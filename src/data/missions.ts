@@ -156,4 +156,62 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 10,
+    title: '레슨 10: 숫자 반복 카운트 활용 (3w, 2dd)',
+    description: 'Vim에서는 명령어 앞에 숫자를 붙여 여러 번 반복할 수 있습니다. 2dd로 불필요한 두 줄을 한 번에 삭제하고, 3w로 [GOAL] 위치로 빠르게 이동하세요.',
+    hint: '2dd를 눌러 불필요한 줄을 지우고, 3w를 눌러 목표 위치로 가보세요.',
+    par: 5,
+    initialLines: [
+      'Header line',
+      'REMOVE ME 1',
+      'REMOVE ME 2',
+      'one two three [GOAL]',
+    ],
+    initialCursor: { line: 1, col: 0 },
+    targetCursor: { line: 1, col: 14 },
+    checkComplete: (state) => {
+      return (
+        !state.lines.some((l) => l.includes('REMOVE ME')) &&
+        state.lines.length === 2 &&
+        state.cursor.line === 1 &&
+        state.cursor.col === 14
+      );
+    },
+  },
+  {
+    id: 11,
+    title: '레슨 11: 빠른 입력 모드 진입 (o, A)',
+    description: 'A 키로 줄 끝에서 바로 추가하고, o 키로 아래에 새 줄을 생성하여 입력하세요. 첫 줄 끝에 " done"을 추가하고, 아래 새 줄에 "Vim is fast!"를 입력하세요.',
+    hint: 'A를 누르고 " done" 입력 후 Esc, 이어서 o를 누르고 "Vim is fast!"를 입력한 뒤 Esc를 누르세요.',
+    par: 21,
+    initialLines: ['Task 1'],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines[0] === 'Task 1 done' &&
+        state.lines[1] === 'Vim is fast!'
+      );
+    },
+  },
+  {
+    id: 12,
+    title: '레슨 12: 빠른 단어 수정과 문자 교체 (cw, r)',
+    description: 'cw를 사용해 틀린 단어 "slow"를 "fast"로 수정하고, r 키로 오타 "cwt"를 "cat"으로 1글자만 교체하세요.',
+    hint: 'cw를 누르고 "fast" 입력 후 Esc, 다음 줄로 가서 오타 위에 커서를 두고 r을 누른 뒤 a를 입력하세요.',
+    par: 14,
+    initialLines: [
+      'Vim is slow',
+      'A cute cwt',
+    ],
+    initialCursor: { line: 0, col: 7 },
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines[0] === 'Vim is fast' &&
+        state.lines[1] === 'A cute cat'
+      );
+    },
+  },
 ];

@@ -39,6 +39,143 @@
   color: #a6adc8;
 }
 
+/* 탭 전환 및 상단 툴바 */
+.app-nav-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto 0.75rem auto;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.nav-tabs {
+  display: flex;
+  gap: 0.4rem;
+  background-color: #181825;
+  padding: 0.3rem;
+  border-radius: 8px;
+  border: 1px solid #313244;
+}
+
+.nav-tab-btn {
+  background: transparent;
+  border: none;
+  color: #a6adc8;
+  font-size: 0.88rem;
+  font-weight: 600;
+  padding: 0.45rem 0.95rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.nav-tab-btn:hover {
+  color: #cdd6f4;
+}
+
+.nav-tab-btn.active {
+  background-color: #89b4fa;
+  color: #11111b;
+  box-shadow: 0 2px 8px rgba(137, 180, 250, 0.25);
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.toolbar-btn {
+  background-color: #181825;
+  border: 1px solid #313244;
+  color: #bac2de;
+  font-size: 0.82rem;
+  font-weight: 600;
+  padding: 0.45rem 0.85rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.toolbar-btn:hover {
+  border-color: #45475a;
+  color: #cdd6f4;
+  background-color: #1e1e2e;
+}
+
+.toolbar-btn.active {
+  border-color: #a6e3a1;
+  color: #a6e3a1;
+  background-color: rgba(166, 227, 161, 0.1);
+}
+
+.lesson-list-btn:hover {
+  border-color: #89b4fa;
+  color: #89b4fa;
+}
+
+/* 샌드박스 가이드 바 */
+.sandbox-panel {
+  width: 100%;
+  max-width: 960px;
+  background-color: #181825;
+  border: 1px solid #313244;
+  border-radius: 8px;
+  padding: 0.85rem 1.25rem;
+  margin-bottom: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-sizing: border-box;
+  gap: 1rem;
+}
+
+.sandbox-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.sandbox-badge {
+  background-color: #fab387;
+  color: #11111b;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  white-space: nowrap;
+}
+
+.sandbox-desc {
+  font-size: 0.88rem;
+  color: #bac2de;
+  line-height: 1.4;
+}
+
+.sandbox-reset-btn {
+  background-color: #313244;
+  border: 1px solid #45475a;
+  color: #cdd6f4;
+  padding: 0.45rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.sandbox-reset-btn:hover {
+  background-color: #45475a;
+  border-color: #89b4fa;
+  color: #ffffff;
+}
+
 .key-cheatsheet {
   display: flex;
   flex-wrap: wrap;
@@ -94,6 +231,24 @@
 
   .header-desc {
     font-size: 0.82rem;
+  }
+
+  .app-nav-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .nav-tabs {
+    justify-content: center;
+  }
+
+  .nav-actions {
+    justify-content: center;
+  }
+
+  .sandbox-panel {
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .key-cheatsheet {

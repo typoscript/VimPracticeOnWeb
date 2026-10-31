@@ -1,18 +1,32 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { Editor } from './components/Editor/Editor';
 import { StatusBar } from './components/StatusBar/StatusBar';
-import { MissionPanel } from './components/MissionPanel/MissionPanel';
+import { MissionPanel, calculateStars } from './components/MissionPanel/MissionPanel';
 import { Keycaster } from './components/Keycaster/Keycaster';
 import { CoachingToast } from './components/CoachingToast/CoachingToast';
+import { LessonSelectModal } from './components/LessonSelectModal/LessonSelectModal';
 import { VimEditorState } from './types/vim';
 import { handleKey } from './engine/vimEngine';
 import { MISSIONS } from './data/missions';
+import { SANDBOX_INITIAL_LINES } from './data/sandbox';
+import {
+  loadProgress,
+  saveLessonRecord,
+  loadRelativeLineSetting,
+  saveRelativeLineSetting,
+  LessonProgress,
+} from './utils/storage';
 import './App.css';
 
 const REPEATED_MOTION_KEYS = ['h', 'j', 'k', 'l', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
 
 export function App() {
+  const [currentTab, setCurrentTab] = useState<'course' | 'sandbox'>('course');
   const [currentMissionIndex, setCurrentMissionIndex] = useState(0);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [progress, setProgress] = useState<LessonProgress>(() => loadProgress());
+  const [relativeLineNumbers, setRelativeLineNumbers] = useState<boolean>(() => loadRelativeLineSetting());
+
   const currentMission = MISSIONS[currentMissionIndex];
 
   // 총 입력 타수 및 최근 키 입력 히스토리
@@ -32,7 +46,16 @@ export function App() {
     clipboard: currentMission.initialClipboard,
   });
 
-  const isCompleted = currentMission.checkComplete(editorState);
+  const isCompleted = currentTab === 'course' && currentMission.checkComplete(editorState);
+
+  // 미션 클리어 시 최고 기록 및 별점 영구 저장
+  useEffect(() => {
+    if (currentTab === 'course' && isCompleted) {
+      const rating = calculateStars(keystrokeCount, currentMission.par);
+      const updated = saveLessonRecord(currentMission.id, rating.starCount, keystrokeCount);
+      setProgress(updated);
+    }
+  }, [currentTab, isCompleted, currentMission.id, currentMission.par, keystrokeCount]);
 
   const handleSelectMission = useCallback((index: number) => {
     if (index >= 0 && index < MISSIONS.length) {
@@ -68,8 +91,56 @@ export function App() {
     consecutiveMotionRef.current = 0;
   }, [currentMission]);
 
+  const handleResetSandbox = useCallback(() => {
+    setEditorState({
+      lines: [...SANDBOX_INITIAL_LINES],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+      undoStack: [],
+      redoStack: [],
+    });
+    setKeystrokeCount(0);
+    setRecentKeys([]);
+    setCoachingMessage(null);
+    consecutiveMotionRef.current = 0;
+  }, []);
+
+  const handleSwitchTab = useCallback((tab: 'course' | 'sandbox') => {
+    setCurrentTab(tab);
+    if (tab === 'sandbox') {
+      handleResetSandbox();
+    } else {
+      const mission = MISSIONS[currentMissionIndex];
+      setEditorState({
+        lines: mission.initialLines,
+        cursor: mission.initialCursor,
+        mode: 'NORMAL',
+        undoStack: mission.initialUndoStack ? [...mission.initialUndoStack] : [],
+        redoStack: [],
+        clipboard: mission.initialClipboard,
+      });
+      setKeystrokeCount(0);
+      setRecentKeys([]);
+      setCoachingMessage(null);
+      consecutiveMotionRef.current = 0;
+    }
+  }, [currentMissionIndex, handleResetSandbox]);
+
+  const handleToggleRelativeLine = useCallback(() => {
+    setRelativeLineNumbers((prev) => {
+      const next = !prev;
+      saveRelativeLineSetting(next);
+      return next;
+    });
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // 모달이 열려 있을 때는 에디터 키 입력을 차단
+      if (isModalOpen) {
+        return;
+      }
+
       // Ctrl+r 또는 Cmd+r: Redo 실행 취소 취소
       if ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R')) {
         e.preventDefault();
@@ -111,7 +182,7 @@ export function App() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, []);
+  }, [isModalOpen]);
 
   return (
     <div className="app-layout">
@@ -122,6 +193,50 @@ export function App() {
         </div>
         <p className="header-desc">인터랙티브 Vim 튜토리얼 &amp; 연습 코스</p>
       </header>
+
+      {/* 탭 전환 및 상단 툴바 */}
+      <div className="app-nav-bar" data-testid="app-nav-bar">
+        <div className="nav-tabs" role="tablist">
+          <button
+            role="tab"
+            aria-selected={currentTab === 'course'}
+            className={`nav-tab-btn ${currentTab === 'course' ? 'active' : ''}`}
+            onClick={() => handleSwitchTab('course')}
+            data-testid="tab-course-btn"
+          >
+            🎯 튜토리얼 코스
+          </button>
+          <button
+            role="tab"
+            aria-selected={currentTab === 'sandbox'}
+            className={`nav-tab-btn ${currentTab === 'sandbox' ? 'active' : ''}`}
+            onClick={() => handleSwitchTab('sandbox')}
+            data-testid="tab-sandbox-btn"
+          >
+            🧪 자유 연습장
+          </button>
+        </div>
+
+        <div className="nav-actions">
+          {currentTab === 'course' && (
+            <button
+              className="toolbar-btn lesson-list-btn"
+              onClick={() => setIsModalOpen(true)}
+              data-testid="open-lesson-modal-btn"
+            >
+              📚 레슨 목록
+            </button>
+          )}
+          <button
+            className={`toolbar-btn relativenumber-btn ${relativeLineNumbers ? 'active' : ''}`}
+            onClick={handleToggleRelativeLine}
+            data-testid="toggle-relativenumber-btn"
+            title="상대 라인 번호 (relativenumber) 토글"
+          >
+            relativenumber: {relativeLineNumbers ? 'ON' : 'OFF'}
+          </button>
+        </div>
+      </div>
 
       <section className="key-cheatsheet" aria-label="Keyboard Shortcuts">
         <span className="cheat-item"><code>h j k l</code> 이동</span>
@@ -142,27 +257,48 @@ export function App() {
           message={coachingMessage}
           onDismiss={() => setCoachingMessage(null)}
         />
-        <MissionPanel
-          mission={currentMission}
-          missionIndex={currentMissionIndex}
-          totalMissions={MISSIONS.length}
-          isCompleted={isCompleted}
-          keystrokeCount={keystrokeCount}
-          onSelectMission={handleSelectMission}
-          onResetMission={handleResetMission}
-        />
+
+        {currentTab === 'course' ? (
+          <MissionPanel
+            mission={currentMission}
+            missionIndex={currentMissionIndex}
+            totalMissions={MISSIONS.length}
+            isCompleted={isCompleted}
+            keystrokeCount={keystrokeCount}
+            onSelectMission={handleSelectMission}
+            onResetMission={handleResetMission}
+          />
+        ) : (
+          <div className="sandbox-panel" data-testid="sandbox-panel">
+            <div className="sandbox-info">
+              <span className="sandbox-badge">🧪 SANDBOX</span>
+              <span className="sandbox-desc">
+                미션 제약 없이 모든 Vim 키보드 명령어를 자유롭게 실험해 볼 수 있습니다.
+              </span>
+            </div>
+            <button
+              className="sandbox-reset-btn"
+              onClick={handleResetSandbox}
+              data-testid="sandbox-reset-btn"
+            >
+              🔄 코드 초기화
+            </button>
+          </div>
+        )}
+
         <Editor
           lines={editorState.lines}
           cursor={editorState.cursor}
           mode={editorState.mode}
-          targetPosition={currentMission.targetCursor}
+          targetPosition={currentTab === 'course' ? currentMission.targetCursor : undefined}
           visualAnchor={editorState.visualAnchor}
+          relativeLineNumbers={relativeLineNumbers}
         />
         <Keycaster recentKeys={recentKeys} />
         <StatusBar
           mode={editorState.mode}
           cursor={editorState.cursor}
-          filename={`lesson_${currentMission.id}.txt`}
+          filename={currentTab === 'course' ? `lesson_${currentMission.id}.txt` : 'sandbox.ts'}
           pendingKeys={editorState.pendingKeys}
         />
       </main>
@@ -170,6 +306,21 @@ export function App() {
       <footer className="app-footer">
         <span>VimPracticeOnWeb • 키보드로 미션을 완료하며 자연스럽게 Vim을 마스터하세요</span>
       </footer>
+
+      <LessonSelectModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        missions={MISSIONS}
+        currentMissionId={currentMission.id}
+        progress={progress}
+        onSelectLesson={(missionId) => {
+          const idx = MISSIONS.findIndex((m) => m.id === missionId);
+          if (idx !== -1) {
+            handleSelectMission(idx);
+            setCurrentTab('course');
+          }
+        }}
+      />
     </div>
   );
 }

@@ -9,6 +9,8 @@ export interface EditorProps {
   mode: VimMode;
   targetPosition?: CursorPosition;
   visualAnchor?: CursorPosition;
+  /** 상대 라인 번호 (relativenumber) 활성화 여부 */
+  relativeLineNumbers?: boolean;
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -17,6 +19,7 @@ export const Editor: React.FC<EditorProps> = ({
   mode,
   targetPosition,
   visualAnchor,
+  relativeLineNumbers = false,
 }) => {
   return (
     <div className="editor-container" data-testid="editor-container">
@@ -29,14 +32,24 @@ export const Editor: React.FC<EditorProps> = ({
                 ? targetPosition.col
                 : null;
 
+            const lineNumberDisplay = relativeLineNumbers
+              ? isCursorLine
+                ? lineIdx + 1
+                : Math.abs(lineIdx - cursor.line)
+              : lineIdx + 1;
+
             return (
               <div
                 key={lineIdx}
                 className={`editor-row ${isCursorLine ? 'active-row' : ''}`}
                 data-testid={`editor-row-${lineIdx + 1}`}
               >
-                <div className="line-number" aria-hidden="true">
-                  {lineIdx + 1}
+                <div
+                  className={`line-number ${isCursorLine ? 'active-line-number' : ''}`}
+                  data-testid={`line-number-${lineIdx + 1}`}
+                  aria-hidden="true"
+                >
+                  {lineNumberDisplay}
                 </div>
                 <div className="line-content">
                   {renderLineContent({

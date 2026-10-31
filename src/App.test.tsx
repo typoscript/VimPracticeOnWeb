@@ -132,4 +132,104 @@ describe('App Component with Keyboard Navigation', () => {
     fireEvent.click(closeBtn);
     expect(screen.queryByTestId('coaching-toast')).not.toBeInTheDocument();
   });
+
+  it('자유 연습장(Sandbox) 모드 탭 전환 및 초기화가 정상 동작한다', () => {
+    render(<App />);
+
+    // 기본은 튜토리얼 코스
+    expect(screen.getByTestId('mission-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('status-filename')).toHaveTextContent('lesson_1.txt');
+
+    // 🧪 자유 연습장 탭 클릭
+    const sandboxTabBtn = screen.getByTestId('tab-sandbox-btn');
+    fireEvent.click(sandboxTabBtn);
+
+    // 미션 패널 대신 샌드박스 패널 표시 확인
+    expect(screen.queryByTestId('mission-panel')).not.toBeInTheDocument();
+    expect(screen.getByTestId('sandbox-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('status-filename')).toHaveTextContent('sandbox.ts');
+
+    // 샌드박스 내 코드 편집: 'dd'로 첫 번째 줄 삭제
+    fireEvent.keyDown(window, { key: 'd' });
+    fireEvent.keyDown(window, { key: 'd' });
+
+    // 🔄 코드 초기화 버튼 클릭
+    const resetBtn = screen.getByTestId('sandbox-reset-btn');
+    fireEvent.click(resetBtn);
+
+    // 초기 샘플 코드로 리셋되었는지 확인
+    expect(screen.getByTestId('editor-row-1').textContent).toContain(
+      '자유 연습장 (Sandbox Mode)'
+    );
+
+    // 🎯 튜토리얼 코스로 다시 복귀
+    const courseTabBtn = screen.getByTestId('tab-course-btn');
+    fireEvent.click(courseTabBtn);
+    expect(screen.getByTestId('mission-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('status-filename')).toHaveTextContent('lesson_1.txt');
+  });
+
+  it('상대 라인 번호(relativenumber) 토글 버튼이 정상 동작한다', () => {
+    localStorage.clear();
+    render(<App />);
+
+    const toggleBtn = screen.getByTestId('toggle-relativenumber-btn');
+    expect(toggleBtn).toHaveTextContent('relativenumber: OFF');
+
+    // 토글 ON 클릭
+    fireEvent.click(toggleBtn);
+    expect(toggleBtn).toHaveTextContent('relativenumber: ON');
+
+    // 커서가 1행(line 0)에 있을 때 2행의 라인 번호는 거리 1로 표시
+    expect(screen.getByTestId('line-number-2')).toHaveTextContent('1');
+
+    // 다시 클릭하여 OFF
+    fireEvent.click(toggleBtn);
+    expect(toggleBtn).toHaveTextContent('relativenumber: OFF');
+    expect(screen.getByTestId('line-number-2')).toHaveTextContent('2');
+  });
+
+  it('레슨 선택 모달을 열고 원하는 레슨으로 바로 이동할 수 있다', () => {
+    render(<App />);
+
+    const openModalBtn = screen.getByTestId('open-lesson-modal-btn');
+    fireEvent.click(openModalBtn);
+
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(screen.getByText(/Vim 커리큘럼 레슨 목록/)).toBeInTheDocument();
+
+    // 레슨 3 카드 클릭
+    const lessonCard3 = screen.getByTestId('lesson-card-3');
+    fireEvent.click(lessonCard3);
+
+    // 모달이 닫히고 레슨 3으로 전환되었는지 확인
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByTestId('mission-title')).toHaveTextContent('레슨 3');
+    expect(screen.getByTestId('status-filename')).toHaveTextContent('lesson_3.txt');
+  });
+
+  it('레슨 클리어 시 localStorage에 진행 기록이 영구 저장된다', () => {
+    localStorage.clear();
+    render(<App />);
+
+    // 레슨 1 시작
+    expect(screen.getByTestId('mission-title')).toHaveTextContent('레슨 1');
+
+    // 레슨 1 클리어: j 2회, l 13회
+    fireEvent.keyDown(window, { key: 'j' });
+    fireEvent.keyDown(window, { key: 'j' });
+    for (let i = 0; i < 13; i++) {
+      fireEvent.keyDown(window, { key: 'l' });
+    }
+
+    expect(screen.getByTestId('mission-completed-badge')).toHaveTextContent('✓ 성공!');
+
+    // localStorage에 레슨 1 기록이 저장되었는지 확인
+    const rawProgress = localStorage.getItem('vim_practice_progress_v1');
+    expect(rawProgress).toBeTruthy();
+    const progress = JSON.parse(rawProgress!);
+    expect(progress[1]).toBeDefined();
+    expect(progress[1].completed).toBe(true);
+    expect(progress[1].minKeystrokes).toBe(15);
+  });
 });

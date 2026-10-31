@@ -36,4 +36,28 @@ describe('Editor Component', () => {
     expect(cursorEl).toBeInTheDocument();
     expect(cursorEl).toHaveClass('cursor-insert');
   });
+
+  it('상대 라인 번호(relativeLineNumbers) 활성화 시 커서 줄은 실제 줄 번호, 다른 줄은 상대 거리를 렌더링한다', () => {
+    const lines = ['Line 1', 'Line 2', 'Line 3', 'Line 4', 'Line 5'];
+    // 커서가 3번째 줄 (line index 2, 1-based: 3)에 위치
+    render(
+      <Editor
+        lines={lines}
+        cursor={{ line: 2, col: 0 }}
+        mode="NORMAL"
+        relativeLineNumbers={true}
+      />
+    );
+
+    // 줄 1: 거리 Math.abs(0 - 2) = 2
+    expect(screen.getByTestId('line-number-1')).toHaveTextContent('2');
+    // 줄 2: 거리 Math.abs(1 - 2) = 1
+    expect(screen.getByTestId('line-number-2')).toHaveTextContent('1');
+    // 줄 3 (커서 줄): 실제 줄 번호 = 3
+    expect(screen.getByTestId('line-number-3')).toHaveTextContent('3');
+    // 줄 4: 거리 Math.abs(3 - 2) = 1
+    expect(screen.getByTestId('line-number-4')).toHaveTextContent('1');
+    // 줄 5: 거리 Math.abs(4 - 2) = 2
+    expect(screen.getByTestId('line-number-5')).toHaveTextContent('2');
+  });
 });
