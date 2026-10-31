@@ -40,4 +40,6 @@ export interface VimEditorState {
   commandType?: ':' | '/';
   /** 마지막 검색어 ('n', 'N', '*' 재검색용) */
   lastSearchQuery?: string;
+  /** 커맨드라인 또는 검색 실행 결과 피드백 메시지 (예: '10번째 줄로 이동', 'E492: 알 수 없는 명령어') */
+  commandMessage?: string;
 }

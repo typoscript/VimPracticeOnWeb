@@ -141,6 +141,11 @@ export function App() {
         return;
       }
 
+      // 단독 메타/보조 키(Shift, Control, Alt, Meta, CapsLock)는 타수 및 Vim 엔진 전달 제외
+      if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(e.key)) {
+        return;
+      }
+
       // Ctrl+r 또는 Cmd+r: Redo 실행 취소 취소
       if ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R')) {
         e.preventDefault();
@@ -156,9 +161,23 @@ export function App() {
         return;
       }
 
-      // 브라우저 기본 스크롤, 포커스 이동, 검색창 및 뒤로가기 방지
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Backspace', 'Tab', '/'].includes(e.key)) {
+      // 브라우저 기본 스크롤, 포커스 이동, 검색창, 엔터(버튼 재클릭 방지), 뒤로가기 방지
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Backspace', 'Tab', '/', 'Enter'].includes(e.key)) {
         e.preventDefault();
+      }
+
+      // 이전에 클릭한 UI 버튼에 남아 있는 포커스를 해제하여 Enter 입력 시 버튼이 재실행되는 버그 방지
+      if (
+        document.activeElement &&
+        document.activeElement instanceof HTMLElement &&
+        document.activeElement.tagName !== 'BODY'
+      ) {
+        document.activeElement.blur();
+      }
+
+      // 한글 입력기(IME) 상태 감지 코칭 안내
+      if (e.key === 'Process' || /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(e.key)) {
+        setCoachingMessage('⚠️ 현재 한글 입력 상태입니다. 원활한 Vim 명령어 입력을 위해 [한/영] 키를 눌러 영문 모드로 전환해 주세요!');
       }
 
       // 타수 증가 및 키캐스터 등록
@@ -312,6 +331,7 @@ export function App() {
           pendingKeys={editorState.pendingKeys}
           commandType={editorState.commandType}
           commandBuffer={editorState.commandBuffer}
+          commandMessage={editorState.commandMessage}
         />
       </main>
 

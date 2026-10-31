@@ -11,6 +11,8 @@ export interface StatusBarProps {
   commandType?: ':' | '/';
   /** 커맨드라인 입력 문자열 */
   commandBuffer?: string;
+  /** 커맨드/검색 실행 결과 알림 메시지 */
+  commandMessage?: string;
 }
 
 export const StatusBar: React.FC<StatusBarProps> = ({
@@ -20,20 +22,31 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   pendingKeys,
   commandType,
   commandBuffer,
+  commandMessage,
 }) => {
   const displayMode = mode === 'VISUAL_LINE' ? 'VISUAL LINE' : mode;
   const modeClass = mode === 'VISUAL_LINE' ? 'mode-visual' : `mode-${mode.toLowerCase()}`;
   const isCommandLineActive = mode === 'COMMAND' || mode === 'SEARCH';
   const promptPrefix = commandType ?? (mode === 'COMMAND' ? ':' : '/');
 
+  const isErrorMessage = commandMessage?.startsWith('E') || commandMessage?.includes('오류') || commandMessage?.includes('찾을 수 없습니다');
+
   return (
-    <footer className="status-bar" data-testid="status-bar">
+    <footer
+      className={`status-bar ${isCommandLineActive ? 'status-bar-active-command' : ''}`}
+      data-testid="status-bar"
+    >
       <div className="status-bar-left">
         {isCommandLineActive ? (
           <div className="commandline-prompt" data-testid="commandline-prompt">
             <span className="prompt-prefix">{promptPrefix}</span>
             <span className="prompt-text">{commandBuffer ?? ''}</span>
             <span className="prompt-cursor">_</span>
+            <span className="prompt-hint">
+              {mode === 'COMMAND'
+                ? '(예: 10, %s/old/new/g, w • Enter 실행, Esc 취소)'
+                : '(단어 입력 후 Enter 실행, Esc 취소)'}
+            </span>
           </div>
         ) : (
           <>
@@ -43,9 +56,19 @@ export const StatusBar: React.FC<StatusBarProps> = ({
             >
               {displayMode}
             </span>
-            <span className="status-filename" data-testid="status-filename">
-              {filename}
-            </span>
+            {commandMessage ? (
+              <span
+                className={`status-command-message ${isErrorMessage ? 'error' : 'info'}`}
+                data-testid="status-command-message"
+              >
+                <span className="message-icon">{isErrorMessage ? '⚠️' : 'ℹ️'}</span>
+                <span className="message-text">{commandMessage}</span>
+              </span>
+            ) : (
+              <span className="status-filename" data-testid="status-filename">
+                {filename}
+              </span>
+            )}
           </>
         )}
       </div>

@@ -275,5 +275,26 @@ describe('App Component with Keyboard Navigation', () => {
 
     expect(screen.queryByTestId('commandline-prompt')).not.toBeInTheDocument();
     expect(screen.getByTestId('status-cursor-pos')).toHaveTextContent('2:1');
+    expect(screen.getByTestId('status-command-message')).toHaveTextContent('2번째 줄로 이동했습니다.');
+  });
+
+  it('Shift 단독 키 입력은 타수를 올리거나 Keycaster에 등록되지 않는다', () => {
+    render(<App />);
+
+    // Shift 키 입력
+    fireEvent.keyDown(window, { key: 'Shift' });
+    expect(screen.queryByTestId('keycap-0')).not.toBeInTheDocument();
+
+    // 이어서 ':' 입력 시 ':'만 Keycaster에 등록됨
+    fireEvent.keyDown(window, { key: ':' });
+    expect(screen.getByTestId('keycap-0')).toHaveTextContent(':');
+  });
+
+  it('한글 입력 상태(자모 또는 Process)가 감지되면 한/영 전환 코칭 토스트를 띄운다', () => {
+    render(<App />);
+
+    // 한글 자모 입력
+    fireEvent.keyDown(window, { key: 'ㄱ' });
+    expect(screen.getByTestId('coaching-toast')).toHaveTextContent('한/영');
   });
 });

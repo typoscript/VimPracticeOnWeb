@@ -159,26 +159,39 @@ function handleSearchModeKey(state: VimEditorState, key: string): VimEditorState
         mode: 'NORMAL',
         commandBuffer: undefined,
         commandType: undefined,
+        commandMessage: undefined,
       };
     }
 
     const matches = findMatches(state.lines, query);
+    if (matches.length === 0) {
+      return {
+        ...state,
+        mode: 'NORMAL',
+        lastSearchQuery: query,
+        commandBuffer: undefined,
+        commandType: undefined,
+        commandMessage: `E486: 패턴을 찾을 수 없습니다: ${query}`,
+      };
+    }
+
     // 현재 커서 위치 또는 그 다음 위치의 매치로 이동
     const targetMatch =
       findNextMatch(matches, { line: state.cursor.line, col: state.cursor.col - 1 }) ??
       matches[0];
 
-    const nextCursor = targetMatch
-      ? { line: targetMatch.line, col: targetMatch.col }
-      : state.cursor;
+    const matchIdx = matches.findIndex(
+      (m) => m.line === targetMatch.line && m.col === targetMatch.col
+    );
 
     return {
       ...state,
       mode: 'NORMAL',
-      cursor: nextCursor,
+      cursor: { line: targetMatch.line, col: targetMatch.col },
       lastSearchQuery: query,
       commandBuffer: undefined,
       commandType: undefined,
+      commandMessage: `검색 일치 (${matchIdx + 1}/${matches.length}): ${query}`,
     };
   }
 
@@ -810,6 +823,7 @@ function handleNormalModeKey(
       commandType: '/',
       commandBuffer: '',
       pendingKeys: undefined,
+      commandMessage: undefined,
     };
   }
 
@@ -821,6 +835,7 @@ function handleNormalModeKey(
       commandType: ':',
       commandBuffer: '',
       pendingKeys: undefined,
+      commandMessage: undefined,
     };
   }
 
@@ -828,14 +843,21 @@ function handleNormalModeKey(
   if (key === 'n') {
     if (state.lastSearchQuery) {
       const matches = findMatches(state.lines, state.lastSearchQuery);
-      const nextMatch = findNextMatch(matches, state.cursor);
-      if (nextMatch) {
+      if (matches.length === 0) {
         return {
           ...state,
-          cursor: { line: nextMatch.line, col: nextMatch.col },
+          commandMessage: `E486: 패턴을 찾을 수 없습니다: ${state.lastSearchQuery}`,
           pendingKeys: undefined,
         };
       }
+      const nextMatch = findNextMatch(matches, state.cursor) ?? matches[0];
+      const matchIdx = matches.findIndex((m) => m.line === nextMatch.line && m.col === nextMatch.col);
+      return {
+        ...state,
+        cursor: { line: nextMatch.line, col: nextMatch.col },
+        commandMessage: `다음 검색 결과 (${matchIdx + 1}/${matches.length}): ${state.lastSearchQuery}`,
+        pendingKeys: undefined,
+      };
     }
     return { ...state, pendingKeys: undefined };
   }
@@ -844,14 +866,21 @@ function handleNormalModeKey(
   if (key === 'N') {
     if (state.lastSearchQuery) {
       const matches = findMatches(state.lines, state.lastSearchQuery);
-      const prevMatch = findPrevMatch(matches, state.cursor);
-      if (prevMatch) {
+      if (matches.length === 0) {
         return {
           ...state,
-          cursor: { line: prevMatch.line, col: prevMatch.col },
+          commandMessage: `E486: 패턴을 찾을 수 없습니다: ${state.lastSearchQuery}`,
           pendingKeys: undefined,
         };
       }
+      const prevMatch = findPrevMatch(matches, state.cursor) ?? matches[matches.length - 1];
+      const matchIdx = matches.findIndex((m) => m.line === prevMatch.line && m.col === prevMatch.col);
+      return {
+        ...state,
+        cursor: { line: prevMatch.line, col: prevMatch.col },
+        commandMessage: `이전 검색 결과 (${matchIdx + 1}/${matches.length}): ${state.lastSearchQuery}`,
+        pendingKeys: undefined,
+      };
     }
     return { ...state, pendingKeys: undefined };
   }
@@ -861,11 +890,15 @@ function handleNormalModeKey(
     const word = getWordAtCursor(currentLine, state.cursor.col);
     if (word) {
       const matches = findMatches(state.lines, word);
-      const nextMatch = findNextMatch(matches, state.cursor);
+      const nextMatch = findNextMatch(matches, state.cursor) ?? matches[0];
+      const matchIdx = nextMatch
+        ? matches.findIndex((m) => m.line === nextMatch.line && m.col === nextMatch.col)
+        : -1;
       return {
         ...state,
         cursor: nextMatch ? { line: nextMatch.line, col: nextMatch.col } : state.cursor,
         lastSearchQuery: word,
+        commandMessage: `단어 '${word}' 검색 (${matchIdx + 1}/${matches.length})`,
         pendingKeys: undefined,
       };
     }

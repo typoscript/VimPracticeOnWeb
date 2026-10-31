@@ -49,4 +49,45 @@ describe('StatusBar Component', () => {
     );
     expect(screen.getByTestId('commandline-prompt')).toHaveTextContent('/target');
   });
+
+  it('COMMAND 모드 진입 시 활성화 클래스와 안내 힌트를 정상 렌더링한다', () => {
+    render(
+      <StatusBar
+        mode="COMMAND"
+        cursor={{ line: 0, col: 0 }}
+        commandType=":"
+        commandBuffer=""
+      />
+    );
+
+    const statusBar = screen.getByTestId('status-bar');
+    expect(statusBar).toHaveClass('status-bar-active-command');
+    expect(screen.getByText(/Enter 실행, Esc 취소/)).toBeInTheDocument();
+  });
+
+  it('commandMessage가 전달되면 정보 또는 에러 알림 배지를 렌더링한다', () => {
+    const { rerender } = render(
+      <StatusBar
+        mode="NORMAL"
+        cursor={{ line: 0, col: 0 }}
+        commandMessage="5번째 줄로 이동했습니다."
+      />
+    );
+
+    const infoMsg = screen.getByTestId('status-command-message');
+    expect(infoMsg).toHaveClass('info');
+    expect(infoMsg).toHaveTextContent('5번째 줄로 이동했습니다.');
+
+    rerender(
+      <StatusBar
+        mode="NORMAL"
+        cursor={{ line: 0, col: 0 }}
+        commandMessage="E486: 패턴을 찾을 수 없습니다: foo"
+      />
+    );
+
+    const errorMsg = screen.getByTestId('status-command-message');
+    expect(errorMsg).toHaveClass('error');
+    expect(errorMsg).toHaveTextContent('E486: 패턴을 찾을 수 없습니다: foo');
+  });
 });
