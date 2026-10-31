@@ -177,19 +177,38 @@ npm run build
 
 ## 🌐 프로덕션 웹 배포 가이드
 
-`vite.config.ts`에 `base: './'` 상대 경로 설정이 완료되어 있어, 별도의 서버 설정 없이 정적 호스팅 서비스에 즉시 배포할 수 있습니다.
+### 🚀 배포된 라이브 사이트 (Live Demo)
+- **GitHub Pages 접속 URL**: [https://typoscript.github.io/VimPracticeOnWeb/](https://typoscript.github.io/VimPracticeOnWeb/)
 
-### Vercel 배포
+---
+
+### 📦 GitHub Pages 자동 배포 설정 방법 (GitHub Actions 기반)
+
+본 프로젝트는 최신 공식 GitHub Actions(`actions/deploy-pages@v4`) 기반의 아티팩트 배포 워크플로(`.github/workflows/deploy.yml`)가 구성되어 있습니다. 별도의 `gh-pages` 브랜치 오염 없이 빠르고 안전하게 배포됩니다.
+
+#### 1단계: GitHub 저장소 Settings 설정
+1. GitHub 저장소 상단의 **`Settings`** 탭으로 이동합니다.
+2. 좌측 사이드바 메뉴에서 **`Pages`** 항목을 클릭합니다.
+3. **`Build and deployment`** 섹션의 **`Source`** 드롭다운 메뉴를 기존 `Deploy from a branch`에서 **`GitHub Actions`**로 변경합니다.
+
+#### 2단계: 자동 배포 파이프라인 구동
+- `main` 브랜치에 새로운 커밋이 `push`되거나, GitHub의 **`Actions`** 탭에서 **`Deploy VimPracticeOnWeb to GitHub Pages`** 워크플로의 `Run workflow` 버튼을 클릭하면 배포가 시작됩니다.
+- 배포 파이프라인은 아래 단계를 자동으로 수행합니다:
+  1. `npm ci`: 의존성 패키지 클린 설치
+  2. `npm run test -- --run`: 252개 Vitest 단위/통합 테스트 전체 통과 검증
+  3. `npm run build`: 리포지토리 베이스 경로(`/VimPracticeOnWeb/`)가 적용된 정적 사이트 번들링
+  4. `actions/deploy-pages`: GitHub Pages CDN으로 즉시 무중단 배포
+
+---
+
+### ☁️ 기타 호스팅 플랫폼 배포
+
+#### Vercel 배포
 1. [Vercel](https://vercel.com)에 로그인 후 GitHub 저장소 `VimPracticeOnWeb`을 Import합니다.
 2. Build Command: `npm run build`
 3. Output Directory: `dist`
-4. Deploy 버튼을 누르면 수 초 내에 전 세계 CDN으로 자동 배포됩니다.
+4. Deploy 버튼을 누르면 수 초 내에 전 세계 엣지 네트워크로 자동 배포됩니다.
 
-### GitHub Pages 배포
-1. 저장소의 `Settings` ➔ `Pages`로 이동합니다.
-2. `Build and deployment` 소스를 `GitHub Actions`로 선택합니다.
-3. 정적 사이트 배포 워크플로우를 활성화하면 푸시할 때마다 자동 배포됩니다.
-
-### Netlify 배포
+#### Netlify 배포
 1. Netlify 대시보드에서 `Import an existing project` 선택
 2. 빌드 명령어: `npm run build`, 게시 디렉터리: `dist` 지정 후 배포
