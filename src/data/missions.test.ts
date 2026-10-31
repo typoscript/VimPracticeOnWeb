@@ -74,4 +74,64 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     };
     expect(lesson12!.checkComplete(stateDone)).toBe(true);
   });
+
+  it('레슨 13 (줄 내 문자 탐색 및 삭제) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson13 = MISSIONS.find((m) => m.id === 13);
+    expect(lesson13).toBeDefined();
+    expect(lesson13?.par).toBe(5);
+
+    const stateNotDone: VimEditorState = {
+      lines: ['console.log(unwanted, junk);'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson13!.checkComplete(stateNotDone)).toBe(false);
+
+    const stateDone: VimEditorState = {
+      lines: ['console.log;'],
+      cursor: { line: 0, col: 11 },
+      mode: 'NORMAL',
+    };
+    expect(lesson13!.checkComplete(stateDone)).toBe(true);
+  });
+
+  it('레슨 14 (텍스트 객체 수정 및 삭제) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson14 = MISSIONS.find((m) => m.id === 14);
+    expect(lesson14).toBeDefined();
+    expect(lesson14?.par).toBe(14);
+
+    const stateNotDone: VimEditorState = {
+      lines: ['let oldVariable = 200;', 'const msg = "delete this text";'],
+      cursor: { line: 0, col: 4 },
+      mode: 'NORMAL',
+    };
+    expect(lesson14!.checkComplete(stateNotDone)).toBe(false);
+
+    const stateDone: VimEditorState = {
+      lines: ['let status = 200;', 'const msg = "";'],
+      cursor: { line: 1, col: 12 },
+      mode: 'NORMAL',
+    };
+    expect(lesson14!.checkComplete(stateDone)).toBe(true);
+  });
+
+  it('레슨 15 (점 반복 편집 자동화) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson15 = MISSIONS.find((m) => m.id === 15);
+    expect(lesson15).toBeDefined();
+    expect(lesson15?.par).toBe(7);
+
+    const stateNotDone: VimEditorState = {
+      lines: ['const a = 1', 'const b = 2', 'const c = 3'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson15!.checkComplete(stateNotDone)).toBe(false);
+
+    const stateDone: VimEditorState = {
+      lines: ['const a = 1;', 'const b = 2;', 'const c = 3;'],
+      cursor: { line: 2, col: 11 },
+      mode: 'NORMAL',
+    };
+    expect(lesson15!.checkComplete(stateDone)).toBe(true);
+  });
 });

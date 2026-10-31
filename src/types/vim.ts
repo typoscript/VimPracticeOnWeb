@@ -24,4 +24,8 @@ export interface VimEditorState {
   clipboard?: ClipboardRegister;
   undoStack?: StateSnapshot[];
   redoStack?: StateSnapshot[];
+  /** 마지막으로 완료된 버퍼 변경 명령어 키 시퀀스 ('.' 반복용) */
+  lastChangeKeys?: string[];
+  /** 현재 진행 중인 변경 명령어 키 시퀀스 버퍼 */
+  currentChangeKeys?: string[];
 }

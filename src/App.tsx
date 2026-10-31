@@ -241,13 +241,16 @@ export function App() {
       <section className="key-cheatsheet" aria-label="Keyboard Shortcuts">
         <span className="cheat-item"><code>h j k l</code> 이동</span>
         <span className="cheat-item"><code>w b e</code> 단어 점프</span>
+        <span className="cheat-item"><code>f F t T</code> 문자 탐색</span>
         <span className="cheat-item"><code>0 $ ^</code> 줄 이동</span>
         <span className="cheat-item"><code>i a I A o O</code> 입력 진입</span>
         <span className="cheat-item"><code>Esc</code> 일반 모드</span>
         <span className="cheat-item"><code>x</code> 글자 삭제</span>
         <span className="cheat-item"><code>cw cc C r</code> 수정/교체</span>
-        <span className="cheat-item"><code>v / V</code> 영역 선택(비주얼)</span>
+        <span className="cheat-item"><code>iw i" i(</code> 텍스트 객체</span>
+        <span className="cheat-item"><code>v / V</code> 영역 선택</span>
         <span className="cheat-item"><code>dd dw</code> 줄/단어 삭제</span>
+        <span className="cheat-item"><code>.</code> 직전 변경 반복</span>
         <span className="cheat-item"><code>p</code> 붙여넣기</span>
         <span className="cheat-item"><code>u / Ctrl-r</code> 실행취소/다시실행</span>
       </section>

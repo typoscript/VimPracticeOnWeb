@@ -214,4 +214,59 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 13,
+    title: '레슨 13: 줄 내 문자 탐색과 삭제 (f, df))',
+    description: 'f{char}로 원하는 문자로 바로 점프하고, df)로 닫는 괄호까지 불필요한 인자들을 한 번에 삭제하세요. 커서를 "("로 옮긴 뒤 df)를 입력하여 "(unwanted, junk)"를 제거하세요.',
+    hint: 'f(를 눌러 여는 괄호로 이동한 다음, df)를 입력하면 닫는 괄호까지 한 번에 삭제됩니다.',
+    par: 5,
+    initialLines: ['console.log(unwanted, junk);'],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines[0] === 'console.log;'
+      );
+    },
+  },
+  {
+    id: 14,
+    title: '레슨 14: 텍스트 객체 내부 수정과 삭제 (ciw, di")',
+    description: 'ciw로 변수명을 "status"로 변경하고, 다음 줄로 이동해 di"로 큰따옴표 내부의 임시 문자열을 비우세요.',
+    hint: 'ciw를 눌러 "status" 입력 후 Esc, j로 내려가 di"를 누르세요.',
+    par: 14,
+    initialLines: [
+      'let oldVariable = 200;',
+      'const msg = "delete this text";',
+    ],
+    initialCursor: { line: 0, col: 4 },
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines[0] === 'let status = 200;' &&
+        state.lines[1] === 'const msg = "";'
+      );
+    },
+  },
+  {
+    id: 15,
+    title: '레슨 15: 점(.) 명령어로 반복 편집 자동화하기',
+    description: '첫 번째 줄 끝에서 A 키로 ";"를 추가한 뒤 Esc를 누르고, 아래 2개 줄로 내려가며 . 키를 눌러 세미콜론을 반복 추가하세요.',
+    hint: 'A를 눌러 ; 입력 후 Esc, j를 누르고 .를 누르고, 다시 j를 누르고 .를 누르세요.',
+    par: 7,
+    initialLines: [
+      'const a = 1',
+      'const b = 2',
+      'const c = 3',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines[0] === 'const a = 1;' &&
+        state.lines[1] === 'const b = 2;' &&
+        state.lines[2] === 'const c = 3;'
+      );
+    },
+  },
 ];

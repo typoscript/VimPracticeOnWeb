@@ -1094,3 +1094,177 @@ describe('Vim Engine - Undo / Redo Compatibility for New Features', () => {
     expect(state.lines).toEqual(['hello']);
   });
 });
+
+describe('Vim Engine - Inline Character Search (f, F, t, T)', () => {
+  it('f{char} 및 t{char} 모션으로 줄 내 특정 문자로 즉시 이동한다', () => {
+    let state = createState(['const value = calculate(10, 20);'], 0, 0);
+
+    // f(: '(' 위치 (index 23)로 이동
+    state = handleKey(state, 'f');
+    state = handleKey(state, '(');
+    expect(state.cursor.col).toBe(23);
+
+    // t): ')' 직전 칸 (index 30 - 1 = 29)으로 이동
+    state = handleKey(state, 't');
+    state = handleKey(state, ')');
+    expect(state.cursor.col).toBe(29);
+
+    // F(: 왼쪽으로 '(' 위치 (index 23)로 이동
+    state = handleKey(state, 'F');
+    state = handleKey(state, '(');
+    expect(state.cursor.col).toBe(23);
+
+    // T=: 왼쪽으로 '=' 바로 오른쪽 칸 (index 12 + 1 = 13)으로 이동
+    state = handleKey(state, 'T');
+    state = handleKey(state, '=');
+    expect(state.cursor.col).toBe(13);
+  });
+
+  it('df) 및 dt" 연산자로 지정 문자까지 삭제한다', () => {
+    let state = createState(['result = format(arg1, arg2);'], 0, 9); // 'f' 위치
+    // df) -> 'f' 부터 ')' 까지 삭제
+    state = handleKey(state, 'd');
+    state = handleKey(state, 'f');
+    state = handleKey(state, ')');
+    expect(state.lines[0]).toBe('result = ;');
+    expect(state.clipboard?.content).toBe('format(arg1, arg2)');
+
+    // dt" -> 큰따옴표 직전까지 삭제
+    let state2 = createState(['log("message");'], 0, 4); // '"' 위치
+    state2 = handleKey(state2, 'd');
+    state2 = handleKey(state2, 't');
+    state2 = handleKey(state2, ';');
+    expect(state2.lines[0]).toBe('log(;');
+  });
+
+  it('cf) 연산자로 삭제 후 즉시 INSERT 모드로 진입한다', () => {
+    let state = createState(['call(oldArg);'], 0, 4); // '(' 위치
+    state = handleKey(state, 'c');
+    state = handleKey(state, 'f');
+    state = handleKey(state, ')');
+    expect(state.lines[0]).toBe('call;');
+    expect(state.mode).toBe('INSERT');
+  });
+});
+
+describe('Vim Engine - Text Objects (iw, i", i(, i))', () => {
+  it('diw / ciw: 단어 내부를 삭제하거나 수정한다', () => {
+    let state = createState(['replace oldWord here'], 0, 10); // 'oldWord' 내부
+    // diw
+    state = handleKey(state, 'd');
+    state = handleKey(state, 'i');
+    state = handleKey(state, 'w');
+    expect(state.lines[0]).toBe('replace  here');
+    expect(state.clipboard?.content).toBe('oldWord');
+
+    // ciw
+    let state2 = createState(['const count = 10;'], 0, 7); // 'count' 내부
+    state2 = handleKey(state2, 'c');
+    state2 = handleKey(state2, 'i');
+    state2 = handleKey(state2, 'w');
+    expect(state2.lines[0]).toBe('const  = 10;');
+    expect(state2.mode).toBe('INSERT');
+  });
+
+  it('di" / ci": 큰따옴표 내부의 문자열을 삭제하거나 수정한다', () => {
+    let state = createState(['const title = "Hello World";'], 0, 20);
+    // di"
+    state = handleKey(state, 'd');
+    state = handleKey(state, 'i');
+    state = handleKey(state, '"');
+    expect(state.lines[0]).toBe('const title = "";');
+    expect(state.clipboard?.content).toBe('Hello World');
+
+    // ci"
+    let state2 = createState(['alert("Please confirm");'], 0, 10);
+    state2 = handleKey(state2, 'c');
+    state2 = handleKey(state2, 'i');
+    state2 = handleKey(state2, '"');
+    expect(state2.lines[0]).toBe('alert("");');
+    expect(state2.mode).toBe('INSERT');
+  });
+
+  it('di( / ci(: 소괄호 내부를 삭제하거나 수정한다', () => {
+    let state = createState(['execute(param1, param2);'], 0, 10);
+    state = handleKey(state, 'd');
+    state = handleKey(state, 'i');
+    state = handleKey(state, '(');
+    expect(state.lines[0]).toBe('execute();');
+    expect(state.clipboard?.content).toBe('param1, param2');
+  });
+
+  it('viw: 단어 영역을 VISUAL 블록으로 선택한다', () => {
+    let state = createState(['one two three'], 0, 4); // 'two'
+    state = handleKey(state, 'v');
+    state = handleKey(state, 'i');
+    state = handleKey(state, 'w');
+    expect(state.mode).toBe('VISUAL');
+    expect(state.visualAnchor).toEqual({ line: 0, col: 4 });
+    expect(state.cursor).toEqual({ line: 0, col: 6 });
+  });
+});
+
+describe('Vim Engine - Dot Repeat (.)', () => {
+  it('. 키로 x 글자 삭제를 반복한다', () => {
+    let state = createState(['abcdef'], 0, 0);
+    state = handleKey(state, 'x'); // 'a' 삭제 -> 'bcdef'
+    expect(state.lines[0]).toBe('bcdef');
+
+    state = handleKey(state, '.'); // 'b' 삭제 -> 'cdef'
+    expect(state.lines[0]).toBe('cdef');
+
+    state = handleKey(state, '.'); // 'c' 삭제 -> 'def'
+    expect(state.lines[0]).toBe('def');
+  });
+
+  it('. 키로 dd 한 줄 삭제를 반복한다', () => {
+    let state = createState(['line 1', 'line 2', 'line 3', 'line 4'], 0, 0);
+    state = handleKey(state, 'd');
+    state = handleKey(state, 'd'); // line 1 삭제
+    expect(state.lines).toEqual(['line 2', 'line 3', 'line 4']);
+
+    state = handleKey(state, '.'); // line 2 삭제
+    expect(state.lines).toEqual(['line 3', 'line 4']);
+  });
+
+  it('. 키로 ciw 입력 세션을 다른 단어에서 반복 실행한다', () => {
+    let state = createState(['apple banana cherry'], 0, 0);
+    // apple을 'fruit'로 변경
+    state = handleKey(state, 'c');
+    state = handleKey(state, 'i');
+    state = handleKey(state, 'w');
+    state = handleKey(state, 'f');
+    state = handleKey(state, 'r');
+    state = handleKey(state, 'u');
+    state = handleKey(state, 'i');
+    state = handleKey(state, 't');
+    state = handleKey(state, 'Escape');
+    expect(state.lines[0]).toBe('fruit banana cherry');
+
+    // banana로 이동
+    state = handleKey(state, 'w');
+    expect(state.cursor.col).toBe(6);
+
+    // . 누르면 banana도 'fruit'로 교체됨!
+    state = handleKey(state, '.');
+    expect(state.lines[0]).toBe('fruit fruit cherry');
+  });
+
+  it('. 키로 df) 삭제 동작을 다른 곳에서 반복 실행한다', () => {
+    let state = createState(['func1(a, b);', 'func2(c, d);'], 0, 5); // 첫 줄 '('
+    state = handleKey(state, 'd');
+    state = handleKey(state, 'f');
+    state = handleKey(state, ')');
+    expect(state.lines[0]).toBe('func1;');
+
+    // 둘째 줄 '('로 이동
+    state = handleKey(state, 'j');
+    state = handleKey(state, '0');
+    state = handleKey(state, 'f');
+    state = handleKey(state, '(');
+
+    // . 누르면 둘째 줄도 ')'까지 삭제됨!
+    state = handleKey(state, '.');
+    expect(state.lines[1]).toBe('func2;');
+  });
+});
