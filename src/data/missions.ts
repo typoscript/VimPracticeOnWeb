@@ -128,4 +128,23 @@ export const MISSIONS: Mission[] = [
       return state.lines.some((l) => l.includes('Line 2'));
     },
   },
+  {
+    id: 9,
+    title: '레슨 9: VISUAL 모드 영역 선택 및 일괄 삭제 (v, d)',
+    description: 'v 키를 눌러 VISUAL 모드로 진입한 뒤, [DELETE THIS PART] 영역을 블록 지정하고 d 키로 한 번에 삭제하세요.',
+    hint: 'v 키를 누른 뒤 l이나 w 키로 블록을 [DELETE THIS PART] 끝까지 지정하고 d를 누르세요.',
+    initialLines: [
+      'Keep start - [DELETE THIS PART] - Keep end.',
+      'Select and delete only the bracketed part.',
+    ],
+    initialCursor: { line: 0, col: 13 },
+    checkComplete: (state) => {
+      const line0 = state.lines[0] ?? '';
+      return (
+        state.mode === 'NORMAL' &&
+        line0.includes('Keep start -  - Keep end.') &&
+        !line0.includes('DELETE THIS PART')
+      );
+    },
+  },
 ];

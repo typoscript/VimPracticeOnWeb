@@ -1,4 +1,4 @@
-export type VimMode = 'NORMAL' | 'INSERT' | 'VISUAL' | 'COMMAND';
+export type VimMode = 'NORMAL' | 'INSERT' | 'VISUAL' | 'VISUAL_LINE' | 'COMMAND';
 
 export interface CursorPosition {
   line: number; // 0-indexed 줄 번호
@@ -19,6 +19,7 @@ export interface VimEditorState {
   lines: string[];
   cursor: CursorPosition;
   mode: VimMode;
+  visualAnchor?: CursorPosition; // VISUAL 모드 선택 시작점
   pendingKeys?: string; // gg, dd, dw 등 다중 키 입력을 위한 버퍼
   clipboard?: ClipboardRegister;
   undoStack?: StateSnapshot[];

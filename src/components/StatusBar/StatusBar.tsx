@@ -15,14 +15,17 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   filename = 'practice.txt',
   pendingKeys,
 }) => {
+  const displayMode = mode === 'VISUAL_LINE' ? 'VISUAL LINE' : mode;
+  const modeClass = mode === 'VISUAL_LINE' ? 'mode-visual' : `mode-${mode.toLowerCase()}`;
+
   return (
     <footer className="status-bar" data-testid="status-bar">
       <div className="status-bar-left">
         <span
-          className={`status-mode-badge mode-${mode.toLowerCase()}`}
+          className={`status-mode-badge ${modeClass}`}
           data-testid="status-mode"
         >
-          {mode}
+          {displayMode}
         </span>
         <span className="status-filename" data-testid="status-filename">
           {filename}

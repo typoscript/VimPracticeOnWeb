@@ -711,3 +711,127 @@ describe('Vim Engine - Operators & History (dd, dw, p, u, Ctrl-r)', () => {
     });
   });
 });
+
+describe('Vim Engine - VISUAL & VISUAL_LINE Modes (v, V, d, y, Escape)', () => {
+  describe('Mode entry and navigation', () => {
+    it('enters VISUAL mode on v and sets visualAnchor', () => {
+      const state = createState(['hello world'], 0, 3);
+      const next = handleKey(state, 'v');
+      expect(next.mode).toBe('VISUAL');
+      expect(next.visualAnchor).toEqual({ line: 0, col: 3 });
+      expect(next.cursor).toEqual({ line: 0, col: 3 });
+    });
+
+    it('moves cursor while keeping visualAnchor intact', () => {
+      let state = createState(['hello world'], 0, 2);
+      state = handleKey(state, 'v');
+      state = handleKey(state, 'w'); // jump to 'world'
+      expect(state.mode).toBe('VISUAL');
+      expect(state.visualAnchor).toEqual({ line: 0, col: 2 });
+      expect(state.cursor).toEqual({ line: 0, col: 6 });
+    });
+
+    it('returns to NORMAL mode on Escape', () => {
+      let state = createState(['hello'], 0, 1);
+      state = handleKey(state, 'v');
+      state = handleKey(state, 'Escape');
+      expect(state.mode).toBe('NORMAL');
+      expect(state.visualAnchor).toBeUndefined();
+    });
+
+    it('toggles back to NORMAL mode on pressing v again', () => {
+      let state = createState(['hello'], 0, 1);
+      state = handleKey(state, 'v');
+      state = handleKey(state, 'v');
+      expect(state.mode).toBe('NORMAL');
+      expect(state.visualAnchor).toBeUndefined();
+    });
+
+    it('enters VISUAL_LINE mode on V', () => {
+      const state = createState(['line 1', 'line 2'], 0, 0);
+      const next = handleKey(state, 'V');
+      expect(next.mode).toBe('VISUAL_LINE');
+      expect(next.visualAnchor).toEqual({ line: 0, col: 0 });
+    });
+
+    it('switches between VISUAL and VISUAL_LINE', () => {
+      let state = createState(['hello'], 0, 0);
+      state = handleKey(state, 'v');
+      expect(state.mode).toBe('VISUAL');
+      state = handleKey(state, 'V');
+      expect(state.mode).toBe('VISUAL_LINE');
+      state = handleKey(state, 'v');
+      expect(state.mode).toBe('VISUAL');
+    });
+  });
+
+  describe('Deleting visual selections (d or x)', () => {
+    it('deletes single-line character selection and copies to clipboard', () => {
+      let state = createState(['start [TARGET] end'], 0, 6); // on '['
+      state = handleKey(state, 'v');
+      // move to ']'
+      for (let i = 0; i < 7; i++) {
+        state = handleKey(state, 'l');
+      }
+      expect(state.cursor).toEqual({ line: 0, col: 13 });
+
+      // delete selection
+      state = handleKey(state, 'd');
+      expect(state.lines).toEqual(['start  end']);
+      expect(state.mode).toBe('NORMAL');
+      expect(state.cursor).toEqual({ line: 0, col: 6 });
+      expect(state.clipboard).toEqual({
+        type: 'text',
+        content: '[TARGET]',
+      });
+
+      // undo restores it
+      state = handleKey(state, 'u');
+      expect(state.lines).toEqual(['start [TARGET] end']);
+    });
+
+    it('deletes multi-line selection in VISUAL_LINE mode', () => {
+      let state = createState(['first', 'second', 'third', 'fourth'], 1, 0);
+      state = handleKey(state, 'V');
+      state = handleKey(state, 'j'); // selects line 1 and line 2
+
+      state = handleKey(state, 'd');
+      expect(state.lines).toEqual(['first', 'fourth']);
+      expect(state.mode).toBe('NORMAL');
+      expect(state.clipboard?.type).toBe('line');
+      expect(state.clipboard?.content).toBe('second\nthird');
+    });
+
+    it('deletes multi-line character selection in VISUAL mode', () => {
+      let state = createState(['hello world', 'goodbye moon'], 0, 6); // 'w'
+      state = handleKey(state, 'v');
+      state = handleKey(state, 'j'); // move down to line 1, col 6 ('e')
+
+      state = handleKey(state, 'd');
+      // 'hello ' + ' moon'
+      expect(state.lines).toEqual(['hello  moon']);
+      expect(state.mode).toBe('NORMAL');
+    });
+  });
+
+  describe('Yanking visual selections (y)', () => {
+    it('yanks selected text without modifying buffer and allows pasting', () => {
+      let state = createState(['copy this word!'], 0, 5); // on 't'
+      state = handleKey(state, 'v');
+      state = handleKey(state, 'e'); // end of 'this' (col 8)
+
+      state = handleKey(state, 'y');
+      expect(state.lines).toEqual(['copy this word!']); // unchanged
+      expect(state.mode).toBe('NORMAL');
+      expect(state.clipboard).toEqual({
+        type: 'text',
+        content: 'this',
+      });
+
+      // paste at end of line
+      state = handleKey(state, '$');
+      state = handleKey(state, 'p');
+      expect(state.lines).toEqual(['copy this word!this']);
+    });
+  });
+});

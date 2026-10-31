@@ -22,6 +22,10 @@ import {
   redo,
   pushUndoSnapshot,
 } from './operators';
+import {
+  deleteVisualSelection,
+  yankVisualSelection,
+} from './visual';
 
 /**
  * Vim 키 입력 처리 순수 함수: (state, key) => newState
@@ -31,11 +35,183 @@ export function handleKey(state: VimEditorState, key: string): VimEditorState {
     return handleInsertModeKey(state, key);
   }
 
+  if (state.mode === 'VISUAL' || state.mode === 'VISUAL_LINE') {
+    return handleVisualModeKey(state, key);
+  }
+
   if (state.mode === 'NORMAL') {
     return handleNormalModeKey(state, key);
   }
 
   return state;
+}
+
+/**
+ * VISUAL / VISUAL_LINE 모드 키 입력 처리
+ */
+function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState {
+  if (key === 'Escape') {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      pendingKeys: undefined,
+    };
+  }
+
+  // 'v': VISUAL 모드 토글 또는 전환
+  if (key === 'v') {
+    if (state.mode === 'VISUAL') {
+      return {
+        ...state,
+        mode: 'NORMAL',
+        visualAnchor: undefined,
+        pendingKeys: undefined,
+      };
+    }
+    return {
+      ...state,
+      mode: 'VISUAL',
+      pendingKeys: undefined,
+    };
+  }
+
+  // 'V': VISUAL_LINE 모드 토글 또는 전환
+  if (key === 'V') {
+    if (state.mode === 'VISUAL_LINE') {
+      return {
+        ...state,
+        mode: 'NORMAL',
+        visualAnchor: undefined,
+        pendingKeys: undefined,
+      };
+    }
+    return {
+      ...state,
+      mode: 'VISUAL_LINE',
+      pendingKeys: undefined,
+    };
+  }
+
+  // 선택 영역 삭제 (d / x)
+  if (key === 'd' || key === 'x') {
+    return deleteVisualSelection(state);
+  }
+
+  // 선택 영역 복사 (y)
+  if (key === 'y') {
+    return yankVisualSelection(state);
+  }
+
+  // VISUAL 모드 내 커서 이동 (모션 평가)
+  const motionResult = evaluateMotion(
+    state.lines,
+    state.cursor,
+    key,
+    state.pendingKeys
+  );
+
+  if (motionResult) {
+    return {
+      ...state,
+      cursor: motionResult.cursor,
+      pendingKeys: motionResult.pendingKeys,
+    };
+  }
+
+  return state;
+}
+
+/**
+ * 모션 키 평가 순수 헬퍼 (NORMAL 및 VISUAL 모드 공통 사용)
+ */
+function evaluateMotion(
+  lines: string[],
+  cursor: { line: number; col: number },
+  key: string,
+  pendingKeys?: string
+): { cursor: { line: number; col: number }; pendingKeys?: string } | null {
+  if (pendingKeys === 'g') {
+    if (key === 'g') {
+      const nextCursor = moveToFirstLine(lines, cursor);
+      return {
+        cursor: clampCursor(lines, nextCursor, 'NORMAL'),
+        pendingKeys: undefined,
+      };
+    }
+  }
+
+  if (key === 'g') {
+    return {
+      cursor,
+      pendingKeys: 'g',
+    };
+  }
+
+  let nextCursor = { ...cursor };
+  let matched = true;
+
+  switch (key) {
+    case 'h':
+    case 'ArrowLeft':
+      nextCursor = moveLeft(lines, cursor);
+      break;
+
+    case 'l':
+    case 'ArrowRight':
+      nextCursor = moveRight(lines, cursor);
+      break;
+
+    case 'j':
+    case 'ArrowDown':
+      nextCursor = moveDown(lines, cursor);
+      break;
+
+    case 'k':
+    case 'ArrowUp':
+      nextCursor = moveUp(lines, cursor);
+      break;
+
+    case '0':
+      nextCursor = moveToLineStart(lines, cursor);
+      break;
+
+    case '$':
+      nextCursor = moveToLineEnd(lines, cursor);
+      break;
+
+    case '^':
+      nextCursor = moveToFirstNonBlank(lines, cursor);
+      break;
+
+    case 'G':
+      nextCursor = moveToLastLine(lines, cursor);
+      break;
+
+    case 'w':
+      nextCursor = moveToNextWord(lines, cursor);
+      break;
+
+    case 'b':
+      nextCursor = moveToPrevWord(lines, cursor);
+      break;
+
+    case 'e':
+      nextCursor = moveToWordEnd(lines, cursor);
+      break;
+
+    default:
+      matched = false;
+  }
+
+  if (!matched) {
+    return null;
+  }
+
+  return {
+    cursor: clampCursor(lines, nextCursor, 'NORMAL'),
+    pendingKeys: undefined,
+  };
 }
 
 /**
@@ -256,89 +432,44 @@ function handleNormalModeKey(state: VimEditorState, key: string): VimEditorState
     };
   }
 
-  // gg 시퀀스 처리
-  if (state.pendingKeys === 'g') {
-    if (key === 'g') {
-      const nextCursor = moveToFirstLine(state.lines, state.cursor);
-      return {
-        ...state,
-        cursor: clampCursor(state.lines, nextCursor, 'NORMAL'),
-        pendingKeys: undefined,
-      };
-    }
-    // 'g' 다음에 다른 키가 오면 pendingKeys를 취소하고 아래에서 해당 키를 정상 평가
-  }
-
-  // 'g' 첫 입력 시 대기
-  if (key === 'g') {
+  // 'v': 문자 단위 VISUAL 모드 진입
+  if (key === 'v') {
     return {
       ...state,
-      pendingKeys: 'g',
+      mode: 'VISUAL',
+      visualAnchor: { ...state.cursor },
+      pendingKeys: undefined,
     };
   }
 
-  let nextCursor = { ...state.cursor };
+  // 'V': 행 단위 VISUAL_LINE 모드 진입
+  if (key === 'V') {
+    return {
+      ...state,
+      mode: 'VISUAL_LINE',
+      visualAnchor: { ...state.cursor },
+      pendingKeys: undefined,
+    };
+  }
 
-  switch (key) {
-    case 'h':
-    case 'ArrowLeft':
-      nextCursor = moveLeft(state.lines, state.cursor);
-      break;
+  // 모션 평가
+  const motionResult = evaluateMotion(
+    state.lines,
+    state.cursor,
+    key,
+    state.pendingKeys
+  );
 
-    case 'l':
-    case 'ArrowRight':
-      nextCursor = moveRight(state.lines, state.cursor);
-      break;
-
-    case 'j':
-    case 'ArrowDown':
-      nextCursor = moveDown(state.lines, state.cursor);
-      break;
-
-    case 'k':
-    case 'ArrowUp':
-      nextCursor = moveUp(state.lines, state.cursor);
-      break;
-
-    case '0':
-      nextCursor = moveToLineStart(state.lines, state.cursor);
-      break;
-
-    case '$':
-      nextCursor = moveToLineEnd(state.lines, state.cursor);
-      break;
-
-    case '^':
-      nextCursor = moveToFirstNonBlank(state.lines, state.cursor);
-      break;
-
-    case 'G':
-      nextCursor = moveToLastLine(state.lines, state.cursor);
-      break;
-
-    case 'w':
-      nextCursor = moveToNextWord(state.lines, state.cursor);
-      break;
-
-    case 'b':
-      nextCursor = moveToPrevWord(state.lines, state.cursor);
-      break;
-
-    case 'e':
-      nextCursor = moveToWordEnd(state.lines, state.cursor);
-      break;
-
-    default:
-      // 지원하지 않는 키는 상태를 유지
-      return {
-        ...state,
-        pendingKeys: undefined,
-      };
+  if (motionResult) {
+    return {
+      ...state,
+      cursor: motionResult.cursor,
+      pendingKeys: motionResult.pendingKeys,
+    };
   }
 
   return {
     ...state,
-    cursor: clampCursor(state.lines, nextCursor, 'NORMAL'),
     pendingKeys: undefined,
   };
 }

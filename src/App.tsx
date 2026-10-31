@@ -93,6 +93,7 @@ export function App() {
         <span className="cheat-item"><code>i a</code> 입력 진입</span>
         <span className="cheat-item"><code>Esc</code> 일반 모드</span>
         <span className="cheat-item"><code>x</code> 글자 삭제</span>
+        <span className="cheat-item"><code>v / V</code> 영역 선택(비주얼)</span>
         <span className="cheat-item"><code>dd dw</code> 줄/단어 삭제</span>
         <span className="cheat-item"><code>p</code> 붙여넣기</span>
         <span className="cheat-item"><code>u / Ctrl-r</code> 실행취소/다시실행</span>
@@ -112,6 +113,7 @@ export function App() {
           cursor={editorState.cursor}
           mode={editorState.mode}
           targetPosition={currentMission.targetCursor}
+          visualAnchor={editorState.visualAnchor}
         />
         <StatusBar
           mode={editorState.mode}
