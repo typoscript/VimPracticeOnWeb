@@ -1,4 +1,4 @@
-export type VimMode = 'NORMAL' | 'INSERT' | 'VISUAL' | 'VISUAL_LINE' | 'COMMAND';
+export type VimMode = 'NORMAL' | 'INSERT' | 'VISUAL' | 'VISUAL_LINE' | 'COMMAND' | 'SEARCH';
 
 export interface CursorPosition {
   line: number; // 0-indexed 줄 번호
@@ -15,6 +15,12 @@ export interface StateSnapshot {
   cursor: CursorPosition;
 }
 
+export interface SearchMatch {
+  line: number;
+  col: number;
+  length: number;
+}
+
 export interface VimEditorState {
   lines: string[];
   cursor: CursorPosition;
@@ -28,4 +34,10 @@ export interface VimEditorState {
   lastChangeKeys?: string[];
   /** 현재 진행 중인 변경 명령어 키 시퀀스 버퍼 */
   currentChangeKeys?: string[];
+  /** 커맨드라인(:) 또는 검색(/) 입력 버퍼 */
+  commandBuffer?: string;
+  /** 커맨드라인 종류 (':' | '/') */
+  commandType?: ':' | '/';
+  /** 마지막 검색어 ('n', 'N', '*' 재검색용) */
+  lastSearchQuery?: string;
 }

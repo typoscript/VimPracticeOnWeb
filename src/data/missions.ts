@@ -269,4 +269,46 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 16,
+    title: '레슨 16: 키워드 검색과 점프 (/, n, N, *)',
+    description: '/target을 입력하고 Enter를 눌러 첫 번째 target으로 점프한 뒤, n을 눌러 마지막 목표 지점인 [FINAL_TARGET]으로 이동하세요.',
+    hint: '/target 입력 후 Enter를 치고, n 키를 두 번 눌러 마지막 [FINAL_TARGET] 위치로 이동하세요.',
+    par: 10,
+    initialLines: [
+      'First line with target item.',
+      'Second line without any match.',
+      'Third line has another target here.',
+      'Fourth line reaches the [FINAL_TARGET]!',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    targetCursor: { line: 3, col: 31 },
+    checkComplete: (state) => {
+      return (
+        state.cursor.line === 3 &&
+        state.cursor.col >= 24 &&
+        state.cursor.col <= 37
+      );
+    },
+  },
+  {
+    id: 17,
+    title: '레슨 17: 커맨드라인 일괄 치환 (:%s/old/new/g)',
+    description: ':%s/TODO/DONE/g 명령어를 입력하고 Enter를 눌러 버퍼 안의 모든 "TODO"를 "DONE"으로 일괄 치환하세요.',
+    hint: ':%s/TODO/DONE/g 입력 후 Enter를 누르면 문서 전체의 TODO가 DONE으로 한 번에 바뀝니다.',
+    par: 16,
+    initialLines: [
+      '1. TODO: Fix authentication bug',
+      '2. TODO: Implement search feature',
+      '3. TODO: Write comprehensive tests',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        !state.lines.some((l) => l.includes('TODO')) &&
+        state.lines.every((l) => l.includes('DONE'))
+      );
+    },
+  },
 ];

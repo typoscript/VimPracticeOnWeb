@@ -6,7 +6,14 @@
 
 ## ✨ 현재 지원하는 기능 (Features)
 
-### 1. 줄 내 문자 탐색 & 모션 (Navigation & Character Search)
+### 1. 키워드 검색 & 줄 내 탐색 (Search & Navigation)
+* **버퍼 내 키워드 검색 (`/`, `n`, `N`, `*`)**:
+  * `/`: 하단 검색 프롬프트(`/검색어`) 활성화
+  * **실시간 매칭 하이라이트 (Incremental Search)**: 검색어 타이핑 중 버퍼 내 모든 일치 항목을 노란색 계열 배경(`.search-match`)으로 실시간 시각화
+  * `Enter`: 첫 번째 검색 매칭 위치로 커서 이동 후 NORMAL 모드 복귀 (`Esc`로 검색 취소)
+  * `n`: 다음 일치 위치로 순환(Wrap-around) 점프
+  * `N`: 이전 일치 위치로 역순환 점프
+  * `*`: 현재 커서 아래의 단어를 즉시 검색어로 등록하고 다음 일치 항목으로 바로 점프
 * **줄 내 문자 즉시 탐색 (`f`, `F`, `t`, `T`)**:
   * `f{char}`: 현재 줄에서 오른쪽 방향으로 `{char}` 문자를 찾아 즉시 커서 이동
   * `F{char}`: 현재 줄에서 왼쪽 방향으로 `{char}` 문자를 찾아 즉시 커서 이동
@@ -33,7 +40,18 @@
   * `gg`: 버퍼의 첫 번째 줄로 이동 (2타 입력 버퍼 처리)
   * `G`: 버퍼의 마지막 줄로 이동
 
-### 2. 텍스트 객체 (Text Objects - Inner)
+### 2. 커맨드라인 모드 (`:`) & 치환 (Command-Line & Substitution)
+* **하단 커맨드라인 프롬프트 (`:`)**:
+  * NORMAL 모드에서 `:` 입력 시 상태바에 커맨드 입력 프롬프트 활성화
+  * `Esc` 또는 빈 상태에서 `Backspace` 입력 시 안전하게 취소 및 복귀
+* **줄 번호 즉시 이동 (`:[숫자]`)**:
+  * `:[숫자]` (예: `:10`, `:25`): 입력 후 `Enter` 시 해당 라인 번호(1-indexed)로 커서 즉시 점프
+* **문자열 치환 (Substitution)**:
+  * `:%s/old/new/g`: 전체 버퍼에서 `old` 문자열을 찾아 `new` 문자열로 일괄 치환
+  * `:s/old/new/g`: 현재 커서가 위치한 줄에서 일괄 치환
+  * 모든 치환 동작 시 실행 취소(Undo) 히스토리 스택 자동 저장
+
+### 3. 텍스트 객체 (Text Objects - Inner)
 * **`iw` (단어 내부)**:
   * `diw`: 커서 위치 단어 삭제 후 클립보드 보관
   * `ciw`: 단어 삭제 후 즉시 INSERT 모드 진입
@@ -48,14 +66,14 @@
   * `ci(`: 소괄호 내부 내용 삭제 후 INSERT 모드 진입
   * `yi(`: 소괄호 내부 내용 복사
 
-### 3. 직전 변경 반복 (`.` Dot Repeat)
+### 4. 직전 변경 반복 (`.` Dot Repeat)
 * **마지막 변경 시퀀스 영구 재생**:
   * 버퍼를 수정한 마지막 명령 시퀀스를 추적 및 엔진 상태에 보존
   * 단독 명령: `x`, `[count]x`, `dd`, `dw`, `df{char}`, `diw`, `di"`, `r{char}`, `p` 등
   * 복합 입력 세션: `i...<Esc>`, `a...<Esc>`, `cw...<Esc>`, `ciw...<Esc>`, `o...<Esc>` 등에서 입력한 텍스트 전체를 기억
   * NORMAL 모드에서 `.` 입력 시 현재 커서 위치에서 직전 편집 작업을 그대로 재실행
 
-### 4. INSERT 모드 & 텍스트 편집 (Editing)
+### 5. INSERT 모드 & 텍스트 편집 (Editing)
 * **모드 전환 (NORMAL ➔ INSERT)**:
   * `i`: 현재 커서 위치에서 INSERT 모드 진입
   * `a`: 현재 커서 다음 칸에서 INSERT 모드 진입 (줄 끝 너머 추가 가능)
@@ -71,7 +89,7 @@
   * `Tab`: 2칸 공백(`  `) 들여쓰기 삽입
   * INSERT 모드 내 방향키(`ArrowLeft`, `ArrowRight`, `ArrowUp`, `ArrowDown`) 이동 지원
 
-### 5. 수정 연산자 & 문자 교체 (Change & Replace)
+### 6. 수정 연산자 & 문자 교체 (Change & Replace)
 * **수정 (`c`)**:
   * `cw` / `c[count]w` / `[count]cw`: 커서 위치부터 단어 끝까지 삭제 후 클립보드에 보관하고 즉시 INSERT 모드 진입
   * `cc` / `[count]cc`: 현재 줄 전체(또는 지정된 줄 수)를 비우고 INSERT 모드 진입
@@ -81,7 +99,7 @@
   * `[count]r{char}`: 커서 위치부터 `count`개의 글자를 `{char}`로 일괄 교체 (예: `3rx` ➔ `xxx`)
   * 교체 대기 중 `Esc`를 누르면 취소되고 NORMAL 모드 유지
 
-### 6. VISUAL 모드 (Selection & Clipboard)
+### 7. VISUAL 모드 (Selection & Clipboard)
 * **모드 전환**:
   * `v`: 문자 단위 비주얼 모드 진입 및 앵커 지정
   * `V`: 행 단위 비주얼 모드 진입
@@ -92,7 +110,7 @@
   * `d` 또는 `x`: 선택된 블록(단일 줄, 여러 줄, 행 단위) 일괄 삭제
   * `y` (Yank): 선택된 블록을 클립보드로 복사한 뒤 `p`로 붙여넣기
 
-### 7. 고급 편집 연산자 & 히스토리 (Operators & History)
+### 8. 고급 편집 연산자 & 히스토리 (Operators & History)
 * **줄 삭제 (`dd` / `[count]dd`)**: 현재 커서 행(또는 여러 행) 삭제 및 클립보드 보관
 * **단어 삭제 (`dw` / `d[count]w` / `[count]dw`)**: 현재 커서부터 `count`개 단어 삭제
 * **글자 삭제 (`x` / `[count]x`)**: 현재 위치부터 `count`개 글자 삭제
@@ -100,7 +118,7 @@
 * **실행 취소 (`u`)**: 직전 변경사항 되돌리기 (새로 추가된 `o`, `O`, `cw`, `cc`, `C`, `r` 및 INSERT 세션 완벽 지원)
 * **다시 실행 (`Ctrl + r`)**: 취소한 변경사항 재적용 (Redo 스택)
 
-### 8. 에디터 설정 및 UI 편의 기능 (Interface & Preferences)
+### 9. 에디터 설정 및 UI 편의 기능 (Interface & Preferences)
 * **상대 라인 번호 (Relative Line Numbers)**:
   * 에디터 상단 `relativenumber: ON/OFF` 토글 버튼 지원
   * 활성화 시 커서 줄은 실제 줄 번호, 나머지 줄은 현재 줄과의 상대 거리(`Math.abs(lineIdx - cursor.line)`)를 표시하여 `5j`, `3k` 등의 이동을 직관적으로 보조
@@ -108,22 +126,23 @@
 * **에디터 뷰**:
   * 1-indexed 라인 번호 Gutter 렌더링
   * 현재 위치한 줄 활성 하이라이트 (`active-row`)
-  * 모드별 커서 스타일 (NORMAL: 블록 커서, INSERT: 세로선, VISUAL: 보라색 블록)
+  * 모드별 커서 스타일 (NORMAL: 블록 커서, INSERT: 세로선, VISUAL: 보라색 블록, COMMAND/SEARCH: 전용 블록)
   * 목표 지점 노란 점선 마커 (`.target-marker`) 하이라이트
 * **상태바 (Status Bar)**:
-  * 실시간 모드 배지 (`NORMAL`, `INSERT`, `VISUAL`, `VISUAL LINE`)
+  * 실시간 모드 배지 (`NORMAL`, `INSERT`, `VISUAL`, `VISUAL LINE`, `COMMAND`, `SEARCH`)
+  * 커맨드/검색 모드 진입 시 실시간 프롬프트(`:`, `/`) 및 깜빡이는 커서 렌더링
   * 현재 편집 중인 파일명 표시 (`lesson_N.txt` / `sandbox.ts`)
   * 대기 중인 키 입력 실시간 표시 (`pendingKeys`, 예: `g`, `d`, `c`, `r`, `f`, `di`)
   * 커서 현재 위치 표시 (`줄:열`, 1-indexed)
 * **실시간 키캐스터 (Keycaster)**:
   * 최근 입력한 8개의 키를 3D 키캡 모양 배지로 상태바 상단에 실시간 시각화
 
-### 9. 게임화, 코칭 및 진도 관리 시스템 (Gamification & Storage)
+### 10. 게임화, 코칭 및 진도 관리 시스템 (Gamification & Storage)
 * **LocalStorage 진도 및 최고 기록 영구 저장**:
   * 레슨 클리어 시 달성한 최고 별점(1~3성)과 최저 타수 기록을 `localStorage`에 자동 갱신 저장
   * 브라우저를 새로고침하거나 재방문해도 학습 진도 및 기록 유지
 * **레슨 선택 모달 (Lesson Selector)**:
-  * 레슨 1~15의 전체 목록과 진행도(완료 수, 총 별점 획득 현황)를 한눈에 확인
+  * 레슨 1~17의 전체 목록과 진행도(완료 수, 총 별점 획득 현황)를 한눈에 확인
   * 레슨별 달성 별점 및 최고 타수(Par) 확인 후 원하는 레슨으로 즉시 이동
 * **자유 연습장 (Sandbox Mode)**:
   * 상단 탭으로 튜토리얼 코스와 자유 연습장을 자유롭게 전환
@@ -159,13 +178,15 @@
 13. **레슨 13: 줄 내 문자 탐색과 삭제 (f, df))**
 14. **레슨 14: 텍스트 객체 내부 수정과 삭제 (ciw, di")**
 15. **레슨 15: 점(.) 명령어로 반복 편집 자동화하기**
+16. **레슨 16: 키워드 검색과 점프 (/, n, N, *)**
+17. **레슨 17: 커맨드라인 일괄 치환 (:%s/old/new/g)**
 
 ---
 
 ## 🛠️ 기술 스택 (Tech Stack)
 
 * **Frontend**: React 19, TypeScript, Vite
-* **Testing**: Vitest, React Testing Library (193개 단위/통합 테스트 100% 통과)
+* **Testing**: Vitest, React Testing Library (217개 단위/통합 테스트 100% 통과)
 * **Styling**: Modern CSS (Catppuccin Macchiato 테마 기반)
 * **Storage**: Browser LocalStorage API
 
@@ -197,15 +218,15 @@ npm run build
 
 ## 🗺️ 로드맵 (Upcoming Features)
 
-- [x] **인터랙티브 미션/튜토리얼 코스**: 단계별 과제 수행 및 목표 도달 감지 UI (레슨 1~15 수록)
+- [x] **인터랙티브 미션/튜토리얼 코스**: 단계별 과제 수행 및 목표 도달 감지 UI (레슨 1~17 수록)
 - [x] **고급 편집 연산자**: 한 줄 삭제(`dd`), 단어 삭제(`dw`), 수정(`cw`, `cc`, `C`), 문자 교체(`r`), 붙여넣기(`p`)
 - [x] **줄 내 문자 탐색**: `f`, `F`, `t`, `T` 및 연산자 결합(`df)`, `ct"`, `yf,`)
 - [x] **텍스트 객체**: `iw`, `i"`, `i(` 내부 수정 및 삭제(`ciw`, `di"`, `viw`, `yi(`)
 - [x] **직전 변경 반복**: 점(`.`) 명령어로 마지막 편집 시퀀스 재실행
+- [x] **키워드 검색 및 하이라이트**: `/` 검색, `n`, `N` 순환 이동, `*` 커서 단어 추출
+- [x] **커맨드라인 모드**: `:[숫자]` 줄 이동, `:s`, `:%s/old/new/g` 일괄 치환
 - [x] **실행 취소/다시 실행**: Undo(`u`), Redo(`Ctrl + r`) 히스토리 스택
 - [x] **VISUAL 모드**: 문자/줄 단위 블록 선택(`v`, `V`) 및 일괄 삭제/복사
 - [x] **자유 연습장 (Sandbox Mode)** 및 **레슨 선택 모달**
 - [x] **상대 라인 번호 (relativenumber)** 토글 기능
 - [x] **LocalStorage 기반 진도 및 기록 영구 저장**
-- [ ] **검색 및 치환**: 버퍼 내 단어 검색(`/`, `?`, `n`, `N`)
-- [ ] **COMMAND 모드**: Ex 명령줄(`:w`, `:help` 등) 지원

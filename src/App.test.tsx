@@ -232,4 +232,48 @@ describe('App Component with Keyboard Navigation', () => {
     expect(progress[1].completed).toBe(true);
     expect(progress[1].minKeystrokes).toBe(15);
   });
+
+  it('/ 키로 검색 모드에 진입하여 프롬프트를 표시하고 일치 위치로 점프한다', () => {
+    render(<App />);
+
+    // / 입력 -> 검색 프롬프트 활성화
+    fireEvent.keyDown(window, { key: '/' });
+    const prompt = screen.getByTestId('commandline-prompt');
+    expect(prompt).toBeInTheDocument();
+    expect(prompt).toHaveTextContent('/');
+
+    // 'T', 'A', 'R', 'G', 'E', 'T' 입력
+    for (const ch of 'TARGET') {
+      fireEvent.keyDown(window, { key: ch });
+    }
+    expect(prompt).toHaveTextContent('/TARGET');
+
+    // 에디터 내 검색어 하이라이트 확인
+    const matches = screen.getAllByTestId('search-match');
+    expect(matches.length).toBeGreaterThan(0);
+
+    // Enter 입력 -> NORMAL 모드로 복귀 및 목표 위치로 점프
+    fireEvent.keyDown(window, { key: 'Enter' });
+    expect(screen.queryByTestId('commandline-prompt')).not.toBeInTheDocument();
+    expect(screen.getByTestId('status-mode')).toHaveTextContent('NORMAL');
+    expect(screen.getByTestId('status-cursor-pos')).toHaveTextContent('3:15');
+  });
+
+  it(': 키로 커맨드라인 모드에 진입하여 줄 번호로 점프한다', () => {
+    render(<App />);
+
+    // : 입력 -> 커맨드라인 활성화
+    fireEvent.keyDown(window, { key: ':' });
+    const prompt = screen.getByTestId('commandline-prompt');
+    expect(prompt).toBeInTheDocument();
+    expect(prompt).toHaveTextContent(':');
+
+    // 2 입력 후 Enter -> 2행으로 점프
+    fireEvent.keyDown(window, { key: '2' });
+    expect(prompt).toHaveTextContent(':2');
+    fireEvent.keyDown(window, { key: 'Enter' });
+
+    expect(screen.queryByTestId('commandline-prompt')).not.toBeInTheDocument();
+    expect(screen.getByTestId('status-cursor-pos')).toHaveTextContent('2:1');
+  });
 });

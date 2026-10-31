@@ -56,9 +56,44 @@
   color: #11111b;
 }
 
+.mode-search {
+  background-color: #f9e2af;
+  color: #11111b;
+}
+
 .status-filename {
   color: #a6adc8;
   font-size: 12px;
+}
+
+/* 커맨드라인 및 검색어 프롬프트 */
+.commandline-prompt {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-family: inherit;
+  font-size: 13px;
+  color: #cdd6f4;
+}
+
+.prompt-prefix {
+  color: #f9e2af;
+  font-weight: 700;
+}
+
+.prompt-text {
+  color: #ffffff;
+}
+
+.prompt-cursor {
+  color: #89b4fa;
+  animation: promptBlink 1s step-end infinite;
+  font-weight: bold;
+}
+
+@keyframes promptBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
 }
 
 .status-bar-right {

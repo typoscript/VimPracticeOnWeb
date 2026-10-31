@@ -156,8 +156,8 @@ export function App() {
         return;
       }
 
-      // 브라우저 기본 스크롤, 포커스 이동 및 뒤로가기 방지
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Backspace', 'Tab'].includes(e.key)) {
+      // 브라우저 기본 스크롤, 포커스 이동, 검색창 및 뒤로가기 방지
+      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Backspace', 'Tab', '/'].includes(e.key)) {
         e.preventDefault();
       }
 
@@ -242,6 +242,8 @@ export function App() {
         <span className="cheat-item"><code>h j k l</code> 이동</span>
         <span className="cheat-item"><code>w b e</code> 단어 점프</span>
         <span className="cheat-item"><code>f F t T</code> 문자 탐색</span>
+        <span className="cheat-item"><code>/ n N *</code> 키워드 검색</span>
+        <span className="cheat-item"><code>: [숫자] / :s</code> 커맨드라인</span>
         <span className="cheat-item"><code>0 $ ^</code> 줄 이동</span>
         <span className="cheat-item"><code>i a I A o O</code> 입력 진입</span>
         <span className="cheat-item"><code>Esc</code> 일반 모드</span>
@@ -296,6 +298,11 @@ export function App() {
           targetPosition={currentTab === 'course' ? currentMission.targetCursor : undefined}
           visualAnchor={editorState.visualAnchor}
           relativeLineNumbers={relativeLineNumbers}
+          searchQuery={
+            editorState.mode === 'SEARCH'
+              ? editorState.commandBuffer
+              : editorState.lastSearchQuery
+          }
         />
         <Keycaster recentKeys={recentKeys} />
         <StatusBar
@@ -303,6 +310,8 @@ export function App() {
           cursor={editorState.cursor}
           filename={currentTab === 'course' ? `lesson_${currentMission.id}.txt` : 'sandbox.ts'}
           pendingKeys={editorState.pendingKeys}
+          commandType={editorState.commandType}
+          commandBuffer={editorState.commandBuffer}
         />
       </main>
 

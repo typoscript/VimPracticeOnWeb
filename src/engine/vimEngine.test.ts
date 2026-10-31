@@ -1268,3 +1268,99 @@ describe('Vim Engine - Dot Repeat (.)', () => {
     expect(state.lines[1]).toBe('func2;');
   });
 });
+
+describe('Vim Engine - Search Mode (/, n, N, *)', () => {
+  it('/ 검색어로 검색 후 Enter 시 첫 번째 매치로 점프한다', () => {
+    let state = createState(['const a = 1;', 'const b = 2;', 'const target = 3;'], 0, 0);
+
+    // / 입력 -> SEARCH 모드 진입
+    state = handleKey(state, '/');
+    expect(state.mode).toBe('SEARCH');
+    expect(state.commandBuffer).toBe('');
+
+    // 't', 'a', 'r', 'g', 'e', 't' 입력
+    for (const ch of 'target') {
+      state = handleKey(state, ch);
+    }
+    expect(state.commandBuffer).toBe('target');
+
+    // Enter 입력 -> NORMAL 모드로 복귀하고 2행 target 위치(col 6)로 점프
+    state = handleKey(state, 'Enter');
+    expect(state.mode).toBe('NORMAL');
+    expect(state.cursor).toEqual({ line: 2, col: 6 });
+    expect(state.lastSearchQuery).toBe('target');
+  });
+
+  it('n 및 N 키로 다음/이전 검색 위치로 순환 점프한다', () => {
+    let state = createState(
+      ['find match1 here', 'second match2 line', 'third match3 line'],
+      0,
+      0
+    );
+    // /match 검색
+    state = handleKey(state, '/');
+    for (const ch of 'match') state = handleKey(state, ch);
+    state = handleKey(state, 'Enter');
+    expect(state.cursor).toEqual({ line: 0, col: 5 });
+
+    // n -> 두 번째 매치 (line 1, col 7)
+    state = handleKey(state, 'n');
+    expect(state.cursor).toEqual({ line: 1, col: 7 });
+
+    // n -> 세 번째 매치 (line 2, col 6)
+    state = handleKey(state, 'n');
+    expect(state.cursor).toEqual({ line: 2, col: 6 });
+
+    // n -> 첫 번째 매치로 wrap-around 순환
+    state = handleKey(state, 'n');
+    expect(state.cursor).toEqual({ line: 0, col: 5 });
+
+    // N -> 이전(마지막) 매치로 역방향 wrap-around
+    state = handleKey(state, 'N');
+    expect(state.cursor).toEqual({ line: 2, col: 6 });
+  });
+
+  it('* 키로 현재 커서 위치의 단어를 즉시 검색하고 다음 위치로 점프한다', () => {
+    let state = createState(['apple and banana and apple again'], 0, 0); // 'apple' 위
+    state = handleKey(state, '*');
+    expect(state.lastSearchQuery).toBe('apple');
+    // 두 번째 'apple' 위치 (col 21)로 점프
+    expect(state.cursor).toEqual({ line: 0, col: 21 });
+  });
+
+  it('Escape로 검색 입력을 취소하고 NORMAL 모드로 복귀한다', () => {
+    let state = createState(['sample line'], 0, 0);
+    state = handleKey(state, '/');
+    state = handleKey(state, 'a');
+    expect(state.mode).toBe('SEARCH');
+
+    state = handleKey(state, 'Escape');
+    expect(state.mode).toBe('NORMAL');
+    expect(state.commandBuffer).toBeUndefined();
+  });
+});
+
+describe('Vim Engine - Command-Line Mode (:, substitution, line jumps)', () => {
+  it(':[숫자] 명령으로 원하는 줄로 즉시 이동한다', () => {
+    let state = createState(['line 1', 'line 2', 'line 3'], 0, 0);
+    state = handleKey(state, ':');
+    expect(state.mode).toBe('COMMAND');
+
+    state = handleKey(state, '3');
+    state = handleKey(state, 'Enter');
+    expect(state.mode).toBe('NORMAL');
+    expect(state.cursor.line).toBe(2);
+  });
+
+  it(':%s/old/new/g 명령으로 전체 버퍼 치환을 실행한다', () => {
+    let state = createState(['foo bar', 'foo baz'], 0, 0);
+    state = handleKey(state, ':');
+    for (const ch of '%s/foo/qux/g') {
+      state = handleKey(state, ch);
+    }
+    state = handleKey(state, 'Enter');
+
+    expect(state.mode).toBe('NORMAL');
+    expect(state.lines).toEqual(['qux bar', 'qux baz']);
+  });
+});

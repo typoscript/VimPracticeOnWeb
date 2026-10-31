@@ -134,4 +134,62 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     };
     expect(lesson15!.checkComplete(stateDone)).toBe(true);
   });
+
+  it('레슨 16 (키워드 검색과 점프) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson16 = MISSIONS.find((m) => m.id === 16);
+    expect(lesson16).toBeDefined();
+    expect(lesson16?.par).toBe(10);
+
+    const stateNotDone: VimEditorState = {
+      lines: [
+        'First line with target item.',
+        'Second line without any match.',
+        'Third line has another target here.',
+        'Fourth line reaches the [FINAL_TARGET]!',
+      ],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson16!.checkComplete(stateNotDone)).toBe(false);
+
+    const stateDone: VimEditorState = {
+      lines: [
+        'First line with target item.',
+        'Second line without any match.',
+        'Third line has another target here.',
+        'Fourth line reaches the [FINAL_TARGET]!',
+      ],
+      cursor: { line: 3, col: 31 },
+      mode: 'NORMAL',
+    };
+    expect(lesson16!.checkComplete(stateDone)).toBe(true);
+  });
+
+  it('레슨 17 (커맨드라인 일괄 치환) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson17 = MISSIONS.find((m) => m.id === 17);
+    expect(lesson17).toBeDefined();
+    expect(lesson17?.par).toBe(16);
+
+    const stateNotDone: VimEditorState = {
+      lines: [
+        '1. TODO: Fix authentication bug',
+        '2. TODO: Implement search feature',
+        '3. TODO: Write comprehensive tests',
+      ],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson17!.checkComplete(stateNotDone)).toBe(false);
+
+    const stateDone: VimEditorState = {
+      lines: [
+        '1. DONE: Fix authentication bug',
+        '2. DONE: Implement search feature',
+        '3. DONE: Write comprehensive tests',
+      ],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson17!.checkComplete(stateDone)).toBe(true);
+  });
 });

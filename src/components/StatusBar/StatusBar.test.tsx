@@ -23,9 +23,30 @@ describe('StatusBar Component', () => {
     rerender(<StatusBar mode="VISUAL" cursor={{ line: 0, col: 0 }} />);
     expect(screen.getByTestId('status-mode')).toHaveTextContent('VISUAL');
     expect(screen.getByTestId('status-mode')).toHaveClass('mode-visual');
+  });
 
-    rerender(<StatusBar mode="COMMAND" cursor={{ line: 0, col: 0 }} />);
-    expect(screen.getByTestId('status-mode')).toHaveTextContent('COMMAND');
-    expect(screen.getByTestId('status-mode')).toHaveClass('mode-command');
+  it('COMMAND 모드 또는 SEARCH 모드일 때 커맨드라인 프롬프트를 렌더링한다', () => {
+    const { rerender } = render(
+      <StatusBar
+        mode="COMMAND"
+        cursor={{ line: 0, col: 0 }}
+        commandType=":"
+        commandBuffer="10"
+      />
+    );
+
+    const prompt = screen.getByTestId('commandline-prompt');
+    expect(prompt).toBeInTheDocument();
+    expect(prompt).toHaveTextContent(':10');
+
+    rerender(
+      <StatusBar
+        mode="SEARCH"
+        cursor={{ line: 0, col: 0 }}
+        commandType="/"
+        commandBuffer="target"
+      />
+    );
+    expect(screen.getByTestId('commandline-prompt')).toHaveTextContent('/target');
   });
 });

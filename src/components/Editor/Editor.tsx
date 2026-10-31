@@ -1,6 +1,7 @@
 import React from 'react';
-import { CursorPosition, VimMode } from '../../types/vim';
+import { CursorPosition, VimMode, SearchMatch } from '../../types/vim';
 import { isPositionSelected } from '../../engine/visual';
+import { findMatches } from '../../engine/search';
 import './Editor.css';
 
 export interface EditorProps {
@@ -11,6 +12,8 @@ export interface EditorProps {
   visualAnchor?: CursorPosition;
   /** 상대 라인 번호 (relativenumber) 활성화 여부 */
   relativeLineNumbers?: boolean;
+  /** 현재 검색어 (실시간 하이라이트용) */
+  searchQuery?: string;
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -20,7 +23,13 @@ export const Editor: React.FC<EditorProps> = ({
   targetPosition,
   visualAnchor,
   relativeLineNumbers = false,
+  searchQuery,
 }) => {
+  // 전체 검색 일치 항목 수집
+  const allMatches = searchQuery && searchQuery.length > 0
+    ? findMatches(lines, searchQuery)
+    : [];
+
   return (
     <div className="editor-container" data-testid="editor-container">
       <div className="editor-scroller">
@@ -37,6 +46,8 @@ export const Editor: React.FC<EditorProps> = ({
                 ? lineIdx + 1
                 : Math.abs(lineIdx - cursor.line)
               : lineIdx + 1;
+
+            const lineMatches = allMatches.filter((m) => m.line === lineIdx);
 
             return (
               <div
@@ -59,6 +70,7 @@ export const Editor: React.FC<EditorProps> = ({
                     mode,
                     targetCol,
                     visualAnchor,
+                    lineMatches,
                   })}
                 </div>
               </div>
@@ -77,14 +89,15 @@ interface RenderLineOptions {
   mode: VimMode;
   targetCol: number | null;
   visualAnchor?: CursorPosition;
+  lineMatches: SearchMatch[];
 }
 
 function renderLineContent(opts: RenderLineOptions): React.ReactNode {
-  const { text, lineIdx, cursor, mode, targetCol, visualAnchor } = opts;
+  const { text, lineIdx, cursor, mode, targetCol, visualAnchor, lineMatches } = opts;
   const isCursorLine = cursor.line === lineIdx;
   const cursorCol = isCursorLine ? cursor.col : null;
 
-  // 빈 줄이면서 커서와 타겟, 비주얼 선택이 모두 없는 경우
+  // 빈 줄이면서 커서와 타겟, 비주얼 선택, 검색 매칭이 모두 없는 경우
   const hasVisual =
     (mode === 'VISUAL' || mode === 'VISUAL_LINE') && !!visualAnchor;
   const isLineInVisualRange =
@@ -92,16 +105,29 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     lineIdx >= Math.min(visualAnchor.line, cursor.line) &&
     lineIdx <= Math.max(visualAnchor.line, cursor.line);
 
-  if (text.length === 0 && cursorCol === null && targetCol === null && !isLineInVisualRange) {
+  const hasSearchMatches = lineMatches.length > 0;
+
+  if (
+    text.length === 0 &&
+    cursorCol === null &&
+    targetCol === null &&
+    !isLineInVisualRange &&
+    !hasSearchMatches
+  ) {
     return <span className="empty-char">&nbsp;</span>;
   }
 
-  // 커서, 타겟, 비주얼 선택이 모두 없는 일반 줄은 원본 텍스트 그대로 반환
-  if (cursorCol === null && targetCol === null && !isLineInVisualRange) {
+  // 커서, 타겟, 비주얼 선택, 검색 매칭이 모두 없는 일반 줄은 원본 텍스트 그대로 반환
+  if (
+    cursorCol === null &&
+    targetCol === null &&
+    !isLineInVisualRange &&
+    !hasSearchMatches
+  ) {
     return text;
   }
 
-  // 커서 또는 타겟, 비주얼 선택이 있는 줄 처리
+  // 커서 또는 타겟, 비주얼 선택, 검색 매치가 있는 줄 처리
   const chars = text.length === 0 ? [' '] : text.split('');
   const maxIdx = Math.max(
     chars.length - 1,
@@ -117,6 +143,9 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     const isSelected =
       hasVisual &&
       isPositionSelected(lineIdx, i, visualAnchor, cursor, mode);
+    const isSearchMatch = lineMatches.some(
+      (m) => i >= m.col && i < m.col + m.length
+    );
     const isTrailingCursor = isCursor && i >= text.length;
 
     // 빈 줄이거나 줄 끝 뒤의 가상 커서 위치에서는 공백 너비 유지를 위해 non-breaking space 사용
@@ -133,6 +162,10 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
       classNames += ' visual-selected';
     }
 
+    if (isSearchMatch) {
+      classNames += ' search-match';
+    }
+
     if (isTarget) {
       classNames += ' target-marker';
     }
@@ -146,6 +179,8 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
             ? 'vim-cursor'
             : isSelected
             ? 'visual-selected-char'
+            : isSearchMatch
+            ? 'search-match'
             : isTarget
             ? 'target-marker'
             : undefined

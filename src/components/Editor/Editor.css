@@ -84,6 +84,15 @@
   color: #ffffff !important;
 }
 
+/* 검색 일치 항목 하이라이트 (Incremental Search) */
+.search-match {
+  background-color: rgba(249, 226, 175, 0.45) !important;
+  color: #f9e2af !important;
+  border-bottom: 2px solid #f9e2af;
+  font-weight: 600;
+  border-radius: 1px;
+}
+
 /* NORMAL 모드: 블록 커서 */
 .cursor-normal {
   background-color: #a6e3a1;
@@ -109,6 +118,13 @@
 /* COMMAND 모드: 주황 블록 */
 .cursor-command {
   background-color: #fab387;
+  color: #11111b;
+  font-weight: bold;
+}
+
+/* SEARCH 모드: 노랑 블록 */
+.cursor-search {
+  background-color: #f9e2af;
   color: #11111b;
   font-weight: bold;
 }

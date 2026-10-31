@@ -43,6 +43,13 @@ import {
   executeTextObjectOperator,
   TextObjectType,
 } from './textObjects';
+import {
+  findMatches,
+  findNextMatch,
+  findPrevMatch,
+  getWordAtCursor,
+} from './search';
+import { executeCommandLine } from './commandLine';
 
 /**
  * 대기 중인 키(pendingKeys)에서 숫자 카운트와 연산자를 분해 파싱합니다.
@@ -92,6 +99,14 @@ export function handleKey(
   key: string,
   isReplayingDot = false
 ): VimEditorState {
+  if (state.mode === 'SEARCH') {
+    return handleSearchModeKey(state, key);
+  }
+
+  if (state.mode === 'COMMAND') {
+    return handleCommandLineModeKey(state, key);
+  }
+
   if (state.mode === 'INSERT') {
     return handleInsertModeKey(state, key, isReplayingDot);
   }
@@ -102,6 +117,120 @@ export function handleKey(
 
   if (state.mode === 'NORMAL') {
     return handleNormalModeKey(state, key, isReplayingDot);
+  }
+
+  return state;
+}
+
+/**
+ * SEARCH 모드(/) 키 입력 처리
+ */
+function handleSearchModeKey(state: VimEditorState, key: string): VimEditorState {
+  if (key === 'Escape') {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  if (key === 'Backspace') {
+    if (state.commandBuffer && state.commandBuffer.length > 0) {
+      return {
+        ...state,
+        commandBuffer: state.commandBuffer.slice(0, -1),
+      };
+    }
+    // 글자가 없는 상태에서 백스페이스 누르면 검색 취소
+    return {
+      ...state,
+      mode: 'NORMAL',
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  if (key === 'Enter') {
+    const query = state.commandBuffer ?? '';
+    if (query.length === 0) {
+      return {
+        ...state,
+        mode: 'NORMAL',
+        commandBuffer: undefined,
+        commandType: undefined,
+      };
+    }
+
+    const matches = findMatches(state.lines, query);
+    // 현재 커서 위치 또는 그 다음 위치의 매치로 이동
+    const targetMatch =
+      findNextMatch(matches, { line: state.cursor.line, col: state.cursor.col - 1 }) ??
+      matches[0];
+
+    const nextCursor = targetMatch
+      ? { line: targetMatch.line, col: targetMatch.col }
+      : state.cursor;
+
+    return {
+      ...state,
+      mode: 'NORMAL',
+      cursor: nextCursor,
+      lastSearchQuery: query,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 일반 타이핑 문자 누적
+  if (key.length === 1) {
+    return {
+      ...state,
+      commandBuffer: (state.commandBuffer ?? '') + key,
+    };
+  }
+
+  return state;
+}
+
+/**
+ * COMMAND 모드(:) 키 입력 처리
+ */
+function handleCommandLineModeKey(state: VimEditorState, key: string): VimEditorState {
+  if (key === 'Escape') {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  if (key === 'Backspace') {
+    if (state.commandBuffer && state.commandBuffer.length > 0) {
+      return {
+        ...state,
+        commandBuffer: state.commandBuffer.slice(0, -1),
+      };
+    }
+    return {
+      ...state,
+      mode: 'NORMAL',
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  if (key === 'Enter') {
+    return executeCommandLine(state, state.commandBuffer ?? '');
+  }
+
+  // 일반 타이핑 문자 누적
+  if (key.length === 1) {
+    return {
+      ...state,
+      commandBuffer: (state.commandBuffer ?? '') + key,
+    };
   }
 
   return state;
@@ -673,6 +802,76 @@ function handleNormalModeKey(
   }
 
   // 10. 단일 키 명령 및 모드 진입
+  // /: 검색 모드 진입
+  if (key === '/') {
+    return {
+      ...state,
+      mode: 'SEARCH',
+      commandType: '/',
+      commandBuffer: '',
+      pendingKeys: undefined,
+    };
+  }
+
+  // :: 커맨드라인 모드 진입
+  if (key === ':') {
+    return {
+      ...state,
+      mode: 'COMMAND',
+      commandType: ':',
+      commandBuffer: '',
+      pendingKeys: undefined,
+    };
+  }
+
+  // n: 다음 검색 결과로 점프
+  if (key === 'n') {
+    if (state.lastSearchQuery) {
+      const matches = findMatches(state.lines, state.lastSearchQuery);
+      const nextMatch = findNextMatch(matches, state.cursor);
+      if (nextMatch) {
+        return {
+          ...state,
+          cursor: { line: nextMatch.line, col: nextMatch.col },
+          pendingKeys: undefined,
+        };
+      }
+    }
+    return { ...state, pendingKeys: undefined };
+  }
+
+  // N: 이전 검색 결과로 점프
+  if (key === 'N') {
+    if (state.lastSearchQuery) {
+      const matches = findMatches(state.lines, state.lastSearchQuery);
+      const prevMatch = findPrevMatch(matches, state.cursor);
+      if (prevMatch) {
+        return {
+          ...state,
+          cursor: { line: prevMatch.line, col: prevMatch.col },
+          pendingKeys: undefined,
+        };
+      }
+    }
+    return { ...state, pendingKeys: undefined };
+  }
+
+  // *: 커서 아래 단어로 검색어 설정 후 다음 결과로 점프
+  if (key === '*') {
+    const word = getWordAtCursor(currentLine, state.cursor.col);
+    if (word) {
+      const matches = findMatches(state.lines, word);
+      const nextMatch = findNextMatch(matches, state.cursor);
+      return {
+        ...state,
+        cursor: nextMatch ? { line: nextMatch.line, col: nextMatch.col } : state.cursor,
+        lastSearchQuery: word,
+        pendingKeys: undefined,
+      };
+    }
+    return { ...state, pendingKeys: undefined };
+  }
+
   // 실행 취소 (Undo)
   if (key === 'u') {
     return undo(state);
