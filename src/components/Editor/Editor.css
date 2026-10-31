@@ -1,0 +1,125 @@
+.editor-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  width: 100%;
+  max-width: 960px;
+  background-color: #1e1e2e;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  border: 1px solid #313244;
+}
+
+.editor-scroller {
+  flex: 1;
+  overflow: auto;
+  min-height: 320px;
+  max-height: 60vh;
+  padding: 1rem 0;
+}
+
+.editor-lines {
+  display: flex;
+  flex-direction: column;
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.editor-row {
+  display: flex;
+  align-items: stretch;
+  min-height: 24px;
+  padding: 0 0.5rem;
+  transition: background-color 0.15s ease;
+}
+
+.editor-row.active-row {
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+.line-number {
+  width: 48px;
+  min-width: 48px;
+  padding-right: 14px;
+  text-align: right;
+  color: #585b70;
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.editor-row.active-row .line-number {
+  color: #cdd6f4;
+  font-weight: 600;
+}
+
+.line-content {
+  flex: 1;
+  white-space: pre;
+  color: #cdd6f4;
+  tab-size: 4;
+}
+
+/* 커서 스타일 */
+.vim-cursor {
+  display: inline-block;
+  min-width: 0.6em;
+  position: relative;
+}
+
+/* NORMAL 모드: 블록 커서 */
+.cursor-normal {
+  background-color: #a6e3a1;
+  color: #11111b;
+  font-weight: bold;
+}
+
+/* INSERT 모드: 세로 바 또는 다른 강조 */
+.cursor-insert {
+  background-color: #89b4fa;
+  color: #11111b;
+  font-weight: bold;
+  box-shadow: -2px 0 0 #89b4fa;
+}
+
+/* VISUAL 모드: 보라/핑크 블록 */
+.cursor-visual {
+  background-color: #cba6f7;
+  color: #11111b;
+  font-weight: bold;
+}
+
+/* COMMAND 모드: 주황 블록 */
+.cursor-command {
+  background-color: #fab387;
+  color: #11111b;
+  font-weight: bold;
+}
+
+.empty-char {
+  display: inline-block;
+  min-width: 0.6em;
+}
+
+@media (max-width: 640px) {
+  .editor-container {
+    border-radius: 4px;
+    max-width: 100%;
+  }
+
+  .editor-scroller {
+    min-height: 260px;
+    padding: 0.5rem 0;
+  }
+
+  .editor-lines {
+    font-size: 13.5px;
+  }
+
+  .line-number {
+    width: 36px;
+    min-width: 36px;
+    padding-right: 8px;
+  }
+}

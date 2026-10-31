@@ -1,0 +1,107 @@
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem;
+  box-sizing: border-box;
+}
+
+.app-header {
+  margin-bottom: 0.75rem;
+  text-align: center;
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.brand-icon {
+  font-size: 1.8rem;
+}
+
+.brand-title {
+  margin: 0;
+  font-size: 1.85rem;
+  font-weight: 700;
+  color: #cdd6f4;
+  letter-spacing: -0.02em;
+}
+
+.header-desc {
+  margin: 0.35rem 0 0 0;
+  font-size: 0.92rem;
+  color: #a6adc8;
+}
+
+.key-cheatsheet {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.cheat-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 4px 10px;
+  background-color: #181825;
+  border: 1px solid #313244;
+  border-radius: 6px;
+  font-size: 12px;
+  color: #bac2de;
+}
+
+.cheat-item code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-weight: 700;
+  color: #89b4fa;
+  background-color: #1e1e2e;
+  padding: 2px 5px;
+  border-radius: 4px;
+}
+
+.editor-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  flex: 1;
+}
+
+.app-footer {
+  margin-top: 1.25rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #585b70;
+}
+
+@media (max-width: 640px) {
+  .app-layout {
+    padding: 1rem 0.5rem;
+  }
+
+  .brand-title {
+    font-size: 1.4rem;
+  }
+
+  .header-desc {
+    font-size: 0.82rem;
+  }
+
+  .key-cheatsheet {
+    gap: 0.35rem;
+  }
+
+  .cheat-item {
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+}
