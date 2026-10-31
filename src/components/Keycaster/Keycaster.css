@@ -7,11 +7,11 @@
   background-color: #1e2030;
   border: 1px solid #363a4f;
   border-top: none;
-  padding: 6px 12px;
+  padding: 4px 12px;
   box-sizing: border-box;
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
   font-size: 12px;
-  min-height: 38px;
+  min-height: 40px;
 }
 
 .keycaster-label {
@@ -20,6 +20,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   user-select: none;
+  white-space: nowrap;
 }
 
 .keycaster-keys {
@@ -27,8 +28,18 @@
   align-items: center;
   gap: 6px;
   overflow-x: auto;
+  overflow-y: hidden;
   max-width: 80%;
-  padding: 2px 0;
+  padding: 4px 2px;
+  scrollbar-width: none; /* Firefox 스크롤바 숨김 */
+  -ms-overflow-style: none; /* IE/Edge 스크롤바 숨김 */
+}
+
+/* Chrome, Safari, WebKit 스크롤바 숨김 */
+.keycaster-keys::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 .keycaster-empty {
@@ -55,6 +66,7 @@
   white-space: nowrap;
   user-select: none;
   transition: transform 0.1s ease;
+  flex-shrink: 0;
 }
 
 .keycap.keycap-latest {
@@ -66,14 +78,14 @@
 }
 
 @keyframes keypop {
-  0% { transform: scale(0.9); }
-  60% { transform: scale(1.15); }
+  0% { transform: scale(0.95); }
+  50% { transform: scale(1.08) translateY(-1px); }
   100% { transform: scale(1); }
 }
 
 @media (max-width: 640px) {
   .keycaster-container {
-    padding: 4px 8px;
+    padding: 3px 8px;
     min-height: 34px;
   }
   .keycap {
