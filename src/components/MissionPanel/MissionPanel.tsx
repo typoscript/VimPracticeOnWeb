@@ -7,8 +7,25 @@ export interface MissionPanelProps {
   missionIndex: number;
   totalMissions: number;
   isCompleted: boolean;
+  keystrokeCount: number;
   onSelectMission: (index: number) => void;
   onResetMission: () => void;
+}
+
+/**
+ * 목표 타수(Par) 대비 현재 타수를 기반으로 별점과 평가 문구를 계산합니다.
+ */
+export function calculateStars(
+  keystrokeCount: number,
+  par: number
+): { stars: string; ratingText: string; starCount: number } {
+  if (keystrokeCount <= par) {
+    return { stars: '★★★', ratingText: '완벽한 최적 타수 (Vim Master)!', starCount: 3 };
+  }
+  if (keystrokeCount <= Math.ceil(par * 1.5)) {
+    return { stars: '★★☆', ratingText: '우수한 타수 (Good)!', starCount: 2 };
+  }
+  return { stars: '★☆☆', ratingText: '클리어 완료 (Pass)!', starCount: 1 };
 }
 
 export const MissionPanel: React.FC<MissionPanelProps> = ({
@@ -16,6 +33,7 @@ export const MissionPanel: React.FC<MissionPanelProps> = ({
   missionIndex,
   totalMissions,
   isCompleted,
+  keystrokeCount,
   onSelectMission,
   onResetMission,
 }) => {
@@ -23,6 +41,7 @@ export const MissionPanel: React.FC<MissionPanelProps> = ({
 
   const hasPrev = missionIndex > 0;
   const hasNext = missionIndex < totalMissions - 1;
+  const rating = calculateStars(keystrokeCount, mission.par);
 
   return (
     <aside className="mission-panel" data-testid="mission-panel">
@@ -30,6 +49,9 @@ export const MissionPanel: React.FC<MissionPanelProps> = ({
         <div className="mission-badge-group">
           <span className="mission-step-badge">
             MISSION {missionIndex + 1} / {totalMissions}
+          </span>
+          <span className="mission-par-badge" data-testid="mission-par-badge">
+            타수: <strong className="stat-num">{keystrokeCount}</strong> / 목표(Par): <strong className="stat-num">{mission.par}</strong>
           </span>
           {isCompleted ? (
             <span className="mission-status-badge completed" data-testid="mission-completed-badge">
@@ -80,7 +102,16 @@ export const MissionPanel: React.FC<MissionPanelProps> = ({
 
       {isCompleted && (
         <div className="mission-success-banner" data-testid="mission-success-banner">
-          <span>🎉 미션을 성공했습니다! 다음 레슨으로 넘어가보세요.</span>
+          <div className="mission-success-info">
+            <span className="mission-success-title">🎉 미션 클리어!</span>
+            <div className="mission-rating-box" data-testid="mission-rating">
+              <span className="rating-stars" data-testid="rating-stars">{rating.stars}</span>
+              <span className="rating-text">{rating.ratingText}</span>
+              <span className="rating-detail">
+                (기록: {keystrokeCount}타 / 기준 Par: {mission.par}타)
+              </span>
+            </div>
+          </div>
           {hasNext && (
             <button
               type="button"

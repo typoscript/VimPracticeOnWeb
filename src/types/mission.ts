@@ -5,6 +5,7 @@ export interface Mission {
   title: string;
   description: string;
   hint: string;
+  par: number; // 최적 최소 타수 (Vim Golf 기준)
   initialLines: string[];
   initialCursor: { line: number; col: number };
   targetCursor?: { line: number; col: number };

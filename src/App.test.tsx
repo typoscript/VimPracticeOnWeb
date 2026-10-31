@@ -106,4 +106,30 @@ describe('App Component with Keyboard Navigation', () => {
     fireEvent.keyDown(window, { key: 'x' });
     expect(row1.textContent).toContain('HWelcome');
   });
+
+  it('tracks keystrokes in Keycaster and detects anti-pattern repeated motion toast', () => {
+    render(<App />);
+
+    expect(screen.getByTestId('keycaster')).toBeInTheDocument();
+    expect(screen.getByTestId('mission-par-badge')).toHaveTextContent('타수: 0 / 목표(Par): 6');
+
+    // l을 4번 누름 -> 아직 토스트 없음
+    for (let i = 0; i < 4; i++) {
+      fireEvent.keyDown(window, { key: 'l' });
+    }
+    expect(screen.queryByTestId('coaching-toast')).not.toBeInTheDocument();
+    expect(screen.getByTestId('mission-par-badge')).toHaveTextContent('타수: 4 / 목표(Par): 6');
+
+    // 5번째 l 누름 -> 5회 연속 연타 안티 패턴 감지 토스트 노출!
+    fireEvent.keyDown(window, { key: 'l' });
+    expect(screen.getByTestId('coaching-toast')).toBeInTheDocument();
+    expect(
+      screen.getByText(/이동 키를 연타하는 대신 w, b 또는 숫자\+이동/i)
+    ).toBeInTheDocument();
+
+    // 토스트 닫기 클릭
+    const closeBtn = screen.getByRole('button', { name: /닫기/i });
+    fireEvent.click(closeBtn);
+    expect(screen.queryByTestId('coaching-toast')).not.toBeInTheDocument();
+  });
 });

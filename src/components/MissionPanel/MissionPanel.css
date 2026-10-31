@@ -35,6 +35,21 @@
   border-radius: 4px;
 }
 
+.mission-par-badge {
+  background-color: #1e2030;
+  border: 1px solid #494d64;
+  color: #a5adcb;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.mission-par-badge .stat-num {
+  color: #8aadf4;
+  font-weight: 700;
+}
+
 .mission-status-badge {
   font-size: 11px;
   font-weight: 700;
@@ -121,7 +136,45 @@
   font-weight: 600;
   font-size: 0.9rem;
   flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.mission-success-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.mission-success-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #a6da95;
+}
+
+.mission-rating-box {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.rating-stars {
+  color: #f5a97f;
+  font-size: 1.15rem;
+  letter-spacing: 0.1em;
+  text-shadow: 0 0 8px rgba(245, 169, 127, 0.4);
+}
+
+.rating-text {
+  color: #cad3f5;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.rating-detail {
+  color: #8087a2;
+  font-size: 0.82rem;
+  font-weight: 400;
 }
 
 .next-lesson-btn {

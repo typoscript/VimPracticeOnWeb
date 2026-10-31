@@ -8,6 +8,7 @@ const mockMission: Mission = {
   title: '레슨 1: 기본 방향 이동',
   description: 'h, j, k, l을 사용해 목표로 이동하세요.',
   hint: 'j로 내려간 뒤 l을 누르세요.',
+  par: 5,
   initialLines: ['Line 1', 'Line 2'],
   initialCursor: { line: 0, col: 0 },
   checkComplete: () => false,
@@ -21,6 +22,7 @@ describe('MissionPanel Component', () => {
         missionIndex={0}
         totalMissions={5}
         isCompleted={false}
+        keystrokeCount={3}
         onSelectMission={vi.fn()}
         onResetMission={vi.fn()}
       />
@@ -30,6 +32,7 @@ describe('MissionPanel Component', () => {
     expect(screen.getByTestId('mission-desc')).toHaveTextContent('h, j, k, l을 사용해 목표로 이동하세요.');
     expect(screen.getByText('MISSION 1 / 5')).toBeInTheDocument();
     expect(screen.getByText('진행 중')).toBeInTheDocument();
+    expect(screen.getByTestId('mission-par-badge')).toHaveTextContent('타수: 3 / 목표(Par): 5');
 
     const prevBtn = screen.getByRole('button', { name: /previous mission/i });
     const nextBtn = screen.getByRole('button', { name: /next mission/i });
@@ -45,6 +48,7 @@ describe('MissionPanel Component', () => {
         missionIndex={0}
         totalMissions={5}
         isCompleted={false}
+        keystrokeCount={0}
         onSelectMission={vi.fn()}
         onResetMission={vi.fn()}
       />
@@ -61,7 +65,7 @@ describe('MissionPanel Component', () => {
     expect(screen.queryByTestId('mission-hint')).not.toBeInTheDocument();
   });
 
-  it('displays success banner and handles next lesson click when completed', () => {
+  it('displays success banner with 3-star rating when keystrokes <= par', () => {
     const handleSelectMission = vi.fn();
 
     render(
@@ -70,6 +74,7 @@ describe('MissionPanel Component', () => {
         missionIndex={0}
         totalMissions={5}
         isCompleted={true}
+        keystrokeCount={4} // 4 <= 5 (par) -> 3 stars!
         onSelectMission={handleSelectMission}
         onResetMission={vi.fn()}
       />
@@ -77,11 +82,30 @@ describe('MissionPanel Component', () => {
 
     expect(screen.getByTestId('mission-completed-badge')).toHaveTextContent('✓ 성공!');
     expect(screen.getByTestId('mission-success-banner')).toBeInTheDocument();
+    expect(screen.getByTestId('rating-stars')).toHaveTextContent('★★★');
+    expect(screen.getByText(/완벽한 최적 타수/)).toBeInTheDocument();
 
     const nextLessonBtn = screen.getByRole('button', { name: /다음 레슨 도전하기/i });
     fireEvent.click(nextLessonBtn);
 
     expect(handleSelectMission).toHaveBeenCalledWith(1);
+  });
+
+  it('displays 2-star rating when keystrokes exceed par but within 1.5x par', () => {
+    render(
+      <MissionPanel
+        mission={mockMission}
+        missionIndex={0}
+        totalMissions={5}
+        isCompleted={true}
+        keystrokeCount={7} // 7 <= Math.ceil(5 * 1.5) = 8 -> 2 stars!
+        onSelectMission={vi.fn()}
+        onResetMission={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId('rating-stars')).toHaveTextContent('★★☆');
+    expect(screen.getByText(/우수한 타수/)).toBeInTheDocument();
   });
 
   it('calls onResetMission when reset button is clicked', () => {
@@ -93,6 +117,7 @@ describe('MissionPanel Component', () => {
         missionIndex={1}
         totalMissions={5}
         isCompleted={false}
+        keystrokeCount={2}
         onSelectMission={vi.fn()}
         onResetMission={handleReset}
       />
