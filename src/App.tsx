@@ -15,6 +15,9 @@ export function App() {
     lines: currentMission.initialLines,
     cursor: currentMission.initialCursor,
     mode: 'NORMAL',
+    undoStack: currentMission.initialUndoStack ? [...currentMission.initialUndoStack] : [],
+    redoStack: [],
+    clipboard: currentMission.initialClipboard,
   });
 
   const isCompleted = currentMission.checkComplete(editorState);
@@ -27,6 +30,9 @@ export function App() {
         lines: nextMission.initialLines,
         cursor: nextMission.initialCursor,
         mode: 'NORMAL',
+        undoStack: nextMission.initialUndoStack ? [...nextMission.initialUndoStack] : [],
+        redoStack: [],
+        clipboard: nextMission.initialClipboard,
       });
     }
   }, []);
@@ -36,12 +42,22 @@ export function App() {
       lines: currentMission.initialLines,
       cursor: currentMission.initialCursor,
       mode: 'NORMAL',
+      undoStack: currentMission.initialUndoStack ? [...currentMission.initialUndoStack] : [],
+      redoStack: [],
+      clipboard: currentMission.initialClipboard,
     });
   }, [currentMission]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // 메타 키(Command, Ctrl, Alt) 조합은 브라우저 기본 단축키 허용
+      // Ctrl+r 또는 Cmd+r: Redo 실행 취소 취소
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R')) {
+        e.preventDefault();
+        setEditorState((prevState) => handleKey(prevState, 'Ctrl-r'));
+        return;
+      }
+
+      // 그 외 메타 키(Command, Ctrl, Alt) 조합은 브라우저 기본 단축키 허용
       if (e.metaKey || e.ctrlKey || e.altKey) {
         return;
       }
@@ -77,6 +93,9 @@ export function App() {
         <span className="cheat-item"><code>i a</code> 입력 진입</span>
         <span className="cheat-item"><code>Esc</code> 일반 모드</span>
         <span className="cheat-item"><code>x</code> 글자 삭제</span>
+        <span className="cheat-item"><code>dd dw</code> 줄/단어 삭제</span>
+        <span className="cheat-item"><code>p</code> 붙여넣기</span>
+        <span className="cheat-item"><code>u / Ctrl-r</code> 실행취소/다시실행</span>
       </section>
 
       <main className="editor-wrapper">

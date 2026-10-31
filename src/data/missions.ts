@@ -71,4 +71,61 @@ export const MISSIONS: Mission[] = [
       return state.mode === 'NORMAL' && line0 === 'Vim rocks';
     },
   },
+  {
+    id: 6,
+    title: '레슨 6: 한 줄 삭제 (dd)',
+    description: 'dd 키를 연속으로 두 번 눌러 불필요한 [DELETE ME] 줄을 삭제하세요.',
+    hint: 'j를 눌러 2번째 줄로 이동한 후, d를 두 번 연속으로 누르면 줄 전체가 삭제됩니다.',
+    initialLines: [
+      'Keep this important line.',
+      'DELETE ME: This line should be removed.',
+      'Keep this line too.',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      return (
+        state.lines.length === 2 &&
+        !state.lines.some((l) => l.includes('DELETE ME'))
+      );
+    },
+  },
+  {
+    id: 7,
+    title: '레슨 7: 단어 삭제 (dw)',
+    description: 'dw 키를 눌러 문장 속 잘못 들어간 "wrong" 단어를 삭제하세요.',
+    hint: 'w 키를 눌러 "wrong" 단어로 이동한 뒤, d를 누르고 w를 누르세요.',
+    initialLines: [
+      'Vim is wrong an amazing editor!',
+      'Delete the word "wrong" from the first line.',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const line0 = state.lines[0] ?? '';
+      return line0.includes('Vim is an amazing editor!') && !line0.includes('wrong');
+    },
+  },
+  {
+    id: 8,
+    title: '레슨 8: 실행 취소 (u) & 되살리기',
+    description: '실수로 중요한 줄이 삭제되었습니다! u 키를 눌러 삭제된 줄을 복구하세요.',
+    hint: 'u 키를 한 번 누르면 방금 삭제된 줄(Line 2)이 원래대로 되살아납니다.',
+    initialLines: [
+      'Line 1: Safe and sound.',
+      'Line 3: Wait, where did Line 2 go?',
+    ],
+    initialCursor: { line: 1, col: 0 },
+    initialUndoStack: [
+      {
+        lines: [
+          'Line 1: Safe and sound.',
+          'Line 2: Important configuration data!',
+          'Line 3: Wait, where did Line 2 go?',
+        ],
+        cursor: { line: 1, col: 0 },
+      },
+    ],
+    checkComplete: (state) => {
+      return state.lines.some((l) => l.includes('Line 2'));
+    },
+  },
 ];

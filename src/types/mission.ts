@@ -1,4 +1,4 @@
-import { VimEditorState } from './vim';
+import { ClipboardRegister, StateSnapshot, VimEditorState } from './vim';
 
 export interface Mission {
   id: number;
@@ -8,5 +8,7 @@ export interface Mission {
   initialLines: string[];
   initialCursor: { line: number; col: number };
   targetCursor?: { line: number; col: number };
+  initialUndoStack?: StateSnapshot[];
+  initialClipboard?: ClipboardRegister;
   checkComplete: (state: VimEditorState) => boolean;
 }

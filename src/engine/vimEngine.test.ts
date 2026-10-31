@@ -554,3 +554,160 @@ describe('Vim Engine - INSERT Mode & Basic Editing (i, a, Esc, x, typing, Backsp
     });
   });
 });
+
+describe('Vim Engine - Operators & History (dd, dw, p, u, Ctrl-r)', () => {
+  describe('dd operator (Delete Line)', () => {
+    it('deletes the current line and saves it into clipboard register', () => {
+      const state = createState(['line 1', 'line 2', 'line 3'], 1, 0);
+      const afterD = handleKey(state, 'd');
+      expect(afterD.pendingKeys).toBe('d');
+
+      const afterDD = handleKey(afterD, 'd');
+      expect(afterDD.lines).toEqual(['line 1', 'line 3']);
+      expect(afterDD.cursor).toEqual({ line: 1, col: 0 });
+      expect(afterDD.clipboard).toEqual({
+        type: 'line',
+        content: 'line 2',
+      });
+      expect(afterDD.pendingKeys).toBeUndefined();
+    });
+
+    it('clamps cursor up when deleting the last line in buffer', () => {
+      const state = createState(['line 1', 'line 2'], 1, 2);
+      const afterD = handleKey(state, 'd');
+      const afterDD = handleKey(afterD, 'd');
+      expect(afterDD.lines).toEqual(['line 1']);
+      expect(afterDD.cursor).toEqual({ line: 0, col: 2 });
+    });
+
+    it('leaves single empty line when only line is deleted', () => {
+      const state = createState(['only line'], 0, 3);
+      const step1 = handleKey(state, 'd');
+      const step2 = handleKey(step1, 'd');
+      expect(step2.lines).toEqual(['']);
+      expect(step2.cursor).toEqual({ line: 0, col: 0 });
+    });
+  });
+
+  describe('dw operator (Delete Word)', () => {
+    it('deletes from cursor to start of next word including spaces', () => {
+      const state = createState(['hello world foo'], 0, 0);
+      const afterD = handleKey(state, 'd');
+      expect(afterD.pendingKeys).toBe('d');
+
+      const afterDW = handleKey(afterD, 'w');
+      expect(afterDW.lines).toEqual(['world foo']);
+      expect(afterDW.cursor).toEqual({ line: 0, col: 0 });
+      expect(afterDW.clipboard).toEqual({
+        type: 'text',
+        content: 'hello ',
+      });
+    });
+
+    it('deletes remaining characters when cursor is in the middle of a word', () => {
+      const state = createState(['abcdef ghij'], 0, 2); // on 'c'
+      const step1 = handleKey(state, 'd');
+      const step2 = handleKey(step1, 'w');
+      expect(step2.lines).toEqual(['abghij']);
+      expect(step2.clipboard?.content).toBe('cdef ');
+    });
+
+    it('cancels pendingKeys if a non-operator key is pressed', () => {
+      const state = createState(['hello world'], 0, 0);
+      const step1 = handleKey(state, 'd');
+      expect(step1.pendingKeys).toBe('d');
+      const step2 = handleKey(step1, 'l');
+      expect(step2.pendingKeys).toBeUndefined();
+      expect(step2.cursor).toEqual({ line: 0, col: 1 });
+    });
+  });
+
+  describe('p operator (Put / Paste)', () => {
+    it('pastes line-type clipboard as new line below current cursor', () => {
+      let state = createState(['line 1', 'line 2', 'line 3'], 0, 0);
+      // dd on line 1
+      state = handleKey(state, 'd');
+      state = handleKey(state, 'd');
+      expect(state.lines).toEqual(['line 2', 'line 3']);
+
+      // p paste below line 2
+      state = handleKey(state, 'p');
+      expect(state.lines).toEqual(['line 2', 'line 1', 'line 3']);
+      expect(state.cursor).toEqual({ line: 1, col: 0 });
+    });
+
+    it('pastes text-type clipboard after cursor column', () => {
+      let state = createState(['word1 word2'], 0, 0);
+      // dw on word1
+      state = handleKey(state, 'd');
+      state = handleKey(state, 'w');
+      expect(state.lines).toEqual(['word2']);
+
+      // move to end and paste
+      state = handleKey(state, '$');
+      state = handleKey(state, 'p');
+      expect(state.lines).toEqual(['word2word1 ']);
+    });
+
+    it('does nothing when clipboard is empty', () => {
+      const state = createState(['hello'], 0, 0);
+      const next = handleKey(state, 'p');
+      expect(next.lines).toEqual(['hello']);
+    });
+  });
+
+  describe('u (Undo) and Ctrl-r (Redo)', () => {
+    it('reverts line deletion made by dd', () => {
+      let state = createState(['first', 'second', 'third'], 1, 0);
+      state = handleKey(state, 'd');
+      state = handleKey(state, 'd');
+      expect(state.lines).toEqual(['first', 'third']);
+
+      // u (Undo)
+      state = handleKey(state, 'u');
+      expect(state.lines).toEqual(['first', 'second', 'third']);
+      expect(state.cursor).toEqual({ line: 1, col: 0 });
+
+      // Ctrl-r (Redo)
+      state = handleKey(state, 'Ctrl-r');
+      expect(state.lines).toEqual(['first', 'third']);
+    });
+
+    it('reverts character deletion made by x', () => {
+      let state = createState(['hello'], 0, 1); // 'e'
+      state = handleKey(state, 'x');
+      expect(state.lines).toEqual(['hllo']);
+
+      state = handleKey(state, 'u');
+      expect(state.lines).toEqual(['hello']);
+      expect(state.cursor).toEqual({ line: 0, col: 1 });
+    });
+
+    it('reverts entire INSERT mode typing session on single u', () => {
+      let state = createState(['hello'], 0, 5);
+      state = handleKey(state, 'a'); // enter insert mode
+      state = handleKey(state, ' ');
+      state = handleKey(state, 'w');
+      state = handleKey(state, 'o');
+      state = handleKey(state, 'r');
+      state = handleKey(state, 'l');
+      state = handleKey(state, 'd');
+      state = handleKey(state, 'Escape'); // back to normal
+
+      expect(state.lines).toEqual(['hello world']);
+
+      // single undo reverts whole typing session
+      state = handleKey(state, 'u');
+      expect(state.lines).toEqual(['hello']);
+    });
+
+    it('safely handles empty undo or redo stack', () => {
+      const state = createState(['hello'], 0, 0);
+      const afterUndo = handleKey(state, 'u');
+      expect(afterUndo.lines).toEqual(['hello']);
+
+      const afterRedo = handleKey(state, 'Ctrl-r');
+      expect(afterRedo.lines).toEqual(['hello']);
+    });
+  });
+});

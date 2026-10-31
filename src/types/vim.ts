@@ -5,9 +5,22 @@ export interface CursorPosition {
   col: number;  // 0-indexed 열 번호
 }
 
+export interface ClipboardRegister {
+  type: 'line' | 'text';
+  content: string;
+}
+
+export interface StateSnapshot {
+  lines: string[];
+  cursor: CursorPosition;
+}
+
 export interface VimEditorState {
   lines: string[];
   cursor: CursorPosition;
   mode: VimMode;
-  pendingKeys?: string; // gg 등 다중 키 입력을 위한 버퍼
+  pendingKeys?: string; // gg, dd, dw 등 다중 키 입력을 위한 버퍼
+  clipboard?: ClipboardRegister;
+  undoStack?: StateSnapshot[];
+  redoStack?: StateSnapshot[];
 }

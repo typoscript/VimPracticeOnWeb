@@ -14,6 +14,14 @@ import {
   moveToPrevWord,
   moveToWordEnd,
 } from './motions';
+import {
+  deleteLine,
+  deleteWord,
+  putClipboard,
+  undo,
+  redo,
+  pushUndoSnapshot,
+} from './operators';
 
 /**
  * Vim 키 입력 처리 순수 함수: (state, key) => newState
@@ -163,20 +171,37 @@ function handleInsertModeKey(state: VimEditorState, key: string): VimEditorState
 function handleNormalModeKey(state: VimEditorState, key: string): VimEditorState {
   const currentLine = state.lines[state.cursor.line] ?? '';
 
-  // 'i': 현재 위치에서 INSERT 모드 진입
+  // 실행 취소 (Undo)
+  if (key === 'u') {
+    return undo(state);
+  }
+
+  // 다시 실행 (Redo)
+  if (key === 'Ctrl-r' || key === 'ctrl+r') {
+    return redo(state);
+  }
+
+  // 'p': 클립보드 붙여넣기
+  if (key === 'p') {
+    return putClipboard(state);
+  }
+
+  // 'i': 현재 위치에서 INSERT 모드 진입 (Undo 스냅샷 보관)
   if (key === 'i') {
+    const stateWithSnapshot = pushUndoSnapshot(state);
     return {
-      ...state,
+      ...stateWithSnapshot,
       mode: 'INSERT',
       pendingKeys: undefined,
     };
   }
 
-  // 'a': 다음 칸에서 INSERT 모드 진입
+  // 'a': 다음 칸에서 INSERT 모드 진입 (Undo 스냅샷 보관)
   if (key === 'a') {
+    const stateWithSnapshot = pushUndoSnapshot(state);
     const newCol = currentLine.length === 0 ? 0 : Math.min(state.cursor.col + 1, currentLine.length);
     return {
-      ...state,
+      ...stateWithSnapshot,
       mode: 'INSERT',
       cursor: { line: state.cursor.line, col: newCol },
       pendingKeys: undefined,
@@ -192,17 +217,42 @@ function handleNormalModeKey(state: VimEditorState, key: string): VimEditorState
       };
     }
 
+    const stateWithSnapshot = pushUndoSnapshot(state);
     const { line, col } = state.cursor;
+    const deletedChar = currentLine[col] ?? '';
     const newLine = currentLine.slice(0, col) + currentLine.slice(col + 1);
     const nextLines = [...state.lines];
     nextLines[line] = newLine;
 
     const clampedCursor = clampCursor(nextLines, state.cursor, 'NORMAL');
     return {
-      ...state,
+      ...stateWithSnapshot,
       lines: nextLines,
       cursor: clampedCursor,
+      clipboard: {
+        type: 'text',
+        content: deletedChar,
+      },
       pendingKeys: undefined,
+    };
+  }
+
+  // dd / dw 연산자 처리
+  if (state.pendingKeys === 'd') {
+    if (key === 'd') {
+      return deleteLine(state);
+    }
+    if (key === 'w') {
+      return deleteWord(state);
+    }
+    // 다른 키가 오면 pendingKeys를 취소하고 아래에서 일반 모션 평가
+  }
+
+  // 'd' 첫 입력 시 대기
+  if (key === 'd') {
+    return {
+      ...state,
+      pendingKeys: 'd',
     };
   }
 
