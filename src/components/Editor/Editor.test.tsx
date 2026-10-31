@@ -60,4 +60,23 @@ describe('Editor Component', () => {
     // 줄 5: 거리 Math.abs(4 - 2) = 2
     expect(screen.getByTestId('line-number-5')).toHaveTextContent('2');
   });
+
+  it('포커스 이탈(isFocused=false) 시 아웃라인 커서와 블러 오버레이 배너를 렌더링한다', () => {
+    const lines = ['Vim editor text'];
+    render(
+      <Editor
+        lines={lines}
+        cursor={{ line: 0, col: 0 }}
+        mode="NORMAL"
+        isFocused={false}
+      />
+    );
+
+    const cursorEl = screen.getByTestId('vim-cursor');
+    expect(cursorEl).toHaveClass('cursor-unfocused');
+
+    const blurOverlay = screen.getByTestId('editor-blur-overlay');
+    expect(blurOverlay).toBeInTheDocument();
+    expect(blurOverlay).toHaveTextContent('클릭하여 에디터 포커스 활성화');
+  });
 });

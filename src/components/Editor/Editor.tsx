@@ -14,6 +14,10 @@ export interface EditorProps {
   relativeLineNumbers?: boolean;
   /** 현재 검색어 (실시간 하이라이트용) */
   searchQuery?: string;
+  /** 에디터 포커스 활성화 여부 */
+  isFocused?: boolean;
+  /** 에디터 클릭 시 포커스 활성화 콜백 */
+  onFocus?: () => void;
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -24,6 +28,8 @@ export const Editor: React.FC<EditorProps> = ({
   visualAnchor,
   relativeLineNumbers = false,
   searchQuery,
+  isFocused = true,
+  onFocus,
 }) => {
   // 전체 검색 일치 항목 수집
   const allMatches = searchQuery && searchQuery.length > 0
@@ -31,7 +37,24 @@ export const Editor: React.FC<EditorProps> = ({
     : [];
 
   return (
-    <div className="editor-container" data-testid="editor-container">
+    <div
+      className={`editor-container ${!isFocused ? 'editor-unfocused' : ''}`}
+      data-testid="editor-container"
+      onClick={onFocus}
+    >
+      {!isFocused && (
+        <div
+          className="editor-blur-overlay"
+          data-testid="editor-blur-overlay"
+          title="클릭하여 에디터 포커스를 활성화하세요"
+        >
+          <div className="blur-overlay-pill">
+            <span className="blur-icon">🖱️</span>
+            <span className="blur-text">클릭하여 에디터 포커스 활성화</span>
+          </div>
+        </div>
+      )}
+
       <div className="editor-scroller">
         <div className="editor-lines">
           {lines.map((lineText, lineIdx) => {
@@ -71,6 +94,7 @@ export const Editor: React.FC<EditorProps> = ({
                     targetCol,
                     visualAnchor,
                     lineMatches,
+                    isFocused,
                   })}
                 </div>
               </div>
@@ -90,10 +114,11 @@ interface RenderLineOptions {
   targetCol: number | null;
   visualAnchor?: CursorPosition;
   lineMatches: SearchMatch[];
+  isFocused: boolean;
 }
 
 function renderLineContent(opts: RenderLineOptions): React.ReactNode {
-  const { text, lineIdx, cursor, mode, targetCol, visualAnchor, lineMatches } = opts;
+  const { text, lineIdx, cursor, mode, targetCol, visualAnchor, lineMatches, isFocused } = opts;
   const isCursorLine = cursor.line === lineIdx;
   const cursorCol = isCursorLine ? cursor.col : null;
 
@@ -155,7 +180,7 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
         : char;
 
     let classNames = isCursor
-      ? `vim-cursor cursor-${mode.toLowerCase()}`
+      ? `vim-cursor ${isFocused ? `cursor-${mode.toLowerCase()}` : 'cursor-unfocused'}`
       : 'vim-char';
 
     if (isSelected) {

@@ -27,6 +27,7 @@ import {
   SpeedrunRecord,
   LessonProgress,
 } from './utils/storage';
+import { normalizeImeKey } from './utils/imeHelper';
 import './App.css';
 
 const REPEATED_MOTION_KEYS = ['h', 'j', 'k', 'l', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
@@ -48,6 +49,7 @@ export function App() {
   const [relativeLineNumbers, setRelativeLineNumbers] = useState<boolean>(() => loadRelativeLineSetting());
   const [showVirtualKeyboard, setShowVirtualKeyboard] = useState<boolean>(() => loadVirtualKeyboardSetting());
   const [showDiffView, setShowDiffView] = useState<boolean>(() => loadDiffViewSetting());
+  const [isEditorFocused, setIsEditorFocused] = useState<boolean>(true);
 
   const currentMission = MISSIONS[currentMissionIndex];
 
@@ -305,6 +307,18 @@ export function App() {
     [currentTab, speedrunStatus]
   );
 
+  // 브라우저 윈도우 포커스/블러 감지
+  useEffect(() => {
+    const handleWindowFocus = () => setIsEditorFocused(true);
+    const handleWindowBlur = () => setIsEditorFocused(false);
+    window.addEventListener('focus', handleWindowFocus);
+    window.addEventListener('blur', handleWindowBlur);
+    return () => {
+      window.removeEventListener('focus', handleWindowFocus);
+      window.removeEventListener('blur', handleWindowBlur);
+    };
+  }, []);
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // 모달이 열려 있을 때는 에디터 키 입력을 차단
@@ -312,15 +326,27 @@ export function App() {
         return;
       }
 
+      // 키 입력 시 에디터 포커스 자동 활성화
+      if (!isEditorFocused) {
+        setIsEditorFocused(true);
+      }
+
       // 단독 메타/보조 키는 타수 및 엔진 전달 제외
       if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(e.key)) {
         return;
       }
 
-      // Ctrl+r 또는 Cmd+r: Redo 실행 취소 취소
+      // Ctrl+r 또는 Cmd+r: Redo 실행 취소 취소 (브라우저 페이지 새로고침 완벽 차단)
       if ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R')) {
         e.preventDefault();
         processKeyInput('Ctrl-r');
+        return;
+      }
+
+      // Ctrl+f 또는 Cmd+f: 브라우저 찾기 대신 Vim 검색 모드(/) 진입 유도
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
+        e.preventDefault();
+        processKeyInput('/');
         return;
       }
 
@@ -330,7 +356,21 @@ export function App() {
       }
 
       // 브라우저 기본 스크롤, 포커스 이동, 검색창, 엔터(버튼 재클릭 방지), 뒤로가기 방지
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Backspace', 'Tab', '/', 'Enter'].includes(e.key)) {
+      if (
+        [
+          'ArrowUp',
+          'ArrowDown',
+          'ArrowLeft',
+          'ArrowRight',
+          ' ',
+          'Backspace',
+          'Tab',
+          '/',
+          'Enter',
+          'PageUp',
+          'PageDown',
+        ].includes(e.key)
+      ) {
         e.preventDefault();
       }
 
@@ -343,19 +383,23 @@ export function App() {
         document.activeElement.blur();
       }
 
-      // 한글 입력기(IME) 상태 감지 코칭 안내
-      if (e.key === 'Process' || /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(e.key)) {
+      // 한/영 입력기(IME) 정규화: NORMAL/VISUAL 모드에서 물리 키코드(e.code)를 매핑해 한글 상태에서도 이동/명령 유지
+      const { key: normalizedKey, isNormalized } = normalizeImeKey(e, editorState.mode);
+
+      if (isNormalized) {
+        setCoachingMessage(`💡 한글 입력이 감지되어 영문('${normalizedKey}')으로 자동 매핑되었습니다. 원활한 입력을 위해 [한/영] 전환을 권장합니다.`);
+      } else if (e.key === 'Process' || /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(e.key)) {
         setCoachingMessage('⚠️ 현재 한글 입력 상태입니다. 원활한 Vim 명령어 입력을 위해 [한/영] 키를 눌러 영문 모드로 전환해 주세요!');
       }
 
-      processKeyInput(e.key);
+      processKeyInput(normalizedKey);
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isModalOpen, processKeyInput]);
+  }, [isModalOpen, isEditorFocused, editorState.mode, processKeyInput]);
 
   const activeMissionForDiff =
     currentTab === 'course'
@@ -532,6 +576,8 @@ export function App() {
               ? editorState.commandBuffer
               : editorState.lastSearchQuery
           }
+          isFocused={isEditorFocused}
+          onFocus={() => setIsEditorFocused(true)}
         />
         <Keycaster recentKeys={recentKeys} />
         <StatusBar

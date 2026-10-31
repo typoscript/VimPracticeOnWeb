@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import App from './App';
 
@@ -330,5 +330,38 @@ describe('App Component with Keyboard Navigation', () => {
 
     expect(screen.getByTestId('speedrun-live-view')).toBeInTheDocument();
     expect(screen.getByTestId('speedrun-stage-indicator')).toHaveTextContent('1 / 5');
+  });
+
+  it('한글 두벌식 키보드 상태에서 물리 코드(code)를 영문 키로 자동 매핑해 커서를 이동한다', () => {
+    render(<App />);
+
+    // 한글 'ㅓ'(KeyJ) 입력 -> j로 자동 매핑되어 아래로 이동 (cursor line: 0 -> 1)
+    fireEvent.keyDown(window, { key: 'ㅓ', code: 'KeyJ' });
+
+    expect(screen.getByTestId('status-cursor-pos')).toHaveTextContent('2:1');
+    expect(screen.getByTestId('coaching-toast')).toHaveTextContent('자동 매핑');
+  });
+
+  it('Ctrl+r 및 / 단축키 시 브라우저 기본 동작(preventDefault)을 호출한다', () => {
+    render(<App />);
+
+    const ctrlREvent = new KeyboardEvent('keydown', {
+      key: 'r',
+      ctrlKey: true,
+      cancelable: true,
+    });
+    const slashEvent = new KeyboardEvent('keydown', {
+      key: '/',
+      cancelable: true,
+    });
+
+    const ctrlRSpy = vi.spyOn(ctrlREvent, 'preventDefault');
+    const slashSpy = vi.spyOn(slashEvent, 'preventDefault');
+
+    fireEvent(window, ctrlREvent);
+    fireEvent(window, slashEvent);
+
+    expect(ctrlRSpy).toHaveBeenCalled();
+    expect(slashSpy).toHaveBeenCalled();
   });
 });

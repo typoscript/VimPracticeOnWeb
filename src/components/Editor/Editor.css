@@ -1,4 +1,5 @@
 .editor-container {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -9,6 +10,43 @@
   overflow: hidden;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
   border: 1px solid #313244;
+  transition: border-color 0.2s ease;
+}
+
+.editor-container.editor-unfocused {
+  border-color: #45475a;
+}
+
+/* 포커스 이탈 시 블러 오버레이 안내 바 */
+.editor-blur-overlay {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  z-index: 20;
+  cursor: pointer;
+  animation: fadeIn 0.2s ease;
+}
+
+.blur-overlay-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background-color: rgba(30, 30, 46, 0.88);
+  border: 1px solid #f9e2af;
+  padding: 4px 12px;
+  border-radius: 20px;
+  color: #f9e2af;
+  font-size: 11.5px;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  transition: all 0.15s ease;
+}
+
+.blur-overlay-pill:hover {
+  background-color: #f9e2af;
+  color: #11111b;
+  transform: translateY(-1px);
 }
 
 .editor-scroller {
@@ -90,6 +128,15 @@
   color: #f9e2af !important;
   border-bottom: 2px solid #f9e2af;
   font-weight: 600;
+  border-radius: 1px;
+}
+
+/* 포커스 이탈(Blur) 시 아웃라인 커서 */
+.cursor-unfocused {
+  outline: 1.5px solid #a6adc8 !important;
+  outline-offset: -1px;
+  background-color: transparent !important;
+  color: #cdd6f4 !important;
   border-radius: 1px;
 }
 
