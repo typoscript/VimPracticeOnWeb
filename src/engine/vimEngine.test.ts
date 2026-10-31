@@ -835,3 +835,262 @@ describe('Vim Engine - VISUAL & VISUAL_LINE Modes (v, V, d, y, Escape)', () => {
     });
   });
 });
+
+describe('Vim Engine - Count Prefixes ([1-9][0-9]*)', () => {
+  it('repeats motion keys with count prefix (3w, 4l, 2b)', () => {
+    let state = createState(['one two three four five'], 0, 0);
+    // 3w: jump 3 words forward
+    state = handleKey(state, '3');
+    expect(state.pendingKeys).toBe('3');
+    state = handleKey(state, 'w');
+    expect(state.cursor).toEqual({ line: 0, col: 14 }); // 'f' in four
+    expect(state.pendingKeys).toBeUndefined();
+
+    // 2b: jump 2 words backward
+    state = handleKey(state, '2');
+    state = handleKey(state, 'b');
+    expect(state.cursor).toEqual({ line: 0, col: 4 }); // 't' in two
+
+    // 4l: move right by 4 cols
+    state = handleKey(state, '4');
+    state = handleKey(state, 'l');
+    expect(state.cursor).toEqual({ line: 0, col: 8 });
+  });
+
+  it('handles multi-digit counts like 10j', () => {
+    const lines = Array.from({ length: 15 }, (_, i) => `Line ${i + 1}`);
+    let state = createState(lines, 0, 0);
+
+    state = handleKey(state, '1');
+    expect(state.pendingKeys).toBe('1');
+    state = handleKey(state, '0');
+    expect(state.pendingKeys).toBe('10');
+    state = handleKey(state, 'j');
+    expect(state.cursor).toEqual({ line: 10, col: 0 });
+    expect(state.pendingKeys).toBeUndefined();
+  });
+
+  it('keeps standalone 0 as line start motion when no count preceded', () => {
+    const state = createState(['hello world'], 0, 8);
+    const next = handleKey(state, '0');
+    expect(next.cursor).toEqual({ line: 0, col: 0 });
+    expect(next.pendingKeys).toBeUndefined();
+  });
+
+  it('deletes multiple lines with count prefix (2dd)', () => {
+    let state = createState(['line 1', 'line 2', 'line 3', 'line 4'], 1, 0);
+    state = handleKey(state, '2');
+    state = handleKey(state, 'd');
+    state = handleKey(state, 'd');
+    expect(state.lines).toEqual(['line 1', 'line 4']);
+    expect(state.clipboard).toEqual({
+      type: 'line',
+      content: 'line 2\nline 3',
+    });
+  });
+
+  it('deletes multiple characters with count prefix (3x)', () => {
+    let state = createState(['abcdef'], 0, 1); // 'b'
+    state = handleKey(state, '3');
+    state = handleKey(state, 'x');
+    expect(state.lines).toEqual(['aef']);
+    expect(state.clipboard).toEqual({
+      type: 'text',
+      content: 'bcd',
+    });
+  });
+
+  it('deletes multiple words with d2w and 2dw', () => {
+    // d2w
+    let state1 = createState(['apple banana cherry date'], 0, 0);
+    state1 = handleKey(state1, 'd');
+    expect(state1.pendingKeys).toBe('d');
+    state1 = handleKey(state1, '2');
+    expect(state1.pendingKeys).toBe('d2');
+    state1 = handleKey(state1, 'w');
+    expect(state1.lines).toEqual(['cherry date']);
+
+    // 2dw
+    let state2 = createState(['apple banana cherry date'], 0, 0);
+    state2 = handleKey(state2, '2');
+    state2 = handleKey(state2, 'd');
+    state2 = handleKey(state2, 'w');
+    expect(state2.lines).toEqual(['cherry date']);
+  });
+
+  it('jumps to line number with [count]gg and [count]G', () => {
+    const lines = ['line 1', 'line 2', 'line 3', 'line 4', 'line 5'];
+    let state = createState(lines, 0, 0);
+
+    // 4gg -> line 3 (4th line)
+    state = handleKey(state, '4');
+    state = handleKey(state, 'g');
+    state = handleKey(state, 'g');
+    expect(state.cursor.line).toBe(3);
+
+    // 2G -> line 1 (2nd line)
+    state = handleKey(state, '2');
+    state = handleKey(state, 'G');
+    expect(state.cursor.line).toBe(1);
+  });
+});
+
+describe('Vim Engine - New INSERT Entry Motions (I, A, o, O)', () => {
+  it('I moves cursor to first non-blank char and enters INSERT mode', () => {
+    const state = createState(['   indented text'], 0, 10);
+    const next = handleKey(state, 'I');
+    expect(next.mode).toBe('INSERT');
+    expect(next.cursor).toEqual({ line: 0, col: 3 }); // index of 'i'
+  });
+
+  it('A moves cursor past line end and enters INSERT mode', () => {
+    const state = createState(['hello'], 0, 1);
+    const next = handleKey(state, 'A');
+    expect(next.mode).toBe('INSERT');
+    expect(next.cursor).toEqual({ line: 0, col: 5 }); // length of 'hello'
+  });
+
+  it('o opens a new line below and enters INSERT mode at col 0', () => {
+    const state = createState(['first line', 'third line'], 0, 3);
+    const next = handleKey(state, 'o');
+    expect(next.mode).toBe('INSERT');
+    expect(next.lines).toEqual(['first line', '', 'third line']);
+    expect(next.cursor).toEqual({ line: 1, col: 0 });
+  });
+
+  it('O opens a new line above and enters INSERT mode at col 0', () => {
+    const state = createState(['second line'], 0, 4);
+    const next = handleKey(state, 'O');
+    expect(next.mode).toBe('INSERT');
+    expect(next.lines).toEqual(['', 'second line']);
+    expect(next.cursor).toEqual({ line: 0, col: 0 });
+  });
+});
+
+describe('Vim Engine - Change (c) & Replace (r) Operators', () => {
+  describe('cw and c[count]w operator', () => {
+    it('deletes from cursor to word end and enters INSERT mode', () => {
+      let state = createState(['hello world'], 0, 0);
+      state = handleKey(state, 'c');
+      expect(state.pendingKeys).toBe('c');
+      state = handleKey(state, 'w');
+      expect(state.mode).toBe('INSERT');
+      expect(state.lines).toEqual([' world']);
+      expect(state.cursor).toEqual({ line: 0, col: 0 });
+      expect(state.clipboard).toEqual({
+        type: 'text',
+        content: 'hello',
+      });
+    });
+
+    it('changes multiple words with c2w', () => {
+      let state = createState(['foo bar baz'], 0, 0);
+      state = handleKey(state, 'c');
+      state = handleKey(state, '2');
+      state = handleKey(state, 'w');
+      expect(state.mode).toBe('INSERT');
+      expect(state.lines).toEqual([' baz']);
+      expect(state.cursor).toEqual({ line: 0, col: 0 });
+    });
+  });
+
+  describe('cc and C operators', () => {
+    it('cc empties current line, saves to clipboard, and enters INSERT mode at col 0', () => {
+      let state = createState(['line 1', 'line 2', 'line 3'], 1, 3);
+      state = handleKey(state, 'c');
+      state = handleKey(state, 'c');
+      expect(state.mode).toBe('INSERT');
+      expect(state.lines).toEqual(['line 1', '', 'line 3']);
+      expect(state.cursor).toEqual({ line: 1, col: 0 });
+      expect(state.clipboard).toEqual({
+        type: 'line',
+        content: 'line 2',
+      });
+    });
+
+    it('C deletes from cursor to line end and enters INSERT mode', () => {
+      const state = createState(['first second third'], 0, 6); // 's' in second
+      const next = handleKey(state, 'C');
+      expect(next.mode).toBe('INSERT');
+      expect(next.lines).toEqual(['first ']);
+      expect(next.cursor).toEqual({ line: 0, col: 6 });
+      expect(next.clipboard).toEqual({
+        type: 'text',
+        content: 'second third',
+      });
+    });
+  });
+
+  describe('r{char} single character replacement', () => {
+    it('replaces character at cursor with next typed char and keeps NORMAL mode', () => {
+      let state = createState(['hello'], 0, 1); // 'e'
+      state = handleKey(state, 'r');
+      expect(state.pendingKeys).toBe('r');
+      state = handleKey(state, 'a');
+      expect(state.lines).toEqual(['hallo']);
+      expect(state.mode).toBe('NORMAL');
+      expect(state.cursor).toEqual({ line: 0, col: 1 });
+      expect(state.pendingKeys).toBeUndefined();
+    });
+
+    it('replaces multiple characters when count is provided (3rx)', () => {
+      let state = createState(['abcdef'], 0, 1); // 'b'
+      state = handleKey(state, '3');
+      state = handleKey(state, 'r');
+      state = handleKey(state, 'x');
+      expect(state.lines).toEqual(['axxxef']);
+      expect(state.cursor).toEqual({ line: 0, col: 3 }); // last replaced char
+    });
+
+    it('cancels r on Escape', () => {
+      let state = createState(['hello'], 0, 1);
+      state = handleKey(state, 'r');
+      state = handleKey(state, 'Escape');
+      expect(state.lines).toEqual(['hello']);
+      expect(state.pendingKeys).toBeUndefined();
+    });
+  });
+});
+
+describe('Vim Engine - Undo / Redo Compatibility for New Features', () => {
+  it('undoes o line insertion and subsequent typing session in single u', () => {
+    let state = createState(['first', 'second'], 0, 0);
+    state = handleKey(state, 'o'); // insert new line
+    state = handleKey(state, 'm');
+    state = handleKey(state, 'i');
+    state = handleKey(state, 'd');
+    state = handleKey(state, 'Escape');
+    expect(state.lines).toEqual(['first', 'mid', 'second']);
+
+    // u reverts both the typing and the newly opened line
+    state = handleKey(state, 'u');
+    expect(state.lines).toEqual(['first', 'second']);
+
+    // Redo re-applies it
+    state = handleKey(state, 'Ctrl-r');
+    expect(state.lines).toEqual(['first', 'mid', 'second']);
+  });
+
+  it('undoes cw change in single u', () => {
+    let state = createState(['hello world'], 0, 0);
+    state = handleKey(state, 'c');
+    state = handleKey(state, 'w');
+    state = handleKey(state, 'h');
+    state = handleKey(state, 'i');
+    state = handleKey(state, 'Escape');
+    expect(state.lines).toEqual(['hi world']);
+
+    state = handleKey(state, 'u');
+    expect(state.lines).toEqual(['hello world']);
+  });
+
+  it('undoes r single character replacement', () => {
+    let state = createState(['hello'], 0, 0);
+    state = handleKey(state, 'r');
+    state = handleKey(state, 'H');
+    expect(state.lines).toEqual(['Hello']);
+
+    state = handleKey(state, 'u');
+    expect(state.lines).toEqual(['hello']);
+  });
+});
