@@ -23,17 +23,17 @@ describe('App Component with Keyboard Navigation', () => {
     fireEvent.keyDown(window, { key: 'l' });
     expect(cursorPos).toHaveTextContent('1:2');
 
-    // j 누름 -> 빈 줄(2번째 줄) -> 2:1
+    // j 누름 -> 2번째 줄 -> 2:2
     fireEvent.keyDown(window, { key: 'j' });
-    expect(cursorPos).toHaveTextContent('2:1');
+    expect(cursorPos).toHaveTextContent('2:2');
 
-    // j 누름 -> 3번째 줄 -> 3:1
+    // j 누름 -> 3번째 줄 -> 3:2
     fireEvent.keyDown(window, { key: 'j' });
-    expect(cursorPos).toHaveTextContent('3:1');
+    expect(cursorPos).toHaveTextContent('3:2');
 
-    // $ 누름 -> 3번째 줄 끝으로 이동 ('Practice your Vim motions and commands directly in the browser.' 길이는 63 -> 3:63)
+    // $ 누름 -> 3번째 줄 맨 끝 문자 -> 3:30
     fireEvent.keyDown(window, { key: '$' });
-    expect(cursorPos).toHaveTextContent('3:63');
+    expect(cursorPos).toHaveTextContent('3:30');
 
     // 0 누름 -> 줄 맨 앞
     fireEvent.keyDown(window, { key: '0' });
@@ -45,6 +45,35 @@ describe('App Component with Keyboard Navigation', () => {
     fireEvent.keyDown(window, { key: 'g' });
     expect(cursorPos).toHaveTextContent('1:1');
     expect(screen.queryByTestId('status-pending-keys')).not.toBeInTheDocument();
+  });
+
+  it('completes lesson 1 upon reaching target cursor and advances to lesson 2', () => {
+    render(<App />);
+
+    expect(screen.getByTestId('mission-title')).toHaveTextContent('레슨 1');
+    expect(screen.getByText('진행 중')).toBeInTheDocument();
+
+    // 레슨 1 목표: line 2, col 13
+    // 아래로 2번 이동 (line 2)
+    fireEvent.keyDown(window, { key: 'j' });
+    fireEvent.keyDown(window, { key: 'j' });
+
+    // 오른쪽으로 13번 이동 (col 13)
+    for (let i = 0; i < 13; i++) {
+      fireEvent.keyDown(window, { key: 'l' });
+    }
+
+    // 성공 상태 확인
+    expect(screen.getByTestId('mission-completed-badge')).toHaveTextContent('✓ 성공!');
+    expect(screen.getByTestId('mission-success-banner')).toBeInTheDocument();
+
+    // 다음 레슨 도전하기 클릭
+    const nextBtn = screen.getByRole('button', { name: /다음 레슨 도전하기/i });
+    fireEvent.click(nextBtn);
+
+    // 레슨 2로 전환 확인
+    expect(screen.getByTestId('mission-title')).toHaveTextContent('레슨 2');
+    expect(screen.getByTestId('status-filename')).toHaveTextContent('lesson_2.txt');
   });
 
   it('enters INSERT mode, types text, and returns to NORMAL mode with Escape', () => {

@@ -1,0 +1,185 @@
+.mission-panel {
+  width: 100%;
+  max-width: 960px;
+  background-color: #24273a;
+  border: 1px solid #363a4f;
+  border-radius: 8px;
+  padding: 1.25rem;
+  box-sizing: border-box;
+  margin-bottom: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+.mission-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.mission-badge-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mission-step-badge {
+  background-color: #363a4f;
+  color: #cad3f5;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.mission-status-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.mission-status-badge.in-progress {
+  background-color: #494d64;
+  color: #eed49f;
+}
+
+.mission-status-badge.completed {
+  background-color: #a6da95;
+  color: #181926;
+  animation: pulse-success 0.4s ease-out;
+}
+
+@keyframes pulse-success {
+  0% { transform: scale(0.95); }
+  50% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+.mission-nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.mission-nav-btn {
+  background-color: #363a4f;
+  color: #cad3f5;
+  border: 1px solid #494d64;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mission-nav-btn:hover:not(:disabled) {
+  background-color: #494d64;
+  color: #ffffff;
+}
+
+.mission-nav-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.mission-nav-btn.highlight {
+  background-color: #8aadf4;
+  color: #181926;
+  border-color: #8aadf4;
+  font-weight: 700;
+}
+
+.mission-title {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f4dbd6;
+}
+
+.mission-desc {
+  margin: 0 0 0.85rem 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: #cad3f5;
+}
+
+.mission-success-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: rgba(166, 218, 149, 0.15);
+  border: 1px solid #a6da95;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.85rem;
+  color: #a6da95;
+  font-weight: 600;
+  font-size: 0.9rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.next-lesson-btn {
+  background-color: #a6da95;
+  color: #181926;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 14px;
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.next-lesson-btn:hover {
+  opacity: 0.9;
+}
+
+.mission-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.mission-hint-toggle,
+.mission-reset-btn {
+  background: transparent;
+  border: none;
+  color: #939ab7;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: color 0.15s ease;
+}
+
+.mission-hint-toggle:hover,
+.mission-reset-btn:hover {
+  color: #cad3f5;
+  text-decoration: underline;
+}
+
+.mission-hint-box {
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.85rem;
+  background-color: #1e2030;
+  border-left: 3px solid #f5a97f;
+  border-radius: 4px;
+  font-size: 0.88rem;
+  color: #eed49f;
+  line-height: 1.45;
+}
+
+@media (max-width: 640px) {
+  .mission-panel {
+    padding: 1rem;
+  }
+  .mission-title {
+    font-size: 1.05rem;
+  }
+}

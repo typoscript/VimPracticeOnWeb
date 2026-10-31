@@ -68,6 +68,16 @@
   position: relative;
 }
 
+/* 목표 위치 하이라이트 */
+.target-marker {
+  outline: 2px dashed #f9e2af;
+  outline-offset: -1px;
+  border-radius: 2px;
+  background-color: rgba(249, 226, 175, 0.18);
+  color: #f9e2af;
+  font-weight: bold;
+}
+
 /* NORMAL 모드: 블록 커서 */
 .cursor-normal {
   background-color: #a6e3a1;

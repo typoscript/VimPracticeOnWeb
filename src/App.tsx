@@ -1,31 +1,43 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Editor } from './components/Editor/Editor';
 import { StatusBar } from './components/StatusBar/StatusBar';
+import { MissionPanel } from './components/MissionPanel/MissionPanel';
 import { VimEditorState } from './types/vim';
 import { handleKey } from './engine/vimEngine';
+import { MISSIONS } from './data/missions';
 import './App.css';
 
-const INITIAL_TEXT = [
-  'Welcome to VimPracticeOnWeb!',
-  '',
-  'Practice your Vim motions and commands directly in the browser.',
-  'Navigate lines using h, j, k, l, switch modes, and edit buffers.',
-  '',
-  'Try the following motions now:',
-  '  - h / j / k / l : Move left, down, up, right',
-  '  - w / b / e     : Next word, previous word, word end',
-  '  - 0 / $ / ^     : Line start, line end, first non-blank char',
-  '  - gg / G        : Top of buffer, bottom of buffer',
-  '',
-  'Happy Vimming!'
-];
-
 export function App() {
+  const [currentMissionIndex, setCurrentMissionIndex] = useState(0);
+  const currentMission = MISSIONS[currentMissionIndex];
+
   const [editorState, setEditorState] = useState<VimEditorState>({
-    lines: INITIAL_TEXT,
-    cursor: { line: 0, col: 0 },
+    lines: currentMission.initialLines,
+    cursor: currentMission.initialCursor,
     mode: 'NORMAL',
   });
+
+  const isCompleted = currentMission.checkComplete(editorState);
+
+  const handleSelectMission = useCallback((index: number) => {
+    if (index >= 0 && index < MISSIONS.length) {
+      setCurrentMissionIndex(index);
+      const nextMission = MISSIONS[index];
+      setEditorState({
+        lines: nextMission.initialLines,
+        cursor: nextMission.initialCursor,
+        mode: 'NORMAL',
+      });
+    }
+  }, []);
+
+  const handleResetMission = useCallback(() => {
+    setEditorState({
+      lines: currentMission.initialLines,
+      cursor: currentMission.initialCursor,
+      mode: 'NORMAL',
+    });
+  }, [currentMission]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -55,34 +67,43 @@ export function App() {
           <span className="brand-icon">⌨</span>
           <h1 className="brand-title">VimPracticeOnWeb</h1>
         </div>
-        <p className="header-desc">NORMAL &amp; INSERT modes enabled</p>
+        <p className="header-desc">인터랙티브 Vim 튜토리얼 &amp; 연습 코스</p>
       </header>
 
       <section className="key-cheatsheet" aria-label="Keyboard Shortcuts">
         <span className="cheat-item"><code>h j k l</code> 이동</span>
-        <span className="cheat-item"><code>w b e</code> 단어 이동</span>
+        <span className="cheat-item"><code>w b e</code> 단어 점프</span>
         <span className="cheat-item"><code>0 $ ^</code> 줄 이동</span>
-        <span className="cheat-item"><code>gg G</code> 파일 이동</span>
         <span className="cheat-item"><code>i a</code> 입력 진입</span>
         <span className="cheat-item"><code>Esc</code> 일반 모드</span>
         <span className="cheat-item"><code>x</code> 글자 삭제</span>
       </section>
 
       <main className="editor-wrapper">
+        <MissionPanel
+          mission={currentMission}
+          missionIndex={currentMissionIndex}
+          totalMissions={MISSIONS.length}
+          isCompleted={isCompleted}
+          onSelectMission={handleSelectMission}
+          onResetMission={handleResetMission}
+        />
         <Editor
           lines={editorState.lines}
           cursor={editorState.cursor}
           mode={editorState.mode}
+          targetPosition={currentMission.targetCursor}
         />
         <StatusBar
           mode={editorState.mode}
           cursor={editorState.cursor}
+          filename={`lesson_${currentMission.id}.txt`}
           pendingKeys={editorState.pendingKeys}
         />
       </main>
 
       <footer className="app-footer">
-        <span>Press i/a to edit • Esc to return to NORMAL • x to delete char</span>
+        <span>VimPracticeOnWeb • 키보드로 미션을 완료하며 자연스럽게 Vim을 마스터하세요</span>
       </footer>
     </div>
   );
