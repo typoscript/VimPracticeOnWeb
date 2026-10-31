@@ -113,6 +113,18 @@
   background-color: rgba(166, 227, 161, 0.1);
 }
 
+.diff-toggle-btn.active {
+  border-color: #fab387;
+  color: #fab387;
+  background-color: rgba(250, 179, 135, 0.1);
+}
+
+.keyboard-toggle-btn.active {
+  border-color: #89b4fa;
+  color: #89b4fa;
+  background-color: rgba(137, 180, 250, 0.1);
+}
+
 .lesson-list-btn:hover {
   border-color: #89b4fa;
   color: #89b4fa;

@@ -9,6 +9,8 @@ export interface Mission {
   initialLines: string[];
   initialCursor: { line: number; col: number };
   targetCursor?: { line: number; col: number };
+  /** 목표 텍스트 상태 (Diff 비교 뷰용) */
+  targetLines?: string[];
   initialUndoStack?: StateSnapshot[];
   initialClipboard?: ClipboardRegister;
   checkComplete: (state: VimEditorState) => boolean;

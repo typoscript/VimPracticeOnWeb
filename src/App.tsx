@@ -5,7 +5,11 @@ import { MissionPanel, calculateStars } from './components/MissionPanel/MissionP
 import { Keycaster } from './components/Keycaster/Keycaster';
 import { CoachingToast } from './components/CoachingToast/CoachingToast';
 import { LessonSelectModal } from './components/LessonSelectModal/LessonSelectModal';
+import { DiffViewer } from './components/DiffViewer/DiffViewer';
+import { VirtualKeyboard } from './components/VirtualKeyboard/VirtualKeyboard';
+import { SpeedrunPanel } from './components/SpeedrunPanel/SpeedrunPanel';
 import { VimEditorState } from './types/vim';
+import { Mission } from './types/mission';
 import { handleKey } from './engine/vimEngine';
 import { MISSIONS } from './data/missions';
 import { SANDBOX_INITIAL_LINES } from './data/sandbox';
@@ -14,28 +18,58 @@ import {
   saveLessonRecord,
   loadRelativeLineSetting,
   saveRelativeLineSetting,
+  loadVirtualKeyboardSetting,
+  saveVirtualKeyboardSetting,
+  loadDiffViewSetting,
+  saveDiffViewSetting,
+  loadSpeedrunRecord,
+  saveSpeedrunRecord,
+  SpeedrunRecord,
   LessonProgress,
 } from './utils/storage';
 import './App.css';
 
 const REPEATED_MOTION_KEYS = ['h', 'j', 'k', 'l', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
 
+/** 스피드런 챌린지 후보 미션 ID 목록 (리팩토링/편집 미션) */
+export const SPEEDRUN_CANDIDATE_IDS = [4, 6, 7, 9, 10, 11, 12, 13, 14, 15, 17];
+
+export function generateSpeedrunStages(): Mission[] {
+  const candidates = MISSIONS.filter((m) => SPEEDRUN_CANDIDATE_IDS.includes(m.id));
+  const shuffled = [...candidates].sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, 5);
+}
+
 export function App() {
-  const [currentTab, setCurrentTab] = useState<'course' | 'sandbox'>('course');
+  const [currentTab, setCurrentTab] = useState<'course' | 'sandbox' | 'speedrun'>('course');
   const [currentMissionIndex, setCurrentMissionIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [progress, setProgress] = useState<LessonProgress>(() => loadProgress());
   const [relativeLineNumbers, setRelativeLineNumbers] = useState<boolean>(() => loadRelativeLineSetting());
+  const [showVirtualKeyboard, setShowVirtualKeyboard] = useState<boolean>(() => loadVirtualKeyboardSetting());
+  const [showDiffView, setShowDiffView] = useState<boolean>(() => loadDiffViewSetting());
 
   const currentMission = MISSIONS[currentMissionIndex];
 
-  // 총 입력 타수 및 최근 키 입력 히스토리
+  // 총 입력 타수 및 최근 키 입력 히스토리, 가상 키보드 프레스 상태
   const [keystrokeCount, setKeystrokeCount] = useState(0);
   const [recentKeys, setRecentKeys] = useState<string[]>([]);
+  const [lastPressedKey, setLastPressedKey] = useState<string | undefined>(undefined);
 
   // 안티 패턴 감지 코칭 메시지
   const [coachingMessage, setCoachingMessage] = useState<string | null>(null);
   const consecutiveMotionRef = useRef(0);
+
+  // 스피드런 상태 관리
+  const [speedrunStatus, setSpeedrunStatus] = useState<'ready' | 'running' | 'completed'>('ready');
+  const [speedrunStages, setSpeedrunStages] = useState<Mission[]>(() => generateSpeedrunStages());
+  const [speedrunCurrentStage, setSpeedrunCurrentStage] = useState(0);
+  const [speedrunElapsedSeconds, setSpeedrunElapsedSeconds] = useState(0);
+  const [speedrunKeystrokes, setSpeedrunKeystrokes] = useState(0);
+  const [speedrunBestRecord, setSpeedrunBestRecord] = useState<SpeedrunRecord | null>(() => loadSpeedrunRecord());
+  const [speedrunIsNewRecord, setSpeedrunIsNewRecord] = useState(false);
+
+  const activeSpeedrunMission = speedrunStages[speedrunCurrentStage];
 
   const [editorState, setEditorState] = useState<VimEditorState>({
     lines: currentMission.initialLines,
@@ -48,7 +82,7 @@ export function App() {
 
   const isCompleted = currentTab === 'course' && currentMission.checkComplete(editorState);
 
-  // 미션 클리어 시 최고 기록 및 별점 영구 저장
+  // 튜토리얼 코스 미션 클리어 시 최고 기록 및 별점 영구 저장
   useEffect(() => {
     if (currentTab === 'course' && isCompleted) {
       const rating = calculateStars(keystrokeCount, currentMission.par);
@@ -56,6 +90,60 @@ export function App() {
       setProgress(updated);
     }
   }, [currentTab, isCompleted, currentMission.id, currentMission.par, keystrokeCount]);
+
+  // 스피드런 타이머 연동 (100ms마다 0.1초 증가)
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (currentTab === 'speedrun' && speedrunStatus === 'running') {
+      interval = setInterval(() => {
+        setSpeedrunElapsedSeconds((prev) => Number((prev + 0.1).toFixed(1)));
+      }, 100);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [currentTab, speedrunStatus]);
+
+  // 스피드런 스테이지 완료 및 다음 스테이지 자동 전이
+  useEffect(() => {
+    if (
+      currentTab === 'speedrun' &&
+      speedrunStatus === 'running' &&
+      activeSpeedrunMission &&
+      activeSpeedrunMission.checkComplete(editorState)
+    ) {
+      if (speedrunCurrentStage < speedrunStages.length - 1) {
+        // 다음 스테이지로 즉시 이동
+        const nextStageIdx = speedrunCurrentStage + 1;
+        setSpeedrunCurrentStage(nextStageIdx);
+        const nextMission = speedrunStages[nextStageIdx];
+        setEditorState({
+          lines: [...nextMission.initialLines],
+          cursor: { ...nextMission.initialCursor },
+          mode: 'NORMAL',
+          undoStack: nextMission.initialUndoStack ? [...nextMission.initialUndoStack] : [],
+          redoStack: [],
+          clipboard: nextMission.initialClipboard,
+        });
+        setCoachingMessage(`🎉 스테이지 ${speedrunCurrentStage + 1} 돌파! 다음 목표로 이동합니다.`);
+      } else {
+        // 5개 스테이지 최종 완료!
+        setSpeedrunStatus('completed');
+        const saveRes = saveSpeedrunRecord(speedrunElapsedSeconds, speedrunKeystrokes);
+        setSpeedrunBestRecord(saveRes.record);
+        setSpeedrunIsNewRecord(saveRes.isNewRecord);
+      }
+    }
+  }, [
+    currentTab,
+    speedrunStatus,
+    activeSpeedrunMission,
+    speedrunCurrentStage,
+    speedrunStages,
+    editorState,
+    speedrunElapsedSeconds,
+    speedrunKeystrokes,
+  ]);
 
   const handleSelectMission = useCallback((index: number) => {
     if (index >= 0 && index < MISSIONS.length) {
@@ -71,6 +159,7 @@ export function App() {
       });
       setKeystrokeCount(0);
       setRecentKeys([]);
+      setLastPressedKey(undefined);
       setCoachingMessage(null);
       consecutiveMotionRef.current = 0;
     }
@@ -87,6 +176,7 @@ export function App() {
     });
     setKeystrokeCount(0);
     setRecentKeys([]);
+    setLastPressedKey(undefined);
     setCoachingMessage(null);
     consecutiveMotionRef.current = 0;
   }, [currentMission]);
@@ -101,30 +191,64 @@ export function App() {
     });
     setKeystrokeCount(0);
     setRecentKeys([]);
+    setLastPressedKey(undefined);
     setCoachingMessage(null);
     consecutiveMotionRef.current = 0;
   }, []);
 
-  const handleSwitchTab = useCallback((tab: 'course' | 'sandbox') => {
-    setCurrentTab(tab);
-    if (tab === 'sandbox') {
-      handleResetSandbox();
-    } else {
-      const mission = MISSIONS[currentMissionIndex];
-      setEditorState({
-        lines: mission.initialLines,
-        cursor: mission.initialCursor,
-        mode: 'NORMAL',
-        undoStack: mission.initialUndoStack ? [...mission.initialUndoStack] : [],
-        redoStack: [],
-        clipboard: mission.initialClipboard,
-      });
-      setKeystrokeCount(0);
-      setRecentKeys([]);
+  const handleStartSpeedrun = useCallback(() => {
+    const newStages = generateSpeedrunStages();
+    setSpeedrunStages(newStages);
+    setSpeedrunCurrentStage(0);
+    setSpeedrunElapsedSeconds(0);
+    setSpeedrunKeystrokes(0);
+    setSpeedrunIsNewRecord(false);
+    setSpeedrunStatus('running');
+
+    const first = newStages[0];
+    setEditorState({
+      lines: [...first.initialLines],
+      cursor: { ...first.initialCursor },
+      mode: 'NORMAL',
+      undoStack: first.initialUndoStack ? [...first.initialUndoStack] : [],
+      redoStack: [],
+      clipboard: first.initialClipboard,
+    });
+    setRecentKeys([]);
+    setLastPressedKey(undefined);
+    setCoachingMessage(null);
+  }, []);
+
+  const handleSwitchTab = useCallback(
+    (tab: 'course' | 'sandbox' | 'speedrun') => {
+      setCurrentTab(tab);
+      setLastPressedKey(undefined);
       setCoachingMessage(null);
       consecutiveMotionRef.current = 0;
-    }
-  }, [currentMissionIndex, handleResetSandbox]);
+
+      if (tab === 'sandbox') {
+        handleResetSandbox();
+      } else if (tab === 'speedrun') {
+        setSpeedrunStatus('ready');
+        setSpeedrunElapsedSeconds(0);
+        setSpeedrunKeystrokes(0);
+        setSpeedrunIsNewRecord(false);
+      } else {
+        const mission = MISSIONS[currentMissionIndex];
+        setEditorState({
+          lines: mission.initialLines,
+          cursor: mission.initialCursor,
+          mode: 'NORMAL',
+          undoStack: mission.initialUndoStack ? [...mission.initialUndoStack] : [],
+          redoStack: [],
+          clipboard: mission.initialClipboard,
+        });
+        setKeystrokeCount(0);
+        setRecentKeys([]);
+      }
+    },
+    [currentMissionIndex, handleResetSandbox]
+  );
 
   const handleToggleRelativeLine = useCallback(() => {
     setRelativeLineNumbers((prev) => {
@@ -134,6 +258,53 @@ export function App() {
     });
   }, []);
 
+  const handleToggleVirtualKeyboard = useCallback(() => {
+    setShowVirtualKeyboard((prev) => {
+      const next = !prev;
+      saveVirtualKeyboardSetting(next);
+      return next;
+    });
+  }, []);
+
+  const handleToggleDiffView = useCallback(() => {
+    setShowDiffView((prev) => {
+      const next = !prev;
+      saveDiffViewSetting(next);
+      return next;
+    });
+  }, []);
+
+  // 실제 키 입력 또는 가상 키보드 클릭 시 공통 실행 함수
+  const processKeyInput = useCallback(
+    (key: string) => {
+      // 단독 보조 키 필터링
+      if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(key)) {
+        return;
+      }
+
+      setLastPressedKey(key);
+      setKeystrokeCount((prev) => prev + 1);
+      setRecentKeys((prev) => [...prev.slice(-7), key]);
+
+      if (currentTab === 'speedrun' && speedrunStatus === 'running') {
+        setSpeedrunKeystrokes((prev) => prev + 1);
+      }
+
+      // 안티 패턴 감지: 단일 이동 키 5회 이상 연속 연타
+      if (REPEATED_MOTION_KEYS.includes(key)) {
+        consecutiveMotionRef.current += 1;
+        if (consecutiveMotionRef.current >= 5) {
+          setCoachingMessage('이동 키를 연타하는 대신 w, b 또는 숫자+이동(예: 5j)을 사용해 보세요!');
+        }
+      } else {
+        consecutiveMotionRef.current = 0;
+      }
+
+      setEditorState((prevState) => handleKey(prevState, key));
+    },
+    [currentTab, speedrunStatus]
+  );
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // 모달이 열려 있을 때는 에디터 키 입력을 차단
@@ -141,7 +312,7 @@ export function App() {
         return;
       }
 
-      // 단독 메타/보조 키(Shift, Control, Alt, Meta, CapsLock)는 타수 및 Vim 엔진 전달 제외
+      // 단독 메타/보조 키는 타수 및 엔진 전달 제외
       if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(e.key)) {
         return;
       }
@@ -149,14 +320,11 @@ export function App() {
       // Ctrl+r 또는 Cmd+r: Redo 실행 취소 취소
       if ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R')) {
         e.preventDefault();
-        setKeystrokeCount((prev) => prev + 1);
-        setRecentKeys((prev) => [...prev.slice(-7), 'Ctrl-r']);
-        consecutiveMotionRef.current = 0;
-        setEditorState((prevState) => handleKey(prevState, 'Ctrl-r'));
+        processKeyInput('Ctrl-r');
         return;
       }
 
-      // 그 외 메타 키(Command, Ctrl, Alt) 조합은 브라우저 기본 단축키 허용
+      // 그 외 메타 키 조합은 브라우저 기본 단축키 허용
       if (e.metaKey || e.ctrlKey || e.altKey) {
         return;
       }
@@ -166,7 +334,7 @@ export function App() {
         e.preventDefault();
       }
 
-      // 이전에 클릭한 UI 버튼에 남아 있는 포커스를 해제하여 Enter 입력 시 버튼이 재실행되는 버그 방지
+      // 이전 UI 버튼에 남아 있는 HTML 포커스 해제
       if (
         document.activeElement &&
         document.activeElement instanceof HTMLElement &&
@@ -180,28 +348,21 @@ export function App() {
         setCoachingMessage('⚠️ 현재 한글 입력 상태입니다. 원활한 Vim 명령어 입력을 위해 [한/영] 키를 눌러 영문 모드로 전환해 주세요!');
       }
 
-      // 타수 증가 및 키캐스터 등록
-      setKeystrokeCount((prev) => prev + 1);
-      setRecentKeys((prev) => [...prev.slice(-7), e.key]);
-
-      // 안티 패턴 감지: 단일 이동 키 5회 이상 연속 연타
-      if (REPEATED_MOTION_KEYS.includes(e.key)) {
-        consecutiveMotionRef.current += 1;
-        if (consecutiveMotionRef.current >= 5) {
-          setCoachingMessage('이동 키를 연타하는 대신 w, b 또는 숫자+이동(예: 5j)을 사용해 보세요!');
-        }
-      } else {
-        consecutiveMotionRef.current = 0;
-      }
-
-      setEditorState((prevState) => handleKey(prevState, e.key));
+      processKeyInput(e.key);
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isModalOpen]);
+  }, [isModalOpen, processKeyInput]);
+
+  const activeMissionForDiff =
+    currentTab === 'course'
+      ? currentMission
+      : currentTab === 'speedrun' && speedrunStatus === 'running'
+      ? activeSpeedrunMission
+      : undefined;
 
   return (
     <div className="app-layout">
@@ -234,6 +395,15 @@ export function App() {
           >
             🧪 자유 연습장
           </button>
+          <button
+            role="tab"
+            aria-selected={currentTab === 'speedrun'}
+            className={`nav-tab-btn ${currentTab === 'speedrun' ? 'active' : ''}`}
+            onClick={() => handleSwitchTab('speedrun')}
+            data-testid="tab-speedrun-btn"
+          >
+            ⚡ 스피드런
+          </button>
         </div>
 
         <div className="nav-actions">
@@ -246,6 +416,29 @@ export function App() {
               📚 레슨 목록
             </button>
           )}
+
+          {/* 목표 Diff 뷰 토글 버튼 */}
+          {currentTab !== 'sandbox' && (
+            <button
+              className={`toolbar-btn diff-toggle-btn ${showDiffView ? 'active' : ''}`}
+              onClick={handleToggleDiffView}
+              data-testid="toggle-diff-view-btn"
+              title="목표 텍스트 Diff 비교 뷰어 토글"
+            >
+              🎯 목표 Diff: {showDiffView ? 'ON' : 'OFF'}
+            </button>
+          )}
+
+          {/* 가상 키보드 오버레이 토글 버튼 */}
+          <button
+            className={`toolbar-btn keyboard-toggle-btn ${showVirtualKeyboard ? 'active' : ''}`}
+            onClick={handleToggleVirtualKeyboard}
+            data-testid="toggle-virtual-keyboard-btn"
+            title="반응형 인터랙티브 가상 키보드 패널 토글"
+          >
+            ⌨ 가상 키보드: {showVirtualKeyboard ? 'ON' : 'OFF'}
+          </button>
+
           <button
             className={`toolbar-btn relativenumber-btn ${relativeLineNumbers ? 'active' : ''}`}
             onClick={handleToggleRelativeLine}
@@ -282,7 +475,7 @@ export function App() {
           onDismiss={() => setCoachingMessage(null)}
         />
 
-        {currentTab === 'course' ? (
+        {currentTab === 'course' && (
           <MissionPanel
             mission={currentMission}
             missionIndex={currentMissionIndex}
@@ -292,7 +485,9 @@ export function App() {
             onSelectMission={handleSelectMission}
             onResetMission={handleResetMission}
           />
-        ) : (
+        )}
+
+        {currentTab === 'sandbox' && (
           <div className="sandbox-panel" data-testid="sandbox-panel">
             <div className="sandbox-info">
               <span className="sandbox-badge">🧪 SANDBOX</span>
@@ -310,11 +505,26 @@ export function App() {
           </div>
         )}
 
+        {currentTab === 'speedrun' && (
+          <SpeedrunPanel
+            status={speedrunStatus}
+            currentStageIndex={speedrunCurrentStage}
+            totalStages={speedrunStages.length}
+            currentMissionTitle={activeSpeedrunMission?.title}
+            elapsedSeconds={speedrunElapsedSeconds}
+            totalKeystrokes={speedrunKeystrokes}
+            bestRecord={speedrunBestRecord}
+            isNewRecord={speedrunIsNewRecord}
+            onStart={handleStartSpeedrun}
+            onRestart={handleStartSpeedrun}
+          />
+        )}
+
         <Editor
           lines={editorState.lines}
           cursor={editorState.cursor}
           mode={editorState.mode}
-          targetPosition={currentTab === 'course' ? currentMission.targetCursor : undefined}
+          targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
           visualAnchor={editorState.visualAnchor}
           relativeLineNumbers={relativeLineNumbers}
           searchQuery={
@@ -327,12 +537,36 @@ export function App() {
         <StatusBar
           mode={editorState.mode}
           cursor={editorState.cursor}
-          filename={currentTab === 'course' ? `lesson_${currentMission.id}.txt` : 'sandbox.ts'}
+          filename={
+            currentTab === 'course'
+              ? `lesson_${currentMission.id}.txt`
+              : currentTab === 'speedrun'
+              ? `speedrun_stage_${speedrunCurrentStage + 1}.txt`
+              : 'sandbox.ts'
+          }
           pendingKeys={editorState.pendingKeys}
           commandType={editorState.commandType}
           commandBuffer={editorState.commandBuffer}
           commandMessage={editorState.commandMessage}
         />
+
+        {/* 목표 상태 Diff 비교 하이라이트 뷰 */}
+        {showDiffView && activeMissionForDiff && (
+          <DiffViewer
+            currentLines={editorState.lines}
+            targetLines={activeMissionForDiff.targetLines}
+            isCompleted={currentTab === 'course' ? isCompleted : false}
+          />
+        )}
+
+        {/* 반응형 인터랙티브 가상 키보드 패널 */}
+        {showVirtualKeyboard && (
+          <VirtualKeyboard
+            mode={editorState.mode}
+            lastPressedKey={lastPressedKey}
+            onKeyPress={processKeyInput}
+          />
+        )}
       </main>
 
       <footer className="app-footer">

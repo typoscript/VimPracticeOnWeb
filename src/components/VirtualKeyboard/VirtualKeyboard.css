@@ -1,0 +1,215 @@
+.virtual-keyboard-panel {
+  width: 100%;
+  max-width: 960px;
+  background-color: #181825;
+  border: 1px solid #313244;
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  box-sizing: border-box;
+  font-family: 'JetBrains Mono', 'Fira Code', sans-serif;
+  margin-top: 0.75rem;
+  user-select: none;
+}
+
+.keyboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #313244;
+}
+
+.keyboard-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.keyboard-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #cdd6f4;
+}
+
+.keyboard-mode-pill {
+  font-size: 11px;
+  font-weight: 700;
+  color: #a6e3a1;
+  background-color: rgba(166, 227, 161, 0.15);
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.keyboard-legend {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 11px;
+  color: #a6adc8;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.legend-dot.motion { background-color: #a6e3a1; }
+.legend-dot.operator { background-color: #fab387; }
+.legend-dot.insert { background-color: #89b4fa; }
+.legend-dot.visual { background-color: #cba6f7; }
+.legend-dot.search { background-color: #f9e2af; }
+
+.keyboard-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background-color: #11111b;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #313244;
+}
+
+.keyboard-row {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
+}
+
+/* 개별 키캡 */
+.vkey {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  min-width: 32px;
+  padding: 2px 4px;
+  background-color: #1e1e2e;
+  border: 1px solid #313244;
+  border-bottom: 2px solid #181825;
+  border-radius: 4px;
+  color: #cdd6f4;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.08s ease;
+  box-sizing: border-box;
+}
+
+.vkey:hover {
+  background-color: #262738;
+  border-color: #45475a;
+}
+
+.vkey-label {
+  line-height: 1.1;
+}
+
+.vkey-sublabel {
+  font-size: 9px;
+  font-weight: normal;
+  color: #6c7086;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+/* 키 너비 */
+.vkey.width-wide {
+  min-width: 48px;
+}
+
+.vkey.width-extra-wide {
+  min-width: 64px;
+}
+
+.vkey.width-space {
+  flex: 1;
+  max-width: 260px;
+}
+
+/* 역할별 색상 */
+.vkey.role-motion {
+  border-color: #a6e3a1;
+  background-color: rgba(166, 227, 161, 0.08);
+}
+.vkey.role-motion .vkey-label {
+  color: #a6e3a1;
+}
+.vkey.role-motion .vkey-sublabel {
+  color: #94e2d5;
+}
+
+.vkey.role-operator {
+  border-color: #fab387;
+  background-color: rgba(250, 179, 135, 0.08);
+}
+.vkey.role-operator .vkey-label {
+  color: #fab387;
+}
+
+.vkey.role-insert {
+  border-color: #89b4fa;
+  background-color: rgba(137, 180, 250, 0.08);
+}
+.vkey.role-insert .vkey-label {
+  color: #89b4fa;
+}
+
+.vkey.role-visual {
+  border-color: #cba6f7;
+  background-color: rgba(203, 166, 247, 0.08);
+}
+.vkey.role-visual .vkey-label {
+  color: #cba6f7;
+}
+
+.vkey.role-search {
+  border-color: #f9e2af;
+  background-color: rgba(249, 226, 175, 0.08);
+}
+.vkey.role-search .vkey-label {
+  color: #f9e2af;
+}
+
+.vkey.role-control {
+  border-color: #f5c2e7;
+}
+
+/* 실제 키를 눌렀을 때의 Press 하이라이트 효과 */
+.vkey.vkey-pressed {
+  background-color: #f9e2af !important;
+  color: #11111b !important;
+  border-color: #f9e2af !important;
+  transform: translateY(2px);
+  box-shadow: 0 0 12px rgba(249, 226, 175, 0.6);
+}
+
+.vkey.vkey-pressed .vkey-label,
+.vkey.vkey-pressed .vkey-sublabel {
+  color: #11111b !important;
+  font-weight: 800;
+}
+
+@media (max-width: 768px) {
+  .keyboard-legend {
+    display: none;
+  }
+  .vkey {
+    height: 32px;
+    min-width: 24px;
+    font-size: 10.5px;
+  }
+  .vkey-sublabel {
+    display: none;
+  }
+}

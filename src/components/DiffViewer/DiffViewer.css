@@ -1,0 +1,183 @@
+.diff-viewer {
+  width: 100%;
+  max-width: 960px;
+  background-color: #181825;
+  border: 1px solid #313244;
+  border-radius: 8px;
+  padding: 0.85rem 1rem;
+  box-sizing: border-box;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 13px;
+  margin-top: 0.75rem;
+  transition: all 0.2s ease;
+}
+
+.diff-viewer.empty {
+  padding: 0.75rem 1rem;
+}
+
+.diff-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #313244;
+}
+
+.diff-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.diff-title {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #cdd6f4;
+}
+
+.diff-subtitle {
+  font-size: 12px;
+  color: #a6adc8;
+}
+
+.diff-badge {
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.diff-badge.match {
+  background-color: rgba(166, 227, 161, 0.2);
+  color: #a6e3a1;
+  border: 1px solid #a6e3a1;
+}
+
+.diff-badge.mismatch {
+  background-color: rgba(243, 139, 168, 0.2);
+  color: #f38ba8;
+  border: 1px solid #f38ba8;
+}
+
+.diff-empty-msg {
+  color: #a6adc8;
+  font-size: 12.5px;
+  margin: 0;
+}
+
+.diff-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.diff-column {
+  background-color: #11111b;
+  border: 1px solid #313244;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.diff-column-header {
+  padding: 6px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  background-color: #181825;
+  border-bottom: 1px solid #313244;
+  color: #bac2de;
+}
+
+.current-col .diff-column-header {
+  border-top: 2px solid #89b4fa;
+}
+
+.target-col .diff-column-header {
+  border-top: 2px solid #a6e3a1;
+}
+
+.diff-lines {
+  display: flex;
+  flex-direction: column;
+}
+
+.diff-line-row {
+  display: flex;
+  align-items: center;
+  padding: 3px 8px;
+  min-height: 24px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  border-bottom: 1px solid rgba(49, 50, 68, 0.4);
+}
+
+.diff-line-row:last-child {
+  border-bottom: none;
+}
+
+.diff-line-no {
+  width: 24px;
+  color: #6c7086;
+  font-size: 11px;
+  text-align: right;
+  margin-right: 8px;
+  user-select: none;
+}
+
+.diff-line-marker {
+  width: 14px;
+  font-weight: bold;
+  user-select: none;
+  font-size: 12px;
+}
+
+.diff-line-content {
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* 줄 상태별 색상 */
+.diff-line-row.match {
+  background-color: transparent;
+  color: #cdd6f4;
+}
+
+.diff-line-row.diff-different {
+  background-color: rgba(243, 139, 168, 0.12);
+  color: #f38ba8;
+}
+
+.diff-line-row.diff-different .diff-line-marker {
+  color: #f38ba8;
+}
+
+.diff-line-row.diff-target {
+  background-color: rgba(166, 227, 161, 0.12);
+  color: #a6e3a1;
+}
+
+.diff-line-row.diff-target .diff-line-marker {
+  color: #a6e3a1;
+}
+
+.diff-blank {
+  color: #6c7086;
+  font-style: italic;
+  font-size: 11px;
+}
+
+.diff-none {
+  color: #f38ba8;
+  font-style: italic;
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+@media (max-width: 768px) {
+  .diff-grid {
+    grid-template-columns: 1fr;
+  }
+}

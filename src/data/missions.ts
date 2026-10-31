@@ -54,6 +54,10 @@ export const MISSIONS: Mission[] = [
       'Viiim is awesome!',
       'Fix the typo on the first line.',
     ],
+    targetLines: [
+      'Vim is awesome!',
+      'Fix the typo on the first line.',
+    ],
     initialCursor: { line: 0, col: 0 },
     checkComplete: (state) => {
       const line0 = state.lines[0] ?? '';
@@ -68,6 +72,10 @@ export const MISSIONS: Mission[] = [
     par: 8,
     initialLines: [
       'Vim',
+      'Change the first line to "Vim rocks".',
+    ],
+    targetLines: [
+      'Vim rocks',
       'Change the first line to "Vim rocks".',
     ],
     initialCursor: { line: 0, col: 0 },
@@ -85,6 +93,10 @@ export const MISSIONS: Mission[] = [
     initialLines: [
       'Keep this important line.',
       'DELETE ME: This line should be removed.',
+      'Keep this line too.',
+    ],
+    targetLines: [
+      'Keep this important line.',
       'Keep this line too.',
     ],
     initialCursor: { line: 0, col: 0 },
@@ -105,6 +117,10 @@ export const MISSIONS: Mission[] = [
       'Vim is wrong an amazing editor!',
       'Delete the word "wrong" from the first line.',
     ],
+    targetLines: [
+      'Vim is an amazing editor!',
+      'Delete the word "wrong" from the first line.',
+    ],
     initialCursor: { line: 0, col: 0 },
     checkComplete: (state) => {
       const line0 = state.lines[0] ?? '';
@@ -119,6 +135,11 @@ export const MISSIONS: Mission[] = [
     par: 1,
     initialLines: [
       'Line 1: Safe and sound.',
+      'Line 3: Wait, where did Line 2 go?',
+    ],
+    targetLines: [
+      'Line 1: Safe and sound.',
+      'Line 2: Important configuration data!',
       'Line 3: Wait, where did Line 2 go?',
     ],
     initialCursor: { line: 1, col: 0 },
@@ -146,6 +167,10 @@ export const MISSIONS: Mission[] = [
       'Keep start - [DELETE THIS PART] - Keep end.',
       'Select and delete only the bracketed part.',
     ],
+    targetLines: [
+      'Keep start -  - Keep end.',
+      'Select and delete only the bracketed part.',
+    ],
     initialCursor: { line: 0, col: 13 },
     checkComplete: (state) => {
       const line0 = state.lines[0] ?? '';
@@ -168,6 +193,10 @@ export const MISSIONS: Mission[] = [
       'REMOVE ME 2',
       'one two three [GOAL]',
     ],
+    targetLines: [
+      'Header line',
+      'one two three [GOAL]',
+    ],
     initialCursor: { line: 1, col: 0 },
     targetCursor: { line: 1, col: 14 },
     checkComplete: (state) => {
@@ -186,6 +215,10 @@ export const MISSIONS: Mission[] = [
     hint: 'A를 누르고 " done" 입력 후 Esc, 이어서 o를 누르고 "Vim is fast!"를 입력한 뒤 Esc를 누르세요.',
     par: 21,
     initialLines: ['Task 1'],
+    targetLines: [
+      'Task 1 done',
+      'Vim is fast!',
+    ],
     initialCursor: { line: 0, col: 0 },
     checkComplete: (state) => {
       return (
@@ -205,6 +238,10 @@ export const MISSIONS: Mission[] = [
       'Vim is slow',
       'A cute cwt',
     ],
+    targetLines: [
+      'Vim is fast',
+      'A cute cat',
+    ],
     initialCursor: { line: 0, col: 7 },
     checkComplete: (state) => {
       return (
@@ -221,6 +258,7 @@ export const MISSIONS: Mission[] = [
     hint: 'f(를 눌러 여는 괄호로 이동한 다음, df)를 입력하면 닫는 괄호까지 한 번에 삭제됩니다.',
     par: 5,
     initialLines: ['console.log(unwanted, junk);'],
+    targetLines: ['console.log;'],
     initialCursor: { line: 0, col: 0 },
     checkComplete: (state) => {
       return (
@@ -238,6 +276,10 @@ export const MISSIONS: Mission[] = [
     initialLines: [
       'let oldVariable = 200;',
       'const msg = "delete this text";',
+    ],
+    targetLines: [
+      'let status = 200;',
+      'const msg = "";',
     ],
     initialCursor: { line: 0, col: 4 },
     checkComplete: (state) => {
@@ -258,6 +300,11 @@ export const MISSIONS: Mission[] = [
       'const a = 1',
       'const b = 2',
       'const c = 3',
+    ],
+    targetLines: [
+      'const a = 1;',
+      'const b = 2;',
+      'const c = 3;',
     ],
     initialCursor: { line: 0, col: 0 },
     checkComplete: (state) => {
@@ -301,6 +348,11 @@ export const MISSIONS: Mission[] = [
       '1. TODO: Fix authentication bug',
       '2. TODO: Implement search feature',
       '3. TODO: Write comprehensive tests',
+    ],
+    targetLines: [
+      '1. DONE: Fix authentication bug',
+      '2. DONE: Implement search feature',
+      '3. DONE: Write comprehensive tests',
     ],
     initialCursor: { line: 0, col: 0 },
     checkComplete: (state) => {

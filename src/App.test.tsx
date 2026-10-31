@@ -297,4 +297,38 @@ describe('App Component with Keyboard Navigation', () => {
     fireEvent.keyDown(window, { key: 'ㄱ' });
     expect(screen.getByTestId('coaching-toast')).toHaveTextContent('한/영');
   });
+
+  it('가상 키보드와 목표 Diff 비교 뷰를 토글할 수 있다', () => {
+    render(<App />);
+
+    // 가상 키보드 토글
+    const kbToggleBtn = screen.getByTestId('toggle-virtual-keyboard-btn');
+    expect(screen.getByTestId('virtual-keyboard')).toBeInTheDocument();
+    fireEvent.click(kbToggleBtn);
+    expect(screen.queryByTestId('virtual-keyboard')).not.toBeInTheDocument();
+
+    // 목표 Diff 뷰 토글
+    const diffToggleBtn = screen.getByTestId('toggle-diff-view-btn');
+    expect(screen.getByTestId('diff-viewer')).toBeInTheDocument();
+    fireEvent.click(diffToggleBtn);
+    expect(screen.queryByTestId('diff-viewer')).not.toBeInTheDocument();
+  });
+
+  it('스피드런 탭 전환 후 챌린지를 시작할 수 있다', () => {
+    render(<App />);
+
+    // 스피드런 탭 클릭
+    const speedrunTabBtn = screen.getByTestId('tab-speedrun-btn');
+    fireEvent.click(speedrunTabBtn);
+
+    expect(screen.getByTestId('speedrun-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('speedrun-ready-view')).toBeInTheDocument();
+
+    // 시작 버튼 클릭 -> live view로 전환
+    const startBtn = screen.getByTestId('speedrun-start-btn');
+    fireEvent.click(startBtn);
+
+    expect(screen.getByTestId('speedrun-live-view')).toBeInTheDocument();
+    expect(screen.getByTestId('speedrun-stage-indicator')).toHaveTextContent('1 / 5');
+  });
 });

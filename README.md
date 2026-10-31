@@ -159,6 +159,22 @@
   * `h, j, k, l` 또는 방향키를 5회 이상 연속으로 연타하는 비효율적 입력 감지
   * 감지 시 세련된 토스트 배너로 `"💡 이동 키를 연타하는 대신 w, b 또는 숫자+이동(예: 5j)을 사용해 보세요!"` 코칭 팁 자동 제공
 
+### 11. 시각적 학습 도구 & 챌린지 모드 (Visual Tools & Speedrun)
+* **목표 상태 Diff 비교 하이라이트 (Target Diff View)**:
+  * 텍스트 편집 미션(삭제, 수정, 치환 등)에서 유저가 만들어야 할 '목표 텍스트(Target Lines)'와 '현재 에디터 텍스트'를 실시간 비교
+  * 아직 수정되지 않은 틀린 줄(붉은색 `-` 마커)과 완성 목표 줄(초록색 `+` 마커)을 나란히 시각화하여, 무엇을 고쳐야 미션이 클리어되는지 직관적으로 제공
+  * 상단 툴바 `🎯 목표 Diff: ON/OFF` 버튼으로 언제든 토글 가능
+* **반응형 인터랙티브 가상 키보드 (Virtual Keyboard)**:
+  * 에디터 하단에 표준 QWERTY 가상 키보드 및 각 키별 Vim 역할 치트시트 렌더링
+  * 실제 키보드를 타이핑할 때마다 가상 키보드의 해당 키캡이 실시간으로 하이라이트(`vkey-pressed`)되는 프레스 애니메이션 지원
+  * 현재 모드(NORMAL / INSERT / VISUAL)에 따라 유효한 기능 키 색상(이동: 녹색, 수정/삭제: 주황, 입력: 파랑, 선택: 보라, 탐색: 노랑) 자동 구분
+  * 마우스 클릭으로도 실제 Vim 명령어가 에디터에 전달되는 인터랙티브 기능 지원
+  * 상단 툴바 `⌨ 가상 키보드: ON/OFF` 버튼으로 토글 가능 (설정 영구 저장)
+* **타임어택 / 스피드런 챌린지 모드 (Speedrun Mode)**:
+  * 상단 `⚡ 스피드런` 탭을 통해 다양한 Vim 리팩토링 미션 5개를 연속으로 격파하는 타임어택 플레이 지원
+  * 실시간 스톱워치 타이머(`00:15.3`) 및 누적 타수 실시간 트래킹
+  * 5개 스테이지 올 클리어 시 최단 소요 시간 및 최저 타수 기록을 `localStorage`에 영구 경신 및 신기록 뱃지 표시
+
 ---
 
 ## 📚 커리큘럼 구성 (Lessons)
@@ -186,7 +202,7 @@
 ## 🛠️ 기술 스택 (Tech Stack)
 
 * **Frontend**: React 19, TypeScript, Vite
-* **Testing**: Vitest, React Testing Library (217개 단위/통합 테스트 100% 통과)
+* **Testing**: Vitest, React Testing Library (244개 단위/통합 테스트 100% 통과)
 * **Styling**: Modern CSS (Catppuccin Macchiato 테마 기반)
 * **Storage**: Browser LocalStorage API
 
@@ -230,3 +246,6 @@ npm run build
 - [x] **자유 연습장 (Sandbox Mode)** 및 **레슨 선택 모달**
 - [x] **상대 라인 번호 (relativenumber)** 토글 기능
 - [x] **LocalStorage 기반 진도 및 기록 영구 저장**
+- [x] **목표 상태 Diff 비교 하이라이트 뷰어 (Target Diff View)**
+- [x] **반응형 인터랙티브 가상 키보드 & 치트시트 오버레이 (Virtual Keyboard)**
+- [x] **타임어택 / 스피드런 챌린지 모드 (Speedrun Mode)**

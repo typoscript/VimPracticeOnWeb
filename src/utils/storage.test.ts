@@ -4,6 +4,12 @@ import {
   saveLessonRecord,
   loadRelativeLineSetting,
   saveRelativeLineSetting,
+  loadVirtualKeyboardSetting,
+  saveVirtualKeyboardSetting,
+  loadDiffViewSetting,
+  saveDiffViewSetting,
+  loadSpeedrunRecord,
+  saveSpeedrunRecord,
   PROGRESS_STORAGE_KEY,
 } from './storage';
 
@@ -88,6 +94,65 @@ describe('storage utils', () => {
         throw new Error('Storage access denied');
       });
       expect(loadRelativeLineSetting()).toBe(false);
+    });
+  });
+
+  describe('virtual keyboard setting', () => {
+    it('기본값은 true를 반환한다', () => {
+      expect(loadVirtualKeyboardSetting()).toBe(true);
+    });
+
+    it('설정을 저장하고 다시 불러올 수 있다', () => {
+      saveVirtualKeyboardSetting(false);
+      expect(loadVirtualKeyboardSetting()).toBe(false);
+
+      saveVirtualKeyboardSetting(true);
+      expect(loadVirtualKeyboardSetting()).toBe(true);
+    });
+  });
+
+  describe('diff view setting', () => {
+    it('기본값은 true를 반환한다', () => {
+      expect(loadDiffViewSetting()).toBe(true);
+    });
+
+    it('설정을 저장하고 다시 불러올 수 있다', () => {
+      saveDiffViewSetting(false);
+      expect(loadDiffViewSetting()).toBe(false);
+
+      saveDiffViewSetting(true);
+      expect(loadDiffViewSetting()).toBe(true);
+    });
+  });
+
+  describe('speedrun records', () => {
+    it('기록이 없을 경우 null을 반환한다', () => {
+      expect(loadSpeedrunRecord()).toBeNull();
+    });
+
+    it('새로운 스피드런 기록을 저장하고 최고 기록 갱신 플래그를 반환한다', () => {
+      const res = saveSpeedrunRecord(24.5, 38);
+      expect(res.isNewRecord).toBe(true);
+      expect(res.record.bestTimeSeconds).toBe(24.5);
+      expect(res.record.minKeystrokes).toBe(38);
+
+      const loaded = loadSpeedrunRecord();
+      expect(loaded?.bestTimeSeconds).toBe(24.5);
+      expect(loaded?.minKeystrokes).toBe(38);
+    });
+
+    it('기존 기록보다 더 빠른 시간이면 신기록으로 경신된다', () => {
+      saveSpeedrunRecord(30.0, 50);
+      const res = saveSpeedrunRecord(22.1, 40);
+      expect(res.isNewRecord).toBe(true);
+      expect(res.record.bestTimeSeconds).toBe(22.1);
+    });
+
+    it('기존 기록보다 느린 시간이면 기존 기록을 유지한다', () => {
+      saveSpeedrunRecord(20.0, 30);
+      const res = saveSpeedrunRecord(25.0, 20);
+      expect(res.isNewRecord).toBe(false);
+      expect(res.record.bestTimeSeconds).toBe(20.0);
     });
   });
 });
