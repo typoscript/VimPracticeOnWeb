@@ -60,9 +60,9 @@ export function executeCommandLine(
     };
   }
 
-  // 4. 범위 지정 명령어 파싱: :%s/old/new/g, :3,7d, :'<,'>norm A;, :%y 등
+  // 4. 범위 지정 명령어 파싱: :%s/old/new/g, :3,7d, :'<,'>norm A;, :%y, :'<,'>sort, :3,5m $, :10t . 등
   const rangeMatch = trimmed.match(
-    /^:?\s*(%|'<,'>|'<|'>|\.|\$|\d+(?:\s*,\s*(?:\.|\$|\d+|'<|'>))?)\s*(.*)$/
+    /^:?\s*(%|'<,'>|<,>|(?:[0-9]+|\.|\$|'<|'>)(?:\s*,\s*(?:[0-9]+|\.|\$|'<|'>))?)\s*(.*)$/
   );
   if (rangeMatch) {
     const rawRange = rangeMatch[1];
@@ -93,6 +93,24 @@ export function executeCommandLine(
         const normKeys = normMatch[3];
         return executeRangeNorm(state, range, normKeys, trimmed, keyRunner);
       }
+
+      // 4-5. 범위 정렬: :sort, :sort!, :sort u, :sort n
+      const sortMatch = restCmdTrimmed.match(/^sort(!?)(?:\s+(.*))?$/);
+      if (sortMatch) {
+        return executeSort(state, range, sortMatch[1], sortMatch[2]);
+      }
+
+      // 4-6. 범위 이동: :[range]m {address}, :[range]move {address}
+      const moveMatch = restCmdTrimmed.match(/^(?:m|move)\s+(.*)$/);
+      if (moveMatch) {
+        return executeMove(state, range, moveMatch[1]);
+      }
+
+      // 4-7. 범위 복제: :[range]t {address}, :[range]co {address}, :[range]copy {address}
+      const copyMatch = restCmdTrimmed.match(/^(?:t|co|copy)\s+(.*)$/);
+      if (copyMatch) {
+        return executeCopy(state, range, copyMatch[1]);
+      }
     }
   }
 
@@ -109,6 +127,27 @@ export function executeCommandLine(
     const normKeys = standaloneNormMatch[3];
     const currentLineRange = { startLine: state.cursor.line, endLine: state.cursor.line };
     return executeRangeNorm(state, currentLineRange, normKeys, trimmed, keyRunner);
+  }
+
+  // 7. 범위 없는 단일 sort: :sort, :sort!, :sort u, :sort n (전체 버퍼 대상)
+  const standaloneSortMatch = trimmed.match(/^:?\s*sort(!?)(?:\s+(.*))?$/);
+  if (standaloneSortMatch) {
+    const fullRange = { startLine: 0, endLine: state.lines.length - 1 };
+    return executeSort(state, fullRange, standaloneSortMatch[1], standaloneSortMatch[2]);
+  }
+
+  // 8. 범위 없는 단일 move: :m {address}, :move {address} (현재 행 대상)
+  const standaloneMoveMatch = trimmed.match(/^:?\s*(?:m|move)\s+(.*)$/);
+  if (standaloneMoveMatch) {
+    const currentLineRange = { startLine: state.cursor.line, endLine: state.cursor.line };
+    return executeMove(state, currentLineRange, standaloneMoveMatch[1]);
+  }
+
+  // 9. 범위 없는 단일 copy: :t {address}, :co {address}, :copy {address} (현재 행 대상)
+  const standaloneCopyMatch = trimmed.match(/^:?\s*(?:t|co|copy)\s+(.*)$/);
+  if (standaloneCopyMatch) {
+    const currentLineRange = { startLine: state.cursor.line, endLine: state.cursor.line };
+    return executeCopy(state, currentLineRange, standaloneCopyMatch[1]);
   }
 
   // 7. 창 분할 및 종료 명령어 (:sp, :vsp, :q, :w, :help)
@@ -260,6 +299,61 @@ export function executeCommandLine(
 }
 
 /**
+ * Ex 커맨드 주소({address}) 문자열을 해석하여 대상 행 인덱스(-1 ~ lines.length - 1)를 반환합니다.
+ * -1은 0번째 행 이전(파일 최상단)을 나타냅니다.
+ */
+export function parseAddress(
+  addrStr: string,
+  state: VimEditorState
+): number | null {
+  const trimmed = addrStr.trim();
+  const totalLines = state.lines.length;
+
+  if (trimmed === '0') {
+    return -1; // 0: 1행 이전, 즉 파일 최상단 (인덱스 0 앞에 삽입)
+  }
+  if (trimmed === '$') {
+    return totalLines - 1;
+  }
+  if (trimmed === '.') {
+    return state.cursor.line;
+  }
+  if (trimmed === "'<") {
+    return Math.min(state.visualAnchor?.line ?? state.cursor.line, state.cursor.line);
+  }
+  if (trimmed === "'>") {
+    return Math.max(state.visualAnchor?.line ?? state.cursor.line, state.cursor.line);
+  }
+
+  // 상대 주소: .+2, .-1, $+1, $-2, +2, -1 등
+  const relMatch = trimmed.match(/^(\.|\$)?\s*([+-])\s*(\d+)$/);
+  if (relMatch) {
+    const baseSym = relMatch[1] ?? '.';
+    const sign = relMatch[2] === '-' ? -1 : 1;
+    const offset = parseInt(relMatch[3], 10) * sign;
+    const baseLine = baseSym === '$' ? totalLines - 1 : state.cursor.line;
+    const calculated = baseLine + offset;
+    if (calculated < -1 || calculated > totalLines - 1) {
+      return null;
+    }
+    return calculated;
+  }
+
+  // 절대 행 번호 (1-indexed): "1", "10" 등
+  const numMatch = trimmed.match(/^(\d+)$/);
+  if (numMatch) {
+    const n = parseInt(numMatch[1], 10);
+    if (n === 0) return -1;
+    if (n >= 1 && n <= totalLines) {
+      return n - 1;
+    }
+    return null; // 유효 범위를 벗어난 행 번호
+  }
+
+  return null;
+}
+
+/**
  * Ex 커맨드 범위(range) 문자열을 0-indexed 시작/끝 행으로 해석합니다.
  */
 export function parseRange(
@@ -296,7 +390,7 @@ export function parseRange(
     return { startLine: l, endLine: l };
   }
 
-  // 콤마로 구분된 두 항목: "3,7", ".,$", "1,." 등
+  // 콤마로 구분된 두 항목: "3,7", ".,$", "1,.", "4,$" 등
   const commaParts = trimmed.split(',');
   if (commaParts.length === 2) {
     const resolvePart = (part: string, defaultLine: number): number => {
@@ -305,8 +399,10 @@ export function parseRange(
       if (p === '$') return totalLines - 1;
       if (p === "'<") return Math.min(state.visualAnchor?.line ?? state.cursor.line, state.cursor.line);
       if (p === "'>") return Math.max(state.visualAnchor?.line ?? state.cursor.line, state.cursor.line);
-      const n = parseInt(p, 10);
-      if (!isNaN(n)) return Math.max(0, Math.min(totalLines - 1, n - 1));
+      const addr = parseAddress(p, state);
+      if (addr !== null) {
+        return Math.max(0, addr);
+      }
       return defaultLine;
     };
 
@@ -318,6 +414,231 @@ export function parseRange(
   }
 
   return null;
+}
+
+/**
+ * [range]sort [u][!] [n] 명령어를 실행합니다.
+ */
+export function executeSort(
+  state: VimEditorState,
+  range: { startLine: number; endLine: number },
+  bang: string,
+  argsStr?: string
+): VimEditorState {
+  const minLine = Math.max(0, Math.min(range.startLine, range.endLine));
+  const maxLine = Math.min(state.lines.length - 1, Math.max(range.startLine, range.endLine));
+
+  if (minLine > maxLine || state.lines.length === 0) {
+    return { ...state, mode: 'NORMAL', commandBuffer: undefined, commandType: undefined };
+  }
+
+  const stateWithUndo = pushUndoSnapshot(state);
+  const flags = (argsStr ?? '').trim();
+  const isDescending = bang === '!' || flags.includes('!');
+  const isUnique = flags.includes('u');
+  const isNumeric = flags.includes('n');
+
+  const selectedLines = state.lines.slice(minLine, maxLine + 1);
+
+  const extractNumber = (line: string): number | null => {
+    const m = line.match(/-?\d+/);
+    return m ? parseInt(m[0], 10) : null;
+  };
+
+  // 안정 정렬(Stable Sort)을 위해 원본 인덱스 유지
+  const indexed = selectedLines.map((line, idx) => ({ line, idx }));
+
+  indexed.sort((a, b) => {
+    if (isNumeric) {
+      const numA = extractNumber(a.line);
+      const numB = extractNumber(b.line);
+      if (numA !== null && numB !== null) {
+        if (numA !== numB) {
+          return isDescending ? numB - numA : numA - numB;
+        }
+      } else if (numA !== null) {
+        return isDescending ? 1 : -1;
+      } else if (numB !== null) {
+        return isDescending ? -1 : 1;
+      }
+      return a.idx - b.idx;
+    }
+
+    const cmp = a.line.localeCompare(b.line);
+    if (cmp !== 0) {
+      return isDescending ? -cmp : cmp;
+    }
+    return a.idx - b.idx;
+  });
+
+  const sortedLines = indexed.map((item) => item.line);
+
+  let finalLines: string[];
+  if (isUnique) {
+    finalLines = [];
+    for (let i = 0; i < sortedLines.length; i++) {
+      if (i === 0 || sortedLines[i] !== sortedLines[i - 1]) {
+        finalLines.push(sortedLines[i]);
+      }
+    }
+  } else {
+    finalLines = sortedLines;
+  }
+
+  const newLines = [
+    ...state.lines.slice(0, minLine),
+    ...finalLines,
+    ...state.lines.slice(maxLine + 1),
+  ];
+
+  if (newLines.length === 0) {
+    newLines.push('');
+  }
+
+  const nextCursor = clampCursor(
+    newLines,
+    { line: minLine, col: 0 },
+    'NORMAL'
+  );
+
+  return {
+    ...stateWithUndo,
+    lines: newLines,
+    cursor: nextCursor,
+    mode: 'NORMAL',
+    visualAnchor: undefined,
+    commandBuffer: undefined,
+    commandType: undefined,
+    commandMessage: `${finalLines.length}개 줄 정렬 완료`,
+  };
+}
+
+/**
+ * :[range]m[ove] {address} 명령어를 실행합니다.
+ */
+export function executeMove(
+  state: VimEditorState,
+  range: { startLine: number; endLine: number },
+  destStr: string
+): VimEditorState {
+  const targetLine = parseAddress(destStr, state);
+  if (targetLine === null) {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: `E14: 잘못된 주소입니다: ${destStr}`,
+    };
+  }
+
+  const startLine = Math.max(0, Math.min(range.startLine, range.endLine));
+  const endLine = Math.min(state.lines.length - 1, Math.max(range.startLine, range.endLine));
+
+  // E134: Cannot move a range of lines into itself
+  if (targetLine >= startLine && targetLine < endLine) {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: 'E134: Cannot move a range of lines into itself',
+    };
+  }
+
+  const stateWithUndo = pushUndoSnapshot(state);
+  const count = endLine - startLine + 1;
+  const linesToMove = state.lines.slice(startLine, endLine + 1);
+
+  const remainingLines = [
+    ...state.lines.slice(0, startLine),
+    ...state.lines.slice(endLine + 1),
+  ];
+
+  let insertIndex: number;
+  if (targetLine < startLine) {
+    insertIndex = targetLine + 1;
+  } else {
+    insertIndex = targetLine + 1 - count;
+  }
+
+  const newLines = [
+    ...remainingLines.slice(0, insertIndex),
+    ...linesToMove,
+    ...remainingLines.slice(insertIndex),
+  ];
+
+  const finalCursorLine = insertIndex + linesToMove.length - 1;
+  const nextCursor = clampCursor(
+    newLines,
+    { line: finalCursorLine, col: 0 },
+    'NORMAL'
+  );
+
+  return {
+    ...stateWithUndo,
+    lines: newLines,
+    cursor: nextCursor,
+    mode: 'NORMAL',
+    visualAnchor: undefined,
+    commandBuffer: undefined,
+    commandType: undefined,
+    commandMessage: `${linesToMove.length}개 줄 이동 완료`,
+  };
+}
+
+/**
+ * :[range]t {address} 또는 :[range]co[py] {address} 명령어를 실행합니다.
+ */
+export function executeCopy(
+  state: VimEditorState,
+  range: { startLine: number; endLine: number },
+  destStr: string
+): VimEditorState {
+  const targetLine = parseAddress(destStr, state);
+  if (targetLine === null) {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: `E14: 잘못된 주소입니다: ${destStr}`,
+    };
+  }
+
+  const startLine = Math.max(0, Math.min(range.startLine, range.endLine));
+  const endLine = Math.min(state.lines.length - 1, Math.max(range.startLine, range.endLine));
+
+  const stateWithUndo = pushUndoSnapshot(state);
+  const linesToCopy = state.lines.slice(startLine, endLine + 1);
+  const insertIndex = targetLine + 1;
+
+  const newLines = [
+    ...state.lines.slice(0, insertIndex),
+    ...linesToCopy,
+    ...state.lines.slice(insertIndex),
+  ];
+
+  const finalCursorLine = insertIndex + linesToCopy.length - 1;
+  const nextCursor = clampCursor(
+    newLines,
+    { line: finalCursorLine, col: 0 },
+    'NORMAL'
+  );
+
+  return {
+    ...stateWithUndo,
+    lines: newLines,
+    cursor: nextCursor,
+    mode: 'NORMAL',
+    visualAnchor: undefined,
+    commandBuffer: undefined,
+    commandType: undefined,
+    commandMessage: `${linesToCopy.length}개 줄 복제 완료`,
+  };
 }
 
 /**

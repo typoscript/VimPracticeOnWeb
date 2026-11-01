@@ -125,6 +125,7 @@ import {
   indentLines,
   indentVisual,
   modifyNumberAtCursor,
+  modifyNumberVisual,
   formatIndentLines,
   formatIndentVisual,
   formatIndentRange,
@@ -938,8 +939,94 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
     };
   }
 
-  if (key === 'gv' || (state.pendingKeys === 'g' && key === 'v')) {
+  // 'g' 접두사 대기 상태 (gg, gv, gd, g;, g,, g Ctrl-a, g Ctrl-x 등)
+  if (state.pendingKeys?.endsWith('g') || parsed.operator === 'g') {
+    if (key === 'g') {
+      const targetLine = parsed.count1 !== undefined
+        ? Math.max(0, Math.min(parsed.count1 - 1, state.lines.length - 1))
+        : 0;
+      return {
+        ...state,
+        cursor: { line: targetLine, col: Math.min(state.cursor.col, getMaxCol(state.lines[targetLine], 'VISUAL')) },
+        pendingKeys: undefined,
+      };
+    }
+    if (key === 'v') {
+      return reselectLastVisual(state);
+    }
+    if (key === 'd') {
+      return goToDeclaration(state);
+    }
+    if (key === ';') {
+      return traverseChangeList(state, 'prev', parsed.totalCount);
+    }
+    if (key === ',') {
+      return traverseChangeList(state, 'next', parsed.totalCount);
+    }
+    if (
+      key === 'Ctrl-a' ||
+      key === 'Ctrl+a' ||
+      key === 'ctrl-a' ||
+      key === '<C-a>'
+    ) {
+      return modifyNumberVisual(state, true, true, parsed.totalCount);
+    }
+    if (
+      key === 'Ctrl-x' ||
+      key === 'Ctrl+x' ||
+      key === 'ctrl-x' ||
+      key === '<C-x>'
+    ) {
+      return modifyNumberVisual(state, false, true, parsed.totalCount);
+    }
+    return { ...state, pendingKeys: undefined };
+  }
+
+  // 복합 키 표현 (g<Ctrl-a>, g<C-a>, g Ctrl-a, g Ctrl+a, g<Ctrl-x>, g<C-x>, g Ctrl-x, g Ctrl+x)
+  if (
+    key === 'g<Ctrl-a>' ||
+    key === 'g<C-a>' ||
+    key === 'g Ctrl-a' ||
+    key === 'g Ctrl+a'
+  ) {
+    return modifyNumberVisual(state, true, true, parsed.totalCount);
+  }
+  if (
+    key === 'g<Ctrl-x>' ||
+    key === 'g<C-x>' ||
+    key === 'g Ctrl-x' ||
+    key === 'g Ctrl+x'
+  ) {
+    return modifyNumberVisual(state, false, true, parsed.totalCount);
+  }
+
+  // VISUAL 모드 직접 Ctrl-a / Ctrl-x (모든 선택 숫자 일괄 증감)
+  if (
+    key === 'Ctrl-a' ||
+    key === 'Ctrl+a' ||
+    key === 'ctrl-a' ||
+    key === '<C-a>'
+  ) {
+    return modifyNumberVisual(state, true, false, parsed.totalCount);
+  }
+  if (
+    key === 'Ctrl-x' ||
+    key === 'Ctrl+x' ||
+    key === 'ctrl-x' ||
+    key === '<C-x>'
+  ) {
+    return modifyNumberVisual(state, false, false, parsed.totalCount);
+  }
+
+  if (key === 'gv') {
     return reselectLastVisual(state);
+  }
+
+  if (key === 'g') {
+    return {
+      ...state,
+      pendingKeys: (state.pendingKeys ?? '') + 'g',
+    };
   }
 
   // 'v': VISUAL 모드 토글 또는 전환

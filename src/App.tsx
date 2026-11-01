@@ -995,18 +995,18 @@ export function App() {
         }
       }
 
-      // Ctrl+a 또는 Cmd+a: 숫자 증가 (NORMAL 모드에서 브라우저 전체 선택 차단)
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
-        if (editorState.mode === 'NORMAL') {
+      // Ctrl+a 또는 Cmd+a 또는 Alt+a: 숫자 증가 (NORMAL 또는 VISUAL 모드에서 브라우저 전체 선택 차단)
+      if ((e.ctrlKey || e.metaKey || e.altKey) && (e.key === 'a' || e.key === 'A')) {
+        if (editorState.mode === 'NORMAL' || editorState.mode.startsWith('VISUAL')) {
           e.preventDefault();
           processKeyInput('Ctrl-a');
           return;
         }
       }
 
-      // Ctrl+x 또는 Cmd+x: 숫자 감소 (NORMAL 모드에서 브라우저 잘라내기 차단)
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'x' || e.key === 'X')) {
-        if (editorState.mode === 'NORMAL') {
+      // Ctrl+x 또는 Cmd+x 또는 Alt+x: 숫자 감소 (NORMAL 또는 VISUAL 모드에서 브라우저 잘라내기 차단)
+      if ((e.ctrlKey || e.metaKey || e.altKey) && (e.key === 'x' || e.key === 'X')) {
+        if (editorState.mode === 'NORMAL' || editorState.mode.startsWith('VISUAL')) {
           e.preventDefault();
           processKeyInput('Ctrl-x');
           return;

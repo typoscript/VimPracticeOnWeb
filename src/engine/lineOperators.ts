@@ -411,3 +411,109 @@ export function formatIndentVisual(state: VimEditorState): VimEditorState {
     visualAnchor: undefined,
   };
 }
+
+/**
+ * VISUAL 모드 Ctrl+a / Ctrl+x 및 g Ctrl+a / g Ctrl+x:
+ * 선택된 행들(또는 VISUAL_BLOCK 영역) 내의 숫자를 일괄 증가/감소하거나
+ * 계단식(Sequential)으로 +1, +2, +3... 순차 증가/감소합니다.
+ */
+export function modifyNumberVisual(
+  state: VimEditorState,
+  isIncrement: boolean,
+  isSequential: boolean,
+  count = 1
+): VimEditorState {
+  if (!state.visualAnchor) {
+    return { ...state, mode: 'NORMAL', pendingKeys: undefined };
+  }
+
+  const anchor = state.visualAnchor;
+  const cursor = state.cursor;
+  const mode = state.mode;
+
+  const minLine = Math.min(anchor.line, cursor.line);
+  const maxLine = Math.max(anchor.line, cursor.line);
+  const minCol = Math.min(anchor.col, cursor.col);
+  const maxCol = Math.max(anchor.col, cursor.col);
+
+  const stateWithUndo = pushUndoSnapshot(state);
+  const newLines = [...state.lines];
+  let stepIndex = 0;
+
+  for (let l = minLine; l <= maxLine; l++) {
+    const lineStr = newLines[l];
+    const regex = /-?\d+/g;
+    let match: RegExpExecArray | null = null;
+    let targetMatch: { start: number; end: number; value: number } | null = null;
+
+    while ((match = regex.exec(lineStr)) !== null) {
+      const start = match.index;
+      const end = start + match[0].length;
+
+      let isSelected = false;
+      if (mode === 'VISUAL_BLOCK') {
+        // VISUAL_BLOCK: 숫자의 적어도 한 문자가 [minCol, maxCol] 컬럼 범위 안에 걸쳐 있어야 함
+        if (start <= maxCol && end - 1 >= minCol) {
+          isSelected = true;
+        }
+      } else if (mode === 'VISUAL_LINE') {
+        // VISUAL_LINE: 해당 줄 전체가 선택 영역이므로 줄의 첫 번째 숫자가 타겟
+        isSelected = true;
+      } else {
+        // 일반 VISUAL: 숫자의 적어도 한 글자가 visual 선택 영역 안에 포함되는지 검사
+        for (let c = start; c < end; c++) {
+          if (isPositionSelected(l, c, anchor, cursor, mode)) {
+            isSelected = true;
+            break;
+          }
+        }
+      }
+
+      if (isSelected) {
+        targetMatch = {
+          start,
+          end,
+          value: parseInt(match[0], 10),
+        };
+        break; // 줄 당 첫 번째 매칭 숫자만 변경
+      }
+    }
+
+    if (targetMatch) {
+      stepIndex++;
+      const multiplier = isSequential ? stepIndex * count : count;
+      const delta = isIncrement ? multiplier : -multiplier;
+      const newValue = targetMatch.value + delta;
+      const newNumStr = String(newValue);
+
+      const before = lineStr.slice(0, targetMatch.start);
+      const after = lineStr.slice(targetMatch.end);
+      newLines[l] = before + newNumStr + after;
+    }
+  }
+
+  // Visual 모드 종료 후 커서는 선택 영역의 시작점으로 복귀
+  const startLine = minLine;
+  const startCol =
+    mode === 'VISUAL_BLOCK'
+      ? minCol
+      : anchor.line < cursor.line || (anchor.line === cursor.line && anchor.col <= cursor.col)
+      ? anchor.col
+      : cursor.col;
+
+  const finalCol = Math.max(0, Math.min(startCol, Math.max(0, (newLines[startLine] ?? '').length - 1)));
+
+  return {
+    ...stateWithUndo,
+    lines: newLines,
+    cursor: { line: startLine, col: finalCol },
+    mode: 'NORMAL',
+    visualAnchor: undefined,
+    pendingKeys: undefined,
+    lastVisualSelection: {
+      mode: state.mode as 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK',
+      anchor: { ...anchor },
+      cursor: { ...cursor },
+    },
+  };
+}
