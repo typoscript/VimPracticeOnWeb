@@ -185,6 +185,31 @@ export function saveGrammarASTSetting(enabled: boolean): void {
   }
 }
 
+const ACTION_TIMELINE_STORAGE_KEY = 'vim_practice_action_timeline_enabled';
+
+/**
+ * 실시간 명령 복기 타임라인 & Vim X-Ray 패널 표시 여부 설정값을 불러옵니다 (기본값: true).
+ */
+export function loadActionTimelineSetting(): boolean {
+  try {
+    const raw = localStorage.getItem(ACTION_TIMELINE_STORAGE_KEY);
+    return raw !== null ? raw === 'true' : true;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * 실시간 명령 복기 타임라인 & Vim X-Ray 패널 표시 여부 설정값을 저장합니다.
+ */
+export function saveActionTimelineSetting(enabled: boolean): void {
+  try {
+    localStorage.setItem(ACTION_TIMELINE_STORAGE_KEY, enabled ? 'true' : 'false');
+  } catch {
+    // 무시
+  }
+}
+
 /**
  * 스피드런 최고 기록을 불러옵니다.
  */

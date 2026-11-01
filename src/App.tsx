@@ -18,6 +18,13 @@ import { ConfigExporterModal } from './components/ConfigExporterModal/ConfigExpo
 import { DungeonRPG } from './components/DungeonRPG/DungeonRPG';
 import { VimGrammarASTViewer } from './components/VimGrammarASTViewer/VimGrammarASTViewer';
 import { BYOCModal } from './components/BYOCModal/BYOCModal';
+import { ActionTimelinePanel } from './components/ActionTimelinePanel/ActionTimelinePanel';
+import {
+  ActionTimelineStep,
+  createInitialTimelineStep,
+  formatCommandLabel,
+  getActionDescription,
+} from './utils/actionTimeline';
 import { VimEditorState, SplitPaneState } from './types/vim';
 import { Mission } from './types/mission';
 import { handleKey } from './engine/vimEngine';
@@ -37,6 +44,8 @@ import {
   saveRegisterInspectorSetting,
   loadGrammarASTSetting,
   saveGrammarASTSetting,
+  loadActionTimelineSetting,
+  saveActionTimelineSetting,
   loadSpeedrunRecord,
   saveSpeedrunRecord,
   SpeedrunRecord,
@@ -245,6 +254,110 @@ export function App() {
     return getMissionInitialState(currentMission);
   });
 
+  // 실시간 명령 복기 타임라인 & Vim X-Ray 투시기 상태
+  const [showActionTimeline, setShowActionTimeline] = useState<boolean>(() => loadActionTimelineSetting());
+  const [timelineSteps, setTimelineSteps] = useState<ActionTimelineStep[]>(() => [
+    createInitialTimelineStep(
+      initialCustomMission
+        ? {
+            lines: [...initialCustomMission.initialLines],
+            cursor: { ...initialCustomMission.initialCursor },
+            mode: 'NORMAL',
+            undoStack: [],
+            redoStack: [],
+            userKeymaps: compileUserKeymaps(activePresets, leaderKey),
+            leaderKey,
+          }
+        : getMissionInitialState(currentMission)
+    ),
+  ]);
+  const [pendingActionKeys, setPendingActionKeys] = useState<string[]>([]);
+  const [allKeysSoFar, setAllKeysSoFar] = useState<string[]>([]);
+  const [previewStepIndex, setPreviewStepIndex] = useState<number | null>(null);
+
+  const editorStateRef = useRef(editorState);
+  editorStateRef.current = editorState;
+  const timelineStepsRef = useRef(timelineSteps);
+  timelineStepsRef.current = timelineSteps;
+  const pendingActionKeysRef = useRef(pendingActionKeys);
+  pendingActionKeysRef.current = pendingActionKeys;
+  const allKeysSoFarRef = useRef(allKeysSoFar);
+  allKeysSoFarRef.current = allKeysSoFar;
+  const keystrokeCountRef = useRef(keystrokeCount);
+  keystrokeCountRef.current = keystrokeCount;
+  const previewStepIndexRef = useRef(previewStepIndex);
+  previewStepIndexRef.current = previewStepIndex;
+
+  const handleToggleActionTimeline = useCallback(() => {
+    setShowActionTimeline((prev) => {
+      const next = !prev;
+      saveActionTimelineSetting(next);
+      return next;
+    });
+  }, []);
+
+  const handleSelectTimelineStep = useCallback((stepIndex: number) => {
+    setPreviewStepIndex((prev) => (prev === stepIndex ? null : stepIndex));
+    previewStepIndexRef.current = previewStepIndexRef.current === stepIndex ? null : stepIndex;
+  }, []);
+
+  const handleCancelPreview = useCallback(() => {
+    setPreviewStepIndex(null);
+    previewStepIndexRef.current = null;
+  }, []);
+
+  const handleBranchFromStep = useCallback((stepIndex: number) => {
+    const targetStep = timelineStepsRef.current[stepIndex];
+    if (!targetStep) return;
+
+    editorStateRef.current = targetStep.snapshot;
+    setEditorState(targetStep.snapshot);
+
+    keystrokeCountRef.current = targetStep.keystrokesSoFar;
+    setKeystrokeCount(targetStep.keystrokesSoFar);
+
+    previewStepIndexRef.current = null;
+    setPreviewStepIndex(null);
+
+    pendingActionKeysRef.current = [];
+    setPendingActionKeys([]);
+
+    // stepIndex 이후 스텝들 잘라내기 (해당 시점부터 분기)
+    const slicedSteps = timelineStepsRef.current.slice(0, stepIndex + 1);
+    timelineStepsRef.current = slicedSteps;
+    setTimelineSteps(slicedSteps);
+
+    // allKeysSoFar도 targetStep 시점까지의 키들만 보존
+    const prunedKeys: string[] = [];
+    for (let i = 1; i <= stepIndex; i++) {
+      if (timelineStepsRef.current[i]) {
+        prunedKeys.push(...timelineStepsRef.current[i].keys);
+      }
+    }
+    allKeysSoFarRef.current = prunedKeys;
+    setAllKeysSoFar(prunedKeys);
+    setCoachingMessage(`⏪ 스텝 #${stepIndex} (${targetStep.command}) 시점부터 이어서 플레이합니다!`);
+  }, []);
+
+  const resetActionTimeline = useCallback((initialState: VimEditorState) => {
+    const step0 = [createInitialTimelineStep(initialState)];
+    setTimelineSteps(step0);
+    timelineStepsRef.current = step0;
+    setPendingActionKeys([]);
+    pendingActionKeysRef.current = [];
+    setAllKeysSoFar([]);
+    allKeysSoFarRef.current = [];
+    setPreviewStepIndex(null);
+    previewStepIndexRef.current = null;
+    editorStateRef.current = initialState;
+    keystrokeCountRef.current = 0;
+  }, []);
+
+  const displayEditorState =
+    previewStepIndex !== null && timelineSteps[previewStepIndex]
+      ? timelineSteps[previewStepIndex].snapshot
+      : editorState;
+
   const isCompleted =
     currentTab === 'course'
       ? currentMission.checkComplete(editorState)
@@ -407,42 +520,48 @@ export function App() {
       handleStopGhostReplay();
       setCurrentMissionIndex(index);
       const nextMission = MISSIONS[index];
-      setEditorState(getMissionInitialState(nextMission));
+      const initState = getMissionInitialState(nextMission);
+      setEditorState(initState);
+      resetActionTimeline(initState);
       setKeystrokeCount(0);
       setRecentKeys([]);
       setLastPressedKey(undefined);
       setCoachingMessage(null);
       antiPatternDetectorRef.current.reset();
     }
-  }, [handleStopGhostReplay, getMissionInitialState]);
+  }, [handleStopGhostReplay, getMissionInitialState, resetActionTimeline]);
 
   const handleResetMission = useCallback(() => {
     handleStopGhostReplay();
-    setEditorState(getMissionInitialState(currentMission));
+    const initState = getMissionInitialState(currentMission);
+    setEditorState(initState);
+    resetActionTimeline(initState);
     setKeystrokeCount(0);
     setRecentKeys([]);
     setLastPressedKey(undefined);
     setCoachingMessage(null);
     antiPatternDetectorRef.current.reset();
-  }, [currentMission, handleStopGhostReplay, getMissionInitialState]);
+  }, [currentMission, handleStopGhostReplay, getMissionInitialState, resetActionTimeline]);
 
   const handleResetSandbox = useCallback(() => {
     handleStopGhostReplay();
-    setEditorState((prev) => ({
+    const initState = {
       lines: [...SANDBOX_INITIAL_LINES],
       cursor: { line: 0, col: 0 },
-      mode: 'NORMAL',
+      mode: 'NORMAL' as const,
       undoStack: [],
       redoStack: [],
-      userKeymaps: prev.userKeymaps,
-      leaderKey: prev.leaderKey,
-    }));
+      userKeymaps: compileUserKeymaps(activePresets, leaderKey),
+      leaderKey,
+    };
+    setEditorState(initState);
+    resetActionTimeline(initState);
     setKeystrokeCount(0);
     setRecentKeys([]);
     setLastPressedKey(undefined);
     setCoachingMessage(null);
     antiPatternDetectorRef.current.reset();
-  }, [handleStopGhostReplay]);
+  }, [handleStopGhostReplay, resetActionTimeline, activePresets, leaderKey]);
 
   const handleStartSpeedrun = useCallback(() => {
     handleStopGhostReplay();
@@ -455,55 +574,61 @@ export function App() {
     setSpeedrunStatus('running');
 
     const first = newStages[0];
-    setEditorState({
+    const initState: VimEditorState = {
       lines: [...first.initialLines],
       cursor: { ...first.initialCursor },
       mode: 'NORMAL',
       undoStack: first.initialUndoStack ? [...first.initialUndoStack] : [],
       redoStack: [],
       clipboard: first.initialClipboard,
-    });
+    };
+    setEditorState(initState);
+    resetActionTimeline(initState);
     setRecentKeys([]);
     setLastPressedKey(undefined);
     setCoachingMessage(null);
     antiPatternDetectorRef.current.reset();
-  }, [handleStopGhostReplay]);
+  }, [handleStopGhostReplay, resetActionTimeline]);
 
   const handleResetCustomMission = useCallback(() => {
     if (!customMission) return;
     handleStopGhostReplay();
-    setEditorState({
+    const initState: VimEditorState = {
       lines: [...customMission.initialLines],
       cursor: { ...customMission.initialCursor },
       mode: 'NORMAL',
       undoStack: [],
       redoStack: [],
-    });
+    };
+    setEditorState(initState);
+    resetActionTimeline(initState);
     setKeystrokeCount(0);
     setRecentKeys([]);
     setLastPressedKey(undefined);
     setCoachingMessage(null);
     antiPatternDetectorRef.current.reset();
-  }, [customMission, handleStopGhostReplay]);
+  }, [customMission, handleStopGhostReplay, resetActionTimeline]);
 
   const handlePlayCustomMission = useCallback((data: CustomMissionData) => {
     handleStopGhostReplay();
     const newMission = createCustomMissionObject(data);
     setCustomMission(newMission);
     setCurrentTab('custom');
-    setEditorState({
+    const initState: VimEditorState = {
       lines: [...newMission.initialLines],
       cursor: { ...newMission.initialCursor },
       mode: 'NORMAL',
       undoStack: [],
       redoStack: [],
-    });
+    };
+    setEditorState(initState);
+    resetActionTimeline(initState);
     setKeystrokeCount(0);
     setRecentKeys([]);
     setLastPressedKey(undefined);
     setCoachingMessage(`⛳ 커스텀 미션 [${newMission.title}] 시작! 최소 타수로 완성을 노려보세요.`);
     antiPatternDetectorRef.current.reset();
-  }, [handleStopGhostReplay]);
+  }, [handleStopGhostReplay, resetActionTimeline]);
 
   const handlePlayBYOCMission = useCallback(
     (missionData: {
@@ -599,12 +724,44 @@ export function App() {
         return;
       }
 
+      // 과거 스텝을 미리보는 중 키를 입력하면 해당 시점에서 자동 분기(Branch)
+      let baseState = editorStateRef.current;
+      let baseKeystrokes = keystrokeCountRef.current;
+      let baseSteps = timelineStepsRef.current;
+      let currentPending = pendingActionKeysRef.current;
+      let baseAllKeys = allKeysSoFarRef.current;
+
+      if (previewStepIndexRef.current !== null) {
+        const targetStep = timelineStepsRef.current[previewStepIndexRef.current];
+        if (targetStep) {
+          baseState = targetStep.snapshot;
+          baseKeystrokes = targetStep.keystrokesSoFar;
+          baseSteps = timelineStepsRef.current.slice(0, previewStepIndexRef.current + 1);
+          currentPending = [];
+          const pruned: string[] = [];
+          for (let i = 1; i <= previewStepIndexRef.current; i++) {
+            if (timelineStepsRef.current[i]) pruned.push(...timelineStepsRef.current[i].keys);
+          }
+          baseAllKeys = pruned;
+        }
+        previewStepIndexRef.current = null;
+        setPreviewStepIndex(null);
+      }
+
       setLastPressedKey(key);
-      setKeystrokeCount((prev) => prev + 1);
+      const nextKeystrokes = baseKeystrokes + 1;
+      keystrokeCountRef.current = nextKeystrokes;
+      setKeystrokeCount(nextKeystrokes);
       setRecentKeys((prev) => [...prev.slice(-7), key]);
 
+      const nextAllKeys = [...baseAllKeys, key];
+      allKeysSoFarRef.current = nextAllKeys;
+      setAllKeysSoFar(nextAllKeys);
+
+      const nextActionKeys = [...currentPending, key];
+
       // Web Audio 기계식 키보드 타건 효과음 재생
-      playKeySound(key, editorState.mode);
+      playKeySound(key, baseState.mode);
 
       // 전체 누적 키 입력 통계 기록
       recordKeyInputStats(key);
@@ -616,17 +773,42 @@ export function App() {
       // 스마트 코칭 시스템: 비효율적 입력 습관(안티패턴) 실시간 감지
       const coachingAdvice = antiPatternDetectorRef.current.processKey(
         key,
-        editorState.mode,
-        editorState.pendingKeys
+        baseState.mode,
+        baseState.pendingKeys
       );
       if (coachingAdvice) {
         setCoachingMessage(coachingAdvice);
         recordAntiPatternDetection(coachingAdvice);
       }
 
-      setEditorState((prevState) => handleKey(prevState, key));
+      const nextState = handleKey(baseState, key);
+      editorStateRef.current = nextState;
+      setEditorState(nextState);
+
+      // 액션 완료 판정 (NORMAL 모드 복귀 및 대기 키 없음)
+      if (nextState.mode === 'NORMAL' && !nextState.pendingKeys) {
+        const newStep: ActionTimelineStep = {
+          stepIndex: baseSteps.length,
+          command: formatCommandLabel(nextActionKeys),
+          description: getActionDescription(nextActionKeys, nextState),
+          keys: nextActionKeys,
+          keystrokesSoFar: nextKeystrokes,
+          snapshot: nextState,
+          timestamp: Date.now(),
+        };
+        const updatedSteps = [...baseSteps, newStep];
+        timelineStepsRef.current = updatedSteps;
+        setTimelineSteps(updatedSteps);
+        pendingActionKeysRef.current = [];
+        setPendingActionKeys([]);
+      } else {
+        timelineStepsRef.current = baseSteps;
+        setTimelineSteps(baseSteps);
+        pendingActionKeysRef.current = nextActionKeys;
+        setPendingActionKeys(nextActionKeys);
+      }
     },
-    [currentTab, speedrunStatus, editorState.mode, editorState.pendingKeys, playKeySound]
+    [currentTab, speedrunStatus, playKeySound]
   );
 
   // 브라우저 윈도우 포커스/블러 감지
@@ -1011,6 +1193,16 @@ export function App() {
             🧩 문법 AST: {showGrammarAST ? 'ON' : 'OFF'}
           </button>
 
+          {/* 실시간 명령 복기 타임라인 & Vim X-Ray 토글 버튼 */}
+          <button
+            className={`toolbar-btn timeline-toggle-btn ${showActionTimeline ? 'active' : ''}`}
+            onClick={handleToggleActionTimeline}
+            data-testid="toggle-action-timeline-btn"
+            title="실시간 명령 복기 타임라인 & Vim X-Ray 투시기 패널 토글"
+          >
+            ⏱️ 타임라인 & X-Ray: {showActionTimeline ? 'ON' : 'OFF'}
+          </button>
+
           {/* 가상 키보드 오버레이 토글 버튼 */}
           <button
             className={`toolbar-btn keyboard-toggle-btn ${showVirtualKeyboard ? 'active' : ''}`}
@@ -1232,32 +1424,32 @@ export function App() {
               </div>
             ) : (
               <Editor
-                lines={editorState.lines}
-                cursor={editorState.cursor}
-                mode={editorState.mode}
+                lines={displayEditorState.lines}
+                cursor={displayEditorState.cursor}
+                mode={displayEditorState.mode}
                 targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
-                visualAnchor={editorState.visualAnchor}
+                visualAnchor={displayEditorState.visualAnchor}
                 relativeLineNumbers={relativeLineNumbers}
                 searchQuery={
-                  editorState.mode === 'SEARCH'
-                    ? editorState.commandBuffer
-                    : editorState.lastSearchQuery
+                  displayEditorState.mode === 'SEARCH'
+                    ? displayEditorState.commandBuffer
+                    : displayEditorState.lastSearchQuery
                 }
                 isFocused={isEditorFocused}
                 onFocus={() => setIsEditorFocused(true)}
-                marks={editorState.marks}
-                viewport={editorState.viewport}
+                marks={displayEditorState.marks}
+                viewport={displayEditorState.viewport}
               />
             )}
             <Keycaster recentKeys={recentKeys} />
             <StatusBar
-              mode={editorState.mode}
-              cursor={editorState.cursor}
+              mode={displayEditorState.mode}
+              cursor={displayEditorState.cursor}
               filename={
-                editorState.splitPanes
-                  ? (editorState.activePaneIndex === 1
-                      ? (editorState.secondaryFilename || editorState.splitPanes[1].filename || 'target.ts')
-                      : (editorState.primaryFilename || editorState.splitPanes[0].filename || 'source.ts'))
+                displayEditorState.splitPanes
+                  ? (displayEditorState.activePaneIndex === 1
+                      ? (displayEditorState.secondaryFilename || displayEditorState.splitPanes[1].filename || 'target.ts')
+                      : (displayEditorState.primaryFilename || displayEditorState.splitPanes[0].filename || 'source.ts'))
                   : (currentTab === 'course'
                       ? (currentMission.primaryFilename || `lesson_${currentMission.id}.txt`)
                       : currentTab === 'custom'
@@ -1266,11 +1458,11 @@ export function App() {
                       ? `speedrun_stage_${speedrunCurrentStage + 1}.txt`
                       : 'sandbox.ts')
               }
-              pendingKeys={editorState.pendingKeys}
-              recordingMacro={editorState.recordingMacro}
-              commandType={editorState.commandType}
-              commandBuffer={editorState.commandBuffer}
-              commandMessage={editorState.commandMessage}
+              pendingKeys={displayEditorState.pendingKeys}
+              recordingMacro={displayEditorState.recordingMacro}
+              commandType={displayEditorState.commandType}
+              commandBuffer={displayEditorState.commandBuffer}
+              commandMessage={displayEditorState.commandMessage}
             />
 
             {/* 실시간 레지스터 인스펙터 패널 */}
@@ -1285,7 +1477,7 @@ export function App() {
             {/* 목표 상태 Diff 비교 하이라이트 뷰 */}
             {showDiffView && activeMissionForDiff && (
               <DiffViewer
-                currentLines={editorState.lines}
+                currentLines={displayEditorState.lines}
                 targetLines={activeMissionForDiff.targetLines}
                 isCompleted={currentTab === 'course' || currentTab === 'custom' ? isCompleted : false}
               />
@@ -1297,6 +1489,41 @@ export function App() {
                 mode={editorState.mode}
                 lastPressedKey={lastPressedKey}
                 onKeyPress={processKeyInput}
+              />
+            )}
+
+            {/* 실시간 명령 복기 타임라인 & 초보자용 Vim X-Ray 투시기 패널 */}
+            {showActionTimeline && (
+              <ActionTimelinePanel
+                steps={timelineSteps}
+                previewStepIndex={previewStepIndex}
+                editorState={displayEditorState}
+                missionTitle={
+                  currentTab === 'course'
+                    ? currentMission.title
+                    : currentTab === 'custom' && customMission
+                    ? customMission.title
+                    : undefined
+                }
+                initialText={
+                  currentTab === 'course'
+                    ? currentMission.initialLines.join('\n')
+                    : currentTab === 'custom' && customMission
+                    ? customMission.initialLines.join('\n')
+                    : SANDBOX_INITIAL_LINES.join('\n')
+                }
+                initialCursor={
+                  currentTab === 'course'
+                    ? currentMission.initialCursor
+                    : currentTab === 'custom' && customMission
+                    ? customMission.initialCursor
+                    : { line: 0, col: 0 }
+                }
+                allKeysSoFar={allKeysSoFar}
+                onSelectStep={handleSelectTimelineStep}
+                onBranchFromStep={handleBranchFromStep}
+                onCancelPreview={handleCancelPreview}
+                onClose={handleToggleActionTimeline}
               />
             )}
           </>

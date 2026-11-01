@@ -47,6 +47,8 @@ import {
   startVisualBlockInsert,
 } from './visual';
 import { findMatchingBracket } from './bracketMatch';
+import { deepFreeze, assertValidVimState } from './invariants';
+export { withInvariantCheck, assertValidVimState, deepFreeze } from './invariants';
 import {
   moveFind,
   executeFindOperator,
@@ -136,7 +138,7 @@ export function parsePending(pendingKeys?: string): ParsedPending {
 /**
  * Vim 키 입력 처리 순수 함수: (state, key) => newState
  */
-export function handleKey(
+export function rawHandleKey(
   state: VimEditorState,
   key: string,
   isReplayingDot = false,
@@ -2253,9 +2255,11 @@ function handleNormalModeKey(
     const deleted = cur.slice(col);
     const nextLines = [...state.lines];
     nextLines[line] = cur.slice(0, col);
+    const clampedCursor = clampCursor(nextLines, { line, col }, 'NORMAL');
     const stateWithDel: VimEditorState = {
       ...pushUndoSnapshot(state),
       lines: nextLines,
+      cursor: clampedCursor,
       clipboard: { type: 'text', content: deleted },
       pendingKeys: undefined,
     };
@@ -2263,6 +2267,46 @@ function handleNormalModeKey(
     return {
       ...synced,
       lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['D'],
+    };
+  }
+
+  // s: 현재 글자 삭제 후 INSERT 모드 진입
+  if (key === 's' && !state.pendingKeys) {
+    const { line, col } = state.cursor;
+    const curLine = state.lines[line] ?? '';
+    if (curLine.length === 0) {
+      return {
+        ...state,
+        mode: 'INSERT',
+        pendingKeys: undefined,
+        currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['s'],
+      };
+    }
+    const deleted = curLine[col] ?? '';
+    const nextLines = [...state.lines];
+    nextLines[line] = curLine.slice(0, col) + curLine.slice(col + 1);
+    const stateWithDel: VimEditorState = {
+      ...pushUndoSnapshot(state),
+      lines: nextLines,
+      cursor: { line, col },
+      mode: 'INSERT',
+      clipboard: { type: 'text', content: deleted },
+      pendingKeys: undefined,
+    };
+    const synced = syncRegisters(state, stateWithDel, false);
+    return {
+      ...synced,
+      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['s'],
+    };
+  }
+
+  // S: 현재 줄 전체를 비우고 INSERT 모드 진입 (cc와 동일)
+  if (key === 'S' && !state.pendingKeys) {
+    const res = changeLine(state);
+    const synced = syncRegisters(state, res, false);
+    return {
+      ...synced,
+      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['S'],
     };
   }
 
@@ -2423,6 +2467,25 @@ function handleNormalModeKey(
     ...state,
     pendingKeys: undefined,
   };
+}
+
+/**
+ * Vim 키 입력 처리 순수 함수: (state, key) => newState
+ * 개발 및 테스트 모드에서는 자동으로 Deep Freeze 및 Invariant Guard가 적용됩니다.
+ */
+export function handleKey(
+  state: VimEditorState,
+  key: string,
+  isReplayingDot = false,
+  macroDepth = 0
+): VimEditorState {
+  if (process.env.NODE_ENV !== 'production') {
+    deepFreeze(state);
+    const nextState = rawHandleKey(state, key, isReplayingDot, macroDepth);
+    assertValidVimState(state, nextState, key);
+    return nextState;
+  }
+  return rawHandleKey(state, key, isReplayingDot, macroDepth);
 }
 
 /**

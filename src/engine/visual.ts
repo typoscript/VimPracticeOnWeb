@@ -256,7 +256,7 @@ export function deleteVisualSelection(state: VimEditorState): VimEditorState {
     const targetLine = Math.min(minLine, nextLines.length - 1);
     const nextCursor = clampCursor(
       nextLines,
-      { line: targetLine, col: 0 },
+      { line: targetLine, col: cursor.col },
       'NORMAL'
     );
 
