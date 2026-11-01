@@ -363,4 +363,63 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 18,
+    title: '레슨 18: 매크로 녹화와 괄호 점프 (% 및 qa, @a)',
+    description: '% 키로 짝이 되는 괄호 위치를 확인하고, qa 매크로를 녹화하여 리스트 항목들을 일괄 포맷팅하세요.',
+    hint: '% 키를 누르면 짝 괄호로 점프합니다. qa -> I -> " -> $ -> a -> ", -> Esc -> j -> 0 -> q 로 매크로를 녹화한 뒤 @a로 반복 실행하세요.',
+    par: 14,
+    initialLines: [
+      'const list = [',
+      '  alpha',
+      '  beta',
+      '  gamma',
+      '];',
+    ],
+    targetLines: [
+      'const list = [',
+      '  "alpha",',
+      '  "beta",',
+      '  "gamma",',
+      '];',
+    ],
+    initialCursor: { line: 0, col: 13 }, // '[' 위
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines[1] === '  "alpha",' &&
+        state.lines[2] === '  "beta",' &&
+        state.lines[3] === '  "gamma",'
+      );
+    },
+  },
+  {
+    id: 19,
+    title: '레슨 19: Ctrl+v 비주얼 블록 다중 줄 편집 (I, Escape)',
+    description: 'Ctrl+v로 3개 줄의 맨 앞 열을 직사각형 블록으로 선택한 뒤, Shift+I를 눌러 "// "를 입력하고 Escape를 눌러 한 번에 주석 처리하세요.',
+    hint: 'Ctrl-v를 누르고 j를 2번 눌러 3개 줄을 블록 선택합니다. Shift+I를 눌러 "// "를 입력한 뒤 Escape를 누르면 모든 줄에 주석이 일괄 적용됩니다.',
+    par: 8,
+    initialLines: [
+      'const host = "localhost";',
+      'const port = 8080;',
+      'const debug = true;',
+      'startServer();',
+    ],
+    targetLines: [
+      '// const host = "localhost";',
+      '// const port = 8080;',
+      '// const debug = true;',
+      'startServer();',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines[0] === '// const host = "localhost";' &&
+        state.lines[1] === '// const port = 8080;' &&
+        state.lines[2] === '// const debug = true;' &&
+        state.lines[3] === 'startServer();'
+      );
+    },
+  },
 ];

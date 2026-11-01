@@ -192,4 +192,52 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     };
     expect(lesson17!.checkComplete(stateDone)).toBe(true);
   });
+
+  it('레슨 18 (매크로 녹화와 괄호 점프 %) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson18 = MISSIONS.find((m) => m.id === 18);
+    expect(lesson18).toBeDefined();
+
+    const stateNotDone: VimEditorState = {
+      lines: ['const list = [', '  alpha', '  beta', '  gamma', '];'],
+      cursor: { line: 0, col: 13 },
+      mode: 'NORMAL',
+    };
+    expect(lesson18!.checkComplete(stateNotDone)).toBe(false);
+
+    const stateDone: VimEditorState = {
+      lines: ['const list = [', '  "alpha",', '  "beta",', '  "gamma",', '];'],
+      cursor: { line: 3, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson18!.checkComplete(stateDone)).toBe(true);
+  });
+
+  it('레슨 19 (Ctrl+v 비주얼 블록 다중 줄 편집) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson19 = MISSIONS.find((m) => m.id === 19);
+    expect(lesson19).toBeDefined();
+
+    const stateNotDone: VimEditorState = {
+      lines: [
+        'const host = "localhost";',
+        'const port = 8080;',
+        'const debug = true;',
+        'startServer();',
+      ],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson19!.checkComplete(stateNotDone)).toBe(false);
+
+    const stateDone: VimEditorState = {
+      lines: [
+        '// const host = "localhost";',
+        '// const port = 8080;',
+        '// const debug = true;',
+        'startServer();',
+      ],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson19!.checkComplete(stateDone)).toBe(true);
+  });
 });

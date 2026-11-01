@@ -33,7 +33,7 @@ import './App.css';
 const REPEATED_MOTION_KEYS = ['h', 'j', 'k', 'l', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
 
 /** 스피드런 챌린지 후보 미션 ID 목록 (리팩토링/편집 미션) */
-export const SPEEDRUN_CANDIDATE_IDS = [4, 6, 7, 9, 10, 11, 12, 13, 14, 15, 17];
+export const SPEEDRUN_CANDIDATE_IDS = [4, 6, 7, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19];
 
 export function generateSpeedrunStages(): Mission[] {
   const candidates = MISSIONS.filter((m) => SPEEDRUN_CANDIDATE_IDS.includes(m.id));
@@ -348,6 +348,15 @@ export function App() {
         e.preventDefault();
         processKeyInput('/');
         return;
+      }
+
+      // Ctrl+v 또는 Cmd+v: 비주얼 블록(VISUAL_BLOCK) 모드 토글
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
+        if (editorState.mode !== 'INSERT' && editorState.mode !== 'COMMAND' && editorState.mode !== 'SEARCH') {
+          e.preventDefault();
+          processKeyInput('Ctrl-v');
+          return;
+        }
       }
 
       // 그 외 메타 키 조합은 브라우저 기본 단축키 허용

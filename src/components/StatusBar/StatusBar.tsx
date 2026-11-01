@@ -27,8 +27,16 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   commandBuffer,
   commandMessage,
 }) => {
-  const displayMode = mode === 'VISUAL_LINE' ? 'VISUAL LINE' : mode;
-  const modeClass = mode === 'VISUAL_LINE' ? 'mode-visual' : `mode-${mode.toLowerCase()}`;
+  const displayMode =
+    mode === 'VISUAL_LINE'
+      ? 'VISUAL LINE'
+      : mode === 'VISUAL_BLOCK'
+      ? 'VISUAL BLOCK'
+      : mode;
+  const modeClass =
+    mode === 'VISUAL_LINE' || mode === 'VISUAL_BLOCK'
+      ? 'mode-visual'
+      : `mode-${mode.toLowerCase()}`;
   const isCommandLineActive = mode === 'COMMAND' || mode === 'SEARCH';
   const promptPrefix = commandType ?? (mode === 'COMMAND' ? ':' : '/');
 

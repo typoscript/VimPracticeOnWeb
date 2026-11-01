@@ -64,7 +64,7 @@ flowchart TD
 | | `I` / `A` | 줄 첫 번째 공백 아닌 문자(`I`) 또는 줄 맨 끝 다음 칸(`A`)에서 입력 진입 |
 | | `o` / `O` | 현재 줄 아래(`o`) 또는 위(`O`)에 새 줄을 생성하고 INSERT 모드 진입 |
 | | `Esc` | INSERT / VISUAL / COMMAND 모드에서 NORMAL 모드로 복귀 |
-| | `v` / `V` | 글자 단위(`v`) 또는 줄 단위(`V`) VISUAL 블록 선택 모드 토글 |
+| | `v` / `V` / `Ctrl+v` | 글자 단위(`v`), 줄 단위(`V`), 직사각형 블록(`Ctrl+v`) VISUAL 선택 모드 |
 | | `:` | 하단 커맨드라인 모드 활성화 |
 | | `/` | 하단 키워드 검색 모드 활성화 |
 | **기본 이동** | `h`, `j`, `k`, `l` | 좌(`h`), 하(`j`), 상(`k`), 우(`l`) 1칸 이동 (방향키 지원) |
@@ -75,8 +75,10 @@ flowchart TD
 | **줄 / 버퍼 이동** | `0` / `^` / `$` | 줄 맨 앞(`0`), 줄 첫 비공백 문자(`^`), 줄 맨 끝(`$`)으로 이동 |
 | | `gg` / `G` | 버퍼의 첫 번째 줄(`gg`) 또는 마지막 줄(`G`)로 점프 |
 | | `:[숫자]` / `[숫자]G` | 지정한 줄 번호로 즉시 점프 (예: `:10` 또는 `10G`) |
+| | `%` | 현재/가장 가까운 `()`, `[]`, `{}` 괄호 짝으로 즉시 점프 (멀티라인 및 `d%`, `c%` 결합) |
 | **줄 내 탐색** | `f{char}` / `F{char}` | 오른쪽(`f`) 또는 왼쪽(`F`)으로 `{char}` 문자를 찾아 즉시 커서 점프 |
 | | `t{char}` / `T{char}` | 오른쪽(`t`) 또는 왼쪽(`T`)으로 `{char}` 문자 바로 직전(Till) 칸으로 점프 |
+| | `;` / `,` | 직전 문자 탐색을 같은 방향(`;`) 또는 반대 방향(`,`)으로 반복 점프 |
 | **키워드 검색** | `/검색어` + `Enter` | 버퍼 내 단어 실시간 하이라이트 및 첫 매치로 점프 |
 | | `n` / `N` | 다음(`n`) 또는 이전(`N`) 검색 결과로 순환 점프 |
 | | `*` | 현재 커서 아래 단어를 즉시 추출해 검색어로 등록 후 다음 매치 점프 |
@@ -120,6 +122,8 @@ flowchart TD
 15. **레슨 15**: 점(`.`) 명령어로 반복 편집 자동화하기
 16. **레슨 16**: 키워드 검색과 점프 (`/`, `n`, `N`, `*`)
 17. **레슨 17**: 커맨드라인 일괄 치환 (`:%s/old/new/g`)
+18. **레슨 18**: 매크로 녹화와 괄호 점프 (`%` 및 `qa`, `@a`)
+19. **레슨 19**: `Ctrl+v` 비주얼 블록 다중 줄 편집 (`I`, `Escape`)
 
 ---
 
@@ -146,7 +150,7 @@ flowchart TD
 ## 🛠️ 기술 스택 (Tech Stack)
 
 - **Core**: React 19, TypeScript, Vite
-- **Testing**: Vitest, React Testing Library (266개 단위/통합 테스트 100% 통과)
+- **Testing**: Vitest, React Testing Library (281개 단위/통합 테스트 100% 통과)
 - **Styling**: Modern Pure CSS (Catppuccin Macchiato 테마)
 - **Zero Dependencies**: 외부 에디터(CodeMirror, Monaco 등) 및 무거운 UI 프레임워크 없는 순수 TypeScript 아키텍처
 
@@ -198,7 +202,7 @@ npm run build
 - `main` 브랜치에 새로운 커밋이 `push`되거나, GitHub의 **`Actions`** 탭에서 **`Deploy VimPracticeOnWeb to GitHub Pages`** 워크플로의 `Run workflow` 버튼을 클릭하면 배포가 시작됩니다.
 - 배포 파이프라인은 아래 단계를 자동으로 수행합니다:
   1. `npm ci`: 의존성 패키지 클린 설치
-  2. `npm run test -- --run`: 266개 Vitest 단위/통합 테스트 전체 통과 검증
+  2. `npm run test -- --run`: 281개 Vitest 단위/통합 테스트 전체 통과 검증
   3. `npm run build`: 리포지토리 베이스 경로(`/VimPracticeOnWeb/`)가 적용된 정적 사이트 번들링
   4. `actions/deploy-pages`: GitHub Pages CDN으로 즉시 무중단 배포
 

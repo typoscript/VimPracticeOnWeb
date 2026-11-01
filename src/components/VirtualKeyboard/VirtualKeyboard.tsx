@@ -124,8 +124,8 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
       return '';
     }
 
-    if (mode === 'VISUAL' || mode === 'VISUAL_LINE') {
-      if (['d', 'y', 'c', 'x', 'Escape'].includes(keyDef.key)) {
+    if (mode === 'VISUAL' || mode === 'VISUAL_LINE' || mode === 'VISUAL_BLOCK') {
+      if (['d', 'y', 'c', 'x', 'I', 'A', 'Escape'].includes(keyDef.key)) {
         return 'role-operator active-mode-key';
       }
       if (keyDef.role === 'motion') {

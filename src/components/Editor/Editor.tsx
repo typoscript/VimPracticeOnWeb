@@ -124,7 +124,7 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
 
   // 빈 줄이면서 커서와 타겟, 비주얼 선택, 검색 매칭이 모두 없는 경우
   const hasVisual =
-    (mode === 'VISUAL' || mode === 'VISUAL_LINE') && !!visualAnchor;
+    (mode === 'VISUAL' || mode === 'VISUAL_LINE' || mode === 'VISUAL_BLOCK') && !!visualAnchor;
   const isLineInVisualRange =
     hasVisual &&
     lineIdx >= Math.min(visualAnchor.line, cursor.line) &&

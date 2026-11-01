@@ -156,7 +156,8 @@
 }
 
 /* VISUAL 모드: 보라/핑크 블록 */
-.cursor-visual {
+.cursor-visual,
+.cursor-visual_block {
   background-color: #cba6f7;
   color: #11111b;
   font-weight: bold;

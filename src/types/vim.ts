@@ -1,4 +1,4 @@
-export type VimMode = 'NORMAL' | 'INSERT' | 'VISUAL' | 'VISUAL_LINE' | 'COMMAND' | 'SEARCH';
+export type VimMode = 'NORMAL' | 'INSERT' | 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK' | 'COMMAND' | 'SEARCH';
 
 export interface CursorPosition {
   line: number; // 0-indexed 줄 번호
@@ -31,6 +31,13 @@ export interface MacroRecording {
   keys: string[];
 }
 
+export interface BlockInsertSession {
+  lines: number[];         // 일괄 삽입이 적용될 행 번호 목록
+  col: number;             // 삽입 기준 열 번호
+  insertMode: 'I' | 'A' | 'c';
+  typedChars: string[];    // INSERT 세션 중 입력된 문자 목록
+}
+
 export interface VimEditorState {
   lines: string[];
   cursor: CursorPosition;
@@ -58,6 +65,10 @@ export interface VimEditorState {
   recordingMacro?: { register: string; keys: string[] } | null;
   /** 가장 마지막에 실행했던 매크로 레지스터 이름 (@@ 재실행용) */
   lastPlayedMacro?: string | null;
+  /** 직전 줄 내 문자 탐색 정보 (';' 및 ',' 반복용) */
+  lastCharSearch?: { type: 'f' | 'F' | 't' | 'T'; char: string } | null;
+  /** 비주얼 블록(Ctrl+v) 다중 줄 동시 삽입 세션 */
+  blockInsertSession?: BlockInsertSession | null;
 }
 
 export type VimState = VimEditorState;
