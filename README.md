@@ -87,11 +87,14 @@ flowchart TD
 | | `cc` / `C` | 현재 줄 전체(`cc`) 또는 줄 끝까지(`C`) 삭제 후 INSERT 모드 진입 |
 | | `r{char}` | 현재 글자 1개를 `{char}`로 교체하고 NORMAL 모드 유지 |
 | | `p` | 클립보드에 복사/삭제된 줄 또는 텍스트 붙여넣기 |
-| **텍스트 객체** | `ciw` / `diw` / `viw` | 단어 내부(`iw`) 수정(`c`), 삭제(`d`), 선택(`v`) |
-| | `ci"` / `di"` / `yi"` | 큰따옴표 내부(`i"`) 수정, 내용 비우기, 복사 |
-| | `ci(` / `di(` / `yi(` | 소괄호 내부(`i(`) 수정, 삭제, 복사 |
+| **텍스트 객체** | `ciw` / `diw` / `viw` / `daw` | 단어 내부(`iw`) 또는 공백 포함 단어 전체(`aw`) 삭제/수정/선택 |
+| | `ci"` / `da"` / `ci'` / `da'` / `da``` | 큰따옴표/작은따옴표/백틱 내부(`i`) 또는 따옴표 자체 포함(`a`) 수정/삭제 |
+| | `ci(` / `da(` / `ci[` / `da[` / `ci{` / `da{` | 소괄호/대괄호/중괄호 내부(`i`) 또는 괄호 자체 포함(`a`) 수정/삭제 (멀티라인 지원) |
 | **치환 (Sub)** | `:%s/old/new/g` | 전체 버퍼에서 `old` 문자열을 `new` 문자열로 일괄 치환 |
 | | `:s/old/new/g` | 현재 줄에서 `old` 문자열을 `new` 문자열로 일괄 치환 |
+| **매크로 & 레지스터** | `q{reg}` ... `q` | `[a-z0-9]` 레지스터에 키 입력 시퀀스 녹화 및 녹화 배지 표시 |
+| | `@{reg}` / `[count]@{reg}` | `{reg}` 레지스터에 녹화된 매크로 1회 또는 count회 실행 (재귀 방지 안전장치) |
+| | `@@` | 가장 마지막에 실행했던 매크로 즉시 재실행 |
 | **히스토리** | `.` (Dot) | 마지막 버퍼 변경 명령 시퀀스를 현재 커서 위치에서 동일하게 재실행 |
 | | `u` | 실행 취소 (Undo) |
 | | `Ctrl + r` | 다시 실행 (Redo) |
@@ -143,7 +146,7 @@ flowchart TD
 ## 🛠️ 기술 스택 (Tech Stack)
 
 - **Core**: React 19, TypeScript, Vite
-- **Testing**: Vitest, React Testing Library (252개 단위/통합 테스트 100% 통과)
+- **Testing**: Vitest, React Testing Library (266개 단위/통합 테스트 100% 통과)
 - **Styling**: Modern Pure CSS (Catppuccin Macchiato 테마)
 - **Zero Dependencies**: 외부 에디터(CodeMirror, Monaco 등) 및 무거운 UI 프레임워크 없는 순수 TypeScript 아키텍처
 
@@ -195,7 +198,7 @@ npm run build
 - `main` 브랜치에 새로운 커밋이 `push`되거나, GitHub의 **`Actions`** 탭에서 **`Deploy VimPracticeOnWeb to GitHub Pages`** 워크플로의 `Run workflow` 버튼을 클릭하면 배포가 시작됩니다.
 - 배포 파이프라인은 아래 단계를 자동으로 수행합니다:
   1. `npm ci`: 의존성 패키지 클린 설치
-  2. `npm run test -- --run`: 252개 Vitest 단위/통합 테스트 전체 통과 검증
+  2. `npm run test -- --run`: 266개 Vitest 단위/통합 테스트 전체 통과 검증
   3. `npm run build`: 리포지토리 베이스 경로(`/VimPracticeOnWeb/`)가 적용된 정적 사이트 번들링
   4. `actions/deploy-pages`: GitHub Pages CDN으로 즉시 무중단 배포
 

@@ -21,6 +21,16 @@ export interface SearchMatch {
   length: number;
 }
 
+export interface RegisterEntry {
+  type: 'char' | 'line' | 'macro';
+  content: string | string[];
+}
+
+export interface MacroRecording {
+  register: string;
+  keys: string[];
+}
+
 export interface VimEditorState {
   lines: string[];
   cursor: CursorPosition;
@@ -42,4 +52,12 @@ export interface VimEditorState {
   lastSearchQuery?: string;
   /** 커맨드라인 또는 검색 실행 결과 피드백 메시지 (예: '10번째 줄로 이동', 'E492: 알 수 없는 명령어') */
   commandMessage?: string;
+  /** 멀티 레지스터 저장소 */
+  registers?: Record<string, { type: 'char' | 'line' | 'macro'; content: string | string[] }>;
+  /** 현재 매크로 녹화 상태 */
+  recordingMacro?: { register: string; keys: string[] } | null;
+  /** 가장 마지막에 실행했던 매크로 레지스터 이름 (@@ 재실행용) */
+  lastPlayedMacro?: string | null;
 }
+
+export type VimState = VimEditorState;

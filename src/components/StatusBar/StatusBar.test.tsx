@@ -90,4 +90,27 @@ describe('StatusBar Component', () => {
     expect(errorMsg).toHaveClass('error');
     expect(errorMsg).toHaveTextContent('E486: 패턴을 찾을 수 없습니다: foo');
   });
+
+  it('매크로 녹화 중(recordingMacro)일 때 깜빡이는 녹화 배지를 렌더링한다', () => {
+    const { rerender } = render(
+      <StatusBar
+        mode="NORMAL"
+        cursor={{ line: 0, col: 0 }}
+        recordingMacro={{ register: 'a', keys: [] }}
+      />
+    );
+
+    const recordingBadge = screen.getByTestId('status-macro-recording');
+    expect(recordingBadge).toBeInTheDocument();
+    expect(recordingBadge).toHaveTextContent('recording @a');
+
+    rerender(
+      <StatusBar
+        mode="NORMAL"
+        cursor={{ line: 0, col: 0 }}
+        recordingMacro={null}
+      />
+    );
+    expect(screen.queryByTestId('status-macro-recording')).not.toBeInTheDocument();
+  });
 });

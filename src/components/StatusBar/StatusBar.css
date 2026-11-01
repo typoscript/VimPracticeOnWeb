@@ -173,6 +173,47 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* 매크로 녹화 인디케이터 배지 */
+.status-macro-recording {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 4px;
+  background-color: #f38ba8;
+  color: #11111b;
+  letter-spacing: 0.05em;
+  animation: macro-pulse 1s infinite alternate ease-in-out;
+}
+
+.macro-rec-dot {
+  font-size: 9px;
+  color: #d20f39;
+  animation: macro-blink 0.8s infinite alternate ease-in-out;
+}
+
+@keyframes macro-pulse {
+  0% {
+    opacity: 0.8;
+    box-shadow: 0 0 2px rgba(243, 139, 168, 0.4);
+  }
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 10px rgba(243, 139, 168, 0.8);
+  }
+}
+
+@keyframes macro-blink {
+  0% {
+    opacity: 0.2;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
 @media (max-width: 640px) {
   .status-bar {
     border-bottom-left-radius: 4px;

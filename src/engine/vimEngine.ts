@@ -77,8 +77,8 @@ export function parsePending(pendingKeys?: string): ParsedPending {
     return { count1: c, totalCount: c };
   }
 
-  // 2. 연산자 및 카운트 조합: "d", "2d", "d2", "2d3", "c", "r", "y", "v", "g"
-  const opMatch = pendingKeys.match(/^([1-9][0-9]*)?([a-zA-Z])([0-9]*)$/);
+  // 2. 연산자 및 카운트 조합: "d", "2d", "d2", "2d3", "c", "r", "y", "v", "g", "@"
+  const opMatch = pendingKeys.match(/^([1-9][0-9]*)?([a-zA-Z@])([0-9]*)$/);
   if (opMatch) {
     const count1 = opMatch[1] ? parseInt(opMatch[1], 10) : undefined;
     const operator = opMatch[2];
@@ -97,8 +97,42 @@ export function parsePending(pendingKeys?: string): ParsedPending {
 export function handleKey(
   state: VimEditorState,
   key: string,
-  isReplayingDot = false
+  isReplayingDot = false,
+  macroDepth = 0
 ): VimEditorState {
+  // 매크로 기록 중인 상태 처리
+  if (state.recordingMacro) {
+    // NORMAL 모드에서 대기 키 없이 'q'를 누르면 매크로 기록 종료
+    if (state.mode === 'NORMAL' && !state.pendingKeys && key === 'q') {
+      const reg = state.recordingMacro.register;
+      const recordedKeys = [...state.recordingMacro.keys];
+      const newRegisters = {
+        ...(state.registers ?? {}),
+        [reg]: {
+          type: 'macro' as const,
+          content: recordedKeys,
+        },
+      };
+      return {
+        ...state,
+        registers: newRegisters,
+        recordingMacro: null,
+        pendingKeys: undefined,
+      };
+    }
+
+    // 매크로 재생 중이 아닌(최상위 입력) 경우에만 키 스트림을 녹화 버퍼에 누적
+    if (macroDepth === 0) {
+      state = {
+        ...state,
+        recordingMacro: {
+          ...state.recordingMacro,
+          keys: [...state.recordingMacro.keys, key],
+        },
+      };
+    }
+  }
+
   if (state.mode === 'SEARCH') {
     return handleSearchModeKey(state, key);
   }
@@ -116,7 +150,7 @@ export function handleKey(
   }
 
   if (state.mode === 'NORMAL') {
-    return handleNormalModeKey(state, key, isReplayingDot);
+    return handleNormalModeKey(state, key, isReplayingDot, macroDepth);
   }
 
   return state;
@@ -479,20 +513,28 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
     };
   }
 
-  // 텍스트 객체 선택 (i 대기 상태: iw, i", i(, i))
-  if (state.pendingKeys === 'i') {
-    if (key === 'w' || key === '"' || key === '(' || key === ')') {
-      const objType: TextObjectType =
-        key === 'w' ? 'iw' : key === '"' ? 'i"' : 'i(';
-      return executeTextObjectOperator(state, 'v', objType);
+  // 텍스트 객체 선택 (i 또는 a 대기 상태: iw, aw, i", a", i(, a(, i{, a{ 등)
+  const visualObjMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([ia])$/);
+  if (visualObjMatch) {
+    const count = visualObjMatch[1] ? parseInt(visualObjMatch[1], 10) : 1;
+    const modifier = visualObjMatch[2] as 'i' | 'a';
+    const validTargets = ['w', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B'];
+    if (validTargets.includes(key)) {
+      let targetChar = key;
+      if (key === 'b' || key === ')') targetChar = '(';
+      else if (key === 'B' || key === '}') targetChar = '{';
+      else if (key === ']') targetChar = '[';
+
+      const objType: TextObjectType = `${modifier}${targetChar}` as TextObjectType;
+      return executeTextObjectOperator(state, 'v', objType, count);
     }
     return { ...state, pendingKeys: undefined };
   }
 
-  if (key === 'i') {
+  if (key === 'i' || key === 'a') {
     return {
       ...state,
-      pendingKeys: 'i',
+      pendingKeys: (state.pendingKeys ?? '') + key,
     };
   }
 
@@ -554,7 +596,8 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
 function handleNormalModeKey(
   state: VimEditorState,
   key: string,
-  isReplayingDot = false
+  isReplayingDot = false,
+  macroDepth = 0
 ): VimEditorState {
   const currentLine = state.lines[state.cursor.line] ?? '';
   const parsed = parsePending(state.pendingKeys);
@@ -564,6 +607,71 @@ function handleNormalModeKey(
     return {
       ...state,
       pendingKeys: undefined,
+    };
+  }
+
+  // 1-1. 매크로 녹화 시작 대기 (q)
+  if (state.pendingKeys === 'q' || parsed.operator === 'q') {
+    if (/^[a-z0-9]$/.test(key)) {
+      return {
+        ...state,
+        pendingKeys: undefined,
+        recordingMacro: {
+          register: key,
+          keys: [],
+        },
+      };
+    }
+    return {
+      ...state,
+      pendingKeys: undefined,
+    };
+  }
+
+  // 1-2. 매크로 실행 (@{reg}, [count]@{reg}, @@)
+  if (parsed.operator === '@') {
+    let targetReg: string | null = null;
+    if (key === '@') {
+      targetReg = state.lastPlayedMacro ?? null;
+    } else if (/^[a-z0-9]$/.test(key)) {
+      targetReg = key;
+    }
+
+    if (!targetReg) {
+      return {
+        ...state,
+        pendingKeys: undefined,
+      };
+    }
+
+    const regEntry = state.registers?.[targetReg];
+    if (!regEntry || !regEntry.content) {
+      return {
+        ...state,
+        pendingKeys: undefined,
+        lastPlayedMacro: targetReg,
+      };
+    }
+
+    const macroKeys = Array.isArray(regEntry.content) ? regEntry.content : [regEntry.content];
+    let curState: VimEditorState = {
+      ...state,
+      pendingKeys: undefined,
+      lastPlayedMacro: targetReg,
+    };
+
+    const repeatCount = parsed.totalCount;
+    for (let c = 0; c < repeatCount; c++) {
+      if (macroDepth >= 100) break;
+      curState = macroKeys.reduce((accState, mk) => {
+        if (macroDepth >= 100) return accState;
+        return handleKey(accState, mk, false, macroDepth + 1);
+      }, curState);
+    }
+
+    return {
+      ...curState,
+      lastPlayedMacro: targetReg,
     };
   }
 
@@ -602,32 +710,39 @@ function handleNormalModeKey(
     };
   }
 
-  // 4. 텍스트 객체 대기 상태 (di, ci, yi, vi)
-  const innerMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([dcyv])i$/);
-  if (innerMatch) {
-    const op = innerMatch[2] as 'd' | 'c' | 'y' | 'v';
-    if (key === 'w' || key === '"' || key === '(' || key === ')') {
-      const objType: TextObjectType =
-        key === 'w' ? 'iw' : key === '"' ? 'i"' : 'i(';
-      const res = executeTextObjectOperator(state, op, objType);
+  // 4. 텍스트 객체 대기 상태 (di, da, ci, ca, yi, ya, vi, va 및 카운트 조합)
+  const textObjPendingMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([dcyv])([ia])$/);
+  if (textObjPendingMatch) {
+    const count = textObjPendingMatch[1] ? parseInt(textObjPendingMatch[1], 10) : 1;
+    const op = textObjPendingMatch[2] as 'd' | 'c' | 'y' | 'v';
+    const modifier = textObjPendingMatch[3] as 'i' | 'a';
 
+    const validTargets = ['w', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B'];
+    if (validTargets.includes(key)) {
+      let targetChar = key;
+      if (key === 'b' || key === ')') targetChar = '(';
+      else if (key === 'B' || key === '}') targetChar = '{';
+      else if (key === ']') targetChar = '[';
+
+      const objType: TextObjectType = `${modifier}${targetChar}` as TextObjectType;
+      const res = executeTextObjectOperator(state, op, objType, count);
+
+      const opKeys = count > 1 ? [String(count), op, modifier, key] : [op, modifier, key];
       if (op === 'c') {
-        const cKeys = [op, 'i', key];
         return {
           ...res,
-          currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
+          currentChangeKeys: isReplayingDot ? state.currentChangeKeys : opKeys,
         };
       }
       if (op === 'd') {
-        const lKeys = [op, 'i', key];
         return {
           ...res,
-          lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
+          lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys,
         };
       }
       return res;
     }
-    // w, ", (, ) 가 아니면 pendingKeys 취소 후 일반 키 평가
+    // 유효한 텍스트 객체가 아니면 pendingKeys 취소 후 일반 키 평가
     state = { ...state, pendingKeys: undefined };
   }
 
@@ -732,7 +847,7 @@ function handleNormalModeKey(
         lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
       };
     }
-    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i') {
+    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a') {
       return {
         ...state,
         pendingKeys: (state.pendingKeys ?? '') + key,
@@ -763,7 +878,7 @@ function handleNormalModeKey(
         currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
       };
     }
-    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i') {
+    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a') {
       return {
         ...state,
         pendingKeys: (state.pendingKeys ?? '') + key,
@@ -771,7 +886,7 @@ function handleNormalModeKey(
     }
     state = { ...state, pendingKeys: undefined };
   } else if (parsed.operator === 'y') {
-    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i') {
+    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a') {
       return {
         ...state,
         pendingKeys: (state.pendingKeys ?? '') + key,
@@ -799,8 +914,15 @@ function handleNormalModeKey(
     state = { ...state, pendingKeys: undefined };
   }
 
-  // 9. 연산자 등록 (d, c, r, g, y, f, F, t, T)
-  if (key === 'd' || key === 'c' || key === 'r' || key === 'g' || key === 'y') {
+  // 9. 연산자 및 매크로 키 등록 (d, c, r, g, y, f, F, t, T, @, q)
+  if (key === 'd' || key === 'c' || key === 'r' || key === 'g' || key === 'y' || key === '@') {
+    return {
+      ...state,
+      pendingKeys: (state.pendingKeys ?? '') + key,
+    };
+  }
+
+  if (key === 'q' && !state.recordingMacro) {
     return {
       ...state,
       pendingKeys: (state.pendingKeys ?? '') + key,

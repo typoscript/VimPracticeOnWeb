@@ -1364,3 +1364,145 @@ describe('Vim Engine - Command-Line Mode (:, substitution, line jumps)', () => {
     expect(state.lines).toEqual(['qux bar', 'qux baz']);
   });
 });
+
+describe('Vim Engine - Multi-Register & Macros (q{reg}, @{reg}, @@)', () => {
+  it('qa...q: 매크로 녹화 시작, 키 스트림 수집 및 종료를 올바르게 처리한다', () => {
+    let state = createState(['item1', 'item2', 'item3'], 0, 0);
+
+    // 1. qa 입력으로 'a' 레지스터 매크로 녹화 시작
+    state = handleKey(state, 'q');
+    expect(state.pendingKeys).toBe('q');
+    state = handleKey(state, 'a');
+    expect(state.pendingKeys).toBeUndefined();
+    expect(state.recordingMacro).toEqual({
+      register: 'a',
+      keys: [],
+    });
+
+    // 2. 키 스트림 실행 (줄 첫머리에 prefix 추가 후 다음 줄 맨 앞으로 이동)
+    // I -> add -> Escape -> j -> 0
+    state = handleKey(state, 'I');
+    state = handleKey(state, 'a');
+    state = handleKey(state, 'd');
+    state = handleKey(state, 'd');
+    state = handleKey(state, '_');
+    state = handleKey(state, 'Escape');
+    state = handleKey(state, 'j');
+    state = handleKey(state, '0');
+
+    expect(state.lines[0]).toBe('add_item1');
+    expect(state.cursor).toEqual({ line: 1, col: 0 });
+    expect(state.recordingMacro?.keys).toEqual(['I', 'a', 'd', 'd', '_', 'Escape', 'j', '0']);
+
+    // 3. q 입력으로 녹화 종료 (종료용 'q'는 매크로 내용에 미포함)
+    state = handleKey(state, 'q');
+    expect(state.recordingMacro).toBeNull();
+    expect(state.registers?.a).toEqual({
+      type: 'macro',
+      content: ['I', 'a', 'd', 'd', '_', 'Escape', 'j', '0'],
+    });
+  });
+
+  it('@a: 녹화된 매크로를 실행하고 lastPlayedMacro를 업데이트한다', () => {
+    let state = createState(['item1', 'item2', 'item3'], 1, 0);
+    // 미리 레지스터 'a'에 매크로 등록
+    state.registers = {
+      a: {
+        type: 'macro',
+        content: ['I', 'v', 'a', 'l', '_', 'Escape', 'j', '0'],
+      },
+    };
+
+    state = handleKey(state, '@');
+    expect(state.pendingKeys).toBe('@');
+    state = handleKey(state, 'a');
+
+    expect(state.lines[1]).toBe('val_item2');
+    expect(state.cursor).toEqual({ line: 2, col: 0 });
+    expect(state.lastPlayedMacro).toBe('a');
+  });
+
+  it('3@a: 카운트 프리픽스를 적용하여 매크로를 3회 연속 실행한다', () => {
+    let state = createState(['line1', 'line2', 'line3', 'line4'], 0, 0);
+    state.registers = {
+      a: {
+        type: 'macro',
+        content: ['I', 'X', 'Escape', 'j', '0'],
+      },
+    };
+
+    // 3@a 실행
+    state = handleKey(state, '3');
+    state = handleKey(state, '@');
+    state = handleKey(state, 'a');
+
+    expect(state.lines[0]).toBe('Xline1');
+    expect(state.lines[1]).toBe('Xline2');
+    expect(state.lines[2]).toBe('Xline3');
+    expect(state.lines[3]).toBe('line4');
+    expect(state.cursor).toEqual({ line: 3, col: 0 });
+    expect(state.lastPlayedMacro).toBe('a');
+  });
+
+  it('@@: 가장 마지막에 실행했던 매크로를 재실행한다', () => {
+    let state = createState(['one', 'two', 'three'], 0, 0);
+    state.registers = {
+      b: {
+        type: 'macro',
+        content: ['A', '_', 'e', 'n', 'd', 'Escape', 'j', '0'],
+      },
+    };
+
+    // 먼저 @b 1회 실행
+    state = handleKey(state, '@');
+    state = handleKey(state, 'b');
+    expect(state.lines[0]).toBe('one_end');
+    expect(state.lastPlayedMacro).toBe('b');
+
+    // @@ 실행으로 다시 b 매크로 실행
+    state = handleKey(state, '@');
+    state = handleKey(state, '@');
+    expect(state.lines[1]).toBe('two_end');
+    expect(state.lastPlayedMacro).toBe('b');
+  });
+
+  it('매크로 자기 자신 호출 시 최대 재귀 깊이(100) 안전장치로 무한 루프를 방지한다', () => {
+    let state = createState(['loop text'], 0, 0);
+    // 자기 자신을 계속해서 부르는 재귀 매크로
+    state.registers = {
+      x: {
+        type: 'macro',
+        content: ['l', '@', 'x'],
+      },
+    };
+
+    // @x 호출 시 브라우저 스택 오버플로나 무한루프 없이 100 깊이 제한으로 안전하게 반환
+    expect(() => {
+      state = handleKey(state, '@');
+      state = handleKey(state, 'x');
+    }).not.toThrow();
+
+    expect(state.lastPlayedMacro).toBe('x');
+  });
+});
+
+describe('Vim Engine - Extended Text Objects Integration in handleKey', () => {
+  it('da": 큰따옴표 텍스트 객체 삭제', () => {
+    let state = createState(['const str = "hello world";'], 0, 15);
+    state = handleKey(state, 'd');
+    state = handleKey(state, 'a');
+    state = handleKey(state, '"');
+
+    expect(state.lines[0]).toBe('const str = ;');
+  });
+
+  it('2daw: 카운트와 조합하여 2개 단어 일괄 삭제', () => {
+    let state = createState(['apple banana orange melon'], 0, 0);
+    state = handleKey(state, '2');
+    state = handleKey(state, 'd');
+    state = handleKey(state, 'a');
+    state = handleKey(state, 'w');
+
+    expect(state.lines[0]).toBe('orange melon');
+  });
+});

@@ -7,6 +7,8 @@ export interface StatusBarProps {
   cursor: CursorPosition;
   filename?: string;
   pendingKeys?: string;
+  /** 매크로 기록 중 상태 정보 */
+  recordingMacro?: { register: string; keys: string[] } | null;
   /** 커맨드라인 종류 (':' | '/') */
   commandType?: ':' | '/';
   /** 커맨드라인 입력 문자열 */
@@ -20,6 +22,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   cursor,
   filename = 'practice.txt',
   pendingKeys,
+  recordingMacro,
   commandType,
   commandBuffer,
   commandMessage,
@@ -56,6 +59,14 @@ export const StatusBar: React.FC<StatusBarProps> = ({
             >
               {displayMode}
             </span>
+            {recordingMacro && (
+              <span
+                className="status-macro-recording"
+                data-testid="status-macro-recording"
+              >
+                <span className="macro-rec-dot">●</span> recording @{recordingMacro.register}
+              </span>
+            )}
             {commandMessage ? (
               <span
                 className={`status-command-message ${isErrorMessage ? 'error' : 'info'}`}

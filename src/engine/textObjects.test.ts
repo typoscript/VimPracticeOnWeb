@@ -138,5 +138,102 @@ describe('textObjects module (iw, i", i(, i))', () => {
       expect(next.lines[0]).toBe('plain text without quotes');
       expect(next.undoStack).toBeUndefined();
     });
+
+    it('daw: 단어와 뒤따르는 공백을 함께 삭제한다', () => {
+      const state: VimEditorState = {
+        lines: ['Hello beautiful World'],
+        cursor: { line: 0, col: 8 }, // 'beautiful' 내부
+        mode: 'NORMAL',
+      };
+
+      const next = executeTextObjectOperator(state, 'd', 'aw');
+      expect(next.lines[0]).toBe('Hello World');
+      expect(next.clipboard?.content).toBe('beautiful ');
+      expect(next.cursor.col).toBe(6);
+      expect(next.mode).toBe('NORMAL');
+    });
+
+    it('da": 큰따옴표 자체를 포함하여 전체를 삭제한다', () => {
+      const state: VimEditorState = {
+        lines: ['const greeting = "Hello World";'],
+        cursor: { line: 0, col: 20 },
+        mode: 'NORMAL',
+      };
+
+      const next = executeTextObjectOperator(state, 'd', 'a"');
+      expect(next.lines[0]).toBe('const greeting = ;');
+      expect(next.clipboard?.content).toBe('"Hello World"');
+      expect(next.cursor.col).toBe(17);
+      expect(next.mode).toBe('NORMAL');
+    });
+
+    it('da\': 작은따옴표 및 da`: 백틱 자체를 포함하여 삭제한다', () => {
+      const singleQuoteState: VimEditorState = {
+        lines: ["const msg = 'single quote';"],
+        cursor: { line: 0, col: 15 },
+        mode: 'NORMAL',
+      };
+      const sqResult = executeTextObjectOperator(singleQuoteState, 'd', "a'");
+      expect(sqResult.lines[0]).toBe('const msg = ;');
+      expect(sqResult.clipboard?.content).toBe("'single quote'");
+
+      const backtickState: VimEditorState = {
+        lines: ['const tpl = `template literal`;'],
+        cursor: { line: 0, col: 15 },
+        mode: 'NORMAL',
+      };
+      const btResult = executeTextObjectOperator(backtickState, 'd', 'a`');
+      expect(btResult.lines[0]).toBe('const tpl = ;');
+      expect(btResult.clipboard?.content).toBe('`template literal`');
+    });
+
+    it('멀티라인 ci{: 여러 줄에 걸친 중괄호 내부를 삭제하고 INSERT 모드로 진입한다', () => {
+      const state: VimEditorState = {
+        lines: [
+          'function compute() {',
+          '  const a = 10;',
+          '  const b = 20;',
+          '  return a + b;',
+          '}',
+        ],
+        cursor: { line: 2, col: 5 }, // 'const b = 20;' 위치
+        mode: 'NORMAL',
+      };
+
+      const next = executeTextObjectOperator(state, 'c', 'i{');
+      expect(next.lines).toEqual(['function compute() {}']);
+      expect(next.cursor).toEqual({ line: 0, col: 20 }); // '{' 바로 다음 칸
+      expect(next.mode).toBe('INSERT');
+      expect(next.clipboard?.content).toContain('const a = 10;');
+      expect(next.clipboard?.content).toContain('return a + b;');
+    });
+
+    it('멀티라인 da{: 여러 줄에 걸친 중괄호 블록 전체를 삭제한다', () => {
+      const state: VimEditorState = {
+        lines: [
+          'const obj = {',
+          '  key: "value",',
+          '};',
+        ],
+        cursor: { line: 1, col: 4 },
+        mode: 'NORMAL',
+      };
+
+      const next = executeTextObjectOperator(state, 'd', 'a{');
+      expect(next.lines).toEqual(['const obj = ;']);
+      expect(next.cursor).toEqual({ line: 0, col: 12 });
+      expect(next.mode).toBe('NORMAL');
+    });
+
+    it('2daw: 카운트 2 적용 시 연속으로 2개 단어를 삭제한다', () => {
+      const state: VimEditorState = {
+        lines: ['one two three four'],
+        cursor: { line: 0, col: 0 }, // 'one'
+        mode: 'NORMAL',
+      };
+
+      const next = executeTextObjectOperator(state, 'd', 'aw', 2);
+      expect(next.lines[0]).toBe('three four');
+    });
   });
 });

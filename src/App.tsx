@@ -591,6 +591,7 @@ export function App() {
               : 'sandbox.ts'
           }
           pendingKeys={editorState.pendingKeys}
+          recordingMacro={editorState.recordingMacro}
           commandType={editorState.commandType}
           commandBuffer={editorState.commandBuffer}
           commandMessage={editorState.commandMessage}
