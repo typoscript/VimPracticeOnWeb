@@ -1,4 +1,4 @@
-import { VimEditorState } from '../types/vim';
+import { VimEditorState, CursorPosition } from '../types/vim';
 import { clampCursor, getMaxCol } from './cursor';
 import {
   moveLeft,
@@ -52,6 +52,24 @@ import {
   getWordAtCursor,
 } from './search';
 import { executeCommandLine } from './commandLine';
+import {
+  recordJump,
+  jumpOlder,
+  jumpNewer,
+  setMark,
+  jumpToMark,
+  executeMarkOperator,
+} from './marks';
+import {
+  joinLines,
+  toggleCaseChar,
+  changeCaseVisual,
+  indentLines,
+  indentVisual,
+  modifyNumberAtCursor,
+  formatIndentLines,
+  formatIndentVisual,
+} from './lineOperators';
 
 /**
  * 대기 중인 키(pendingKeys)에서 숫자 카운트와 연산자를 분해 파싱합니다.
@@ -79,8 +97,8 @@ export function parsePending(pendingKeys?: string): ParsedPending {
     return { count1: c, totalCount: c };
   }
 
-  // 2. 연산자 및 카운트 조합: "d", "2d", "d2", "2d3", "c", "r", "y", "v", "g", "@"
-  const opMatch = pendingKeys.match(/^([1-9][0-9]*)?([a-zA-Z@])([0-9]*)$/);
+  // 2. 연산자 및 카운트 조합: "d", "2d", "d2", "2d3", "c", "r", "y", "v", "g", "@", ">", "<", "=", "m", "'", "`"
+  const opMatch = pendingKeys.match(/^([1-9][0-9]*)?([a-zA-Z@'`><=])([0-9]*)$/);
   if (opMatch) {
     const count1 = opMatch[1] ? parseInt(opMatch[1], 10) : undefined;
     const operator = opMatch[2];
@@ -220,8 +238,10 @@ function handleSearchModeKey(state: VimEditorState, key: string): VimEditorState
       (m) => m.line === targetMatch.line && m.col === targetMatch.col
     );
 
+    const stateWithJump = recordJump(state);
+
     return {
-      ...state,
+      ...stateWithJump,
       mode: 'NORMAL',
       cursor: { line: targetMatch.line, col: targetMatch.col },
       lastSearchQuery: query,
@@ -709,6 +729,81 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
     return yankVisualSelection(state);
   }
 
+  // J: 선택 영역 모든 행 이어 붙이기
+  if (key === 'J') {
+    if (!state.visualAnchor) return { ...state, mode: 'NORMAL', pendingKeys: undefined };
+    const minLine = Math.min(state.visualAnchor.line, state.cursor.line);
+    const maxLine = Math.max(state.visualAnchor.line, state.cursor.line);
+    const joinCount = maxLine - minLine;
+    const tempState: VimEditorState = {
+      ...state,
+      cursor: { line: minLine, col: 0 },
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+    };
+    return joinLines(tempState, Math.max(1, joinCount));
+  }
+
+  // 대소문자 변환 (~, u, U)
+  if (key === '~') {
+    return changeCaseVisual(state, 'toggle');
+  }
+  if (key === 'u') {
+    return changeCaseVisual(state, 'lower');
+  }
+  if (key === 'U') {
+    return changeCaseVisual(state, 'upper');
+  }
+
+  // 들여쓰기 / 내어쓰기 / 정렬 (>, <, =)
+  if (key === '>') {
+    return indentVisual(state, 'in');
+  }
+  if (key === '<') {
+    return indentVisual(state, 'out');
+  }
+  if (key === '=') {
+    return formatIndentVisual(state);
+  }
+
+  // 마크 설정 (m{a-z})
+  if (state.pendingKeys === 'm') {
+    if (/^[a-z]$/.test(key)) {
+      return setMark(state, key);
+    }
+    return { ...state, pendingKeys: undefined };
+  }
+  if (key === 'm' && !state.pendingKeys) {
+    return { ...state, pendingKeys: 'm' };
+  }
+
+  // 마크 점프 ('{a-z}, `{a-z}) - 선택 영역 확장
+  if (state.pendingKeys === "'" || state.pendingKeys === '`') {
+    const quote = state.pendingKeys;
+    if (/^[a-z]$/.test(key)) {
+      const mark = state.marks?.[key];
+      if (mark) {
+        const targetLine = Math.max(0, Math.min(mark.row, state.lines.length - 1));
+        let targetCursor: CursorPosition;
+        if (quote === "'") {
+          targetCursor = moveToFirstNonBlank(state.lines, { line: targetLine, col: 0 });
+        } else {
+          const lineLen = (state.lines[targetLine] ?? '').length;
+          targetCursor = { line: targetLine, col: Math.max(0, Math.min(mark.col, Math.max(0, lineLen - 1))) };
+        }
+        return {
+          ...state,
+          cursor: targetCursor,
+          pendingKeys: undefined,
+        };
+      }
+    }
+    return { ...state, pendingKeys: undefined };
+  }
+  if ((key === "'" || key === '`') && !state.pendingKeys) {
+    return { ...state, pendingKeys: key };
+  }
+
   // VISUAL 모드 내 커서 이동 (모션 평가 및 카운트 반영)
   const motionCursor = evaluateMotionWithCount(
     state.lines,
@@ -844,8 +939,9 @@ function handleNormalModeKey(
   if (key === '%' && !state.pendingKeys) {
     const matchPos = findMatchingBracket(state.lines, state.cursor);
     if (matchPos) {
+      const stateWithJump = recordJump(state);
       return {
-        ...state,
+        ...stateWithJump,
         cursor: matchPos,
         pendingKeys: undefined,
       };
@@ -893,6 +989,147 @@ function handleNormalModeKey(
       }
     }
     return state;
+  }
+
+  // 1-0-5. Ctrl-o / Ctrl-i: 점프 리스트 탐색
+  if ((key === 'Ctrl-o' || key === 'Ctrl+o' || key === 'ctrl-o') && !parsed.operator) {
+    return jumpOlder(state);
+  }
+  if ((key === 'Ctrl-i' || key === 'Ctrl+i' || key === 'ctrl-i') && !parsed.operator) {
+    return jumpNewer(state);
+  }
+
+  // 1-0-6. Ctrl-a / Ctrl-x: 커서 위치 숫자 증감
+  if ((key === 'Ctrl-a' || key === 'Ctrl+a' || key === 'ctrl-a') && !parsed.operator) {
+    const res = modifyNumberAtCursor(state, parsed.totalCount);
+    const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'Ctrl-a'] : ['Ctrl-a'];
+    return {
+      ...res,
+      lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
+    };
+  }
+  if ((key === 'Ctrl-x' || key === 'Ctrl+x' || key === 'ctrl-x') && !parsed.operator) {
+    const res = modifyNumberAtCursor(state, -parsed.totalCount);
+    const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'Ctrl-x'] : ['Ctrl-x'];
+    return {
+      ...res,
+      lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
+    };
+  }
+
+  // 1-0-7. J: 줄 이어 붙이기
+  if (key === 'J' && !parsed.operator) {
+    const res = joinLines(state, parsed.totalCount);
+    const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'J'] : ['J'];
+    return {
+      ...res,
+      lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
+    };
+  }
+
+  // 1-0-8. ~: 커서 위치 문자 대소문자 반전
+  if (key === '~' && !parsed.operator) {
+    const res = toggleCaseChar(state, parsed.totalCount);
+    const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), '~'] : ['~'];
+    return {
+      ...res,
+      lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
+    };
+  }
+
+  // 1-0-9. 마크 연산자 결합 (d'a, d`a, c'a, c`a, y'a, y`a, v'a, v`a)
+  const markOpMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([dcyv])(['`])$/);
+  if (markOpMatch) {
+    const op = markOpMatch[2] as 'd' | 'c' | 'y' | 'v';
+    const quote = markOpMatch[3] as "'" | '`';
+    if (/^[a-z]$/.test(key)) {
+      const isLineWise = quote === "'";
+      const res = executeMarkOperator(state, op, key, isLineWise);
+      if (op === 'c') {
+        return {
+          ...res,
+          currentChangeKeys: isReplayingDot ? state.currentChangeKeys : [op, quote, key],
+        };
+      }
+      if (op === 'd') {
+        return {
+          ...res,
+          lastChangeKeys: isReplayingDot ? state.lastChangeKeys : [op, quote, key],
+        };
+      }
+      return res;
+    }
+    return { ...state, pendingKeys: undefined };
+  }
+
+  // 1-0-10. 단독 마크 점프 ('{a-z}, `{a-z})
+  const standaloneMarkMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?(['`])$/);
+  if (standaloneMarkMatch) {
+    const quote = standaloneMarkMatch[2];
+    if (/^[a-z]$/.test(key)) {
+      return jumpToMark(state, key, quote === "'");
+    }
+    return { ...state, pendingKeys: undefined };
+  }
+
+  // 1-0-11. 마크 설정 (m{a-z})
+  if (state.pendingKeys === 'm' || parsed.operator === 'm') {
+    if (/^[a-z]$/.test(key)) {
+      return setMark(state, key);
+    }
+    return { ...state, pendingKeys: undefined };
+  }
+
+  // 1-0-12. 들여쓰기 / 내어쓰기 / 정렬 (>>, <<, ==)
+  if (parsed.operator === '>') {
+    if (key === '>') {
+      const res = indentLines(state, parsed.totalCount, 'in');
+      const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), '>', '>'] : ['>', '>'];
+      return {
+        ...res,
+        lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
+      };
+    }
+    state = { ...state, pendingKeys: undefined };
+  }
+  if (parsed.operator === '<') {
+    if (key === '<') {
+      const res = indentLines(state, parsed.totalCount, 'out');
+      const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), '<', '<'] : ['<', '<'];
+      return {
+        ...res,
+        lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
+      };
+    }
+    state = { ...state, pendingKeys: undefined };
+  }
+  if (parsed.operator === '=') {
+    if (key === '=') {
+      const res = formatIndentLines(state, parsed.totalCount);
+      const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), '=', '='] : ['=', '='];
+      return {
+        ...res,
+        lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
+      };
+    }
+    state = { ...state, pendingKeys: undefined };
+  }
+
+  // 1-0-13. g 대소문자 변환 (guu, gUU, g~~)
+  const gCaseMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?g([~uU])$/);
+  if (gCaseMatch) {
+    const gType = gCaseMatch[2];
+    if (key === gType || (gType === 'u' && key === 'u') || (gType === 'U' && key === 'U') || (gType === '~' && key === '~')) {
+      const visualState: VimEditorState = {
+        ...state,
+        mode: 'VISUAL_LINE',
+        visualAnchor: { line: state.cursor.line, col: 0 },
+        cursor: { line: state.cursor.line, col: 0 },
+      };
+      const caseType = gType === '~' ? 'toggle' : gType === 'u' ? 'lower' : 'upper';
+      return changeCaseVisual(visualState, caseType);
+    }
+    state = { ...state, pendingKeys: undefined };
   }
 
   // 1-1. 매크로 녹화 시작 대기 (q)
@@ -1137,7 +1374,7 @@ function handleNormalModeKey(
         lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
       };
     }
-    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a') {
+    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a' || key === "'" || key === '`') {
       return {
         ...state,
         pendingKeys: (state.pendingKeys ?? '') + key,
@@ -1168,7 +1405,7 @@ function handleNormalModeKey(
         currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
       };
     }
-    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a') {
+    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a' || key === "'" || key === '`') {
       return {
         ...state,
         pendingKeys: (state.pendingKeys ?? '') + key,
@@ -1176,7 +1413,7 @@ function handleNormalModeKey(
     }
     state = { ...state, pendingKeys: undefined };
   } else if (parsed.operator === 'y') {
-    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a') {
+    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a' || key === "'" || key === '`') {
       return {
         ...state,
         pendingKeys: (state.pendingKeys ?? '') + key,
@@ -1185,27 +1422,38 @@ function handleNormalModeKey(
     state = { ...state, pendingKeys: undefined };
   } else if (parsed.operator === 'g') {
     if (key === 'g') {
+      const stateWithJump = recordJump(state);
       if (parsed.count1 !== undefined) {
         const targetLine = Math.max(0, Math.min(parsed.count1 - 1, state.lines.length - 1));
         const maxCol = getMaxCol(state.lines[targetLine], 'NORMAL');
         return {
-          ...state,
+          ...stateWithJump,
           cursor: { line: targetLine, col: Math.min(state.cursor.col, maxCol) },
           pendingKeys: undefined,
         };
       }
       const nextCursor = moveToFirstLine(state.lines, state.cursor);
       return {
-        ...state,
+        ...stateWithJump,
         cursor: clampCursor(state.lines, nextCursor, 'NORMAL'),
         pendingKeys: undefined,
+      };
+    }
+    if (key === '~' || key === 'u' || key === 'U') {
+      return {
+        ...state,
+        pendingKeys: (state.pendingKeys ?? '') + key,
       };
     }
     state = { ...state, pendingKeys: undefined };
   }
 
-  // 9. 연산자 및 매크로 키 등록 (d, c, r, g, y, f, F, t, T, @, q)
-  if (key === 'd' || key === 'c' || key === 'r' || key === 'g' || key === 'y' || key === '@') {
+  // 9. 연산자 및 매크로 키 등록 (d, c, r, g, y, f, F, t, T, @, q, m, ', `, >, <, =)
+  if (
+    key === 'd' || key === 'c' || key === 'r' || key === 'g' || key === 'y' ||
+    key === '@' || key === '>' || key === '<' || key === '=' || key === 'm' ||
+    key === "'" || key === '`'
+  ) {
     return {
       ...state,
       pendingKeys: (state.pendingKeys ?? '') + key,
@@ -1264,8 +1512,9 @@ function handleNormalModeKey(
       }
       const nextMatch = findNextMatch(matches, state.cursor) ?? matches[0];
       const matchIdx = matches.findIndex((m) => m.line === nextMatch.line && m.col === nextMatch.col);
+      const stateWithJump = recordJump(state);
       return {
-        ...state,
+        ...stateWithJump,
         cursor: { line: nextMatch.line, col: nextMatch.col },
         commandMessage: `다음 검색 결과 (${matchIdx + 1}/${matches.length}): ${state.lastSearchQuery}`,
         pendingKeys: undefined,
@@ -1287,8 +1536,9 @@ function handleNormalModeKey(
       }
       const prevMatch = findPrevMatch(matches, state.cursor) ?? matches[matches.length - 1];
       const matchIdx = matches.findIndex((m) => m.line === prevMatch.line && m.col === prevMatch.col);
+      const stateWithJump = recordJump(state);
       return {
-        ...state,
+        ...stateWithJump,
         cursor: { line: prevMatch.line, col: prevMatch.col },
         commandMessage: `이전 검색 결과 (${matchIdx + 1}/${matches.length}): ${state.lastSearchQuery}`,
         pendingKeys: undefined,
@@ -1306,8 +1556,9 @@ function handleNormalModeKey(
       const matchIdx = nextMatch
         ? matches.findIndex((m) => m.line === nextMatch.line && m.col === nextMatch.col)
         : -1;
+      const stateWithJump = recordJump(state);
       return {
-        ...state,
+        ...stateWithJump,
         cursor: nextMatch ? { line: nextMatch.line, col: nextMatch.col } : state.cursor,
         lastSearchQuery: word,
         commandMessage: `단어 '${word}' 검색 (${matchIdx + 1}/${matches.length})`,
@@ -1443,18 +1694,19 @@ function handleNormalModeKey(
 
   // G: 버퍼 이동 ([count]G는 count번째 줄, 없으면 마지막 줄)
   if (key === 'G') {
+    const stateWithJump = recordJump(state);
     if (parsed.count1 !== undefined) {
       const targetLine = Math.max(0, Math.min(parsed.count1 - 1, state.lines.length - 1));
       const maxCol = getMaxCol(state.lines[targetLine], 'NORMAL');
       return {
-        ...state,
+        ...stateWithJump,
         cursor: { line: targetLine, col: Math.min(state.cursor.col, maxCol) },
         pendingKeys: undefined,
       };
     }
     const nextCursor = moveToLastLine(state.lines, state.cursor);
     return {
-      ...state,
+      ...stateWithJump,
       cursor: clampCursor(state.lines, nextCursor, 'NORMAL'),
       pendingKeys: undefined,
     };

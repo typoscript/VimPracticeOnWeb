@@ -574,6 +574,42 @@ export function App() {
         }
       }
 
+      // Ctrl+o 또는 Cmd+o: 점프 리스트 이전 위치 (브라우저 파일 열기 차단)
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'o' || e.key === 'O')) {
+        if (editorState.mode === 'NORMAL') {
+          e.preventDefault();
+          processKeyInput('Ctrl-o');
+          return;
+        }
+      }
+
+      // Ctrl+i 또는 Cmd+i: 점프 리스트 다음 위치
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'i' || e.key === 'I')) {
+        if (editorState.mode === 'NORMAL') {
+          e.preventDefault();
+          processKeyInput('Ctrl-i');
+          return;
+        }
+      }
+
+      // Ctrl+a 또는 Cmd+a: 숫자 증가 (NORMAL 모드에서 브라우저 전체 선택 차단)
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'a' || e.key === 'A')) {
+        if (editorState.mode === 'NORMAL') {
+          e.preventDefault();
+          processKeyInput('Ctrl-a');
+          return;
+        }
+      }
+
+      // Ctrl+x 또는 Cmd+x: 숫자 감소 (NORMAL 모드에서 브라우저 잘라내기 차단)
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'x' || e.key === 'X')) {
+        if (editorState.mode === 'NORMAL') {
+          e.preventDefault();
+          processKeyInput('Ctrl-x');
+          return;
+        }
+      }
+
       // 그 외 메타 키 조합은 브라우저 기본 단축키 허용
       if (e.metaKey || e.ctrlKey || e.altKey) {
         return;
@@ -780,6 +816,8 @@ export function App() {
         <span className="cheat-item"><code>v / V</code> 영역 선택</span>
         <span className="cheat-item"><code>dd dw</code> 줄/단어 삭제</span>
         <span className="cheat-item"><code>.</code> 직전 변경 반복</span>
+        <span className="cheat-item"><code>m ' Ctrl-o</code> 마크/점프</span>
+        <span className="cheat-item"><code>J ~ &gt;&gt; Ctrl-a</code> 라인/편집</span>
         <span className="cheat-item"><code>p</code> 붙여넣기</span>
         <span className="cheat-item"><code>u / Ctrl-r</code> 실행취소/다시실행</span>
       </section>
@@ -865,6 +903,7 @@ export function App() {
           }
           isFocused={isEditorFocused}
           onFocus={() => setIsEditorFocused(true)}
+          marks={editorState.marks}
         />
         <Keycaster recentKeys={recentKeys} />
         <StatusBar

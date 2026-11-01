@@ -79,4 +79,31 @@ describe('Editor Component', () => {
     expect(blurOverlay).toBeInTheDocument();
     expect(blurOverlay).toHaveTextContent('클릭하여 에디터 포커스 활성화');
   });
+
+  it('마크가 설정된 줄의 Gutter(줄 번호 영역)에 마크 배지([a])를 시각적으로 렌더링한다', () => {
+    const lines = ['First line', 'Second line with mark', 'Third line'];
+    render(
+      <Editor
+        lines={lines}
+        cursor={{ line: 0, col: 0 }}
+        mode="NORMAL"
+        marks={{
+          a: { row: 1, col: 5 },
+          b: { row: 1, col: 10 },
+        }}
+      />
+    );
+
+    const markBadgeA = screen.getByTestId('mark-badge-a');
+    expect(markBadgeA).toBeInTheDocument();
+    expect(markBadgeA).toHaveTextContent('[a]');
+
+    const markBadgeB = screen.getByTestId('mark-badge-b');
+    expect(markBadgeB).toBeInTheDocument();
+    expect(markBadgeB).toHaveTextContent('[b]');
+
+    const line2 = screen.getByTestId('line-number-2');
+    expect(line2).toContainElement(markBadgeA);
+    expect(line2).toContainElement(markBadgeB);
+  });
 });

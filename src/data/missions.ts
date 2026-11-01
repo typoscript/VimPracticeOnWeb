@@ -441,4 +441,58 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 20,
+    title: '레슨 20: 마크와 점프 리스트로 코드 순간이동 (m, \', Ctrl-o)',
+    description: '현재 위치를 마크 ma로 북마크한 뒤, 파일 맨 끝(G)으로 이동해 코드를 확인하고, \'a 또는 Ctrl-o로 원래 마크 위치로 순간이동하세요.',
+    hint: 'ma로 현재 위치를 저장하고, G로 맨 끝 줄로 점프한 뒤, \'a를 누르면 마크 a가 위치한 줄의 첫 글자로 즉시 복귀합니다.',
+    par: 5,
+    optimalKeys: ['m', 'a', 'G', "'", 'a'],
+    initialLines: [
+      'function calculateTotal() {',
+      '  return 100;',
+      '}',
+      '',
+      '// End of file notes',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    targetCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        state.marks?.a !== undefined &&
+        state.cursor.line === 0 &&
+        (state.jumpList?.length ?? 0) >= 1
+      );
+    },
+  },
+  {
+    id: 21,
+    title: '레슨 21: 실무 필수 라인/문자 편집 (J, ~, >>, <<, Ctrl-a/x)',
+    description: '~로 대소문자를 변경하고, Ctrl-a로 숫자를 증가시키며, J로 줄을 이어붙이고 >>로 들여쓰기를 맞춰보세요.',
+    hint: '~로 V를 만들고, Ctrl-a로 1을 2로 올린 뒤, j -> J로 아래 줄을 연결하고, j -> >>로 들여쓰기를 정렬하세요.',
+    par: 7,
+    optimalKeys: ['~', 'Ctrl-a', 'j', 'J', 'j', '>', '>'],
+    initialLines: [
+      'const version = 1;',
+      'const message =',
+      '  "hello vim";',
+      'console.log(message);',
+    ],
+    targetLines: [
+      'const Version = 2;',
+      'const message = "hello vim";',
+      '  console.log(message);',
+    ],
+    initialCursor: { line: 0, col: 6 },
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines.length === 3 &&
+        state.lines[0] === 'const Version = 2;' &&
+        state.lines[1] === 'const message = "hello vim";' &&
+        state.lines[2] === '  console.log(message);'
+      );
+    },
+  },
 ];

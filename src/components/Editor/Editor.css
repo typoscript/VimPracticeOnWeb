@@ -78,13 +78,35 @@
 }
 
 .line-number {
-  width: 48px;
-  min-width: 48px;
+  min-width: 52px;
   padding-right: 14px;
   text-align: right;
   color: var(--text-muted, #585b70);
   user-select: none;
   font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.gutter-marks {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.gutter-mark-badge {
+  color: #fab387;
+  background-color: rgba(250, 179, 135, 0.15);
+  border-radius: 3px;
+  padding: 0 2px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.line-num-text {
+  display: inline-block;
 }
 
 .editor-row.active-row .line-number {

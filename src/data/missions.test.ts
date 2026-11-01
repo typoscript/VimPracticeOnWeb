@@ -242,8 +242,58 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson19!.checkComplete(stateDone)).toBe(true);
   });
 
-  it('모든 19개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(19);
+  it('레슨 20 (마크와 점프 리스트) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson20 = MISSIONS.find((m) => m.id === 20);
+    expect(lesson20).toBeDefined();
+
+    const stateNotDone: VimEditorState = {
+      lines: ['function calculateTotal() {', '  return 100;', '}', '', '// End of file notes'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson20!.checkComplete(stateNotDone)).toBe(false);
+
+    const stateDone: VimEditorState = {
+      lines: ['function calculateTotal() {', '  return 100;', '}', '', '// End of file notes'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+      marks: { a: { row: 0, col: 0 } },
+      jumpList: [{ row: 0, col: 0 }, { row: 4, col: 0 }],
+      jumpIndex: 1,
+    };
+    expect(lesson20!.checkComplete(stateDone)).toBe(true);
+  });
+
+  it('레슨 21 (실무 필수 라인/문자 편집) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson21 = MISSIONS.find((m) => m.id === 21);
+    expect(lesson21).toBeDefined();
+
+    const stateNotDone: VimEditorState = {
+      lines: [
+        'const version = 1;',
+        'const message =',
+        '  "hello vim";',
+        'console.log(message);',
+      ],
+      cursor: { line: 0, col: 6 },
+      mode: 'NORMAL',
+    };
+    expect(lesson21!.checkComplete(stateNotDone)).toBe(false);
+
+    const stateDone: VimEditorState = {
+      lines: [
+        'const Version = 2;',
+        'const message = "hello vim";',
+        '  console.log(message);',
+      ],
+      cursor: { line: 2, col: 2 },
+      mode: 'NORMAL',
+    };
+    expect(lesson21!.checkComplete(stateDone)).toBe(true);
+  });
+
+  it('모든 21개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(21);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();

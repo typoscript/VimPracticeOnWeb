@@ -67,6 +67,12 @@ export interface VimEditorState {
   lastPlayedMacro?: string | null;
   /** 직전 줄 내 문자 탐색 정보 (';' 및 ',' 반복용) */
   lastCharSearch?: { type: 'f' | 'F' | 't' | 'T'; char: string } | null;
+  /** 마크 위치 저장소 (m{a-z}) */
+  marks?: Record<string, { row: number; col: number }>;
+  /** 점프 리스트 (Ctrl+o, Ctrl+i) */
+  jumpList?: Array<{ row: number; col: number }>;
+  /** 점프 리스트 현재 인덱스 */
+  jumpIndex?: number;
   /** 비주얼 블록(Ctrl+v) 다중 줄 동시 삽입 세션 */
   blockInsertSession?: BlockInsertSession | null;
 }

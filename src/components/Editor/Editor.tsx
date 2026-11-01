@@ -18,6 +18,8 @@ export interface EditorProps {
   isFocused?: boolean;
   /** 에디터 클릭 시 포커스 활성화 콜백 */
   onFocus?: () => void;
+  /** 마크 위치 목록 (m{a-z}) */
+  marks?: Record<string, { row: number; col: number }>;
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -30,6 +32,7 @@ export const Editor: React.FC<EditorProps> = ({
   searchQuery,
   isFocused = true,
   onFocus,
+  marks,
 }) => {
   // 전체 검색 일치 항목 수집
   const allMatches = searchQuery && searchQuery.length > 0
@@ -71,6 +74,11 @@ export const Editor: React.FC<EditorProps> = ({
               : lineIdx + 1;
 
             const lineMatches = allMatches.filter((m) => m.line === lineIdx);
+            const marksOnLine = marks
+              ? Object.entries(marks)
+                  .filter(([_, pos]) => pos.row === lineIdx)
+                  .map(([name]) => name)
+              : [];
 
             return (
               <div
@@ -83,7 +91,20 @@ export const Editor: React.FC<EditorProps> = ({
                   data-testid={`line-number-${lineIdx + 1}`}
                   aria-hidden="true"
                 >
-                  {lineNumberDisplay}
+                  {marksOnLine.length > 0 && (
+                    <span className="gutter-marks">
+                      {marksOnLine.map((m) => (
+                        <span
+                          key={m}
+                          className="gutter-mark-badge"
+                          data-testid={`mark-badge-${m}`}
+                        >
+                          [{m}]
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                  <span className="line-num-text">{lineNumberDisplay}</span>
                 </div>
                 <div className="line-content">
                   {renderLineContent({
