@@ -61,9 +61,9 @@ export function deleteLine(state: VimEditorState, count = 1): VimEditorState {
   };
 }
 
-type CharType = 'word' | 'punct' | 'space';
+export type CharType = 'word' | 'punct' | 'space';
 
-function getCharType(ch: string | undefined): CharType {
+export function getCharType(ch: string | undefined): CharType {
   if (!ch) return 'space';
   if (/\s/.test(ch)) return 'space';
   if (/\w/.test(ch)) return 'word';

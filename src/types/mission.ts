@@ -15,5 +15,13 @@ export interface Mission {
   optimalKeys?: string[];
   initialUndoStack?: StateSnapshot[];
   initialClipboard?: ClipboardRegister;
+  /** 주 창 파일명 (기본: lesson_{id}.txt 또는 source.ts) */
+  primaryFilename?: string;
+  /** 보조 창 파일명 (예: target.ts) */
+  secondaryFilename?: string;
+  /** 보조 창 초기 줄 (다중 파일 미션용) */
+  secondaryLines?: string[];
+  /** 초기 창 분할 상태 */
+  initialSplit?: 'none' | 'horizontal' | 'vertical';
   checkComplete: (state: VimEditorState) => boolean;
 }

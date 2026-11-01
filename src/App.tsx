@@ -10,9 +10,11 @@ import { VirtualKeyboard } from './components/VirtualKeyboard/VirtualKeyboard';
 import { SpeedrunPanel } from './components/SpeedrunPanel/SpeedrunPanel';
 import { ThemeSwitcher } from './components/ThemeSwitcher/ThemeSwitcher';
 import { CustomMissionModal } from './components/CustomMissionModal/CustomMissionModal';
-import { VimEditorState } from './types/vim';
+import { RegisterInspector } from './components/RegisterInspector/RegisterInspector';
+import { VimEditorState, SplitPaneState } from './types/vim';
 import { Mission } from './types/mission';
 import { handleKey } from './engine/vimEngine';
+import { switchPaneFocus } from './engine/splitWindow';
 import { MISSIONS } from './data/missions';
 import { SANDBOX_INITIAL_LINES } from './data/sandbox';
 import {
@@ -24,6 +26,8 @@ import {
   saveVirtualKeyboardSetting,
   loadDiffViewSetting,
   saveDiffViewSetting,
+  loadRegisterInspectorSetting,
+  saveRegisterInspectorSetting,
   loadSpeedrunRecord,
   saveSpeedrunRecord,
   SpeedrunRecord,
@@ -85,7 +89,21 @@ export function App() {
   const [relativeLineNumbers, setRelativeLineNumbers] = useState<boolean>(() => loadRelativeLineSetting());
   const [showVirtualKeyboard, setShowVirtualKeyboard] = useState<boolean>(() => loadVirtualKeyboardSetting());
   const [showDiffView, setShowDiffView] = useState<boolean>(() => loadDiffViewSetting());
+  const [showRegisterInspector, setShowRegisterInspector] = useState<boolean>(() => loadRegisterInspectorSetting());
   const [isEditorFocused, setIsEditorFocused] = useState<boolean>(true);
+
+  const handleToggleRegisterInspector = useCallback(() => {
+    setShowRegisterInspector((prev) => {
+      const next = !prev;
+      saveRegisterInspectorSetting(next);
+      return next;
+    });
+  }, []);
+
+  const handleSwitchPane = useCallback((targetIndex: number) => {
+    setEditorState((prevState) => switchPaneFocus(prevState, targetIndex));
+    setIsEditorFocused(true);
+  }, []);
 
   const currentMission = MISSIONS[currentMissionIndex];
 
@@ -117,6 +135,40 @@ export function App() {
 
   const activeSpeedrunMission = speedrunStages[speedrunCurrentStage];
 
+  const getMissionInitialState = useCallback((m: Mission): VimEditorState => {
+    const isSplit = m.initialSplit && m.initialSplit !== 'none';
+    let splitPanes: [SplitPaneState, SplitPaneState] | undefined = undefined;
+    if (isSplit) {
+      const p0: SplitPaneState = {
+        filename: m.primaryFilename || 'source.ts',
+        lines: [...m.initialLines],
+        cursor: { ...m.initialCursor },
+        mode: 'NORMAL',
+      };
+      const p1: SplitPaneState = {
+        filename: m.secondaryFilename || 'target.ts',
+        lines: m.secondaryLines ? [...m.secondaryLines] : [...m.initialLines],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+      splitPanes = [p0, p1];
+    }
+    return {
+      lines: [...m.initialLines],
+      cursor: { ...m.initialCursor },
+      mode: 'NORMAL',
+      undoStack: m.initialUndoStack ? [...m.initialUndoStack] : [],
+      redoStack: [],
+      clipboard: m.initialClipboard,
+      primaryFilename: m.primaryFilename,
+      secondaryFilename: m.secondaryFilename,
+      secondaryLines: m.secondaryLines,
+      splitDirection: m.initialSplit ?? 'none',
+      splitPanes,
+      activePaneIndex: 0,
+    };
+  }, []);
+
   const [editorState, setEditorState] = useState<VimEditorState>(() => {
     if (initialCustomMission) {
       return {
@@ -127,14 +179,7 @@ export function App() {
         redoStack: [],
       };
     }
-    return {
-      lines: currentMission.initialLines,
-      cursor: currentMission.initialCursor,
-      mode: 'NORMAL',
-      undoStack: currentMission.initialUndoStack ? [...currentMission.initialUndoStack] : [],
-      redoStack: [],
-      clipboard: currentMission.initialClipboard,
-    };
+    return getMissionInitialState(currentMission);
   });
 
   const isCompleted =
@@ -243,14 +288,7 @@ export function App() {
       ghostTimerRef.current = null;
     }
 
-    let currentState: VimEditorState = {
-      lines: [...currentMission.initialLines],
-      cursor: { ...currentMission.initialCursor },
-      mode: 'NORMAL',
-      undoStack: currentMission.initialUndoStack ? [...currentMission.initialUndoStack] : [],
-      redoStack: [],
-      clipboard: currentMission.initialClipboard,
-    };
+    let currentState = getMissionInitialState(currentMission);
     setEditorState(currentState);
     setKeystrokeCount(0);
     setRecentKeys([]);
@@ -306,38 +344,24 @@ export function App() {
       handleStopGhostReplay();
       setCurrentMissionIndex(index);
       const nextMission = MISSIONS[index];
-      setEditorState({
-        lines: nextMission.initialLines,
-        cursor: nextMission.initialCursor,
-        mode: 'NORMAL',
-        undoStack: nextMission.initialUndoStack ? [...nextMission.initialUndoStack] : [],
-        redoStack: [],
-        clipboard: nextMission.initialClipboard,
-      });
+      setEditorState(getMissionInitialState(nextMission));
       setKeystrokeCount(0);
       setRecentKeys([]);
       setLastPressedKey(undefined);
       setCoachingMessage(null);
       antiPatternDetectorRef.current.reset();
     }
-  }, [handleStopGhostReplay]);
+  }, [handleStopGhostReplay, getMissionInitialState]);
 
   const handleResetMission = useCallback(() => {
     handleStopGhostReplay();
-    setEditorState({
-      lines: currentMission.initialLines,
-      cursor: currentMission.initialCursor,
-      mode: 'NORMAL',
-      undoStack: currentMission.initialUndoStack ? [...currentMission.initialUndoStack] : [],
-      redoStack: [],
-      clipboard: currentMission.initialClipboard,
-    });
+    setEditorState(getMissionInitialState(currentMission));
     setKeystrokeCount(0);
     setRecentKeys([]);
     setLastPressedKey(undefined);
     setCoachingMessage(null);
     antiPatternDetectorRef.current.reset();
-  }, [currentMission, handleStopGhostReplay]);
+  }, [currentMission, handleStopGhostReplay, getMissionInitialState]);
 
   const handleResetSandbox = useCallback(() => {
     handleStopGhostReplay();
@@ -443,19 +467,12 @@ export function App() {
         setRecentKeys([]);
       } else {
         const mission = MISSIONS[currentMissionIndex];
-        setEditorState({
-          lines: mission.initialLines,
-          cursor: mission.initialCursor,
-          mode: 'NORMAL',
-          undoStack: mission.initialUndoStack ? [...mission.initialUndoStack] : [],
-          redoStack: [],
-          clipboard: mission.initialClipboard,
-        });
+        setEditorState(getMissionInitialState(mission));
         setKeystrokeCount(0);
         setRecentKeys([]);
       }
     },
-    [currentMissionIndex, handleResetSandbox, customMission, handleStopGhostReplay]
+    [currentMissionIndex, handleResetSandbox, customMission, handleStopGhostReplay, getMissionInitialState]
   );
 
   const handleToggleRelativeLine = useCallback(() => {
@@ -556,6 +573,15 @@ export function App() {
         e.preventDefault();
         processKeyInput('Ctrl-r');
         return;
+      }
+
+      // Ctrl+w 또는 Cmd+w: 윈도우 분할 및 포커스 제어 (브라우저 창 닫기 차단)
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'w' || e.key === 'W')) {
+        if (editorState.mode === 'NORMAL' || editorState.mode.startsWith('VISUAL')) {
+          e.preventDefault();
+          processKeyInput('Ctrl-w');
+          return;
+        }
       }
 
       // Ctrl+f 또는 Cmd+f: 브라우저 찾기 대신 Vim 검색 모드(/) 진입 유도
@@ -798,6 +824,16 @@ export function App() {
             </button>
           )}
 
+          {/* 실시간 레지스터 인스펙터 토글 버튼 */}
+          <button
+            className={`toolbar-btn register-toggle-btn ${showRegisterInspector ? 'active' : ''}`}
+            onClick={handleToggleRegisterInspector}
+            data-testid="toggle-register-inspector-btn"
+            title="실시간 레지스터 인스펙터 패널 토글"
+          >
+            📋 레지스터: {showRegisterInspector ? 'ON' : 'OFF'}
+          </button>
+
           {/* 가상 키보드 오버레이 토글 버튼 */}
           <button
             className={`toolbar-btn keyboard-toggle-btn ${showVirtualKeyboard ? 'active' : ''}`}
@@ -838,6 +874,8 @@ export function App() {
         <span className="cheat-item"><code>J ~ &gt;&gt; Ctrl-a</code> 라인/편집</span>
         <span className="cheat-item"><code>:g :norm</code> 일괄/글로벌</span>
         <span className="cheat-item"><code>zz H M L</code> 뷰포트/스크롤</span>
+        <span className="cheat-item"><code>"a "0 "_</code> 레지스터</span>
+        <span className="cheat-item"><code>:sp :vsp Ctrl-w</code> 창 분할</span>
         <span className="cheat-item"><code>p</code> 붙여넣기</span>
         <span className="cheat-item"><code>u / Ctrl-r</code> 실행취소/다시실행</span>
       </section>
@@ -909,41 +947,124 @@ export function App() {
           />
         )}
 
-        <Editor
-          lines={editorState.lines}
-          cursor={editorState.cursor}
-          mode={editorState.mode}
-          targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
-          visualAnchor={editorState.visualAnchor}
-          relativeLineNumbers={relativeLineNumbers}
-          searchQuery={
-            editorState.mode === 'SEARCH'
-              ? editorState.commandBuffer
-              : editorState.lastSearchQuery
-          }
-          isFocused={isEditorFocused}
-          onFocus={() => setIsEditorFocused(true)}
-          marks={editorState.marks}
-          viewport={editorState.viewport}
-        />
+        {/* 에디터 렌더링: 분할 창 모드 vs 단일 창 모드 */}
+        {editorState.splitDirection && editorState.splitDirection !== 'none' && editorState.splitPanes ? (
+          <div
+            className={`editor-split-container split-${editorState.splitDirection}`}
+            data-testid="editor-split-container"
+          >
+            {/* 왼쪽/상단 주 창 (Pane 0) */}
+            <div
+              className={`editor-split-pane ${editorState.activePaneIndex === 0 ? 'active' : ''}`}
+              onClick={() => handleSwitchPane(0)}
+              data-testid="split-pane-0"
+            >
+              <div className="pane-header">
+                <span className="pane-filename">
+                  📄 {editorState.primaryFilename || editorState.splitPanes[0].filename || 'source.ts'}
+                </span>
+                {editorState.activePaneIndex === 0 && <span className="pane-active-indicator">FOCUS</span>}
+              </div>
+              <Editor
+                lines={editorState.activePaneIndex === 0 ? editorState.lines : editorState.splitPanes[0].lines}
+                cursor={editorState.activePaneIndex === 0 ? editorState.cursor : editorState.splitPanes[0].cursor}
+                mode={editorState.activePaneIndex === 0 ? editorState.mode : editorState.splitPanes[0].mode}
+                targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
+                visualAnchor={editorState.activePaneIndex === 0 ? editorState.visualAnchor : editorState.splitPanes[0].visualAnchor}
+                relativeLineNumbers={relativeLineNumbers}
+                searchQuery={
+                  editorState.activePaneIndex === 0 && editorState.mode === 'SEARCH'
+                    ? editorState.commandBuffer
+                    : editorState.lastSearchQuery
+                }
+                isFocused={isEditorFocused && editorState.activePaneIndex === 0}
+                onFocus={() => handleSwitchPane(0)}
+                marks={editorState.marks}
+                viewport={editorState.activePaneIndex === 0 ? editorState.viewport : editorState.splitPanes[0].viewport}
+              />
+            </div>
+
+            {/* 오른쪽/하단 보조 창 (Pane 1) */}
+            <div
+              className={`editor-split-pane ${editorState.activePaneIndex === 1 ? 'active' : ''}`}
+              onClick={() => handleSwitchPane(1)}
+              data-testid="split-pane-1"
+            >
+              <div className="pane-header">
+                <span className="pane-filename">
+                  📄 {editorState.secondaryFilename || editorState.splitPanes[1].filename || 'target.ts'}
+                </span>
+                {editorState.activePaneIndex === 1 && <span className="pane-active-indicator">FOCUS</span>}
+              </div>
+              <Editor
+                lines={editorState.activePaneIndex === 1 ? editorState.lines : editorState.splitPanes[1].lines}
+                cursor={editorState.activePaneIndex === 1 ? editorState.cursor : editorState.splitPanes[1].cursor}
+                mode={editorState.activePaneIndex === 1 ? editorState.mode : editorState.splitPanes[1].mode}
+                targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
+                visualAnchor={editorState.activePaneIndex === 1 ? editorState.visualAnchor : editorState.splitPanes[1].visualAnchor}
+                relativeLineNumbers={relativeLineNumbers}
+                searchQuery={
+                  editorState.activePaneIndex === 1 && editorState.mode === 'SEARCH'
+                    ? editorState.commandBuffer
+                    : editorState.lastSearchQuery
+                }
+                isFocused={isEditorFocused && editorState.activePaneIndex === 1}
+                onFocus={() => handleSwitchPane(1)}
+                marks={editorState.marks}
+                viewport={editorState.activePaneIndex === 1 ? editorState.viewport : editorState.splitPanes[1].viewport}
+              />
+            </div>
+          </div>
+        ) : (
+          <Editor
+            lines={editorState.lines}
+            cursor={editorState.cursor}
+            mode={editorState.mode}
+            targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
+            visualAnchor={editorState.visualAnchor}
+            relativeLineNumbers={relativeLineNumbers}
+            searchQuery={
+              editorState.mode === 'SEARCH'
+                ? editorState.commandBuffer
+                : editorState.lastSearchQuery
+            }
+            isFocused={isEditorFocused}
+            onFocus={() => setIsEditorFocused(true)}
+            marks={editorState.marks}
+            viewport={editorState.viewport}
+          />
+        )}
         <Keycaster recentKeys={recentKeys} />
         <StatusBar
           mode={editorState.mode}
           cursor={editorState.cursor}
           filename={
-            currentTab === 'course'
-              ? `lesson_${currentMission.id}.txt`
-              : currentTab === 'custom'
-              ? 'custom_golf.txt'
-              : currentTab === 'speedrun'
-              ? `speedrun_stage_${speedrunCurrentStage + 1}.txt`
-              : 'sandbox.ts'
+            editorState.splitPanes
+              ? (editorState.activePaneIndex === 1
+                  ? (editorState.secondaryFilename || editorState.splitPanes[1].filename || 'target.ts')
+                  : (editorState.primaryFilename || editorState.splitPanes[0].filename || 'source.ts'))
+              : (currentTab === 'course'
+                  ? (currentMission.primaryFilename || `lesson_${currentMission.id}.txt`)
+                  : currentTab === 'custom'
+                  ? 'custom_golf.txt'
+                  : currentTab === 'speedrun'
+                  ? `speedrun_stage_${speedrunCurrentStage + 1}.txt`
+                  : 'sandbox.ts')
           }
           pendingKeys={editorState.pendingKeys}
           recordingMacro={editorState.recordingMacro}
           commandType={editorState.commandType}
           commandBuffer={editorState.commandBuffer}
           commandMessage={editorState.commandMessage}
+        />
+
+        {/* 실시간 레지스터 인스펙터 패널 */}
+        <RegisterInspector
+          isOpen={showRegisterInspector}
+          onToggle={handleToggleRegisterInspector}
+          registers={editorState.registers}
+          activeRegister={editorState.activeRegister}
+          clipboard={editorState.clipboard}
         />
 
         {/* 목표 상태 Diff 비교 하이라이트 뷰 */}

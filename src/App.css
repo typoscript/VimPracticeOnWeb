@@ -288,3 +288,62 @@
     padding: 3px 8px;
   }
 }
+
+/* 멀티 윈도우 분할 레이아웃 (:sp, :vsp, Ctrl+w) */
+.editor-split-container {
+  display: flex;
+  width: 100%;
+  max-width: 900px;
+  gap: 8px;
+}
+
+.editor-split-container.split-vertical {
+  flex-direction: row;
+}
+
+.editor-split-container.split-horizontal {
+  flex-direction: column;
+}
+
+.editor-split-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-radius: 8px;
+  border: 1px solid var(--border-color, #292e42);
+  background: var(--bg-primary, #1a1b26);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  overflow: hidden;
+}
+
+.editor-split-pane.active {
+  border-color: #7aa2f7;
+  box-shadow: 0 0 10px rgba(122, 162, 247, 0.2);
+}
+
+.pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--bg-secondary, #1f2335);
+  border-bottom: 1px solid var(--border-color, #292e42);
+  font-size: 0.8rem;
+}
+
+.pane-filename {
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-weight: 600;
+  color: var(--text-primary, #c0caf5);
+}
+
+.pane-active-indicator {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(122, 162, 247, 0.2);
+  color: #7aa2f7;
+  letter-spacing: 0.5px;
+}

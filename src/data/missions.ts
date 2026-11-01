@@ -528,4 +528,80 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 23,
+    title: '레슨 23: 블랙홀 레지스터 "_ 와 명명된 레지스터 "a 활용하기 ("ayiw, "_dd, "ap)',
+    description: '일반 삭제(d, x)는 기본 클립보드를 덮어쓰지만, 블랙홀 레지스터("_")를 쓰면 기존 복사본을 오염시키지 않고 삭제할 수 있습니다. 첫 줄의 토큰을 "a 레지스터에 복사하고, 불필요한 둘째 줄은 "_dd로 삭제한 뒤, 세 번째 줄에 "ap로 붙여넣으세요.',
+    hint: '첫 줄 따옴표 안에서 "ayi" 로 a에 복사하고, j -> "_dd 로 둘째 줄을 블랙홀 삭제합니다. 그 다음 "ap 로 세 번째 줄 따옴표 사이에 바로 붙여넣으세요.',
+    par: 13,
+    optimalKeys: [
+      '"', 'a', 'y', 'i', '"',
+      'j',
+      '"', '_', 'd', 'd',
+      '"', 'a', 'p',
+    ],
+    initialLines: [
+      'const secret = "secretKey123";',
+      'const garbageLine = "DELETE_ME_NOW";',
+      'let authHeader = "";',
+    ],
+    targetLines: [
+      'const secret = "secretKey123";',
+      'let authHeader = "secretKey123";',
+    ],
+    initialCursor: { line: 0, col: 17 },
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines.length === 2 &&
+        state.lines[0] === 'const secret = "secretKey123";' &&
+        state.lines[1] === 'let authHeader = "secretKey123";' &&
+        state.registers?.a?.content === 'secretKey123'
+      );
+    },
+  },
+  {
+    id: 24,
+    title: '레슨 24: :vsp 화면 분할과 창 간 코드 이동 (:vsp, Ctrl-w l, "ap, "bp)',
+    description: ':vsp 명령으로 화면을 세로 분할해 오른쪽 창(target.ts)을 열고, 왼쪽 창(source.ts)의 필요한 함수들을 "a와 "b 레지스터에 복사한 뒤, Ctrl-w l 로 넘어가 붙여넣어 리팩토링을 완성하세요.',
+    hint: ':vsp 엔터로 창을 열고, "ayy 로 helperA를 a에, 2j -> "byy 로 helperB를 b에 복사하세요. 그 다음 Ctrl-w l 로 오른쪽 창으로 넘어가 "ap 와 "bp 로 붙여넣으세요.',
+    par: 23,
+    optimalKeys: [
+      ':', 'v', 's', 'p', 'Enter',
+      '"', 'a', 'y', 'y',
+      '2', 'j',
+      '"', 'b', 'y', 'y',
+      'Ctrl-w', 'l',
+      '"', 'a', 'p',
+      '"', 'b', 'p',
+    ],
+    primaryFilename: 'source.ts',
+    secondaryFilename: 'target.ts',
+    initialLines: [
+      'export function helperA() { return "A"; }',
+      'export function deprecated() { return null; }',
+      'export function helperB() { return "B"; }',
+    ],
+    secondaryLines: [
+      '// Refactored Target',
+    ],
+    targetLines: [
+      '// Refactored Target',
+      'export function helperA() { return "A"; }',
+      'export function helperB() { return "B"; }',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const targetLines = state.splitPanes
+        ? (state.activePaneIndex === 1 ? state.lines : state.splitPanes[1].lines)
+        : state.lines;
+      return (
+        state.mode === 'NORMAL' &&
+        targetLines.length === 3 &&
+        targetLines[0] === '// Refactored Target' &&
+        targetLines[1] === 'export function helperA() { return "A"; }' &&
+        targetLines[2] === 'export function helperB() { return "B"; }'
+      );
+    },
+  },
 ];

@@ -43,6 +43,21 @@ export interface ViewportState {
   visibleRows: number;  // 화면에 한 번에 표시되는 행 개수
 }
 
+export type SplitDirection = 'none' | 'horizontal' | 'vertical';
+
+export interface SplitPaneState {
+  filename: string;
+  lines: string[];
+  cursor: CursorPosition;
+  mode: VimMode;
+  visualAnchor?: CursorPosition;
+  viewport?: ViewportState;
+  undoStack?: StateSnapshot[];
+  redoStack?: StateSnapshot[];
+  pendingKeys?: string;
+  blockInsertSession?: BlockInsertSession | null;
+}
+
 export interface VimEditorState {
   lines: string[];
   cursor: CursorPosition;
@@ -66,6 +81,8 @@ export interface VimEditorState {
   commandMessage?: string;
   /** 멀티 레지스터 저장소 */
   registers?: Record<string, { type: 'char' | 'line' | 'macro'; content: string | string[] }>;
+  /** 현재 선택된 대상 레지스터 ("a~"z, "0, "_ 등) */
+  activeRegister?: string | null;
   /** 현재 매크로 녹화 상태 */
   recordingMacro?: { register: string; keys: string[] } | null;
   /** 가장 마지막에 실행했던 매크로 레지스터 이름 (@@ 재실행용) */
@@ -82,6 +99,18 @@ export interface VimEditorState {
   blockInsertSession?: BlockInsertSession | null;
   /** 화면 뷰포트 상태 (zz, zt, zb, H, M, L, Ctrl+d/u 스크롤용) */
   viewport?: ViewportState;
+  /** 창 분할 방향 (:sp, :vsp, Ctrl+w) */
+  splitDirection?: SplitDirection;
+  /** 현재 활성 포커스 창 인덱스 (0: 주 창, 1: 보조 창) */
+  activePaneIndex?: number;
+  /** 분할된 윈도우 페인 목록 */
+  splitPanes?: [SplitPaneState, SplitPaneState];
+  /** 주 창 파일명 (예: source.ts) */
+  primaryFilename?: string;
+  /** 보조 창 파일명 (예: target.ts) */
+  secondaryFilename?: string;
+  /** 보조 창 초기 줄 내용 (미션 로드용) */
+  secondaryLines?: string[];
 }
 
 export type VimState = VimEditorState;

@@ -2,6 +2,7 @@ import { VimEditorState } from '../types/vim';
 import { clampCursor } from './cursor';
 import { pushUndoSnapshot } from './operators';
 import { escapeRegExp } from './search';
+import { splitWindow, closeSplitWindow } from './splitWindow';
 
 export type KeyRunner = (
   state: VimEditorState,
@@ -110,8 +111,28 @@ export function executeCommandLine(
     return executeRangeNorm(state, currentLineRange, normKeys, trimmed, keyRunner);
   }
 
-  // 7. 유용한 보조 명령어: :w (저장), :q (종료), :help (도움말)
-  const cleanCmd = trimmed.replace(/^:/, '').trim().toLowerCase();
+  // 7. 창 분할 및 종료 명령어 (:sp, :vsp, :q, :w, :help)
+  const cleanCmdRaw = trimmed.replace(/^:/, '').trim();
+  const splitMatch = cleanCmdRaw.match(/^(sp|split|vsp|vsplit)(?:\s+(.+))?$/i);
+  if (splitMatch) {
+    const isVertical = splitMatch[1].toLowerCase().startsWith('v');
+    const targetFile = splitMatch[2]?.trim();
+    const splitRes = splitWindow(
+      state,
+      isVertical ? 'vertical' : 'horizontal',
+      state.secondaryLines,
+      targetFile || state.secondaryFilename
+    );
+    return {
+      ...splitRes,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  const cleanCmd = cleanCmdRaw.toLowerCase();
   if (cleanCmd === 'w' || cleanCmd === 'write') {
     return {
       ...state,
@@ -124,13 +145,23 @@ export function executeCommandLine(
   }
 
   if (cleanCmd === 'q' || cleanCmd === 'quit') {
+    if (state.splitDirection && state.splitDirection !== 'none') {
+      const closed = closeSplitWindow(state);
+      return {
+        ...closed,
+        mode: 'NORMAL',
+        visualAnchor: undefined,
+        commandBuffer: undefined,
+        commandType: undefined,
+      };
+    }
     return {
       ...state,
       mode: 'NORMAL',
       visualAnchor: undefined,
       commandBuffer: undefined,
       commandType: undefined,
-      commandMessage: 'VimPracticeOnWeb은 웹 환경입니다. 연습 코스를 계속 진행하세요!',
+      commandMessage: '단일 창 상태입니다 (:q)',
     };
   }
 

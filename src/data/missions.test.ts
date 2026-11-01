@@ -311,8 +311,53 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson22!.checkComplete(stateDone)).toBe(true);
   });
 
-  it('모든 22개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(22);
+  it('레슨 23 (블랙홀 레지스터 및 명명된 레지스터) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson23 = MISSIONS.find((m) => m.id === 23);
+    expect(lesson23).toBeDefined();
+
+    const stateNotDone: VimEditorState = {
+      lines: ['const secret = "secretKey123";', 'const garbageLine = "DELETE_ME";', 'let authHeader = "";'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson23!.checkComplete(stateNotDone)).toBe(false);
+
+    const stateDone: VimEditorState = {
+      lines: ['const secret = "secretKey123";', 'let authHeader = "secretKey123";'],
+      cursor: { line: 1, col: 17 },
+      mode: 'NORMAL',
+      registers: {
+        a: { type: 'char', content: 'secretKey123' },
+      },
+    };
+    expect(lesson23!.checkComplete(stateDone)).toBe(true);
+  });
+
+  it('레슨 24 (:vsp 화면 분할과 창 간 코드 이동) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson24 = MISSIONS.find((m) => m.id === 24);
+    expect(lesson24).toBeDefined();
+
+    const stateNotDone: VimEditorState = {
+      lines: ['// Refactored Target'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson24!.checkComplete(stateNotDone)).toBe(false);
+
+    const stateDone: VimEditorState = {
+      lines: [
+        '// Refactored Target',
+        'export function helperA() { return "A"; }',
+        'export function helperB() { return "B"; }',
+      ],
+      cursor: { line: 2, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson24!.checkComplete(stateDone)).toBe(true);
+  });
+
+  it('모든 24개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(24);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();
@@ -326,6 +371,9 @@ describe('MISSIONS 10 ~ 12 validation', () => {
         undoStack: m.initialUndoStack ? [...m.initialUndoStack] : [],
         redoStack: [],
         clipboard: m.initialClipboard,
+        primaryFilename: m.primaryFilename,
+        secondaryFilename: m.secondaryFilename,
+        secondaryLines: m.secondaryLines,
       };
 
       for (const key of m.optimalKeys!) {

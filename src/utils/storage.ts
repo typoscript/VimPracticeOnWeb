@@ -10,6 +10,7 @@ export const PROGRESS_STORAGE_KEY = 'vim_practice_progress_v1';
 export const RELATIVE_LINE_STORAGE_KEY = 'vim_relative_line_numbers_v1';
 export const VIRTUAL_KEYBOARD_STORAGE_KEY = 'vim_virtual_keyboard_v1';
 export const DIFF_VIEW_STORAGE_KEY = 'vim_diff_view_v1';
+export const REGISTER_INSPECTOR_STORAGE_KEY = 'vim_register_inspector_v1';
 export const SPEEDRUN_RECORD_STORAGE_KEY = 'vim_speedrun_record_v1';
 
 export interface SpeedrunRecord {
@@ -132,6 +133,29 @@ export function loadDiffViewSetting(): boolean {
 export function saveDiffViewSetting(enabled: boolean): void {
   try {
     localStorage.setItem(DIFF_VIEW_STORAGE_KEY, enabled ? 'true' : 'false');
+  } catch {
+    // 무시
+  }
+}
+
+/**
+ * 레지스터 인스펙터 패널 표시 여부 설정값을 불러옵니다. (기본값: true)
+ */
+export function loadRegisterInspectorSetting(): boolean {
+  try {
+    const raw = localStorage.getItem(REGISTER_INSPECTOR_STORAGE_KEY);
+    return raw !== null ? raw === 'true' : true;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * 레지스터 인스펙터 패널 표시 여부 설정값을 저장합니다.
+ */
+export function saveRegisterInspectorSetting(enabled: boolean): void {
+  try {
+    localStorage.setItem(REGISTER_INSPECTOR_STORAGE_KEY, enabled ? 'true' : 'false');
   } catch {
     // 무시
   }

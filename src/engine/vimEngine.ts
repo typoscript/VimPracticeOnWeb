@@ -26,11 +26,21 @@ import {
   appendAtLineEnd,
   openLineBelow,
   openLineAbove,
-  putClipboard,
   undo,
   redo,
   pushUndoSnapshot,
+  getCharType,
 } from './operators';
+import {
+  syncRegisters,
+  putFromRegister,
+} from './registers';
+import {
+  splitWindow,
+  closeSplitWindow,
+  switchPaneFocus,
+  syncActivePane,
+} from './splitWindow';
 import {
   deleteVisualSelection,
   yankVisualSelection,
@@ -184,14 +194,14 @@ export function handleKey(
   if (nextState.cursor && nextState.lines) {
     const vp = adjustViewport(getViewport(nextState), nextState.cursor.line, nextState.lines.length);
     if (!nextState.viewport || nextState.viewport.topRow !== vp.topRow || nextState.viewport.visibleRows !== vp.visibleRows) {
-      return {
+      nextState = {
         ...nextState,
         viewport: vp,
       };
     }
   }
 
-  return nextState;
+  return syncActivePane(nextState);
 }
 
 /**
@@ -542,6 +552,69 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
       mode: 'NORMAL',
       visualAnchor: undefined,
       pendingKeys: undefined,
+      activeRegister: undefined,
+    };
+  }
+
+  // 명명된 레지스터 지정 ("{register})
+  if (state.pendingKeys === '"') {
+    if (/^[a-z0-9"+_]$/.test(key)) {
+      const reg = key === '""' ? '"' : key;
+      return {
+        ...state,
+        activeRegister: reg,
+        pendingKeys: undefined,
+      };
+    }
+    return {
+      ...state,
+      pendingKeys: undefined,
+    };
+  }
+
+  // 윈도우 분할 및 포커스 제어 (Ctrl-w)
+  if (state.pendingKeys === 'Ctrl-w' || state.pendingKeys === 'Ctrl+w') {
+    if (key === 's') {
+      return { ...splitWindow(state, 'horizontal', state.secondaryLines), pendingKeys: undefined };
+    }
+    if (key === 'v') {
+      return { ...splitWindow(state, 'vertical', state.secondaryLines), pendingKeys: undefined };
+    }
+    if (key === 'w' || key === 'Ctrl-w' || key === 'Ctrl+w') {
+      return { ...switchPaneFocus(state, (state.activePaneIndex ?? 0) === 0 ? 1 : 0), pendingKeys: undefined };
+    }
+    if (key === 'h' || key === 'ArrowLeft') {
+      return { ...switchPaneFocus(state, 0), pendingKeys: undefined };
+    }
+    if (key === 'l' || key === 'ArrowRight') {
+      return { ...switchPaneFocus(state, 1), pendingKeys: undefined };
+    }
+    if (key === 'k' || key === 'ArrowUp') {
+      return { ...switchPaneFocus(state, 0), pendingKeys: undefined };
+    }
+    if (key === 'j' || key === 'ArrowDown') {
+      return { ...switchPaneFocus(state, 1), pendingKeys: undefined };
+    }
+    if (key === 'c' || key === 'q') {
+      return { ...closeSplitWindow(state), pendingKeys: undefined };
+    }
+    return {
+      ...state,
+      pendingKeys: undefined,
+    };
+  }
+
+  if (key === '"' && !state.pendingKeys) {
+    return {
+      ...state,
+      pendingKeys: '"',
+    };
+  }
+
+  if ((key === 'Ctrl-w' || key === 'Ctrl+w') && !state.pendingKeys) {
+    return {
+      ...state,
+      pendingKeys: 'Ctrl-w',
     };
   }
 
@@ -772,12 +845,21 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
 
   // 선택 영역 삭제 (d / x)
   if (key === 'd' || key === 'x') {
-    return deleteVisualSelection(state);
+    const res = deleteVisualSelection(state);
+    return syncRegisters(state, res, false);
   }
 
   // 선택 영역 복사 (y)
   if (key === 'y') {
-    return yankVisualSelection(state);
+    const res = yankVisualSelection(state);
+    return syncRegisters(state, res, true);
+  }
+
+  // 선택 영역 붙여넣기 (p / P)
+  if (key === 'p' || key === 'P') {
+    const delRes = deleteVisualSelection(state);
+    const synced = syncRegisters(state, delRes, false);
+    return putFromRegister(synced, state.activeRegister, false);
   }
 
   // J: 선택 영역 모든 행 이어 붙이기
@@ -900,6 +982,69 @@ function handleNormalModeKey(
     return {
       ...state,
       pendingKeys: undefined,
+      activeRegister: undefined,
+    };
+  }
+
+  // 1-0-a. 명명된 레지스터 지정 ("{register})
+  if (state.pendingKeys === '"') {
+    if (/^[a-z0-9"+_]$/.test(key)) {
+      const reg = key === '""' ? '"' : key;
+      return {
+        ...state,
+        activeRegister: reg,
+        pendingKeys: undefined,
+      };
+    }
+    return {
+      ...state,
+      pendingKeys: undefined,
+    };
+  }
+
+  // 1-0-b. 윈도우 분할 및 포커스 제어 (Ctrl-w)
+  if (state.pendingKeys === 'Ctrl-w' || state.pendingKeys === 'Ctrl+w') {
+    if (key === 's') {
+      return { ...splitWindow(state, 'horizontal', state.secondaryLines), pendingKeys: undefined };
+    }
+    if (key === 'v') {
+      return { ...splitWindow(state, 'vertical', state.secondaryLines), pendingKeys: undefined };
+    }
+    if (key === 'w' || key === 'Ctrl-w' || key === 'Ctrl+w') {
+      return { ...switchPaneFocus(state, (state.activePaneIndex ?? 0) === 0 ? 1 : 0), pendingKeys: undefined };
+    }
+    if (key === 'h' || key === 'ArrowLeft') {
+      return { ...switchPaneFocus(state, 0), pendingKeys: undefined };
+    }
+    if (key === 'l' || key === 'ArrowRight') {
+      return { ...switchPaneFocus(state, 1), pendingKeys: undefined };
+    }
+    if (key === 'k' || key === 'ArrowUp') {
+      return { ...switchPaneFocus(state, 0), pendingKeys: undefined };
+    }
+    if (key === 'j' || key === 'ArrowDown') {
+      return { ...switchPaneFocus(state, 1), pendingKeys: undefined };
+    }
+    if (key === 'c' || key === 'q') {
+      return { ...closeSplitWindow(state), pendingKeys: undefined };
+    }
+    return {
+      ...state,
+      pendingKeys: undefined,
+    };
+  }
+
+  if (key === '"' && !state.pendingKeys) {
+    return {
+      ...state,
+      pendingKeys: '"',
+    };
+  }
+
+  if ((key === 'Ctrl-w' || key === 'Ctrl+w') && !state.pendingKeys) {
+    return {
+      ...state,
+      pendingKeys: 'Ctrl-w',
     };
   }
 
@@ -940,21 +1085,24 @@ function handleNormalModeKey(
       };
       if (op === 'd') {
         const res = deleteVisualSelection(stateWithAnchor);
+        const synced = syncRegisters(state, res, false);
         return {
-          ...res,
+          ...synced,
           lastChangeKeys: isReplayingDot ? state.lastChangeKeys : [op, '%'],
         };
       }
       if (op === 'c') {
         const res = deleteVisualSelection(stateWithAnchor);
+        const synced = syncRegisters(state, res, false);
         return {
-          ...res,
+          ...synced,
           mode: 'INSERT',
           currentChangeKeys: isReplayingDot ? state.currentChangeKeys : [op, '%'],
         };
       }
       if (op === 'y') {
-        return yankVisualSelection(stateWithAnchor);
+        const res = yankVisualSelection(stateWithAnchor);
+        return syncRegisters(state, res, true);
       }
     }
     return { ...state, pendingKeys: undefined };
@@ -969,19 +1117,20 @@ function handleNormalModeKey(
       const op = parsed.operator;
       const motion = key === ';' ? state.lastCharSearch.type : getOppositeMotion(state.lastCharSearch.type);
       const res = executeFindOperator(state, op, motion, state.lastCharSearch.char, parsed.totalCount);
+      const synced = syncRegisters(state, res, op === 'y');
       if (op === 'c') {
         return {
-          ...res,
+          ...synced,
           currentChangeKeys: isReplayingDot ? state.currentChangeKeys : [op, key],
         };
       }
       if (op === 'd') {
         return {
-          ...res,
+          ...synced,
           lastChangeKeys: isReplayingDot ? state.lastChangeKeys : [op, key],
         };
       }
-      return res;
+      return synced;
     }
     return { ...state, pendingKeys: undefined };
   }
@@ -1124,19 +1273,20 @@ function handleNormalModeKey(
     if (/^[a-z]$/.test(key)) {
       const isLineWise = quote === "'";
       const res = executeMarkOperator(state, op, key, isLineWise);
+      const synced = syncRegisters(state, res, op === 'y');
       if (op === 'c') {
         return {
-          ...res,
+          ...synced,
           currentChangeKeys: isReplayingDot ? state.currentChangeKeys : [op, quote, key],
         };
       }
       if (op === 'd') {
         return {
-          ...res,
+          ...synced,
           lastChangeKeys: isReplayingDot ? state.lastChangeKeys : [op, quote, key],
         };
       }
-      return res;
+      return synced;
     }
     return { ...state, pendingKeys: undefined };
   }
@@ -1327,21 +1477,22 @@ function handleNormalModeKey(
 
       const objType: TextObjectType = `${modifier}${targetChar}` as TextObjectType;
       const res = executeTextObjectOperator(state, op, objType, count);
+      const synced = syncRegisters(state, res, op === 'y');
 
       const opKeys = count > 1 ? [String(count), op, modifier, key] : [op, modifier, key];
       if (op === 'c') {
         return {
-          ...res,
+          ...synced,
           currentChangeKeys: isReplayingDot ? state.currentChangeKeys : opKeys,
         };
       }
       if (op === 'd') {
         return {
-          ...res,
+          ...synced,
           lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys,
         };
       }
-      return res;
+      return synced;
     }
     // 유효한 텍스트 객체가 아니면 pendingKeys 취소 후 일반 키 평가
     state = { ...state, pendingKeys: undefined };
@@ -1362,21 +1513,22 @@ function handleNormalModeKey(
         ...res,
         lastCharSearch: { type: motion, char: key },
       };
+      const synced = syncRegisters(state, resWithSearch, op === 'y');
       if (op === 'c') {
         const cKeys = [op, motion, key];
         return {
-          ...resWithSearch,
+          ...synced,
           currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
         };
       }
       if (op === 'd') {
         const lKeys = [op, motion, key];
         return {
-          ...resWithSearch,
+          ...synced,
           lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
         };
       }
-      return resWithSearch;
+      return synced;
     }
     state = { ...state, pendingKeys: undefined };
   }
@@ -1433,24 +1585,44 @@ function handleNormalModeKey(
   if (parsed.operator === 'd') {
     if (key === 'd') {
       const res = deleteLine(state, parsed.totalCount);
+      const synced = syncRegisters(state, res, false);
       const lKeys =
         parsed.totalCount > 1
           ? [String(parsed.totalCount), 'd', 'd']
           : ['d', 'd'];
       return {
-        ...res,
+        ...synced,
         lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
       };
     }
     if (key === 'w') {
       const res = deleteWord(state, parsed.totalCount);
+      const synced = syncRegisters(state, res, false);
       const lKeys =
         parsed.totalCount > 1
           ? [String(parsed.totalCount), 'd', 'w']
           : ['d', 'w'];
       return {
-        ...res,
+        ...synced,
         lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
+      };
+    }
+    if (key === '$') {
+      const { line, col } = state.cursor;
+      const cur = state.lines[line] ?? '';
+      const deleted = cur.slice(col);
+      const nextLines = [...state.lines];
+      nextLines[line] = cur.slice(0, col);
+      const stateWithDel = {
+        ...pushUndoSnapshot(state),
+        lines: nextLines,
+        clipboard: { type: 'text' as const, content: deleted },
+        pendingKeys: undefined,
+      };
+      const synced = syncRegisters(state, stateWithDel, false);
+      return {
+        ...synced,
+        lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['d', '$'],
       };
     }
     if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a' || key === "'" || key === '`') {
@@ -1464,24 +1636,34 @@ function handleNormalModeKey(
   } else if (parsed.operator === 'c') {
     if (key === 'c') {
       const res = changeLine(state, parsed.totalCount);
+      const synced = syncRegisters(state, res, false);
       const cKeys =
         parsed.totalCount > 1
           ? [String(parsed.totalCount), 'c', 'c']
           : ['c', 'c'];
       return {
-        ...res,
+        ...synced,
         currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
       };
     }
     if (key === 'w') {
       const res = changeWord(state, parsed.totalCount);
+      const synced = syncRegisters(state, res, false);
       const cKeys =
         parsed.totalCount > 1
           ? [String(parsed.totalCount), 'c', 'w']
           : ['c', 'w'];
       return {
-        ...res,
+        ...synced,
         currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
+      };
+    }
+    if (key === '$') {
+      const res = changeToEndOfLine(state);
+      const synced = syncRegisters(state, res, false);
+      return {
+        ...synced,
+        currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['c', '$'],
       };
     }
     if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a' || key === "'" || key === '`') {
@@ -1492,6 +1674,60 @@ function handleNormalModeKey(
     }
     state = { ...state, pendingKeys: undefined };
   } else if (parsed.operator === 'y') {
+    if (key === 'y') {
+      const { line } = state.cursor;
+      const count = parsed.totalCount;
+      const yankCount = Math.min(count, state.lines.length - line);
+      const yankedLines = state.lines.slice(line, line + yankCount).join('\n');
+      const stateWithClip: VimEditorState = {
+        ...state,
+        clipboard: {
+          type: 'line',
+          content: yankedLines,
+        },
+        pendingKeys: undefined,
+      };
+      return syncRegisters(state, stateWithClip, true);
+    }
+    if (key === 'w') {
+      const { line, col } = state.cursor;
+      const currentLine = state.lines[line] ?? '';
+      let endCol = col;
+      for (let step = 0; step < parsed.totalCount; step++) {
+        if (endCol >= currentLine.length) break;
+        const startType = getCharType(currentLine[endCol]);
+        if (startType === 'space') {
+          while (endCol < currentLine.length && getCharType(currentLine[endCol]) === 'space') endCol++;
+        } else {
+          while (endCol < currentLine.length && getCharType(currentLine[endCol]) === startType) endCol++;
+          while (endCol < currentLine.length && getCharType(currentLine[endCol]) === 'space') endCol++;
+        }
+      }
+      const yankedText = currentLine.slice(col, endCol);
+      const stateWithClip: VimEditorState = {
+        ...state,
+        clipboard: {
+          type: 'text',
+          content: yankedText,
+        },
+        pendingKeys: undefined,
+      };
+      return syncRegisters(state, stateWithClip, true);
+    }
+    if (key === '$') {
+      const { line, col } = state.cursor;
+      const currentLine = state.lines[line] ?? '';
+      const yankedText = currentLine.slice(col);
+      const stateWithClip: VimEditorState = {
+        ...state,
+        clipboard: {
+          type: 'text',
+          content: yankedText,
+        },
+        pendingKeys: undefined,
+      };
+      return syncRegisters(state, stateWithClip, true);
+    }
     if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a' || key === "'" || key === '`') {
       return {
         ...state,
@@ -1657,20 +1893,65 @@ function handleNormalModeKey(
     return redo(state);
   }
 
-  // p: 클립보드 붙여넣기
+  // p: 레지스터/클립보드 붙여넣기 (커서 뒤)
   if (key === 'p') {
-    const res = putClipboard(state);
+    const res = putFromRegister(state, state.activeRegister, false);
     return {
       ...res,
       lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['p'],
     };
   }
 
+  // P: 레지스터/클립보드 붙여넣기 (커서 앞)
+  if (key === 'P') {
+    const res = putFromRegister(state, state.activeRegister, true);
+    return {
+      ...res,
+      lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['P'],
+    };
+  }
+
+  // Y: 한 줄 복사 (yy와 동일)
+  if (key === 'Y' && !state.pendingKeys) {
+    const { line } = state.cursor;
+    const yankedLine = state.lines[line] ?? '';
+    const stateWithClip: VimEditorState = {
+      ...state,
+      clipboard: {
+        type: 'line',
+        content: yankedLine,
+      },
+      pendingKeys: undefined,
+    };
+    return syncRegisters(state, stateWithClip, true);
+  }
+
+  // D: 줄 끝까지 삭제
+  if (key === 'D' && !state.pendingKeys) {
+    const { line, col } = state.cursor;
+    const cur = state.lines[line] ?? '';
+    const deleted = cur.slice(col);
+    const nextLines = [...state.lines];
+    nextLines[line] = cur.slice(0, col);
+    const stateWithDel: VimEditorState = {
+      ...pushUndoSnapshot(state),
+      lines: nextLines,
+      clipboard: { type: 'text', content: deleted },
+      pendingKeys: undefined,
+    };
+    const synced = syncRegisters(state, stateWithDel, false);
+    return {
+      ...synced,
+      lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['D'],
+    };
+  }
+
   // C: 커서부터 줄 끝까지 수정 후 INSERT
   if (key === 'C') {
     const res = changeToEndOfLine(state);
+    const synced = syncRegisters(state, res, false);
     return {
-      ...res,
+      ...synced,
       currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['C'],
     };
   }
@@ -1678,12 +1959,13 @@ function handleNormalModeKey(
   // x: 현재 문자 삭제 ([count]x)
   if (key === 'x') {
     const res = deleteChar(state, parsed.totalCount);
+    const synced = syncRegisters(state, res, false);
     const lKeys =
       parsed.totalCount > 1
         ? [String(parsed.totalCount), 'x']
         : ['x'];
     return {
-      ...res,
+      ...synced,
       lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
     };
   }
