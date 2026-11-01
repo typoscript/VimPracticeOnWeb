@@ -15,6 +15,7 @@ import { ArcadeSurvival } from './components/ArcadeSurvival/ArcadeSurvival';
 import { AnalyticsModal } from './components/AnalyticsModal/AnalyticsModal';
 import { DailyChallengeModal } from './components/DailyChallengeModal/DailyChallengeModal';
 import { ConfigExporterModal } from './components/ConfigExporterModal/ConfigExporterModal';
+import { DungeonRPG } from './components/DungeonRPG/DungeonRPG';
 import { VimEditorState, SplitPaneState } from './types/vim';
 import { Mission } from './types/mission';
 import { handleKey } from './engine/vimEngine';
@@ -77,7 +78,7 @@ export function App() {
   const initialChallenge = useRef(getChallengeFromUrl()).current;
   const initialCustomMission = initialChallenge ? createCustomMissionObject(initialChallenge) : null;
 
-  const [currentTab, setCurrentTab] = useState<'course' | 'sandbox' | 'speedrun' | 'custom' | 'arcade'>(
+  const [currentTab, setCurrentTab] = useState<'course' | 'sandbox' | 'speedrun' | 'custom' | 'arcade' | 'dungeon'>(
     initialCustomMission ? 'custom' : 'course'
   );
   const [customMission, setCustomMission] = useState<Mission | null>(initialCustomMission);
@@ -491,7 +492,7 @@ export function App() {
   }, [handleStopGhostReplay]);
 
   const handleSwitchTab = useCallback(
-    (tab: 'course' | 'sandbox' | 'speedrun' | 'custom' | 'arcade') => {
+    (tab: 'course' | 'sandbox' | 'speedrun' | 'custom' | 'arcade' | 'dungeon') => {
       handleStopGhostReplay();
       setCurrentTab(tab);
       setLastPressedKey(undefined);
@@ -507,6 +508,8 @@ export function App() {
         setSpeedrunIsNewRecord(false);
       } else if (tab === 'arcade') {
         // 아케이드 서바이벌 모드는 자체 상태를 갖습니다
+      } else if (tab === 'dungeon') {
+        // 던전 RPG 모드는 자체 상태를 갖습니다
       } else if (tab === 'custom' && customMission) {
         setEditorState({
           lines: [...customMission.initialLines],
@@ -616,7 +619,8 @@ export function App() {
         isAnalyticsModalOpen ||
         isDailyModalOpen ||
         isConfigModalOpen ||
-        currentTab === 'arcade'
+        currentTab === 'arcade' ||
+        currentTab === 'dungeon'
       ) {
         return;
       }
@@ -848,6 +852,15 @@ export function App() {
           >
             👾 아케이드
           </button>
+          <button
+            role="tab"
+            aria-selected={currentTab === 'dungeon'}
+            className={`nav-tab-btn ${currentTab === 'dungeon' ? 'active' : ''}`}
+            onClick={() => handleSwitchTab('dungeon')}
+            data-testid="tab-dungeon-btn"
+          >
+            🗡️ 던전 RPG
+          </button>
           {customMission && (
             <button
               role="tab"
@@ -1004,6 +1017,12 @@ export function App() {
 
         {currentTab === 'arcade' ? (
           <ArcadeSurvival
+            onPlayKeySound={playKeySound}
+            onPlaySuccessSound={playSuccessSound}
+            isMuted={isMuted}
+          />
+        ) : currentTab === 'dungeon' ? (
+          <DungeonRPG
             onPlayKeySound={playKeySound}
             onPlaySuccessSound={playSuccessSound}
             isMuted={isMuted}
