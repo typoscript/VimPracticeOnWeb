@@ -53,8 +53,35 @@ import {
   cancelCompletion,
   acceptCompletion,
 } from './completion';
-import { findMatchingBracket } from './bracketMatch';
+import {
+  findMatchingBracket,
+} from './bracketMatch';
+import {
+  moveToNextParagraph,
+  moveToPrevParagraph,
+  deleteParagraph,
+  changeParagraph,
+  yankParagraph,
+  goToDeclaration,
+  goToLastInsert,
+  reselectLastVisual,
+  traverseChangeList,
+  recordChangePosition,
+} from './advancedMotions';
+export {
+  moveToNextParagraph,
+  moveToPrevParagraph,
+  deleteParagraph,
+  changeParagraph,
+  yankParagraph,
+  goToDeclaration,
+  goToLastInsert,
+  reselectLastVisual,
+  traverseChangeList,
+  recordChangePosition,
+} from './advancedMotions';
 import { deepFreeze, assertValidVimState } from './invariants';
+
 export { withInvariantCheck, assertValidVimState, deepFreeze } from './invariants';
 import {
   moveFind,
@@ -435,6 +462,9 @@ function handleInsertModeKey(
         nextLastChange = [...state.currentChangeKeys.slice(0, -1), 'Escape'];
       }
 
+      const lastPos = { line, col: nextCol, row: line };
+      const changeRecord = recordChangePosition(state.changeList, { line, col: nextCol });
+
       return {
         ...state,
         lines: nextLines,
@@ -443,9 +473,14 @@ function handleInsertModeKey(
         pendingKeys: undefined,
         lastChangeKeys: nextLastChange,
         currentChangeKeys: undefined,
+        lastInsertPos: lastPos,
+        changeList: changeRecord.changeList,
+        changeIndex: changeRecord.changeIndex,
+        marks: { ...(state.marks ?? {}), '^': { row: line, col: nextCol } },
       };
     }
   }
+
 
   // 자동완성 (Ctrl+n / Ctrl+p / Ctrl+e / Ctrl+y)
   if (key === 'Ctrl-n' || key === 'Ctrl+n' || key === 'Alt-n' || key === 'Alt+n') {
@@ -501,6 +536,8 @@ function handleInsertModeKey(
 
       const firstLineIdx = targetLines[0];
       const nextCol = Math.max(0, col - 1);
+      const lastPos = { line: firstLineIdx, col: insertCol, row: firstLineIdx };
+      const changeRecord = recordChangePosition(state.changeList, { line: firstLineIdx, col: insertCol });
 
       return {
         ...state,
@@ -510,6 +547,10 @@ function handleInsertModeKey(
         blockInsertSession: null,
         pendingKeys: undefined,
         currentChangeKeys: undefined,
+        lastInsertPos: lastPos,
+        changeList: changeRecord.changeList,
+        changeIndex: changeRecord.changeIndex,
+        marks: { ...(state.marks ?? {}), '^': { row: firstLineIdx, col: insertCol } },
       };
     }
 
@@ -520,6 +561,9 @@ function handleInsertModeKey(
       nextLastChange = [...state.currentChangeKeys, 'Escape'];
     }
 
+    const lastPos = { line, col, row: line };
+    const changeRecord = recordChangePosition(state.changeList, { line, col });
+
     return {
       ...state,
       mode: 'NORMAL',
@@ -527,8 +571,14 @@ function handleInsertModeKey(
       pendingKeys: undefined,
       lastChangeKeys: nextLastChange,
       currentChangeKeys: undefined,
+      lastInsertPos: lastPos,
+      changeList: changeRecord.changeList,
+      changeIndex: changeRecord.changeIndex,
+      marks: { ...(state.marks ?? {}), '^': { row: line, col } },
     };
+
   }
+
 
   // 키 입력 기록 (Dot Repeat 용)
   const appendCurrentChange = (k: string) => {
@@ -779,8 +829,16 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
       visualAnchor: undefined,
       pendingKeys: undefined,
       activeRegister: undefined,
+      lastVisualSelection: state.visualAnchor
+        ? {
+            mode: state.mode as 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK',
+            anchor: { ...state.visualAnchor },
+            cursor: { ...state.cursor },
+          }
+        : state.lastVisualSelection,
     };
   }
+
 
   // 명명된 레지스터 지정 ("{register})
   if (state.pendingKeys === '"') {
@@ -880,6 +938,10 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
     };
   }
 
+  if (key === 'gv' || (state.pendingKeys === 'g' && key === 'v')) {
+    return reselectLastVisual(state);
+  }
+
   // 'v': VISUAL 모드 토글 또는 전환
   if (key === 'v') {
     if (state.mode === 'VISUAL') {
@@ -888,6 +950,13 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
         mode: 'NORMAL',
         visualAnchor: undefined,
         pendingKeys: undefined,
+        lastVisualSelection: state.visualAnchor
+          ? {
+              mode: state.mode,
+              anchor: { ...state.visualAnchor },
+              cursor: { ...state.cursor },
+            }
+          : state.lastVisualSelection,
       };
     }
     return {
@@ -905,6 +974,13 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
         mode: 'NORMAL',
         visualAnchor: undefined,
         pendingKeys: undefined,
+        lastVisualSelection: state.visualAnchor
+          ? {
+              mode: state.mode,
+              anchor: { ...state.visualAnchor },
+              cursor: { ...state.cursor },
+            }
+          : state.lastVisualSelection,
       };
     }
     return {
@@ -922,6 +998,13 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
         mode: 'NORMAL',
         visualAnchor: undefined,
         pendingKeys: undefined,
+        lastVisualSelection: state.visualAnchor
+          ? {
+              mode: state.mode,
+              anchor: { ...state.visualAnchor },
+              cursor: { ...state.cursor },
+            }
+          : state.lastVisualSelection,
       };
     }
     return {
@@ -930,6 +1013,7 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
       pendingKeys: undefined,
     };
   }
+
 
   // VISUAL_BLOCK 전용 모드 삽입 연산자 (I, A, c)
   if (state.mode === 'VISUAL_BLOCK') {
@@ -1081,24 +1165,57 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
     };
   }
 
+  const visualSnapshot = state.visualAnchor
+    ? {
+        mode: state.mode as 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK',
+        anchor: { ...state.visualAnchor },
+        cursor: { ...state.cursor },
+      }
+    : state.lastVisualSelection;
+
   // 선택 영역 삭제 (d / x)
   if (key === 'd' || key === 'x') {
     const res = deleteVisualSelection(state);
-    return syncRegisters(state, res, false);
+    const synced = syncRegisters(state, res, false);
+    return { ...synced, lastVisualSelection: visualSnapshot };
   }
 
   // 선택 영역 복사 (y)
   if (key === 'y') {
     const res = yankVisualSelection(state);
-    return syncRegisters(state, res, true);
+    const synced = syncRegisters(state, res, true);
+    return { ...synced, lastVisualSelection: visualSnapshot };
   }
 
   // 선택 영역 붙여넣기 (p / P)
   if (key === 'p' || key === 'P') {
     const delRes = deleteVisualSelection(state);
     const synced = syncRegisters(state, delRes, false);
-    return putFromRegister(synced, state.activeRegister, false);
+    const res = putFromRegister(synced, state.activeRegister, false);
+    return { ...res, lastVisualSelection: visualSnapshot };
   }
+
+  // * 및 # : 현재 커서 아래 단어로 검색 후 비주얼 커서 이동
+  if (key === '*' || key === '#') {
+    const word = getWordAtCursor(state.lines[state.cursor.line] ?? '', state.cursor.col);
+    if (word) {
+      const matches = findMatches(state.lines, word);
+      const match =
+        key === '*'
+          ? findNextMatch(matches, state.cursor) ?? matches[0]
+          : findPrevMatch(matches, state.cursor) ?? matches[matches.length - 1];
+      if (match) {
+        return {
+          ...state,
+          cursor: { line: match.line, col: match.col },
+          lastSearchQuery: word,
+          pendingKeys: undefined,
+        };
+      }
+    }
+    return { ...state, pendingKeys: undefined };
+  }
+
 
   // J: 선택 영역 모든 행 이어 붙이기
   if (key === 'J') {
@@ -1964,7 +2081,15 @@ function handleNormalModeKey(
     };
   }
 
+  // gd, gi, gv, g;, g, 단일 키 입력 시 처리
+  if (key === 'gd') return goToDeclaration(state);
+  if (key === 'gi') return goToLastInsert(state);
+  if (key === 'gv') return reselectLastVisual(state);
+  if (key === 'g;') return traverseChangeList(state, 'prev', parsed.totalCount);
+  if (key === 'g,') return traverseChangeList(state, 'next', parsed.totalCount);
+
   // 8. 연산자 대기 처리 (d, c, y, g, v)
+
   if (parsed.operator === 'd') {
     if (key === 'd') {
       const res = deleteFoldOrLine(state, parsed.totalCount);
@@ -2077,6 +2202,19 @@ function handleNormalModeKey(
         lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['d', '$'],
       };
     }
+    if (key === '}' || key === '{') {
+      const res = deleteParagraph(state, key === '}' ? 'next' : 'prev', parsed.totalCount);
+      const synced = syncRegisters(state, res, false);
+      const lKeys =
+        parsed.totalCount > 1
+          ? [String(parsed.totalCount), 'd', key]
+          : ['d', key];
+      return {
+        ...synced,
+        lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
+      };
+    }
+
     if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a' || key === "'" || key === '`') {
       return {
         ...state,
@@ -2183,6 +2321,18 @@ function handleNormalModeKey(
         currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['c', '$'],
       };
     }
+    if (key === '}' || key === '{') {
+      const res = changeParagraph(state, key === '}' ? 'next' : 'prev', parsed.totalCount);
+      const synced = syncRegisters(state, res, false);
+      const cKeys =
+        parsed.totalCount > 1
+          ? [String(parsed.totalCount), 'c', key]
+          : ['c', key];
+      return {
+        ...synced,
+        currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
+      };
+    }
     if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a' || key === "'" || key === '`') {
       return {
         ...state,
@@ -2276,6 +2426,11 @@ function handleNormalModeKey(
       };
       return syncRegisters(state, stateWithClip, true);
     }
+    if (key === '}' || key === '{') {
+      const res = yankParagraph(state, key === '}' ? 'next' : 'prev', parsed.totalCount);
+      return syncRegisters(state, res, true);
+    }
+
     if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a' || key === "'" || key === '`') {
       return {
         ...state,
@@ -2302,7 +2457,23 @@ function handleNormalModeKey(
         pendingKeys: undefined,
       };
     }
+    if (key === 'd') {
+      return goToDeclaration(state);
+    }
+    if (key === 'i') {
+      return goToLastInsert(state);
+    }
+    if (key === 'v') {
+      return reselectLastVisual(state);
+    }
+    if (key === ';') {
+      return traverseChangeList(state, 'prev', parsed.totalCount);
+    }
+    if (key === ',') {
+      return traverseChangeList(state, 'next', parsed.totalCount);
+    }
     if (key === '~' || key === 'u' || key === 'U') {
+
       return {
         ...state,
         pendingKeys: (state.pendingKeys ?? '') + key,
@@ -2430,6 +2601,28 @@ function handleNormalModeKey(
     }
     return { ...state, pendingKeys: undefined };
   }
+
+  // #: 커서 아래 단어로 검색어 설정 후 이전 결과로 점프
+  if (key === '#') {
+    const word = getWordAtCursor(currentLine, state.cursor.col);
+    if (word) {
+      const matches = findMatches(state.lines, word);
+      const prevMatch = findPrevMatch(matches, state.cursor) ?? matches[matches.length - 1];
+      const matchIdx = prevMatch
+        ? matches.findIndex((m) => m.line === prevMatch.line && m.col === prevMatch.col)
+        : -1;
+      const stateWithJump = recordJump(state);
+      return {
+        ...stateWithJump,
+        cursor: prevMatch ? { line: prevMatch.line, col: prevMatch.col } : state.cursor,
+        lastSearchQuery: word,
+        commandMessage: `단어 '${word}' 역방향 검색 (${matchIdx + 1}/${matches.length})`,
+        pendingKeys: undefined,
+      };
+    }
+    return { ...state, pendingKeys: undefined };
+  }
+
 
   // 실행 취소 (Undo)
   if (key === 'u') {
@@ -2654,7 +2847,21 @@ function handleNormalModeKey(
     };
   }
 
+  // 문단 단위 점프 ({, }) - 점프 리스트 등록
+  if ((key === '}' || key === '{') && !parsed.operator) {
+    const target = key === '}'
+      ? moveToNextParagraph(state.lines, state.cursor, parsed.totalCount)
+      : moveToPrevParagraph(state.lines, state.cursor, parsed.totalCount);
+    const stateWithJump = recordJump(state);
+    return {
+      ...stateWithJump,
+      cursor: clampCursor(state.lines, target, 'NORMAL'),
+      pendingKeys: undefined,
+    };
+  }
+
   // 11. 이동 모션 키 평가 (카운트 반복 반영)
+
   let motionCursor = evaluateMotionWithCount(
     state.lines,
     state.cursor,
@@ -2795,8 +3002,17 @@ function evaluateMotionWithCount(
       for (let i = 0; i < count; i++) cur = moveToWORDEnd(lines, cur);
       break;
 
+    case '}':
+      cur = moveToNextParagraph(lines, cur, count);
+      break;
+
+    case '{':
+      cur = moveToPrevParagraph(lines, cur, count);
+      break;
+
     default:
       matched = false;
+
   }
 
   if (!matched) {

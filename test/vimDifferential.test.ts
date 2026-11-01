@@ -329,5 +329,35 @@ describe('Vim Differential Cross-Validation: 50 Edge Cases', () => {
       expect(res.passed, res.mismatch?.diffReport).toBe(true);
     });
   });
+
+  // =========================================================================
+  // Category 8: Advanced Pure Vim Motions ({, }, *, #) (Cases 51~54)
+  // =========================================================================
+  describe('Category 8: Advanced Pure Vim Motions', () => {
+    it('[Case 51] } jumps to next paragraph empty line boundary', () => {
+      const text = 'p1 line 1\np1 line 2\n\np2 line 1';
+      const res = runDifferentialCheck(text, ['0', '}']);
+      expect(res.passed, res.mismatch?.diffReport).toBe(true);
+    });
+
+    it('[Case 52] { jumps back to previous paragraph boundary', () => {
+      const text = 'p1 line 1\n\np2 line 1\np2 line 2';
+      const res = runDifferentialCheck(text, ['G', '{']);
+      expect(res.passed, res.mismatch?.diffReport).toBe(true);
+    });
+
+    it('[Case 53] * searches forward for word under cursor', () => {
+      const text = 'const item = 1;\nconst item = 2;';
+      const res = runDifferentialCheck(text, ['0', 'w', '*']);
+      expect(res.passed, res.mismatch?.diffReport).toBe(true);
+    });
+
+    it('[Case 54] # searches backward for word under cursor', () => {
+      const text = 'const alpha = 1;\nconst other = 2;\nconst alpha = 3;';
+      const res = runDifferentialCheck(text, ['G', 'w', '#']);
+      expect(res.passed, res.mismatch?.diffReport).toBe(true);
+    });
+  });
 });
+
 

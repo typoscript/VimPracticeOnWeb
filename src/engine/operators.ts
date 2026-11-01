@@ -17,11 +17,34 @@ export function pushUndoSnapshot(state: VimEditorState): VimEditorState {
     nextUndo.shift();
   }
 
+  const currentChangeList = state.changeList ? [...state.changeList] : [];
+  const lastChange = currentChangeList[currentChangeList.length - 1];
+  if (lastChange && lastChange.row === state.cursor.line) {
+    currentChangeList[currentChangeList.length - 1] = {
+      row: state.cursor.line,
+      col: state.cursor.col,
+      line: state.cursor.line,
+    };
+  } else {
+    currentChangeList.push({
+      row: state.cursor.line,
+      col: state.cursor.col,
+      line: state.cursor.line,
+    });
+    if (currentChangeList.length > MAX_HISTORY) {
+      currentChangeList.shift();
+    }
+  }
+
   return {
     ...state,
     undoStack: nextUndo,
     redoStack: [],
+    changeList: currentChangeList,
+    changeIndex: currentChangeList.length,
   };
+
+
 }
 
 /**

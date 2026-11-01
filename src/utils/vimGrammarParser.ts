@@ -82,7 +82,10 @@ const MOTION_NAMES: Record<string, { name: string; desc: string }> = {
   l: { name: '오른쪽 문자', desc: '오른쪽 문자' },
   G: { name: '파일 끝 줄', desc: '파일의 맨 마지막 줄' },
   gg: { name: '파일 첫 줄', desc: '파일의 맨 첫 번째 줄' },
+  '{': { name: '이전 문단 시작', desc: '이전 문단 경계(빈 줄)까지' },
+  '}': { name: '다음 문단 시작', desc: '다음 문단 경계(빈 줄)까지' },
 };
+
 
 /**
  * 연산자 정보 매핑
@@ -153,8 +156,11 @@ function getOperatorCandidates(op: string, count1?: number): CandidateCategory[]
       { key: '0', name: '줄 맨 앞까지', example: `${op}0`, description: '줄의 0번째 열까지' },
       { key: '^', name: '첫 글자까지', example: `${op}^`, description: '들여쓰기 후 첫 문자까지' },
       { key: '%', name: '짝 괄호까지', example: `${op}%`, description: '대응되는 괄호 영역' },
+      { key: '}', name: '다음 문단까지', example: `${op}}`, description: '다음 문단 경계(빈 줄)까지' },
+      { key: '{', name: '이전 문단까지', example: `${op}{`, description: '이전 문단 경계(빈 줄)까지' },
     ],
   });
+
 
   // 4. 동일 연산자 연타 (Line Operator - dd, cc, yy)
   if (['d', 'c', 'y'].includes(op)) {
@@ -469,8 +475,9 @@ export function parseVimGrammar(
       };
     }
 
-    // 7. 일반 모션 검사 (w, b, e, $, 0, ^, %, f{c}, t{c})
-    const motionMatch = remaining.match(/^(f.|t.|F.|T.|ge|gg|[wbe$0^%jklhG])/);
+    // 7. 일반 모션 검사 (w, b, e, $, 0, ^, %, {}, f{c}, t{c})
+    const motionMatch = remaining.match(/^(f.|t.|F.|T.|ge|gg|[wbe$0^%jklhG{}])/);
+
     if (motionMatch) {
       const motionStr = motionMatch[1];
       const motionInfo = MOTION_NAMES[motionStr] || {
@@ -500,8 +507,9 @@ export function parseVimGrammar(
     }
   }
 
-  // 8. 독립형 액션 및 모션 (연산자 없이 단독 실행: x, p, P, u, Ctrl-r, ., hjkl, w, b, e, $, 0, gg, G 등)
-  const standaloneActionMatch = remaining.match(/^(Ctrl-r|[xpPu.r.])/) || remaining.match(/^([hjklwbe$0^%G]|gg)/);
+  // 8. 독립형 액션 및 모션 (연산자 없이 단독 실행: x, p, P, u, Ctrl-r, ., hjkl, w, b, e, $, 0, gg, G, {, } 등)
+  const standaloneActionMatch = remaining.match(/^(Ctrl-r|[xpPu.r.])/) || remaining.match(/^([hjklwbe$0^%G{}]|gg)/);
+
   if (standaloneActionMatch) {
     const actStr = standaloneActionMatch[1];
     const totalCount = count1 ?? 1;

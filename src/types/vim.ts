@@ -46,6 +46,19 @@ export interface CompletionSession {
   originalWord: string;
 }
 
+export interface LastVisualSelection {
+  mode: 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK';
+  anchor: CursorPosition;
+  cursor: CursorPosition;
+}
+
+export interface ChangeListItem {
+  row: number;
+  col: number;
+  line: number;
+}
+
+
 export interface ViewportState {
   topRow: number;       // 현재 화면 최상단 행 번호 (0-indexed)
   visibleRows: number;  // 화면에 한 번에 표시되는 행 개수
@@ -137,6 +150,15 @@ export interface VimEditorState {
   insertNormalSession?: boolean;
   /** 버퍼 내 단어 자동완성 팝업 세션 (Ctrl+n, Ctrl+p) */
   completionSession?: CompletionSession | null;
+  /** 마지막 INSERT 모드 종료 시점의 커서 위치 (gi용) */
+  lastInsertPos?: { row: number; col: number; line: number } | null;
+  /** 직전 비주얼 모드 선택 영역 정보 (gv 복구용) */
+  lastVisualSelection?: LastVisualSelection | null;
+  /** 버퍼 텍스트 변경 위치 히스토리 목록 (g;, g, 순회용) */
+  changeList?: ChangeListItem[];
+  /** changeList 현재 인덱스 */
+  changeIndex?: number;
 }
+
 
 export type VimState = VimEditorState;

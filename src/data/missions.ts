@@ -672,5 +672,37 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 27,
+    title: '레슨 27: {} 문단 점프와 gi, gv, g;로 편집 위치 복귀하기',
+    description: 'Vim의 문단 점프({, })로 코드 블록 사이를 빠르게 오가고, gi를 사용해 상단 코드를 둘러본 뒤 방금 편집하던 정확한 위치로 1초 만에 복귀하세요.',
+    hint: 'A; <Esc> 로 세미콜론을 추가한 뒤, { 를 두 번 눌러 상단 블록으로 점프해 확인하고, gi 로 방금 작업 위치로 복귀한 후 <Esc> 를 누르세요.',
+    par: 8,
+    optimalKeys: ['A', ';', 'Escape', '{', '{', 'g', 'i', 'Escape'],
+    initialLines: [
+      '// Header 1: Configuration',
+      'const MAX_RETRIES = 3;',
+      '',
+      '// Header 2: Client Instance',
+      'const client = new ApiClient()',
+    ],
+    targetLines: [
+      '// Header 1: Configuration',
+      'const MAX_RETRIES = 3;',
+      '',
+      '// Header 2: Client Instance',
+      'const client = new ApiClient();',
+    ],
+    initialCursor: { line: 4, col: 30 },
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines.length === 5 &&
+        state.lines[4] === 'const client = new ApiClient();' &&
+        state.cursor.line === 4
+      );
+    },
+  },
 ];
+
 
