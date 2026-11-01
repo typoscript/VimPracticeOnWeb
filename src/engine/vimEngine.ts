@@ -1734,7 +1734,53 @@ function handleNormalModeKey(
         lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
       };
     }
-    if (key === 'w') {
+    if (key === 'w' || key === 'e') {
+      let target = state.cursor;
+      for (let i = 0; i < parsed.totalCount; i++) {
+        target = key === 'w' ? moveToNextWord(state.lines, target) : moveToWordEnd(state.lines, target);
+      }
+      if (key === 'e') {
+        if (target.line !== state.cursor.line) {
+          const stateWithAnchor: VimEditorState = {
+            ...state,
+            mode: 'VISUAL',
+            visualAnchor: state.cursor,
+            cursor: target,
+          };
+          const delRes = deleteVisualSelection(stateWithAnchor);
+          const synced = syncRegisters(state, delRes, false);
+          return {
+            ...synced,
+            lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['d', 'e'],
+          };
+        }
+        const { line, col } = state.cursor;
+        const currentLine = state.lines[line] ?? '';
+        const deletedText = currentLine.slice(col, target.col + 1);
+        const newLine = currentLine.slice(0, col) + currentLine.slice(target.col + 1);
+        const nextLines = [...state.lines];
+        nextLines[line] = newLine;
+        const clampedCursor = clampCursor(nextLines, state.cursor, 'NORMAL');
+        const stateWithDel = {
+          ...pushUndoSnapshot(state),
+          lines: nextLines,
+          cursor: clampedCursor,
+          clipboard: {
+            type: 'text' as const,
+            content: deletedText,
+          },
+          pendingKeys: undefined,
+        };
+        const synced = syncRegisters(state, stateWithDel, false);
+        const lKeys =
+          parsed.totalCount > 1
+            ? [String(parsed.totalCount), 'd', 'e']
+            : ['d', 'e'];
+        return {
+          ...synced,
+          lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
+        };
+      }
       const res = deleteWord(state, parsed.totalCount);
       const synced = syncRegisters(state, res, false);
       const lKeys =
@@ -1746,15 +1792,56 @@ function handleNormalModeKey(
         lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
       };
     }
+    if (key === '0') {
+      const { line, col } = state.cursor;
+      const cur = state.lines[line] ?? '';
+      const deleted = cur.slice(0, col);
+      const nextLines = [...state.lines];
+      nextLines[line] = cur.slice(col);
+      const stateWithDel = {
+        ...pushUndoSnapshot(state),
+        lines: nextLines,
+        cursor: { line, col: 0 },
+        clipboard: { type: 'text' as const, content: deleted },
+        pendingKeys: undefined,
+      };
+      const synced = syncRegisters(state, stateWithDel, false);
+      return {
+        ...synced,
+        lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['d', '0'],
+      };
+    }
+    if (key === '0') {
+      const { line, col } = state.cursor;
+      const cur = state.lines[line] ?? '';
+      const deleted = cur.slice(0, col);
+      const nextLines = [...state.lines];
+      nextLines[line] = cur.slice(col);
+      const stateWithDel = {
+        ...pushUndoSnapshot(state),
+        lines: nextLines,
+        cursor: { line, col: 0 },
+        mode: 'INSERT' as const,
+        clipboard: { type: 'text' as const, content: deleted },
+        pendingKeys: undefined,
+      };
+      const synced = syncRegisters(state, stateWithDel, false);
+      return {
+        ...synced,
+        currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['c', '0'],
+      };
+    }
     if (key === '$') {
       const { line, col } = state.cursor;
       const cur = state.lines[line] ?? '';
       const deleted = cur.slice(col);
       const nextLines = [...state.lines];
       nextLines[line] = cur.slice(0, col);
+      const clampedCursor = clampCursor(nextLines, { line, col }, 'NORMAL');
       const stateWithDel = {
         ...pushUndoSnapshot(state),
         lines: nextLines,
+        cursor: clampedCursor,
         clipboard: { type: 'text' as const, content: deleted },
         pendingKeys: undefined,
       };
@@ -1797,6 +1884,50 @@ function handleNormalModeKey(
         currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
       };
     }
+    if (key === 'e') {
+      let target = state.cursor;
+      for (let i = 0; i < parsed.totalCount; i++) {
+        target = moveToWordEnd(state.lines, target);
+      }
+      const stateWithAnchor: VimEditorState = {
+        ...state,
+        mode: 'VISUAL',
+        visualAnchor: state.cursor,
+        cursor: target,
+      };
+      const delRes = deleteVisualSelection(stateWithAnchor);
+      const synced = syncRegisters(state, delRes, false);
+      const cKeys =
+        parsed.totalCount > 1
+          ? [String(parsed.totalCount), 'c', 'e']
+          : ['c', 'e'];
+      return {
+        ...synced,
+        mode: 'INSERT',
+        cursor: { line: state.cursor.line, col: state.cursor.col },
+        currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
+      };
+    }
+    if (key === '0') {
+      const { line, col } = state.cursor;
+      const cur = state.lines[line] ?? '';
+      const deleted = cur.slice(0, col);
+      const nextLines = [...state.lines];
+      nextLines[line] = cur.slice(col);
+      const stateWithDel = {
+        ...pushUndoSnapshot(state),
+        lines: nextLines,
+        cursor: { line, col: 0 },
+        mode: 'INSERT' as const,
+        clipboard: { type: 'text' as const, content: deleted },
+        pendingKeys: undefined,
+      };
+      const synced = syncRegisters(state, stateWithDel, false);
+      return {
+        ...synced,
+        currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['c', '0'],
+      };
+    }
     if (key === '$') {
       const res = changeToEndOfLine(state);
       const synced = syncRegisters(state, res, false);
@@ -1828,9 +1959,48 @@ function handleNormalModeKey(
       };
       return syncRegisters(state, stateWithClip, true);
     }
-    if (key === 'w') {
+    if (key === 'w' || key === 'e') {
+      let target = state.cursor;
+      for (let i = 0; i < parsed.totalCount; i++) {
+        target = key === 'w' ? moveToNextWord(state.lines, target) : moveToWordEnd(state.lines, target);
+      }
+      if (key === 'e') {
+        if (target.line !== state.cursor.line) {
+          const stateWithAnchor: VimEditorState = {
+            ...state,
+            mode: 'VISUAL',
+            visualAnchor: state.cursor,
+            cursor: target,
+          };
+          const res = yankVisualSelection(stateWithAnchor);
+          return syncRegisters(state, res, true);
+        }
+        const { line, col } = state.cursor;
+        const currentLine = state.lines[line] ?? '';
+        const yankedText = currentLine.slice(col, target.col + 1);
+        const stateWithClip: VimEditorState = {
+          ...state,
+          clipboard: {
+            type: 'text',
+            content: yankedText,
+          },
+          pendingKeys: undefined,
+        };
+        return syncRegisters(state, stateWithClip, true);
+      }
       const { line, col } = state.cursor;
       const currentLine = state.lines[line] ?? '';
+      if (key === 'w' && currentLine.length === 0 && line < state.lines.length - 1) {
+        const stateWithClip: VimEditorState = {
+          ...state,
+          clipboard: {
+            type: 'text',
+            content: '\n',
+          },
+          pendingKeys: undefined,
+        };
+        return syncRegisters(state, stateWithClip, true);
+      }
       let endCol = col;
       for (let step = 0; step < parsed.totalCount; step++) {
         if (endCol >= currentLine.length) break;
@@ -1849,6 +2019,17 @@ function handleNormalModeKey(
           type: 'text',
           content: yankedText,
         },
+        pendingKeys: undefined,
+      };
+      return syncRegisters(state, stateWithClip, true);
+    }
+    if (key === '0') {
+      const { line, col } = state.cursor;
+      const cur = state.lines[line] ?? '';
+      const yanked = cur.slice(0, col);
+      const stateWithClip: VimEditorState = {
+        ...state,
+        clipboard: { type: 'text', content: yanked },
         pendingKeys: undefined,
       };
       return syncRegisters(state, stateWithClip, true);
@@ -2213,7 +2394,7 @@ function handleNormalModeKey(
   }
 
   // 11. 이동 모션 키 평가 (카운트 반복 반영)
-  const motionCursor = evaluateMotionWithCount(
+  let motionCursor = evaluateMotionWithCount(
     state.lines,
     state.cursor,
     key,
@@ -2221,9 +2402,19 @@ function handleNormalModeKey(
   );
 
   if (motionCursor) {
+    const isDollar = key === '$';
+    const isVertical = key === 'j' || key === 'k' || key === 'ArrowDown' || key === 'ArrowUp';
+    if (state.stickyDollar && isVertical) {
+      const destLine = state.lines[motionCursor.line] ?? '';
+      motionCursor = {
+        line: motionCursor.line,
+        col: Math.max(0, destLine.length - 1),
+      };
+    }
     return {
       ...state,
       cursor: motionCursor,
+      stickyDollar: isDollar || (state.stickyDollar && isVertical),
       pendingKeys: undefined,
     };
   }
@@ -2272,6 +2463,9 @@ function evaluateMotionWithCount(
       break;
 
     case '$':
+      if (count > 1) {
+        cur.line = Math.min(lines.length - 1, cur.line + count - 1);
+      }
       cur = moveToLineEnd(lines, cur);
       break;
 

@@ -310,6 +310,13 @@ export function executeTextObjectOperator(
   for (let step = 0; step < count; step++) {
     const range = getTextObjectRange(curState.lines, curState.cursor, objectType);
     if (!range) {
+      if (operator === 'c') {
+        return {
+          ...pushUndoSnapshot(curState),
+          mode: 'INSERT',
+          pendingKeys: undefined,
+        };
+      }
       return { ...curState, pendingKeys: undefined };
     }
 

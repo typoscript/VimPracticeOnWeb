@@ -122,6 +122,56 @@ export function deleteWord(state: VimEditorState, count = 1): VimEditorState {
 }
 
 /**
+ * 'de' / '[count]de': 현재 커서 위치부터 단어의 끝(공백 제외)까지 삭제합니다.
+ */
+export function deleteToEndOfWord(state: VimEditorState, count = 1): VimEditorState {
+  const { line, col } = state.cursor;
+  const currentLine = state.lines[line] ?? '';
+
+  if (currentLine.length === 0) {
+    return { ...state, pendingKeys: undefined };
+  }
+
+  const stateWithSnapshot = pushUndoSnapshot(state);
+
+  let endCol = col;
+  for (let step = 0; step < count; step++) {
+    if (endCol >= currentLine.length) break;
+    const startType = getCharType(currentLine[endCol]);
+
+    if (startType === 'space') {
+      while (endCol < currentLine.length && getCharType(currentLine[endCol]) === 'space') {
+        endCol++;
+      }
+    }
+    if (endCol < currentLine.length) {
+      const wordType = getCharType(currentLine[endCol]);
+      while (endCol < currentLine.length && getCharType(currentLine[endCol]) === wordType) {
+        endCol++;
+      }
+    }
+  }
+
+  const deletedText = currentLine.slice(col, endCol);
+  const newLine = currentLine.slice(0, col) + currentLine.slice(endCol);
+  const nextLines = [...state.lines];
+  nextLines[line] = newLine;
+
+  const clampedCursor = clampCursor(nextLines, state.cursor, 'NORMAL');
+
+  return {
+    ...stateWithSnapshot,
+    lines: nextLines,
+    cursor: clampedCursor,
+    clipboard: {
+      type: 'text',
+      content: deletedText,
+    },
+    pendingKeys: undefined,
+  };
+}
+
+/**
  * 'x' / '[count]x': 현재 커서 위치부터 count개의 글자를 삭제합니다.
  */
 export function deleteChar(state: VimEditorState, count = 1): VimEditorState {
@@ -163,6 +213,19 @@ export function changeWord(state: VimEditorState, count = 1): VimEditorState {
 
   if (currentLine.length === 0) {
     const stateWithSnapshot = pushUndoSnapshot(state);
+    if (state.lines.length > line + 1) {
+      const nextLines = [
+        ...state.lines.slice(0, line),
+        ...state.lines.slice(line + 1),
+      ];
+      return {
+        ...stateWithSnapshot,
+        lines: nextLines,
+        cursor: { line, col: 0 },
+        mode: 'INSERT',
+        pendingKeys: undefined,
+      };
+    }
     return {
       ...stateWithSnapshot,
       mode: 'INSERT',

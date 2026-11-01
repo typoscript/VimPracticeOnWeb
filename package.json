@@ -8,16 +8,17 @@
     "build": "tsc -b && vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:fuzz": "vitest run test/vimDifferential.fuzz.test.ts"
   },
   "dependencies": {
-    "@replit/codemirror-vim": "^6.4.0",
-    "@uiw/react-codemirror": "^4.25.12",
-    "codemirror": "^6.0.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@codemirror/state": "^6.5.2",
+    "@codemirror/view": "^6.36.0",
+    "@replit/codemirror-vim": "^6.4.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.2.0",
     "@types/node": "^22.13.4",

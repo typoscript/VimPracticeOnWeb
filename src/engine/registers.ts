@@ -110,7 +110,7 @@ export function putFromRegister(
 ): VimEditorState {
   const clip = getRegisterContent(state, reg ?? state.activeRegister);
 
-  if (!clip || !clip.content) {
+  if (!clip || clip.content === undefined || clip.content === null) {
     return {
       ...state,
       activeRegister: undefined,
@@ -128,18 +128,45 @@ export function putFromRegister(
       clip.content,
       ...state.lines.slice(targetLine),
     ];
+    const firstNonWs = clip.content.search(/\S/);
+    const targetCol = firstNonWs !== -1 ? firstNonWs : 0;
     return {
       ...stateWithSnapshot,
       lines: nextLines,
-      cursor: { line: targetLine, col: 0 },
+      cursor: { line: targetLine, col: targetCol },
       activeRegister: undefined,
       pendingKeys: undefined,
     };
   }
 
-  // 인라인 문자열(text) 붙여넣기
+  // 인라인 / 멀티라인 문자열(text) 붙여넣기
   const currentLine = state.lines[line] ?? '';
   const insertCol = isBefore ? col : (currentLine.length === 0 ? 0 : col + 1);
+
+  if (clip.content.includes('\n')) {
+    const before = currentLine.slice(0, insertCol);
+    const after = currentLine.slice(insertCol);
+    const parts = clip.content.split('\n');
+    const firstLine = before + parts[0];
+    const lastLine = parts[parts.length - 1] + after;
+    const middleLines = parts.slice(1, -1);
+    const insertedLines = [firstLine, ...middleLines, lastLine];
+
+    const nextLines = [
+      ...state.lines.slice(0, line),
+      ...insertedLines,
+      ...state.lines.slice(line + 1),
+    ];
+
+    return {
+      ...stateWithSnapshot,
+      lines: nextLines,
+      cursor: { line, col: insertCol },
+      activeRegister: undefined,
+      pendingKeys: undefined,
+    };
+  }
+
   const newLine =
     currentLine.slice(0, insertCol) +
     clip.content +
@@ -149,7 +176,7 @@ export function putFromRegister(
 
   const newCol = Math.min(
     getMaxCol(newLine, 'NORMAL'),
-    insertCol + Math.max(0, clip.content.length - 1)
+    col + clip.content.length
   );
 
   return {

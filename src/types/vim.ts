@@ -115,6 +115,8 @@ export interface VimEditorState {
   userKeymaps?: Record<string, string>;
   /** 리더 키 (Leader Key, 기본값: ' ') */
   leaderKey?: string;
+  /** $ 키 입력 후 j/k 수직 이동 시 줄 끝 유지 여부 (Vim sticky end-of-line) */
+  stickyDollar?: boolean;
 }
 
 export type VimState = VimEditorState;
