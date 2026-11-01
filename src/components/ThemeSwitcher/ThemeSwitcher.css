@@ -1,0 +1,46 @@
+.theme-switcher-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  transition: all 0.2s ease;
+}
+
+.theme-switcher-wrapper:hover {
+  border-color: var(--accent-blue);
+}
+
+.theme-switcher-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.theme-icon {
+  font-size: 0.95rem;
+}
+
+.theme-select {
+  background-color: transparent;
+  color: var(--text-primary);
+  border: none;
+  font-size: 0.82rem;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+  padding: 0.25rem 0.25rem 0.25rem 0;
+  font-family: inherit;
+}
+
+.theme-select option {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+}

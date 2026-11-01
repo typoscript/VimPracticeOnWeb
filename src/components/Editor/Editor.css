@@ -5,12 +5,12 @@
   flex: 1;
   width: 100%;
   max-width: 960px;
-  background-color: #1e1e2e;
+  background-color: var(--bg-surface, #1e1e2e);
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-  border: 1px solid #313244;
-  transition: border-color 0.2s ease;
+  border: 1px solid var(--border-color, #313244);
+  transition: border-color 0.2s ease, background-color 0.25s ease;
 }
 
 .editor-container.editor-unfocused {
@@ -82,20 +82,20 @@
   min-width: 48px;
   padding-right: 14px;
   text-align: right;
-  color: #585b70;
+  color: var(--text-muted, #585b70);
   user-select: none;
   font-variant-numeric: tabular-nums;
 }
 
 .editor-row.active-row .line-number {
-  color: #cdd6f4;
+  color: var(--text-primary, #cdd6f4);
   font-weight: 600;
 }
 
 .line-content {
   flex: 1;
   white-space: pre;
-  color: #cdd6f4;
+  color: var(--text-primary, #cdd6f4);
   tab-size: 4;
 }
 
@@ -142,23 +142,23 @@
 
 /* NORMAL 모드: 블록 커서 */
 .cursor-normal {
-  background-color: #a6e3a1;
+  background-color: var(--cursor-normal, #a6e3a1);
   color: #11111b;
   font-weight: bold;
 }
 
 /* INSERT 모드: 세로 바 또는 다른 강조 */
 .cursor-insert {
-  background-color: #89b4fa;
+  background-color: var(--cursor-insert, #89b4fa);
   color: #11111b;
   font-weight: bold;
-  box-shadow: -2px 0 0 #89b4fa;
+  box-shadow: -2px 0 0 var(--cursor-insert, #89b4fa);
 }
 
 /* VISUAL 모드: 보라/핑크 블록 */
 .cursor-visual,
 .cursor-visual_block {
-  background-color: #cba6f7;
+  background-color: var(--cursor-visual, #cba6f7);
   color: #11111b;
   font-weight: bold;
 }

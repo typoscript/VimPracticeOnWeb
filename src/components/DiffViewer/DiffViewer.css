@@ -1,8 +1,8 @@
 .diff-viewer {
   width: 100%;
   max-width: 960px;
-  background-color: #181825;
-  border: 1px solid #313244;
+  background-color: var(--bg-surface, #181825);
+  border: 1px solid var(--border-color, #313244);
   border-radius: 8px;
   padding: 0.85rem 1rem;
   box-sizing: border-box;

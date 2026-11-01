@@ -130,6 +130,22 @@
   color: #89b4fa;
 }
 
+.custom-mission-btn {
+  border-color: rgba(166, 227, 161, 0.4);
+  color: #a6e3a1;
+}
+
+.custom-mission-btn:hover {
+  background-color: rgba(166, 227, 161, 0.15);
+  border-color: #a6e3a1;
+  color: #a6e3a1;
+}
+
+.sound-toggle-btn.muted {
+  color: #6c7086;
+  opacity: 0.85;
+}
+
 /* 샌드박스 가이드 바 */
 .sandbox-panel {
   width: 100%;

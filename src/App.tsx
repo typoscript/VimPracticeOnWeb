@@ -8,6 +8,8 @@ import { LessonSelectModal } from './components/LessonSelectModal/LessonSelectMo
 import { DiffViewer } from './components/DiffViewer/DiffViewer';
 import { VirtualKeyboard } from './components/VirtualKeyboard/VirtualKeyboard';
 import { SpeedrunPanel } from './components/SpeedrunPanel/SpeedrunPanel';
+import { ThemeSwitcher } from './components/ThemeSwitcher/ThemeSwitcher';
+import { CustomMissionModal } from './components/CustomMissionModal/CustomMissionModal';
 import { VimEditorState } from './types/vim';
 import { Mission } from './types/mission';
 import { handleKey } from './engine/vimEngine';
@@ -28,6 +30,18 @@ import {
   LessonProgress,
 } from './utils/storage';
 import { normalizeImeKey } from './utils/imeHelper';
+import {
+  loadThemeSetting,
+  saveThemeSetting,
+  applyTheme,
+  VimTheme,
+} from './utils/theme';
+import { useSoundEffects } from './utils/soundEffects';
+import {
+  getChallengeFromUrl,
+  createCustomMissionObject,
+  CustomMissionData,
+} from './utils/customMission';
 import './App.css';
 
 const REPEATED_MOTION_KEYS = ['h', 'j', 'k', 'l', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
@@ -42,7 +56,30 @@ export function generateSpeedrunStages(): Mission[] {
 }
 
 export function App() {
-  const [currentTab, setCurrentTab] = useState<'course' | 'sandbox' | 'speedrun'>('course');
+  const initialChallenge = useRef(getChallengeFromUrl()).current;
+  const initialCustomMission = initialChallenge ? createCustomMissionObject(initialChallenge) : null;
+
+  const [currentTab, setCurrentTab] = useState<'course' | 'sandbox' | 'speedrun' | 'custom'>(
+    initialCustomMission ? 'custom' : 'course'
+  );
+  const [customMission, setCustomMission] = useState<Mission | null>(initialCustomMission);
+  const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
+
+  // 테마 관리
+  const [currentTheme, setCurrentTheme] = useState<VimTheme>(() => loadThemeSetting());
+  useEffect(() => {
+    applyTheme(currentTheme);
+  }, [currentTheme]);
+
+  const handleThemeChange = useCallback((newTheme: VimTheme) => {
+    setCurrentTheme(newTheme);
+    saveThemeSetting(newTheme);
+    applyTheme(newTheme);
+  }, []);
+
+  // Web Audio 기계식 키보드 음향 효과음 훅
+  const { isMuted, toggleMute, playKeySound, playSuccessSound } = useSoundEffects();
+
   const [currentMissionIndex, setCurrentMissionIndex] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [progress, setProgress] = useState<LessonProgress>(() => loadProgress());
@@ -73,16 +110,32 @@ export function App() {
 
   const activeSpeedrunMission = speedrunStages[speedrunCurrentStage];
 
-  const [editorState, setEditorState] = useState<VimEditorState>({
-    lines: currentMission.initialLines,
-    cursor: currentMission.initialCursor,
-    mode: 'NORMAL',
-    undoStack: currentMission.initialUndoStack ? [...currentMission.initialUndoStack] : [],
-    redoStack: [],
-    clipboard: currentMission.initialClipboard,
+  const [editorState, setEditorState] = useState<VimEditorState>(() => {
+    if (initialCustomMission) {
+      return {
+        lines: [...initialCustomMission.initialLines],
+        cursor: { ...initialCustomMission.initialCursor },
+        mode: 'NORMAL',
+        undoStack: [],
+        redoStack: [],
+      };
+    }
+    return {
+      lines: currentMission.initialLines,
+      cursor: currentMission.initialCursor,
+      mode: 'NORMAL',
+      undoStack: currentMission.initialUndoStack ? [...currentMission.initialUndoStack] : [],
+      redoStack: [],
+      clipboard: currentMission.initialClipboard,
+    };
   });
 
-  const isCompleted = currentTab === 'course' && currentMission.checkComplete(editorState);
+  const isCompleted =
+    currentTab === 'course'
+      ? currentMission.checkComplete(editorState)
+      : currentTab === 'custom' && customMission
+      ? customMission.checkComplete(editorState)
+      : false;
 
   // 튜토리얼 코스 미션 클리어 시 최고 기록 및 별점 영구 저장
   useEffect(() => {
@@ -92,6 +145,22 @@ export function App() {
       setProgress(updated);
     }
   }, [currentTab, isCompleted, currentMission.id, currentMission.par, keystrokeCount]);
+
+  // 미션 클리어 시 레트로 8비트 아르페지오 성공 효과음 재생
+  const wasCompletedRef = useRef(false);
+  useEffect(() => {
+    if (isCompleted && !wasCompletedRef.current) {
+      playSuccessSound();
+    }
+    wasCompletedRef.current = isCompleted;
+  }, [isCompleted, playSuccessSound]);
+
+  // URL에서 커스텀 미션을 감지한 경우 안내 코칭 메시지 표시
+  useEffect(() => {
+    if (initialCustomMission) {
+      setCoachingMessage(`⛳ URL 커스텀 Vim Golf 미션 [${initialCustomMission.title}]이(가) 로드되었습니다!`);
+    }
+  }, [initialCustomMission]);
 
   // 스피드런 타이머 연동 (100ms마다 0.1초 증가)
   useEffect(() => {
@@ -131,6 +200,7 @@ export function App() {
       } else {
         // 5개 스테이지 최종 완료!
         setSpeedrunStatus('completed');
+        playSuccessSound();
         const saveRes = saveSpeedrunRecord(speedrunElapsedSeconds, speedrunKeystrokes);
         setSpeedrunBestRecord(saveRes.record);
         setSpeedrunIsNewRecord(saveRes.isNewRecord);
@@ -145,6 +215,7 @@ export function App() {
     editorState,
     speedrunElapsedSeconds,
     speedrunKeystrokes,
+    playSuccessSound,
   ]);
 
   const handleSelectMission = useCallback((index: number) => {
@@ -221,8 +292,42 @@ export function App() {
     setCoachingMessage(null);
   }, []);
 
+  const handleResetCustomMission = useCallback(() => {
+    if (!customMission) return;
+    setEditorState({
+      lines: [...customMission.initialLines],
+      cursor: { ...customMission.initialCursor },
+      mode: 'NORMAL',
+      undoStack: [],
+      redoStack: [],
+    });
+    setKeystrokeCount(0);
+    setRecentKeys([]);
+    setLastPressedKey(undefined);
+    setCoachingMessage(null);
+    consecutiveMotionRef.current = 0;
+  }, [customMission]);
+
+  const handlePlayCustomMission = useCallback((data: CustomMissionData) => {
+    const newMission = createCustomMissionObject(data);
+    setCustomMission(newMission);
+    setCurrentTab('custom');
+    setEditorState({
+      lines: [...newMission.initialLines],
+      cursor: { ...newMission.initialCursor },
+      mode: 'NORMAL',
+      undoStack: [],
+      redoStack: [],
+    });
+    setKeystrokeCount(0);
+    setRecentKeys([]);
+    setLastPressedKey(undefined);
+    setCoachingMessage(`⛳ 커스텀 미션 [${newMission.title}] 시작! 최소 타수로 완성을 노려보세요.`);
+    consecutiveMotionRef.current = 0;
+  }, []);
+
   const handleSwitchTab = useCallback(
-    (tab: 'course' | 'sandbox' | 'speedrun') => {
+    (tab: 'course' | 'sandbox' | 'speedrun' | 'custom') => {
       setCurrentTab(tab);
       setLastPressedKey(undefined);
       setCoachingMessage(null);
@@ -235,6 +340,16 @@ export function App() {
         setSpeedrunElapsedSeconds(0);
         setSpeedrunKeystrokes(0);
         setSpeedrunIsNewRecord(false);
+      } else if (tab === 'custom' && customMission) {
+        setEditorState({
+          lines: [...customMission.initialLines],
+          cursor: { ...customMission.initialCursor },
+          mode: 'NORMAL',
+          undoStack: [],
+          redoStack: [],
+        });
+        setKeystrokeCount(0);
+        setRecentKeys([]);
       } else {
         const mission = MISSIONS[currentMissionIndex];
         setEditorState({
@@ -249,7 +364,7 @@ export function App() {
         setRecentKeys([]);
       }
     },
-    [currentMissionIndex, handleResetSandbox]
+    [currentMissionIndex, handleResetSandbox, customMission]
   );
 
   const handleToggleRelativeLine = useCallback(() => {
@@ -288,6 +403,9 @@ export function App() {
       setKeystrokeCount((prev) => prev + 1);
       setRecentKeys((prev) => [...prev.slice(-7), key]);
 
+      // Web Audio 기계식 키보드 타건 효과음 재생
+      playKeySound(key, editorState.mode);
+
       if (currentTab === 'speedrun' && speedrunStatus === 'running') {
         setSpeedrunKeystrokes((prev) => prev + 1);
       }
@@ -304,7 +422,7 @@ export function App() {
 
       setEditorState((prevState) => handleKey(prevState, key));
     },
-    [currentTab, speedrunStatus]
+    [currentTab, speedrunStatus, editorState.mode, playKeySound]
   );
 
   // 브라우저 윈도우 포커스/블러 감지
@@ -322,7 +440,7 @@ export function App() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // 모달이 열려 있을 때는 에디터 키 입력을 차단
-      if (isModalOpen) {
+      if (isModalOpen || isCustomModalOpen) {
         return;
       }
 
@@ -408,11 +526,13 @@ export function App() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isModalOpen, isEditorFocused, editorState.mode, processKeyInput]);
+  }, [isModalOpen, isCustomModalOpen, isEditorFocused, editorState.mode, processKeyInput]);
 
   const activeMissionForDiff =
     currentTab === 'course'
       ? currentMission
+      : currentTab === 'custom' && customMission
+      ? customMission
       : currentTab === 'speedrun' && speedrunStatus === 'running'
       ? activeSpeedrunMission
       : undefined;
@@ -457,9 +577,46 @@ export function App() {
           >
             ⚡ 스피드런
           </button>
+          {customMission && (
+            <button
+              role="tab"
+              aria-selected={currentTab === 'custom'}
+              className={`nav-tab-btn ${currentTab === 'custom' ? 'active' : ''}`}
+              onClick={() => handleSwitchTab('custom')}
+              data-testid="tab-custom-btn"
+            >
+              ⛳ 커스텀 골프
+            </button>
+          )}
         </div>
 
         <div className="nav-actions">
+          {/* 커스텀 Vim Golf 미션 생성 모달 */}
+          <button
+            className="toolbar-btn custom-mission-btn"
+            onClick={() => setIsCustomModalOpen(true)}
+            data-testid="open-custom-modal-btn"
+            title="URL 공유 가능한 커스텀 Vim Golf 미션 생성기"
+          >
+            ⛳ 미션 만들기
+          </button>
+
+          {/* 에디터 컬러 테마 스위처 */}
+          <ThemeSwitcher
+            currentTheme={currentTheme}
+            onThemeChange={handleThemeChange}
+          />
+
+          {/* 기계식 키보드 음향 효과음 토글 */}
+          <button
+            className={`toolbar-btn sound-toggle-btn ${isMuted ? 'muted' : ''}`}
+            onClick={toggleMute}
+            data-testid="toggle-sound-btn"
+            title="기계식 키보드 타건 효과음 토글"
+          >
+            {isMuted ? '🔇 소리: OFF' : '🔊 소리: ON'}
+          </button>
+
           {currentTab === 'course' && (
             <button
               className="toolbar-btn lesson-list-btn"
@@ -540,6 +697,18 @@ export function App() {
           />
         )}
 
+        {currentTab === 'custom' && customMission && (
+          <MissionPanel
+            mission={customMission}
+            missionIndex={0}
+            totalMissions={1}
+            isCompleted={isCompleted}
+            keystrokeCount={keystrokeCount}
+            onSelectMission={() => {}}
+            onResetMission={handleResetCustomMission}
+          />
+        )}
+
         {currentTab === 'sandbox' && (
           <div className="sandbox-panel" data-testid="sandbox-panel">
             <div className="sandbox-info">
@@ -595,6 +764,8 @@ export function App() {
           filename={
             currentTab === 'course'
               ? `lesson_${currentMission.id}.txt`
+              : currentTab === 'custom'
+              ? 'custom_golf.txt'
               : currentTab === 'speedrun'
               ? `speedrun_stage_${speedrunCurrentStage + 1}.txt`
               : 'sandbox.ts'
@@ -611,7 +782,7 @@ export function App() {
           <DiffViewer
             currentLines={editorState.lines}
             targetLines={activeMissionForDiff.targetLines}
-            isCompleted={currentTab === 'course' ? isCompleted : false}
+            isCompleted={currentTab === 'course' || currentTab === 'custom' ? isCompleted : false}
           />
         )}
 
@@ -642,6 +813,12 @@ export function App() {
             setCurrentTab('course');
           }
         }}
+      />
+
+      <CustomMissionModal
+        isOpen={isCustomModalOpen}
+        onClose={() => setIsCustomModalOpen(false)}
+        onPlayMission={handlePlayCustomMission}
       />
     </div>
   );
