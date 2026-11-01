@@ -16,6 +16,8 @@ import { AnalyticsModal } from './components/AnalyticsModal/AnalyticsModal';
 import { DailyChallengeModal } from './components/DailyChallengeModal/DailyChallengeModal';
 import { ConfigExporterModal } from './components/ConfigExporterModal/ConfigExporterModal';
 import { DungeonRPG } from './components/DungeonRPG/DungeonRPG';
+import { VimGrammarASTViewer } from './components/VimGrammarASTViewer/VimGrammarASTViewer';
+import { BYOCModal } from './components/BYOCModal/BYOCModal';
 import { VimEditorState, SplitPaneState } from './types/vim';
 import { Mission } from './types/mission';
 import { handleKey } from './engine/vimEngine';
@@ -33,6 +35,8 @@ import {
   saveDiffViewSetting,
   loadRegisterInspectorSetting,
   saveRegisterInspectorSetting,
+  loadGrammarASTSetting,
+  saveGrammarASTSetting,
   loadSpeedrunRecord,
   saveSpeedrunRecord,
   SpeedrunRecord,
@@ -86,6 +90,8 @@ export function App() {
   const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
   const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+  const [isBYOCModalOpen, setIsBYOCModalOpen] = useState(false);
+  const [showGrammarAST, setShowGrammarAST] = useState<boolean>(() => loadGrammarASTSetting());
 
   // 커스텀 키매핑 프리셋 및 리더 키 상태
   const [activePresets, setActivePresets] = useState<Record<string, boolean>>(() => loadActivePresets());
@@ -141,6 +147,14 @@ export function App() {
     setShowRegisterInspector((prev) => {
       const next = !prev;
       saveRegisterInspectorSetting(next);
+      return next;
+    });
+  }, []);
+
+  const handleToggleGrammarAST = useCallback(() => {
+    setShowGrammarAST((prev) => {
+      const next = !prev;
+      saveGrammarASTSetting(next);
       return next;
     });
   }, []);
@@ -491,6 +505,29 @@ export function App() {
     antiPatternDetectorRef.current.reset();
   }, [handleStopGhostReplay]);
 
+  const handlePlayBYOCMission = useCallback(
+    (missionData: {
+      title: string;
+      description: string;
+      initialText: string;
+      targetText: string;
+      par: number;
+      hint: string;
+    }) => {
+      handlePlayCustomMission({
+        title: missionData.title,
+        description: missionData.description,
+        initialText: missionData.initialText,
+        targetText: missionData.targetText,
+        par: missionData.par,
+      });
+      setShowDiffView(true);
+      saveDiffViewSetting(true);
+      setCoachingMessage(`⛳ [BYOC] 리팩토링 미션 시작! 힌트: ${missionData.hint}`);
+    },
+    [handlePlayCustomMission]
+  );
+
   const handleSwitchTab = useCallback(
     (tab: 'course' | 'sandbox' | 'speedrun' | 'custom' | 'arcade' | 'dungeon') => {
       handleStopGhostReplay();
@@ -619,6 +656,7 @@ export function App() {
         isAnalyticsModalOpen ||
         isDailyModalOpen ||
         isConfigModalOpen ||
+        isBYOCModalOpen ||
         currentTab === 'arcade' ||
         currentTab === 'dungeon'
       ) {
@@ -963,6 +1001,16 @@ export function App() {
             📋 레지스터: {showRegisterInspector ? 'ON' : 'OFF'}
           </button>
 
+          {/* 실시간 Vim 문법 AST 인스펙터 토글 버튼 */}
+          <button
+            className={`toolbar-btn ast-toggle-btn ${showGrammarAST ? 'active' : ''}`}
+            onClick={handleToggleGrammarAST}
+            data-testid="toggle-grammar-ast-btn"
+            title="실시간 Vim 문법 AST 인스펙터 패널 토글"
+          >
+            🧩 문법 AST: {showGrammarAST ? 'ON' : 'OFF'}
+          </button>
+
           {/* 가상 키보드 오버레이 토글 버튼 */}
           <button
             className={`toolbar-btn keyboard-toggle-btn ${showVirtualKeyboard ? 'active' : ''}`}
@@ -1015,6 +1063,20 @@ export function App() {
           onDismiss={() => setCoachingMessage(null)}
         />
 
+        {/* 실시간 Vim 명령어 문법 AST 인스펙터 */}
+        {showGrammarAST && currentTab !== 'arcade' && currentTab !== 'dungeon' && (
+          <VimGrammarASTViewer
+            currentKeySequence={editorState.pendingKeys || ''}
+            activeRegister={editorState.activeRegister}
+            onSelectCandidate={(token) => {
+              for (const ch of token) {
+                processKeyInput(ch);
+              }
+            }}
+            onClose={() => setShowGrammarAST(false)}
+          />
+        )}
+
         {currentTab === 'arcade' ? (
           <ArcadeSurvival
             onPlayKeySound={playKeySound}
@@ -1065,13 +1127,23 @@ export function App() {
                     미션 제약 없이 모든 Vim 키보드 명령어를 자유롭게 실험해 볼 수 있습니다.
                   </span>
                 </div>
-                <button
-                  className="sandbox-reset-btn"
-                  onClick={handleResetSandbox}
-                  data-testid="sandbox-reset-btn"
-                >
-                  🔄 코드 초기화
-                </button>
+                <div className="sandbox-actions">
+                  <button
+                    className="sandbox-byoc-btn"
+                    onClick={() => setIsBYOCModalOpen(true)}
+                    data-testid="open-byoc-modal-btn"
+                    title="내 실제 업무 코드를 붙여넣어 자동 리팩토링 미션 생성"
+                  >
+                    ✨ 내 코드로 리팩토링 미션 생성 (BYOC)
+                  </button>
+                  <button
+                    className="sandbox-reset-btn"
+                    onClick={handleResetSandbox}
+                    data-testid="sandbox-reset-btn"
+                  >
+                    🔄 코드 초기화
+                  </button>
+                </div>
               </div>
             )}
 
@@ -1279,6 +1351,13 @@ export function App() {
         activePresets={activePresets}
         onTogglePreset={handleTogglePreset}
         onChangeLeaderKey={handleChangeLeaderKey}
+      />
+
+      <BYOCModal
+        isOpen={isBYOCModalOpen}
+        onClose={() => setIsBYOCModalOpen(false)}
+        initialCode={editorState.lines.join('\n')}
+        onStartMission={handlePlayBYOCMission}
       />
     </div>
   );

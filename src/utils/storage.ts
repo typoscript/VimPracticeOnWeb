@@ -11,6 +11,7 @@ export const RELATIVE_LINE_STORAGE_KEY = 'vim_relative_line_numbers_v1';
 export const VIRTUAL_KEYBOARD_STORAGE_KEY = 'vim_virtual_keyboard_v1';
 export const DIFF_VIEW_STORAGE_KEY = 'vim_diff_view_v1';
 export const REGISTER_INSPECTOR_STORAGE_KEY = 'vim_register_inspector_v1';
+export const GRAMMAR_AST_STORAGE_KEY = 'vim_grammar_ast_v1';
 export const SPEEDRUN_RECORD_STORAGE_KEY = 'vim_speedrun_record_v1';
 
 export interface SpeedrunRecord {
@@ -156,6 +157,29 @@ export function loadRegisterInspectorSetting(): boolean {
 export function saveRegisterInspectorSetting(enabled: boolean): void {
   try {
     localStorage.setItem(REGISTER_INSPECTOR_STORAGE_KEY, enabled ? 'true' : 'false');
+  } catch {
+    // 무시
+  }
+}
+
+/**
+ * Vim 문법 AST 인스펙터 패널 표시 여부 설정값을 불러옵니다. (기본값: false)
+ */
+export function loadGrammarASTSetting(): boolean {
+  try {
+    const raw = localStorage.getItem(GRAMMAR_AST_STORAGE_KEY);
+    return raw !== null ? raw === 'true' : false;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Vim 문법 AST 인스펙터 패널 표시 여부 설정값을 저장합니다.
+ */
+export function saveGrammarASTSetting(enabled: boolean): void {
+  try {
+    localStorage.setItem(GRAMMAR_AST_STORAGE_KEY, enabled ? 'true' : 'false');
   } catch {
     // 무시
   }

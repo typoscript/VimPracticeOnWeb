@@ -1,0 +1,330 @@
+.vim-grammar-ast-viewer {
+  background: var(--bg-secondary, #1e1e2e);
+  border: 1px solid var(--border-color, #313244);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+  font-family: inherit;
+  color: var(--text-primary, #cdd6f4);
+  animation: fadeInAst 0.25s ease-out;
+}
+
+@keyframes fadeInAst {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.ast-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--border-color, #313244);
+  padding-bottom: 10px;
+}
+
+.ast-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ast-badge {
+  background: #3b82f6;
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.ast-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary, #cdd6f4);
+  margin: 0;
+}
+
+.ast-formula {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.78rem;
+  color: var(--text-secondary, #a6adc8);
+  background: rgba(0, 0, 0, 0.25);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+
+.ast-presets {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.preset-label {
+  font-size: 0.76rem;
+  color: var(--text-secondary, #a6adc8);
+}
+
+.preset-chip {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #89b4fa;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.preset-chip:hover {
+  background: rgba(137, 180, 250, 0.18);
+  border-color: #89b4fa;
+  transform: translateY(-1px);
+}
+
+.ast-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.ast-input-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary, #a6adc8);
+  white-space: nowrap;
+}
+
+.ast-command-input {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid #45475a;
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.95rem;
+  color: #f9e2af;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.ast-command-input:focus {
+  border-color: #89b4fa;
+  box-shadow: 0 0 0 2px rgba(137, 180, 250, 0.2);
+}
+
+.ast-pipeline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  margin-bottom: 14px;
+}
+
+.ast-node-card {
+  display: flex;
+  flex-direction: column;
+  padding: 6px 12px;
+  border-radius: 6px;
+  min-width: 80px;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.node-register {
+  background: rgba(192, 132, 252, 0.15);
+  border: 1px solid #c084fc;
+  color: #c084fc;
+}
+
+.node-count1,
+.node-count2 {
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid #fbbf24;
+  color: #fbbf24;
+}
+
+.node-operator {
+  background: rgba(244, 63, 94, 0.15);
+  border: 1px solid #f43f5e;
+  color: #f43f5e;
+}
+
+.node-motion {
+  background: rgba(56, 189, 248, 0.15);
+  border: 1px solid #38bdf8;
+  color: #38bdf8;
+}
+
+.node-text_object {
+  background: rgba(34, 211, 238, 0.15);
+  border: 1px solid #22d3ee;
+  color: #22d3ee;
+}
+
+.node-action {
+  background: rgba(52, 211, 153, 0.15);
+  border: 1px solid #34d399;
+  color: #34d399;
+}
+
+.node-modifier_pending,
+.node-pending {
+  background: rgba(251, 146, 60, 0.15);
+  border: 1px dashed #fb923c;
+  color: #fb923c;
+  animation: pendingPulse 1.5s infinite;
+}
+
+@keyframes pendingPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(251, 146, 60, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(251, 146, 60, 0);
+  }
+}
+
+.node-val {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 1.15rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.node-label {
+  font-size: 0.68rem;
+  opacity: 0.85;
+  margin-top: 2px;
+}
+
+.ast-arrow {
+  color: var(--text-secondary, #6c7086);
+  font-size: 1.1rem;
+  font-weight: bold;
+}
+
+.ast-explanation-box {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: rgba(30, 41, 59, 0.7);
+  border-left: 4px solid #38bdf8;
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+
+.exp-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.exp-body {
+  flex: 1;
+}
+
+.exp-title {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #38bdf8;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+}
+
+.exp-text {
+  font-size: 0.92rem;
+  line-height: 1.45;
+  color: #e2e8f0;
+  margin: 0;
+}
+
+.ast-candidates-container {
+  background: rgba(244, 63, 94, 0.08);
+  border: 1px dashed rgba(244, 63, 94, 0.4);
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.candidates-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #f43f5e;
+  margin-bottom: 10px;
+}
+
+.candidates-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.candidate-category-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.category-name {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary, #a6adc8);
+  text-transform: uppercase;
+}
+
+.category-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.candidate-button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  padding: 3px 8px;
+  color: var(--text-primary, #cdd6f4);
+  cursor: pointer;
+  font-size: 0.76rem;
+  transition: all 0.15s ease;
+}
+
+.candidate-button:hover {
+  background: rgba(244, 63, 94, 0.2);
+  border-color: #f43f5e;
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.candidate-key {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: #f9e2af;
+}
+
+.candidate-name {
+  font-size: 0.72rem;
+  color: var(--text-secondary, #a6adc8);
+}
