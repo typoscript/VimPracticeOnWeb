@@ -257,3 +257,87 @@ export function saveSpeedrunRecord(
 
   return { record: recordToSave, isNewRecord };
 }
+
+export const HARDCORE_MODE_STORAGE_KEY = 'vim_hardcore_mode_v1';
+export const DOJO_HIGH_SCORES_STORAGE_KEY = 'vim_dojo_high_scores_v1';
+
+export interface DojoHighScore {
+  score: number;
+  targetsHit: number;
+  spm: number;
+  apm: number;
+  completedAt: string;
+}
+
+/**
+ * 하드코어 모드 활성화 여부를 불러옵니다 (기본값: false).
+ */
+export function loadHardcoreMode(): boolean {
+  try {
+    const raw = localStorage.getItem(HARDCORE_MODE_STORAGE_KEY);
+    return raw === 'true';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 하드코어 모드 활성화 여부를 저장합니다.
+ */
+export function saveHardcoreMode(enabled: boolean): void {
+  try {
+    localStorage.setItem(HARDCORE_MODE_STORAGE_KEY, enabled ? 'true' : 'false');
+  } catch {
+    // 무시
+  }
+}
+
+/**
+ * 도장(Dojo) 미니 드릴 최고 기록 목록을 불러옵니다.
+ */
+export function loadDojoHighScores(): Record<string, DojoHighScore> {
+  try {
+    const raw = localStorage.getItem(DOJO_HIGH_SCORES_STORAGE_KEY);
+    if (!raw) return {};
+    return JSON.parse(raw);
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * 특정 드릴의 최고 기록을 저장하고 갱신 여부를 반환합니다.
+ */
+export function saveDojoHighScore(
+  drillId: string,
+  record: { score: number; targetsHit: number; spm: number; apm: number }
+): { isNewRecord: boolean; currentBest: DojoHighScore } {
+  const all = loadDojoHighScores();
+  const existing = all[drillId];
+  let isNewRecord = false;
+
+  if (!existing || record.score > existing.score) {
+    isNewRecord = true;
+  }
+
+  const updatedRecord: DojoHighScore = isNewRecord
+    ? {
+        score: record.score,
+        targetsHit: record.targetsHit,
+        spm: record.spm,
+        apm: record.apm,
+        completedAt: new Date().toISOString(),
+      }
+    : existing!;
+
+  all[drillId] = updatedRecord;
+
+  try {
+    localStorage.setItem(DOJO_HIGH_SCORES_STORAGE_KEY, JSON.stringify(all));
+  } catch {
+    // 무시
+  }
+
+  return { isNewRecord, currentBest: updatedRecord };
+}
+

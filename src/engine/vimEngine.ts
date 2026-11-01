@@ -13,6 +13,9 @@ import {
   moveToNextWord,
   moveToPrevWord,
   moveToWordEnd,
+  moveToNextWORD,
+  moveToPrevWORD,
+  moveToWORDEnd,
 } from './motions';
 import {
   deleteWord,
@@ -1822,48 +1825,30 @@ function handleNormalModeKey(
         lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
       };
     }
-    if (key === 'w' || key === 'e') {
+    if (key === 'w' || key === 'e' || key === 'W' || key === 'E') {
       let target = state.cursor;
       for (let i = 0; i < parsed.totalCount; i++) {
-        target = key === 'w' ? moveToNextWord(state.lines, target) : moveToWordEnd(state.lines, target);
+        if (key === 'w') target = moveToNextWord(state.lines, target);
+        else if (key === 'W') target = moveToNextWORD(state.lines, target);
+        else if (key === 'e') target = moveToWordEnd(state.lines, target);
+        else if (key === 'E') target = moveToWORDEnd(state.lines, target);
       }
-      if (key === 'e') {
-        if (target.line !== state.cursor.line) {
-          const stateWithAnchor: VimEditorState = {
-            ...state,
-            mode: 'VISUAL',
-            visualAnchor: state.cursor,
-            cursor: target,
-          };
-          const delRes = deleteVisualSelection(stateWithAnchor);
-          const synced = syncRegisters(state, delRes, false);
-          return {
-            ...synced,
-            lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['d', 'e'],
-          };
-        }
-        const { line, col } = state.cursor;
-        const currentLine = state.lines[line] ?? '';
-        const deletedText = currentLine.slice(col, target.col + 1);
-        const newLine = currentLine.slice(0, col) + currentLine.slice(target.col + 1);
-        const nextLines = [...state.lines];
-        nextLines[line] = newLine;
-        const clampedCursor = clampCursor(nextLines, state.cursor, 'NORMAL');
-        const stateWithDel = {
-          ...pushUndoSnapshot(state),
-          lines: nextLines,
-          cursor: clampedCursor,
-          clipboard: {
-            type: 'text' as const,
-            content: deletedText,
-          },
-          pendingKeys: undefined,
+      if (key === 'e' || key === 'E' || key === 'W') {
+        const stateWithAnchor: VimEditorState = {
+          ...state,
+          mode: 'VISUAL',
+          visualAnchor: state.cursor,
+          cursor:
+            key === 'W' && target.line === state.cursor.line && target.col > state.cursor.col
+              ? { line: target.line, col: target.col - 1 }
+              : target,
         };
-        const synced = syncRegisters(state, stateWithDel, false);
+        const delRes = deleteVisualSelection(stateWithAnchor);
+        const synced = syncRegisters(state, delRes, false);
         const lKeys =
           parsed.totalCount > 1
-            ? [String(parsed.totalCount), 'd', 'e']
-            : ['d', 'e'];
+            ? [String(parsed.totalCount), 'd', key]
+            : ['d', key];
         return {
           ...synced,
           lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
@@ -1960,7 +1945,28 @@ function handleNormalModeKey(
         currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
       };
     }
-    if (key === 'w') {
+    if (key === 'w' || key === 'W') {
+      if (key === 'W') {
+        let target = state.cursor;
+        for (let i = 0; i < parsed.totalCount; i++) {
+          target = moveToWORDEnd(state.lines, target);
+        }
+        const stateWithAnchor: VimEditorState = {
+          ...state,
+          mode: 'VISUAL',
+          visualAnchor: state.cursor,
+          cursor: target,
+        };
+        const delRes = deleteVisualSelection(stateWithAnchor);
+        const synced = syncRegisters(state, delRes, false);
+        const cKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'c', 'W'] : ['c', 'W'];
+        return {
+          ...synced,
+          mode: 'INSERT',
+          cursor: { line: state.cursor.line, col: state.cursor.col },
+          currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
+        };
+      }
       const res = changeWord(state, parsed.totalCount);
       const synced = syncRegisters(state, res, false);
       const cKeys =
@@ -1972,10 +1978,10 @@ function handleNormalModeKey(
         currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
       };
     }
-    if (key === 'e') {
+    if (key === 'e' || key === 'E') {
       let target = state.cursor;
       for (let i = 0; i < parsed.totalCount; i++) {
-        target = moveToWordEnd(state.lines, target);
+        target = key === 'e' ? moveToWordEnd(state.lines, target) : moveToWORDEnd(state.lines, target);
       }
       const stateWithAnchor: VimEditorState = {
         ...state,
@@ -1987,8 +1993,8 @@ function handleNormalModeKey(
       const synced = syncRegisters(state, delRes, false);
       const cKeys =
         parsed.totalCount > 1
-          ? [String(parsed.totalCount), 'c', 'e']
-          : ['c', 'e'];
+          ? [String(parsed.totalCount), 'c', key]
+          : ['c', key];
       return {
         ...synced,
         mode: 'INSERT',
@@ -2036,34 +2042,26 @@ function handleNormalModeKey(
       const stateWithClip = yankFoldOrLine(state, parsed.totalCount);
       return syncRegisters(state, stateWithClip, true);
     }
-    if (key === 'w' || key === 'e') {
+    if (key === 'w' || key === 'e' || key === 'W' || key === 'E') {
       let target = state.cursor;
       for (let i = 0; i < parsed.totalCount; i++) {
-        target = key === 'w' ? moveToNextWord(state.lines, target) : moveToWordEnd(state.lines, target);
+        if (key === 'w') target = moveToNextWord(state.lines, target);
+        else if (key === 'W') target = moveToNextWORD(state.lines, target);
+        else if (key === 'e') target = moveToWordEnd(state.lines, target);
+        else if (key === 'E') target = moveToWORDEnd(state.lines, target);
       }
-      if (key === 'e') {
-        if (target.line !== state.cursor.line) {
-          const stateWithAnchor: VimEditorState = {
-            ...state,
-            mode: 'VISUAL',
-            visualAnchor: state.cursor,
-            cursor: target,
-          };
-          const res = yankVisualSelection(stateWithAnchor);
-          return syncRegisters(state, res, true);
-        }
-        const { line, col } = state.cursor;
-        const currentLine = state.lines[line] ?? '';
-        const yankedText = currentLine.slice(col, target.col + 1);
-        const stateWithClip: VimEditorState = {
+      if (key === 'e' || key === 'E' || key === 'W') {
+        const stateWithAnchor: VimEditorState = {
           ...state,
-          clipboard: {
-            type: 'text',
-            content: yankedText,
-          },
-          pendingKeys: undefined,
+          mode: 'VISUAL',
+          visualAnchor: state.cursor,
+          cursor:
+            key === 'W' && target.line === state.cursor.line && target.col > state.cursor.col
+              ? { line: target.line, col: target.col - 1 }
+              : target,
         };
-        return syncRegisters(state, stateWithClip, true);
+        const res = yankVisualSelection(stateWithAnchor);
+        return syncRegisters(state, res, true);
       }
       const { line, col } = state.cursor;
       const currentLine = state.lines[line] ?? '';
@@ -2624,12 +2622,24 @@ function evaluateMotionWithCount(
       for (let i = 0; i < count; i++) cur = moveToNextWord(lines, cur);
       break;
 
+    case 'W':
+      for (let i = 0; i < count; i++) cur = moveToNextWORD(lines, cur);
+      break;
+
     case 'b':
       for (let i = 0; i < count; i++) cur = moveToPrevWord(lines, cur);
       break;
 
+    case 'B':
+      for (let i = 0; i < count; i++) cur = moveToPrevWORD(lines, cur);
+      break;
+
     case 'e':
       for (let i = 0; i < count; i++) cur = moveToWordEnd(lines, cur);
+      break;
+
+    case 'E':
+      for (let i = 0; i < count; i++) cur = moveToWORDEnd(lines, cur);
       break;
 
     default:

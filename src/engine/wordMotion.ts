@@ -172,3 +172,151 @@ export function findWordEnd(lines: string[], cursor: CursorPosition): CursorPosi
   const lastLineIdx = lines.length - 1;
   return { line: lastLineIdx, col: getMaxCol(lines[lastLineIdx]) };
 }
+
+function isSpaceChar(ch: string | undefined): boolean {
+  if (!ch) return true;
+  return /\s/.test(ch);
+}
+
+/**
+ * 'W': 다음 WORD(공백으로만 구분되는 텍스트 덩어리)의 시작 위치로 이동합니다.
+ * 특수문자/기호를 단어 구분의 기준으로 삼지 않고 공백 기준으로만 건너뜁니다.
+ */
+export function findNextWORD(lines: string[], cursor: CursorPosition): CursorPosition {
+  if (lines.length === 0) return { line: 0, col: 0 };
+
+  let { line, col } = cursor;
+  line = Math.max(0, Math.min(line, lines.length - 1));
+  const currentLine = lines[line] ?? '';
+
+  if (currentLine.length === 0) {
+    for (let l = line + 1; l < lines.length; l++) {
+      const nextLine = lines[l];
+      if (nextLine.length === 0) {
+        return { line: l, col: 0 };
+      }
+      const match = nextLine.search(/\S/);
+      if (match !== -1) {
+        return { line: l, col: match };
+      }
+    }
+    return { line: lines.length - 1, col: getMaxCol(lines[lines.length - 1]) };
+  }
+
+  let c = col;
+  if (isSpaceChar(currentLine[c])) {
+    while (c < currentLine.length && isSpaceChar(currentLine[c])) {
+      c++;
+    }
+  } else {
+    // 현재 WORD 끝까지 건너뜀 (공백을 만날 때까지)
+    while (c < currentLine.length && !isSpaceChar(currentLine[c])) {
+      c++;
+    }
+    // 그 뒤의 공백들을 건너뜀
+    while (c < currentLine.length && isSpaceChar(currentLine[c])) {
+      c++;
+    }
+  }
+
+  if (c < currentLine.length) {
+    return { line, col: c };
+  }
+
+  for (let l = line + 1; l < lines.length; l++) {
+    const nextLine = lines[l];
+    if (nextLine.length === 0) {
+      return { line: l, col: 0 };
+    }
+    const match = nextLine.search(/\S/);
+    if (match !== -1) {
+      return { line: l, col: match };
+    }
+  }
+
+  const lastLineIdx = lines.length - 1;
+  return { line: lastLineIdx, col: getMaxCol(lines[lastLineIdx]) };
+}
+
+/**
+ * 'B': 이전 WORD(공백으로만 구분되는 텍스트 덩어리)의 시작 위치로 이동합니다.
+ */
+export function findPrevWORD(lines: string[], cursor: CursorPosition): CursorPosition {
+  if (lines.length === 0) return { line: 0, col: 0 };
+
+  let { line, col } = cursor;
+  line = Math.max(0, Math.min(line, lines.length - 1));
+
+  let l = line;
+  let c = col - 1;
+
+  while (l >= 0) {
+    if (c < 0) {
+      l--;
+      if (l < 0) break;
+      const prevLineText = lines[l] ?? '';
+      if (prevLineText.length === 0) {
+        return { line: l, col: 0 };
+      }
+      c = prevLineText.length - 1;
+    }
+
+    const currentLineText = lines[l] ?? '';
+    if (currentLineText.length === 0) {
+      return { line: l, col: 0 };
+    }
+
+    // 공백 건너뛰기
+    while (c >= 0 && isSpaceChar(currentLineText[c])) {
+      c--;
+    }
+
+    if (c >= 0) {
+      // WORD의 시작점까지 왼쪽으로 이동
+      while (c > 0 && !isSpaceChar(currentLineText[c - 1])) {
+        c--;
+      }
+      return { line: l, col: c };
+    }
+  }
+
+  return { line: 0, col: 0 };
+}
+
+/**
+ * 'E': 현재/다음 WORD(공백으로만 구분되는 텍스트 덩어리)의 끝 위치로 이동합니다.
+ */
+export function findWORDEnd(lines: string[], cursor: CursorPosition): CursorPosition {
+  if (lines.length === 0) return { line: 0, col: 0 };
+
+  let { line, col } = cursor;
+  line = Math.max(0, Math.min(line, lines.length - 1));
+
+  let l = line;
+  let c = col + 1;
+
+  while (l < lines.length) {
+    const lineText = lines[l] ?? '';
+
+    if (c >= lineText.length) {
+      l++;
+      if (l >= lines.length) break;
+      c = 0;
+      continue;
+    }
+
+    while (c < lineText.length && isSpaceChar(lineText[c])) {
+      c++;
+    }
+
+    if (c < lineText.length) {
+      while (c + 1 < lineText.length && !isSpaceChar(lineText[c + 1])) {
+        c++;
+      }
+      return { line: l, col: c };
+    }
+  }
+
+  const lastLineIdx = lines.length - 1;
+  return { line: lastLineIdx, col: getMaxCol(lines[lastLineIdx]) };
+}

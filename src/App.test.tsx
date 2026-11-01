@@ -364,4 +364,37 @@ describe('App Component with Keyboard Navigation', () => {
     expect(ctrlRSpy).toHaveBeenCalled();
     expect(slashSpy).toHaveBeenCalled();
   });
+
+  it('도장 탭 클릭 시 하드코어 도장(HardcoreDojo) 컴포넌트로 전환된다', () => {
+    render(<App />);
+
+    const dojoTabBtn = screen.getByTestId('tab-dojo-btn');
+    fireEvent.click(dojoTabBtn);
+
+    expect(screen.getByText(/하드코어 도장/)).toBeInTheDocument();
+    expect(screen.getAllByText('상대 라인 스나이퍼').length).toBeGreaterThan(0);
+  });
+
+  it('하드코어 수련 모드 토글 시 방향키 및 마우스 클릭을 차단하고 경고 배너를 띄운다', () => {
+    render(<App />);
+
+    const toggleHardcoreBtn = screen.getByTestId('toggle-hardcore-mode-btn');
+    expect(toggleHardcoreBtn).toHaveTextContent('OFF');
+
+    // 하드코어 모드 켜기
+    fireEvent.click(toggleHardcoreBtn);
+    expect(toggleHardcoreBtn).toHaveTextContent('ON');
+
+    // 방향키 ArrowDown 입력 -> 차단 및 배너 출력
+    fireEvent.keyDown(window, { key: 'ArrowDown' });
+
+    expect(screen.getByTestId('hardcore-warning-banner')).toBeInTheDocument();
+    expect(screen.getByText(/방향키 대신 hjkl/)).toBeInTheDocument();
+
+    // 에디터 영역 마우스 클릭 -> 마우스 경고 배너 출력
+    const editorViewport = screen.getByTestId('editor-main-viewport');
+    fireEvent.click(editorViewport);
+
+    expect(screen.getByText(/마우스 대신 Vim 모션/)).toBeInTheDocument();
+  });
 });

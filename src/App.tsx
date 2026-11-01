@@ -16,6 +16,7 @@ import { AnalyticsModal } from './components/AnalyticsModal/AnalyticsModal';
 import { DailyChallengeModal } from './components/DailyChallengeModal/DailyChallengeModal';
 import { ConfigExporterModal } from './components/ConfigExporterModal/ConfigExporterModal';
 import { DungeonRPG } from './components/DungeonRPG/DungeonRPG';
+import { HardcoreDojo } from './components/HardcoreDojo/HardcoreDojo';
 import { VimGrammarASTViewer } from './components/VimGrammarASTViewer/VimGrammarASTViewer';
 import { BYOCModal } from './components/BYOCModal/BYOCModal';
 import { ActionTimelinePanel } from './components/ActionTimelinePanel/ActionTimelinePanel';
@@ -48,11 +49,14 @@ import {
   saveActionTimelineSetting,
   loadSpeedrunRecord,
   saveSpeedrunRecord,
+  loadHardcoreMode,
+  saveHardcoreMode,
   SpeedrunRecord,
   LessonProgress,
 } from './utils/storage';
 import { normalizeImeKey } from './utils/imeHelper';
 import { AntiPatternDetector } from './utils/antiPatternDetector';
+import { HardcoreGuard } from './utils/hardcoreGuard';
 import {
   loadThemeSetting,
   saveThemeSetting,
@@ -91,9 +95,9 @@ export function App() {
   const initialChallenge = useRef(getChallengeFromUrl()).current;
   const initialCustomMission = initialChallenge ? createCustomMissionObject(initialChallenge) : null;
 
-  const [currentTab, setCurrentTab] = useState<'course' | 'sandbox' | 'speedrun' | 'custom' | 'arcade' | 'dungeon'>(
-    initialCustomMission ? 'custom' : 'course'
-  );
+  const [currentTab, setCurrentTab] = useState<
+    'course' | 'sandbox' | 'speedrun' | 'custom' | 'arcade' | 'dungeon' | 'dojo'
+  >(initialCustomMission ? 'custom' : 'course');
   const [customMission, setCustomMission] = useState<Mission | null>(initialCustomMission);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
@@ -101,6 +105,44 @@ export function App() {
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [isBYOCModalOpen, setIsBYOCModalOpen] = useState(false);
   const [showGrammarAST, setShowGrammarAST] = useState<boolean>(() => loadGrammarASTSetting());
+
+  // 🔥 하드코어 수련 모드 및 가드 상태
+  const [hardcoreMode, setHardcoreMode] = useState<boolean>(() => loadHardcoreMode());
+  const hardcoreGuardRef = useRef(new HardcoreGuard());
+  const [isEditorShaking, setIsEditorShaking] = useState(false);
+  const [hardcoreWarning, setHardcoreWarning] = useState<string | null>(null);
+  const shakeTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const handleToggleHardcoreMode = useCallback(() => {
+    setHardcoreMode((prev) => {
+      const next = !prev;
+      saveHardcoreMode(next);
+      return next;
+    });
+  }, []);
+
+  const triggerHardcoreViolation = useCallback((msg: string, suggestion?: string) => {
+    setIsEditorShaking(true);
+    setHardcoreWarning(`${msg}${suggestion ? ` 👉 ${suggestion}` : ''}`);
+
+    if (shakeTimerRef.current) clearTimeout(shakeTimerRef.current);
+    shakeTimerRef.current = setTimeout(() => {
+      setIsEditorShaking(false);
+    }, 400);
+
+    setTimeout(() => {
+      setHardcoreWarning(null);
+    }, 2500);
+  }, []);
+
+  const handleEditorAreaClick = useCallback(() => {
+    if (hardcoreMode) {
+      const check = hardcoreGuardRef.current.checkMouseClick();
+      if (check.blocked) {
+        triggerHardcoreViolation(check.message!, check.suggestion);
+      }
+    }
+  }, [hardcoreMode, triggerHardcoreViolation]);
 
   // 커스텀 키매핑 프리셋 및 리더 키 상태
   const [activePresets, setActivePresets] = useState<Record<string, boolean>>(() => loadActivePresets());
@@ -654,7 +696,7 @@ export function App() {
   );
 
   const handleSwitchTab = useCallback(
-    (tab: 'course' | 'sandbox' | 'speedrun' | 'custom' | 'arcade' | 'dungeon') => {
+    (tab: 'course' | 'sandbox' | 'speedrun' | 'custom' | 'arcade' | 'dungeon' | 'dojo') => {
       handleStopGhostReplay();
       setCurrentTab(tab);
       setLastPressedKey(undefined);
@@ -672,6 +714,8 @@ export function App() {
         // 아케이드 서바이벌 모드는 자체 상태를 갖습니다
       } else if (tab === 'dungeon') {
         // 던전 RPG 모드는 자체 상태를 갖습니다
+      } else if (tab === 'dojo') {
+        // 하드코어 도장 모드는 자체 상태를 갖습니다
       } else if (tab === 'custom' && customMission) {
         setEditorState({
           lines: [...customMission.initialLines],
@@ -722,6 +766,15 @@ export function App() {
       // 단독 보조 키 필터링
       if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(key)) {
         return;
+      }
+
+      // 🔥 하드코어 모드 가드 검사
+      if (hardcoreMode) {
+        const check = hardcoreGuardRef.current.checkKey(key, Date.now());
+        if (check.blocked) {
+          triggerHardcoreViolation(check.message!, check.suggestion);
+          return;
+        }
       }
 
       // 과거 스텝을 미리보는 중 키를 입력하면 해당 시점에서 자동 분기(Branch)
@@ -808,7 +861,7 @@ export function App() {
         setPendingActionKeys(nextActionKeys);
       }
     },
-    [currentTab, speedrunStatus, playKeySound]
+    [currentTab, speedrunStatus, playKeySound, hardcoreMode, triggerHardcoreViolation]
   );
 
   // 브라우저 윈도우 포커스/블러 감지
@@ -831,7 +884,7 @@ export function App() {
         return;
       }
 
-      // 모달이 열려 있거나 아케이드 모드일 때는 기본 에디터 키 입력을 차단
+      // 모달이 열려 있거나 아케이드/던전/도장 모드일 때는 기본 에디터 키 입력을 차단
       if (
         isModalOpen ||
         isCustomModalOpen ||
@@ -840,7 +893,8 @@ export function App() {
         isConfigModalOpen ||
         isBYOCModalOpen ||
         currentTab === 'arcade' ||
-        currentTab === 'dungeon'
+        currentTab === 'dungeon' ||
+        currentTab === 'dojo'
       ) {
         return;
       }
@@ -992,6 +1046,16 @@ export function App() {
         setCoachingMessage('⚠️ 현재 한글 입력 상태입니다. 원활한 Vim 명령어 입력을 위해 [한/영] 키를 눌러 영문 모드로 전환해 주세요!');
       }
 
+      // 🔥 하드코어 모드 가드: 방향키/연타 조기 차단
+      if (hardcoreMode) {
+        const check = hardcoreGuardRef.current.checkKey(normalizedKey, Date.now());
+        if (check.blocked) {
+          triggerHardcoreViolation(check.message!, check.suggestion);
+          e.preventDefault();
+          return;
+        }
+      }
+
       processKeyInput(normalizedKey);
     };
 
@@ -1011,6 +1075,8 @@ export function App() {
     handleStopGhostReplay,
     isEditorFocused,
     editorState.mode,
+    hardcoreMode,
+    triggerHardcoreViolation,
     processKeyInput,
   ]);
 
@@ -1081,6 +1147,15 @@ export function App() {
           >
             🗡️ 던전 RPG
           </button>
+          <button
+            role="tab"
+            aria-selected={currentTab === 'dojo'}
+            className={`nav-tab-btn ${currentTab === 'dojo' ? 'active' : ''}`}
+            onClick={() => handleSwitchTab('dojo')}
+            data-testid="tab-dojo-btn"
+          >
+            🥋 도장
+          </button>
           {customMission && (
             <button
               role="tab"
@@ -1095,6 +1170,16 @@ export function App() {
         </div>
 
         <div className="nav-actions">
+          {/* 🔥 하드코어 수련 모드 토글 스위치 */}
+          <button
+            className={`toolbar-btn hardcore-mode-btn ${hardcoreMode ? 'active' : ''}`}
+            onClick={handleToggleHardcoreMode}
+            data-testid="toggle-hardcore-mode-btn"
+            title="🔥 하드코어 수련 모드: 방향키 및 마우스 완전 차단, 1.5초 3회 초과 연타 무시"
+          >
+            {hardcoreMode ? '🔥 하드코어: ON' : '🔥 하드코어: OFF'}
+          </button>
+
           {/* 커스텀 키매핑 및 설정 파일 내보내기 모달 */}
           <button
             className="toolbar-btn config-export-btn"
@@ -1256,7 +1341,7 @@ export function App() {
         />
 
         {/* 실시간 Vim 명령어 문법 AST 인스펙터 */}
-        {showGrammarAST && currentTab !== 'arcade' && currentTab !== 'dungeon' && (
+        {showGrammarAST && currentTab !== 'arcade' && currentTab !== 'dungeon' && currentTab !== 'dojo' && (
           <VimGrammarASTViewer
             currentKeySequence={editorState.pendingKeys || ''}
             activeRegister={editorState.activeRegister}
@@ -1280,6 +1365,12 @@ export function App() {
             onPlayKeySound={playKeySound}
             onPlaySuccessSound={playSuccessSound}
             isMuted={isMuted}
+          />
+        ) : currentTab === 'dojo' ? (
+          <HardcoreDojo
+            onBackToCourse={() => handleSwitchTab('course')}
+            playKeySound={playKeySound}
+            playSuccessSound={playSuccessSound}
           />
         ) : (
           <>
@@ -1354,96 +1445,128 @@ export function App() {
               />
             )}
 
-            {/* 에디터 렌더링: 분할 창 모드 vs 단일 창 모드 */}
-            {editorState.splitDirection && editorState.splitDirection !== 'none' && editorState.splitPanes ? (
-              <div
-                className={`editor-split-container split-${editorState.splitDirection}`}
-                data-testid="editor-split-container"
-              >
-                {/* 왼쪽/상단 주 창 (Pane 0) */}
+            {/* 에디터 렌더링 영역 및 하드코어 셰이크/마우스 감시 */}
+            <div
+              className={`editor-main-viewport ${isEditorShaking ? 'shake-hardcore' : ''}`}
+              onClick={handleEditorAreaClick}
+              data-testid="editor-main-viewport"
+            >
+              {hardcoreWarning && (
                 <div
-                  className={`editor-split-pane ${editorState.activePaneIndex === 0 ? 'active' : ''}`}
-                  onClick={() => handleSwitchPane(0)}
-                  data-testid="split-pane-0"
+                  className="hardcore-warning-banner"
+                  role="alert"
+                  data-testid="hardcore-warning-banner"
                 >
-                  <div className="pane-header">
-                    <span className="pane-filename">
-                      📄 {editorState.primaryFilename || editorState.splitPanes[0].filename || 'source.ts'}
-                    </span>
-                    {editorState.activePaneIndex === 0 && <span className="pane-active-indicator">FOCUS</span>}
-                  </div>
-                  <Editor
-                    lines={editorState.activePaneIndex === 0 ? editorState.lines : editorState.splitPanes[0].lines}
-                    cursor={editorState.activePaneIndex === 0 ? editorState.cursor : editorState.splitPanes[0].cursor}
-                    mode={editorState.activePaneIndex === 0 ? editorState.mode : editorState.splitPanes[0].mode}
-                    targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
-                    visualAnchor={editorState.activePaneIndex === 0 ? editorState.visualAnchor : editorState.splitPanes[0].visualAnchor}
-                    relativeLineNumbers={relativeLineNumbers}
-                    searchQuery={
-                      editorState.activePaneIndex === 0 && editorState.mode === 'SEARCH'
-                        ? editorState.commandBuffer
-                        : editorState.lastSearchQuery
-                    }
-                    isFocused={isEditorFocused && editorState.activePaneIndex === 0}
-                    onFocus={() => handleSwitchPane(0)}
-                    marks={editorState.marks}
-                    viewport={editorState.activePaneIndex === 0 ? editorState.viewport : editorState.splitPanes[0].viewport}
-                    folds={editorState.folds}
-                  />
+                  <span>{hardcoreWarning}</span>
+                  <button
+                    type="button"
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontWeight: 'bold',
+                      color: 'inherit',
+                      marginLeft: '0.5rem',
+                    }}
+                    onClick={() => setHardcoreWarning(null)}
+                    aria-label="닫기"
+                  >
+                    ✕
+                  </button>
                 </div>
+              )}
 
-                {/* 오른쪽/하단 보조 창 (Pane 1) */}
+              {/* 에디터 렌더링: 분할 창 모드 vs 단일 창 모드 */}
+              {editorState.splitDirection && editorState.splitDirection !== 'none' && editorState.splitPanes ? (
                 <div
-                  className={`editor-split-pane ${editorState.activePaneIndex === 1 ? 'active' : ''}`}
-                  onClick={() => handleSwitchPane(1)}
-                  data-testid="split-pane-1"
+                  className={`editor-split-container split-${editorState.splitDirection}`}
+                  data-testid="editor-split-container"
                 >
-                  <div className="pane-header">
-                    <span className="pane-filename">
-                      📄 {editorState.secondaryFilename || editorState.splitPanes[1].filename || 'target.ts'}
-                    </span>
-                    {editorState.activePaneIndex === 1 && <span className="pane-active-indicator">FOCUS</span>}
+                  {/* 왼쪽/상단 주 창 (Pane 0) */}
+                  <div
+                    className={`editor-split-pane ${editorState.activePaneIndex === 0 ? 'active' : ''}`}
+                    onClick={() => handleSwitchPane(0)}
+                    data-testid="split-pane-0"
+                  >
+                    <div className="pane-header">
+                      <span className="pane-filename">
+                        📄 {editorState.primaryFilename || editorState.splitPanes[0].filename || 'source.ts'}
+                      </span>
+                      {editorState.activePaneIndex === 0 && <span className="pane-active-indicator">FOCUS</span>}
+                    </div>
+                    <Editor
+                      lines={editorState.activePaneIndex === 0 ? editorState.lines : editorState.splitPanes[0].lines}
+                      cursor={editorState.activePaneIndex === 0 ? editorState.cursor : editorState.splitPanes[0].cursor}
+                      mode={editorState.activePaneIndex === 0 ? editorState.mode : editorState.splitPanes[0].mode}
+                      targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
+                      visualAnchor={editorState.activePaneIndex === 0 ? editorState.visualAnchor : editorState.splitPanes[0].visualAnchor}
+                      relativeLineNumbers={relativeLineNumbers}
+                      searchQuery={
+                        editorState.activePaneIndex === 0 && editorState.mode === 'SEARCH'
+                          ? editorState.commandBuffer
+                          : editorState.lastSearchQuery
+                      }
+                      isFocused={isEditorFocused && editorState.activePaneIndex === 0}
+                      onFocus={() => handleSwitchPane(0)}
+                      marks={editorState.marks}
+                      viewport={editorState.activePaneIndex === 0 ? editorState.viewport : editorState.splitPanes[0].viewport}
+                      folds={editorState.folds}
+                    />
                   </div>
-                  <Editor
-                    lines={editorState.activePaneIndex === 1 ? editorState.lines : editorState.splitPanes[1].lines}
-                    cursor={editorState.activePaneIndex === 1 ? editorState.cursor : editorState.splitPanes[1].cursor}
-                    mode={editorState.activePaneIndex === 1 ? editorState.mode : editorState.splitPanes[1].mode}
-                    targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
-                    visualAnchor={editorState.activePaneIndex === 1 ? editorState.visualAnchor : editorState.splitPanes[1].visualAnchor}
-                    relativeLineNumbers={relativeLineNumbers}
-                    searchQuery={
-                      editorState.activePaneIndex === 1 && editorState.mode === 'SEARCH'
-                        ? editorState.commandBuffer
-                        : editorState.lastSearchQuery
-                    }
-                    isFocused={isEditorFocused && editorState.activePaneIndex === 1}
-                    onFocus={() => handleSwitchPane(1)}
-                    marks={editorState.marks}
-                    viewport={editorState.activePaneIndex === 1 ? editorState.viewport : editorState.splitPanes[1].viewport}
-                    folds={editorState.folds}
-                  />
+
+                  {/* 오른쪽/하단 보조 창 (Pane 1) */}
+                  <div
+                    className={`editor-split-pane ${editorState.activePaneIndex === 1 ? 'active' : ''}`}
+                    onClick={() => handleSwitchPane(1)}
+                    data-testid="split-pane-1"
+                  >
+                    <div className="pane-header">
+                      <span className="pane-filename">
+                        📄 {editorState.secondaryFilename || editorState.splitPanes[1].filename || 'target.ts'}
+                      </span>
+                      {editorState.activePaneIndex === 1 && <span className="pane-active-indicator">FOCUS</span>}
+                    </div>
+                    <Editor
+                      lines={editorState.activePaneIndex === 1 ? editorState.lines : editorState.splitPanes[1].lines}
+                      cursor={editorState.activePaneIndex === 1 ? editorState.cursor : editorState.splitPanes[1].cursor}
+                      mode={editorState.activePaneIndex === 1 ? editorState.mode : editorState.splitPanes[1].mode}
+                      targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
+                      visualAnchor={editorState.activePaneIndex === 1 ? editorState.visualAnchor : editorState.splitPanes[1].visualAnchor}
+                      relativeLineNumbers={relativeLineNumbers}
+                      searchQuery={
+                        editorState.activePaneIndex === 1 && editorState.mode === 'SEARCH'
+                          ? editorState.commandBuffer
+                          : editorState.lastSearchQuery
+                      }
+                      isFocused={isEditorFocused && editorState.activePaneIndex === 1}
+                      onFocus={() => handleSwitchPane(1)}
+                      marks={editorState.marks}
+                      viewport={editorState.activePaneIndex === 1 ? editorState.viewport : editorState.splitPanes[1].viewport}
+                      folds={editorState.folds}
+                    />
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <Editor
-                lines={displayEditorState.lines}
-                cursor={displayEditorState.cursor}
-                mode={displayEditorState.mode}
-                targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
-                visualAnchor={displayEditorState.visualAnchor}
-                relativeLineNumbers={relativeLineNumbers}
-                searchQuery={
-                  displayEditorState.mode === 'SEARCH'
-                    ? displayEditorState.commandBuffer
-                    : displayEditorState.lastSearchQuery
-                }
-                isFocused={isEditorFocused}
-                onFocus={() => setIsEditorFocused(true)}
-                marks={displayEditorState.marks}
-                viewport={displayEditorState.viewport}
-                folds={displayEditorState.folds}
-              />
-            )}
+              ) : (
+                <Editor
+                  lines={displayEditorState.lines}
+                  cursor={displayEditorState.cursor}
+                  mode={displayEditorState.mode}
+                  targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
+                  visualAnchor={displayEditorState.visualAnchor}
+                  relativeLineNumbers={relativeLineNumbers}
+                  searchQuery={
+                    displayEditorState.mode === 'SEARCH'
+                      ? displayEditorState.commandBuffer
+                      : displayEditorState.lastSearchQuery
+                  }
+                  isFocused={isEditorFocused}
+                  onFocus={() => setIsEditorFocused(true)}
+                  marks={displayEditorState.marks}
+                  viewport={displayEditorState.viewport}
+                  folds={displayEditorState.folds}
+                />
+              )}
+            </div>
             <Keycaster recentKeys={recentKeys} />
             <StatusBar
               mode={displayEditorState.mode}

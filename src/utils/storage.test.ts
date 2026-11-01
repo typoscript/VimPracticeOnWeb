@@ -10,6 +10,10 @@ import {
   saveDiffViewSetting,
   loadSpeedrunRecord,
   saveSpeedrunRecord,
+  loadHardcoreMode,
+  saveHardcoreMode,
+  loadDojoHighScores,
+  saveDojoHighScore,
   PROGRESS_STORAGE_KEY,
 } from './storage';
 
@@ -153,6 +157,52 @@ describe('storage utils', () => {
       const res = saveSpeedrunRecord(25.0, 20);
       expect(res.isNewRecord).toBe(false);
       expect(res.record.bestTimeSeconds).toBe(20.0);
+    });
+  });
+
+  describe('hardcore mode and dojo storage', () => {
+    it('하드코어 모드 설정값을 저장하고 불러온다', () => {
+      expect(loadHardcoreMode()).toBe(false);
+      saveHardcoreMode(true);
+      expect(loadHardcoreMode()).toBe(true);
+      saveHardcoreMode(false);
+      expect(loadHardcoreMode()).toBe(false);
+    });
+
+    it('도장 고득점 기록을 저장하고 갱신 여부를 판별한다', () => {
+      expect(loadDojoHighScores()).toEqual({});
+
+      const res1 = saveDojoHighScore('relative-jump', {
+        score: 1200,
+        targetsHit: 12,
+        spm: 24,
+        apm: 180,
+      });
+      expect(res1.isNewRecord).toBe(true);
+      expect(res1.currentBest.score).toBe(1200);
+
+      // 더 낮은 점수는 갱신되지 않음
+      const res2 = saveDojoHighScore('relative-jump', {
+        score: 1000,
+        targetsHit: 10,
+        spm: 20,
+        apm: 150,
+      });
+      expect(res2.isNewRecord).toBe(false);
+      expect(res2.currentBest.score).toBe(1200);
+
+      // 더 높은 점수는 갱신됨
+      const res3 = saveDojoHighScore('relative-jump', {
+        score: 1500,
+        targetsHit: 15,
+        spm: 30,
+        apm: 210,
+      });
+      expect(res3.isNewRecord).toBe(true);
+      expect(res3.currentBest.score).toBe(1500);
+
+      const all = loadDojoHighScores();
+      expect(all['relative-jump'].score).toBe(1500);
     });
   });
 });

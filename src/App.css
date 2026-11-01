@@ -406,3 +406,33 @@
   color: #7aa2f7;
   letter-spacing: 0.5px;
 }
+
+/* Hardcore Mode Shake Animation & Warning Banner */
+.shake-hardcore {
+  animation: hardcore-shake 0.35s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  box-shadow: 0 0 16px rgba(247, 118, 142, 0.6) !important;
+  border-color: #f7768e !important;
+}
+
+@keyframes hardcore-shake {
+  10%, 90% { transform: translate3d(-2px, 0, 0); }
+  20%, 80% { transform: translate3d(4px, 0, 0); }
+  30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
+  40%, 60% { transform: translate3d(6px, 0, 0); }
+}
+
+.hardcore-warning-banner {
+  background: #f7768e;
+  color: #1a1b26;
+  font-weight: 700;
+  font-size: 0.88rem;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 4px 12px rgba(247, 118, 142, 0.4);
+  animation: fadeIn 0.2s ease;
+}
+

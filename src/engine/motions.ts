@@ -1,6 +1,13 @@
 import { CursorPosition } from '../types/vim';
 import { clampCursor, getFirstNonBlankCol, getMaxCol } from './cursor';
-import { findNextWord, findPrevWord, findWordEnd } from './wordMotion';
+import {
+  findNextWord,
+  findPrevWord,
+  findWordEnd,
+  findNextWORD,
+  findPrevWORD,
+  findWORDEnd,
+} from './wordMotion';
 
 /**
  * 'h': 왼쪽으로 1칸 이동
@@ -129,4 +136,25 @@ export function moveToPrevWord(lines: string[], cursor: CursorPosition): CursorP
  */
 export function moveToWordEnd(lines: string[], cursor: CursorPosition): CursorPosition {
   return findWordEnd(lines, cursor);
+}
+
+/**
+ * 'W': 다음 WORD 시작 (공백 기준으로만 분리)
+ */
+export function moveToNextWORD(lines: string[], cursor: CursorPosition): CursorPosition {
+  return findNextWORD(lines, cursor);
+}
+
+/**
+ * 'B': 이전 WORD 시작 (공백 기준으로만 분리)
+ */
+export function moveToPrevWORD(lines: string[], cursor: CursorPosition): CursorPosition {
+  return findPrevWORD(lines, cursor);
+}
+
+/**
+ * 'E': WORD 끝 (공백 기준으로만 분리)
+ */
+export function moveToWORDEnd(lines: string[], cursor: CursorPosition): CursorPosition {
+  return findWORDEnd(lines, cursor);
 }
