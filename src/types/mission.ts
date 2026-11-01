@@ -11,6 +11,8 @@ export interface Mission {
   targetCursor?: { line: number; col: number };
   /** 목표 텍스트 상태 (Diff 비교 뷰용) */
   targetLines?: string[];
+  /** 3성(Par) 기준 모범 키 입력 시퀀스 (고스트 리플레이용) */
+  optimalKeys?: string[];
   initialUndoStack?: StateSnapshot[];
   initialClipboard?: ClipboardRegister;
   checkComplete: (state: VimEditorState) => boolean;

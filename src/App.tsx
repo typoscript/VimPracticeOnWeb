@@ -30,6 +30,7 @@ import {
   LessonProgress,
 } from './utils/storage';
 import { normalizeImeKey } from './utils/imeHelper';
+import { AntiPatternDetector } from './utils/antiPatternDetector';
 import {
   loadThemeSetting,
   saveThemeSetting,
@@ -43,8 +44,6 @@ import {
   CustomMissionData,
 } from './utils/customMission';
 import './App.css';
-
-const REPEATED_MOTION_KEYS = ['h', 'j', 'k', 'l', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
 
 /** 스피드런 챌린지 후보 미션 ID 목록 (리팩토링/편집 미션) */
 export const SPEEDRUN_CANDIDATE_IDS = [4, 6, 7, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19];
@@ -95,9 +94,17 @@ export function App() {
   const [recentKeys, setRecentKeys] = useState<string[]>([]);
   const [lastPressedKey, setLastPressedKey] = useState<string | undefined>(undefined);
 
-  // 안티 패턴 감지 코칭 메시지
+  // 스마트 코칭: 비효율적 입력 습관(안티패턴) 실시간 분석기
   const [coachingMessage, setCoachingMessage] = useState<string | null>(null);
-  const consecutiveMotionRef = useRef(0);
+  const antiPatternDetectorRef = useRef(new AntiPatternDetector());
+
+  // 최적 타수(Par) 모범 답안 고스트 리플레이 상태
+  const [isGhostReplaying, setIsGhostReplaying] = useState(false);
+  const [ghostReplayProgress, setGhostReplayProgress] = useState<{ current: number; total: number }>({
+    current: 0,
+    total: 0,
+  });
+  const ghostTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 스피드런 상태 관리
   const [speedrunStatus, setSpeedrunStatus] = useState<'ready' | 'running' | 'completed'>('ready');
@@ -218,8 +225,85 @@ export function App() {
     playSuccessSound,
   ]);
 
+  const handleStopGhostReplay = useCallback(() => {
+    if (ghostTimerRef.current) {
+      clearInterval(ghostTimerRef.current);
+      ghostTimerRef.current = null;
+    }
+    setIsGhostReplaying(false);
+    setLastPressedKey(undefined);
+  }, []);
+
+  const handleStartGhostReplay = useCallback(() => {
+    const keys = currentMission.optimalKeys;
+    if (!keys || keys.length === 0) return;
+
+    if (ghostTimerRef.current) {
+      clearInterval(ghostTimerRef.current);
+      ghostTimerRef.current = null;
+    }
+
+    let currentState: VimEditorState = {
+      lines: [...currentMission.initialLines],
+      cursor: { ...currentMission.initialCursor },
+      mode: 'NORMAL',
+      undoStack: currentMission.initialUndoStack ? [...currentMission.initialUndoStack] : [],
+      redoStack: [],
+      clipboard: currentMission.initialClipboard,
+    };
+    setEditorState(currentState);
+    setKeystrokeCount(0);
+    setRecentKeys([]);
+    setLastPressedKey(undefined);
+    setIsGhostReplaying(true);
+    setGhostReplayProgress({ current: 0, total: keys.length });
+
+    let step = 0;
+    ghostTimerRef.current = setInterval(() => {
+      if (step >= keys.length) {
+        if (ghostTimerRef.current) {
+          clearInterval(ghostTimerRef.current);
+          ghostTimerRef.current = null;
+        }
+        setIsGhostReplaying(false);
+        setLastPressedKey(undefined);
+        return;
+      }
+
+      const key = keys[step];
+      const prevMode = currentState.mode;
+      currentState = handleKey(currentState, key);
+      setEditorState(currentState);
+
+      setLastPressedKey(key);
+      playKeySound(key, prevMode);
+      setKeystrokeCount((prev) => prev + 1);
+      setRecentKeys((prev) => [...prev.slice(-7), key]);
+      step += 1;
+      setGhostReplayProgress({ current: step, total: keys.length });
+
+      if (step >= keys.length) {
+        if (ghostTimerRef.current) {
+          clearInterval(ghostTimerRef.current);
+          ghostTimerRef.current = null;
+        }
+        setIsGhostReplaying(false);
+        setLastPressedKey(undefined);
+      }
+    }, 350);
+  }, [currentMission, playKeySound]);
+
+  useEffect(() => {
+    return () => {
+      if (ghostTimerRef.current) {
+        clearInterval(ghostTimerRef.current);
+      }
+    };
+  }, []);
+
   const handleSelectMission = useCallback((index: number) => {
     if (index >= 0 && index < MISSIONS.length) {
+      handleStopGhostReplay();
       setCurrentMissionIndex(index);
       const nextMission = MISSIONS[index];
       setEditorState({
@@ -234,11 +318,12 @@ export function App() {
       setRecentKeys([]);
       setLastPressedKey(undefined);
       setCoachingMessage(null);
-      consecutiveMotionRef.current = 0;
+      antiPatternDetectorRef.current.reset();
     }
-  }, []);
+  }, [handleStopGhostReplay]);
 
   const handleResetMission = useCallback(() => {
+    handleStopGhostReplay();
     setEditorState({
       lines: currentMission.initialLines,
       cursor: currentMission.initialCursor,
@@ -251,10 +336,11 @@ export function App() {
     setRecentKeys([]);
     setLastPressedKey(undefined);
     setCoachingMessage(null);
-    consecutiveMotionRef.current = 0;
-  }, [currentMission]);
+    antiPatternDetectorRef.current.reset();
+  }, [currentMission, handleStopGhostReplay]);
 
   const handleResetSandbox = useCallback(() => {
+    handleStopGhostReplay();
     setEditorState({
       lines: [...SANDBOX_INITIAL_LINES],
       cursor: { line: 0, col: 0 },
@@ -266,10 +352,11 @@ export function App() {
     setRecentKeys([]);
     setLastPressedKey(undefined);
     setCoachingMessage(null);
-    consecutiveMotionRef.current = 0;
-  }, []);
+    antiPatternDetectorRef.current.reset();
+  }, [handleStopGhostReplay]);
 
   const handleStartSpeedrun = useCallback(() => {
+    handleStopGhostReplay();
     const newStages = generateSpeedrunStages();
     setSpeedrunStages(newStages);
     setSpeedrunCurrentStage(0);
@@ -290,10 +377,12 @@ export function App() {
     setRecentKeys([]);
     setLastPressedKey(undefined);
     setCoachingMessage(null);
-  }, []);
+    antiPatternDetectorRef.current.reset();
+  }, [handleStopGhostReplay]);
 
   const handleResetCustomMission = useCallback(() => {
     if (!customMission) return;
+    handleStopGhostReplay();
     setEditorState({
       lines: [...customMission.initialLines],
       cursor: { ...customMission.initialCursor },
@@ -305,10 +394,11 @@ export function App() {
     setRecentKeys([]);
     setLastPressedKey(undefined);
     setCoachingMessage(null);
-    consecutiveMotionRef.current = 0;
-  }, [customMission]);
+    antiPatternDetectorRef.current.reset();
+  }, [customMission, handleStopGhostReplay]);
 
   const handlePlayCustomMission = useCallback((data: CustomMissionData) => {
+    handleStopGhostReplay();
     const newMission = createCustomMissionObject(data);
     setCustomMission(newMission);
     setCurrentTab('custom');
@@ -323,15 +413,16 @@ export function App() {
     setRecentKeys([]);
     setLastPressedKey(undefined);
     setCoachingMessage(`⛳ 커스텀 미션 [${newMission.title}] 시작! 최소 타수로 완성을 노려보세요.`);
-    consecutiveMotionRef.current = 0;
-  }, []);
+    antiPatternDetectorRef.current.reset();
+  }, [handleStopGhostReplay]);
 
   const handleSwitchTab = useCallback(
     (tab: 'course' | 'sandbox' | 'speedrun' | 'custom') => {
+      handleStopGhostReplay();
       setCurrentTab(tab);
       setLastPressedKey(undefined);
       setCoachingMessage(null);
-      consecutiveMotionRef.current = 0;
+      antiPatternDetectorRef.current.reset();
 
       if (tab === 'sandbox') {
         handleResetSandbox();
@@ -364,7 +455,7 @@ export function App() {
         setRecentKeys([]);
       }
     },
-    [currentMissionIndex, handleResetSandbox, customMission]
+    [currentMissionIndex, handleResetSandbox, customMission, handleStopGhostReplay]
   );
 
   const handleToggleRelativeLine = useCallback(() => {
@@ -410,19 +501,19 @@ export function App() {
         setSpeedrunKeystrokes((prev) => prev + 1);
       }
 
-      // 안티 패턴 감지: 단일 이동 키 5회 이상 연속 연타
-      if (REPEATED_MOTION_KEYS.includes(key)) {
-        consecutiveMotionRef.current += 1;
-        if (consecutiveMotionRef.current >= 5) {
-          setCoachingMessage('이동 키를 연타하는 대신 w, b 또는 숫자+이동(예: 5j)을 사용해 보세요!');
-        }
-      } else {
-        consecutiveMotionRef.current = 0;
+      // 스마트 코칭 시스템: 비효율적 입력 습관(안티패턴) 실시간 감지
+      const coachingAdvice = antiPatternDetectorRef.current.processKey(
+        key,
+        editorState.mode,
+        editorState.pendingKeys
+      );
+      if (coachingAdvice) {
+        setCoachingMessage(coachingAdvice);
       }
 
       setEditorState((prevState) => handleKey(prevState, key));
     },
-    [currentTab, speedrunStatus, editorState.mode, playKeySound]
+    [currentTab, speedrunStatus, editorState.mode, editorState.pendingKeys, playKeySound]
   );
 
   // 브라우저 윈도우 포커스/블러 감지
@@ -439,6 +530,12 @@ export function App() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // 고스트 리플레이 재생 중 사용자가 키를 누르면 리플레이 중지
+      if (isGhostReplaying) {
+        handleStopGhostReplay();
+        return;
+      }
+
       // 모달이 열려 있을 때는 에디터 키 입력을 차단
       if (isModalOpen || isCustomModalOpen) {
         return;
@@ -526,7 +623,15 @@ export function App() {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isModalOpen, isCustomModalOpen, isEditorFocused, editorState.mode, processKeyInput]);
+  }, [
+    isModalOpen,
+    isCustomModalOpen,
+    isGhostReplaying,
+    handleStopGhostReplay,
+    isEditorFocused,
+    editorState.mode,
+    processKeyInput,
+  ]);
 
   const activeMissionForDiff =
     currentTab === 'course'
@@ -694,6 +799,10 @@ export function App() {
             keystrokeCount={keystrokeCount}
             onSelectMission={handleSelectMission}
             onResetMission={handleResetMission}
+            onStartGhostReplay={handleStartGhostReplay}
+            onStopGhostReplay={handleStopGhostReplay}
+            isGhostReplaying={isGhostReplaying}
+            ghostReplayProgress={ghostReplayProgress}
           />
         )}
 

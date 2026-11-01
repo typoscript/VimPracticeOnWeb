@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { MISSIONS } from './missions';
 import { VimEditorState } from '../types/vim';
+import { handleKey } from '../engine/vimEngine';
 
 describe('MISSIONS 10 ~ 12 validation', () => {
   it('레슨 10 (숫자 반복 카운트) 설정 및 완료 조건이 정상 동작한다', () => {
@@ -239,5 +240,30 @@ describe('MISSIONS 10 ~ 12 validation', () => {
       mode: 'NORMAL',
     };
     expect(lesson19!.checkComplete(stateDone)).toBe(true);
+  });
+
+  it('모든 19개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(19);
+
+    MISSIONS.forEach((m) => {
+      expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();
+      expect(m.optimalKeys!.length).toBeGreaterThan(0);
+      expect(m.optimalKeys!.length).toBeLessThanOrEqual(m.par);
+
+      let state: VimEditorState = {
+        lines: [...m.initialLines],
+        cursor: { ...m.initialCursor },
+        mode: 'NORMAL',
+        undoStack: m.initialUndoStack ? [...m.initialUndoStack] : [],
+        redoStack: [],
+        clipboard: m.initialClipboard,
+      };
+
+      for (const key of m.optimalKeys!) {
+        state = handleKey(state, key);
+      }
+
+      expect(m.checkComplete(state), `레슨 ${m.id} (${m.title}) optimalKeys 실행 후 미션이 통과되어야 합니다.`).toBe(true);
+    });
   });
 });

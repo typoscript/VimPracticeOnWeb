@@ -10,6 +10,10 @@ export interface MissionPanelProps {
   keystrokeCount: number;
   onSelectMission: (index: number) => void;
   onResetMission: () => void;
+  onStartGhostReplay?: () => void;
+  onStopGhostReplay?: () => void;
+  isGhostReplaying?: boolean;
+  ghostReplayProgress?: { current: number; total: number };
 }
 
 /**
@@ -36,6 +40,10 @@ export const MissionPanel: React.FC<MissionPanelProps> = ({
   keystrokeCount,
   onSelectMission,
   onResetMission,
+  onStartGhostReplay,
+  onStopGhostReplay,
+  isGhostReplaying,
+  ghostReplayProgress,
 }) => {
   const [showHint, setShowHint] = useState(false);
 
@@ -100,7 +108,23 @@ export const MissionPanel: React.FC<MissionPanelProps> = ({
         {mission.description}
       </p>
 
-      {isCompleted && (
+      {isGhostReplaying && ghostReplayProgress && onStopGhostReplay && (
+        <div className="ghost-replay-banner" data-testid="ghost-replay-banner">
+          <span className="ghost-replay-label">
+            🎬 최적 모범 답안 자동 재생 중... ({ghostReplayProgress.current}/{ghostReplayProgress.total}타)
+          </span>
+          <button
+            type="button"
+            className="stop-replay-btn"
+            onClick={onStopGhostReplay}
+            data-testid="stop-optimal-replay-btn"
+          >
+            ⏹️ 재생 중지
+          </button>
+        </div>
+      )}
+
+      {isCompleted && !isGhostReplaying && (
         <div className="mission-success-banner" data-testid="mission-success-banner">
           <div className="mission-success-info">
             <span className="mission-success-title">🎉 미션 클리어!</span>
@@ -111,6 +135,19 @@ export const MissionPanel: React.FC<MissionPanelProps> = ({
                 (기록: {keystrokeCount}타 / 기준 Par: {mission.par}타)
               </span>
             </div>
+            {mission.optimalKeys && mission.optimalKeys.length > 0 && onStartGhostReplay && (
+              <div className="optimal-replay-action">
+                <button
+                  type="button"
+                  className="optimal-replay-btn"
+                  onClick={onStartGhostReplay}
+                  data-testid="play-optimal-replay-btn"
+                  title="3성(Par) 기준 최적 모범 타수 자동 재생 보기"
+                >
+                  ✨ 최적 타수(Par) 모범 답안 보기 ({mission.optimalKeys.length}타)
+                </button>
+              </div>
+            )}
           </div>
           {hasNext && (
             <button

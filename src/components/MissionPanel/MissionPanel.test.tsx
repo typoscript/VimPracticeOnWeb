@@ -128,4 +128,57 @@ describe('MissionPanel Component', () => {
 
     expect(handleReset).toHaveBeenCalledTimes(1);
   });
+
+  it('renders optimal replay button when completed and optimalKeys exist', () => {
+    const handleStartGhostReplay = vi.fn();
+    const missionWithOptimal: Mission = {
+      ...mockMission,
+      optimalKeys: ['j', 'j', 'w'],
+    };
+
+    render(
+      <MissionPanel
+        mission={missionWithOptimal}
+        missionIndex={0}
+        totalMissions={5}
+        isCompleted={true}
+        keystrokeCount={6}
+        onSelectMission={vi.fn()}
+        onResetMission={vi.fn()}
+        onStartGhostReplay={handleStartGhostReplay}
+      />
+    );
+
+    const replayBtn = screen.getByTestId('play-optimal-replay-btn');
+    expect(replayBtn).toBeInTheDocument();
+    expect(replayBtn).toHaveTextContent(/최적 타수\(Par\) 모범 답안 보기 \(3타\)/);
+
+    fireEvent.click(replayBtn);
+    expect(handleStartGhostReplay).toHaveBeenCalledTimes(1);
+  });
+
+  it('renders ghost replay banner when isGhostReplaying is true and stops on click', () => {
+    const handleStopGhostReplay = vi.fn();
+
+    render(
+      <MissionPanel
+        mission={mockMission}
+        missionIndex={0}
+        totalMissions={5}
+        isCompleted={true}
+        keystrokeCount={0}
+        onSelectMission={vi.fn()}
+        onResetMission={vi.fn()}
+        isGhostReplaying={true}
+        ghostReplayProgress={{ current: 2, total: 5 }}
+        onStopGhostReplay={handleStopGhostReplay}
+      />
+    );
+
+    expect(screen.getByTestId('ghost-replay-banner')).toHaveTextContent(/2\/5타/);
+    const stopBtn = screen.getByTestId('stop-optimal-replay-btn');
+    fireEvent.click(stopBtn);
+
+    expect(handleStopGhostReplay).toHaveBeenCalledTimes(1);
+  });
 });
