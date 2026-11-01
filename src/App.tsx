@@ -610,6 +610,24 @@ export function App() {
         }
       }
 
+      // Ctrl+d 또는 Cmd+d: 반 페이지 아래 스크롤 (브라우저 북마크 차단)
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
+        if (editorState.mode === 'NORMAL' || editorState.mode.startsWith('VISUAL')) {
+          e.preventDefault();
+          processKeyInput('Ctrl-d');
+          return;
+        }
+      }
+
+      // Ctrl+u 또는 Cmd+u: 반 페이지 위 스크롤 (브라우저 소스 보기 차단)
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'u' || e.key === 'U')) {
+        if (editorState.mode === 'NORMAL' || editorState.mode.startsWith('VISUAL')) {
+          e.preventDefault();
+          processKeyInput('Ctrl-u');
+          return;
+        }
+      }
+
       // 그 외 메타 키 조합은 브라우저 기본 단축키 허용
       if (e.metaKey || e.ctrlKey || e.altKey) {
         return;
@@ -818,6 +836,8 @@ export function App() {
         <span className="cheat-item"><code>.</code> 직전 변경 반복</span>
         <span className="cheat-item"><code>m ' Ctrl-o</code> 마크/점프</span>
         <span className="cheat-item"><code>J ~ &gt;&gt; Ctrl-a</code> 라인/편집</span>
+        <span className="cheat-item"><code>:g :norm</code> 일괄/글로벌</span>
+        <span className="cheat-item"><code>zz H M L</code> 뷰포트/스크롤</span>
         <span className="cheat-item"><code>p</code> 붙여넣기</span>
         <span className="cheat-item"><code>u / Ctrl-r</code> 실행취소/다시실행</span>
       </section>
@@ -904,6 +924,7 @@ export function App() {
           isFocused={isEditorFocused}
           onFocus={() => setIsEditorFocused(true)}
           marks={editorState.marks}
+          viewport={editorState.viewport}
         />
         <Keycaster recentKeys={recentKeys} />
         <StatusBar

@@ -38,6 +38,11 @@ export interface BlockInsertSession {
   typedChars: string[];    // INSERT 세션 중 입력된 문자 목록
 }
 
+export interface ViewportState {
+  topRow: number;       // 현재 화면 최상단 행 번호 (0-indexed)
+  visibleRows: number;  // 화면에 한 번에 표시되는 행 개수
+}
+
 export interface VimEditorState {
   lines: string[];
   cursor: CursorPosition;
@@ -75,6 +80,8 @@ export interface VimEditorState {
   jumpIndex?: number;
   /** 비주얼 블록(Ctrl+v) 다중 줄 동시 삽입 세션 */
   blockInsertSession?: BlockInsertSession | null;
+  /** 화면 뷰포트 상태 (zz, zt, zb, H, M, L, Ctrl+d/u 스크롤용) */
+  viewport?: ViewportState;
 }
 
 export type VimState = VimEditorState;

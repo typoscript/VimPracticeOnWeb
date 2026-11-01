@@ -1,5 +1,5 @@
 import React from 'react';
-import { CursorPosition, VimMode, SearchMatch } from '../../types/vim';
+import { CursorPosition, VimMode, SearchMatch, ViewportState } from '../../types/vim';
 import { isPositionSelected } from '../../engine/visual';
 import { findMatches } from '../../engine/search';
 import './Editor.css';
@@ -20,6 +20,8 @@ export interface EditorProps {
   onFocus?: () => void;
   /** 마크 위치 목록 (m{a-z}) */
   marks?: Record<string, { row: number; col: number }>;
+  /** 화면 뷰포트 상태 */
+  viewport?: ViewportState;
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -33,7 +35,17 @@ export const Editor: React.FC<EditorProps> = ({
   isFocused = true,
   onFocus,
   marks,
+  viewport,
 }) => {
+  const scrollerRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    if (scrollerRef.current && viewport) {
+      const rowHeight = 24;
+      scrollerRef.current.scrollTop = viewport.topRow * rowHeight;
+    }
+  }, [viewport?.topRow]);
+
   // 전체 검색 일치 항목 수집
   const allMatches = searchQuery && searchQuery.length > 0
     ? findMatches(lines, searchQuery)
@@ -58,7 +70,7 @@ export const Editor: React.FC<EditorProps> = ({
         </div>
       )}
 
-      <div className="editor-scroller">
+      <div ref={scrollerRef} className="editor-scroller">
         <div className="editor-lines">
           {lines.map((lineText, lineIdx) => {
             const isCursorLine = cursor.line === lineIdx;

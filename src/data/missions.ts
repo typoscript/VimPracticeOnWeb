@@ -495,4 +495,37 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 22,
+    title: '레슨 22: :g 글로벌 명령과 :norm으로 초고속 일괄 편집 (:g/pattern/d, :norm)',
+    description: ':g/console/d 명령으로 불필요한 디버그 로그 줄을 한 번에 삭제하고, :%norm A; 명령으로 남은 모든 줄 끝에 세미콜론(;)을 추가하세요.',
+    hint: ':g/console/d 를 입력해 엔터를 누르면 콘솔 로그 줄이 모두 삭제됩니다. 그 다음 :%norm A; 를 실행하면 모든 줄 끝에 ;이 일괄 추가됩니다.',
+    par: 24,
+    optimalKeys: [
+      ':', 'g', '/', 'c', 'o', 'n', 's', 'o', 'l', 'e', '/', 'd', 'Enter',
+      ':', '%', 'n', 'o', 'r', 'm', ' ', 'A', ';', 'Enter',
+    ],
+    initialLines: [
+      'const a = 1',
+      'console.log("debug: a is", a)',
+      'const b = 2',
+      'console.log("debug: b is", b)',
+      'const sum = a + b',
+    ],
+    targetLines: [
+      'const a = 1;',
+      'const b = 2;',
+      'const sum = a + b;',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines.length === 3 &&
+        state.lines[0] === 'const a = 1;' &&
+        state.lines[1] === 'const b = 2;' &&
+        state.lines[2] === 'const sum = a + b;'
+      );
+    },
+  },
 ];

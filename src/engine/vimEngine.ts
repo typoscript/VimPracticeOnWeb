@@ -53,6 +53,18 @@ import {
 } from './search';
 import { executeCommandLine } from './commandLine';
 import {
+  scrollToCenter,
+  scrollToTop,
+  scrollToBottom,
+  cursorToHigh,
+  cursorToMiddle,
+  cursorToLow,
+  scrollHalfPageDown,
+  scrollHalfPageUp,
+  adjustViewport,
+  getViewport,
+} from './viewport';
+import {
   recordJump,
   jumpOlder,
   jumpNewer,
@@ -153,27 +165,33 @@ export function handleKey(
     }
   }
 
+  let nextState: VimEditorState;
   if (state.mode === 'SEARCH') {
-    return handleSearchModeKey(state, key);
+    nextState = handleSearchModeKey(state, key);
+  } else if (state.mode === 'COMMAND') {
+    nextState = handleCommandLineModeKey(state, key);
+  } else if (state.mode === 'INSERT') {
+    nextState = handleInsertModeKey(state, key, isReplayingDot);
+  } else if (state.mode === 'VISUAL' || state.mode === 'VISUAL_LINE' || state.mode === 'VISUAL_BLOCK') {
+    nextState = handleVisualModeKey(state, key);
+  } else if (state.mode === 'NORMAL') {
+    nextState = handleNormalModeKey(state, key, isReplayingDot, macroDepth);
+  } else {
+    nextState = state;
   }
 
-  if (state.mode === 'COMMAND') {
-    return handleCommandLineModeKey(state, key);
+  // 커서 이동 시 화면 뷰포트 자동 동기화 (커서가 화면을 벗어나지 않도록 보정)
+  if (nextState.cursor && nextState.lines) {
+    const vp = adjustViewport(getViewport(nextState), nextState.cursor.line, nextState.lines.length);
+    if (!nextState.viewport || nextState.viewport.topRow !== vp.topRow || nextState.viewport.visibleRows !== vp.visibleRows) {
+      return {
+        ...nextState,
+        viewport: vp,
+      };
+    }
   }
 
-  if (state.mode === 'INSERT') {
-    return handleInsertModeKey(state, key, isReplayingDot);
-  }
-
-  if (state.mode === 'VISUAL' || state.mode === 'VISUAL_LINE' || state.mode === 'VISUAL_BLOCK') {
-    return handleVisualModeKey(state, key);
-  }
-
-  if (state.mode === 'NORMAL') {
-    return handleNormalModeKey(state, key, isReplayingDot, macroDepth);
-  }
-
-  return state;
+  return nextState;
 }
 
 /**
@@ -291,7 +309,7 @@ function handleCommandLineModeKey(state: VimEditorState, key: string): VimEditor
   }
 
   if (key === 'Enter') {
-    return executeCommandLine(state, state.commandBuffer ?? '');
+    return executeCommandLine(state, state.commandBuffer ?? '', handleKey);
   }
 
   // 일반 타이핑 문자 누적
@@ -613,6 +631,39 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
     if (key === 'c') {
       return startVisualBlockInsert(state, 'c');
     }
+  }
+
+  // ':' 키: VISUAL 선택 영역 범위를 포함하여 커맨드라인 모드 진입 (:'<,'>)
+  if (key === ':') {
+    return {
+      ...state,
+      mode: 'COMMAND',
+      commandType: ':',
+      commandBuffer: "'<,'>",
+      pendingKeys: undefined,
+    };
+  }
+
+  // 화면 뷰포트 기준 이동 및 스크롤 (H, M, L, Ctrl-d, Ctrl-u)
+  if (key === 'H') {
+    const res = cursorToHigh(state);
+    return { ...state, cursor: res.cursor, pendingKeys: undefined };
+  }
+  if (key === 'M') {
+    const res = cursorToMiddle(state);
+    return { ...state, cursor: res.cursor, pendingKeys: undefined };
+  }
+  if (key === 'L') {
+    const res = cursorToLow(state);
+    return { ...state, cursor: res.cursor, pendingKeys: undefined };
+  }
+  if (key === 'Ctrl-d' || key === 'Ctrl+d' || key === 'ctrl-d') {
+    const res = scrollHalfPageDown(state);
+    return { ...state, cursor: res.cursor, viewport: res.viewport, pendingKeys: undefined };
+  }
+  if (key === 'Ctrl-u' || key === 'Ctrl+u' || key === 'ctrl-u') {
+    const res = scrollHalfPageUp(state);
+    return { ...state, cursor: res.cursor, viewport: res.viewport, pendingKeys: undefined };
   }
 
   // '%' 키: 짝이 되는 괄호로 선택 영역 확장
@@ -1015,6 +1066,34 @@ function handleNormalModeKey(
       ...res,
       lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
     };
+  }
+
+  // 뷰포트 스크롤 및 화면 기준 커서 이동:
+  // H, M, L: 화면 뷰포트 기준 최상단, 중앙, 최하단 줄로 이동
+  if (key === 'H' && !parsed.operator) {
+    return cursorToHigh(state);
+  }
+  if (key === 'M' && !parsed.operator) {
+    return cursorToMiddle(state);
+  }
+  if (key === 'L' && !parsed.operator) {
+    return cursorToLow(state);
+  }
+
+  // Ctrl-d / Ctrl-u: 반 페이지 아래/위 스크롤
+  if ((key === 'Ctrl-d' || key === 'Ctrl+d' || key === 'ctrl-d') && !parsed.operator) {
+    return scrollHalfPageDown(state);
+  }
+  if ((key === 'Ctrl-u' || key === 'Ctrl+u' || key === 'ctrl-u') && !parsed.operator) {
+    return scrollHalfPageUp(state);
+  }
+
+  // zz, zt, zb: 뷰포트 정렬
+  if (state.pendingKeys === 'z' || parsed.operator === 'z') {
+    if (key === 'z') return scrollToCenter(state);
+    if (key === 't') return scrollToTop(state);
+    if (key === 'b') return scrollToBottom(state);
+    return { ...state, pendingKeys: undefined };
   }
 
   // 1-0-7. J: 줄 이어 붙이기
@@ -1448,11 +1527,11 @@ function handleNormalModeKey(
     state = { ...state, pendingKeys: undefined };
   }
 
-  // 9. 연산자 및 매크로 키 등록 (d, c, r, g, y, f, F, t, T, @, q, m, ', `, >, <, =)
+  // 9. 연산자 및 매크로 키 등록 (d, c, r, g, y, f, F, t, T, @, q, m, ', `, >, <, =, z)
   if (
     key === 'd' || key === 'c' || key === 'r' || key === 'g' || key === 'y' ||
     key === '@' || key === '>' || key === '<' || key === '=' || key === 'm' ||
-    key === "'" || key === '`'
+    key === "'" || key === '`' || key === 'z'
   ) {
     return {
       ...state,

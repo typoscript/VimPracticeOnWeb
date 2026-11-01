@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { executeCommandLine } from './commandLine';
+import { handleKey } from './vimEngine';
 import { VimEditorState } from '../types/vim';
 
 describe('commandLine module', () => {
@@ -107,5 +108,98 @@ describe('commandLine module', () => {
     const subWithSpace = executeCommandLine(state, ':%s /apple/banana/g');
     expect(subWithSpace.lines[0]).toBe('Line 1: banana and banana');
     expect(subWithSpace.commandMessage).toContain('3개 항목을 치환했습니다');
+  });
+
+  describe('고급 Ex 커맨드 (:g, :v, :norm, :[range]d/y)', () => {
+    it(':g/TODO/d 명령으로 특정 패턴이 포함된 줄을 일괄 삭제한다', () => {
+      const state: VimEditorState = {
+        lines: [
+          'const a = 1;',
+          '// TODO: remove this',
+          'const b = 2;',
+          '// TODO: remove that',
+          'const c = 3;',
+        ],
+        cursor: { line: 0, col: 0 },
+        mode: 'COMMAND',
+      };
+
+      const result = executeCommandLine(state, 'g/TODO/d');
+      expect(result.lines).toEqual(['const a = 1;', 'const b = 2;', 'const c = 3;']);
+      expect(result.commandMessage).toContain('2개 줄이 일괄 삭제되었습니다.');
+      expect(result.undoStack).toHaveLength(1);
+    });
+
+    it(':v/keep/d 및 :g!/keep/d 명령으로 특정 패턴이 없는 줄을 일괄 삭제한다', () => {
+      const state: VimEditorState = {
+        lines: [
+          'keep me 1',
+          'drop me 1',
+          'keep me 2',
+          'drop me 2',
+        ],
+        cursor: { line: 0, col: 0 },
+        mode: 'COMMAND',
+      };
+
+      const resultV = executeCommandLine(state, 'v/keep/d');
+      expect(resultV.lines).toEqual(['keep me 1', 'keep me 2']);
+
+      const resultGExcl = executeCommandLine(state, 'g!/keep/d');
+      expect(resultGExcl.lines).toEqual(['keep me 1', 'keep me 2']);
+    });
+
+    it(':3,4d 명령으로 지정된 범위의 줄을 삭제한다', () => {
+      const state: VimEditorState = {
+        lines: ['line 1', 'line 2', 'line 3', 'line 4', 'line 5'],
+        cursor: { line: 0, col: 0 },
+        mode: 'COMMAND',
+      };
+
+      const result = executeCommandLine(state, '3,4d');
+      expect(result.lines).toEqual(['line 1', 'line 2', 'line 5']);
+      expect(result.clipboard?.content).toBe('line 3\nline 4');
+    });
+
+    it(':%y 명령으로 버퍼 전체를 복사한다', () => {
+      const state: VimEditorState = {
+        lines: ['alpha', 'beta', 'gamma'],
+        cursor: { line: 0, col: 0 },
+        mode: 'COMMAND',
+      };
+
+      const result = executeCommandLine(state, '%y');
+      expect(result.clipboard?.content).toBe('alpha\nbeta\ngamma');
+      expect(result.commandMessage).toContain('3개 줄이 복사되었습니다.');
+    });
+
+    it(':\'<,\'>norm A; 명령으로 비주얼 선택 범위의 모든 줄 끝에 세미콜론을 추가한다', () => {
+      const state: VimEditorState = {
+        lines: ['let x = 1', 'let y = 2', 'let z = 3', 'console.log(x)'],
+        cursor: { line: 2, col: 0 },
+        visualAnchor: { line: 0, col: 0 },
+        mode: 'COMMAND',
+      };
+
+      const result = executeCommandLine(state, "'<,'>norm A;", handleKey);
+      expect(result.lines).toEqual([
+        'let x = 1;',
+        'let y = 2;',
+        'let z = 3;',
+        'console.log(x)',
+      ]);
+      expect(result.commandMessage).toContain('3개 줄에 normal 명령을 실행했습니다.');
+    });
+
+    it(':%norm I// 명령으로 버퍼 전체 줄 앞에 주석을 일괄 삽입한다', () => {
+      const state: VimEditorState = {
+        lines: ['const a = 1;', 'const b = 2;'],
+        cursor: { line: 0, col: 0 },
+        mode: 'COMMAND',
+      };
+
+      const result = executeCommandLine(state, '%norm I// ', handleKey);
+      expect(result.lines).toEqual(['// const a = 1;', '// const b = 2;']);
+    });
   });
 });
