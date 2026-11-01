@@ -344,6 +344,43 @@ function handleInsertModeKey(
   const { line, col } = state.cursor;
   const currentLine = state.lines[line] ?? '';
 
+  // 타임아웃 발생 시 대기 버퍼 초기화
+  if (key === 'Timeout') {
+    return { ...state, pendingKeys: undefined };
+  }
+
+  // 커스텀 키매핑 검사 (예: Insert 모드 jk 또는 jj -> <Esc>)
+  if (state.pendingKeys) {
+    const combined = `${state.pendingKeys}${key}`;
+    const mapped =
+      state.userKeymaps?.[`i:${combined}`] ||
+      state.userKeymaps?.[combined];
+
+    if (mapped === '<Esc>' || mapped === '<esc>') {
+      // 직전에 입력되어 버퍼에 기록된 pendingKeys 문자(예: 'j')를 삭제
+      const cleanedLine =
+        currentLine.slice(0, Math.max(0, col - 1)) + currentLine.slice(col);
+      const nextLines = [...state.lines];
+      nextLines[line] = cleanedLine;
+      const nextCol = Math.max(0, col - 2);
+
+      let nextLastChange = state.lastChangeKeys;
+      if (!isReplayingDot && state.currentChangeKeys) {
+        nextLastChange = [...state.currentChangeKeys.slice(0, -1), 'Escape'];
+      }
+
+      return {
+        ...state,
+        lines: nextLines,
+        mode: 'NORMAL',
+        cursor: clampCursor(nextLines, { line, col: nextCol }, 'NORMAL'),
+        pendingKeys: undefined,
+        lastChangeKeys: nextLastChange,
+        currentChangeKeys: undefined,
+      };
+    }
+  }
+
   // ESC: NORMAL 모드로 복귀 (커서 1칸 좌측 보정)
   if (key === 'Escape') {
     // 비주얼 블록(Ctrl+v) 삽입 세션 중인 경우 나머지 행에 일괄 복제 반영
@@ -529,10 +566,17 @@ function handleInsertModeKey(
     const newLine = currentLine.slice(0, col) + key + currentLine.slice(col);
     const nextLines = [...state.lines];
     nextLines[line] = newLine;
+    // 현재 입력된 문자가 Insert 모드 다중 키 매핑의 접두사인지 확인 (예: 'jk'의 'j')
+    const isMappingPrefix = Object.keys(state.userKeymaps ?? {}).some((k) => {
+      const from = k.startsWith('i:') ? k.slice(2) : k;
+      return from.length > 1 && from.startsWith(key);
+    });
+
     return {
       ...state,
       lines: nextLines,
       cursor: { line, col: col + 1 },
+      pendingKeys: isMappingPrefix ? key : undefined,
       currentChangeKeys: nextChangeKeys,
     };
   }
@@ -616,6 +660,18 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
       ...state,
       pendingKeys: 'Ctrl-w',
     };
+  }
+
+  // 비주얼 모드 커스텀 키매핑 (예: H -> ^, L -> $)
+  if (!state.pendingKeys) {
+    const visualMapped =
+      state.userKeymaps?.[`v:${key}`] || state.userKeymaps?.[key];
+    if (visualMapped === '^') {
+      return { ...state, cursor: moveToFirstNonBlank(state.lines, state.cursor) };
+    }
+    if (visualMapped === '$') {
+      return { ...state, cursor: moveToLineEnd(state.lines, state.cursor) };
+    }
   }
 
   // 숫자 누적 (카운트 모션 지원)
@@ -977,13 +1033,96 @@ function handleNormalModeKey(
   const currentLine = state.lines[state.cursor.line] ?? '';
   const parsed = parsePending(state.pendingKeys);
 
-  // 1. ESC: 대기 중인 모든 키 시퀀스 취소
-  if (key === 'Escape') {
+  // 1. ESC 또는 타임아웃: 대기 중인 모든 키 시퀀스 취소
+  if (key === 'Escape' || key === 'Timeout') {
     return {
       ...state,
       pendingKeys: undefined,
       activeRegister: undefined,
     };
+  }
+
+  // 1-0. 커스텀 키매핑 및 리더 키(Leader Key) 시뮬레이션
+  const leaderKey = state.leaderKey || ' ';
+
+  // 1-0-1. 대기 중인 리더 키('<leader>') 조합 처리
+  if (state.pendingKeys === '<leader>' || state.pendingKeys === leaderKey) {
+    const leaderCombo = `<leader>${key}`;
+    const mapped =
+      state.userKeymaps?.[`n:${leaderCombo}`] ||
+      state.userKeymaps?.[leaderCombo] ||
+      state.userKeymaps?.[`n:${leaderKey}${key}`] ||
+      state.userKeymaps?.[`${leaderKey}${key}`];
+
+    if (mapped) {
+      if (mapped.startsWith(':')) {
+        return executeCommandLine(
+          { ...state, pendingKeys: undefined },
+          mapped.slice(1),
+          handleKey
+        );
+      }
+      let s: VimEditorState = { ...state, pendingKeys: undefined };
+      for (const ch of mapped.split('')) {
+        s = handleKey(s, ch, isReplayingDot, macroDepth);
+      }
+      return s;
+    }
+
+    // 일치하는 리더 키 매핑이 없으면 pending 해제 후 일반 키로 처리
+    state = { ...state, pendingKeys: undefined };
+  }
+
+  // 1-0-2. 리더 키 입력 감지 (대기 상태로 전환)
+  const isLeaderKey =
+    key === leaderKey || (leaderKey === ' ' && (key === ' ' || key === 'Space'));
+  if (isLeaderKey && !state.pendingKeys) {
+    const hasLeaderMap = Object.keys(state.userKeymaps ?? {}).some(
+      (k) =>
+        k.includes('<leader>') ||
+        k.startsWith(`n:${leaderKey}`) ||
+        k.startsWith(leaderKey)
+    );
+    if (hasLeaderMap) {
+      return {
+        ...state,
+        pendingKeys: '<leader>',
+      };
+    }
+  }
+
+  // 1-0-3. 단일 키 매핑 처리 (H -> ^, L -> $, Ctrl-h -> Ctrl-w h 등)
+  if (!state.pendingKeys) {
+    const singleMapped =
+      state.userKeymaps?.[`n:${key}`] || state.userKeymaps?.[key];
+    if (singleMapped) {
+      if (singleMapped === '^') {
+        return { ...state, cursor: moveToFirstNonBlank(state.lines, state.cursor) };
+      }
+      if (singleMapped === '$') {
+        return { ...state, cursor: moveToLineEnd(state.lines, state.cursor) };
+      }
+      if (singleMapped === 'Ctrl-w h') {
+        return switchPaneFocus(state, 0);
+      }
+      if (singleMapped === 'Ctrl-w l') {
+        return switchPaneFocus(state, 1);
+      }
+      if (singleMapped === 'Ctrl-w j') {
+        return switchPaneFocus(state, 1);
+      }
+      if (singleMapped === 'Ctrl-w k') {
+        return switchPaneFocus(state, 0);
+      }
+      if (singleMapped.startsWith(':')) {
+        return executeCommandLine(state, singleMapped.slice(1), handleKey);
+      }
+      let s: VimEditorState = state;
+      for (const ch of singleMapped.split('')) {
+        s = handleKey(s, ch, isReplayingDot, macroDepth);
+      }
+      return s;
+    }
   }
 
   // 1-0-a. 명명된 레지스터 지정 ("{register})

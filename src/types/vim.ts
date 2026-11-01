@@ -111,6 +111,10 @@ export interface VimEditorState {
   secondaryFilename?: string;
   /** 보조 창 초기 줄 내용 (미션 로드용) */
   secondaryLines?: string[];
+  /** 사용자 정의 키매핑 테이블 (예: { 'i:jk': '<Esc>', 'n:<leader>w': ':w' }) */
+  userKeymaps?: Record<string, string>;
+  /** 리더 키 (Leader Key, 기본값: ' ') */
+  leaderKey?: string;
 }
 
 export type VimState = VimEditorState;

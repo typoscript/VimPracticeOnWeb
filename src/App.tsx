@@ -14,6 +14,7 @@ import { RegisterInspector } from './components/RegisterInspector/RegisterInspec
 import { ArcadeSurvival } from './components/ArcadeSurvival/ArcadeSurvival';
 import { AnalyticsModal } from './components/AnalyticsModal/AnalyticsModal';
 import { DailyChallengeModal } from './components/DailyChallengeModal/DailyChallengeModal';
+import { ConfigExporterModal } from './components/ConfigExporterModal/ConfigExporterModal';
 import { VimEditorState, SplitPaneState } from './types/vim';
 import { Mission } from './types/mission';
 import { handleKey } from './engine/vimEngine';
@@ -54,6 +55,13 @@ import {
   recordKeyInputStats,
   recordAntiPatternDetection,
 } from './utils/analyticsStorage';
+import {
+  loadActivePresets,
+  saveActivePresets,
+  loadLeaderKey,
+  saveLeaderKey,
+  compileUserKeymaps,
+} from './utils/keymapStorage';
 import './App.css';
 
 /** 스피드런 챌린지 후보 미션 ID 목록 (리팩토링/편집 미션) */
@@ -76,6 +84,33 @@ export function App() {
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
   const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
+  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
+
+  // 커스텀 키매핑 프리셋 및 리더 키 상태
+  const [activePresets, setActivePresets] = useState<Record<string, boolean>>(() => loadActivePresets());
+  const [leaderKey, setLeaderKey] = useState<string>(() => loadLeaderKey());
+
+  const handleTogglePreset = useCallback((presetId: string) => {
+    setActivePresets((prev) => {
+      const updated = { ...prev, [presetId]: !prev[presetId] };
+      saveActivePresets(updated);
+      setEditorState((st) => ({
+        ...st,
+        userKeymaps: compileUserKeymaps(updated, leaderKey, st.userKeymaps),
+      }));
+      return updated;
+    });
+  }, [leaderKey]);
+
+  const handleChangeLeaderKey = useCallback((newLeader: string) => {
+    setLeaderKey(newLeader);
+    saveLeaderKey(newLeader);
+    setEditorState((st) => ({
+      ...st,
+      leaderKey: newLeader,
+      userKeymaps: compileUserKeymaps(activePresets, newLeader, st.userKeymaps),
+    }));
+  }, [activePresets]);
 
   // 테마 관리
   const [currentTheme, setCurrentTheme] = useState<VimTheme>(() => loadThemeSetting());
@@ -175,8 +210,10 @@ export function App() {
       splitDirection: m.initialSplit ?? 'none',
       splitPanes,
       activePaneIndex: 0,
+      userKeymaps: compileUserKeymaps(activePresets, leaderKey),
+      leaderKey,
     };
-  }, []);
+  }, [activePresets, leaderKey]);
 
   const [editorState, setEditorState] = useState<VimEditorState>(() => {
     if (initialCustomMission) {
@@ -186,6 +223,8 @@ export function App() {
         mode: 'NORMAL',
         undoStack: [],
         redoStack: [],
+        userKeymaps: compileUserKeymaps(activePresets, leaderKey),
+        leaderKey,
       };
     }
     return getMissionInitialState(currentMission);
@@ -374,13 +413,15 @@ export function App() {
 
   const handleResetSandbox = useCallback(() => {
     handleStopGhostReplay();
-    setEditorState({
+    setEditorState((prev) => ({
       lines: [...SANDBOX_INITIAL_LINES],
       cursor: { line: 0, col: 0 },
       mode: 'NORMAL',
       undoStack: [],
       redoStack: [],
-    });
+      userKeymaps: prev.userKeymaps,
+      leaderKey: prev.leaderKey,
+    }));
     setKeystrokeCount(0);
     setRecentKeys([]);
     setLastPressedKey(undefined);
@@ -574,6 +615,7 @@ export function App() {
         isCustomModalOpen ||
         isAnalyticsModalOpen ||
         isDailyModalOpen ||
+        isConfigModalOpen ||
         currentTab === 'arcade'
       ) {
         return;
@@ -601,6 +643,15 @@ export function App() {
         if (editorState.mode === 'NORMAL' || editorState.mode.startsWith('VISUAL')) {
           e.preventDefault();
           processKeyInput('Ctrl-w');
+          return;
+        }
+      }
+
+      // Ctrl+h/j/k/l: 분할 창 빠른 이동 (브라우저 히스토리/다운로드 기본 동작 차단)
+      if ((e.ctrlKey || e.metaKey) && ['h', 'j', 'k', 'l'].includes(e.key.toLowerCase())) {
+        if (editorState.mode === 'NORMAL' && activePresets['ctrlWindowNav']) {
+          e.preventDefault();
+          processKeyInput(`Ctrl-${e.key.toLowerCase()}`);
           return;
         }
       }
@@ -729,6 +780,8 @@ export function App() {
     isCustomModalOpen,
     isAnalyticsModalOpen,
     isDailyModalOpen,
+    isConfigModalOpen,
+    activePresets,
     currentTab,
     isGhostReplaying,
     handleStopGhostReplay,
@@ -809,6 +862,16 @@ export function App() {
         </div>
 
         <div className="nav-actions">
+          {/* 커스텀 키매핑 및 설정 파일 내보내기 모달 */}
+          <button
+            className="toolbar-btn config-export-btn"
+            onClick={() => setIsConfigModalOpen(true)}
+            data-testid="open-config-modal-btn"
+            title="키매핑 프리셋 설정 및 .vimrc/init.lua/VS Code/IdeaVim 설정 내보내기"
+          >
+            ⚙️ 설정/내보내기
+          </button>
+
           {/* 숙련도 분석 대시보드 모달 */}
           <button
             className="toolbar-btn analytics-btn"
@@ -1186,6 +1249,17 @@ export function App() {
         onClose={() => setIsDailyModalOpen(false)}
         onPlayKeySound={playKeySound}
         onPlaySuccessSound={playSuccessSound}
+      />
+
+      <ConfigExporterModal
+        isOpen={isConfigModalOpen}
+        onClose={() => setIsConfigModalOpen(false)}
+        relativenumber={relativeLineNumbers}
+        theme={currentTheme}
+        leaderKey={leaderKey}
+        activePresets={activePresets}
+        onTogglePreset={handleTogglePreset}
+        onChangeLeaderKey={handleChangeLeaderKey}
       />
     </div>
   );

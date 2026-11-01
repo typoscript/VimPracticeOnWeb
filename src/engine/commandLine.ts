@@ -176,7 +176,79 @@ export function executeCommandLine(
     };
   }
 
-  // 8. 알 수 없는 명령어는 에러 메시지와 함께 NORMAL 모드로 복귀
+  // 8. 리더 키(Leader Key) 설정: :let mapleader = " " 또는 :let g:mapleader = " "
+  const leaderMatch = trimmed.match(/^:?\s*let\s+(?:g:)?mapleader\s*=\s*(["'])(.*?)\1/i);
+  if (leaderMatch) {
+    let newLeader = leaderMatch[2];
+    if (newLeader.toLowerCase() === '<space>') newLeader = ' ';
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      leaderKey: newLeader,
+      commandMessage: `[리더 키 설정] mapleader = "${newLeader === ' ' ? '<Space>' : newLeader}"`,
+    };
+  }
+
+  // 9. 커스텀 키매핑 등록: :imap, :inoremap, :nmap, :nnoremap, :vmap, :vnoremap, :map, :noremap
+  const mapMatch = trimmed.match(
+    /^:?\s*(nmap|nnoremap|imap|inoremap|vmap|vnoremap|map|noremap)\s+(\S+)\s+(.+)$/i
+  );
+  if (mapMatch) {
+    const cmdType = mapMatch[1].toLowerCase();
+    const from = mapMatch[2];
+    const to = mapMatch[3].trim();
+    let modePrefix = 'all';
+    if (cmdType.startsWith('i')) modePrefix = 'i';
+    else if (cmdType.startsWith('n')) modePrefix = 'n';
+    else if (cmdType.startsWith('v')) modePrefix = 'v';
+
+    const newKeymaps = { ...(state.userKeymaps ?? {}) };
+    if (modePrefix === 'all') {
+      newKeymaps[`n:${from}`] = to;
+      newKeymaps[`i:${from}`] = to;
+      newKeymaps[`v:${from}`] = to;
+      newKeymaps[from] = to;
+    } else {
+      newKeymaps[`${modePrefix}:${from}`] = to;
+      newKeymaps[from] = to;
+    }
+
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      userKeymaps: newKeymaps,
+      commandMessage: `[키매핑 등록] ${cmdType}: ${from} -> ${to}`,
+    };
+  }
+
+  // 10. 키매핑 해제: :unmap, :nunmap, :iunmap
+  const unmapMatch = trimmed.match(/^:?\s*(unmap|nunmap|iunmap|vunmap)\s+(\S+)$/i);
+  if (unmapMatch) {
+    const from = unmapMatch[2];
+    const newKeymaps = { ...(state.userKeymaps ?? {}) };
+    delete newKeymaps[`n:${from}`];
+    delete newKeymaps[`i:${from}`];
+    delete newKeymaps[`v:${from}`];
+    delete newKeymaps[from];
+
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      userKeymaps: newKeymaps,
+      commandMessage: `[키매핑 해제] ${from}`,
+    };
+  }
+
+  // 11. 알 수 없는 명령어는 에러 메시지와 함께 NORMAL 모드로 복귀
   return {
     ...state,
     mode: 'NORMAL',

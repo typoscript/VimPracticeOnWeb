@@ -141,6 +141,17 @@
   color: #a6e3a1;
 }
 
+.config-export-btn {
+  border-color: rgba(187, 154, 247, 0.4);
+  color: #bb9af7;
+}
+
+.config-export-btn:hover {
+  background-color: rgba(187, 154, 247, 0.15);
+  border-color: #bb9af7;
+  color: #bb9af7;
+}
+
 .analytics-btn {
   border-color: rgba(125, 207, 255, 0.4);
   color: #7dcfff;
