@@ -32,7 +32,7 @@ flowchart TD
         subgraph Sub_Engines["모듈별 세부 처리기"]
             Motions["모션 & 카운트 (motions / wordMotion)"]
             Operators["연산자 (operators / dd, dw, cw, r)"]
-            TextObjects["텍스트 객체 (textObjects / iw, i\", i\()"]
+            TextObjects["텍스트 객체 (textObjects / iw, i&quot;, i()"]
             FindChar["줄 내 문자 탐색 (findChar / f, F, t, T)"]
             SearchEngine["키워드 검색 엔진 (search / /, n, N, *)"]
             CommandLine["커맨드라인 엔진 (commandLine / :, :s, :%s)"]
