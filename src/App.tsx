@@ -9,6 +9,7 @@ import { DiffViewer } from './components/DiffViewer/DiffViewer';
 import { VirtualKeyboard } from './components/VirtualKeyboard/VirtualKeyboard';
 import { SpeedrunPanel } from './components/SpeedrunPanel/SpeedrunPanel';
 import { ThemeSwitcher } from './components/ThemeSwitcher/ThemeSwitcher';
+import { ViewPanelsDropdown } from './components/ViewPanelsDropdown/ViewPanelsDropdown';
 import { CustomMissionModal } from './components/CustomMissionModal/CustomMissionModal';
 import { RegisterInspector } from './components/RegisterInspector/RegisterInspector';
 import { ArcadeSurvival } from './components/ArcadeSurvival/ArcadeSurvival';
@@ -1197,142 +1198,106 @@ export function App() {
         </div>
 
         <div className="nav-actions">
-          {/* 🔥 하드코어 수련 모드 토글 스위치 */}
-          <button
-            className={`toolbar-btn hardcore-mode-btn ${hardcoreMode ? 'active' : ''}`}
-            onClick={handleToggleHardcoreMode}
-            data-testid="toggle-hardcore-mode-btn"
-            title="🔥 하드코어 수련 모드: 방향키 및 마우스 완전 차단, 1.5초 3회 초과 연타 무시"
-          >
-            {hardcoreMode ? '🔥 하드코어: ON' : '🔥 하드코어: OFF'}
-          </button>
-
-          {/* 커스텀 키매핑 및 설정 파일 내보내기 모달 */}
-          <button
-            className="toolbar-btn config-export-btn"
-            onClick={() => setIsConfigModalOpen(true)}
-            data-testid="open-config-modal-btn"
-            title="키매핑 프리셋 설정 및 .vimrc/init.lua/VS Code/IdeaVim 설정 내보내기"
-          >
-            ⚙️ 설정/내보내기
-          </button>
-
-          {/* 숙련도 분석 대시보드 모달 */}
-          <button
-            className="toolbar-btn analytics-btn"
-            onClick={() => setIsAnalyticsModalOpen(true)}
-            data-testid="open-analytics-modal-btn"
-            title="Vim 숙련도 5각 레이더 및 명령어 사용 통계 대시보드"
-          >
-            📊 숙련도 분석
-          </button>
-
-          {/* 데일리 챌린지 모달 */}
-          <button
-            className="toolbar-btn daily-challenge-btn"
-            onClick={() => setIsDailyModalOpen(true)}
-            data-testid="open-daily-modal-btn"
-            title="오늘의 데일리 Vim Golf 챌린지"
-          >
-            📅 데일리
-          </button>
-
-          {/* 커스텀 Vim Golf 미션 생성 모달 */}
-          <button
-            className="toolbar-btn custom-mission-btn"
-            onClick={() => setIsCustomModalOpen(true)}
-            data-testid="open-custom-modal-btn"
-            title="URL 공유 가능한 커스텀 Vim Golf 미션 생성기"
-          >
-            ⛳ 미션 만들기
-          </button>
-
-          {/* 에디터 컬러 테마 스위처 */}
-          <ThemeSwitcher
-            currentTheme={currentTheme}
-            onThemeChange={handleThemeChange}
-          />
-
-          {/* 기계식 키보드 음향 효과음 토글 */}
-          <button
-            className={`toolbar-btn sound-toggle-btn ${isMuted ? 'muted' : ''}`}
-            onClick={toggleMute}
-            data-testid="toggle-sound-btn"
-            title="기계식 키보드 타건 효과음 토글"
-          >
-            {isMuted ? '🔇 소리: OFF' : '🔊 소리: ON'}
-          </button>
-
-          {currentTab === 'course' && (
+          {/* 주요 훈련 및 모달 도구 그룹 */}
+          <div className="nav-action-group nav-tools-group">
+            {/* 🔥 하드코어 수련 모드 토글 스위치 */}
             <button
-              className="toolbar-btn lesson-list-btn"
-              onClick={() => setIsModalOpen(true)}
-              data-testid="open-lesson-modal-btn"
+              className={`toolbar-btn hardcore-mode-btn ${hardcoreMode ? 'active' : ''}`}
+              onClick={handleToggleHardcoreMode}
+              data-testid="toggle-hardcore-mode-btn"
+              title="🔥 하드코어 수련 모드: 방향키 및 마우스 완전 차단, 1.5초 3회 초과 연타 무시"
             >
-              📚 레슨 목록
+              {hardcoreMode ? '🔥 하드코어: ON' : '🔥 하드코어: OFF'}
             </button>
-          )}
 
-          {/* 목표 Diff 뷰 토글 버튼 */}
-          {currentTab !== 'sandbox' && (
+            {/* 데일리 챌린지 모달 */}
             <button
-              className={`toolbar-btn diff-toggle-btn ${showDiffView ? 'active' : ''}`}
-              onClick={handleToggleDiffView}
-              data-testid="toggle-diff-view-btn"
-              title="목표 텍스트 Diff 비교 뷰어 토글"
+              className="toolbar-btn daily-challenge-btn"
+              onClick={() => setIsDailyModalOpen(true)}
+              data-testid="open-daily-modal-btn"
+              title="오늘의 데일리 Vim Golf 챌린지"
             >
-              🎯 목표 Diff: {showDiffView ? 'ON' : 'OFF'}
+              📅 데일리
             </button>
-          )}
 
-          {/* 실시간 레지스터 인스펙터 토글 버튼 */}
-          <button
-            className={`toolbar-btn register-toggle-btn ${showRegisterInspector ? 'active' : ''}`}
-            onClick={handleToggleRegisterInspector}
-            data-testid="toggle-register-inspector-btn"
-            title="실시간 레지스터 인스펙터 패널 토글"
-          >
-            📋 레지스터: {showRegisterInspector ? 'ON' : 'OFF'}
-          </button>
+            {/* 숙련도 분석 대시보드 모달 */}
+            <button
+              className="toolbar-btn analytics-btn"
+              onClick={() => setIsAnalyticsModalOpen(true)}
+              data-testid="open-analytics-modal-btn"
+              title="Vim 숙련도 5각 레이더 및 명령어 사용 통계 대시보드"
+            >
+              📊 숙련도 분석
+            </button>
 
-          {/* 실시간 Vim 문법 AST 인스펙터 토글 버튼 */}
-          <button
-            className={`toolbar-btn ast-toggle-btn ${showGrammarAST ? 'active' : ''}`}
-            onClick={handleToggleGrammarAST}
-            data-testid="toggle-grammar-ast-btn"
-            title="실시간 Vim 문법 AST 인스펙터 패널 토글"
-          >
-            🧩 문법 AST: {showGrammarAST ? 'ON' : 'OFF'}
-          </button>
+            {/* 커스텀 Vim Golf 미션 생성 모달 */}
+            <button
+              className="toolbar-btn custom-mission-btn"
+              onClick={() => setIsCustomModalOpen(true)}
+              data-testid="open-custom-modal-btn"
+              title="URL 공유 가능한 커스텀 Vim Golf 미션 생성기"
+            >
+              ⛳ 미션 만들기
+            </button>
 
-          {/* 실시간 명령 복기 타임라인 & Vim X-Ray 토글 버튼 */}
-          <button
-            className={`toolbar-btn timeline-toggle-btn ${showActionTimeline ? 'active' : ''}`}
-            onClick={handleToggleActionTimeline}
-            data-testid="toggle-action-timeline-btn"
-            title="실시간 명령 복기 타임라인 & Vim X-Ray 투시기 패널 토글"
-          >
-            ⏱️ 타임라인 & X-Ray: {showActionTimeline ? 'ON' : 'OFF'}
-          </button>
+            {/* 커스텀 키매핑 및 설정 파일 내보내기 모달 */}
+            <button
+              className="toolbar-btn config-export-btn"
+              onClick={() => setIsConfigModalOpen(true)}
+              data-testid="open-config-modal-btn"
+              title="키매핑 프리셋 설정 및 .vimrc/init.lua/VS Code/IdeaVim 설정 내보내기"
+            >
+              ⚙️ 설정/내보내기
+            </button>
 
-          {/* 가상 키보드 오버레이 토글 버튼 */}
-          <button
-            className={`toolbar-btn keyboard-toggle-btn ${showVirtualKeyboard ? 'active' : ''}`}
-            onClick={handleToggleVirtualKeyboard}
-            data-testid="toggle-virtual-keyboard-btn"
-            title="반응형 인터랙티브 가상 키보드 패널 토글"
-          >
-            ⌨ 가상 키보드: {showVirtualKeyboard ? 'ON' : 'OFF'}
-          </button>
+            {currentTab === 'course' && (
+              <button
+                className="toolbar-btn lesson-list-btn"
+                onClick={() => setIsModalOpen(true)}
+                data-testid="open-lesson-modal-btn"
+              >
+                📚 레슨 목록
+              </button>
+            )}
+          </div>
 
-          <button
-            className={`toolbar-btn relativenumber-btn ${relativeLineNumbers ? 'active' : ''}`}
-            onClick={handleToggleRelativeLine}
-            data-testid="toggle-relativenumber-btn"
-            title="상대 라인 번호 (relativenumber) 토글"
-          >
-            relativenumber: {relativeLineNumbers ? 'ON' : 'OFF'}
-          </button>
+          {/* 에디터 보조 패널 & 인스펙터 드롭다운 그룹 */}
+          <div className="nav-action-group nav-view-group">
+            <ViewPanelsDropdown
+              showDiffView={showDiffView}
+              onToggleDiffView={handleToggleDiffView}
+              isSandbox={currentTab === 'sandbox'}
+              showRegisterInspector={showRegisterInspector}
+              onToggleRegisterInspector={handleToggleRegisterInspector}
+              showGrammarAST={showGrammarAST}
+              onToggleGrammarAST={handleToggleGrammarAST}
+              showActionTimeline={showActionTimeline}
+              onToggleActionTimeline={handleToggleActionTimeline}
+              showVirtualKeyboard={showVirtualKeyboard}
+              onToggleVirtualKeyboard={handleToggleVirtualKeyboard}
+              relativeLineNumbers={relativeLineNumbers}
+              onToggleRelativeLineNumbers={handleToggleRelativeLine}
+            />
+          </div>
+
+          {/* 환경 설정 (테마 및 타건음) 그룹 */}
+          <div className="nav-action-group nav-settings-group">
+            {/* 에디터 컬러 테마 스위처 */}
+            <ThemeSwitcher
+              currentTheme={currentTheme}
+              onThemeChange={handleThemeChange}
+            />
+
+            {/* 기계식 키보드 음향 효과음 토글 */}
+            <button
+              className={`toolbar-btn sound-toggle-btn ${isMuted ? 'muted' : ''}`}
+              onClick={toggleMute}
+              data-testid="toggle-sound-btn"
+              title="기계식 키보드 타건 효과음 토글"
+            >
+              {isMuted ? '🔇 소리: OFF' : '🔊 소리: ON'}
+            </button>
+          </div>
         </div>
       </div>
 

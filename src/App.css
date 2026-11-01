@@ -85,7 +85,15 @@
 .nav-actions {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.nav-action-group {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
 }
 
 .toolbar-btn {
@@ -99,6 +107,8 @@
   cursor: pointer;
   transition: all 0.15s ease;
   font-family: inherit;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .toolbar-btn:hover {
@@ -330,6 +340,10 @@
   }
 
   .nav-actions {
+    justify-content: center;
+  }
+
+  .nav-action-group {
     justify-content: center;
   }
 
