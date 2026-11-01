@@ -11,6 +11,9 @@ import { SpeedrunPanel } from './components/SpeedrunPanel/SpeedrunPanel';
 import { ThemeSwitcher } from './components/ThemeSwitcher/ThemeSwitcher';
 import { CustomMissionModal } from './components/CustomMissionModal/CustomMissionModal';
 import { RegisterInspector } from './components/RegisterInspector/RegisterInspector';
+import { ArcadeSurvival } from './components/ArcadeSurvival/ArcadeSurvival';
+import { AnalyticsModal } from './components/AnalyticsModal/AnalyticsModal';
+import { DailyChallengeModal } from './components/DailyChallengeModal/DailyChallengeModal';
 import { VimEditorState, SplitPaneState } from './types/vim';
 import { Mission } from './types/mission';
 import { handleKey } from './engine/vimEngine';
@@ -47,6 +50,10 @@ import {
   createCustomMissionObject,
   CustomMissionData,
 } from './utils/customMission';
+import {
+  recordKeyInputStats,
+  recordAntiPatternDetection,
+} from './utils/analyticsStorage';
 import './App.css';
 
 /** 스피드런 챌린지 후보 미션 ID 목록 (리팩토링/편집 미션) */
@@ -62,11 +69,13 @@ export function App() {
   const initialChallenge = useRef(getChallengeFromUrl()).current;
   const initialCustomMission = initialChallenge ? createCustomMissionObject(initialChallenge) : null;
 
-  const [currentTab, setCurrentTab] = useState<'course' | 'sandbox' | 'speedrun' | 'custom'>(
+  const [currentTab, setCurrentTab] = useState<'course' | 'sandbox' | 'speedrun' | 'custom' | 'arcade'>(
     initialCustomMission ? 'custom' : 'course'
   );
   const [customMission, setCustomMission] = useState<Mission | null>(initialCustomMission);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
+  const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
+  const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
 
   // 테마 관리
   const [currentTheme, setCurrentTheme] = useState<VimTheme>(() => loadThemeSetting());
@@ -441,7 +450,7 @@ export function App() {
   }, [handleStopGhostReplay]);
 
   const handleSwitchTab = useCallback(
-    (tab: 'course' | 'sandbox' | 'speedrun' | 'custom') => {
+    (tab: 'course' | 'sandbox' | 'speedrun' | 'custom' | 'arcade') => {
       handleStopGhostReplay();
       setCurrentTab(tab);
       setLastPressedKey(undefined);
@@ -455,6 +464,8 @@ export function App() {
         setSpeedrunElapsedSeconds(0);
         setSpeedrunKeystrokes(0);
         setSpeedrunIsNewRecord(false);
+      } else if (tab === 'arcade') {
+        // 아케이드 서바이벌 모드는 자체 상태를 갖습니다
       } else if (tab === 'custom' && customMission) {
         setEditorState({
           lines: [...customMission.initialLines],
@@ -514,6 +525,9 @@ export function App() {
       // Web Audio 기계식 키보드 타건 효과음 재생
       playKeySound(key, editorState.mode);
 
+      // 전체 누적 키 입력 통계 기록
+      recordKeyInputStats(key);
+
       if (currentTab === 'speedrun' && speedrunStatus === 'running') {
         setSpeedrunKeystrokes((prev) => prev + 1);
       }
@@ -526,6 +540,7 @@ export function App() {
       );
       if (coachingAdvice) {
         setCoachingMessage(coachingAdvice);
+        recordAntiPatternDetection(coachingAdvice);
       }
 
       setEditorState((prevState) => handleKey(prevState, key));
@@ -553,8 +568,14 @@ export function App() {
         return;
       }
 
-      // 모달이 열려 있을 때는 에디터 키 입력을 차단
-      if (isModalOpen || isCustomModalOpen) {
+      // 모달이 열려 있거나 아케이드 모드일 때는 기본 에디터 키 입력을 차단
+      if (
+        isModalOpen ||
+        isCustomModalOpen ||
+        isAnalyticsModalOpen ||
+        isDailyModalOpen ||
+        currentTab === 'arcade'
+      ) {
         return;
       }
 
@@ -706,6 +727,9 @@ export function App() {
   }, [
     isModalOpen,
     isCustomModalOpen,
+    isAnalyticsModalOpen,
+    isDailyModalOpen,
+    currentTab,
     isGhostReplaying,
     handleStopGhostReplay,
     isEditorFocused,
@@ -762,6 +786,15 @@ export function App() {
           >
             ⚡ 스피드런
           </button>
+          <button
+            role="tab"
+            aria-selected={currentTab === 'arcade'}
+            className={`nav-tab-btn ${currentTab === 'arcade' ? 'active' : ''}`}
+            onClick={() => handleSwitchTab('arcade')}
+            data-testid="tab-arcade-btn"
+          >
+            👾 아케이드
+          </button>
           {customMission && (
             <button
               role="tab"
@@ -776,6 +809,26 @@ export function App() {
         </div>
 
         <div className="nav-actions">
+          {/* 숙련도 분석 대시보드 모달 */}
+          <button
+            className="toolbar-btn analytics-btn"
+            onClick={() => setIsAnalyticsModalOpen(true)}
+            data-testid="open-analytics-modal-btn"
+            title="Vim 숙련도 5각 레이더 및 명령어 사용 통계 대시보드"
+          >
+            📊 숙련도 분석
+          </button>
+
+          {/* 데일리 챌린지 모달 */}
+          <button
+            className="toolbar-btn daily-challenge-btn"
+            onClick={() => setIsDailyModalOpen(true)}
+            data-testid="open-daily-modal-btn"
+            title="오늘의 데일리 Vim Golf 챌린지"
+          >
+            📅 데일리
+          </button>
+
           {/* 커스텀 Vim Golf 미션 생성 모달 */}
           <button
             className="toolbar-btn custom-mission-btn"
@@ -886,203 +939,213 @@ export function App() {
           onDismiss={() => setCoachingMessage(null)}
         />
 
-        {currentTab === 'course' && (
-          <MissionPanel
-            mission={currentMission}
-            missionIndex={currentMissionIndex}
-            totalMissions={MISSIONS.length}
-            isCompleted={isCompleted}
-            keystrokeCount={keystrokeCount}
-            onSelectMission={handleSelectMission}
-            onResetMission={handleResetMission}
-            onStartGhostReplay={handleStartGhostReplay}
-            onStopGhostReplay={handleStopGhostReplay}
-            isGhostReplaying={isGhostReplaying}
-            ghostReplayProgress={ghostReplayProgress}
+        {currentTab === 'arcade' ? (
+          <ArcadeSurvival
+            onPlayKeySound={playKeySound}
+            onPlaySuccessSound={playSuccessSound}
+            isMuted={isMuted}
           />
-        )}
-
-        {currentTab === 'custom' && customMission && (
-          <MissionPanel
-            mission={customMission}
-            missionIndex={0}
-            totalMissions={1}
-            isCompleted={isCompleted}
-            keystrokeCount={keystrokeCount}
-            onSelectMission={() => {}}
-            onResetMission={handleResetCustomMission}
-          />
-        )}
-
-        {currentTab === 'sandbox' && (
-          <div className="sandbox-panel" data-testid="sandbox-panel">
-            <div className="sandbox-info">
-              <span className="sandbox-badge">🧪 SANDBOX</span>
-              <span className="sandbox-desc">
-                미션 제약 없이 모든 Vim 키보드 명령어를 자유롭게 실험해 볼 수 있습니다.
-              </span>
-            </div>
-            <button
-              className="sandbox-reset-btn"
-              onClick={handleResetSandbox}
-              data-testid="sandbox-reset-btn"
-            >
-              🔄 코드 초기화
-            </button>
-          </div>
-        )}
-
-        {currentTab === 'speedrun' && (
-          <SpeedrunPanel
-            status={speedrunStatus}
-            currentStageIndex={speedrunCurrentStage}
-            totalStages={speedrunStages.length}
-            currentMissionTitle={activeSpeedrunMission?.title}
-            elapsedSeconds={speedrunElapsedSeconds}
-            totalKeystrokes={speedrunKeystrokes}
-            bestRecord={speedrunBestRecord}
-            isNewRecord={speedrunIsNewRecord}
-            onStart={handleStartSpeedrun}
-            onRestart={handleStartSpeedrun}
-          />
-        )}
-
-        {/* 에디터 렌더링: 분할 창 모드 vs 단일 창 모드 */}
-        {editorState.splitDirection && editorState.splitDirection !== 'none' && editorState.splitPanes ? (
-          <div
-            className={`editor-split-container split-${editorState.splitDirection}`}
-            data-testid="editor-split-container"
-          >
-            {/* 왼쪽/상단 주 창 (Pane 0) */}
-            <div
-              className={`editor-split-pane ${editorState.activePaneIndex === 0 ? 'active' : ''}`}
-              onClick={() => handleSwitchPane(0)}
-              data-testid="split-pane-0"
-            >
-              <div className="pane-header">
-                <span className="pane-filename">
-                  📄 {editorState.primaryFilename || editorState.splitPanes[0].filename || 'source.ts'}
-                </span>
-                {editorState.activePaneIndex === 0 && <span className="pane-active-indicator">FOCUS</span>}
-              </div>
-              <Editor
-                lines={editorState.activePaneIndex === 0 ? editorState.lines : editorState.splitPanes[0].lines}
-                cursor={editorState.activePaneIndex === 0 ? editorState.cursor : editorState.splitPanes[0].cursor}
-                mode={editorState.activePaneIndex === 0 ? editorState.mode : editorState.splitPanes[0].mode}
-                targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
-                visualAnchor={editorState.activePaneIndex === 0 ? editorState.visualAnchor : editorState.splitPanes[0].visualAnchor}
-                relativeLineNumbers={relativeLineNumbers}
-                searchQuery={
-                  editorState.activePaneIndex === 0 && editorState.mode === 'SEARCH'
-                    ? editorState.commandBuffer
-                    : editorState.lastSearchQuery
-                }
-                isFocused={isEditorFocused && editorState.activePaneIndex === 0}
-                onFocus={() => handleSwitchPane(0)}
-                marks={editorState.marks}
-                viewport={editorState.activePaneIndex === 0 ? editorState.viewport : editorState.splitPanes[0].viewport}
-              />
-            </div>
-
-            {/* 오른쪽/하단 보조 창 (Pane 1) */}
-            <div
-              className={`editor-split-pane ${editorState.activePaneIndex === 1 ? 'active' : ''}`}
-              onClick={() => handleSwitchPane(1)}
-              data-testid="split-pane-1"
-            >
-              <div className="pane-header">
-                <span className="pane-filename">
-                  📄 {editorState.secondaryFilename || editorState.splitPanes[1].filename || 'target.ts'}
-                </span>
-                {editorState.activePaneIndex === 1 && <span className="pane-active-indicator">FOCUS</span>}
-              </div>
-              <Editor
-                lines={editorState.activePaneIndex === 1 ? editorState.lines : editorState.splitPanes[1].lines}
-                cursor={editorState.activePaneIndex === 1 ? editorState.cursor : editorState.splitPanes[1].cursor}
-                mode={editorState.activePaneIndex === 1 ? editorState.mode : editorState.splitPanes[1].mode}
-                targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
-                visualAnchor={editorState.activePaneIndex === 1 ? editorState.visualAnchor : editorState.splitPanes[1].visualAnchor}
-                relativeLineNumbers={relativeLineNumbers}
-                searchQuery={
-                  editorState.activePaneIndex === 1 && editorState.mode === 'SEARCH'
-                    ? editorState.commandBuffer
-                    : editorState.lastSearchQuery
-                }
-                isFocused={isEditorFocused && editorState.activePaneIndex === 1}
-                onFocus={() => handleSwitchPane(1)}
-                marks={editorState.marks}
-                viewport={editorState.activePaneIndex === 1 ? editorState.viewport : editorState.splitPanes[1].viewport}
-              />
-            </div>
-          </div>
         ) : (
-          <Editor
-            lines={editorState.lines}
-            cursor={editorState.cursor}
-            mode={editorState.mode}
-            targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
-            visualAnchor={editorState.visualAnchor}
-            relativeLineNumbers={relativeLineNumbers}
-            searchQuery={
-              editorState.mode === 'SEARCH'
-                ? editorState.commandBuffer
-                : editorState.lastSearchQuery
-            }
-            isFocused={isEditorFocused}
-            onFocus={() => setIsEditorFocused(true)}
-            marks={editorState.marks}
-            viewport={editorState.viewport}
-          />
-        )}
-        <Keycaster recentKeys={recentKeys} />
-        <StatusBar
-          mode={editorState.mode}
-          cursor={editorState.cursor}
-          filename={
-            editorState.splitPanes
-              ? (editorState.activePaneIndex === 1
-                  ? (editorState.secondaryFilename || editorState.splitPanes[1].filename || 'target.ts')
-                  : (editorState.primaryFilename || editorState.splitPanes[0].filename || 'source.ts'))
-              : (currentTab === 'course'
-                  ? (currentMission.primaryFilename || `lesson_${currentMission.id}.txt`)
-                  : currentTab === 'custom'
-                  ? 'custom_golf.txt'
-                  : currentTab === 'speedrun'
-                  ? `speedrun_stage_${speedrunCurrentStage + 1}.txt`
-                  : 'sandbox.ts')
-          }
-          pendingKeys={editorState.pendingKeys}
-          recordingMacro={editorState.recordingMacro}
-          commandType={editorState.commandType}
-          commandBuffer={editorState.commandBuffer}
-          commandMessage={editorState.commandMessage}
-        />
+          <>
+            {currentTab === 'course' && (
+              <MissionPanel
+                mission={currentMission}
+                missionIndex={currentMissionIndex}
+                totalMissions={MISSIONS.length}
+                isCompleted={isCompleted}
+                keystrokeCount={keystrokeCount}
+                onSelectMission={handleSelectMission}
+                onResetMission={handleResetMission}
+                onStartGhostReplay={handleStartGhostReplay}
+                onStopGhostReplay={handleStopGhostReplay}
+                isGhostReplaying={isGhostReplaying}
+                ghostReplayProgress={ghostReplayProgress}
+              />
+            )}
 
-        {/* 실시간 레지스터 인스펙터 패널 */}
-        <RegisterInspector
-          isOpen={showRegisterInspector}
-          onToggle={handleToggleRegisterInspector}
-          registers={editorState.registers}
-          activeRegister={editorState.activeRegister}
-          clipboard={editorState.clipboard}
-        />
+            {currentTab === 'custom' && customMission && (
+              <MissionPanel
+                mission={customMission}
+                missionIndex={0}
+                totalMissions={1}
+                isCompleted={isCompleted}
+                keystrokeCount={keystrokeCount}
+                onSelectMission={() => {}}
+                onResetMission={handleResetCustomMission}
+              />
+            )}
 
-        {/* 목표 상태 Diff 비교 하이라이트 뷰 */}
-        {showDiffView && activeMissionForDiff && (
-          <DiffViewer
-            currentLines={editorState.lines}
-            targetLines={activeMissionForDiff.targetLines}
-            isCompleted={currentTab === 'course' || currentTab === 'custom' ? isCompleted : false}
-          />
-        )}
+            {currentTab === 'sandbox' && (
+              <div className="sandbox-panel" data-testid="sandbox-panel">
+                <div className="sandbox-info">
+                  <span className="sandbox-badge">🧪 SANDBOX</span>
+                  <span className="sandbox-desc">
+                    미션 제약 없이 모든 Vim 키보드 명령어를 자유롭게 실험해 볼 수 있습니다.
+                  </span>
+                </div>
+                <button
+                  className="sandbox-reset-btn"
+                  onClick={handleResetSandbox}
+                  data-testid="sandbox-reset-btn"
+                >
+                  🔄 코드 초기화
+                </button>
+              </div>
+            )}
 
-        {/* 반응형 인터랙티브 가상 키보드 패널 */}
-        {showVirtualKeyboard && (
-          <VirtualKeyboard
-            mode={editorState.mode}
-            lastPressedKey={lastPressedKey}
-            onKeyPress={processKeyInput}
-          />
+            {currentTab === 'speedrun' && (
+              <SpeedrunPanel
+                status={speedrunStatus}
+                currentStageIndex={speedrunCurrentStage}
+                totalStages={speedrunStages.length}
+                currentMissionTitle={activeSpeedrunMission?.title}
+                elapsedSeconds={speedrunElapsedSeconds}
+                totalKeystrokes={speedrunKeystrokes}
+                bestRecord={speedrunBestRecord}
+                isNewRecord={speedrunIsNewRecord}
+                onStart={handleStartSpeedrun}
+                onRestart={handleStartSpeedrun}
+              />
+            )}
+
+            {/* 에디터 렌더링: 분할 창 모드 vs 단일 창 모드 */}
+            {editorState.splitDirection && editorState.splitDirection !== 'none' && editorState.splitPanes ? (
+              <div
+                className={`editor-split-container split-${editorState.splitDirection}`}
+                data-testid="editor-split-container"
+              >
+                {/* 왼쪽/상단 주 창 (Pane 0) */}
+                <div
+                  className={`editor-split-pane ${editorState.activePaneIndex === 0 ? 'active' : ''}`}
+                  onClick={() => handleSwitchPane(0)}
+                  data-testid="split-pane-0"
+                >
+                  <div className="pane-header">
+                    <span className="pane-filename">
+                      📄 {editorState.primaryFilename || editorState.splitPanes[0].filename || 'source.ts'}
+                    </span>
+                    {editorState.activePaneIndex === 0 && <span className="pane-active-indicator">FOCUS</span>}
+                  </div>
+                  <Editor
+                    lines={editorState.activePaneIndex === 0 ? editorState.lines : editorState.splitPanes[0].lines}
+                    cursor={editorState.activePaneIndex === 0 ? editorState.cursor : editorState.splitPanes[0].cursor}
+                    mode={editorState.activePaneIndex === 0 ? editorState.mode : editorState.splitPanes[0].mode}
+                    targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
+                    visualAnchor={editorState.activePaneIndex === 0 ? editorState.visualAnchor : editorState.splitPanes[0].visualAnchor}
+                    relativeLineNumbers={relativeLineNumbers}
+                    searchQuery={
+                      editorState.activePaneIndex === 0 && editorState.mode === 'SEARCH'
+                        ? editorState.commandBuffer
+                        : editorState.lastSearchQuery
+                    }
+                    isFocused={isEditorFocused && editorState.activePaneIndex === 0}
+                    onFocus={() => handleSwitchPane(0)}
+                    marks={editorState.marks}
+                    viewport={editorState.activePaneIndex === 0 ? editorState.viewport : editorState.splitPanes[0].viewport}
+                  />
+                </div>
+
+                {/* 오른쪽/하단 보조 창 (Pane 1) */}
+                <div
+                  className={`editor-split-pane ${editorState.activePaneIndex === 1 ? 'active' : ''}`}
+                  onClick={() => handleSwitchPane(1)}
+                  data-testid="split-pane-1"
+                >
+                  <div className="pane-header">
+                    <span className="pane-filename">
+                      📄 {editorState.secondaryFilename || editorState.splitPanes[1].filename || 'target.ts'}
+                    </span>
+                    {editorState.activePaneIndex === 1 && <span className="pane-active-indicator">FOCUS</span>}
+                  </div>
+                  <Editor
+                    lines={editorState.activePaneIndex === 1 ? editorState.lines : editorState.splitPanes[1].lines}
+                    cursor={editorState.activePaneIndex === 1 ? editorState.cursor : editorState.splitPanes[1].cursor}
+                    mode={editorState.activePaneIndex === 1 ? editorState.mode : editorState.splitPanes[1].mode}
+                    targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
+                    visualAnchor={editorState.activePaneIndex === 1 ? editorState.visualAnchor : editorState.splitPanes[1].visualAnchor}
+                    relativeLineNumbers={relativeLineNumbers}
+                    searchQuery={
+                      editorState.activePaneIndex === 1 && editorState.mode === 'SEARCH'
+                        ? editorState.commandBuffer
+                        : editorState.lastSearchQuery
+                    }
+                    isFocused={isEditorFocused && editorState.activePaneIndex === 1}
+                    onFocus={() => handleSwitchPane(1)}
+                    marks={editorState.marks}
+                    viewport={editorState.activePaneIndex === 1 ? editorState.viewport : editorState.splitPanes[1].viewport}
+                  />
+                </div>
+              </div>
+            ) : (
+              <Editor
+                lines={editorState.lines}
+                cursor={editorState.cursor}
+                mode={editorState.mode}
+                targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
+                visualAnchor={editorState.visualAnchor}
+                relativeLineNumbers={relativeLineNumbers}
+                searchQuery={
+                  editorState.mode === 'SEARCH'
+                    ? editorState.commandBuffer
+                    : editorState.lastSearchQuery
+                }
+                isFocused={isEditorFocused}
+                onFocus={() => setIsEditorFocused(true)}
+                marks={editorState.marks}
+                viewport={editorState.viewport}
+              />
+            )}
+            <Keycaster recentKeys={recentKeys} />
+            <StatusBar
+              mode={editorState.mode}
+              cursor={editorState.cursor}
+              filename={
+                editorState.splitPanes
+                  ? (editorState.activePaneIndex === 1
+                      ? (editorState.secondaryFilename || editorState.splitPanes[1].filename || 'target.ts')
+                      : (editorState.primaryFilename || editorState.splitPanes[0].filename || 'source.ts'))
+                  : (currentTab === 'course'
+                      ? (currentMission.primaryFilename || `lesson_${currentMission.id}.txt`)
+                      : currentTab === 'custom'
+                      ? 'custom_golf.txt'
+                      : currentTab === 'speedrun'
+                      ? `speedrun_stage_${speedrunCurrentStage + 1}.txt`
+                      : 'sandbox.ts')
+              }
+              pendingKeys={editorState.pendingKeys}
+              recordingMacro={editorState.recordingMacro}
+              commandType={editorState.commandType}
+              commandBuffer={editorState.commandBuffer}
+              commandMessage={editorState.commandMessage}
+            />
+
+            {/* 실시간 레지스터 인스펙터 패널 */}
+            <RegisterInspector
+              isOpen={showRegisterInspector}
+              onToggle={handleToggleRegisterInspector}
+              registers={editorState.registers}
+              activeRegister={editorState.activeRegister}
+              clipboard={editorState.clipboard}
+            />
+
+            {/* 목표 상태 Diff 비교 하이라이트 뷰 */}
+            {showDiffView && activeMissionForDiff && (
+              <DiffViewer
+                currentLines={editorState.lines}
+                targetLines={activeMissionForDiff.targetLines}
+                isCompleted={currentTab === 'course' || currentTab === 'custom' ? isCompleted : false}
+              />
+            )}
+
+            {/* 반응형 인터랙티브 가상 키보드 패널 */}
+            {showVirtualKeyboard && (
+              <VirtualKeyboard
+                mode={editorState.mode}
+                lastPressedKey={lastPressedKey}
+                onKeyPress={processKeyInput}
+              />
+            )}
+          </>
         )}
       </main>
 
@@ -1109,6 +1172,20 @@ export function App() {
         isOpen={isCustomModalOpen}
         onClose={() => setIsCustomModalOpen(false)}
         onPlayMission={handlePlayCustomMission}
+      />
+
+      <AnalyticsModal
+        isOpen={isAnalyticsModalOpen}
+        onClose={() => setIsAnalyticsModalOpen(false)}
+        progress={progress}
+        onOpenDailyChallenge={() => setIsDailyModalOpen(true)}
+      />
+
+      <DailyChallengeModal
+        isOpen={isDailyModalOpen}
+        onClose={() => setIsDailyModalOpen(false)}
+        onPlayKeySound={playKeySound}
+        onPlaySuccessSound={playSuccessSound}
       />
     </div>
   );

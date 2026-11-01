@@ -141,6 +141,28 @@
   color: #a6e3a1;
 }
 
+.analytics-btn {
+  border-color: rgba(125, 207, 255, 0.4);
+  color: #7dcfff;
+}
+
+.analytics-btn:hover {
+  background-color: rgba(125, 207, 255, 0.15);
+  border-color: #7dcfff;
+  color: #7dcfff;
+}
+
+.daily-challenge-btn {
+  border-color: rgba(224, 175, 104, 0.4);
+  color: #e0af68;
+}
+
+.daily-challenge-btn:hover {
+  background-color: rgba(224, 175, 104, 0.15);
+  border-color: #e0af68;
+  color: #e0af68;
+}
+
 .sound-toggle-btn.muted {
   color: #6c7086;
   opacity: 0.85;
