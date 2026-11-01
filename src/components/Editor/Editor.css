@@ -204,6 +204,25 @@
   min-width: 0.6em;
 }
 
+/* 접힌 코드 블록 (Folding) 축약 스타일 */
+.editor-row.folded-row {
+  background-color: rgba(137, 180, 250, 0.08);
+  border-left: 3px solid #89b4fa;
+}
+
+.folded-summary {
+  display: inline-flex;
+  align-items: center;
+  color: #89b4fa;
+  font-style: italic;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  background-color: rgba(137, 180, 250, 0.12);
+  padding: 1px 8px;
+  border-radius: 4px;
+  user-select: none;
+}
+
 @media (max-width: 640px) {
   .editor-container {
     border-radius: 4px;

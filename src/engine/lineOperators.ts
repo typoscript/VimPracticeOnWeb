@@ -275,35 +275,103 @@ export function modifyNumberAtCursor(
 }
 
 /**
- * ==: 현재 줄(및 count개 줄) 들여쓰기 자동 정렬
+ * 코드 전체 문맥의 중괄호({}) 블록 깊이를 계산하여指定된 줄 범위의 들여쓰기를 2 spaces 단위로 맞춥니다.
  */
-export function formatIndentLines(
-  state: VimEditorState,
-  count = 1
-): VimEditorState {
-  const stateWithUndo = pushUndoSnapshot(state);
-  const startLine = state.cursor.line;
-  const endLine = Math.min(state.lines.length - 1, startLine + Math.max(1, count) - 1);
-  const newLines = [...state.lines];
+export function formatLinesRange(
+  lines: string[],
+  fromLine: number,
+  toLine: number
+): string[] {
+  const minLine = Math.max(0, Math.min(fromLine, toLine));
+  const maxLine = Math.min(lines.length - 1, Math.max(fromLine, toLine));
+  const newLines = [...lines];
 
-  for (let i = startLine; i <= endLine; i++) {
-    let depth = 0;
-    for (let prev = 0; prev < i; prev++) {
-      const pText = newLines[prev];
-      for (const ch of pText) {
-        if (ch === '{' || ch === '(' || ch === '[') depth++;
-        else if (ch === '}' || ch === ')' || ch === ']') depth = Math.max(0, depth - 1);
+  let currentIndentDepth = 0;
+
+  for (let i = 0; i <= maxLine; i++) {
+    const lineText = newLines[i];
+    const trimmed = lineText.trim();
+
+    if (trimmed.length === 0) {
+      if (i >= minLine) {
+        newLines[i] = '';
+      }
+      continue;
+    }
+
+    // 현재 행이 닫는 괄호(}, ), ]) 또는 닫는 태그(</)로 시작하면 해당 행 자체의 들여쓰기를 먼저 1단계 줄임
+    let leadingCloses = 0;
+    if (trimmed.startsWith('</')) {
+      leadingCloses = 1;
+    } else {
+      for (const ch of trimmed) {
+        if (ch === '}' || ch === ')' || ch === ']') {
+          leadingCloses++;
+        } else {
+          break;
+        }
       }
     }
-    const currentText = newLines[i].trimStart();
-    if (currentText.startsWith('}') || currentText.startsWith(')') || currentText.startsWith(']')) {
-      depth = Math.max(0, depth - 1);
+
+    const effectiveDepth = Math.max(0, currentIndentDepth - leadingCloses);
+
+    if (i >= minLine) {
+      newLines[i] = '  '.repeat(effectiveDepth) + trimmed;
     }
-    const indent = '  '.repeat(depth);
-    newLines[i] = currentText.length > 0 ? indent + currentText : '';
+
+    // 문자열 리터럴 내부를 제외한 중괄호/괄호/HTML태그 변화량을 계산하여 다음 줄 들여쓰기 갱신
+    let inQuote: string | null = null;
+    let netBrackets = 0;
+    for (let c = 0; c < trimmed.length; c++) {
+      const ch = trimmed[c];
+      if (inQuote) {
+        if (ch === inQuote && trimmed[c - 1] !== '\\') {
+          inQuote = null;
+        }
+      } else {
+        if (ch === '"' || ch === "'" || ch === '`') {
+          inQuote = ch;
+        } else if (ch === '{' || ch === '(' || ch === '[') {
+          netBrackets++;
+        } else if (ch === '}' || ch === ')' || ch === ']') {
+          netBrackets--;
+        }
+      }
+    }
+
+    // HTML / JSX 태그 변화량 계산 (문자열 밖)
+    let netTags = 0;
+    const tagRegex = /<(\/)?([a-zA-Z0-9_\-.:]+)((?:[^>"'`]|"[^"]*"|'[^']*'|`[^`]*`)*)(\/?)>/g;
+    let tm: RegExpExecArray | null;
+    while ((tm = tagRegex.exec(trimmed)) !== null) {
+      const isClose = tm[1] === '/';
+      const isSelf = !isClose && (tm[4] === '/' || (tm[3] ?? '').trim().endsWith('/'));
+      if (isClose) {
+        netTags--;
+      } else if (!isSelf) {
+        netTags++;
+      }
+    }
+
+    currentIndentDepth = Math.max(0, currentIndentDepth + netBrackets + netTags);
   }
 
-  const newCursor = moveToFirstNonBlank(newLines, { line: startLine, col: 0 });
+  return newLines;
+}
+
+/**
+ * 지정된 행 범위 [startLine, endLine]에 대해 들여쓰기를 자동 정렬하고 실행 취소 스냅샷을 푸시합니다.
+ */
+export function formatIndentRange(
+  state: VimEditorState,
+  startLine: number,
+  endLine: number
+): VimEditorState {
+  const stateWithUndo = pushUndoSnapshot(state);
+  const minLine = Math.max(0, Math.min(startLine, endLine));
+  const maxLine = Math.min(state.lines.length - 1, Math.max(startLine, endLine));
+  const newLines = formatLinesRange(state.lines, minLine, maxLine);
+  const newCursor = moveToFirstNonBlank(newLines, { line: minLine, col: 0 });
 
   return {
     ...stateWithUndo,
@@ -314,6 +382,18 @@ export function formatIndentLines(
 }
 
 /**
+ * ==: 현재 줄(및 count개 줄) 들여쓰기 자동 정렬
+ */
+export function formatIndentLines(
+  state: VimEditorState,
+  count = 1
+): VimEditorState {
+  const startLine = state.cursor.line;
+  const endLine = Math.min(state.lines.length - 1, startLine + Math.max(1, count) - 1);
+  return formatIndentRange(state, startLine, endLine);
+}
+
+/**
  * VISUAL 모드 =: 선택 영역 들여쓰기 자동 정렬
  */
 export function formatIndentVisual(state: VimEditorState): VimEditorState {
@@ -321,36 +401,13 @@ export function formatIndentVisual(state: VimEditorState): VimEditorState {
     return { ...state, mode: 'NORMAL', pendingKeys: undefined };
   }
 
-  const stateWithUndo = pushUndoSnapshot(state);
   const minLine = Math.min(state.visualAnchor.line, state.cursor.line);
   const maxLine = Math.max(state.visualAnchor.line, state.cursor.line);
-  const newLines = [...state.lines];
-
-  for (let i = minLine; i <= maxLine; i++) {
-    let depth = 0;
-    for (let prev = 0; prev < i; prev++) {
-      const pText = newLines[prev];
-      for (const ch of pText) {
-        if (ch === '{' || ch === '(' || ch === '[') depth++;
-        else if (ch === '}' || ch === ')' || ch === ']') depth = Math.max(0, depth - 1);
-      }
-    }
-    const currentText = newLines[i].trimStart();
-    if (currentText.startsWith('}') || currentText.startsWith(')') || currentText.startsWith(']')) {
-      depth = Math.max(0, depth - 1);
-    }
-    const indent = '  '.repeat(depth);
-    newLines[i] = currentText.length > 0 ? indent + currentText : '';
-  }
-
-  const newCursor = moveToFirstNonBlank(newLines, { line: minLine, col: 0 });
+  const res = formatIndentRange(state, minLine, maxLine);
 
   return {
-    ...stateWithUndo,
-    lines: newLines,
-    cursor: newCursor,
+    ...res,
     mode: 'NORMAL',
     visualAnchor: undefined,
-    pendingKeys: undefined,
   };
 }

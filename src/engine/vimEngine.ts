@@ -1,4 +1,4 @@
-import { VimEditorState, CursorPosition } from '../types/vim';
+import { VimEditorState, CursorPosition, FoldRange } from '../types/vim';
 import { clampCursor, getMaxCol } from './cursor';
 import {
   moveLeft,
@@ -15,7 +15,6 @@ import {
   moveToWordEnd,
 } from './motions';
 import {
-  deleteLine,
   deleteWord,
   deleteChar,
   changeWord,
@@ -93,7 +92,32 @@ import {
   modifyNumberAtCursor,
   formatIndentLines,
   formatIndentVisual,
+  formatIndentRange,
 } from './lineOperators';
+import {
+  foldClose,
+  foldOpen,
+  foldToggle,
+  foldCloseAll,
+  foldOpenAll,
+  getNextVisibleLine,
+  getPrevVisibleLine,
+  deleteFoldOrLine,
+  yankFoldOrLine,
+} from './folding';
+export {
+  foldClose,
+  foldOpen,
+  foldToggle,
+  foldCloseAll,
+  foldOpenAll,
+  detectFoldBlocks,
+  findFoldForCursor,
+  getNextVisibleLine,
+  getPrevVisibleLine,
+  deleteFoldOrLine,
+  yankFoldOrLine,
+} from './folding';
 
 /**
  * 대기 중인 키(pendingKeys)에서 숫자 카운트와 연산자를 분해 파싱합니다.
@@ -857,7 +881,7 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
   if (visualObjMatch) {
     const count = visualObjMatch[1] ? parseInt(visualObjMatch[1], 10) : 1;
     const modifier = visualObjMatch[2] as 'i' | 'a';
-    const validTargets = ['w', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B'];
+    const validTargets = ['w', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't'];
     if (validTargets.includes(key)) {
       let targetChar = key;
       if (key === 'b' || key === ')') targetChar = '(';
@@ -1000,7 +1024,8 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
     state.lines,
     state.cursor,
     key,
-    parsed.totalCount
+    parsed.totalCount,
+    state.folds
   );
 
   if (motionCursor) {
@@ -1378,11 +1403,16 @@ function handleNormalModeKey(
     return scrollHalfPageUp(state);
   }
 
-  // zz, zt, zb: 뷰포트 정렬
+  // zz, zt, zb: 뷰포트 정렬 및 zc, zo, za, zM, zR: 코드 폴딩
   if (state.pendingKeys === 'z' || parsed.operator === 'z') {
     if (key === 'z') return scrollToCenter(state);
     if (key === 't') return scrollToTop(state);
     if (key === 'b') return scrollToBottom(state);
+    if (key === 'c') return foldClose(state);
+    if (key === 'o') return foldOpen(state);
+    if (key === 'a') return foldToggle(state);
+    if (key === 'M') return foldCloseAll(state);
+    if (key === 'R') return foldOpenAll(state);
     return { ...state, pendingKeys: undefined };
   }
 
@@ -1473,6 +1503,18 @@ function handleNormalModeKey(
     }
     state = { ...state, pendingKeys: undefined };
   }
+  // =g 대기 상태 (예: =gg 또는 1=gg)
+  if (state.pendingKeys?.endsWith('=g')) {
+    if (key === 'g') {
+      const res = formatIndentRange(state, 0, state.cursor.line);
+      return {
+        ...res,
+        lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['=', 'g', 'g'],
+      };
+    }
+    state = { ...state, pendingKeys: undefined };
+  }
+
   if (parsed.operator === '=') {
     if (key === '=') {
       const res = formatIndentLines(state, parsed.totalCount);
@@ -1480,6 +1522,44 @@ function handleNormalModeKey(
       return {
         ...res,
         lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
+      };
+    }
+    if (key === 'G') {
+      const res = formatIndentRange(state, state.cursor.line, state.lines.length - 1);
+      const lKeys = ['=', 'G'];
+      return {
+        ...res,
+        lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
+      };
+    }
+    if (key === 'g') {
+      return {
+        ...state,
+        pendingKeys: (parsed.count1 ? String(parsed.count1) : '') + '=g',
+      };
+    }
+    if (key === 'j') {
+      const endLine = Math.min(state.lines.length - 1, state.cursor.line + parsed.totalCount);
+      const res = formatIndentRange(state, state.cursor.line, endLine);
+      const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), '=', 'j'] : ['=', 'j'];
+      return {
+        ...res,
+        lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
+      };
+    }
+    if (key === 'k') {
+      const startLine = Math.max(0, state.cursor.line - parsed.totalCount);
+      const res = formatIndentRange(state, startLine, state.cursor.line);
+      const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), '=', 'k'] : ['=', 'k'];
+      return {
+        ...res,
+        lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
+      };
+    }
+    if (key === 'i' || key === 'a') {
+      return {
+        ...state,
+        pendingKeys: (parsed.count1 ? String(parsed.count1) : '') + '=' + key,
       };
     }
     state = { ...state, pendingKeys: undefined };
@@ -1602,14 +1682,14 @@ function handleNormalModeKey(
     };
   }
 
-  // 4. 텍스트 객체 대기 상태 (di, da, ci, ca, yi, ya, vi, va 및 카운트 조합)
-  const textObjPendingMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([dcyv])([ia])$/);
+  // 4. 텍스트 객체 대기 상태 (di, da, ci, ca, yi, ya, vi, va, =i, =a 및 카운트 조합)
+  const textObjPendingMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([dcyv=])([ia])$/);
   if (textObjPendingMatch) {
     const count = textObjPendingMatch[1] ? parseInt(textObjPendingMatch[1], 10) : 1;
-    const op = textObjPendingMatch[2] as 'd' | 'c' | 'y' | 'v';
+    const op = textObjPendingMatch[2] as 'd' | 'c' | 'y' | 'v' | '=';
     const modifier = textObjPendingMatch[3] as 'i' | 'a';
 
-    const validTargets = ['w', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B'];
+    const validTargets = ['w', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't'];
     if (validTargets.includes(key)) {
       let targetChar = key;
       if (key === 'b' || key === ')') targetChar = '(';
@@ -1628,6 +1708,12 @@ function handleNormalModeKey(
         };
       }
       if (op === 'd') {
+        return {
+          ...synced,
+          lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys,
+        };
+      }
+      if (op === '=') {
         return {
           ...synced,
           lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys,
@@ -1725,7 +1811,7 @@ function handleNormalModeKey(
   // 8. 연산자 대기 처리 (d, c, y, g, v)
   if (parsed.operator === 'd') {
     if (key === 'd') {
-      const res = deleteLine(state, parsed.totalCount);
+      const res = deleteFoldOrLine(state, parsed.totalCount);
       const synced = syncRegisters(state, res, false);
       const lKeys =
         parsed.totalCount > 1
@@ -1947,18 +2033,7 @@ function handleNormalModeKey(
     state = { ...state, pendingKeys: undefined };
   } else if (parsed.operator === 'y') {
     if (key === 'y') {
-      const { line } = state.cursor;
-      const count = parsed.totalCount;
-      const yankCount = Math.min(count, state.lines.length - line);
-      const yankedLines = state.lines.slice(line, line + yankCount).join('\n');
-      const stateWithClip: VimEditorState = {
-        ...state,
-        clipboard: {
-          type: 'line',
-          content: yankedLines,
-        },
-        pendingKeys: undefined,
-      };
+      const stateWithClip = yankFoldOrLine(state, parsed.totalCount);
       return syncRegisters(state, stateWithClip, true);
     }
     if (key === 'w' || key === 'e') {
@@ -2235,16 +2310,7 @@ function handleNormalModeKey(
 
   // Y: 한 줄 복사 (yy와 동일)
   if (key === 'Y' && !state.pendingKeys) {
-    const { line } = state.cursor;
-    const yankedLine = state.lines[line] ?? '';
-    const stateWithClip: VimEditorState = {
-      ...state,
-      clipboard: {
-        type: 'line',
-        content: yankedLine,
-      },
-      pendingKeys: undefined,
-    };
+    const stateWithClip = yankFoldOrLine(state, 1);
     return syncRegisters(state, stateWithClip, true);
   }
 
@@ -2442,7 +2508,8 @@ function handleNormalModeKey(
     state.lines,
     state.cursor,
     key,
-    parsed.totalCount
+    parsed.totalCount,
+    state.folds
   );
 
   if (motionCursor) {
@@ -2495,7 +2562,8 @@ function evaluateMotionWithCount(
   lines: string[],
   cursor: { line: number; col: number },
   key: string,
-  count = 1
+  count = 1,
+  folds?: FoldRange[]
 ): { line: number; col: number } | null {
   let cur = { ...cursor };
   let matched = true;
@@ -2513,12 +2581,28 @@ function evaluateMotionWithCount(
 
     case 'j':
     case 'ArrowDown':
-      for (let i = 0; i < count; i++) cur = moveDown(lines, cur);
+      for (let i = 0; i < count; i++) {
+        if (folds && folds.length > 0) {
+          const nextLine = getNextVisibleLine(folds, cur.line, lines.length - 1);
+          const maxCol = getMaxCol(lines[nextLine]);
+          cur = { line: nextLine, col: Math.min(cur.col, maxCol) };
+        } else {
+          cur = moveDown(lines, cur);
+        }
+      }
       break;
 
     case 'k':
     case 'ArrowUp':
-      for (let i = 0; i < count; i++) cur = moveUp(lines, cur);
+      for (let i = 0; i < count; i++) {
+        if (folds && folds.length > 0) {
+          const prevLine = getPrevVisibleLine(folds, cur.line);
+          const maxCol = getMaxCol(lines[prevLine]);
+          cur = { line: prevLine, col: Math.min(cur.col, maxCol) };
+        } else {
+          cur = moveUp(lines, cur);
+        }
+      }
       break;
 
     case '0':

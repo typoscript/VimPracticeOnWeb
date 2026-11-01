@@ -43,6 +43,12 @@ export interface ViewportState {
   visibleRows: number;  // 화면에 한 번에 표시되는 행 개수
 }
 
+export interface FoldRange {
+  startRow: number; // 0-indexed 시작 행
+  endRow: number;   // 0-indexed 종료 행
+  closed: boolean;  // 접힘 여부
+}
+
 export type SplitDirection = 'none' | 'horizontal' | 'vertical';
 
 export interface SplitPaneState {
@@ -117,6 +123,8 @@ export interface VimEditorState {
   leaderKey?: string;
   /** $ 키 입력 후 j/k 수직 이동 시 줄 끝 유지 여부 (Vim sticky end-of-line) */
   stickyDollar?: boolean;
+  /** 코드 폴딩 목록 (zc, zo, za, zR, zM) */
+  folds?: FoldRange[];
 }
 
 export type VimState = VimEditorState;

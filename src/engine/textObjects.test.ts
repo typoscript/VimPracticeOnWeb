@@ -235,5 +235,91 @@ describe('textObjects module (iw, i", i(, i))', () => {
       const next = executeTextObjectOperator(state, 'd', 'aw', 2);
       expect(next.lines[0]).toBe('three four');
     });
+
+    it('cit: 중첩 태그 구조에서 커서가 위치한 안쪽 태그의 콘텐츠만 삭제하고 INSERT 모드로 진입한다', () => {
+      const state: VimEditorState = {
+        lines: ['<div className="box"><span>Hello</span></div>'],
+        cursor: { line: 0, col: 28 }, // 'Hello' 내부
+        mode: 'NORMAL',
+      };
+
+      const next = executeTextObjectOperator(state, 'c', 'it');
+      expect(next.lines[0]).toBe('<div className="box"><span></span></div>');
+      expect(next.cursor).toEqual({ line: 0, col: 27 }); // '<span>' 바로 다음
+      expect(next.mode).toBe('INSERT');
+      expect(next.clipboard?.content).toBe('Hello');
+    });
+
+    it('dat: 여는 태그와 닫는 태그 전체를 포함하여 삭제한다', () => {
+      const state: VimEditorState = {
+        lines: ['const el = <span>Delete Me</span>;'],
+        cursor: { line: 0, col: 18 },
+        mode: 'NORMAL',
+      };
+
+      const next = executeTextObjectOperator(state, 'd', 'at');
+      expect(next.lines[0]).toBe('const el = ;');
+      expect(next.clipboard?.content).toBe('<span>Delete Me</span>');
+      expect(next.mode).toBe('NORMAL');
+    });
+
+    it('멀티라인 cit: 여러 줄에 걸친 태그 내부를 한 줄로 합쳐 INSERT 모드로 진입한다', () => {
+      const state: VimEditorState = {
+        lines: [
+          '<div className="box">',
+          '  First line',
+          '  Second line',
+          '</div>',
+        ],
+        cursor: { line: 1, col: 4 },
+        mode: 'NORMAL',
+      };
+
+      const next = executeTextObjectOperator(state, 'c', 'it');
+      expect(next.lines).toEqual(['<div className="box"></div>']);
+      expect(next.cursor).toEqual({ line: 0, col: 21 });
+      expect(next.mode).toBe('INSERT');
+    });
+
+    it('Self-closing 태그 at: <input /> 태그 전체를 선택/삭제한다', () => {
+      const state: VimEditorState = {
+        lines: ['<form><input type="text" /></form>'],
+        cursor: { line: 0, col: 12 }, // input 태그 내부
+        mode: 'NORMAL',
+      };
+
+      const next = executeTextObjectOperator(state, 'd', 'at');
+      expect(next.lines[0]).toBe('<form></form>');
+      expect(next.clipboard?.content).toBe('<input type="text" />');
+    });
+
+    it('vat: 태그 전체를 VISUAL 모드로 영역 선택한다', () => {
+      const state: VimEditorState = {
+        lines: ['<div><span>Text</span></div>'],
+        cursor: { line: 0, col: 13 },
+        mode: 'NORMAL',
+      };
+
+      const next = executeTextObjectOperator(state, 'v', 'at');
+      expect(next.mode).toBe('VISUAL');
+      expect(next.visualAnchor).toEqual({ line: 0, col: 5 }); // '<' of <span>
+      expect(next.cursor).toEqual({ line: 0, col: 21 }); // '>' of </span>
+    });
+
+    it('=it: 태그 내부 영역의 들여쓰기를 자동 정렬한다', () => {
+      const state: VimEditorState = {
+        lines: [
+          '<div>',
+          '<h1>Title</h1>',
+          '</div>',
+        ],
+        cursor: { line: 1, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      const next = executeTextObjectOperator(state, '=', 'it');
+      expect(next.lines[1]).toBe('  <h1>Title</h1>');
+      expect(next.mode).toBe('NORMAL');
+    });
   });
 });

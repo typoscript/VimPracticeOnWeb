@@ -106,4 +106,37 @@ describe('Editor Component', () => {
     expect(line2).toContainElement(markBadgeA);
     expect(line2).toContainElement(markBadgeB);
   });
+
+  it('코드 폴딩(closed fold) 시 해당 구간을 숨기고 축약 요약 바(+--- [3 lines folded] ---)를 렌더링한다', () => {
+    const lines = [
+      'function test() {',
+      '  const a = 1;',
+      '  const b = 2;',
+      '  return a + b;',
+      '}',
+      'console.log(test());',
+    ];
+
+    render(
+      <Editor
+        lines={lines}
+        cursor={{ line: 1, col: 0 }}
+        mode="NORMAL"
+        folds={[{ startRow: 1, endRow: 3, closed: true }]}
+      />
+    );
+
+    // 접힌 요약 텍스트 검증
+    const foldSummary = screen.getByTestId('fold-summary-2');
+    expect(foldSummary).toBeInTheDocument();
+    expect(foldSummary).toHaveTextContent('+--- [3 lines folded] ---');
+
+    // 숨겨진 행(3번, 4번 줄)은 렌더링되지 않음
+    expect(screen.queryByTestId('editor-row-3')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('editor-row-4')).not.toBeInTheDocument();
+
+    // 0번 줄(1번 라인)과 4번 줄(5번 라인)은 정상 렌더링됨
+    expect(screen.getByTestId('editor-row-1')).toBeInTheDocument();
+    expect(screen.getByTestId('editor-row-5')).toBeInTheDocument();
+  });
 });

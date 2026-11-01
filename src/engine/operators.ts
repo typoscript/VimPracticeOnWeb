@@ -61,6 +61,23 @@ export function deleteLine(state: VimEditorState, count = 1): VimEditorState {
   };
 }
 
+/**
+ * 'yy' / '[count]yy': 현재 줄부터 count개의 줄을 라인 단위로 복사합니다.
+ */
+export function yankLine(state: VimEditorState, count = 1): VimEditorState {
+  const { line } = state.cursor;
+  const yankCount = Math.min(Math.max(1, count), state.lines.length - line);
+  const yankedLines = state.lines.slice(line, line + yankCount).join('\n');
+  return {
+    ...state,
+    clipboard: {
+      type: 'line',
+      content: yankedLines,
+    },
+    pendingKeys: undefined,
+  };
+}
+
 export type CharType = 'word' | 'punct' | 'space';
 
 export function getCharType(ch: string | undefined): CharType {

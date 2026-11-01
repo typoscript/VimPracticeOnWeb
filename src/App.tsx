@@ -1388,6 +1388,7 @@ export function App() {
                     onFocus={() => handleSwitchPane(0)}
                     marks={editorState.marks}
                     viewport={editorState.activePaneIndex === 0 ? editorState.viewport : editorState.splitPanes[0].viewport}
+                    folds={editorState.folds}
                   />
                 </div>
 
@@ -1419,6 +1420,7 @@ export function App() {
                     onFocus={() => handleSwitchPane(1)}
                     marks={editorState.marks}
                     viewport={editorState.activePaneIndex === 1 ? editorState.viewport : editorState.splitPanes[1].viewport}
+                    folds={editorState.folds}
                   />
                 </div>
               </div>
@@ -1439,6 +1441,7 @@ export function App() {
                 onFocus={() => setIsEditorFocused(true)}
                 marks={displayEditorState.marks}
                 viewport={displayEditorState.viewport}
+                folds={displayEditorState.folds}
               />
             )}
             <Keycaster recentKeys={recentKeys} />

@@ -224,5 +224,20 @@ describe('Vim State Invariant Guard', () => {
 
       expect(() => guarded(initial, 'l')).toThrow(VimInvariantViolationError);
     });
+
+    it('validates folds invariant and throws when fold range is invalid', () => {
+      const prev = createMockState();
+      // Valid fold
+      const nextValid = createMockState({
+        folds: [{ startRow: 0, endRow: 1, closed: true }],
+      });
+      expect(() => assertValidVimState(prev, nextValid)).not.toThrow();
+
+      // Invalid fold: endRow >= lines.length
+      const nextInvalid = createMockState({
+        folds: [{ startRow: 0, endRow: 99, closed: true }],
+      });
+      expect(() => assertValidVimState(prev, nextInvalid)).toThrow(/INVALID_FOLD_RANGE/);
+    });
   });
 });

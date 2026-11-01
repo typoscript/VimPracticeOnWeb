@@ -356,8 +356,41 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson24!.checkComplete(stateDone)).toBe(true);
   });
 
-  it('모든 24개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(24);
+  it('레슨 25 (cit로 JSX 태그 편집하고 gg=G로 들여쓰기 정렬) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson25 = MISSIONS.find((m) => m.id === 25);
+    expect(lesson25).toBeDefined();
+
+    const stateNotDone: VimEditorState = {
+      lines: [
+        'function App() {',
+        'const title = "Vim";',
+        'return (',
+        '<button>Old</button>',
+        ');',
+        '}',
+      ],
+      cursor: { line: 3, col: 8 },
+      mode: 'NORMAL',
+    };
+    expect(lesson25!.checkComplete(stateNotDone)).toBe(false);
+
+    const stateDone: VimEditorState = {
+      lines: [
+        'function App() {',
+        '  const title = "Vim";',
+        '  return (',
+        '    <button>Click Me</button>',
+        '  );',
+        '}',
+      ],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson25!.checkComplete(stateDone)).toBe(true);
+  });
+
+  it('모든 25개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(25);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();

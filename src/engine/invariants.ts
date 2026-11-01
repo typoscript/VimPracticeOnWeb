@@ -227,6 +227,39 @@ export function assertValidVimState(
       }
     }
   }
+
+  // 4. 폴딩 상태(folds) 불변 조건 검증 (folds가 설정된 경우)
+  if (nextState.folds !== undefined) {
+    if (!Array.isArray(nextState.folds)) {
+      throw new VimInvariantViolationError(
+        'FOLDS_NOT_ARRAY',
+        `folds must be an Array, received ${typeof nextState.folds}`,
+        key,
+        prevState,
+        nextState
+      );
+    }
+    for (let i = 0; i < nextState.folds.length; i++) {
+      const f = nextState.folds[i];
+      if (
+        !f ||
+        typeof f.startRow !== 'number' ||
+        typeof f.endRow !== 'number' ||
+        typeof f.closed !== 'boolean' ||
+        f.startRow < 0 ||
+        f.startRow > f.endRow ||
+        f.endRow >= nextState.lines.length
+      ) {
+        throw new VimInvariantViolationError(
+          'INVALID_FOLD_RANGE',
+          `Fold at index ${i} has invalid range: startRow=${f?.startRow}, endRow=${f?.endRow}, closed=${f?.closed} (lines count: ${nextState.lines.length})`,
+          key,
+          prevState,
+          nextState
+        );
+      }
+    }
+  }
 }
 
 /**

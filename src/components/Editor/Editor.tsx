@@ -1,5 +1,5 @@
 import React from 'react';
-import { CursorPosition, VimMode, SearchMatch, ViewportState } from '../../types/vim';
+import { CursorPosition, VimMode, SearchMatch, ViewportState, FoldRange } from '../../types/vim';
 import { isPositionSelected } from '../../engine/visual';
 import { findMatches } from '../../engine/search';
 import './Editor.css';
@@ -22,6 +22,8 @@ export interface EditorProps {
   marks?: Record<string, { row: number; col: number }>;
   /** 화면 뷰포트 상태 */
   viewport?: ViewportState;
+  /** 코드 폴딩 상태 (zc, zo, za, zR, zM) */
+  folds?: FoldRange[];
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -36,6 +38,7 @@ export const Editor: React.FC<EditorProps> = ({
   onFocus,
   marks,
   viewport,
+  folds,
 }) => {
   const scrollerRef = React.useRef<HTMLDivElement>(null);
 
@@ -73,6 +76,18 @@ export const Editor: React.FC<EditorProps> = ({
       <div ref={scrollerRef} className="editor-scroller">
         <div className="editor-lines">
           {lines.map((lineText, lineIdx) => {
+            const closedFolds = (folds ?? []).filter((f) => f.closed);
+            // 닫힌 폴드의 숨겨진 행(startRow < lineIdx <= endRow)은 렌더링하지 않음
+            if (closedFolds.some((f) => f.startRow < lineIdx && lineIdx <= f.endRow)) {
+              return null;
+            }
+
+            const foldStartingHere = closedFolds.find((f) => f.startRow === lineIdx);
+            const isFoldedHeader = !!foldStartingHere;
+            const foldedLineCount = foldStartingHere
+              ? foldStartingHere.endRow - foldStartingHere.startRow + 1
+              : 0;
+
             const isCursorLine = cursor.line === lineIdx;
             const targetCol =
               targetPosition && targetPosition.line === lineIdx
@@ -95,7 +110,7 @@ export const Editor: React.FC<EditorProps> = ({
             return (
               <div
                 key={lineIdx}
-                className={`editor-row ${isCursorLine ? 'active-row' : ''}`}
+                className={`editor-row ${isCursorLine ? 'active-row' : ''} ${isFoldedHeader ? 'folded-row' : ''}`}
                 data-testid={`editor-row-${lineIdx + 1}`}
               >
                 <div
@@ -119,16 +134,25 @@ export const Editor: React.FC<EditorProps> = ({
                   <span className="line-num-text">{lineNumberDisplay}</span>
                 </div>
                 <div className="line-content">
-                  {renderLineContent({
-                    text: lineText,
-                    lineIdx,
-                    cursor,
-                    mode,
-                    targetCol,
-                    visualAnchor,
-                    lineMatches,
-                    isFocused,
-                  })}
+                  {isFoldedHeader ? (
+                    <div
+                      className="folded-summary"
+                      data-testid={`fold-summary-${lineIdx + 1}`}
+                    >
+                      {`+--- [${foldedLineCount} lines folded] ---`}
+                    </div>
+                  ) : (
+                    renderLineContent({
+                      text: lineText,
+                      lineIdx,
+                      cursor,
+                      mode,
+                      targetCol,
+                      visualAnchor,
+                      lineMatches,
+                      isFocused,
+                    })
+                  )}
                 </div>
               </div>
             );

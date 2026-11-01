@@ -604,4 +604,47 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 25,
+    title: '레슨 25: JSX 태그 편집과 자동 들여쓰기 (cit, gg=G)',
+    description: 'cit로 JSX 태그 내부 내용을 한 번에 교체하고, gg=G로 문서 전체의 어긋난 들여쓰기를 자동 정렬하세요.',
+    hint: '초기 커서 위치(버튼 태그 내부)에서 citClick Me<Esc> 로 버튼 텍스트를 수정한 뒤, gg=G 로 코드 전체 줄을 정렬하세요.',
+    par: 16,
+    optimalKeys: [
+      'c', 'i', 't',
+      'C', 'l', 'i', 'c', 'k', ' ', 'M', 'e',
+      'Escape',
+      'g', 'g',
+      '=', 'G',
+    ],
+    initialLines: [
+      'function App() {',
+      'const title = "Vim";',
+      'return (',
+      '<button>Old</button>',
+      ');',
+      '}',
+    ],
+    targetLines: [
+      'function App() {',
+      '  const title = "Vim";',
+      '  return (',
+      '    <button>Click Me</button>',
+      '  );',
+      '}',
+    ],
+    initialCursor: { line: 3, col: 8 },
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines.length === 6 &&
+        state.lines[0] === 'function App() {' &&
+        state.lines[1] === '  const title = "Vim";' &&
+        state.lines[2] === '  return (' &&
+        state.lines[3] === '    <button>Click Me</button>' &&
+        state.lines[4] === '  );' &&
+        state.lines[5] === '}'
+      );
+    },
+  },
 ];
