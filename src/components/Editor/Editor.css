@@ -115,6 +115,7 @@
 }
 
 .line-content {
+  position: relative;
   flex: 1;
   white-space: pre;
   color: var(--text-primary, #cdd6f4);
@@ -175,6 +176,14 @@
   color: #11111b;
   font-weight: bold;
   box-shadow: -2px 0 0 var(--cursor-insert, #89b4fa);
+}
+
+/* INSERT (normal) 모드: 보라빛 블록 커서 */
+.cursor-insert-normal {
+  background-color: #bb9af7;
+  color: #1a1b26;
+  font-weight: bold;
+  box-shadow: 0 0 6px rgba(187, 154, 247, 0.6);
 }
 
 /* VISUAL 모드: 보라/핑크 블록 */
@@ -244,3 +253,96 @@
     padding-right: 8px;
   }
 }
+
+/* Vim Style Autocomplete Popup Menu (Ctrl+n / Ctrl+p) */
+.vim-completion-menu {
+  position: absolute;
+  top: 1.6em;
+  z-index: 100;
+  min-width: 220px;
+  max-width: 420px;
+  background-color: var(--bg-secondary, #1f2335);
+  border: 1px solid var(--border-color, #414868);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  font-family: inherit;
+  font-size: 13px;
+  overflow: hidden;
+  animation: fadeIn 0.15s ease;
+  user-select: none;
+}
+
+.completion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  background-color: rgba(0, 0, 0, 0.35);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+}
+
+.completion-prefix-tag {
+  color: #7aa2f7;
+  font-weight: 700;
+}
+
+.completion-count-tag {
+  color: #565f89;
+  font-size: 10.5px;
+}
+
+.completion-list {
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.completion-item {
+  display: flex;
+  align-items: center;
+  padding: 4px 10px;
+  color: var(--text-primary, #c0caf5);
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+  white-space: nowrap;
+}
+
+.completion-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.completion-item.selected {
+  background-color: #3d59a1;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.cand-match-prefix {
+  color: #ff9e64;
+  font-weight: bold;
+}
+
+.completion-item.selected .cand-match-prefix {
+  color: #ffc777;
+}
+
+.cand-remainder {
+  flex: 1;
+}
+
+.cand-selected-indicator {
+  margin-left: 8px;
+  font-size: 11px;
+  opacity: 0.8;
+}
+
+.completion-footer {
+  padding: 3px 8px;
+  background-color: rgba(0, 0, 0, 0.25);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 10px;
+  color: #7aa2f7;
+  text-align: right;
+  opacity: 0.8;
+}
+

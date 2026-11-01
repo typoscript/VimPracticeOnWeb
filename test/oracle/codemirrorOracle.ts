@@ -54,7 +54,29 @@ export function mapKeyToCodeMirror(key: string): string {
       return '<C-d>';
     case 'Ctrl-u':
     case 'Ctrl+u':
+    case 'Alt-u':
+    case 'Alt+u':
       return '<C-u>';
+    case 'Ctrl-w':
+    case 'Ctrl+w':
+    case 'Alt-w':
+    case 'Alt+w':
+      return '<C-w>';
+    case 'Ctrl-h':
+    case 'Ctrl+h':
+    case 'Alt-h':
+    case 'Alt+h':
+      return '<C-h>';
+    case 'Ctrl-n':
+    case 'Ctrl+n':
+    case 'Alt-n':
+    case 'Alt+n':
+      return '<C-n>';
+    case 'Ctrl-p':
+    case 'Ctrl+p':
+    case 'Alt-p':
+    case 'Alt+p':
+      return '<C-p>';
     default:
       return key;
   }

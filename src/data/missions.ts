@@ -647,4 +647,30 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 26,
+    title: '레슨 26: Insert 모드 고속 제어와 인버퍼 자동완성 (Ctrl+w, Ctrl+n)',
+    description: 'Insert 모드에서 홈 로우를 벗어나지 않고 오타 단어를 Ctrl+w로 지우고, 긴 식별자를 Ctrl+n(또는 Alt+n)으로 자동완성하세요.',
+    hint: 'A를 눌러 줄 끝에서 Insert 모드로 진입한 후, Ctrl+w(또는 Alt+w)로 wrongWord를 삭제하고 calc 입력 후 Ctrl+n(또는 Alt+n)을 눌러 자동완성한 뒤 ;와 Escape를 누르세요.',
+    par: 9,
+    optimalKeys: ['A', 'Ctrl-w', 'c', 'a', 'l', 'c', 'Ctrl-n', ';', 'Escape'],
+    initialLines: [
+      'const calculateTotalHospitalPrescriptionPrice = 12000;',
+      'const currentTotal = wrongWord',
+    ],
+    targetLines: [
+      'const calculateTotalHospitalPrescriptionPrice = 12000;',
+      'const currentTotal = calculateTotalHospitalPrescriptionPrice;',
+    ],
+    initialCursor: { line: 1, col: 29 },
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines.length === 2 &&
+        state.lines[0] === 'const calculateTotalHospitalPrescriptionPrice = 12000;' &&
+        state.lines[1] === 'const currentTotal = calculateTotalHospitalPrescriptionPrice;'
+      );
+    },
+  },
 ];
+

@@ -38,6 +38,14 @@ export interface BlockInsertSession {
   typedChars: string[];    // INSERT 세션 중 입력된 문자 목록
 }
 
+export interface CompletionSession {
+  prefix: string;
+  prefixStartCol: number;
+  candidates: string[];
+  selectedIndex: number; // 0-indexed into candidates
+  originalWord: string;
+}
+
 export interface ViewportState {
   topRow: number;       // 현재 화면 최상단 행 번호 (0-indexed)
   visibleRows: number;  // 화면에 한 번에 표시되는 행 개수
@@ -125,6 +133,10 @@ export interface VimEditorState {
   stickyDollar?: boolean;
   /** 코드 폴딩 목록 (zc, zo, za, zR, zM) */
   folds?: FoldRange[];
+  /** Insert 모드 일회성 Normal 명령 실행 세션 (Ctrl+o) */
+  insertNormalSession?: boolean;
+  /** 버퍼 내 단어 자동완성 팝업 세션 (Ctrl+n, Ctrl+p) */
+  completionSession?: CompletionSession | null;
 }
 
 export type VimState = VimEditorState;

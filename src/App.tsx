@@ -916,11 +916,38 @@ export function App() {
         return;
       }
 
-      // Ctrl+w 또는 Cmd+w: 윈도우 분할 및 포커스 제어 (브라우저 창 닫기 차단)
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'w' || e.key === 'W')) {
-        if (editorState.mode === 'NORMAL' || editorState.mode.startsWith('VISUAL')) {
+      // Ctrl+w 또는 Cmd+w 또는 Alt+w: 윈도우 분할(NORMAL/VISUAL) 및 단어 삭제(INSERT)
+      if ((e.ctrlKey || e.metaKey || e.altKey) && (e.key === 'w' || e.key === 'W')) {
+        if (editorState.mode === 'NORMAL' || editorState.mode.startsWith('VISUAL') || editorState.mode === 'INSERT') {
           e.preventDefault();
           processKeyInput('Ctrl-w');
+          return;
+        }
+      }
+
+      // Ctrl+h 또는 Cmd+h 또는 Alt+h: INSERT 모드 백스페이스
+      if ((e.ctrlKey || e.metaKey || e.altKey) && (e.key === 'h' || e.key === 'H')) {
+        if (editorState.mode === 'INSERT') {
+          e.preventDefault();
+          processKeyInput('Ctrl-h');
+          return;
+        }
+      }
+
+      // Ctrl+n 또는 Cmd+n 또는 Alt+n: INSERT 모드 인버퍼 자동완성 (다음 후보)
+      if ((e.ctrlKey || e.metaKey || e.altKey) && (e.key === 'n' || e.key === 'N')) {
+        if (editorState.mode === 'INSERT') {
+          e.preventDefault();
+          processKeyInput('Ctrl-n');
+          return;
+        }
+      }
+
+      // Ctrl+p 또는 Cmd+p 또는 Alt+p: INSERT 모드 인버퍼 자동완성 (이전 후보)
+      if ((e.ctrlKey || e.metaKey || e.altKey) && (e.key === 'p' || e.key === 'P')) {
+        if (editorState.mode === 'INSERT') {
+          e.preventDefault();
+          processKeyInput('Ctrl-p');
           return;
         }
       }
@@ -950,9 +977,9 @@ export function App() {
         }
       }
 
-      // Ctrl+o 또는 Cmd+o: 점프 리스트 이전 위치 (브라우저 파일 열기 차단)
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'o' || e.key === 'O')) {
-        if (editorState.mode === 'NORMAL') {
+      // Ctrl+o 또는 Cmd+o 또는 Alt+o: 점프 리스트 이전 위치(NORMAL) 및 일회성 Normal 명령(INSERT)
+      if ((e.ctrlKey || e.metaKey || e.altKey) && (e.key === 'o' || e.key === 'O')) {
+        if (editorState.mode === 'NORMAL' || editorState.mode === 'INSERT') {
           e.preventDefault();
           processKeyInput('Ctrl-o');
           return;
@@ -995,9 +1022,9 @@ export function App() {
         }
       }
 
-      // Ctrl+u 또는 Cmd+u: 반 페이지 위 스크롤 (브라우저 소스 보기 차단)
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'u' || e.key === 'U')) {
-        if (editorState.mode === 'NORMAL' || editorState.mode.startsWith('VISUAL')) {
+      // Ctrl+u 또는 Cmd+u 또는 Alt+u: 반 페이지 위 스크롤 (NORMAL/VISUAL) 및 줄 시작까지 삭제 (INSERT)
+      if ((e.ctrlKey || e.metaKey || e.altKey) && (e.key === 'u' || e.key === 'U')) {
+        if (editorState.mode === 'NORMAL' || editorState.mode.startsWith('VISUAL') || editorState.mode === 'INSERT') {
           e.preventDefault();
           processKeyInput('Ctrl-u');
           return;
@@ -1511,6 +1538,8 @@ export function App() {
                       marks={editorState.marks}
                       viewport={editorState.activePaneIndex === 0 ? editorState.viewport : editorState.splitPanes[0].viewport}
                       folds={editorState.folds}
+                      completionSession={editorState.activePaneIndex === 0 ? editorState.completionSession : undefined}
+                      insertNormalSession={editorState.activePaneIndex === 0 ? editorState.insertNormalSession : undefined}
                     />
                   </div>
 
@@ -1543,6 +1572,8 @@ export function App() {
                       marks={editorState.marks}
                       viewport={editorState.activePaneIndex === 1 ? editorState.viewport : editorState.splitPanes[1].viewport}
                       folds={editorState.folds}
+                      completionSession={editorState.activePaneIndex === 1 ? editorState.completionSession : undefined}
+                      insertNormalSession={editorState.activePaneIndex === 1 ? editorState.insertNormalSession : undefined}
                     />
                   </div>
                 </div>
@@ -1564,6 +1595,8 @@ export function App() {
                   marks={displayEditorState.marks}
                   viewport={displayEditorState.viewport}
                   folds={displayEditorState.folds}
+                  completionSession={displayEditorState.completionSession}
+                  insertNormalSession={displayEditorState.insertNormalSession}
                 />
               )}
             </div>
@@ -1571,6 +1604,7 @@ export function App() {
             <StatusBar
               mode={displayEditorState.mode}
               cursor={displayEditorState.cursor}
+              insertNormalSession={displayEditorState.insertNormalSession}
               filename={
                 displayEditorState.splitPanes
                   ? (displayEditorState.activePaneIndex === 1

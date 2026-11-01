@@ -48,6 +48,11 @@ import {
   yankVisualSelection,
   startVisualBlockInsert,
 } from './visual';
+import {
+  startOrCycleCompletion,
+  cancelCompletion,
+  acceptCompletion,
+} from './completion';
 import { findMatchingBracket } from './bracketMatch';
 import { deepFreeze, assertValidVimState } from './invariants';
 export { withInvariantCheck, assertValidVimState, deepFreeze } from './invariants';
@@ -215,6 +220,38 @@ export function rawHandleKey(
     nextState = handleVisualModeKey(state, key);
   } else if (state.mode === 'NORMAL') {
     nextState = handleNormalModeKey(state, key, isReplayingDot, macroDepth);
+    // 일회성 NORMAL 모드 명령 (Ctrl+o) 완료 여부 검사
+    if (state.insertNormalSession) {
+      if (key === 'Escape') {
+        // Escape 입력 시 세션 취소하고 NORMAL 모드로 잔류
+        nextState = { ...nextState, insertNormalSession: undefined };
+      } else if (!nextState.pendingKeys) {
+        // pendingKeys가 없으면 단일 normal 명령이 완결되었으므로 다시 INSERT 모드로 자동 복귀
+        if (nextState.mode === 'NORMAL') {
+          const currentLineText = nextState.lines[nextState.cursor.line] ?? '';
+          const targetCol = nextState.stickyDollar
+            ? currentLineText.length
+            : nextState.cursor.col;
+          nextState = {
+            ...nextState,
+            mode: 'INSERT',
+            cursor: { line: nextState.cursor.line, col: targetCol },
+            insertNormalSession: undefined,
+          };
+        } else {
+          nextState = {
+            ...nextState,
+            insertNormalSession: undefined,
+          };
+        }
+      } else {
+        // pendingKeys가 남아 있는 경우(예: 'z', '2', 'd' 등) 세션 유지
+        nextState = {
+          ...nextState,
+          insertNormalSession: true,
+        };
+      }
+    }
   } else {
     nextState = state;
   }
@@ -410,6 +447,40 @@ function handleInsertModeKey(
     }
   }
 
+  // 자동완성 (Ctrl+n / Ctrl+p / Ctrl+e / Ctrl+y)
+  if (key === 'Ctrl-n' || key === 'Ctrl+n' || key === 'Alt-n' || key === 'Alt+n') {
+    return startOrCycleCompletion(state, 'next');
+  }
+  if (key === 'Ctrl-p' || key === 'Ctrl+p' || key === 'Alt-p' || key === 'Alt+p') {
+    return startOrCycleCompletion(state, 'prev');
+  }
+  if (key === 'Ctrl-e' || key === 'Ctrl+e') {
+    if (state.completionSession) {
+      return cancelCompletion(state);
+    }
+  }
+  if (key === 'Ctrl-y' || key === 'Ctrl+y') {
+    if (state.completionSession) {
+      return acceptCompletion(state);
+    }
+  }
+
+  // 자동완성 이외의 키가 입력되면 활성 자동완성 세션 해제
+  if (state.completionSession) {
+    state = { ...state, completionSession: null };
+  }
+
+  // Ctrl+o: 단 1회의 Normal 명령 실행 (INSERT (normal))
+  if (key === 'Ctrl-o' || key === 'Ctrl+o' || key === 'Alt-o' || key === 'Alt+o') {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      insertNormalSession: true,
+      cursor: clampCursor(state.lines, state.cursor, 'NORMAL'),
+      pendingKeys: undefined,
+    };
+  }
+
   // ESC: NORMAL 모드로 복귀 (커서 1칸 좌측 보정)
   if (key === 'Escape') {
     // 비주얼 블록(Ctrl+v) 삽입 세션 중인 경우 나머지 행에 일괄 복제 반영
@@ -465,8 +536,90 @@ function handleInsertModeKey(
     return [...state.currentChangeKeys, k];
   };
 
-  // Backspace: 이전 문자 삭제 또는 윗줄과 병합
-  if (key === 'Backspace') {
+  // Ctrl+w: 커서 앞의 단어 하나 즉시 삭제
+  if (key === 'Ctrl-w' || key === 'Ctrl+w' || key === 'Alt-w' || key === 'Alt+w') {
+    const nextChangeKeys = appendCurrentChange('Ctrl-w');
+    if (col === 0 && line > 0) {
+      const prevLine = state.lines[line - 1] ?? '';
+      const mergedLine = prevLine + currentLine;
+      const nextLines = [
+        ...state.lines.slice(0, line - 1),
+        mergedLine,
+        ...state.lines.slice(line + 1),
+      ];
+      return {
+        ...state,
+        lines: nextLines,
+        cursor: { line: line - 1, col: prevLine.length },
+        currentChangeKeys: nextChangeKeys,
+      };
+    }
+    if (col > 0) {
+      let start = col;
+      while (start > 0 && /\s/.test(currentLine[start - 1])) {
+        start--;
+      }
+      if (start > 0) {
+        const isWordChar = /\w/.test(currentLine[start - 1]);
+        while (
+          start > 0 &&
+          (isWordChar
+            ? /\w/.test(currentLine[start - 1])
+            : !/\w/.test(currentLine[start - 1]) && !/\s/.test(currentLine[start - 1]))
+        ) {
+          start--;
+        }
+      }
+      const newLine = currentLine.slice(0, start) + currentLine.slice(col);
+      const nextLines = [...state.lines];
+      nextLines[line] = newLine;
+      return {
+        ...state,
+        lines: nextLines,
+        cursor: { line, col: start },
+        currentChangeKeys: nextChangeKeys,
+      };
+    }
+    return { ...state, currentChangeKeys: nextChangeKeys };
+  }
+
+  // Ctrl+u: 현재 줄의 커서 앞쪽 내용을 줄 시작까지 통째로 삭제
+  if (key === 'Ctrl-u' || key === 'Ctrl+u' || key === 'Alt-u' || key === 'Alt+u') {
+    const nextChangeKeys = appendCurrentChange('Ctrl-u');
+    if (col === 0 && line > 0) {
+      const prevLine = state.lines[line - 1] ?? '';
+      const mergedLine = prevLine + currentLine;
+      const nextLines = [
+        ...state.lines.slice(0, line - 1),
+        mergedLine,
+        ...state.lines.slice(line + 1),
+      ];
+      return {
+        ...state,
+        lines: nextLines,
+        cursor: { line: line - 1, col: prevLine.length },
+        currentChangeKeys: nextChangeKeys,
+      };
+    }
+    const newLine = currentLine.slice(col);
+    const nextLines = [...state.lines];
+    nextLines[line] = newLine;
+    return {
+      ...state,
+      lines: nextLines,
+      cursor: { line, col: 0 },
+      currentChangeKeys: nextChangeKeys,
+    };
+  }
+
+  // Backspace 또는 Ctrl+h: 이전 문자 삭제 또는 윗줄과 병합
+  if (
+    key === 'Backspace' ||
+    key === 'Ctrl-h' ||
+    key === 'Ctrl+h' ||
+    key === 'Alt-h' ||
+    key === 'Alt+h'
+  ) {
     if (state.blockInsertSession) {
       const updatedChars = state.blockInsertSession.typedChars.slice(0, -1);
       state = {

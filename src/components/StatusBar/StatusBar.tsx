@@ -15,6 +15,8 @@ export interface StatusBarProps {
   commandBuffer?: string;
   /** 커맨드/검색 실행 결과 알림 메시지 */
   commandMessage?: string;
+  /** Insert 모드 일회성 Normal 명령 실행 세션 (Ctrl+o) */
+  insertNormalSession?: boolean;
 }
 
 export const StatusBar: React.FC<StatusBarProps> = ({
@@ -26,15 +28,20 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   commandType,
   commandBuffer,
   commandMessage,
+  insertNormalSession,
 }) => {
   const displayMode =
-    mode === 'VISUAL_LINE'
+    insertNormalSession
+      ? 'INSERT (normal)'
+      : mode === 'VISUAL_LINE'
       ? 'VISUAL LINE'
       : mode === 'VISUAL_BLOCK'
       ? 'VISUAL BLOCK'
       : mode;
   const modeClass =
-    mode === 'VISUAL_LINE' || mode === 'VISUAL_BLOCK'
+    insertNormalSession
+      ? 'mode-insert-normal'
+      : mode === 'VISUAL_LINE' || mode === 'VISUAL_BLOCK'
       ? 'mode-visual'
       : `mode-${mode.toLowerCase()}`;
   const isCommandLineActive = mode === 'COMMAND' || mode === 'SEARCH';

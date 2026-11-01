@@ -79,6 +79,22 @@ export const ActionTimelinePanel: React.FC<ActionTimelinePanelProps> = ({
 
   // X-Ray: 1. 대기 중인 명령 및 가이드 텍스트
   const getPendingGuide = () => {
+    if (editorState.insertNormalSession) {
+      return {
+        badge: 'INSERT (normal) 모드',
+        guide: '단 1회의 NORMAL 명령 실행 대기 중 (명령 완결 후 즉시 INSERT 모드로 복귀)',
+        isPending: true,
+      };
+    }
+    if (editorState.completionSession) {
+      const { prefix, selectedIndex, candidates } = editorState.completionSession;
+      return {
+        badge: `인버퍼 자동완성 [${prefix}]`,
+        guide: `후보 (${selectedIndex + 1}/${candidates.length}): '${candidates[selectedIndex]}' (Ctrl+n: 다음, Ctrl+p: 이전, Esc: 닫기)`,
+        isPending: true,
+      };
+    }
+
     const pk = editorState.pendingKeys;
     if (!pk) {
       if (editorState.mode === 'NORMAL') {
@@ -91,7 +107,7 @@ export const ActionTimelinePanel: React.FC<ActionTimelinePanelProps> = ({
       if (editorState.mode === 'INSERT') {
         return {
           badge: 'INSERT 모드',
-          guide: '텍스트 입력 중 (<Esc>를 누르면 NORMAL 모드로 복귀)',
+          guide: '텍스트 입력 중 (Ctrl+w: 단어삭제, Ctrl+u: 줄시작삭제, Ctrl+n: 자동완성, <Esc>: 복귀)',
           isPending: false,
         };
       }

@@ -389,8 +389,33 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson25!.checkComplete(stateDone)).toBe(true);
   });
 
-  it('모든 25개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(25);
+  it('레슨 26 (Insert 모드 Ctrl+w 단어 삭제 및 Ctrl+n 자동완성) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson26 = MISSIONS.find((m) => m.id === 26);
+    expect(lesson26).toBeDefined();
+
+    const stateNotDone: VimEditorState = {
+      lines: [
+        'const calculateTotalHospitalPrescriptionPrice = 12000;',
+        'const currentTotal = wrongWord',
+      ],
+      cursor: { line: 1, col: 29 },
+      mode: 'NORMAL',
+    };
+    expect(lesson26!.checkComplete(stateNotDone)).toBe(false);
+
+    const stateDone: VimEditorState = {
+      lines: [
+        'const calculateTotalHospitalPrescriptionPrice = 12000;',
+        'const currentTotal = calculateTotalHospitalPrescriptionPrice;',
+      ],
+      cursor: { line: 1, col: 60 },
+      mode: 'NORMAL',
+    };
+    expect(lesson26!.checkComplete(stateDone)).toBe(true);
+  });
+
+  it('모든 26개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(26);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();
@@ -417,3 +442,4 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     });
   });
 });
+

@@ -1,5 +1,12 @@
 import React from 'react';
-import { CursorPosition, VimMode, SearchMatch, ViewportState, FoldRange } from '../../types/vim';
+import {
+  CursorPosition,
+  VimMode,
+  SearchMatch,
+  ViewportState,
+  FoldRange,
+  CompletionSession,
+} from '../../types/vim';
 import { isPositionSelected } from '../../engine/visual';
 import { findMatches } from '../../engine/search';
 import './Editor.css';
@@ -24,6 +31,10 @@ export interface EditorProps {
   viewport?: ViewportState;
   /** 코드 폴딩 상태 (zc, zo, za, zR, zM) */
   folds?: FoldRange[];
+  /** 버퍼 내 단어 자동완성 세션 (Ctrl+n, Ctrl+p) */
+  completionSession?: CompletionSession | null;
+  /** Insert 모드 일회성 Normal 명령 실행 세션 (Ctrl+o) */
+  insertNormalSession?: boolean;
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -39,6 +50,8 @@ export const Editor: React.FC<EditorProps> = ({
   marks,
   viewport,
   folds,
+  completionSession,
+  insertNormalSession,
 }) => {
   const scrollerRef = React.useRef<HTMLDivElement>(null);
 
@@ -142,16 +155,62 @@ export const Editor: React.FC<EditorProps> = ({
                       {`+--- [${foldedLineCount} lines folded] ---`}
                     </div>
                   ) : (
-                    renderLineContent({
-                      text: lineText,
-                      lineIdx,
-                      cursor,
-                      mode,
-                      targetCol,
-                      visualAnchor,
-                      lineMatches,
-                      isFocused,
-                    })
+                    <>
+                      {renderLineContent({
+                        text: lineText,
+                        lineIdx,
+                        cursor,
+                        mode,
+                        targetCol,
+                        visualAnchor,
+                        lineMatches,
+                        isFocused,
+                        insertNormalSession,
+                      })}
+                      {isCursorLine &&
+                        completionSession &&
+                        completionSession.candidates.length > 0 && (
+                          <div
+                            className="vim-completion-menu"
+                            data-testid="vim-completion-menu"
+                            style={{ left: `calc(${cursor.col} * 1ch)` }}
+                          >
+                            <div className="completion-header">
+                              <span className="completion-prefix-tag">
+                                {completionSession.prefix}
+                              </span>
+                              <span className="completion-count-tag">
+                                {completionSession.selectedIndex + 1}/
+                                {completionSession.candidates.length}
+                              </span>
+                            </div>
+                            <div className="completion-list">
+                              {completionSession.candidates.map((cand, idx) => (
+                                <div
+                                  key={cand}
+                                  className={`completion-item ${
+                                    idx === completionSession.selectedIndex ? 'selected' : ''
+                                  }`}
+                                  data-testid={`completion-item-${idx}`}
+                                >
+                                  <span className="cand-match-prefix">
+                                    {cand.slice(0, completionSession.prefix.length)}
+                                  </span>
+                                  <span className="cand-remainder">
+                                    {cand.slice(completionSession.prefix.length)}
+                                  </span>
+                                  {idx === completionSession.selectedIndex && (
+                                    <span className="cand-selected-indicator">⏎</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            <div className="completion-footer">
+                              <span>Ctrl+n: 다음 | Ctrl+p: 이전</span>
+                            </div>
+                          </div>
+                        )}
+                    </>
                   )}
                 </div>
               </div>
@@ -172,10 +231,21 @@ interface RenderLineOptions {
   visualAnchor?: CursorPosition;
   lineMatches: SearchMatch[];
   isFocused: boolean;
+  insertNormalSession?: boolean;
 }
 
 function renderLineContent(opts: RenderLineOptions): React.ReactNode {
-  const { text, lineIdx, cursor, mode, targetCol, visualAnchor, lineMatches, isFocused } = opts;
+  const {
+    text,
+    lineIdx,
+    cursor,
+    mode,
+    targetCol,
+    visualAnchor,
+    lineMatches,
+    isFocused,
+    insertNormalSession,
+  } = opts;
   const isCursorLine = cursor.line === lineIdx;
   const cursorCol = isCursorLine ? cursor.col : null;
 
@@ -237,7 +307,13 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
         : char;
 
     let classNames = isCursor
-      ? `vim-cursor ${isFocused ? `cursor-${mode.toLowerCase()}` : 'cursor-unfocused'}`
+      ? `vim-cursor ${
+          isFocused
+            ? insertNormalSession
+              ? 'cursor-insert-normal'
+              : `cursor-${mode.toLowerCase()}`
+            : 'cursor-unfocused'
+        }`
       : 'vim-char';
 
     if (isSelected) {
