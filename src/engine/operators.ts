@@ -1,5 +1,6 @@
 import { StateSnapshot, VimEditorState } from '../types/vim';
 import { clampCursor, getFirstNonBlankCol, getMaxCol } from './cursor';
+import { areLinesEqual, ensureUndoTreeInitialized, recordUndoTreeChange, jumpUndoSeq } from './undoTreeEngine';
 
 const MAX_HISTORY = 50;
 
@@ -7,29 +8,32 @@ const MAX_HISTORY = 50;
  * 상태 변경 전 실행 취소(Undo) 스냅샷을 푸시하고 Redo 스택을 초기화합니다.
  */
 export function pushUndoSnapshot(state: VimEditorState): VimEditorState {
+  // 상태 변경 전 Undo Tree 루트 및 기존 버퍼 변경사항 확정 기록
+  const treeState = recordUndoTreeChange(ensureUndoTreeInitialized(state));
+
   const currentSnapshot: StateSnapshot = {
-    lines: [...state.lines],
-    cursor: { ...state.cursor },
+    lines: [...treeState.lines],
+    cursor: { ...treeState.cursor },
   };
 
-  const nextUndo = [...(state.undoStack ?? []), currentSnapshot];
+  const nextUndo = [...(treeState.undoStack ?? []), currentSnapshot];
   if (nextUndo.length > MAX_HISTORY) {
     nextUndo.shift();
   }
 
-  const currentChangeList = state.changeList ? [...state.changeList] : [];
+  const currentChangeList = treeState.changeList ? [...treeState.changeList] : [];
   const lastChange = currentChangeList[currentChangeList.length - 1];
-  if (lastChange && lastChange.row === state.cursor.line) {
+  if (lastChange && lastChange.row === treeState.cursor.line) {
     currentChangeList[currentChangeList.length - 1] = {
-      row: state.cursor.line,
-      col: state.cursor.col,
-      line: state.cursor.line,
+      row: treeState.cursor.line,
+      col: treeState.cursor.col,
+      line: treeState.cursor.line,
     };
   } else {
     currentChangeList.push({
-      row: state.cursor.line,
-      col: state.cursor.col,
-      line: state.cursor.line,
+      row: treeState.cursor.line,
+      col: treeState.cursor.col,
+      line: treeState.cursor.line,
     });
     if (currentChangeList.length > MAX_HISTORY) {
       currentChangeList.shift();
@@ -37,14 +41,12 @@ export function pushUndoSnapshot(state: VimEditorState): VimEditorState {
   }
 
   return {
-    ...state,
+    ...treeState,
     undoStack: nextUndo,
     redoStack: [],
     changeList: currentChangeList,
     changeIndex: currentChangeList.length,
   };
-
-
 }
 
 /**
@@ -532,6 +534,10 @@ export function putClipboard(state: VimEditorState): VimEditorState {
  */
 export function undo(state: VimEditorState): VimEditorState {
   if (!state.undoStack || state.undoStack.length === 0) {
+    if (state.undoTreeNodes && state.currentUndoSeq !== undefined && state.currentUndoSeq > 0) {
+      const parent = state.undoTreeNodes[state.currentUndoSeq]?.parentSeq ?? 0;
+      return jumpUndoSeq(state, parent);
+    }
     return { ...state, pendingKeys: undefined };
   }
 
@@ -545,12 +551,27 @@ export function undo(state: VimEditorState): VimEditorState {
 
   const nextRedo = [...(state.redoStack ?? []), currentSnapshot];
 
+  let currentSeq = state.currentUndoSeq;
+  let timeIdx = state.undoTimeIndex;
+  if (state.undoTreeNodes && currentSeq !== undefined) {
+    const parent = state.undoTreeNodes[currentSeq]?.parentSeq;
+    if (parent !== null && parent !== undefined) {
+      currentSeq = parent;
+      if (state.undoTimeHistory) {
+        const found = state.undoTimeHistory.lastIndexOf(parent);
+        if (found >= 0) timeIdx = found;
+      }
+    }
+  }
+
   return {
     ...state,
     lines: lastSnapshot.lines,
     cursor: clampCursor(lastSnapshot.lines, lastSnapshot.cursor, 'NORMAL'),
     undoStack: nextUndo,
     redoStack: nextRedo,
+    currentUndoSeq: currentSeq,
+    undoTimeIndex: timeIdx,
     pendingKeys: undefined,
   };
 }
@@ -573,12 +594,29 @@ export function redo(state: VimEditorState): VimEditorState {
 
   const nextUndo = [...(state.undoStack ?? []), currentSnapshot];
 
+  let currentSeq = state.currentUndoSeq;
+  let timeIdx = state.undoTimeIndex;
+  if (state.undoTreeNodes && currentSeq !== undefined) {
+    const childEntry = Object.values(state.undoTreeNodes).find(
+      (n) => n.parentSeq === currentSeq && areLinesEqual(n.lines, nextSnapshot.lines)
+    );
+    if (childEntry) {
+      currentSeq = childEntry.seq;
+      if (state.undoTimeHistory) {
+        const found = state.undoTimeHistory.lastIndexOf(currentSeq);
+        if (found >= 0) timeIdx = found;
+      }
+    }
+  }
+
   return {
     ...state,
     lines: nextSnapshot.lines,
     cursor: clampCursor(nextSnapshot.lines, nextSnapshot.cursor, 'NORMAL'),
     undoStack: nextUndo,
     redoStack: nextRedo,
+    currentUndoSeq: currentSeq,
+    undoTimeIndex: timeIdx,
     pendingKeys: undefined,
   };
 }

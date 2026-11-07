@@ -49,6 +49,7 @@ import {
 } from './cmdlineWindow';
 import { handleNetrwKey } from './netrwEngine';
 import { jumpDiffHunk, diffObtain, diffPut } from './diffEngine';
+import { travelUndoTime, recordUndoTreeChange } from './undoTreeEngine';
 import {
   handleTabCompletion,
   cancelWildmenu,
@@ -349,6 +350,11 @@ export function rawHandleKey(
         viewport: vp,
       };
     }
+  }
+
+  // Undo tree 동기화: NORMAL 모드이고 대기 키가 없을 때 버퍼 내용 변경 감지 및 확정
+  if (nextState.mode === 'NORMAL' && !nextState.pendingKeys) {
+    nextState = recordUndoTreeChange(nextState);
   }
 
   return syncActivePane(nextState);
@@ -3198,6 +3204,8 @@ function handleNormalModeKey(
   if (key === 'gv') return reselectLastVisual(state);
   if (key === 'g;') return traverseChangeList(state, 'prev', parsed.totalCount);
   if (key === 'g,') return traverseChangeList(state, 'next', parsed.totalCount);
+  if (key === 'g-') return travelUndoTime(state, 'older', parsed.totalCount);
+  if (key === 'g+') return travelUndoTime(state, 'newer', parsed.totalCount);
 
   // 8. 연산자 대기 처리 (d, c, y, g, v)
 
@@ -3604,6 +3612,12 @@ function handleNormalModeKey(
     }
     state = { ...state, pendingKeys: undefined };
   } else if (parsed.operator === 'g') {
+    if (key === '-') {
+      return travelUndoTime(state, 'older', parsed.totalCount);
+    }
+    if (key === '+') {
+      return travelUndoTime(state, 'newer', parsed.totalCount);
+    }
     if (key === 'g') {
       const stateWithJump = recordJump(state);
       if (parsed.count1 !== undefined) {

@@ -1311,6 +1311,65 @@ export const MISSIONS: Mission[] = [
       return state.lines.every((line, idx) => line === target[idx]);
     },
   },
+  {
+    id: 44,
+    title: '레슨 44: 순정 Vim Undo Tree 시간 여행(g-, g+)과 과거 브랜치 복구하기',
+    description: '일반적인 에디터는 실행 취소(u) 후 새로운 편집을 시작하면 이전의 redo 기록이 영구히 소실됩니다. 반면 순정 Vim은 모든 변경사항을 "트리(Tree)" 구조로 보존하므로 어떤 브랜치의 과거 코드도 절대 잃어버리지 않습니다! 1) 벽시계 절대 시간 역순 이동: g-를 누르면 다른 브랜치에 묻힌 과거의 완벽한 코드 상태로 시간 여행합니다. 2) 시간 순방향 이동: g+를 누르면 다시 최신 상태로 돌아옵니다. 3) :undolist로 갈라진 브랜치 잎(leaf) 목록을 확인하고, :earlier / :later로 시간 및 파일 저장 단위 복귀도 가능합니다.',
+    hint: '과거 브랜치에 작성해 두었던 calculateTax 함수가 u 후 다른 코드를 입력하면서 사라진 상태입니다. NORMAL 모드에서 g-를 입력하여 과거 브랜치의 코드를 단숨에 복원하세요! (또는 :earlier 1)',
+    par: 2,
+    optimalKeys: ['g', '-'],
+    primaryFilename: 'taxService.ts',
+    initialLines: [
+      '// TODO: implement tax calculation later',
+    ],
+    targetLines: [
+      'export function calculateTax(amount: number): number {',
+      '  return amount * 0.1;',
+      '}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    initialCurrentUndoSeq: 2,
+    initialMaxUndoSeq: 2,
+    initialUndoTimeHistory: [0, 1, 2],
+    initialUndoTimeIndex: 2,
+    initialUndoTreeNodes: {
+      0: {
+        seq: 0,
+        parentSeq: null,
+        timestamp: 1000,
+        lines: ['// Initial template'],
+        cursor: { line: 0, col: 0 },
+      },
+      1: {
+        seq: 1,
+        parentSeq: 0,
+        timestamp: 2000,
+        lines: [
+          'export function calculateTax(amount: number): number {',
+          '  return amount * 0.1;',
+          '}',
+        ],
+        cursor: { line: 0, col: 0 },
+      },
+      2: {
+        seq: 2,
+        parentSeq: 0,
+        timestamp: 3000,
+        lines: ['// TODO: implement tax calculation later'],
+        cursor: { line: 0, col: 0 },
+      },
+    },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const target = [
+        'export function calculateTax(amount: number): number {',
+        '  return amount * 0.1;',
+        '}',
+      ];
+      if (state.lines.length !== target.length) return false;
+      return state.lines.every((line, idx) => line === target[idx]);
+    },
+  },
 ];
 
 

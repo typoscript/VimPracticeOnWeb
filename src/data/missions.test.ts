@@ -801,8 +801,32 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson43!.checkComplete(stateDone)).toBe(true);
   });
 
-  it('모든 43개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(43);
+  it('레슨 44 (Undo Tree 시간 여행 및 과거 브랜치 복구) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson44 = MISSIONS.find((m) => m.id === 44);
+    expect(lesson44).toBeDefined();
+    expect(lesson44?.par).toBe(2);
+
+    const incompleteState: VimEditorState = {
+      lines: ['// TODO: implement tax calculation later'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson44!.checkComplete(incompleteState)).toBe(false);
+
+    const completeState: VimEditorState = {
+      lines: [
+        'export function calculateTax(amount: number): number {',
+        '  return amount * 0.1;',
+        '}',
+      ],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson44!.checkComplete(completeState)).toBe(true);
+  });
+
+  it('모든 44개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(44);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();
@@ -835,6 +859,11 @@ describe('MISSIONS 10 ~ 12 validation', () => {
         mode: 'NORMAL',
         undoStack: m.initialUndoStack ? [...m.initialUndoStack] : [],
         redoStack: [],
+        undoTreeNodes: m.initialUndoTreeNodes,
+        currentUndoSeq: m.initialCurrentUndoSeq,
+        maxUndoSeq: m.initialMaxUndoSeq,
+        undoTimeHistory: m.initialUndoTimeHistory,
+        undoTimeIndex: m.initialUndoTimeIndex,
         clipboard: m.initialClipboard,
         primaryFilename: m.primaryFilename,
         secondaryFilename: m.secondaryFilename,

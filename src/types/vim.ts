@@ -247,6 +247,15 @@ export interface DiffHunk {
   type: 'change' | 'add' | 'delete';
 }
 
+export interface UndoTreeNode {
+  seq: number;
+  parentSeq: number | null;
+  timestamp: number;
+  lines: string[];
+  cursor: CursorPosition;
+  saveNumber?: number;
+}
+
 export interface VimEditorState {
   lines: string[];
   cursor: CursorPosition;
@@ -388,6 +397,18 @@ export interface VimEditorState {
   diffMode?: boolean;
   /** 현재 계산된 Diff Hunk 목록 */
   diffHunks?: DiffHunk[];
+  /** 순정 Vim Undo Tree 노드 맵 (seq -> UndoTreeNode) */
+  undoTreeNodes?: Record<number, UndoTreeNode>;
+  /** 현재 활성화된 변경 시퀀스 번호 */
+  currentUndoSeq?: number;
+  /** 가장 큰(최신 생성) 변경 시퀀스 번호 */
+  maxUndoSeq?: number;
+  /** 시간 순서대로 생성된 seq 목록 (g-, g+ 순회용) */
+  undoTimeHistory?: number[];
+  /** 현재 시간 기록 인덱스 (undoTimeHistory 내 위치) */
+  undoTimeIndex?: number;
+  /** 파일 저장(:w) 횟수 카운터 */
+  saveCounter?: number;
 }
 
 

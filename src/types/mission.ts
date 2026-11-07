@@ -1,4 +1,4 @@
-import { ClipboardRegister, StateSnapshot, VimEditorState, QuickfixItem, ChangeListItem } from './vim';
+import { ClipboardRegister, StateSnapshot, VimEditorState, QuickfixItem, ChangeListItem, UndoTreeNode } from './vim';
 
 export interface Mission {
   id: number;
@@ -14,6 +14,11 @@ export interface Mission {
   /** 3성(Par) 기준 모범 키 입력 시퀀스 (고스트 리플레이용) */
   optimalKeys?: string[];
   initialUndoStack?: StateSnapshot[];
+  initialUndoTreeNodes?: Record<number, UndoTreeNode>;
+  initialCurrentUndoSeq?: number;
+  initialMaxUndoSeq?: number;
+  initialUndoTimeHistory?: number[];
+  initialUndoTimeIndex?: number;
   initialClipboard?: ClipboardRegister;
   /** 주 창 파일명 (기본: lesson_{id}.txt 또는 source.ts) */
   primaryFilename?: string;

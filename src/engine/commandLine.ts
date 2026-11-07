@@ -4,7 +4,14 @@ import {
   ConfirmSubstituteSession,
 } from '../types/vim';
 import { clampCursor } from './cursor';
-import { pushUndoSnapshot } from './operators';
+import { pushUndoSnapshot, undo, redo } from './operators';
+import {
+  formatUndoList,
+  jumpUndoSeq,
+  recordFileSave,
+  travelEarlier,
+  travelLater,
+} from './undoTreeEngine';
 import { splitWindow, closeSplitWindow, closeOtherPanes, resizeSplit } from './splitWindow';
 import {
   formatBufferList,
@@ -1493,13 +1500,89 @@ export function executeCommandLine(
   }
 
   if (cleanCmd === 'w' || cleanCmd === 'write') {
+    const savedState = recordFileSave(state);
+    return {
+      ...savedState,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: '[가상 저장 완료] 변경사항이 안전하게 메모리에 저장되었습니다.',
+    };
+  }
+
+  // Undo Tree 목록 확인: :undolist, :undol
+  if (cleanCmd === 'undolist' || cleanCmd === 'undol') {
     return {
       ...state,
       mode: 'NORMAL',
       visualAnchor: undefined,
       commandBuffer: undefined,
       commandType: undefined,
-      commandMessage: '[가상 저장 완료] 변경사항이 안전하게 메모리에 저장되었습니다.',
+      commandMessage: formatUndoList(state),
+    };
+  }
+
+  // 이전 상태로 시간 여행: :earlier [count][s|m|h|d|f], :ea [count]...
+  const earlierMatch = trimmed.match(/^:?\s*(?:earlier|ea)(?:\s+(.*))?$/i);
+  if (earlierMatch) {
+    const res = travelEarlier(state, earlierMatch[1]);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 이후 상태로 시간 여행: :later [count][s|m|h|d|f], :lat [count]...
+  const laterMatch = trimmed.match(/^:?\s*(?:later|lat)(?:\s+(.*))?$/i);
+  if (laterMatch) {
+    const res = travelLater(state, laterMatch[1]);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 변경 번호로 직접 이동: :undo {seq}, :u {seq}
+  const undoJumpMatch = trimmed.match(/^:?\s*u(?:ndo)?\s+(\d+)$/i);
+  if (undoJumpMatch) {
+    const seq = parseInt(undoJumpMatch[1], 10);
+    const res = jumpUndoSeq(state, seq);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 단순 실행 취소 및 재실행: :u, :undo, :red, :redo
+  if (cleanCmd === 'u' || cleanCmd === 'undo') {
+    const res = undo(state);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  if (cleanCmd === 'red' || cleanCmd === 'redo') {
+    const res = redo(state);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
     };
   }
 
