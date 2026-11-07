@@ -580,8 +580,20 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson33!.checkComplete(stateNotDone)).toBe(false);
   });
 
-  it('모든 33개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(33);
+  it('레슨 34: :tabnew, :tabclose 및 gt/gT 완료 조건 검증', () => {
+    const lesson34 = MISSIONS.find((m) => m.id === 34);
+    expect(lesson34).toBeDefined();
+
+    const stateNotDone: VimEditorState = {
+      lines: ['const STAGE = 1'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson34!.checkComplete(stateNotDone)).toBe(false);
+  });
+
+  it('모든 34개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(34);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();

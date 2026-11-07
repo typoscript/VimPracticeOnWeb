@@ -450,6 +450,107 @@
   animation: fadeIn 0.2s ease;
 }
 
+/* 상단 탭라인 바 (:tabnew, :tabc, gt, gT) */
+.editor-tab-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 900px;
+  padding: 3px 8px;
+  background: #16161e;
+  border: 1px solid var(--border-color, #292e42);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px 8px 0 0;
+  overflow-x: auto;
+  user-select: none;
+}
+
+.tab-list {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  overflow-x: auto;
+}
+
+.tab-page {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 0.75rem;
+  color: #7982a9;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.tab-page:hover {
+  background: rgba(157, 124, 216, 0.12);
+  color: #c0caf5;
+}
+
+.tab-page.active {
+  background: rgba(157, 124, 216, 0.22);
+  color: #bb9af7;
+  border-color: rgba(187, 154, 247, 0.4);
+  font-weight: 600;
+}
+
+.tab-number {
+  font-size: 0.7rem;
+  opacity: 0.75;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.tab-filename {
+  font-size: 0.75rem;
+}
+
+.tab-close-btn {
+  background: transparent;
+  border: none;
+  color: #7982a9;
+  font-size: 0.75rem;
+  padding: 0 3px;
+  cursor: pointer;
+  border-radius: 3px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.tab-close-btn:hover {
+  color: #f7768e;
+  background: rgba(247, 118, 142, 0.15);
+}
+
+.tab-new-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #7982a9;
+  font-size: 0.85rem;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tab-new-btn:hover {
+  color: #bb9af7;
+  border-color: rgba(187, 154, 247, 0.4);
+  background: rgba(187, 154, 247, 0.1);
+}
+
 /* 상단 버퍼라인 탭 바 (:ls, :b, :bn, :bp, Ctrl-^) */
 .editor-buffer-bar {
   display: flex;

@@ -40,6 +40,7 @@ import {
 } from './registers';
 import { evaluateVimExpression } from './expressionParser';
 import { alternateBuffer } from './bufferEngine';
+import { nextTab, prevTab } from './tabEngine';
 import {
   splitWindow,
   closeSplitWindow,
@@ -1553,10 +1554,16 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
     };
   }
 
-  // Visual 모드 내 gn / gN (다음/이전 검색 매치로 선택 영역 확장)
+  // Visual 모드 내 gn / gN (다음/이전 검색 매치로 선택 영역 확장) 및 gt / gT (탭 전환)
   if (state.pendingKeys === 'g') {
     if (key === 'n' || key === 'N') {
       return executeGn(state, key === 'n');
+    }
+    if (key === 't') {
+      return { ...nextTab(state), pendingKeys: undefined };
+    }
+    if (key === 'T') {
+      return { ...prevTab(state), pendingKeys: undefined };
     }
   }
 
@@ -3381,6 +3388,18 @@ function handleNormalModeKey(
       return {
         ...res,
         lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
+      };
+    }
+    if (key === 't') {
+      return {
+        ...nextTab(state, parsed.count1),
+        pendingKeys: undefined,
+      };
+    }
+    if (key === 'T') {
+      return {
+        ...prevTab(state, parsed.count1 ?? 1),
+        pendingKeys: undefined,
       };
     }
     if (key === '~' || key === 'u' || key === 'U') {

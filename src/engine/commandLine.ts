@@ -16,6 +16,16 @@ import {
   deleteBuffer,
   editBuffer,
 } from './bufferEngine';
+import {
+  openNewTab,
+  closeTab,
+  closeOtherTabs,
+  nextTab,
+  prevTab,
+  firstTab,
+  lastTab,
+  moveTab,
+} from './tabEngine';
 
 export type KeyRunner = (
   state: VimEditorState,
@@ -758,6 +768,117 @@ export function executeCommandLine(
   if (bMatch && !cleanCmdRaw.match(/^(?:bn|bnext|bp|bprev|bprevious|bf|bfirst|bl|blast|bd|bdelete|bdel)/i)) {
     const target = bMatch[1]?.trim();
     const res = target ? switchBuffer(state, target) : nextBuffer(state, 1);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 탭 생성: :tabnew, :tabedit, :tabe [filename]
+  const tabNewMatch = cleanCmdRaw.match(/^(?:tabnew|tabedit|tabe)(?:\s+(.+))?$/i);
+  if (tabNewMatch) {
+    const filename = tabNewMatch[1]?.trim();
+    const res = openNewTab(state, filename);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 탭 닫기: :tabc, :tabclose [N]
+  const tabCloseMatch = cleanCmdRaw.match(/^(?:tabc|tabclose)(?:\s+(\d+))?$/i);
+  if (tabCloseMatch) {
+    const targetIdx = tabCloseMatch[1] ? parseInt(tabCloseMatch[1], 10) : undefined;
+    const res = closeTab(state, targetIdx);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 다른 탭 모두 닫기: :tabo, :tabonly
+  if (cleanCmd === 'tabo' || cleanCmd === 'tabonly') {
+    const res = closeOtherTabs(state);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 탭 순회(다음): :tabn, :tabnext [count]
+  const tabNextMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?(?:tabn|tabnext)(?:\s+(\d+))?$/i);
+  if (tabNextMatch) {
+    const countRaw = tabNextMatch[1] || tabNextMatch[2];
+    const count = countRaw ? parseInt(countRaw, 10) : undefined;
+    const res = nextTab(state, count);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 탭 순회(이전): :tabp, :tabprev, :tabprevious [count]
+  const tabPrevMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?(?:tabp|tabprev|tabprevious)(?:\s+(\d+))?$/i);
+  if (tabPrevMatch) {
+    const countRaw = tabPrevMatch[1] || tabPrevMatch[2];
+    const count = countRaw ? parseInt(countRaw, 10) : 1;
+    const res = prevTab(state, count);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 탭 양 끝 이동: :tabfirst, :tabfir, :tabr, :tabrewind, :tablast, :tabl
+  if (
+    cleanCmd === 'tabfirst' ||
+    cleanCmd === 'tabfir' ||
+    cleanCmd === 'tabr' ||
+    cleanCmd === 'tabrewind'
+  ) {
+    const res = firstTab(state);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+  if (cleanCmd === 'tablast' || cleanCmd === 'tabl') {
+    const res = lastTab(state);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 탭 이동: :tabmove, :tabm [N]
+  const tabMoveMatch = cleanCmdRaw.match(/^(?:tabmove|tabm)(?:\s+(.+))?$/i);
+  if (tabMoveMatch) {
+    const targetPos = tabMoveMatch[1]?.trim();
+    const res = moveTab(state, targetPos);
     return {
       ...res,
       mode: 'NORMAL',

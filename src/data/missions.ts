@@ -1,5 +1,6 @@
 import { Mission } from '../types/mission';
 import { ensureBuffers } from '../engine/bufferEngine';
+import { ensureTabPages } from '../engine/tabEngine';
 
 export const MISSIONS: Mission[] = [
   {
@@ -927,6 +928,42 @@ export const MISSIONS: Mission[] = [
         isCurrentBuf1 &&
         buf1?.lines[0] === 'const API_VERSION = 2' &&
         buf2?.lines[0] === 'export const PORT = 3008'
+      );
+    },
+  },
+  {
+    id: 34,
+    title: '레슨 34: :tabnew, :tabclose와 gt/gT로 여러 탭 페이지 워크스페이스 제어하기',
+    description: 'Vim의 탭(Tab Page)은 각 탭마다 독립된 창 분할 레이아웃과 작업 환경을 보존하는 최상위 워크스페이스입니다. :tabnew로 새 작업 탭을 열고, gt/gT 및 [count]gt로 탭 사이를 자유자재로 넘나들며 편집을 완성하세요.',
+    hint: '$r2로 main.ts의 STAGE를 2로 수정한 뒤, :tabnew로 새 탭을 엽니다. 새 탭에서 iOK<Esc>로 코드를 작성한 후, gt를 눌러 1번 탭 main.ts로 돌아오세요.',
+    par: 18,
+    optimalKeys: [
+      '$', 'r', '2',
+      ':', 't', 'a', 'b', 'n', 'e', 'w', 'Enter',
+      'i', 'O', 'K', 'Escape',
+      'g', 't',
+    ],
+    primaryFilename: 'main.ts',
+    initialLines: [
+      'const STAGE = 1',
+      'export const READY = true',
+    ],
+    targetLines: [
+      'const STAGE = 2',
+      'export const READY = true',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const s = ensureTabPages(state);
+      const tab1 = s.tabPages?.find((t) => t.id === 1);
+      const tab2 = s.tabPages?.find((t) => t.id === 2);
+      const isCurrentTab1 = s.currentTabId === 1;
+
+      return (
+        state.mode === 'NORMAL' &&
+        isCurrentTab1 &&
+        tab1?.lines[0] === 'const STAGE = 2' &&
+        tab2?.lines[0] === 'OK'
       );
     },
   },

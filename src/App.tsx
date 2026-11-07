@@ -32,6 +32,7 @@ import { Mission } from './types/mission';
 import { handleKey } from './engine/vimEngine';
 import { switchPaneFocus } from './engine/splitWindow';
 import { switchBuffer, ensureBuffers } from './engine/bufferEngine';
+import { switchTab, openNewTab, closeTab, ensureTabPages } from './engine/tabEngine';
 import { MISSIONS } from './data/missions';
 import { SANDBOX_INITIAL_LINES } from './data/sandbox';
 import {
@@ -219,6 +220,21 @@ export function App() {
 
   const handleSwitchBuffer = useCallback((targetId: number) => {
     setEditorState((prevState) => switchBuffer(prevState, targetId));
+    setIsEditorFocused(true);
+  }, []);
+
+  const handleSwitchTabPage = useCallback((targetId: number) => {
+    setEditorState((prevState) => switchTab(prevState, targetId));
+    setIsEditorFocused(true);
+  }, []);
+
+  const handleCloseTabPage = useCallback((targetId: number) => {
+    setEditorState((prevState) => closeTab(prevState, targetId));
+    setIsEditorFocused(true);
+  }, []);
+
+  const handleNewTabPage = useCallback(() => {
+    setEditorState((prevState) => openNewTab(prevState));
     setIsEditorFocused(true);
   }, []);
 
@@ -1480,6 +1496,63 @@ export function App() {
                   </button>
                 </div>
               )}
+
+              {/* 상단 탭 페이지 바 (Tabline: :tabnew, :tabc, gt, gT) */}
+              {(() => {
+                const stateWithTabs = ensureTabPages(displayEditorState);
+                const tabList = stateWithTabs.tabPages ?? [];
+                if (tabList.length <= 1) return null;
+                const currentTabId = stateWithTabs.currentTabId ?? 1;
+
+                return (
+                  <div className="editor-tab-bar" data-testid="editor-tab-bar">
+                    <div className="tab-list">
+                      {tabList.map((tab, idx) => {
+                        const isCurrent = tab.id === currentTabId;
+                        return (
+                          <div
+                            key={tab.id}
+                            className={`tab-page ${isCurrent ? 'active' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSwitchTabPage(tab.id);
+                            }}
+                            data-testid={`tab-page-${tab.id}`}
+                            title={`탭 ${idx + 1}: ${tab.filename}`}
+                          >
+                            <span className="tab-number">{idx + 1}</span>
+                            <span className="tab-filename">{tab.filename}</span>
+                            {tabList.length > 1 && (
+                              <button
+                                type="button"
+                                className="tab-close-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleCloseTabPage(tab.id);
+                                }}
+                                title="탭 닫기 (:tabclose)"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <button
+                      type="button"
+                      className="tab-new-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleNewTabPage();
+                      }}
+                      title="새 탭 열기 (:tabnew)"
+                    >
+                      +
+                    </button>
+                  </div>
+                );
+              })()}
 
               {/* 상단 버퍼 탭 바 (Bufferline) */}
               {(() => {

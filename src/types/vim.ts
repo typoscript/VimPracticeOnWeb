@@ -59,6 +59,24 @@ export interface VimBuffer {
   isModified?: boolean;
 }
 
+export interface VimTabPage {
+  id: number;
+  filename: string;
+  lines: string[];
+  cursor: CursorPosition;
+  mode: VimMode;
+  visualAnchor?: CursorPosition;
+  undoStack?: StateSnapshot[];
+  redoStack?: StateSnapshot[];
+  splitDirection?: SplitDirection;
+  activePaneIndex?: number;
+  splitPanes?: [SplitPaneState, SplitPaneState];
+  primaryFilename?: string;
+  secondaryFilename?: string;
+  currentBufferId?: number;
+  alternateBufferId?: number;
+}
+
 export interface RegisterEntry {
   type: 'char' | 'line' | 'macro';
   content: string | string[];
@@ -222,6 +240,10 @@ export interface VimEditorState {
   currentBufferId?: number;
   /** 직전 대안 버퍼 ID ('#' 및 Ctrl-^용) */
   alternateBufferId?: number;
+  /** 열려 있는 탭 페이지 목록 (:tabnew, :tabc, :tabn, gt, gT) */
+  tabPages?: VimTabPage[];
+  /** 현재 활성화된 탭 페이지 ID */
+  currentTabId?: number;
 }
 
 
