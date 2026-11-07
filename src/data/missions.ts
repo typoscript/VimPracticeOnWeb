@@ -1127,6 +1127,48 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 40,
+    title: '레슨 40: .vimrc 환경설정 버퍼 편집(:e ~/.vimrc) 및 실시간 소싱(:source, :so %)',
+    description: 'Vim은 ~/.vimrc 설정 파일에 옵션(set number, set relativenumber, set ignorecase 등)과 키 매핑을 작성하여 나만의 환경을 구축합니다. 에디터 사용 도중 설정을 변경하고 싶을 때는 :e ~/.vimrc 로 환경설정 버퍼를 열어 편집하고, 재시작 없이 :source %(축약형 :so %)를 실행하여 즉시 현재 세션에 반영할 수 있습니다. 또한 직전 대안 버퍼 토글 단축키인 Ctrl+^(또는 Ctrl+6)을 사용해 원래 작업 중이던 코드로 초고속 복귀할 수 있습니다.',
+    hint: ':e ~/.vimrc 를 입력하여 환경설정 버퍼를 열고, :so % 로 설정을 즉시 에디터에 적용한 뒤, Ctrl-^(또는 :bn)을 눌러 원래 작업 파일(app.ts)로 복귀하세요. (또는 :so ~/.vimrc 로 즉시 소싱할 수도 있습니다)',
+    par: 19,
+    optimalKeys: [
+      ':', 'e', ' ', '~', '/', '.', 'v', 'i', 'm', 'r', 'c', 'Enter',
+      ':', 's', 'o', ' ', '%', 'Enter',
+      'Ctrl-^',
+    ],
+    primaryFilename: 'app.ts',
+    initialLines: [
+      '// ~/.vimrc 환경설정 파일을 열어 설정을 적용하고 돌아오세요.',
+      'export function main() {',
+      '  console.log("Vim configuration sourced!");',
+      '}',
+    ],
+    targetLines: [
+      '// ~/.vimrc 환경설정 파일을 열어 설정을 적용하고 돌아오세요.',
+      'export function main() {',
+      '  console.log("Vim configuration sourced!");',
+      '}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const isReturnedToApp = state.primaryFilename === 'app.ts';
+      const hasRelativeNumber = Boolean(state.options?.relativenumber);
+      const hasIgnoreCase = Boolean(state.options?.ignorecase);
+      const hasVimrcBuffer = Boolean(
+        state.buffers?.some((b) => b.name === '~/.vimrc' || b.name === '.vimrc')
+      );
+
+      return (
+        state.mode === 'NORMAL' &&
+        isReturnedToApp &&
+        hasRelativeNumber &&
+        hasIgnoreCase &&
+        (hasVimrcBuffer || Boolean(state.userKeymaps?.['jk']))
+      );
+    },
+  },
 ];
 
 

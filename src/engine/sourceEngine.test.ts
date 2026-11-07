@@ -126,6 +126,33 @@ describe('sourceEngine (:source, :so, :e ~/.vimrc, :vimrc modal)', () => {
       expect(state.options?.relativenumber).toBe(true);
       expect(state.commandMessage).toContain('적용 완료');
     });
+
+    it(':e ~/.vimrc -> :so % -> Ctrl-^ 워크플로우로 설정을 소싱하고 원래 버퍼로 복귀한다', () => {
+      let state = createBaseState();
+
+      // 1. :e ~/.vimrc
+      state = handleKey(state, ':');
+      for (const ch of 'e ~/.vimrc') {
+        state = handleKey(state, ch);
+      }
+      state = handleKey(state, 'Enter');
+      expect(state.primaryFilename).toBe('~/.vimrc');
+
+      // 2. :so %
+      state = handleKey(state, ':');
+      for (const ch of 'so %') {
+        state = handleKey(state, ch);
+      }
+      state = handleKey(state, 'Enter');
+      expect(state.options?.relativenumber).toBe(true);
+      expect(state.options?.ignorecase).toBe(true);
+
+      // 3. Ctrl-^ 복귀
+      state = handleKey(state, 'Ctrl-^');
+      expect(state.primaryFilename).toBe('app.ts');
+      expect(state.options?.relativenumber).toBe(true);
+      expect(state.options?.ignorecase).toBe(true);
+    });
   });
 
   describe('generateVimrc options synchronization', () => {

@@ -654,8 +654,63 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson39!.checkComplete(stateNotDone)).toBe(false);
   });
 
-  it('모든 39개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(39);
+  it('레슨 40: .vimrc 환경설정 버퍼 편집(:e ~/.vimrc) 및 실시간 소싱(:source, :so %) 완료 조건 검증', () => {
+    const lesson40 = MISSIONS.find((m) => m.id === 40);
+    expect(lesson40).toBeDefined();
+    expect(lesson40?.par).toBe(19);
+
+    const stateNotDone: VimEditorState = {
+      lines: ['export function main() {}'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+      primaryFilename: 'app.ts',
+    };
+    expect(lesson40!.checkComplete(stateNotDone)).toBe(false);
+
+    const stateDone: VimEditorState = {
+      lines: ['export function main() {}'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+      primaryFilename: 'app.ts',
+      options: {
+        number: true,
+        relativenumber: true,
+        ignorecase: true,
+        smartcase: true,
+        hlsearch: true,
+        wrap: true,
+        cursorline: true,
+        tabstop: 2,
+        shiftwidth: 2,
+        expandtab: true,
+        list: false,
+      },
+      buffers: [
+        {
+          id: 1,
+          name: 'app.ts',
+          lines: ['export function main() {}'],
+          cursor: { line: 0, col: 0 },
+          undoStack: [],
+          redoStack: [],
+          isModified: false,
+        },
+        {
+          id: 2,
+          name: '~/.vimrc',
+          lines: ['set relativenumber'],
+          cursor: { line: 0, col: 0 },
+          undoStack: [],
+          redoStack: [],
+          isModified: false,
+        },
+      ],
+    };
+    expect(lesson40!.checkComplete(stateDone)).toBe(true);
+  });
+
+  it('모든 40개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(40);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();
