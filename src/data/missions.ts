@@ -705,7 +705,40 @@ export const MISSIONS: Mission[] = [
   },
   {
     id: 28,
-    title: '레슨 28: g Ctrl+a로 배열 번호를 한 번에 매기고 :sort u로 중복 데이터 정제하기',
+    title: '레슨 28: 캡처 그룹 \\1, \\2와 \\u로 snake_case 코드를 camelCase로 1초 만에 리팩토링하기',
+    description: 'Vim의 정규식 치환(:%s)에서 캡처 그룹(\\(...\\))과 역참조(\\1), 대소문자 변환 플래그(\\u)를 조합하여 레거시 snake_case 함수들을 camelCase로 일괄 리팩토링하세요.',
+    hint: ':%s/get_\\(\\w\\+\\)/get\\u\\1/g (또는 :%s/get_(\\w+)/get\\u\\1/g)를 입력하고 Enter를 누르세요.',
+    par: 27,
+    optimalKeys: [
+      ':', '%', 's', '/', 'g', 'e', 't', '_', '\\', '(', '\\', 'w', '\\', '+', '\\', ')', '/', 'g', 'e', 't', '\\', 'u', '\\', '1', '/', 'g', 'Enter',
+    ],
+    initialLines: [
+      'function get_user() {',
+      '  const user = get_account();',
+      '  return get_profile(user);',
+      '}',
+    ],
+    targetLines: [
+      'function getUser() {',
+      '  const user = getAccount();',
+      '  return getProfile(user);',
+      '}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines.length === 4 &&
+        state.lines[0] === 'function getUser() {' &&
+        state.lines[1] === '  const user = getAccount();' &&
+        state.lines[2] === '  return getProfile(user);' &&
+        state.lines[3] === '}'
+      );
+    },
+  },
+  {
+    id: 29,
+    title: '레슨 29: g Ctrl+a로 배열 번호를 한 번에 매기고 :sort u로 중복 데이터 정제하기',
     description: 'Visual 모드에서 g Ctrl+a(또는 Alt+a)를 사용하여 목업 데이터에 1, 2, 3 순차 인덱스를 일괄 부여하고, :4,$sort u 명령으로 중복 태그 목록을 가나다순으로 정제하세요.',
     hint: 'V2j로 3개 줄을 선택 후 g와 Ctrl-a(또는 Alt-a)를 눌러 순차 번호를 매긴 뒤, :4,$sort u 를 입력하고 Enter를 누르세요.',
     par: 16,

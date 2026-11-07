@@ -1,7 +1,6 @@
 import { VimEditorState } from '../types/vim';
 import { clampCursor } from './cursor';
 import { pushUndoSnapshot } from './operators';
-import { escapeRegExp } from './search';
 import { splitWindow, closeSplitWindow } from './splitWindow';
 
 export type KeyRunner = (
@@ -9,6 +8,610 @@ export type KeyRunner = (
   key: string,
   isReplayingDot?: boolean
 ) => VimEditorState;
+
+export type ReplaceToken =
+  | { type: 'char'; char: string }
+  | { type: 'group'; index: number }
+  | { type: 'modifier'; mod: 'u' | 'U' | 'l' | 'L' | 'E' };
+
+/**
+ * 순정 Vim 정규식 패턴을 JavaScript RegExp 패턴으로 변환합니다.
+ * - \( 및 \) -> ( 및 ) (캡처 그룹 추출, 표준 ( )도 호환)
+ * - \+ -> + (1회 이상 반복)
+ * - \? -> ? (0회 또는 1회)
+ * - \| -> | (선택 분기)
+ * - \{n,m\} -> {n,m} (수량자)
+ * - \< 및 \> -> \b (단어 경계)
+ * - \s, \d, \w 등 표준 이스케이프 유지
+ * - [...] 문자 클래스 내부 내용은 그대로 보존
+ */
+export function vimRegexToJsRegex(vimPattern: string): string {
+  let jsPattern = '';
+  let i = 0;
+  let inCharClass = false;
+
+  while (i < vimPattern.length) {
+    const ch = vimPattern[i];
+
+    if (inCharClass) {
+      if (ch === '\\' && i + 1 < vimPattern.length) {
+        jsPattern += ch + vimPattern[i + 1];
+        i += 2;
+        continue;
+      }
+      if (ch === ']') {
+        inCharClass = false;
+      }
+      jsPattern += ch;
+      i++;
+      continue;
+    }
+
+    if (ch === '[') {
+      inCharClass = true;
+      jsPattern += ch;
+      i++;
+      continue;
+    }
+
+    if (ch === '\\') {
+      if (i + 1 >= vimPattern.length) {
+        jsPattern += '\\\\';
+        i++;
+        continue;
+      }
+      const next = vimPattern[i + 1];
+      if (next === '(') {
+        jsPattern += '(';
+        i += 2;
+      } else if (next === ')') {
+        jsPattern += ')';
+        i += 2;
+      } else if (next === '+') {
+        jsPattern += '+';
+        i += 2;
+      } else if (next === '?') {
+        jsPattern += '?';
+        i += 2;
+      } else if (next === '|') {
+        jsPattern += '|';
+        i += 2;
+      } else if (next === '{') {
+        jsPattern += '{';
+        i += 2;
+      } else if (next === '}') {
+        jsPattern += '}';
+        i += 2;
+      } else if (next === '<' || next === '>') {
+        jsPattern += '\\b';
+        i += 2;
+      } else if (next === '\\') {
+        jsPattern += '\\\\';
+        i += 2;
+      } else if (next === '/') {
+        jsPattern += '/';
+        i += 2;
+      } else {
+        jsPattern += '\\' + next;
+        i += 2;
+      }
+      continue;
+    }
+
+    jsPattern += ch;
+    i++;
+  }
+
+  return jsPattern;
+}
+
+/**
+ * 치환 문자열(replacement)을 파싱하여 토큰 목록으로 분해합니다.
+ * \1~\9 (캡처 그룹 역참조), & 및 \0 (전체 매칭), \u, \U, \l, \L, \E (대소문자 제어)
+ */
+export function parseReplacementTokens(rep: string): ReplaceToken[] {
+  const tokens: ReplaceToken[] = [];
+  let i = 0;
+
+  while (i < rep.length) {
+    const ch = rep[i];
+
+    if (ch === '&') {
+      tokens.push({ type: 'group', index: 0 });
+      i++;
+      continue;
+    }
+
+    if (ch === '\\') {
+      if (i + 1 >= rep.length) {
+        tokens.push({ type: 'char', char: '\\' });
+        i++;
+        continue;
+      }
+
+      const next = rep[i + 1];
+
+      if (next === '&') {
+        tokens.push({ type: 'char', char: '&' });
+        i += 2;
+      } else if (next === '\\') {
+        tokens.push({ type: 'char', char: '\\' });
+        i += 2;
+      } else if (next === '0') {
+        tokens.push({ type: 'group', index: 0 });
+        i += 2;
+      } else if (next >= '1' && next <= '9') {
+        tokens.push({ type: 'group', index: parseInt(next, 10) });
+        i += 2;
+      } else if (next === 'u' || next === 'U' || next === 'l' || next === 'L') {
+        tokens.push({ type: 'modifier', mod: next });
+        i += 2;
+      } else if (next === 'e' || next === 'E') {
+        tokens.push({ type: 'modifier', mod: 'E' });
+        i += 2;
+      } else if (next === 'n') {
+        tokens.push({ type: 'char', char: '\n' });
+        i += 2;
+      } else if (next === 'r') {
+        tokens.push({ type: 'char', char: '\n' });
+        i += 2;
+      } else if (next === 't') {
+        tokens.push({ type: 'char', char: '\t' });
+        i += 2;
+      } else {
+        tokens.push({ type: 'char', char: next });
+        i += 2;
+      }
+      continue;
+    }
+
+    tokens.push({ type: 'char', char: ch });
+    i++;
+  }
+
+  return tokens;
+}
+
+/**
+ * 매칭 결과와 캡처 그룹을 바탕으로 치환 문자열 토큰을 전개합니다.
+ * \u: 다음 1글자만 대문자
+ * \l: 다음 1글자만 소문자
+ * \U: 이후 모든 문자 대문자 (또는 \E까지)
+ * \L: 이후 모든 문자 소문자 (또는 \E까지)
+ */
+export function evaluateReplacement(
+  tokens: ReplaceToken[],
+  match: string,
+  groups: (string | undefined)[]
+): string {
+  let streamCase: 'none' | 'upper' | 'lower' = 'none';
+  let nextCharCase: 'none' | 'upper' | 'lower' = 'none';
+  let result = '';
+
+  const applyCase = (c: string): string => {
+    let res = c;
+    if (nextCharCase === 'upper') {
+      res = res.toUpperCase();
+      nextCharCase = 'none';
+    } else if (nextCharCase === 'lower') {
+      res = res.toLowerCase();
+      nextCharCase = 'none';
+    } else if (streamCase === 'upper') {
+      res = res.toUpperCase();
+    } else if (streamCase === 'lower') {
+      res = res.toLowerCase();
+    }
+    return res;
+  };
+
+  for (const token of tokens) {
+    if (token.type === 'char') {
+      result += applyCase(token.char);
+    } else if (token.type === 'modifier') {
+      if (token.mod === 'u') {
+        nextCharCase = 'upper';
+      } else if (token.mod === 'l') {
+        nextCharCase = 'lower';
+      } else if (token.mod === 'U') {
+        streamCase = 'upper';
+      } else if (token.mod === 'L') {
+        streamCase = 'lower';
+      } else if (token.mod === 'E') {
+        streamCase = 'none';
+      }
+    } else if (token.type === 'group') {
+      const text = token.index === 0 ? match : (groups[token.index - 1] ?? '');
+      for (let j = 0; j < text.length; j++) {
+        result += applyCase(text[j]);
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * :s/old/new/flags 커맨드를 구분자(/ 또는 기타) 기준으로 분해합니다.
+ */
+export function parseSubstitutionCommand(cmd: string): {
+  oldText: string;
+  newText: string;
+  flags: string;
+} | null {
+  const m = cmd.match(/^(?:s|substitute)(?![a-zA-Z])\s*/);
+  if (!m) return null;
+  const afterS = cmd.slice(m[0].length);
+  if (afterS.length === 0) return null;
+
+  const delim = afterS[0];
+  if (/[a-zA-Z0-9\s]/.test(delim)) {
+    return null;
+  }
+
+  let idx = 1;
+  let oldText = '';
+  while (idx < afterS.length) {
+    if (afterS[idx] === '\\' && idx + 1 < afterS.length) {
+      if (afterS[idx + 1] === delim) {
+        oldText += '\\' + delim;
+        idx += 2;
+        continue;
+      }
+      oldText += '\\' + afterS[idx + 1];
+      idx += 2;
+      continue;
+    }
+    if (afterS[idx] === delim) {
+      break;
+    }
+    oldText += afterS[idx];
+    idx++;
+  }
+
+  if (idx >= afterS.length || afterS[idx] !== delim) {
+    return null;
+  }
+
+  idx++;
+  let newText = '';
+  while (idx < afterS.length) {
+    if (afterS[idx] === '\\' && idx + 1 < afterS.length) {
+      if (afterS[idx + 1] === delim) {
+        newText += delim;
+        idx += 2;
+        continue;
+      }
+      newText += '\\' + afterS[idx + 1];
+      idx += 2;
+      continue;
+    }
+    if (afterS[idx] === delim) {
+      break;
+    }
+    newText += afterS[idx];
+    idx++;
+  }
+
+  let flags = '';
+  if (idx < afterS.length && afterS[idx] === delim) {
+    flags = afterS.slice(idx + 1).trim();
+  }
+
+  return { oldText, newText, flags };
+}
+
+/**
+ * 버퍼에서 패턴과 매칭되는 줄 번호를 검색합니다.
+ */
+function searchPatternLine(
+  pattern: string,
+  state: VimEditorState,
+  fromLine: number,
+  forward: boolean
+): number | null {
+  if (state.lines.length === 0) return null;
+  const jsPat = vimRegexToJsRegex(pattern);
+  let regex: RegExp;
+  try {
+    regex = new RegExp(jsPat);
+  } catch {
+    return null;
+  }
+
+  const total = state.lines.length;
+  if (forward) {
+    for (let offset = 0; offset < total; offset++) {
+      const idx = (fromLine + offset) % total;
+      if (regex.test(state.lines[idx])) {
+        return idx;
+      }
+    }
+  } else {
+    for (let offset = 0; offset < total; offset++) {
+      const idx = (fromLine - offset + total) % total;
+      if (regex.test(state.lines[idx])) {
+        return idx;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * 단일 Ex 주소({address})를 파싱하여 대상 행(0-indexed)과 소비된 문자 길이를 반환합니다.
+ */
+export function parseSingleAddress(
+  input: string,
+  state: VimEditorState,
+  fromLine?: number,
+  isSecondAddr = false
+): { line: number; consumed: number; error?: string } | null {
+  const totalLines = state.lines.length;
+  const baseFromLine = fromLine ?? state.cursor.line;
+  let consumed = 0;
+  let baseLine: number | null = null;
+
+  // 1. 순방향 패턴 검색: /pattern/
+  if (input.startsWith('/')) {
+    let idx = 1;
+    let pat = '';
+    while (idx < input.length) {
+      if (input[idx] === '\\' && idx + 1 < input.length) {
+        if (input[idx + 1] === '/') {
+          pat += '/';
+          idx += 2;
+          continue;
+        }
+        pat += '\\' + input[idx + 1];
+        idx += 2;
+        continue;
+      }
+      if (input[idx] === '/') {
+        break;
+      }
+      pat += input[idx];
+      idx++;
+    }
+    if (idx < input.length && input[idx] === '/') {
+      consumed = idx + 1;
+      const searchStart = isSecondAddr ? (baseFromLine + 1) % totalLines : baseFromLine;
+      const matchedLine = searchPatternLine(pat, state, searchStart, true);
+      if (matchedLine === null) {
+        return { line: -1, consumed, error: `E486: 패턴을 찾을 수 없습니다: ${pat}` };
+      }
+      baseLine = matchedLine;
+    } else {
+      return null;
+    }
+  }
+  // 2. 역방향 패턴 검색: ?pattern?
+  else if (input.startsWith('?')) {
+    let idx = 1;
+    let pat = '';
+    while (idx < input.length) {
+      if (input[idx] === '\\' && idx + 1 < input.length) {
+        if (input[idx + 1] === '?') {
+          pat += '?';
+          idx += 2;
+          continue;
+        }
+        pat += '\\' + input[idx + 1];
+        idx += 2;
+        continue;
+      }
+      if (input[idx] === '?') {
+        break;
+      }
+      pat += input[idx];
+      idx++;
+    }
+    if (idx < input.length && input[idx] === '?') {
+      consumed = idx + 1;
+      const searchStart = isSecondAddr ? (baseFromLine - 1 + totalLines) % totalLines : baseFromLine;
+      const matchedLine = searchPatternLine(pat, state, searchStart, false);
+      if (matchedLine === null) {
+        return { line: -1, consumed, error: `E486: 패턴을 찾을 수 없습니다: ${pat}` };
+      }
+      baseLine = matchedLine;
+    } else {
+      return null;
+    }
+  }
+  // 3. 마크 주소: 'a~'z, '<, '>
+  else if (input.startsWith("'")) {
+    if (input.length < 2) return null;
+    const m = input[1];
+    consumed = 2;
+    if (m === '<') {
+      baseLine = Math.min(
+        state.visualAnchor?.line ?? state.lastVisualSelection?.anchor.line ?? state.cursor.line,
+        state.cursor.line
+      );
+    } else if (m === '>') {
+      baseLine = Math.max(
+        state.visualAnchor?.line ?? state.lastVisualSelection?.cursor.line ?? state.cursor.line,
+        state.cursor.line
+      );
+    } else if (state.marks && state.marks[m] !== undefined) {
+      baseLine = state.marks[m].row;
+    } else {
+      return { line: -1, consumed, error: `E20: 마크가 설정되지 않았습니다: '${m}` };
+    }
+  }
+  // 4. 현재 줄: .
+  else if (input.startsWith('.')) {
+    consumed = 1;
+    baseLine = state.cursor.line;
+  }
+  // 5. 마지막 줄: $
+  else if (input.startsWith('$')) {
+    consumed = 1;
+    baseLine = Math.max(0, totalLines - 1);
+  }
+  // 6. 절대 줄 번호: [0-9]+
+  else if (/^\d+/.test(input)) {
+    const m = input.match(/^\d+/)!;
+    consumed = m[0].length;
+    const n = parseInt(m[0], 10);
+    baseLine = n === 0 ? -1 : n - 1;
+  }
+  // 7. 기준 기호 없는 상대 오프셋: + 또는 -
+  else if (/^[+-]/.test(input)) {
+    consumed = 0;
+    baseLine = baseFromLine;
+  } else {
+    return null;
+  }
+
+  // 상대 오프셋 연속 파싱: (+|-)\d*
+  let offset = 0;
+  let rest = input.slice(consumed);
+  while (rest.length > 0) {
+    const offMatch = rest.match(/^\s*([+-])\s*(\d*)/);
+    if (!offMatch || offMatch[0].length === 0) break;
+    const sign = offMatch[1] === '-' ? -1 : 1;
+    const num = offMatch[2] ? parseInt(offMatch[2], 10) : 1;
+    offset += sign * num;
+    consumed += offMatch[0].length;
+    rest = input.slice(consumed);
+  }
+
+  return { line: baseLine + offset, consumed };
+}
+
+/**
+ * 커맨드 문자열 앞부분에서 [range]와 나머지 명령어 부분을 추출합니다.
+ */
+export function extractRangeAndCommand(
+  rawInput: string,
+  state: VimEditorState
+): {
+  range: { startLine: number; endLine: number } | null;
+  hasRange: boolean;
+  command: string;
+  error?: string;
+} {
+  const raw = rawInput.replace(/^:\s*/, '').trimStart();
+  const totalLines = state.lines.length;
+
+  if (raw.length === 0) {
+    return { range: null, hasRange: false, command: '' };
+  }
+
+  // 1. % (전체 버퍼 범위)
+  if (raw.startsWith('%')) {
+    const cmd = raw.slice(1).trimStart();
+    return {
+      range: { startLine: 0, endLine: Math.max(0, totalLines - 1) },
+      hasRange: true,
+      command: cmd,
+    };
+  }
+
+  // 2. '<,'> 또는 <,> (비주얼 선택 영역)
+  const visMatch = raw.match(/^('<,'>|<,>)/);
+  if (visMatch) {
+    const anchorLine =
+      state.visualAnchor?.line ?? state.lastVisualSelection?.anchor.line ?? state.cursor.line;
+    const cursorLine = state.cursor.line;
+    const startLine = Math.max(0, Math.min(anchorLine, cursorLine));
+    const endLine = Math.min(Math.max(0, totalLines - 1), Math.max(anchorLine, cursorLine));
+    const cmd = raw.slice(visMatch[0].length).trimStart();
+    return {
+      range: { startLine, endLine },
+      hasRange: true,
+      command: cmd,
+    };
+  }
+
+  // 3. 첫 번째 주소 시도
+  const res1 = parseSingleAddress(raw, state, state.cursor.line, false);
+  if (res1?.error) {
+    return { range: null, hasRange: true, command: '', error: res1.error };
+  }
+  if (!res1 || res1.consumed === 0) {
+    return { range: null, hasRange: false, command: raw };
+  }
+
+  let consumed = res1.consumed;
+  const rest = raw.slice(consumed);
+  const sepMatch = rest.match(/^\s*([,;])\s*/);
+
+  if (sepMatch) {
+    const afterSep = rest.slice(sepMatch[0].length);
+    const res2 = parseSingleAddress(afterSep, state, res1.line, true);
+    if (res2?.error) {
+      return { range: null, hasRange: true, command: '', error: res2.error };
+    }
+    if (res2 && res2.consumed > 0) {
+      consumed += sepMatch[0].length + res2.consumed;
+      const startLine = Math.max(0, Math.min(res1.line, res2.line));
+      const endLine = Math.min(Math.max(0, totalLines - 1), Math.max(res1.line, res2.line));
+      const cmd = raw.slice(consumed).trimStart();
+      return {
+        range: { startLine, endLine },
+        hasRange: true,
+        command: cmd,
+      };
+    } else {
+      return { range: null, hasRange: true, command: '', error: 'E16: 유효하지 않은 범위입니다' };
+    }
+  } else {
+    // 단일 주소 범위
+    const targetLine = Math.max(0, Math.min(Math.max(0, totalLines - 1), res1.line));
+    const cmd = raw.slice(consumed).trimStart();
+    return {
+      range: { startLine: targetLine, endLine: targetLine },
+      hasRange: true,
+      command: cmd,
+    };
+  }
+}
+
+/**
+ * Ex 커맨드 주소({address}) 문자열을 해석하여 대상 행 인덱스(-1 ~ lines.length - 1)를 반환합니다.
+ * -1은 0번째 행 이전(파일 최상단)을 나타냅니다.
+ */
+export function parseAddress(
+  addrStr: string,
+  state: VimEditorState
+): number | null {
+  const trimmed = addrStr.trim();
+  const totalLines = state.lines.length;
+
+  if (trimmed === '0') {
+    return -1;
+  }
+
+  const res = parseSingleAddress(trimmed, state, state.cursor.line);
+  if (!res || res.error) {
+    return null;
+  }
+
+  if (res.line === -1) {
+    return -1;
+  }
+  if (res.line >= 0 && res.line < totalLines) {
+    return res.line;
+  }
+
+  return null;
+}
+
+/**
+ * Ex 커맨드 범위(range) 문자열을 0-indexed 시작/끝 행으로 해석합니다.
+ */
+export function parseRange(
+  rawRange: string,
+  state: VimEditorState
+): { startLine: number; endLine: number } | null {
+  const trimmed = rawRange.trim();
+  if (trimmed === '.' || trimmed === '') {
+    return { startLine: state.cursor.line, endLine: state.cursor.line };
+  }
+  const extracted = extractRangeAndCommand(trimmed, state);
+  return extracted.range;
+}
 
 /**
  * COMMAND 모드(:)에서 입력된 명령어를 파싱하고 실행합니다.
@@ -38,119 +641,7 @@ export function executeCommandLine(
     return executeGlobalCommand(state, gMatch, commandStr, keyRunner);
   }
 
-  // 3. 줄 번호 이동: ':[숫자]', ': [숫자]', 또는 '[숫자]' (예: ':10', ': 10', '5')
-  const lineNumMatch = trimmed.match(/^:?\s*([0-9]+)$/);
-  if (lineNumMatch) {
-    const lineNum = parseInt(lineNumMatch[1], 10);
-    const targetLine = Math.max(0, Math.min(lineNum - 1, state.lines.length - 1));
-    const nextCursor = clampCursor(
-      state.lines,
-      { line: targetLine, col: state.cursor.col },
-      'NORMAL'
-    );
-
-    return {
-      ...state,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      cursor: nextCursor,
-      commandBuffer: undefined,
-      commandType: undefined,
-      commandMessage: `${targetLine + 1}번째 줄로 이동했습니다.`,
-    };
-  }
-
-  // 4. 범위 지정 명령어 파싱: :%s/old/new/g, :3,7d, :'<,'>norm A;, :%y, :'<,'>sort, :3,5m $, :10t . 등
-  const rangeMatch = trimmed.match(
-    /^:?\s*(%|'<,'>|<,>|(?:[0-9]+|\.|\$|'<|'>)(?:\s*,\s*(?:[0-9]+|\.|\$|'<|'>))?)\s*(.*)$/
-  );
-  if (rangeMatch) {
-    const rawRange = rangeMatch[1];
-    const restCmd = rangeMatch[2].trimStart();
-    const restCmdTrimmed = restCmd.trim();
-    const range = parseRange(rawRange, state);
-
-    if (range && restCmdTrimmed.length > 0) {
-      // 4-1. 범위 치환: :%s/old/new/g, :'<,'>s/old/new/g, :3,7s/old/new/g
-      const subMatch = restCmdTrimmed.match(/^s\s*\/([^\/]*)\/([^\/]*)\/?([gi]*)$/);
-      if (subMatch) {
-        return executeSubstitution(state, range, subMatch, trimmed);
-      }
-
-      // 4-2. 범위 삭제: :3,7d, :%d, :'<,'>d
-      if (restCmdTrimmed === 'd' || restCmdTrimmed === 'delete') {
-        return executeRangeDelete(state, range, trimmed);
-      }
-
-      // 4-3. 범위 복사: :3,7y, :%y, :'<,'>y
-      if (restCmdTrimmed === 'y' || restCmdTrimmed === 'yank') {
-        return executeRangeYank(state, range);
-      }
-
-      // 4-4. 범위 Normal 실행: :'<,'>norm A;, :%norm A;, :3,7norm A;
-      const normMatch = restCmd.match(/^(norm|normal)(!?)\s+(.*)$/);
-      if (normMatch) {
-        const normKeys = normMatch[3];
-        return executeRangeNorm(state, range, normKeys, trimmed, keyRunner);
-      }
-
-      // 4-5. 범위 정렬: :sort, :sort!, :sort u, :sort n
-      const sortMatch = restCmdTrimmed.match(/^sort(!?)(?:\s+(.*))?$/);
-      if (sortMatch) {
-        return executeSort(state, range, sortMatch[1], sortMatch[2]);
-      }
-
-      // 4-6. 범위 이동: :[range]m {address}, :[range]move {address}
-      const moveMatch = restCmdTrimmed.match(/^(?:m|move)\s+(.*)$/);
-      if (moveMatch) {
-        return executeMove(state, range, moveMatch[1]);
-      }
-
-      // 4-7. 범위 복제: :[range]t {address}, :[range]co {address}, :[range]copy {address}
-      const copyMatch = restCmdTrimmed.match(/^(?:t|co|copy)\s+(.*)$/);
-      if (copyMatch) {
-        return executeCopy(state, range, copyMatch[1]);
-      }
-    }
-  }
-
-  // 5. 범위 없는 단일 치환: :s/old/new/g
-  const currentSubMatch = trimmed.match(/^:?\s*s\s*\/([^\/]*)\/([^\/]*)\/?([gi]*)$/);
-  if (currentSubMatch) {
-    const currentLineRange = { startLine: state.cursor.line, endLine: state.cursor.line };
-    return executeSubstitution(state, currentLineRange, currentSubMatch, trimmed);
-  }
-
-  // 6. 범위 없는 단일 norm: :norm A;
-  const standaloneNormMatch = trimmed.match(/^:?\s*(norm|normal)(!?)\s+(.*)$/);
-  if (standaloneNormMatch) {
-    const normKeys = standaloneNormMatch[3];
-    const currentLineRange = { startLine: state.cursor.line, endLine: state.cursor.line };
-    return executeRangeNorm(state, currentLineRange, normKeys, trimmed, keyRunner);
-  }
-
-  // 7. 범위 없는 단일 sort: :sort, :sort!, :sort u, :sort n (전체 버퍼 대상)
-  const standaloneSortMatch = trimmed.match(/^:?\s*sort(!?)(?:\s+(.*))?$/);
-  if (standaloneSortMatch) {
-    const fullRange = { startLine: 0, endLine: state.lines.length - 1 };
-    return executeSort(state, fullRange, standaloneSortMatch[1], standaloneSortMatch[2]);
-  }
-
-  // 8. 범위 없는 단일 move: :m {address}, :move {address} (현재 행 대상)
-  const standaloneMoveMatch = trimmed.match(/^:?\s*(?:m|move)\s+(.*)$/);
-  if (standaloneMoveMatch) {
-    const currentLineRange = { startLine: state.cursor.line, endLine: state.cursor.line };
-    return executeMove(state, currentLineRange, standaloneMoveMatch[1]);
-  }
-
-  // 9. 범위 없는 단일 copy: :t {address}, :co {address}, :copy {address} (현재 행 대상)
-  const standaloneCopyMatch = trimmed.match(/^:?\s*(?:t|co|copy)\s+(.*)$/);
-  if (standaloneCopyMatch) {
-    const currentLineRange = { startLine: state.cursor.line, endLine: state.cursor.line };
-    return executeCopy(state, currentLineRange, standaloneCopyMatch[1]);
-  }
-
-  // 7. 창 분할 및 종료 명령어 (:sp, :vsp, :q, :w, :help)
+  // 3. 창 분할 및 종료, 설정, 키매핑 명령어
   const cleanCmdRaw = trimmed.replace(/^:/, '').trim();
   const splitMatch = cleanCmdRaw.match(/^(sp|split|vsp|vsplit)(?:\s+(.+))?$/i);
   if (splitMatch) {
@@ -215,7 +706,7 @@ export function executeCommandLine(
     };
   }
 
-  // 8. 리더 키(Leader Key) 설정: :let mapleader = " " 또는 :let g:mapleader = " "
+  // 리더 키(Leader Key) 설정: :let mapleader = " "
   const leaderMatch = trimmed.match(/^:?\s*let\s+(?:g:)?mapleader\s*=\s*(["'])(.*?)\1/i);
   if (leaderMatch) {
     let newLeader = leaderMatch[2];
@@ -231,7 +722,7 @@ export function executeCommandLine(
     };
   }
 
-  // 9. 커스텀 키매핑 등록: :imap, :inoremap, :nmap, :nnoremap, :vmap, :vnoremap, :map, :noremap
+  // 커스텀 키매핑 등록: :imap, :inoremap, :nmap, :nnoremap, :vmap, :vnoremap, :map, :noremap
   const mapMatch = trimmed.match(
     /^:?\s*(nmap|nnoremap|imap|inoremap|vmap|vnoremap|map|noremap)\s+(\S+)\s+(.+)$/i
   );
@@ -266,7 +757,7 @@ export function executeCommandLine(
     };
   }
 
-  // 10. 키매핑 해제: :unmap, :nunmap, :iunmap
+  // 키매핑 해제: :unmap, :nunmap, :iunmap, :vunmap
   const unmapMatch = trimmed.match(/^:?\s*(unmap|nunmap|iunmap|vunmap)\s+(\S+)$/i);
   if (unmapMatch) {
     const from = unmapMatch[2];
@@ -287,7 +778,92 @@ export function executeCommandLine(
     };
   }
 
-  // 11. 알 수 없는 명령어는 에러 메시지와 함께 NORMAL 모드로 복귀
+  // 4. 공통 Range 파서 및 Ex 명령어 실행
+  const extracted = extractRangeAndCommand(trimmed, state);
+  if (extracted.error) {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: extracted.error,
+    };
+  }
+
+  const { range, hasRange, command } = extracted;
+  const cmdTrimmed = command.trim();
+
+  // 4-1. 명령어 없이 범위 또는 주소만 주어진 경우: 라인 이동 (예: ':10', ':$', ':+3', ':-2', ':\'a')
+  if (hasRange && cmdTrimmed.length === 0 && range) {
+    const targetLine = Math.max(0, Math.min(range.endLine, state.lines.length - 1));
+    const nextCursor = clampCursor(
+      state.lines,
+      { line: targetLine, col: state.cursor.col },
+      'NORMAL'
+    );
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      cursor: nextCursor,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: `${targetLine + 1}번째 줄로 이동했습니다.`,
+    };
+  }
+
+  const currentLineRange = { startLine: state.cursor.line, endLine: state.cursor.line };
+  const fullBufferRange = { startLine: 0, endLine: Math.max(0, state.lines.length - 1) };
+
+  // 4-2. 치환: :[range]s/old/new/flags 또는 :s/old/new/flags
+  const sub = parseSubstitutionCommand(command);
+  if (sub) {
+    const targetRange = range ?? currentLineRange;
+    return executeSubstitution(state, targetRange, sub.oldText, sub.newText, sub.flags, trimmed);
+  }
+
+  // 4-3. 삭제: :[range]d, :d, :[range]delete
+  if (cmdTrimmed === 'd' || cmdTrimmed === 'delete') {
+    const targetRange = range ?? currentLineRange;
+    return executeRangeDelete(state, targetRange, trimmed);
+  }
+
+  // 4-4. 복사: :[range]y, :y, :[range]yank
+  if (cmdTrimmed === 'y' || cmdTrimmed === 'yank') {
+    const targetRange = range ?? currentLineRange;
+    return executeRangeYank(state, targetRange);
+  }
+
+  // 4-5. Normal 모드 명령 실행: :[range]norm {keys}, :norm {keys}
+  const normMatch = command.match(/^(?:norm|normal)(!?)\s+(.*)$/);
+  if (normMatch) {
+    const targetRange = range ?? currentLineRange;
+    return executeRangeNorm(state, targetRange, normMatch[2], trimmed, keyRunner);
+  }
+
+  // 4-6. 정렬: :[range]sort, :sort
+  const sortMatch = cmdTrimmed.match(/^sort(!?)(?:\s+(.*))?$/);
+  if (sortMatch) {
+    const targetRange = range ?? fullBufferRange;
+    return executeSort(state, targetRange, sortMatch[1], sortMatch[2]);
+  }
+
+  // 4-7. 이동: :[range]m {address}, :m {address}
+  const moveMatch = cmdTrimmed.match(/^(?:m|move)\s+(.*)$/);
+  if (moveMatch) {
+    const targetRange = range ?? currentLineRange;
+    return executeMove(state, targetRange, moveMatch[1]);
+  }
+
+  // 4-8. 복제: :[range]t {address}, :t {address}, :co, :copy
+  const copyMatch = cmdTrimmed.match(/^(?:t|co|copy)\s+(.*)$/);
+  if (copyMatch) {
+    const targetRange = range ?? currentLineRange;
+    return executeCopy(state, targetRange, copyMatch[1]);
+  }
+
+  // 5. 알 수 없는 명령어는 에러 메시지와 함께 NORMAL 모드로 복귀
   return {
     ...state,
     mode: 'NORMAL',
@@ -296,124 +872,6 @@ export function executeCommandLine(
     commandType: undefined,
     commandMessage: `E492: 지원하지 않는 에디터 명령어입니다: ${trimmed}`,
   };
-}
-
-/**
- * Ex 커맨드 주소({address}) 문자열을 해석하여 대상 행 인덱스(-1 ~ lines.length - 1)를 반환합니다.
- * -1은 0번째 행 이전(파일 최상단)을 나타냅니다.
- */
-export function parseAddress(
-  addrStr: string,
-  state: VimEditorState
-): number | null {
-  const trimmed = addrStr.trim();
-  const totalLines = state.lines.length;
-
-  if (trimmed === '0') {
-    return -1; // 0: 1행 이전, 즉 파일 최상단 (인덱스 0 앞에 삽입)
-  }
-  if (trimmed === '$') {
-    return totalLines - 1;
-  }
-  if (trimmed === '.') {
-    return state.cursor.line;
-  }
-  if (trimmed === "'<") {
-    return Math.min(state.visualAnchor?.line ?? state.cursor.line, state.cursor.line);
-  }
-  if (trimmed === "'>") {
-    return Math.max(state.visualAnchor?.line ?? state.cursor.line, state.cursor.line);
-  }
-
-  // 상대 주소: .+2, .-1, $+1, $-2, +2, -1 등
-  const relMatch = trimmed.match(/^(\.|\$)?\s*([+-])\s*(\d+)$/);
-  if (relMatch) {
-    const baseSym = relMatch[1] ?? '.';
-    const sign = relMatch[2] === '-' ? -1 : 1;
-    const offset = parseInt(relMatch[3], 10) * sign;
-    const baseLine = baseSym === '$' ? totalLines - 1 : state.cursor.line;
-    const calculated = baseLine + offset;
-    if (calculated < -1 || calculated > totalLines - 1) {
-      return null;
-    }
-    return calculated;
-  }
-
-  // 절대 행 번호 (1-indexed): "1", "10" 등
-  const numMatch = trimmed.match(/^(\d+)$/);
-  if (numMatch) {
-    const n = parseInt(numMatch[1], 10);
-    if (n === 0) return -1;
-    if (n >= 1 && n <= totalLines) {
-      return n - 1;
-    }
-    return null; // 유효 범위를 벗어난 행 번호
-  }
-
-  return null;
-}
-
-/**
- * Ex 커맨드 범위(range) 문자열을 0-indexed 시작/끝 행으로 해석합니다.
- */
-export function parseRange(
-  rawRange: string,
-  state: VimEditorState
-): { startLine: number; endLine: number } | null {
-  const trimmed = rawRange.trim();
-  const totalLines = state.lines.length;
-
-  if (trimmed === '%' || trimmed === '1,$') {
-    return { startLine: 0, endLine: totalLines - 1 };
-  }
-
-  if (trimmed === "'<,'>" || trimmed === "'<" || trimmed === "'>" || trimmed === '<,>') {
-    const anchorLine = state.visualAnchor?.line ?? state.cursor.line;
-    const cursorLine = state.cursor.line;
-    const startLine = Math.max(0, Math.min(anchorLine, cursorLine));
-    const endLine = Math.min(totalLines - 1, Math.max(anchorLine, cursorLine));
-    return { startLine, endLine };
-  }
-
-  if (trimmed === '.' || trimmed === '') {
-    return { startLine: state.cursor.line, endLine: state.cursor.line };
-  }
-
-  if (trimmed === '$') {
-    return { startLine: totalLines - 1, endLine: totalLines - 1 };
-  }
-
-  // 단일 숫자: "5"
-  const singleNumMatch = trimmed.match(/^([0-9]+)$/);
-  if (singleNumMatch) {
-    const l = Math.max(0, Math.min(totalLines - 1, parseInt(singleNumMatch[1], 10) - 1));
-    return { startLine: l, endLine: l };
-  }
-
-  // 콤마로 구분된 두 항목: "3,7", ".,$", "1,.", "4,$" 등
-  const commaParts = trimmed.split(',');
-  if (commaParts.length === 2) {
-    const resolvePart = (part: string, defaultLine: number): number => {
-      const p = part.trim();
-      if (p === '.') return state.cursor.line;
-      if (p === '$') return totalLines - 1;
-      if (p === "'<") return Math.min(state.visualAnchor?.line ?? state.cursor.line, state.cursor.line);
-      if (p === "'>") return Math.max(state.visualAnchor?.line ?? state.cursor.line, state.cursor.line);
-      const addr = parseAddress(p, state);
-      if (addr !== null) {
-        return Math.max(0, addr);
-      }
-      return defaultLine;
-    };
-
-    const startLine = resolvePart(commaParts[0], state.cursor.line);
-    const endLine = resolvePart(commaParts[1], state.cursor.line);
-    const minLine = Math.min(startLine, endLine);
-    const maxLine = Math.max(startLine, endLine);
-    return { startLine: minLine, endLine: maxLine };
-  }
-
-  return null;
 }
 
 /**
@@ -910,17 +1368,16 @@ export function parseKeyTokens(keysStr: string): string[] {
 
 /**
  * 지정된 범위 내 텍스트 치환을 실행합니다.
+ * 순정 Vim 정규식 캡처 그룹(\1~\9, &) 및 대소문자 변환 플래그(\u, \U, \l, \L, \E)를 완벽하게 지원합니다.
  */
-function executeSubstitution(
+export function executeSubstitution(
   state: VimEditorState,
   range: { startLine: number; endLine: number },
-  subMatch: RegExpMatchArray,
+  oldText: string,
+  newText: string,
+  flags: string,
   commandStr: string
 ): VimEditorState {
-  const oldText = subMatch[1];
-  const newText = subMatch[2];
-  const flags = subMatch[3] ?? '';
-
   if (oldText.length === 0) {
     return {
       ...state,
@@ -938,19 +1395,46 @@ function executeSubstitution(
   if (isGlobal) regFlags += 'g';
   if (isIgnoreCase) regFlags += 'i';
 
-  const regex = new RegExp(escapeRegExp(oldText), regFlags);
+  const jsPattern = vimRegexToJsRegex(oldText);
+  let regex: RegExp;
+  try {
+    regex = new RegExp(jsPattern, regFlags);
+  } catch {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: `E486: 잘못된 정규식 패턴입니다: ${oldText}`,
+    };
+  }
+
+  const repTokens = parseReplacementTokens(newText);
   let totalSubCount = 0;
 
   const nextLines = [...state.lines];
   for (let l = range.startLine; l <= range.endLine; l++) {
     const line = nextLines[l];
-    const matches = line.match(
-      new RegExp(escapeRegExp(oldText), regFlags.includes('g') ? regFlags : regFlags + 'g')
-    );
-    if (matches) {
-      totalSubCount += matches.length;
+    // 패턴 매칭 여부 사전 테스트
+    const testRegex = new RegExp(jsPattern, isIgnoreCase ? 'i' : '');
+    if (!testRegex.test(line)) {
+      continue;
     }
-    nextLines[l] = line.replace(regex, newText);
+
+    if (isGlobal) {
+      regex.lastIndex = 0;
+    }
+
+    const replacedLine = line.replace(regex, (...args) => {
+      totalSubCount++;
+      const match = args[0] as string;
+      const offsetIndex = args.findIndex((arg, idx) => idx > 0 && typeof arg === 'number');
+      const groups = (offsetIndex > 1 ? args.slice(1, offsetIndex) : []) as (string | undefined)[];
+      return evaluateReplacement(repTokens, match, groups);
+    });
+
+    nextLines[l] = replacedLine;
   }
 
   if (totalSubCount === 0) {

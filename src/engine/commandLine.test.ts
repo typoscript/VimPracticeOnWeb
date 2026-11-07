@@ -202,4 +202,286 @@ describe('commandLine module', () => {
       expect(result.lines).toEqual(['// const a = 1;', '// const b = 2;']);
     });
   });
+
+  describe('순정 Vim 정규식 캡처 그룹(\\(...\\)) 및 역참조(\\1~\\9, &) 치환', () => {
+    it(':%s/\\(\\w\\+\\): \\(\\w\\+\\)/\\2 = \\1/g 명령으로 key: value를 value = key로 일괄 역전한다', () => {
+      const state: VimEditorState = {
+        lines: ['first: one', 'second: two', 'third: three'],
+        cursor: { line: 0, col: 0 },
+        mode: 'COMMAND',
+      };
+
+      const result = executeCommandLine(state, ':%s/\\(\\w\\+\\): \\(\\w\\+\\)/\\2 = \\1/g');
+      expect(result.lines).toEqual(['one = first', 'two = second', 'three = third']);
+      expect(result.commandMessage).toContain('3개 항목을 치환했습니다.');
+    });
+
+    it('표준 괄호 (\\w+): (\\w+) 구문도 캡처 그룹으로 호환되어 동일하게 동작한다', () => {
+      const state: VimEditorState = {
+        lines: ['name: alice', 'age: 30'],
+        cursor: { line: 0, col: 0 },
+        mode: 'COMMAND',
+      };
+
+      const result = executeCommandLine(state, ':%s/(\\w+): (\\w+)/\\2 = \\1/g');
+      expect(result.lines).toEqual(['alice = name', '30 = age']);
+    });
+
+    it(':%s/[0-9]\\+/[&]/g 명령으로 모든 숫자를 대괄호 [&]로 감싼다', () => {
+      const state: VimEditorState = {
+        lines: ['val1 = 123', 'val2 = 456;'],
+        cursor: { line: 0, col: 0 },
+        mode: 'COMMAND',
+      };
+
+      const result = executeCommandLine(state, ':%s/[0-9]\\+/[&]/g');
+      expect(result.lines).toEqual(['val[1] = [123]', 'val[2] = [456];']);
+    });
+
+    it('\\0 또한 &와 동일하게 전체 매칭 텍스트로 치환된다', () => {
+      const state: VimEditorState = {
+        lines: ['code 99'],
+        cursor: { line: 0, col: 0 },
+        mode: 'COMMAND',
+      };
+
+      const result = executeCommandLine(state, ':%s/[0-9]\\+/<\\0>/g');
+      expect(result.lines).toEqual(['code <99>']);
+    });
+
+    it('\\u 플래그로 캡처 그룹의 첫 글자를 대문자로 변환한다 (snake_case -> camelCase)', () => {
+      const state: VimEditorState = {
+        lines: [
+          'const user = get_user();',
+          'const account = get_account_info();',
+          'const profile = get_profile();',
+        ],
+        cursor: { line: 0, col: 0 },
+        mode: 'COMMAND',
+      };
+
+      const result = executeCommandLine(state, ':%s/get_\\(\\w\\+\\)/get\\u\\1/g');
+      expect(result.lines).toEqual([
+        'const user = getUser();',
+        'const account = getAccount_info();',
+        'const profile = getProfile();',
+      ]);
+    });
+
+    it('\\U 플래그로 캡처 그룹 전체를 대문자화하고 \\E로 종료한다', () => {
+      const state: VimEditorState = {
+        lines: ['const foo_bar = 1;', 'const hello_world = 2;'],
+        cursor: { line: 0, col: 0 },
+        mode: 'COMMAND',
+      };
+
+      const result = executeCommandLine(state, ':%s/const \\(\\w\\+\\)/const \\U\\1\\E_ENV/g');
+      expect(result.lines).toEqual(['const FOO_BAR_ENV = 1;', 'const HELLO_WORLD_ENV = 2;']);
+    });
+
+    it('\\L 플래그로 캡처 그룹 전체를 소문자화한다', () => {
+      const state: VimEditorState = {
+        lines: ['HELLO_WORLD', 'VIM_ROCKS'],
+        cursor: { line: 0, col: 0 },
+        mode: 'COMMAND',
+      };
+
+      const result = executeCommandLine(state, ':%s/\\(\\w\\+\\)/\\L\\1/g');
+      expect(result.lines).toEqual(['hello_world', 'vim_rocks']);
+    });
+
+    it('\\l 플래그로 캡처 그룹 첫 글자만 소문자화한다', () => {
+      const state: VimEditorState = {
+        lines: ['PascalCase', 'CamelCase'],
+        cursor: { line: 0, col: 0 },
+        mode: 'COMMAND',
+      };
+
+      const result = executeCommandLine(state, ':%s/\\(\\w\\+\\)/\\l\\1/g');
+      expect(result.lines).toEqual(['pascalCase', 'camelCase']);
+    });
+
+    it('이스케이프된 \\& 및 \\\\를 리터럴 문자로 정확하게 치환한다', () => {
+      const state: VimEditorState = {
+        lines: ['foo and bar'],
+        cursor: { line: 0, col: 0 },
+        mode: 'COMMAND',
+      };
+
+      const result = executeCommandLine(state, ':%s/and/\\&/g');
+      expect(result.lines).toEqual(['foo & bar']);
+    });
+  });
+
+  describe('순정 Ex 커맨드 고급 범위(Range) 지정 파서', () => {
+    const multiLines = [
+      'line 1: AAA',
+      'line 2: BBB',
+      'line 3: CCC',
+      'line 4: DDD',
+      'line 5: EEE',
+      'line 6: FFF',
+      'line 7: GGG',
+    ];
+
+    it('상대 오프셋: .,.+3d 로 현재 줄부터 아래로 3줄(총 4줄)을 삭제한다', () => {
+      const state: VimEditorState = {
+        lines: [...multiLines],
+        cursor: { line: 1, col: 0 }, // line 2 (인덱스 1)
+        mode: 'COMMAND',
+      };
+
+      // 1번 인덱스(line 2)부터 1+3=4번 인덱스(line 5)까지 총 4줄 삭제
+      const result = executeCommandLine(state, ':.,.+3d');
+      expect(result.lines).toEqual(['line 1: AAA', 'line 6: FFF', 'line 7: GGG']);
+      expect(result.clipboard?.content).toBe('line 2: BBB\nline 3: CCC\nline 4: DDD\nline 5: EEE');
+      expect(result.commandMessage).toContain('4개 줄이 삭제되었습니다.');
+    });
+
+    it('상대 오프셋: .-2,.+2s/foo/bar/g 로 커서 전후 2줄 범위에서만 치환한다', () => {
+      const state: VimEditorState = {
+        lines: [
+          'target 0',
+          'target 1',
+          'target 2',
+          'target 3',
+          'target 4',
+          'target 5',
+          'target 6',
+        ],
+        cursor: { line: 3, col: 0 }, // line 3 (인덱스 3)
+        mode: 'COMMAND',
+      };
+
+      // 3-2=1 ~ 3+2=5 행만 치환
+      const result = executeCommandLine(state, '.-2,.+2s/target/MODIFIED/g');
+      expect(result.lines).toEqual([
+        'target 0',
+        'MODIFIED 1',
+        'MODIFIED 2',
+        'MODIFIED 3',
+        'MODIFIED 4',
+        'MODIFIED 5',
+        'target 6',
+      ]);
+    });
+
+    it('마크 범위: \'a,\'bd 로 마크 a부터 마크 b까지의 줄을 일괄 삭제한다', () => {
+      const state: VimEditorState = {
+        lines: [...multiLines],
+        cursor: { line: 0, col: 0 },
+        marks: {
+          a: { row: 2, col: 0 }, // line 3
+          b: { row: 4, col: 0 }, // line 5
+        },
+        mode: 'COMMAND',
+      };
+
+      const result = executeCommandLine(state, ":'a,'bd");
+      expect(result.lines).toEqual([
+        'line 1: AAA',
+        'line 2: BBB',
+        'line 6: FFF',
+        'line 7: GGG',
+      ]);
+      expect(result.clipboard?.content).toBe('line 3: CCC\nline 4: DDD\nline 5: EEE');
+    });
+
+    it('설정되지 않은 마크 참조 시 E20 에러를 반환한다', () => {
+      const state: VimEditorState = {
+        lines: [...multiLines],
+        cursor: { line: 0, col: 0 },
+        mode: 'COMMAND',
+      };
+
+      const result = executeCommandLine(state, ":'x,'yd");
+      expect(result.lines).toEqual(multiLines);
+      expect(result.commandMessage).toContain("E20: 마크가 설정되지 않았습니다: 'x");
+    });
+
+    it('검색 패턴 범위: :/START/,/END/d 로 START부터 END가 있는 줄까지 블록을 통째로 삭제한다', () => {
+      const state: VimEditorState = {
+        lines: [
+          'const before = true;',
+          '// START',
+          'const inside1 = 1;',
+          'const inside2 = 2;',
+          '// END',
+          'const after = true;',
+        ],
+        cursor: { line: 0, col: 0 },
+        mode: 'COMMAND',
+      };
+
+      const result = executeCommandLine(state, ':/START/,/END/d');
+      expect(result.lines).toEqual(['const before = true;', 'const after = true;']);
+      expect(result.clipboard?.content).toBe('// START\nconst inside1 = 1;\nconst inside2 = 2;\n// END');
+      expect(result.commandMessage).toContain('4개 줄이 삭제되었습니다.');
+    });
+
+    it('패턴을 찾지 못할 경우 버퍼를 변경하지 않고 E486 에러를 반환한다', () => {
+      const state: VimEditorState = {
+        lines: ['line 1', 'line 2'],
+        cursor: { line: 0, col: 0 },
+        mode: 'COMMAND',
+      };
+
+      const result = executeCommandLine(state, ':/NON_EXISTENT/,/END/d');
+      expect(result.lines).toEqual(['line 1', 'line 2']);
+      expect(result.commandMessage).toContain('E486: 패턴을 찾을 수 없습니다: NON_EXISTENT');
+    });
+
+    it('상대 오프셋 점프: :+3 및 :-2 로 커서 행을 즉시 이동한다', () => {
+      const state: VimEditorState = {
+        lines: [...multiLines],
+        cursor: { line: 2, col: 0 },
+        mode: 'COMMAND',
+      };
+
+      const jumpDown = executeCommandLine(state, ':+3');
+      expect(jumpDown.cursor.line).toBe(5);
+
+      const jumpUp = executeCommandLine(state, ':-2');
+      expect(jumpUp.cursor.line).toBe(0);
+    });
+
+    it('마크 및 패턴 주소 점프: :\'a 및 :/FFF/ 로 해당 위치로 이동한다', () => {
+      const state: VimEditorState = {
+        lines: [...multiLines],
+        cursor: { line: 0, col: 0 },
+        marks: {
+          a: { row: 4, col: 2 },
+        },
+        mode: 'COMMAND',
+      };
+
+      const jumpMark = executeCommandLine(state, ":'a");
+      expect(jumpMark.cursor.line).toBe(4);
+
+      const jumpPattern = executeCommandLine(state, ':/FFF/');
+      expect(jumpPattern.cursor.line).toBe(5);
+    });
+
+    it('상대 범위 norm 실행: :.,.+2norm A; 로 현재 줄 및 아래 2줄 끝에 세미콜론을 추가한다', () => {
+      const state: VimEditorState = {
+        lines: ['let a = 1', 'let b = 2', 'let c = 3', 'let d = 4'],
+        cursor: { line: 1, col: 0 },
+        mode: 'COMMAND',
+      };
+
+      const result = executeCommandLine(state, ':.,.+2norm A;', handleKey);
+      expect(result.lines).toEqual(['let a = 1', 'let b = 2;', 'let c = 3;', 'let d = 4;']);
+    });
+
+    it('상대 범위 move 실행: :.,.+1m $ 로 현재 줄과 다음 줄을 파일 끝으로 이동한다', () => {
+      const state: VimEditorState = {
+        lines: ['first', 'second', 'third', 'fourth'],
+        cursor: { line: 0, col: 0 },
+        mode: 'COMMAND',
+      };
+
+      const result = executeCommandLine(state, ':.,.+1m $');
+      expect(result.lines).toEqual(['third', 'fourth', 'first', 'second']);
+    });
+  });
 });
