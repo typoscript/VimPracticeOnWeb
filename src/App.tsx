@@ -93,7 +93,7 @@ import './App.css';
 /** 스피드런 챌린지 후보 미션 ID 목록 (리팩토링/편집 미션) */
 export const SPEEDRUN_CANDIDATE_IDS = [
   4, 6, 7, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 21, 23, 25, 26, 28, 29, 30, 31, 32, 43, 44,
-  47, 48, 49, 50, 51, 52, 53, 54,
+  47, 48, 49, 50, 51, 52, 53, 54, 55,
 ];
 
 export function generateSpeedrunStages(): Mission[] {
@@ -407,6 +407,8 @@ export function App() {
   // 매크로 슬로우모션 디버거: 패널 표시 여부 및 현재 프레임 미리보기 상태
   const [showMacroDebugger, setShowMacroDebugger] = useState<boolean>(false);
   const [macroPreviewState, setMacroPreviewState] = useState<VimEditorState | null>(null);
+  // visualbell: 키 실패(bell) 발생 횟수 (값이 바뀔 때마다 에디터가 깜빡임)
+  const [bellCount, setBellCount] = useState(0);
 
   const editorStateRef = useRef(editorState);
   editorStateRef.current = editorState;
@@ -962,6 +964,9 @@ export function App() {
       const nextState = handleKey(baseState, key);
       editorStateRef.current = nextState;
       setEditorState(nextState);
+      if (nextState.bell) {
+        setBellCount((c) => c + 1);
+      }
 
       // 액션 완료 판정 (NORMAL 모드 복귀 및 대기 키 없음)
       if (nextState.mode === 'NORMAL' && !nextState.pendingKeys) {
@@ -1745,6 +1750,7 @@ export function App() {
                       options={displayEditorState.options}
                       diffHunks={displayEditorState.diffMode ? displayEditorState.diffHunks : undefined}
                       diffPaneIndex={0}
+                      bellSignal={editorState.activePaneIndex === 0 ? bellCount : undefined}
                     />
                   </div>
 
@@ -1786,6 +1792,7 @@ export function App() {
                       options={displayEditorState.options}
                       diffHunks={displayEditorState.diffMode ? displayEditorState.diffHunks : undefined}
                       diffPaneIndex={1}
+                      bellSignal={editorState.activePaneIndex === 1 ? bellCount : undefined}
                     />
                   </div>
                 </div>
@@ -1812,6 +1819,7 @@ export function App() {
                   insertRegisterPending={displayEditorState.insertRegisterPending}
                   confirmSubstitute={displayEditorState.confirmSubstitute}
                   options={displayEditorState.options}
+                  bellSignal={bellCount}
                 />
               )}
             </div>

@@ -17,6 +17,28 @@
   border-color: #45475a;
 }
 
+/* visualbell: 키 실패(마지막 줄의 j, 없는 문자 f 등) 시 짧은 깜빡임 */
+.editor-container.editor-bell {
+  animation: editorBellFlash 0.2s ease-out;
+}
+
+@keyframes editorBellFlash {
+  0% {
+    border-color: #f38ba8;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 0 0 2px rgba(243, 139, 168, 0.55);
+  }
+  100% {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), inset 0 0 0 2px rgba(243, 139, 168, 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .editor-container.editor-bell {
+    animation: none;
+    border-color: #f38ba8;
+  }
+}
+
 /* 포커스 이탈 시 블러 오버레이 안내 바 */
 .editor-blur-overlay {
   position: absolute;

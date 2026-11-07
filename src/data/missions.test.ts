@@ -1067,8 +1067,35 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson54!.checkComplete({ ...completeState, mode: 'INSERT' })).toBe(false);
   });
 
-  it('모든 54개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(54);
+  it('레슨 55 (사용자 정의 Ex 명령: :command!) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson55 = MISSIONS.find((m) => m.id === 55);
+    expect(lesson55).toBeDefined();
+    expect(lesson55?.par).toBe(39);
+
+    const incompleteState: VimEditorState = {
+      lines: [...lesson55!.initialLines],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson55!.checkComplete(incompleteState)).toBe(false);
+
+    // 명령을 등록하지 않고 직접 :g 로 지운 경우는 미완료
+    const withoutCommand: VimEditorState = {
+      lines: [...lesson55!.targetLines!],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson55!.checkComplete(withoutCommand)).toBe(false);
+
+    const completeState: VimEditorState = {
+      ...withoutCommand,
+      userCommands: { D: { name: 'D', nargs: '1', range: 'none', bang: false, replacement: 'g/<args>/d' } },
+    };
+    expect(lesson55!.checkComplete(completeState)).toBe(true);
+  });
+
+  it('모든 55개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(55);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();

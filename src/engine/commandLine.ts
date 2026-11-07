@@ -92,6 +92,7 @@ import {
   unregisterKeymap,
   formatKeymapsList,
 } from './keymapEngine';
+import { executeUserCommandDefinition, executeUserCommand, lookupUserCommand } from './userCommandEngine';
 
 export type KeyRunner = (
   state: VimEditorState,
@@ -709,7 +710,8 @@ export function parseRange(
 export function executeCommandLine(
   state: VimEditorState,
   commandStr: string,
-  keyRunner?: KeyRunner
+  keyRunner?: KeyRunner,
+  userCommandDepth = 0
 ): VimEditorState {
   const trimmed = commandStr.trimStart();
 
@@ -1908,6 +1910,12 @@ export function executeCommandLine(
     return registerKeymap(state, cmdType, from, to);
   }
 
+  // 사용자 정의 명령 등록·삭제·목록: :command[!], :delcommand, :comclear
+  const userCmdDef = executeUserCommandDefinition(state, cleanCmdRaw);
+  if (userCmdDef) {
+    return userCmdDef;
+  }
+
   // 키매핑 해제: :unmap, :nunmap, :iunmap, :vunmap
   const unmapMatch = trimmed.match(/^:?\s*(unmap|nunmap|iunmap|vunmap)\s+(\S+)$/i);
   if (unmapMatch) {
@@ -1931,6 +1939,32 @@ export function executeCommandLine(
 
   const { range, hasRange, command } = extracted;
   const cmdTrimmed = command.trim();
+
+  // 4-0. 사용자 정의 명령 호출 (:Name[!] [args], :[range]Name) - 내장 명령보다 뒤에 평가되어 내장 명령을 가리지 않음
+  const userCmdCall = cmdTrimmed.match(/^([A-Z][A-Za-z0-9]*)(!?)(?:\s+(.*))?$/);
+  if (userCmdCall && state.userCommands) {
+    const lookup = lookupUserCommand(state, userCmdCall[1]);
+    if (lookup.kind === 'ambiguous') {
+      return {
+        ...state,
+        mode: 'NORMAL',
+        visualAnchor: undefined,
+        commandBuffer: undefined,
+        commandType: undefined,
+        commandMessage: `E464: 사용자 정의 명령 이름이 모호합니다: ${userCmdCall[1]} (${lookup.candidates.join(', ')})`,
+        bell: true,
+      };
+    }
+    if (lookup.kind === 'found') {
+      return executeUserCommand(
+        state,
+        lookup.command,
+        { bang: userCmdCall[2] === '!', args: (userCmdCall[3] ?? '').trim(), range: hasRange ? range : null },
+        (s, cmd) => executeCommandLine(s, cmd, keyRunner, userCommandDepth + 1),
+        userCommandDepth
+      );
+    }
+  }
 
   // 4-1. 명령어 없이 범위 또는 주소만 주어진 경우: 라인 이동 (예: ':10', ':$', ':+3', ':-2', ':\'a')
   if (hasRange && cmdTrimmed.length === 0 && range) {

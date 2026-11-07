@@ -48,6 +48,8 @@ export interface EditorProps {
   diffHunks?: DiffHunk[];
   /** 현재 에디터가 분할 창의 몇 번째 창인지 (0 또는 1) */
   diffPaneIndex?: number;
+  /** 키 실패(bell) 횟수 카운터. 값이 바뀔 때마다 에디터 테두리를 잠깐 깜빡입니다 (visualbell) */
+  bellSignal?: number;
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -70,8 +72,22 @@ export const Editor: React.FC<EditorProps> = ({
   options,
   diffHunks,
   diffPaneIndex = 0,
+  bellSignal = 0,
 }) => {
   const scrollerRef = React.useRef<HTMLDivElement>(null);
+  const [isBellFlashing, setIsBellFlashing] = React.useState(false);
+
+  // visualbell: 키가 실패할 때마다 짧게 깜빡임 (연속 실패 시 애니메이션 재시작)
+  React.useEffect(() => {
+    if (!bellSignal) return;
+    setIsBellFlashing(false);
+    const start = requestAnimationFrame(() => setIsBellFlashing(true));
+    const stop = setTimeout(() => setIsBellFlashing(false), 220);
+    return () => {
+      cancelAnimationFrame(start);
+      clearTimeout(stop);
+    };
+  }, [bellSignal]);
 
   React.useEffect(() => {
     if (scrollerRef.current && viewport) {
@@ -92,7 +108,7 @@ export const Editor: React.FC<EditorProps> = ({
 
   return (
     <div
-      className={`editor-container ${!isFocused ? 'editor-unfocused' : ''}`}
+      className={`editor-container ${!isFocused ? 'editor-unfocused' : ''} ${isBellFlashing ? 'editor-bell' : ''}`}
       data-testid="editor-container"
       onClick={onFocus}
     >

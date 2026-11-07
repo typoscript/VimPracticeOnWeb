@@ -1764,4 +1764,34 @@ export const MISSIONS: Mission[] = [
       return state.lines.length === target.length && target.every((t, i) => state.lines[i] === t);
     },
   },
+  {
+    id: 55,
+    title: '레슨 55: 사용자 정의 Ex 명령(:command!)으로 나만의 명령 만들기',
+    description:
+      '자주 쓰는 긴 Ex 명령은 :command! 로 이름을 붙여 두면 짧게 다시 쓸 수 있습니다. ~/.vimrc 에 적어 두면 :source 할 때마다 자동으로 등록됩니다.\n\n:command[!] [속성] {Name} {실행할 Ex 명령}\n- 이름은 반드시 대문자로 시작합니다. (:W, :Trim, :D)\n- -nargs=0|1|*|?|+ : 인자 개수 (기본 0)\n- -range / -range=% : 범위 허용 (:2,5Name), -bang : :Name! 허용\n- 실행할 명령 안에서 <args>(인자), <q-args>(따옴표로 감싼 인자), <line1>/<line2>(범위), <bang> 이 치환됩니다.\n- :command 로 목록 확인, :delcommand Name 으로 삭제, :Na 처럼 겹치지 않는 접두어로도 호출할 수 있습니다.\n\n미션:\n1) :com! -nargs=1 D g/<args>/d 를 입력해, 인자로 받은 패턴이 들어간 줄을 모두 지우는 :D 명령을 만드세요.\n2) :D console 로 디버그용 console.log 줄을 한 번에 지우세요.',
+    hint: ':com! -nargs=1 D g/<args>/d 입력 후 Enter, 이어서 :D console 입력 후 Enter',
+    par: 39,
+    optimalKeys: [
+      ':', 'c', 'o', 'm', '!', ' ', '-', 'n', 'a', 'r', 'g', 's', '=', '1', ' ', 'D', ' ', 'g', '/', '<', 'a', 'r', 'g', 's', '>', '/', 'd', 'Enter', ':', 'D', ' ', 'c', 'o', 'n', 's', 'o', 'l', 'e', 'Enter',
+    ],
+    initialLines: [
+      'const a = 1;',
+      'console.log("debug a");',
+      'const b = 2;',
+      'console.log("debug b");',
+      'export { a, b };',
+    ],
+    targetLines: [
+      'const a = 1;',
+      'const b = 2;',
+      'export { a, b };',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const target = ['const a = 1;', 'const b = 2;', 'export { a, b };'];
+      const hasCommand = !!state.userCommands?.D;
+      return hasCommand && state.lines.length === target.length && target.every((t, i) => state.lines[i] === t);
+    },
+  },
 ];

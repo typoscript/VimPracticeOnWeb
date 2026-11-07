@@ -2,6 +2,7 @@ import { VimEditorState } from '../types/vim';
 import { executeSetCommand } from './setEngine';
 import { getVfsFile } from './vfs';
 import { registerKeymap } from './keymapEngine';
+import { executeUserCommandDefinition } from './userCommandEngine';
 
 /**
  * .vimrc 또는 스크립트 파일을 한 줄씩 읽어 에디터 상태에 적용합니다 (:source, :so).
@@ -65,7 +66,17 @@ export function sourceScript(state: VimEditorState, targetFile = '%'): VimEditor
       continue;
     }
 
-    // 3. 리더키 설정 (let mapleader = "..." 또는 let g:mapleader = "...")
+    // 3. 사용자 정의 명령 (command! W w, delcommand W, comclear)
+    if (/^(com|delc)/.test(line)) {
+      const defined = executeUserCommandDefinition(curState, line);
+      if (defined) {
+        curState = defined;
+        appliedCount++;
+        continue;
+      }
+    }
+
+    // 4. 리더키 설정 (let mapleader = "..." 또는 let g:mapleader = "...")
     const leaderMatch = line.match(/^let\s+(?:g:)?mapleader\s*=\s*["']([^"']+)["']/);
     if (leaderMatch) {
       const leaderVal = leaderMatch[1] === '<Space>' ? ' ' : leaderMatch[1];

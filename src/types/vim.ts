@@ -5,6 +5,19 @@ export interface CursorPosition {
   col: number;  // 0-indexed 열 번호
 }
 
+/** 사용자 정의 Ex 명령 (:command[!] [-nargs] [-range] [-bang] Name replacement) */
+export interface UserCommand {
+  name: string;
+  /** 인자 개수: 0(없음), 1(정확히 1개), *(0개 이상), ?(0 또는 1개), +(1개 이상) */
+  nargs: '0' | '1' | '*' | '?' | '+';
+  /** 범위 허용 여부와 기본값: none(불허), line(현재 줄), file(-range=%, 전체) */
+  range: 'none' | 'line' | 'file';
+  /** ! 로 호출 가능 여부 (-bang) */
+  bang: boolean;
+  /** 실행할 Ex 명령 (<args>, <q-args>, <line1>, <line2>, <bang>, <lt> 치환) */
+  replacement: string;
+}
+
 export interface ClipboardRegister {
   type: 'line' | 'text';
   content: string;
@@ -326,6 +339,8 @@ export interface VimEditorState {
   secondaryLines?: string[];
   /** 사용자 정의 키매핑 테이블 (예: { 'i:jk': '<Esc>', 'n:<leader>w': ':w' }) */
   userKeymaps?: Record<string, string>;
+  /** 사용자 정의 Ex 명령 (:command! Name ...) */
+  userCommands?: Record<string, UserCommand>;
   /** 리더 키 (Leader Key, 기본값: ' ') */
   leaderKey?: string;
   /** $ 키 입력 후 j/k 수직 이동 시 줄 끝 유지 여부 (Vim sticky end-of-line) */

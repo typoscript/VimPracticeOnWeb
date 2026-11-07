@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import { Editor } from './Editor';
 
 describe('Editor Component', () => {
@@ -138,5 +138,16 @@ describe('Editor Component', () => {
     // 0번 줄(1번 라인)과 4번 줄(5번 라인)은 정상 렌더링됨
     expect(screen.getByTestId('editor-row-1')).toBeInTheDocument();
     expect(screen.getByTestId('editor-row-5')).toBeInTheDocument();
+  });
+
+  it('bellSignal 값이 바뀌면 visualbell 깜빡임 클래스를 잠깐 적용한다', async () => {
+    const props = { lines: ['abc'], cursor: { line: 0, col: 0 }, mode: 'NORMAL' as const };
+    const { rerender } = render(<Editor {...props} bellSignal={0} />);
+    const container = screen.getByTestId('editor-container');
+    expect(container).not.toHaveClass('editor-bell');
+
+    rerender(<Editor {...props} bellSignal={1} />);
+    await waitFor(() => expect(container).toHaveClass('editor-bell'));
+    await waitFor(() => expect(container).not.toHaveClass('editor-bell'));
   });
 });
