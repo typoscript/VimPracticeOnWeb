@@ -117,6 +117,31 @@ export interface NetrwState {
   files: Record<string, string[]>; // 가상 파일 맵: 경로 -> 줄 목록
 }
 
+export interface VimOptions {
+  /** 줄 번호 표시 여부 (:set nu / nonu) */
+  number: boolean;
+  /** 상대 줄 번호 표시 여부 (:set rnu / nornu) */
+  relativenumber: boolean;
+  /** 검색 대소문자 무시 여부 (:set ic / noic) */
+  ignorecase: boolean;
+  /** 스마트 대소문자 (대문자 포함 시 대소문자 구분) (:set scs / noscs) */
+  smartcase: boolean;
+  /** 검색어 하이라이트 여부 (:set hls / nohls) */
+  hlsearch: boolean;
+  /** 자동 줄바꿈 여부 (:set wrap / nowrap) */
+  wrap: boolean;
+  /** 현재 커서 라인 하이라이트 (:set cul / nocul) */
+  cursorline: boolean;
+  /** 탭 문자 너비 (:set ts=4) */
+  tabstop: number;
+  /** 들여쓰기 너비 (:set sw=4) */
+  shiftwidth: number;
+  /** 탭 대신 공백 사용 (:set et / noet) */
+  expandtab: boolean;
+  /** 탭/공백 특수문자 표시 (:set list / nolist) */
+  list: boolean;
+}
+
 export interface RegisterEntry {
   type: 'char' | 'line' | 'macro';
   content: string | string[];
@@ -306,6 +331,8 @@ export interface VimEditorState {
   netrw?: NetrwState | null;
   /** 레지스터 인스펙터 패널 표시 여부 (:reg, :registers) */
   showRegisterInspector?: boolean;
+  /** 순정 Vim 환경 옵션 설정 (:set nu, :set rnu, :set ic 등) */
+  options?: VimOptions;
 }
 
 

@@ -489,6 +489,14 @@ export function App() {
     }
   }, [editorState.showRegisterInspector]);
 
+  // :set rnu / :set nornu Ex 명령 실행 시 상대 라인 번호 상태 연동
+  useEffect(() => {
+    if (editorState.options?.relativenumber !== undefined) {
+      setRelativeLineNumbers(editorState.options.relativenumber);
+      saveRelativeLineSetting(editorState.options.relativenumber);
+    }
+  }, [editorState.options?.relativenumber]);
+
   // 스피드런 타이머 연동 (100ms마다 0.1초 증가)
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -797,6 +805,22 @@ export function App() {
     setRelativeLineNumbers((prev) => {
       const next = !prev;
       saveRelativeLineSetting(next);
+      setEditorState((st) => ({
+        ...st,
+        options: {
+          number: st.options?.number ?? true,
+          relativenumber: next,
+          ignorecase: st.options?.ignorecase ?? false,
+          smartcase: st.options?.smartcase ?? false,
+          hlsearch: st.options?.hlsearch ?? true,
+          wrap: st.options?.wrap ?? true,
+          cursorline: st.options?.cursorline ?? true,
+          tabstop: st.options?.tabstop ?? 2,
+          shiftwidth: st.options?.shiftwidth ?? 2,
+          expandtab: st.options?.expandtab ?? true,
+          list: st.options?.list ?? false,
+        },
+      }));
       return next;
     });
   }, []);
@@ -1663,6 +1687,7 @@ export function App() {
                       insertNormalSession={editorState.activePaneIndex === 0 ? editorState.insertNormalSession : undefined}
                       insertRegisterPending={editorState.activePaneIndex === 0 ? editorState.insertRegisterPending : undefined}
                       confirmSubstitute={editorState.activePaneIndex === 0 ? editorState.confirmSubstitute : undefined}
+                      options={displayEditorState.options}
                     />
                   </div>
 
@@ -1700,6 +1725,7 @@ export function App() {
                       insertNormalSession={editorState.activePaneIndex === 1 ? editorState.insertNormalSession : undefined}
                       insertRegisterPending={editorState.activePaneIndex === 1 ? editorState.insertRegisterPending : undefined}
                       confirmSubstitute={editorState.activePaneIndex === 1 ? editorState.confirmSubstitute : undefined}
+                      options={displayEditorState.options}
                     />
                   </div>
                 </div>
@@ -1725,6 +1751,7 @@ export function App() {
                   insertNormalSession={displayEditorState.insertNormalSession}
                   insertRegisterPending={displayEditorState.insertRegisterPending}
                   confirmSubstitute={displayEditorState.confirmSubstitute}
+                  options={displayEditorState.options}
                 />
               )}
             </div>

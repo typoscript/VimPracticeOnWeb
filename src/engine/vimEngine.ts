@@ -509,7 +509,7 @@ function executeGn(
     };
   }
 
-  const matches = findMatches(state.lines, state.lastSearchQuery);
+  const matches = findMatches(state.lines, state.lastSearchQuery, state.options);
   if (matches.length === 0) {
     return {
       ...state,
@@ -626,7 +626,7 @@ export function executeSearchQuery(
   }
 
   const { pattern, offset } = parseSearchQuery(rawQuery);
-  const matches = findMatches(state.lines, pattern);
+  const matches = findMatches(state.lines, pattern, state.options);
   if (matches.length === 0) {
     const returnCursor = state.searchOperator?.initialCursor ?? state.cursor;
     return {
@@ -2188,7 +2188,7 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
   if (key === '*' || key === '#') {
     const word = getWordAtCursor(state.lines[state.cursor.line] ?? '', state.cursor.col);
     if (word) {
-      const matches = findMatches(state.lines, word);
+      const matches = findMatches(state.lines, word, state.options);
       const match =
         key === '*'
           ? findNextMatch(matches, state.cursor) ?? matches[0]
@@ -3606,7 +3606,7 @@ function handleNormalModeKey(
   // n: 다음 검색 결과로 점프
   if (key === 'n') {
     if (state.lastSearchQuery) {
-      const matches = findMatches(state.lines, state.lastSearchQuery);
+      const matches = findMatches(state.lines, state.lastSearchQuery, state.options);
       if (matches.length === 0) {
         return {
           ...state,
@@ -3631,7 +3631,7 @@ function handleNormalModeKey(
   // N: 이전 검색 결과로 점프
   if (key === 'N') {
     if (state.lastSearchQuery) {
-      const matches = findMatches(state.lines, state.lastSearchQuery);
+      const matches = findMatches(state.lines, state.lastSearchQuery, state.options);
       if (matches.length === 0) {
         return {
           ...state,
@@ -3657,7 +3657,7 @@ function handleNormalModeKey(
   if (key === '*') {
     const word = getWordAtCursor(currentLine, state.cursor.col);
     if (word) {
-      const matches = findMatches(state.lines, word);
+      const matches = findMatches(state.lines, word, state.options);
       const nextMatch = findNextMatch(matches, state.cursor) ?? matches[0];
       const matchIdx = nextMatch
         ? matches.findIndex((m) => m.line === nextMatch.line && m.col === nextMatch.col)
@@ -3678,7 +3678,7 @@ function handleNormalModeKey(
   if (key === '#') {
     const word = getWordAtCursor(currentLine, state.cursor.col);
     if (word) {
-      const matches = findMatches(state.lines, word);
+      const matches = findMatches(state.lines, word, state.options);
       const prevMatch = findPrevMatch(matches, state.cursor) ?? matches[matches.length - 1];
       const matchIdx = prevMatch
         ? matches.findIndex((m) => m.line === prevMatch.line && m.col === prevMatch.col)

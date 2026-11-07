@@ -53,6 +53,7 @@ import {
 } from './argEngine';
 import { openNetrw } from './netrwEngine';
 import { formatRegisters } from './registers';
+import { executeSetCommand } from './setEngine';
 
 export type KeyRunner = (
   state: VimEditorState,
@@ -1195,6 +1196,20 @@ export function executeCommandLine(
       commandBuffer: undefined,
       commandType: undefined,
       commandMessage: formatted,
+    };
+  }
+
+  // 순정 Vim 환경 옵션 설정: :set [args]
+  const setMatch = cleanCmdRaw.match(/^set(?:\s+(.*))?$/i);
+  if (setMatch) {
+    const rawArgs = setMatch[1] ?? '';
+    const res = executeSetCommand(state, rawArgs);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
     };
   }
 

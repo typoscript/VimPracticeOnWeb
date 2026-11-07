@@ -7,6 +7,7 @@ import {
   FoldRange,
   CompletionSession,
   ConfirmSubstituteSession,
+  VimOptions,
 } from '../../types/vim';
 import { isPositionSelected } from '../../engine/visual';
 import { findMatches } from '../../engine/search';
@@ -40,6 +41,8 @@ export interface EditorProps {
   insertRegisterPending?: boolean;
   /** :s/.../.../gc 대화형 치환 확인 세션 */
   confirmSubstitute?: ConfirmSubstituteSession | null;
+  /** 순정 Vim 환경 옵션 설정 (:set nu, :set rnu, :set ic 등) */
+  options?: VimOptions;
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -59,6 +62,7 @@ export const Editor: React.FC<EditorProps> = ({
   insertNormalSession,
   insertRegisterPending,
   confirmSubstitute,
+  options,
 }) => {
   const scrollerRef = React.useRef<HTMLDivElement>(null);
 
@@ -69,9 +73,14 @@ export const Editor: React.FC<EditorProps> = ({
     }
   }, [viewport?.topRow]);
 
+  const showLineNumbers = options?.number ?? true;
+  const isRelative = options?.relativenumber ?? relativeLineNumbers;
+  const isHlSearch = options?.hlsearch ?? true;
+  const searchOpts = options ? { ignorecase: options.ignorecase, smartcase: options.smartcase } : undefined;
+
   // 전체 검색 일치 항목 수집
-  const allMatches = searchQuery && searchQuery.length > 0
-    ? findMatches(lines, searchQuery)
+  const allMatches = searchQuery && searchQuery.length > 0 && isHlSearch
+    ? findMatches(lines, searchQuery, searchOpts)
     : [];
 
   return (
@@ -109,12 +118,15 @@ export const Editor: React.FC<EditorProps> = ({
               : 0;
 
             const isCursorLine = cursor.line === lineIdx;
+            const isCursorLineActive = isCursorLine && (options?.cursorline ?? true);
             const targetCol =
               targetPosition && targetPosition.line === lineIdx
                 ? targetPosition.col
                 : null;
 
-            const lineNumberDisplay = relativeLineNumbers
+            const lineNumberDisplay = !showLineNumbers
+              ? ''
+              : isRelative
               ? isCursorLine
                 ? lineIdx + 1
                 : Math.abs(lineIdx - cursor.line)
@@ -130,7 +142,7 @@ export const Editor: React.FC<EditorProps> = ({
             return (
               <div
                 key={lineIdx}
-                className={`editor-row ${isCursorLine ? 'active-row' : ''} ${isFoldedHeader ? 'folded-row' : ''}`}
+                className={`editor-row ${isCursorLineActive ? 'active-row' : ''} ${isFoldedHeader ? 'folded-row' : ''}`}
                 data-testid={`editor-row-${lineIdx + 1}`}
               >
                 <div

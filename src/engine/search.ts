@@ -7,18 +7,37 @@ export function escapeRegExp(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+export interface SearchOptions {
+  ignorecase?: boolean;
+  smartcase?: boolean;
+}
+
 /**
  * 버퍼 전체 줄에서 검색어(query)와 일치하는 모든 위치를 찾습니다.
  * 순정 Vim 정규식과 일반 문자열 모두 안전하게 처리합니다.
  */
-export function findMatches(lines: string[], query: string): SearchMatch[] {
+export function findMatches(
+  lines: string[],
+  query: string,
+  options?: SearchOptions
+): SearchMatch[] {
   if (!query || query.length === 0) {
     return [];
   }
 
   const matches: SearchMatch[] = [];
   const escaped = escapeRegExp(query);
-  const regex = new RegExp(escaped, 'g');
+
+  let isCaseInsensitive = options?.ignorecase ?? false;
+  if (isCaseInsensitive && options?.smartcase) {
+    // smartcase: 만약 검색어에 대문자가 하나라도 포함되어 있다면 대소문자를 구분합니다.
+    if (/[A-Z]/.test(query)) {
+      isCaseInsensitive = false;
+    }
+  }
+
+  const flags = isCaseInsensitive ? 'gi' : 'g';
+  const regex = new RegExp(escaped, flags);
 
   for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
     const lineText = lines[lineIdx] ?? '';
