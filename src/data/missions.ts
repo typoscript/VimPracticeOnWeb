@@ -1530,6 +1530,51 @@ export const MISSIONS: Mission[] = [
       return state.lines.every((line, idx) => line === target[idx]);
     },
   },
+  {
+    id: 49,
+    title: '레슨 49: 윈도우 로컬 로케이션 리스트(:lvimgrep, :lopen, :lne)로 현재 창 진단 및 수정하기',
+    description:
+      '퀵픽스(:vimgrep, :copen)가 에디터 전역(Global)의 에러 목록이라면, 로케이션 리스트(Location List: :lvimgrep, :lopen)는 현재 창에만 독립적으로 귀속되는 윈도우 로컬 목록입니다.\n\n분할 화면이나 다중 파일 작업 시 각 창마다 서로 다른 에러/검색 결과를 유지할 때 유용합니다.\n\n1) :lvimgrep /FIXME/ %: 현재 파일(%) 내에서 FIXME를 검색하여 로케이션 리스트를 생성하고 첫 번째 항목으로 이동합니다.\n2) :lopen: 현재 창의 로케이션 리스트 창을 엽니다.\n3) :lne / :lp: 다음/이전 매칭 위치로 이동합니다.\n4) :lcl: 로케이션 리스트 창을 닫습니다.\n\n미션: :lvimgrep /FIXME/ % 명령으로 파일 내 2개의 FIXME 주석 위치를 로케이션 리스트에 등록한 후, 첫 번째 매칭을 cwDONE<Esc>로 수정하고 :lne 로 두 번째 위치로 이동하여 . (점 반복)으로 수정한 뒤 완료하세요.',
+    hint: ':lvimgrep /FIXME/ % 를 실행하면 첫 번째 FIXME 위치로 자동 점프합니다. cwDONE<Esc> 로 수정한 뒤, :lne 로 두 번째 위치로 점프하여 . (점 반복)을 누르면 완료됩니다.',
+    par: 33,
+    optimalKeys: [
+      ':', 'l', 'v', 'i', 'm', 'g', 'r', 'e', 'p', ' ', '/', 'F', 'I', 'X', 'M', 'E', '/', ' ', '%', 'Enter',
+      'c', 'w', 'D', 'O', 'N', 'E', 'Escape',
+      ':', 'l', 'n', 'e', 'Enter',
+      '.',
+    ],
+    primaryFilename: 'order.ts',
+    initialLines: [
+      'export function processOrder(order: Order) {',
+      '  // FIXME: validate user balance',
+      '  deductBalance(order.userId, order.amount);',
+      '  // FIXME: send push notification',
+      '  return { success: true };',
+      '}',
+    ],
+    targetLines: [
+      'export function processOrder(order: Order) {',
+      '  // DONE: validate user balance',
+      '  deductBalance(order.userId, order.amount);',
+      '  // DONE: send push notification',
+      '  return { success: true };',
+      '}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const target = [
+        'export function processOrder(order: Order) {',
+        '  // DONE: validate user balance',
+        '  deductBalance(order.userId, order.amount);',
+        '  // DONE: send push notification',
+        '  return { success: true };',
+        '}',
+      ];
+      if (state.lines.length !== target.length) return false;
+      return state.lines.every((line, idx) => line === target[idx]);
+    },
+  },
 ];
 
 

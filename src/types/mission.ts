@@ -36,6 +36,8 @@ export interface Mission {
   initialSearchHistory?: string[];
   /** 초기 퀵픽스 목록 (:copen, :cn, :cp 미션용) */
   initialQuickfixItems?: QuickfixItem[];
+  /** 초기 로케이션 리스트 (:lopen, :lnext, :lprev 미션용) */
+  initialLocationListItems?: QuickfixItem[];
   /** 초기 체인지 리스트 (g;, g, 미션용) */
   initialChangeList?: ChangeListItem[];
   /** 초기 아규먼트 리스트 (:args, :argdo 미션용) */

@@ -47,6 +47,20 @@ import {
   setQuickfixList,
   loadQuickfixFromFile,
 } from './quickfixEngine';
+import {
+  openLocationListWindow,
+  closeLocationListWindow,
+  toggleLocationListWindow,
+  nextLocationList,
+  prevLocationList,
+  firstLocationList,
+  lastLocationList,
+  jumpToLocationListItem,
+  formatLocationList,
+  lvimgrep,
+  setLocationList,
+  loadLocationListFromFile,
+} from './locationListEngine';
 import { formatChangeList } from './advancedMotions';
 import {
   startDiffSplit,
@@ -1277,6 +1291,185 @@ export function executeCommandLine(
         commandBuffer: undefined,
         commandType: undefined,
         commandMessage: '퀵픽스 목록 초기화됨',
+      };
+    }
+  }
+
+  // --- 로케이션 리스트 (Location List) Ex 명령 ---
+  // 로케이션 리스트 창 열기: :lopen [height], :lope [height]
+  const lopenMatch = cleanCmdRaw.match(/^(?:lopen|lope)(?:\s+(\d+))?$/i);
+  if (lopenMatch) {
+    const height = lopenMatch[1] ? parseInt(lopenMatch[1], 10) : undefined;
+    const res = openLocationListWindow(state, height);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 로케이션 리스트 창 닫기: :lclose, :lcl
+  if (cleanCmd === 'lclose' || cleanCmd === 'lcl') {
+    const res = closeLocationListWindow(state);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 로케이션 리스트 창 토글/열기: :lwindow [height], :lw [height]
+  const lwMatch = cleanCmdRaw.match(/^(?:lwindow|lw)(?:\s+(\d+))?$/i);
+  if (lwMatch) {
+    const height = lwMatch[1] ? parseInt(lwMatch[1], 10) : undefined;
+    const res = toggleLocationListWindow(state, height);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 로케이션 리스트 다음 에러 이동: :lnext [count], :lne [count]
+  const lneMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?(?:lnext|lne)(?:\s+(\d+))?$/i);
+  if (lneMatch) {
+    const countRaw = lneMatch[1] || lneMatch[2];
+    const count = countRaw ? parseInt(countRaw, 10) : 1;
+    const res = nextLocationList(state, count);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 로케이션 리스트 이전 에러 이동: :lprev [count], :lp [count], :lprevious [count]
+  const lpMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?(?:lprev|lp|lprevious)(?:\s+(\d+))?$/i);
+  if (lpMatch) {
+    const countRaw = lpMatch[1] || lpMatch[2];
+    const count = countRaw ? parseInt(countRaw, 10) : 1;
+    const res = prevLocationList(state, count);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 로케이션 리스트 양 끝 이동: :lfirst, :lr, :lrewind, :llast, :lla
+  if (cleanCmd === 'lfirst' || cleanCmd === 'lr' || cleanCmd === 'lrewind') {
+    const res = firstLocationList(state);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+  if (cleanCmd === 'llast' || cleanCmd === 'lla') {
+    const res = lastLocationList(state);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 로케이션 리스트 특정 번호 점프: :ll [N]
+  const llMatch = cleanCmdRaw.match(/^(?:ll)(?:\s+(\d+))?$/i);
+  if (llMatch) {
+    const targetIdx = llMatch[1] ? parseInt(llMatch[1], 10) - 1 : (state.locationList?.currentIndex ?? 0);
+    const res = jumpToLocationListItem(state, targetIdx);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 로케이션 리스트 목록 조회: :llist, :lli
+  if (cleanCmd === 'llist' || cleanCmd === 'lli') {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: formatLocationList(state),
+    };
+  }
+
+  // 로케이션 리스트 파일 로드 및 첫 에러 점프: :lfile [filename], :lf [filename]
+  const lfileMatch = cleanCmdRaw.match(/^(?:lfile|lf)\s+(.+)$/i);
+  if (lfileMatch) {
+    const filename = lfileMatch[1].trim();
+    const res = loadLocationListFromFile(state, filename, true);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 로케이션 리스트 파일 로드(점프 없음): :lgetfile [filename], :lg [filename]
+  const lgetfileMatch = cleanCmdRaw.match(/^(?:lgetfile|lg)\s+(.+)$/i);
+  if (lgetfileMatch) {
+    const filename = lgetfileMatch[1].trim();
+    const res = loadLocationListFromFile(state, filename, false);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // lvimgrep / lvimgrepadd / lv 검색: :lvimgrep /pat/[flags] {file}, :lv ...
+  const lvimgrepMatch = cleanCmdRaw.match(/^(lvimgrep|lvimgrepadd|lv)\s+(.*)$/i);
+  if (lvimgrepMatch) {
+    const isAppend = lvimgrepMatch[1].toLowerCase() === 'lvimgrepadd';
+    const args = lvimgrepMatch[2];
+    const res = lvimgrep(state, args, isAppend);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 로케이션 리스트 표현식 설정/초기화: :lexpr []
+  const lexprMatch = cleanCmdRaw.match(/^lexpr\s*(.*)$/i);
+  if (lexprMatch) {
+    const expr = lexprMatch[1].trim();
+    if (expr === '[]' || expr === '') {
+      const res = setLocationList(state, [], false);
+      return {
+        ...res,
+        mode: 'NORMAL',
+        visualAnchor: undefined,
+        commandBuffer: undefined,
+        commandType: undefined,
+        commandMessage: '로케이션 리스트 초기화됨',
       };
     }
   }

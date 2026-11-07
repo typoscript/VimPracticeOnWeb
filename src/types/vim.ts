@@ -236,6 +236,8 @@ export interface SplitPaneState {
   blockInsertSession?: BlockInsertSession | null;
   /** 해당 창이 diff 모드인지 여부 (:diffsplit, :diffthis) */
   diff?: boolean;
+  /** 해당 분할 창의 로케이션 리스트 (:lopen, :lclose, :lnext, :lprev, :lvimgrep) */
+  locationList?: QuickfixState | null;
 }
 
 export interface DiffHunk {
@@ -377,6 +379,8 @@ export interface VimEditorState {
   cmdlineWindow?: CommandLineWindowSession | null;
   /** 퀵픽스(Quickfix) 목록 및 윈도우 상태 (:copen, :cn, :cp, :vimgrep) */
   quickfix?: QuickfixState | null;
+  /** 로케이션 리스트 (Location List: :lopen, :lclose, :lnext, :lprev, :lvimgrep) */
+  locationList?: QuickfixState | null;
   /** 아규먼트 리스트 (Arglist: :args, :argdo, :next, :prev) */
   argList?: ArgListState | null;
   /** Netrw 순정 파일 탐색기 상태 (:Explore, :edit ., :E) */

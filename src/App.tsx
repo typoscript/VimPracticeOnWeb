@@ -35,6 +35,7 @@ import { switchBuffer, ensureBuffers } from './engine/bufferEngine';
 import { switchTab, openNewTab, closeTab, ensureTabPages } from './engine/tabEngine';
 import { closeCommandLineWindow } from './engine/cmdlineWindow';
 import { closeQuickfixWindow, jumpToQuickfixItem } from './engine/quickfixEngine';
+import { closeLocationListWindow, jumpToLocationListItem } from './engine/locationListEngine';
 import { computeDiffHunks } from './engine/diffEngine';
 import { MISSIONS } from './data/missions';
 import { SANDBOX_INITIAL_LINES } from './data/sandbox';
@@ -91,7 +92,7 @@ import './App.css';
 /** 스피드런 챌린지 후보 미션 ID 목록 (리팩토링/편집 미션) */
 export const SPEEDRUN_CANDIDATE_IDS = [
   4, 6, 7, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 21, 23, 25, 26, 28, 29, 30, 31, 32, 43, 44,
-  47, 48,
+  47, 48, 49,
 ];
 
 export function generateSpeedrunStages(): Mission[] {
@@ -268,6 +269,16 @@ export function App() {
     setIsEditorFocused(true);
   }, []);
 
+  const handleJumpLocationListItem = useCallback((index: number) => {
+    setEditorState((prevState) => jumpToLocationListItem(prevState, index));
+    setIsEditorFocused(true);
+  }, []);
+
+  const handleCloseLocationListWindow = useCallback(() => {
+    setEditorState((prevState) => closeLocationListWindow(prevState));
+    setIsEditorFocused(true);
+  }, []);
+
   const currentMission = MISSIONS[currentMissionIndex];
 
   // 총 입력 타수 및 최근 키 입력 히스토리, 가상 키보드 프레스 상태
@@ -342,6 +353,9 @@ export function App() {
       searchHistory: m.initialSearchHistory ? [...m.initialSearchHistory] : undefined,
       quickfix: m.initialQuickfixItems
         ? { items: [...m.initialQuickfixItems], currentIndex: 0, isOpen: false }
+        : undefined,
+      locationList: m.initialLocationListItems
+        ? { items: [...m.initialLocationListItems], currentIndex: 0, isOpen: false }
         : undefined,
       changeList: m.initialChangeList ? [...m.initialChangeList] : undefined,
       changeIndex: m.initialChangeList ? m.initialChangeList.length : undefined,
@@ -1857,6 +1871,46 @@ export function App() {
                         key={idx}
                         className={`quickfix-item ${isActive ? 'active' : ''}`}
                         onClick={() => handleJumpQuickfixItem(idx)}
+                      >
+                        <span className="quickfix-item-num">{idx + 1}</span>
+                        <span className="quickfix-item-loc">
+                          {item.filename}:{item.line}:{item.col}
+                        </span>
+                        <span className="quickfix-item-text">{item.text}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 로케이션 리스트 윈도우 (Location List: :lopen, :lclose, :lne, :lp, :lvimgrep) */}
+            {displayEditorState.locationList?.isOpen && displayEditorState.locationList.items.length > 0 && (
+              <div className="quickfix-window-container location-list-container" data-testid="locationlist-window">
+                <div className="quickfix-window-header">
+                  <span className="quickfix-window-title">
+                    [Location List] ({displayEditorState.locationList.currentIndex + 1} of {displayEditorState.locationList.items.length})
+                  </span>
+                  <span className="quickfix-window-hint">
+                    :lne / :lp 이동 | 항목 클릭 시 점프 | :lclose 닫기
+                  </span>
+                  <button
+                    type="button"
+                    className="quickfix-window-close"
+                    onClick={handleCloseLocationListWindow}
+                    title="로케이션 리스트 닫기 (:lclose)"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="quickfix-window-body">
+                  {displayEditorState.locationList.items.map((item, idx) => {
+                    const isActive = idx === displayEditorState.locationList!.currentIndex;
+                    return (
+                      <div
+                        key={idx}
+                        className={`quickfix-item ${isActive ? 'active' : ''}`}
+                        onClick={() => handleJumpLocationListItem(idx)}
                       >
                         <span className="quickfix-item-num">{idx + 1}</span>
                         <span className="quickfix-item-loc">

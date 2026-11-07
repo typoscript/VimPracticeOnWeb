@@ -36,6 +36,7 @@ export function splitWindow(
     redoStack: state.redoStack ? [...state.redoStack] : [],
     pendingKeys: state.pendingKeys,
     blockInsertSession: state.blockInsertSession,
+    locationList: state.locationList,
   };
 
   const p1Lines = secondaryLines ?? state.secondaryLines ?? [...state.lines];
@@ -95,6 +96,7 @@ export function closeSplitWindow(state: VimEditorState): VimEditorState {
       previousPaneIndex: undefined,
       splitPanes: undefined,
       splitRatio: undefined,
+      locationList: p0.locationList,
       commandMessage: '분할 창을 닫았습니다 (:close)',
     };
   }
@@ -116,6 +118,7 @@ export function closeSplitWindow(state: VimEditorState): VimEditorState {
     previousPaneIndex: undefined,
     splitPanes: undefined,
     splitRatio: undefined,
+    locationList: p1.locationList,
     commandMessage: '분할 창을 닫았습니다 (:close)',
   };
 }
@@ -184,6 +187,7 @@ export function switchPaneFocus(
     redoStack: state.redoStack ? [...state.redoStack] : [],
     pendingKeys: state.pendingKeys,
     blockInsertSession: state.blockInsertSession,
+    locationList: state.locationList,
   };
 
   const newPanes: [SplitPaneState, SplitPaneState] = [
@@ -207,6 +211,7 @@ export function switchPaneFocus(
     activePaneIndex: targetPaneIndex,
     previousPaneIndex: curIdx,
     splitPanes: newPanes,
+    locationList: targetPane.locationList,
   };
 }
 
@@ -439,6 +444,7 @@ export function syncActivePane(state: VimEditorState): VimEditorState {
     redoStack: state.redoStack ? [...state.redoStack] : [],
     pendingKeys: state.pendingKeys,
     blockInsertSession: state.blockInsertSession,
+    locationList: state.locationList,
   };
 
   return {

@@ -927,8 +927,28 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson48!.checkComplete(completeState)).toBe(true);
   });
 
-  it('모든 48개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(48);
+  it('레슨 49 (로케이션 리스트 :lvimgrep, :lne) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson49 = MISSIONS.find((m) => m.id === 49);
+    expect(lesson49).toBeDefined();
+    expect(lesson49?.par).toBe(33);
+
+    const incompleteState: VimEditorState = {
+      lines: [...lesson49!.initialLines],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson49!.checkComplete(incompleteState)).toBe(false);
+
+    const completeState: VimEditorState = {
+      lines: [...lesson49!.targetLines!],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson49!.checkComplete(completeState)).toBe(true);
+  });
+
+  it('모든 49개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(49);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();
@@ -978,6 +998,9 @@ describe('MISSIONS 10 ~ 12 validation', () => {
         searchHistory: m.initialSearchHistory ? [...m.initialSearchHistory] : undefined,
         quickfix: m.initialQuickfixItems
           ? { items: [...m.initialQuickfixItems], currentIndex: 0, isOpen: false }
+          : undefined,
+        locationList: m.initialLocationListItems
+          ? { items: [...m.initialLocationListItems], currentIndex: 0, isOpen: false }
           : undefined,
         changeList: m.initialChangeList ? [...m.initialChangeList] : undefined,
         changeIndex: m.initialChangeList ? m.initialChangeList.length : undefined,
