@@ -612,13 +612,21 @@ describe('Vim Engine - Operators & History (dd, dw, p, u, Ctrl-r)', () => {
       expect(step2.clipboard?.content).toBe('cdef ');
     });
 
-    it('cancels pendingKeys if a non-operator key is pressed', () => {
+    it('dl deletes the character under the cursor like x (operator + l motion)', () => {
       const state = createState(['hello world'], 0, 0);
       const step1 = handleKey(state, 'd');
       expect(step1.pendingKeys).toBe('d');
       const step2 = handleKey(step1, 'l');
       expect(step2.pendingKeys).toBeUndefined();
-      expect(step2.cursor).toEqual({ line: 0, col: 1 });
+      expect(step2.lines).toEqual(['ello world']);
+      expect(step2.cursor).toEqual({ line: 0, col: 0 });
+    });
+
+    it('cancels pendingKeys when Escape is pressed after d', () => {
+      const state = createState(['hello world'], 0, 0);
+      const step2 = handleKey(handleKey(state, 'd'), 'Escape');
+      expect(step2.pendingKeys).toBeUndefined();
+      expect(step2.lines).toEqual(['hello world']);
     });
   });
 

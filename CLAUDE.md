@@ -15,7 +15,7 @@
   `npm test -- src/engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 94개 테스트 파일, 1,184개 테스트 100% 통과 필수)*
+  *(현재 95개 테스트 파일, 1,199개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -65,7 +65,8 @@
   - `mA~mZ, 'A~'Z, :marks` (대문자 전역 마크 및 버퍼 자동 전환)
   - `:nmap, :nnoremap, :imap, :vmap, :unmap` (키매핑 인터프리터)
   - `cs, ds, ysiw, yss, S` (순정 vim-surround 괄호/따옴표 감싸기 엔진)
-- **매크로 심화 & 디버깅 (레슨 53)**: `@a, @@, [count]@@` + 매크로 슬로우모션 디버거 (`src/engine/macroDebugger.ts`, `src/components/MacroDebugger/`: 1x/0.5x/0.2x 재생, 키 단위 스텝, 프레임 미리보기). 모션 실패 시 매크로 중단은 `src/engine/macroAbort.ts`
+- **매크로 심화 & 디버깅 (레슨 53)**: `@a, @@, [count]@@` + 매크로 슬로우모션 디버거 (`src/engine/macroDebugger.ts`, `src/components/MacroDebugger/`: 1x/0.5x/0.2x 재생, 키 단위 스텝, 프레임 미리보기).
+- **실패 신호(bell) & 연산자+모션**: 실패한 키는 상태에 일시적 `bell: true`를 남기며(매 키 입력 시작 시 제거), `@` 매크로·`.` 반복·`:normal`·키매핑 재생은 bell에서 중단됩니다. `src/engine/operatorMotion.ts`가 `d/c/y` + `j k G gg`(줄 단위), `h l b B ^`(배타적 문자 단위)를 처리하며 실패 시 bell을 울립니다.
 - **인덴트 텍스트 객체 (레슨 54)**: `ii, ai, iI, aI, [count]ii` + `d/c/y/v/=/gu/gU/g~` (`textObjects.ts`의 `getIndentObjectRange`, `executeIndentObjectOperator`, 항상 줄 단위)
 
 ---
@@ -78,5 +79,4 @@
 3. **순정 Vim 맞춤법 검사기 (`:set spell`, `]s`, `[s`, `z=`, `zg`)**:
    - 코드 주석이나 문자열에서 오탈자를 탐색하고 `z=`로 교체 추천 목록을 띄우는 기능.
 4. ~~**인덴트 텍스트 객체 확장 (`ii`, `ai`)**~~ — 레슨 54와 함께 구현 완료.
-5. **엔진 전역 실패 신호 (bell/abort)**:
-   - 현재 매크로 중단은 키 전후 상태 비교(`macroAbort.ts`)로 판정합니다. 모션·연산자가 직접 실패를 보고하도록 바꾸면 `dj`(마지막 줄), `:normal`, `.` 반복의 실패 처리까지 실제 Vim과 일치시킬 수 있습니다.
+5. ~~**엔진 전역 실패 신호 (bell/abort)**~~ — `bell` 신호 및 연산자+모션(`dj`, `dl`, `db`, `dG` 등)과 함께 구현 완료.

@@ -1,5 +1,5 @@
 import { VimEditorState, CursorPosition, FoldRange } from '../types/vim';
-import { isMacroKeyFailure } from './macroAbort';
+import { executeOperatorMotion, OPERATOR_MOTION_KEYS } from './operatorMotion';
 import { clampCursor, getMaxCol } from './cursor';
 import {
   moveLeft,
@@ -542,6 +542,7 @@ function executeGn(
       ...state,
       commandMessage: `E486: 패턴을 찾을 수 없습니다: ${state.lastSearchQuery}`,
       pendingKeys: undefined,
+      bell: true,
     };
   }
 
@@ -666,6 +667,7 @@ export function executeSearchQuery(
       commandType: undefined,
       commandMessage: `E486: 패턴을 찾을 수 없습니다: ${pattern}`,
       searchOperator: undefined,
+      bell: true,
     };
   }
 
@@ -1200,6 +1202,7 @@ function handleInsertModeKey(
       const tokens = parseKeySequence(mapped, state.leaderKey || ' ');
       for (const tok of tokens) {
         s = rawHandleKey(s, tok, isReplayingDot, 1);
+        if (s.bell) break;
       }
       return s;
     }
@@ -1922,6 +1925,7 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
       let s: VimEditorState = state;
       for (const tok of tokens) {
         s = rawHandleKey(s, tok, false, macroDepth + 1);
+        if (s.bell) break;
       }
       return s;
     }
@@ -2266,7 +2270,7 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
     if (key.length === 1) {
       const nextPos = moveFind(state.lines, state.cursor, motion, key, count);
       return {
-        ...state,
+        ...(nextPos ? state : ringBell(state)),
         cursor: nextPos ?? state.cursor,
         lastCharSearch: { type: motion, char: key },
         pendingKeys: undefined,
@@ -2429,6 +2433,34 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
   return state;
 }
 
+/** 연산자 + 일반 모션을 실행하고 레지스터 동기화와 `.` 반복 키를 기록합니다. */
+function applyOperatorMotion(
+  state: VimEditorState,
+  op: 'd' | 'c' | 'y',
+  motionKey: string,
+  parsed: ParsedPending,
+  isReplayingDot: boolean
+): VimEditorState {
+  // G / gg 는 카운트를 줄 번호로, 나머지 모션은 반복 횟수로 사용합니다.
+  const isLineJump = motionKey === 'G' || motionKey === 'gg';
+  const hasCount = parsed.count1 !== undefined || parsed.count2 !== undefined;
+  const count = isLineJump ? (hasCount ? parsed.totalCount : undefined) : parsed.totalCount;
+  const res = executeOperatorMotion(state, op, motionKey, count);
+  if (!res) {
+    return ringBell(state);
+  }
+  const synced = syncRegisters(state, res, op === 'y');
+  const motionKeys = motionKey === 'gg' ? ['g', 'g'] : [motionKey];
+  const opKeys = hasCount ? [String(parsed.totalCount), op, ...motionKeys] : [op, ...motionKeys];
+  if (op === 'c') {
+    return { ...synced, currentChangeKeys: isReplayingDot ? state.currentChangeKeys : opKeys };
+  }
+  if (op === 'd') {
+    return { ...synced, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys };
+  }
+  return synced;
+}
+
 function getOppositeMotion(motion: 'f' | 'F' | 't' | 'T'): 'f' | 'F' | 't' | 'T' {
   switch (motion) {
     case 'f': return 'F';
@@ -2465,6 +2497,14 @@ function handleNormalModeKey(
     const op = gnMatch[2];
     return executeGn(state, key === 'n', op, isReplayingDot);
   }
+  // dgg / cgg / ygg ([count]은 줄 번호)
+  const ggOpMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([cdy])([1-9][0-9]*)?g$/);
+  if (ggOpMatch && key === 'g') {
+    const op = ggOpMatch[2] as 'd' | 'c' | 'y';
+    const hasCount = !!(ggOpMatch[1] || ggOpMatch[3]);
+    const lineCount = parseInt(ggOpMatch[1] ?? '1', 10) * parseInt(ggOpMatch[3] ?? '1', 10);
+    return applyOperatorMotion(state, op, 'gg', { count1: hasCount ? lineCount : undefined, operator: op, totalCount: lineCount }, isReplayingDot);
+  }
   if (state.pendingKeys?.match(/^([1-9][0-9]*)?([cdy])g$/)) {
     // cg, dg, yg 대기 상태에서 n/N이 아닌 다른 키가 들어오면 pending 취소
     state = { ...state, pendingKeys: undefined };
@@ -2495,6 +2535,7 @@ function handleNormalModeKey(
       const tokens = parseKeySequence(mapped, leaderKey);
       for (const tok of tokens) {
         s = rawHandleKey(s, tok, isReplayingDot, macroDepth + 1);
+        if (s.bell) break;
       }
       return s;
     }
@@ -2552,6 +2593,7 @@ function handleNormalModeKey(
       const tokens = parseKeySequence(singleMapped, leaderKey);
       for (const tok of tokens) {
         s = rawHandleKey(s, tok, isReplayingDot, macroDepth + 1);
+        if (s.bell) break;
       }
       return s;
     }
@@ -2755,6 +2797,9 @@ function handleNormalModeKey(
     if (state.lastCharSearch) {
       const op = parsed.operator;
       const motion = key === ';' ? state.lastCharSearch.type : getOppositeMotion(state.lastCharSearch.type);
+      if (!moveFind(state.lines, state.cursor, motion, state.lastCharSearch.char, parsed.totalCount)) {
+        return ringBell(state);
+      }
       const res = executeFindOperator(state, op, motion, state.lastCharSearch.char, parsed.totalCount);
       const synced = syncRegisters(state, res, op === 'y');
       if (op === 'c') {
@@ -2806,7 +2851,7 @@ function handleNormalModeKey(
         };
       }
     }
-    return state;
+    return ringBell(state);
   }
 
   if (key === ',' && !state.pendingKeys) {
@@ -2827,7 +2872,7 @@ function handleNormalModeKey(
         };
       }
     }
-    return state;
+    return ringBell(state);
   }
 
   // 1-0-5. Ctrl-o / Ctrl-i: 점프 리스트 탐색
@@ -3132,31 +3177,27 @@ function handleNormalModeKey(
     }
 
     const macroKeys = Array.isArray(regEntry.content) ? regEntry.content : [regEntry.content];
-    let curState: VimEditorState = withoutMacroAborted({
+    let curState: VimEditorState = {
       ...state,
       pendingKeys: undefined,
       lastPlayedMacro: targetReg,
-    });
+    };
 
-    // 실제 Vim과 동일하게 모션 실패(또는 중첩 매크로 중단) 시 남은 키와 반복 횟수를 모두 버립니다.
-    let aborted = false;
+    // 실제 Vim과 동일하게 키가 실패(bell)하면 남은 키와 반복 횟수를 모두 버립니다.
+    // bell은 결과 상태에 남으므로 중첩 매크로(@b 안의 @a)의 실패도 상위 매크로를 중단시킵니다.
     const repeatCount = parsed.totalCount;
-    for (let c = 0; c < repeatCount && !aborted; c++) {
+    for (let c = 0; c < repeatCount && !curState.bell; c++) {
       if (macroDepth >= 100) break;
       for (const mk of macroKeys) {
-        const nextState = handleKey(curState, mk, false, macroDepth + 1);
-        aborted = !!nextState.macroAborted || isMacroKeyFailure(curState, nextState, mk);
-        curState = nextState;
-        if (aborted) break;
+        curState = handleKey(curState, mk, false, macroDepth + 1);
+        if (curState.bell) break;
       }
     }
 
-    const result: VimEditorState = withoutMacroAborted({
+    return {
       ...curState,
       lastPlayedMacro: targetReg,
-    });
-    // 중첩 매크로(@b 안의 @a 등)에서는 상위 매크로도 함께 중단되도록 신호를 전달합니다.
-    return aborted && macroDepth > 0 ? { ...result, macroAborted: true } : result;
+    };
   }
 
   // 2. 직전 변경 반복 ('.' Dot Repeat)
@@ -3168,6 +3209,7 @@ function handleNormalModeKey(
     let curState: VimEditorState = { ...state, pendingKeys: undefined };
     for (const rk of replayKeys) {
       curState = handleKey(curState, rk, true);
+      if (curState.bell) break;
     }
     return {
       ...curState,
@@ -3261,6 +3303,9 @@ function handleNormalModeKey(
     const totalCount = c1 * c2;
 
     if (key.length === 1) {
+      if (!moveFind(state.lines, state.cursor, motion, key, totalCount)) {
+        return { ...ringBell(state), lastCharSearch: { type: motion, char: key } };
+      }
       const res = executeFindOperator(state, op, motion, key, totalCount);
       const resWithSearch = {
         ...res,
@@ -3295,7 +3340,7 @@ function handleNormalModeKey(
     if (key.length === 1) {
       const nextPos = moveFind(state.lines, state.cursor, motion, key, count);
       return {
-        ...state,
+        ...(nextPos ? state : ringBell(state)),
         cursor: nextPos ?? state.cursor,
         lastCharSearch: { type: motion, char: key },
         pendingKeys: undefined,
@@ -3342,6 +3387,14 @@ function handleNormalModeKey(
   if (key === 'g,') return traverseChangeList(state, 'next', parsed.totalCount);
   if (key === 'g-') return travelUndoTime(state, 'older', parsed.totalCount);
   if (key === 'g+') return travelUndoTime(state, 'newer', parsed.totalCount);
+
+  // 8-0. 연산자 + 일반 모션 (dj, dk, dh, dl, db, dB, d^, dG, cj, yk 등): 줄 단위 / 배타적 문자 단위
+  if (
+    (parsed.operator === 'd' || parsed.operator === 'c' || parsed.operator === 'y') &&
+    OPERATOR_MOTION_KEYS.has(key)
+  ) {
+    return applyOperatorMotion(state, parsed.operator, key, parsed, isReplayingDot);
+  }
 
   // 8. 연산자 대기 처리 (d, c, y, g, v)
 
@@ -3892,6 +3945,7 @@ function handleNormalModeKey(
           ...state,
           commandMessage: `E486: 패턴을 찾을 수 없습니다: ${state.lastSearchQuery}`,
           pendingKeys: undefined,
+          bell: true,
         };
       }
       const nextMatch = findNextMatch(matches, state.cursor) ?? matches[0];
@@ -3917,6 +3971,7 @@ function handleNormalModeKey(
           ...state,
           commandMessage: `E486: 패턴을 찾을 수 없습니다: ${state.lastSearchQuery}`,
           pendingKeys: undefined,
+          bell: true,
         };
       }
       const prevMatch = findPrevMatch(matches, state.cursor) ?? matches[matches.length - 1];
@@ -4237,6 +4292,13 @@ function handleNormalModeKey(
   if (motionCursor) {
     const isDollar = key === '$';
     const isVertical = key === 'j' || key === 'k' || key === 'ArrowDown' || key === 'ArrowUp';
+    // 커서를 전혀 움직이지 못한 모션은 실패(bell): 마지막 줄의 j, 줄 시작의 h, 버퍼 끝의 w 등
+    const failed = FAILABLE_MOTION_KEYS.has(key) && (isVertical
+      ? motionCursor.line === state.cursor.line
+      : motionCursor.line === state.cursor.line && motionCursor.col === state.cursor.col);
+    if (failed) {
+      return ringBell(state);
+    }
     if (state.stickyDollar && isVertical) {
       const destLine = state.lines[motionCursor.line] ?? '';
       motionCursor = {
@@ -4268,25 +4330,35 @@ export function handleKey(
   isReplayingDot = false,
   macroDepth = 0
 ): VimEditorState {
-  let nextState: VimEditorState;
+  // bell은 "직전 키가 실패했다"는 일시적 신호이므로 매 키 입력마다 새로 시작합니다.
+  const input = withoutBell(state);
   if (process.env.NODE_ENV !== 'production') {
-    deepFreeze(state);
-    nextState = rawHandleKey(state, key, isReplayingDot, macroDepth);
-    assertValidVimState(state, nextState, key);
-  } else {
-    nextState = rawHandleKey(state, key, isReplayingDot, macroDepth);
+    deepFreeze(input);
+    const nextState = rawHandleKey(input, key, isReplayingDot, macroDepth);
+    assertValidVimState(input, nextState, key);
+    return nextState;
   }
-  // 매크로 중단 신호는 매크로 실행 중에만 의미가 있으므로 최상위 입력에서는 제거합니다.
-  return macroDepth === 0 ? withoutMacroAborted(nextState) : nextState;
+  return rawHandleKey(input, key, isReplayingDot, macroDepth);
 }
 
-/** 일시적인 매크로 중단 신호(macroAborted)를 제거한 상태를 반환합니다. */
-function withoutMacroAborted(state: VimEditorState): VimEditorState {
-  if (!state.macroAborted) return state;
+/** 일시적인 실패 신호(bell)를 제거한 상태를 반환합니다. */
+export function withoutBell(state: VimEditorState): VimEditorState {
+  if (!state.bell) return state;
   const copy = { ...state };
-  delete copy.macroAborted;
+  delete copy.bell;
   return copy;
 }
+
+/** 키 실패(Vim의 벨/에러)를 표시합니다. 매크로, `.`, `:normal`, 키매핑 재생은 이 신호에서 중단됩니다. */
+function ringBell(state: VimEditorState): VimEditorState {
+  return { ...state, pendingKeys: undefined, bell: true };
+}
+
+/** 이동하지 못하면 실패(bell)로 간주되는 모션 키 */
+const FAILABLE_MOTION_KEYS = new Set([
+  'h', 'j', 'k', 'l', 'w', 'b', 'e', 'W', 'B', 'E',
+  'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+]);
 
 /**
  * 카운트 배수를 적용하여 단일 모션을 여러 번 반복 평가합니다.

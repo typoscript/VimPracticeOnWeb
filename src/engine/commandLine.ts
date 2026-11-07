@@ -2286,6 +2286,7 @@ function executeGlobalCommand(
       commandBuffer: undefined,
       commandType: undefined,
       commandMessage: `E486: 패턴을 찾을 수 없습니다: ${pattern}`,
+      bell: true,
     };
   }
 
@@ -2469,6 +2470,8 @@ export function executeNormalKeysOnLine(
 
   for (const token of tokens) {
     curState = keyRunner(curState, token, true);
+    // 실제 Vim과 동일하게 키가 실패하면 해당 줄의 남은 키를 버립니다.
+    if (curState.bell) break;
   }
 
   // 명령어 수행 후 여전히 INSERT 모드인 경우 자동으로 Escape 호출하여 완료
@@ -2569,6 +2572,7 @@ export function executeSubstitution(
         commandBuffer: undefined,
         commandType: undefined,
         commandMessage: `E486: 패턴을 찾을 수 없습니다: ${oldText}`,
+        bell: true,
       };
     }
 
@@ -2629,6 +2633,7 @@ export function executeSubstitution(
       commandBuffer: undefined,
       commandType: undefined,
       commandMessage: `E486: 패턴을 찾을 수 없습니다: ${oldText}`,
+      bell: true,
     };
   }
 

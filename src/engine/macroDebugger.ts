@@ -1,6 +1,5 @@
 import { VimEditorState } from '../types/vim';
 import { handleKey } from './vimEngine';
-import { isMacroKeyFailure } from './macroAbort';
 
 /**
  * 매크로 슬로우모션 디버거 엔진 (MacroDebugger)
@@ -89,18 +88,18 @@ export function buildMacroTrace(state: VimEditorState, register: string, count =
     for (let ki = 0; ki < keys.length; ki++) {
       const k = keys[ki];
       const next = handleKey(cur, k, false, 1);
-      aborted = !!next.macroAborted || isMacroKeyFailure(cur, next, k);
-      const frameState = next.macroAborted ? { ...next, macroAborted: undefined } : next;
+      // 실제 @{reg} 실행과 동일하게 키가 실패(bell)하면 매크로를 중단합니다.
+      aborted = !!next.bell;
       frames.push({
         index: frames.length,
         key: k,
         iteration: it,
         keyIndex: ki,
-        state: frameState,
+        state: next,
         changed: next.lines !== cur.lines && next.lines.join('\n') !== cur.lines.join('\n'),
         failed: aborted,
       });
-      cur = frameState;
+      cur = next;
       if (aborted) break;
     }
   }
