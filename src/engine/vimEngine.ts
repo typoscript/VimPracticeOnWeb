@@ -121,6 +121,8 @@ import {
   TextObjectType,
   executeIndentObjectOperator,
   IndentObjectType,
+  executeParagraphObjectOperator,
+  ParagraphObjectType,
 } from './textObjects';
 import {
   findMatches,
@@ -2251,7 +2253,11 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
     if (key === 'i' || key === 'I') {
       return executeIndentObjectOperator(state, 'v', `${modifier}${key}` as IndentObjectType, count);
     }
-    const validTargets = ['w', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't'];
+    // 문단 텍스트 객체 (vip, vap): 줄 단위 VISUAL LINE 선택
+    if (key === 'p') {
+      return executeParagraphObjectOperator(state, 'v', `${modifier}p` as ParagraphObjectType, count) ?? ringBell(state);
+    }
+    const validTargets = ['w', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't', 's'];
     if (validTargets.includes(key)) {
       let targetChar = key;
       if (key === 'b' || key === ')') targetChar = '(';
@@ -3267,15 +3273,22 @@ function handleNormalModeKey(
   }
 
   // 4. 텍스트 객체 대기 상태 (di, da, ci, ca, yi, ya, vi, va, =i, =a, gui, gua, gUi, gUa, g~i, g~a 및 카운트 조합)
-  const textObjPendingMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([dcyv=]|g[uU~])([ia])$/);
+  // 카운트는 연산자 앞(2das)과 뒤(d2as) 모두 가능하며 서로 곱해집니다
+  const textObjPendingMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([dcyv=]|g[uU~])([1-9][0-9]*)?([ia])$/);
   if (textObjPendingMatch) {
-    const count = textObjPendingMatch[1] ? parseInt(textObjPendingMatch[1], 10) : 1;
+    const count =
+      (textObjPendingMatch[1] ? parseInt(textObjPendingMatch[1], 10) : 1) *
+      (textObjPendingMatch[3] ? parseInt(textObjPendingMatch[3], 10) : 1);
     const op = textObjPendingMatch[2] as 'd' | 'c' | 'y' | 'v' | '=' | 'gu' | 'gU' | 'g~';
-    const modifier = textObjPendingMatch[3] as 'i' | 'a';
+    const modifier = textObjPendingMatch[4] as 'i' | 'a';
 
-    // 인덴트 텍스트 객체 (dii, cai, yii, =ii, gUai, daI 등): 줄 단위 연산
-    if (key === 'i' || key === 'I') {
-      const res = executeIndentObjectOperator(state, op, `${modifier}${key}` as IndentObjectType, count);
+    // 인덴트 텍스트 객체 (dii, cai, yii, =ii, gUai, daI 등) / 문단 텍스트 객체 (dap, yip, cip, =ap): 줄 단위 연산
+    if (key === 'i' || key === 'I' || key === 'p') {
+      const res =
+        key === 'p'
+          ? executeParagraphObjectOperator(state, op, `${modifier}p` as ParagraphObjectType, count)
+          : executeIndentObjectOperator(state, op, `${modifier}${key}` as IndentObjectType, count);
+      if (!res) return ringBell(state);
       const synced = syncRegisters(state, res, op === 'y');
       const opKeys = count > 1 ? [String(count), op, modifier, key] : [op, modifier, key];
       if (op === 'c') {
@@ -3293,7 +3306,7 @@ function handleNormalModeKey(
       return synced;
     }
 
-    const validTargets = ['w', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't'];
+    const validTargets = ['w', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't', 's'];
     if (validTargets.includes(key)) {
       let targetChar = key;
       if (key === 'b' || key === ')') targetChar = '(';

@@ -18,7 +18,8 @@ export type TextObjectTarget =
   | '}'
   | 'b'
   | 'B'
-  | 't';
+  | 't'
+  | 's';
 
 export type TextObjectType = `${TextObjectModifier}${TextObjectTarget}` | string;
 
@@ -520,9 +521,14 @@ export function executeTextObjectOperator(
   count = 1
 ): VimEditorState {
   let curState = state;
+  // 문장 객체(is, as)는 [count] 를 범위 계산에 반영하여 한 번만 적용합니다
+  const isSentence = objectType === 'is' || objectType === 'as';
+  const steps = isSentence ? 1 : count;
 
-  for (let step = 0; step < count; step++) {
-    const range = getTextObjectRange(curState.lines, curState.cursor, objectType);
+  for (let step = 0; step < steps; step++) {
+    const range = isSentence
+      ? getSentenceObjectRange(curState.lines, curState.cursor, objectType as 'is' | 'as', count)
+      : getTextObjectRange(curState.lines, curState.cursor, objectType);
     if (!range) {
       if (operator === 'c') {
         return {
@@ -782,11 +788,21 @@ export function executeIndentObjectOperator(
   if (!range) {
     return { ...state, pendingKeys: undefined };
   }
+  return executeLinewiseObjectOperator(state, operator, range);
+}
 
+/**
+ * 줄 단위 텍스트 객체(ii, ai, ip, ap) 범위에 연산자(d, c, y, v, =, gu, gU, g~)를 적용합니다.
+ */
+export function executeLinewiseObjectOperator(
+  state: VimEditorState,
+  operator: 'd' | 'c' | 'y' | 'v' | '=' | 'gu' | 'gU' | 'g~',
+  range: IndentObjectRange
+): VimEditorState {
   const { startLine, endLine } = range;
   const content = state.lines.slice(startLine, endLine + 1).join('\n');
 
-  // VISUAL LINE 모드 영역 지정 (vii, vai)
+  // VISUAL LINE 모드 영역 지정 (vii, vai, vip, vap)
   if (operator === 'v') {
     return {
       ...state,
@@ -797,7 +813,7 @@ export function executeIndentObjectOperator(
     };
   }
 
-  // 대소문자 변환 (guii, gUai, g~ii)
+  // 대소문자 변환 (guii, gUai, g~ip)
   if (operator === 'gu' || operator === 'gU' || operator === 'g~') {
     const visualState: VimEditorState = {
       ...state,
@@ -809,7 +825,7 @@ export function executeIndentObjectOperator(
     return changeCaseVisual(visualState, caseType);
   }
 
-  // 자동 들여쓰기 정렬 (=ii)
+  // 자동 들여쓰기 정렬 (=ii, =ap)
   if (operator === '=') {
     const stateWithSnapshot = pushUndoSnapshot(state);
     const nextLines = formatLinesRange(state.lines, startLine, endLine);
@@ -823,7 +839,7 @@ export function executeIndentObjectOperator(
 
   const clipboard = { type: 'line' as const, content };
 
-  // 복사 (yii): 커서는 복사 영역의 첫 줄로 이동
+  // 복사 (yii, yap): 커서는 복사 영역의 첫 줄로 이동
   if (operator === 'y') {
     return {
       ...state,
@@ -837,7 +853,7 @@ export function executeIndentObjectOperator(
   const before = state.lines.slice(0, startLine);
   const after = state.lines.slice(endLine + 1);
 
-  // 수정 (cii): 블록을 첫 줄의 들여쓰기만 남긴 빈 줄 하나로 교체하고 INSERT 진입 (autoindent)
+  // 수정 (cii, cip): 블록을 첫 줄의 들여쓰기만 남긴 빈 줄 하나로 교체하고 INSERT 진입 (autoindent)
   if (operator === 'c') {
     const indentStr = (state.lines[startLine] ?? '').match(/^[ \t]*/)?.[0] ?? '';
     return {
@@ -850,7 +866,7 @@ export function executeIndentObjectOperator(
     };
   }
 
-  // 삭제 (dii)
+  // 삭제 (dii, dap)
   const nextLines = before.length + after.length === 0 ? [''] : [...before, ...after];
   return {
     ...stateWithSnapshot,
@@ -858,5 +874,226 @@ export function executeIndentObjectOperator(
     cursor: moveToFirstNonBlank(nextLines, { line: Math.min(startLine, nextLines.length - 1), col: 0 }),
     clipboard,
     pendingKeys: undefined,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 문단 텍스트 객체 (ip, ap) — Vim current_par() 규칙
+// ---------------------------------------------------------------------------
+
+export type ParagraphObjectType = 'ip' | 'ap';
+
+/** 텍스트 객체에서 공백 문자만 있는 줄도 빈 줄로 봅니다. (Vim linewhite(), } 모션과 다름) */
+function isWhiteLine(text: string | undefined): boolean {
+  return (text ?? '').trim().length === 0;
+}
+
+/**
+ * 문단 텍스트 객체 범위 (항상 줄 단위)
+ * - ip: 커서가 있는 문단(빈 줄이 아닌 연속 줄). 빈 줄 위라면 연속된 빈 줄 묶음
+ * - ap: 문단 + 뒤의 빈 줄들 (뒤에 빈 줄이 없으면 앞의 빈 줄들). 빈 줄 위라면 빈 줄 + 다음 문단
+ * - [count]: ip 는 문단과 빈 줄 묶음을 각각 하나로 세고, ap 는 (문단 + 빈 줄) 단위로 셉니다.
+ * 범위가 버퍼 끝을 넘어가면 null (Vim 에서는 실패)
+ */
+export function getParagraphObjectRange(
+  lines: string[],
+  line: number,
+  objectType: ParagraphObjectType,
+  count = 1
+): IndentObjectRange | null {
+  if (lines.length === 0) return null;
+  const include = objectType === 'ap';
+  const last = lines.length - 1;
+
+  let start = Math.max(0, Math.min(line, last));
+  const whiteInFront = isWhiteLine(lines[start]);
+  // 현재 묶음(문단 또는 빈 줄)의 시작으로 이동
+  while (start > 0 && isWhiteLine(lines[start - 1]) === whiteInFront) start--;
+
+  // 시작이 빈 줄 묶음이면 그 끝까지, 문단이면 시작 바로 앞 줄을 끝으로 둡니다
+  let end = start;
+  while (end <= last && isWhiteLine(lines[end])) end++;
+  end--;
+
+  let remaining = Math.max(1, count);
+  if (!include && whiteInFront) remaining--;
+  while (remaining-- > 0) {
+    if (end === last) return null;
+    const doWhite = !include && isWhiteLine(lines[end + 1]);
+    if (include || !doWhite) {
+      end++;
+      while (end < last && !isWhiteLine(lines[end + 1])) end++;
+    }
+    if (remaining === 0 && whiteInFront && include) break;
+    if (include || doWhite) {
+      while (end < last && isWhiteLine(lines[end + 1])) end++;
+    }
+  }
+
+  // ap: 뒤에 빈 줄이 없으면 앞의 빈 줄을 포함
+  if (include && !whiteInFront && !isWhiteLine(lines[end])) {
+    while (start > 0 && isWhiteLine(lines[start - 1])) start--;
+  }
+
+  return { startLine: start, endLine: end };
+}
+
+/** 문단 텍스트 객체와 연산자를 줄 단위로 실행합니다. (dap, yip, cip, vap, =ip, gUap ...) */
+export function executeParagraphObjectOperator(
+  state: VimEditorState,
+  operator: 'd' | 'c' | 'y' | 'v' | '=' | 'gu' | 'gU' | 'g~',
+  objectType: ParagraphObjectType,
+  count = 1
+): VimEditorState | null {
+  const range = getParagraphObjectRange(state.lines, state.cursor.line, objectType, count);
+  return range ? executeLinewiseObjectOperator(state, operator, range) : null;
+}
+
+// ---------------------------------------------------------------------------
+// 문장 텍스트 객체 (is, as)
+// ---------------------------------------------------------------------------
+
+interface FlatChar {
+  ch: string;
+  line: number;
+  col: number;
+}
+
+interface Segment {
+  kind: 'sentence' | 'white';
+  start: number;
+  end: number;
+}
+
+const SENTENCE_END = '.!?';
+const SENTENCE_CLOSERS = ')]"\'';
+
+function isWhiteChar(ch: string): boolean {
+  return ch === ' ' || ch === '\t' || ch === '\n';
+}
+
+/**
+ * 커서가 있는 문단(빈 줄로 구분)의 문자를 한 줄로 펼치고, 문장과 공백 구간으로 나눕니다.
+ * 문장은 . ! ? (뒤에 ) ] " ' 가 붙을 수 있음) 다음에 공백·줄 끝이 오면 끝납니다. (:help sentence)
+ */
+function splitSentences(lines: string[], line: number): { chars: FlatChar[]; segments: Segment[] } | null {
+  if (isWhiteLine(lines[line])) return null;
+  let first = line;
+  while (first > 0 && !isWhiteLine(lines[first - 1])) first--;
+  let lastLine = line;
+  while (lastLine < lines.length - 1 && !isWhiteLine(lines[lastLine + 1])) lastLine++;
+
+  const chars: FlatChar[] = [];
+  for (let l = first; l <= lastLine; l++) {
+    const text = lines[l] ?? '';
+    for (let c = 0; c < text.length; c++) chars.push({ ch: text[c], line: l, col: c });
+    if (l < lastLine) chars.push({ ch: '\n', line: l, col: text.length });
+  }
+
+  const segments: Segment[] = [];
+  let i = 0;
+  while (i < chars.length) {
+    if (isWhiteChar(chars[i].ch)) {
+      let j = i;
+      while (j < chars.length && isWhiteChar(chars[j].ch)) j++;
+      segments.push({ kind: 'white', start: i, end: j - 1 });
+      i = j;
+      continue;
+    }
+    let end = chars.length - 1;
+    for (let k = i; k < chars.length; k++) {
+      if (!SENTENCE_END.includes(chars[k].ch)) continue;
+      let m = k + 1;
+      while (m < chars.length && SENTENCE_CLOSERS.includes(chars[m].ch)) m++;
+      if (m === chars.length || isWhiteChar(chars[m].ch)) {
+        end = m - 1;
+        break;
+      }
+    }
+    segments.push({ kind: 'sentence', start: i, end });
+    i = end + 1;
+  }
+  return { chars, segments };
+}
+
+/** 공백 구간 중 지정한 줄에 속한 부분만 남깁니다. (문장 앞뒤 공백은 줄을 넘지 않음) */
+function whiteOnLine(chars: FlatChar[], seg: Segment, line: number): { start: number; end: number } | null {
+  let s = -1;
+  let e = -1;
+  for (let i = seg.start; i <= seg.end; i++) {
+    if (chars[i].ch === '\n' || chars[i].line !== line) continue;
+    if (s < 0) s = i;
+    e = i;
+  }
+  return s < 0 ? null : { start: s, end: e };
+}
+
+/**
+ * 문장 텍스트 객체 범위 (문자 단위, 끝 포함)
+ * - is: 커서가 있는 문장 (공백 위라면 그 공백). [count] 는 문장과 공백을 각각 하나로 셉니다.
+ * - as: 문장 + 뒤 공백 (뒤 공백이 없으면 앞 공백). 공백 위라면 공백 + 다음 문장.
+ * 문장은 여러 줄에 걸칠 수 있지만, 앞뒤로 붙는 공백은 문장과 같은 줄까지만 포함합니다.
+ */
+export function getSentenceObjectRange(
+  lines: string[],
+  cursor: CursorPosition,
+  objectType: 'is' | 'as',
+  count = 1
+): TextObjectRange | null {
+  const split = splitSentences(lines, cursor.line);
+  if (!split) return null;
+  const { chars, segments } = split;
+  const n = Math.max(1, count);
+
+  const lineText = lines[cursor.line] ?? '';
+  const col = Math.min(cursor.col, Math.max(0, lineText.length - 1));
+  const flatIdx = chars.findIndex((c) => c.line === cursor.line && c.col === col);
+  const k = segments.findIndex((seg) => flatIdx >= seg.start && flatIdx <= seg.end);
+  if (k < 0) return null;
+
+  let start: number;
+  let end: number;
+
+  if (objectType === 'is') {
+    const lastSeg = segments[Math.min(segments.length - 1, k + n - 1)];
+    start = segments[k].start;
+    end = lastSeg.end;
+    if (segments[k].kind === 'white') {
+      const own = whiteOnLine(chars, segments[k], cursor.line);
+      if (!own) return null;
+      start = own.start;
+      if (lastSeg === segments[k]) end = own.end;
+    }
+  } else if (segments[k].kind === 'sentence') {
+    const lastIdx = Math.min(segments.length - 1, k + 2 * (n - 1));
+    start = segments[k].start;
+    end = segments[lastIdx].end;
+    const trailing = segments[lastIdx + 1];
+    const trailingOwn = trailing?.kind === 'white' ? whiteOnLine(chars, trailing, chars[end].line) : null;
+    if (trailingOwn) {
+      end = trailingOwn.end;
+    } else {
+      const leading = segments[k - 1];
+      const leadingOwn = leading?.kind === 'white' ? whiteOnLine(chars, leading, chars[start].line) : null;
+      if (leadingOwn) start = leadingOwn.start;
+    }
+  } else {
+    // 공백 위의 as: 공백 + 다음 문장(들)
+    const nextIdx = Math.min(segments.length - 1, k + 2 * n - 1);
+    if (nextIdx === k) return null;
+    const own = whiteOnLine(chars, segments[k], cursor.line) ?? { start: segments[k].start };
+    start = own.start;
+    end = segments[nextIdx].end;
+  }
+
+  // 범위의 양 끝이 줄바꿈이 되지 않도록 실제 문자 위치로 좁힙니다
+  while (start < end && chars[start].ch === '\n') start++;
+  while (end > start && chars[end].ch === '\n') end--;
+
+  return {
+    startLine: chars[start].line,
+    startCol: chars[start].col,
+    endLine: chars[end].line,
+    endCol: chars[end].col,
   };
 }

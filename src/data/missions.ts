@@ -1851,4 +1851,48 @@ export const MISSIONS: Mission[] = [
       return state.lines.length === target.length && target.every((t, i) => state.lines[i] === t);
     },
   },
+  {
+    id: 58,
+    title: '레슨 58: 문단·문장 텍스트 객체(ip, ap, is, as)로 문서 구조 다듬기',
+    description:
+      'iw, i( 처럼 단어와 괄호를 다루듯, 문단과 문장도 텍스트 객체로 한 번에 다룰 수 있습니다.\n\n1) ip: 커서가 있는 문단 (빈 줄로 구분, 공백만 있는 줄도 빈 줄로 봄)\n2) ap: 문단 + 뒤의 빈 줄 (마지막 문단이면 앞의 빈 줄) → dap 로 지우고 P 로 붙이면 문단 순서를 바꿀 수 있습니다.\n3) is: 커서가 있는 문장 (. ! ? 뒤에 공백이나 줄 끝이 오면 문장 끝)\n4) as: 문장 + 뒤 공백 (뒤 공백이 없으면 앞 공백)\n\nd, c, y, v, gU 등 모든 연산자와 함께 쓰고, 2dap / d2as 처럼 카운트도 붙일 수 있습니다.\n\n미션:\n1) 커서가 있는 ## Deploy 문단을 dap 로 잘라내세요.\n2) gg 로 맨 위로 가서 P 로 붙여 넣어 Deploy 를 첫 번째 문단으로 옮기세요.\n3) 4j 로 Install 줄로 내려가 fR 로 Run 으로 이동한 뒤, das 로 "Run the build." 문장을 지우세요.',
+    hint: 'dap → gg → P 로 문단을 옮기고, 4j → fR → das 로 문장을 지우세요.',
+    par: 13,
+    optimalKeys: ['d', 'a', 'p', 'g', 'g', 'P', '4', 'j', 'f', 'R', 'd', 'a', 's'],
+    initialLines: [
+      '## Setup',
+      'Install the tools. Run the build.',
+      '',
+      '## Deploy',
+      'Push the image. Restart the pods.',
+      '',
+      '## Notes',
+      'Ask the team first.',
+    ],
+    targetLines: [
+      '## Deploy',
+      'Push the image. Restart the pods.',
+      '',
+      '## Setup',
+      'Install the tools.',
+      '',
+      '## Notes',
+      'Ask the team first.',
+    ],
+    initialCursor: { line: 4, col: 0 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const target = [
+        '## Deploy',
+        'Push the image. Restart the pods.',
+        '',
+        '## Setup',
+        'Install the tools.',
+        '',
+        '## Notes',
+        'Ask the team first.',
+      ];
+      return state.lines.length === target.length && target.every((t, i) => state.lines[i] === t);
+    },
+  },
 ];
