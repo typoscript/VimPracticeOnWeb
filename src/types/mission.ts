@@ -31,5 +31,7 @@ export interface Mission {
   initialQuickfixItems?: QuickfixItem[];
   /** 초기 체인지 리스트 (g;, g, 미션용) */
   initialChangeList?: ChangeListItem[];
+  /** 초기 아규먼트 리스트 (:args, :argdo 미션용) */
+  initialArgs?: string[];
   checkComplete: (state: VimEditorState) => boolean;
 }

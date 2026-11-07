@@ -40,6 +40,17 @@ import {
   setQuickfixList,
 } from './quickfixEngine';
 import { formatChangeList } from './advancedMotions';
+import {
+  setArgs,
+  addArgs,
+  deleteArgs,
+  nextArg,
+  prevArg,
+  firstArg,
+  lastArg,
+  formatArgs,
+  argdo,
+} from './argEngine';
 
 export type KeyRunner = (
   state: VimEditorState,
@@ -1120,6 +1131,131 @@ export function executeCommandLine(
       commandBuffer: undefined,
       commandType: undefined,
       commandMessage: formatChangeList(state),
+    };
+  }
+
+  // 아규먼트 일괄 실행: :argdo {cmd}
+  const argdoMatch = cleanCmdRaw.match(/^argdo\s+(.*)$/i);
+  if (argdoMatch) {
+    const cmdToRun = argdoMatch[1];
+    const res = argdo(state, cmdToRun, (s, c) => executeCommandLine(s, c, keyRunner));
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 아규먼트 추가: :argadd {file} ...
+  const argaddMatch = cleanCmdRaw.match(/^argadd\s+(.*)$/i);
+  if (argaddMatch) {
+    const files = argaddMatch[1].trim().split(/\s+/);
+    const res = addArgs(state, files);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 아규먼트 삭제: :argdelete {pattern}, :argd {pattern}
+  const argdMatch = cleanCmdRaw.match(/^(?:argdelete|argd)\s+(.*)$/i);
+  if (argdMatch) {
+    const pattern = argdMatch[1].trim();
+    const res = deleteArgs(state, pattern);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 아규먼트 설정 및 조회: :args [file1 file2 ...]
+  const argsMatch = cleanCmdRaw.match(/^args(?:\s+(.*))?$/i);
+  if (argsMatch) {
+    const filesStr = argsMatch[1]?.trim();
+    if (filesStr) {
+      const files = filesStr.split(/\s+/);
+      const res = setArgs(state, files);
+      return {
+        ...res,
+        mode: 'NORMAL',
+        visualAnchor: undefined,
+        commandBuffer: undefined,
+        commandType: undefined,
+      };
+    } else {
+      return {
+        ...state,
+        mode: 'NORMAL',
+        visualAnchor: undefined,
+        commandBuffer: undefined,
+        commandType: undefined,
+        commandMessage: formatArgs(state),
+      };
+    }
+  }
+
+  // 아규먼트 다음 파일 이동: :next, :n ([count] 지원)
+  const nextArgMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?(?:next|n)(?:\s+(\d+))?$/i);
+  if (nextArgMatch) {
+    const countRaw = nextArgMatch[1] || nextArgMatch[2];
+    const count = countRaw ? parseInt(countRaw, 10) : 1;
+    const res = nextArg(state, count);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 아규먼트 이전 파일 이동: :prev, :previous, :Next, :N ([count] 지원)
+  const prevArgMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?(?:prev|previous|Next|N)(?:\s+(\d+))?$/);
+  if (prevArgMatch) {
+    const countRaw = prevArgMatch[1] || prevArgMatch[2];
+    const count = countRaw ? parseInt(countRaw, 10) : 1;
+    const res = prevArg(state, count);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 아규먼트 양 끝 파일 이동: :first, :fir, :rewind, :rew, :last, :la
+  if (
+    cleanCmd === 'first' ||
+    cleanCmd === 'fir' ||
+    cleanCmd === 'rewind' ||
+    cleanCmd === 'rew'
+  ) {
+    const res = firstArg(state);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+  if (cleanCmd === 'last' || cleanCmd === 'la') {
+    const res = lastArg(state);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
     };
   }
 

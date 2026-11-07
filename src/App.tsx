@@ -323,6 +323,9 @@ export function App() {
         : undefined,
       changeList: m.initialChangeList ? [...m.initialChangeList] : undefined,
       changeIndex: m.initialChangeList ? m.initialChangeList.length : undefined,
+      argList: m.initialArgs
+        ? { files: [...m.initialArgs], currentIndex: 0 }
+        : undefined,
       userKeymaps: compileUserKeymaps(activePresets, leaderKey),
       leaderKey,
     };

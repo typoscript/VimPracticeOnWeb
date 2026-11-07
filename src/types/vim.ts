@@ -104,6 +104,11 @@ export interface QuickfixState {
   height?: number;
 }
 
+export interface ArgListState {
+  files: string[];
+  currentIndex: number; // 0-based 인덱스
+}
+
 export interface RegisterEntry {
   type: 'char' | 'line' | 'macro';
   content: string | string[];
@@ -287,6 +292,8 @@ export interface VimEditorState {
   cmdlineWindow?: CommandLineWindowSession | null;
   /** 퀵픽스(Quickfix) 목록 및 윈도우 상태 (:copen, :cn, :cp, :vimgrep) */
   quickfix?: QuickfixState | null;
+  /** 아규먼트 리스트 (Arglist: :args, :argdo, :next, :prev) */
+  argList?: ArgListState | null;
 }
 
 

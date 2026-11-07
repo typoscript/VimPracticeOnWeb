@@ -1,5 +1,5 @@
 import { Mission } from '../types/mission';
-import { ensureBuffers } from '../engine/bufferEngine';
+import { ensureBuffers, syncCurrentBuffer } from '../engine/bufferEngine';
 import { ensureTabPages } from '../engine/tabEngine';
 
 export const MISSIONS: Mission[] = [
@@ -1060,6 +1060,45 @@ export const MISSIONS: Mission[] = [
         state.lines[0] === 'val1 = 1;' &&
         state.lines[1] === 'val2 = 1;' &&
         state.lines[2] === '// footer'
+      );
+    },
+  },
+  {
+    id: 38,
+    title: '레슨 38: 아규먼트 리스트(Arglist: :args, :argdo, :n)로 여러 파일 일괄 치환하기',
+    description: 'Vim의 아규먼트 리스트(Arglist)는 대규모 프로젝트에서 여러 파일을 작업 목록에 묶어두고 일괄 처리하는 순정 강력 기능입니다. :args로 파일 목록을 확인하거나 등록하고, :n(다음 파일)과 :prev(이전 파일)로 넘나들 수 있으며, 특히 :argdo를 사용하면 목록에 포함된 모든 파일에 대해 치환(%s)이나 명령을 한 번에 일괄 적용할 수 있습니다.',
+    hint: ':argdo %s/1/2/g 를 입력하고 Enter를 누르면 아규먼트 목록(serviceA.ts, serviceB.ts)의 모든 파일에서 1이 2로 일괄 치환됩니다. (:args로 파일 목록을 확인하거나 :n으로 파일을 넘나들 수도 있습니다)',
+    par: 16,
+    optimalKeys: [
+      ':', 'a', 'r', 'g', 'd', 'o', ' ', '%', 's', '/', '1', '/', '2', '/', 'g', 'Enter',
+    ],
+    primaryFilename: 'serviceA.ts',
+    secondaryFilename: 'serviceB.ts',
+    initialLines: [
+      'const API_HOST = "HTTP_V1";',
+      'export const ready = true;',
+    ],
+    secondaryLines: [
+      'const AUTH_HOST = "HTTP_V1";',
+      'export const auth = true;',
+    ],
+    targetLines: [
+      'const API_HOST = "HTTP_V2";',
+      'export const ready = true;',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    initialArgs: ['serviceA.ts', 'serviceB.ts'],
+    checkComplete: (state) => {
+      const s = syncCurrentBuffer(ensureBuffers(state));
+      const bufA = s.buffers?.find((b) => b.name === 'serviceA.ts');
+      const bufB = s.buffers?.find((b) => b.name === 'serviceB.ts');
+      const aLine = bufA?.lines[0];
+      const bLine = bufB?.lines[0];
+
+      return (
+        state.mode === 'NORMAL' &&
+        aLine === 'const API_HOST = "HTTP_V2";' &&
+        bLine === 'const AUTH_HOST = "HTTP_V2";'
       );
     },
   },
