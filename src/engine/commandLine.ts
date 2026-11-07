@@ -26,6 +26,19 @@ import {
   lastTab,
   moveTab,
 } from './tabEngine';
+import {
+  openQuickfixWindow,
+  closeQuickfixWindow,
+  toggleQuickfixWindow,
+  nextQuickfix,
+  prevQuickfix,
+  firstQuickfix,
+  lastQuickfix,
+  jumpToQuickfixItem,
+  formatQuickfixList,
+  vimgrep,
+  setQuickfixList,
+} from './quickfixEngine';
 
 export type KeyRunner = (
   state: VimEditorState,
@@ -945,6 +958,156 @@ export function executeCommandLine(
       commandBuffer: undefined,
       commandType: undefined,
     };
+  }
+
+  // 퀵픽스 창 열기: :copen [height], :cope [height]
+  const copenMatch = cleanCmdRaw.match(/^(?:copen|cope)(?:\s+(\d+))?$/i);
+  if (copenMatch) {
+    const height = copenMatch[1] ? parseInt(copenMatch[1], 10) : undefined;
+    const res = openQuickfixWindow(state, height);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 퀵픽스 창 닫기: :cclose, :ccl
+  if (cleanCmd === 'cclose' || cleanCmd === 'ccl') {
+    const res = closeQuickfixWindow(state);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 퀵픽스 창 토글/열기: :cwindow [height], :cw [height]
+  const cwMatch = cleanCmdRaw.match(/^(?:cwindow|cw)(?:\s+(\d+))?$/i);
+  if (cwMatch) {
+    const height = cwMatch[1] ? parseInt(cwMatch[1], 10) : undefined;
+    const res = toggleQuickfixWindow(state, height);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 퀵픽스 다음 에러 이동: :cnext [count], :cn [count]
+  const cnMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?(?:cnext|cn)(?:\s+(\d+))?$/i);
+  if (cnMatch) {
+    const countRaw = cnMatch[1] || cnMatch[2];
+    const count = countRaw ? parseInt(countRaw, 10) : 1;
+    const res = nextQuickfix(state, count);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 퀵픽스 이전 에러 이동: :cprev [count], :cp [count], :cprevious [count]
+  const cpMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?(?:cprev|cp|cprevious)(?:\s+(\d+))?$/i);
+  if (cpMatch) {
+    const countRaw = cpMatch[1] || cpMatch[2];
+    const count = countRaw ? parseInt(countRaw, 10) : 1;
+    const res = prevQuickfix(state, count);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 퀵픽스 양 끝 이동: :cfirst, :cr, :crewind, :clast, :cla
+  if (cleanCmd === 'cfirst' || cleanCmd === 'cr' || cleanCmd === 'crewind') {
+    const res = firstQuickfix(state);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+  if (cleanCmd === 'clast' || cleanCmd === 'cla') {
+    const res = lastQuickfix(state);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 퀵픽스 특정 번호 점프: :cc [N]
+  const ccMatch = cleanCmdRaw.match(/^(?:cc)(?:\s+(\d+))?$/i);
+  if (ccMatch) {
+    const targetIdx = ccMatch[1] ? parseInt(ccMatch[1], 10) - 1 : (state.quickfix?.currentIndex ?? 0);
+    const res = jumpToQuickfixItem(state, targetIdx);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 퀵픽스 목록 조회: :clist, :cl
+  if (cleanCmd === 'clist' || cleanCmd === 'cl') {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: formatQuickfixList(state),
+    };
+  }
+
+  // vimgrep / vimgrepadd 검색: :vimgrep /pat/[flags] {file}, :vimgrepadd ...
+  const vimgrepMatch = cleanCmdRaw.match(/^(vimgrep|vimgrepadd)\s+(.*)$/i);
+  if (vimgrepMatch) {
+    const isAppend = vimgrepMatch[1].toLowerCase() === 'vimgrepadd';
+    const args = vimgrepMatch[2];
+    const res = vimgrep(state, args, isAppend);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 퀵픽스 표현식 설정/초기화: :cexpr []
+  const cexprMatch = cleanCmdRaw.match(/^cexpr\s*(.*)$/i);
+  if (cexprMatch) {
+    const expr = cexprMatch[1].trim();
+    if (expr === '[]' || expr === '') {
+      const res = setQuickfixList(state, [], false);
+      return {
+        ...res,
+        mode: 'NORMAL',
+        visualAnchor: undefined,
+        commandBuffer: undefined,
+        commandType: undefined,
+        commandMessage: '퀵픽스 목록 초기화됨',
+      };
+    }
   }
 
   if (cleanCmd === 'w' || cleanCmd === 'write') {

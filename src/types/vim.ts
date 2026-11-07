@@ -88,6 +88,22 @@ export interface CommandLineWindowSession {
   redoStack?: StateSnapshot[];
 }
 
+export interface QuickfixItem {
+  filename: string;
+  bufferId?: number;
+  line: number; // 1-based 라인 번호 (Vim 표준)
+  col: number;  // 1-based 컬럼 번호 (Vim 표준)
+  text: string;
+  type?: 'E' | 'W' | 'I'; // Error, Warning, Info
+}
+
+export interface QuickfixState {
+  items: QuickfixItem[];
+  currentIndex: number; // 0-based 인덱스
+  isOpen: boolean;
+  height?: number;
+}
+
 export interface RegisterEntry {
   type: 'char' | 'line' | 'macro';
   content: string | string[];
@@ -269,6 +285,8 @@ export interface VimEditorState {
   historyDraft?: string;
   /** 커맨드라인 윈도우(q:, q/, Ctrl-f) 활성 세션 */
   cmdlineWindow?: CommandLineWindowSession | null;
+  /** 퀵픽스(Quickfix) 목록 및 윈도우 상태 (:copen, :cn, :cp, :vimgrep) */
+  quickfix?: QuickfixState | null;
 }
 
 

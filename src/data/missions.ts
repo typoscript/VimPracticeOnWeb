@@ -997,6 +997,40 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 36,
+    title: '레슨 36: 퀵픽스(Quickfix: :cc, :cn, :copen)로 코드 에러 순회 및 수정하기',
+    description: '순정 Vim의 퀵픽스(Quickfix)는 프로젝트 전역 검색(:vimgrep) 결과나 컴파일러/린터 에러 목록을 모아두고 빠르게 탐색하는 IDE 기능의 핵심입니다. :copen으로 하단 목록 창을 열고, :cc로 특정 에러 또는 :cn(다음 에러)과 :cp(이전 에러)로 에러가 발생한 위치로 즉시 점프하여 코드를 수정해 보세요.',
+    hint: ':cc로 1번 에러 위치(BAD)로 점프한 뒤 cwOK<Esc>로 수정합니다. :cn으로 다음 에러로 점프한 뒤 .(점 반복)으로 간결하게 수정하세요. (:copen으로 퀵픽스 창을 열 수도 있습니다)',
+    par: 14,
+    optimalKeys: [
+      ':', 'c', 'c', 'Enter',
+      'c', 'w', 'O', 'K', 'Escape',
+      ':', 'c', 'n', 'Enter',
+      '.',
+    ],
+    primaryFilename: 'config.ts',
+    initialLines: [
+      'flag1 = BAD',
+      'flag2 = BAD',
+    ],
+    targetLines: [
+      'flag1 = OK',
+      'flag2 = OK',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    initialQuickfixItems: [
+      { filename: 'config.ts', line: 1, col: 9, text: 'flag1 = BAD' },
+      { filename: 'config.ts', line: 2, col: 9, text: 'flag2 = BAD' },
+    ],
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines[0] === 'flag1 = OK' &&
+        state.lines[1] === 'flag2 = OK'
+      );
+    },
+  },
 ];
 
 

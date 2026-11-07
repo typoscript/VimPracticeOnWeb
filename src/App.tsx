@@ -34,6 +34,7 @@ import { switchPaneFocus } from './engine/splitWindow';
 import { switchBuffer, ensureBuffers } from './engine/bufferEngine';
 import { switchTab, openNewTab, closeTab, ensureTabPages } from './engine/tabEngine';
 import { closeCommandLineWindow } from './engine/cmdlineWindow';
+import { closeQuickfixWindow, jumpToQuickfixItem } from './engine/quickfixEngine';
 import { MISSIONS } from './data/missions';
 import { SANDBOX_INITIAL_LINES } from './data/sandbox';
 import {
@@ -244,6 +245,16 @@ export function App() {
     setIsEditorFocused(true);
   }, []);
 
+  const handleJumpQuickfixItem = useCallback((index: number) => {
+    setEditorState((prevState) => jumpToQuickfixItem(prevState, index));
+    setIsEditorFocused(true);
+  }, []);
+
+  const handleCloseQuickfixWindow = useCallback(() => {
+    setEditorState((prevState) => closeQuickfixWindow(prevState));
+    setIsEditorFocused(true);
+  }, []);
+
   const currentMission = MISSIONS[currentMissionIndex];
 
   // 총 입력 타수 및 최근 키 입력 히스토리, 가상 키보드 프레스 상태
@@ -307,6 +318,9 @@ export function App() {
       activePaneIndex: 0,
       commandHistory: m.initialCommandHistory ? [...m.initialCommandHistory] : undefined,
       searchHistory: m.initialSearchHistory ? [...m.initialSearchHistory] : undefined,
+      quickfix: m.initialQuickfixItems
+        ? { items: [...m.initialQuickfixItems], currentIndex: 0, isOpen: false }
+        : undefined,
       userKeymaps: compileUserKeymaps(activePresets, leaderKey),
       leaderKey,
     };
@@ -1749,6 +1763,45 @@ export function App() {
                             line || ' '
                           )}
                         </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* 퀵픽스 윈도우 (Quickfix List: :copen, :cclose, :cn, :cp, :vimgrep) */}
+            {displayEditorState.quickfix?.isOpen && displayEditorState.quickfix.items.length > 0 && (
+              <div className="quickfix-window-container" data-testid="quickfix-window">
+                <div className="quickfix-window-header">
+                  <span className="quickfix-window-title">
+                    [Quickfix List] ({displayEditorState.quickfix.currentIndex + 1} of {displayEditorState.quickfix.items.length})
+                  </span>
+                  <span className="quickfix-window-hint">
+                    :cn / :cp 이동 | 항목 클릭 시 점프 | :cclose 닫기
+                  </span>
+                  <button
+                    className="quickfix-window-close"
+                    onClick={handleCloseQuickfixWindow}
+                    title="퀵픽스 닫기 (:cclose)"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="quickfix-window-body">
+                  {displayEditorState.quickfix.items.map((item, idx) => {
+                    const isActive = idx === displayEditorState.quickfix!.currentIndex;
+                    return (
+                      <div
+                        key={idx}
+                        className={`quickfix-item ${isActive ? 'active' : ''}`}
+                        onClick={() => handleJumpQuickfixItem(idx)}
+                      >
+                        <span className="quickfix-item-num">{idx + 1}</span>
+                        <span className="quickfix-item-loc">
+                          {item.filename}:{item.line}:{item.col}
+                        </span>
+                        <span className="quickfix-item-text">{item.text}</span>
                       </div>
                     );
                   })}

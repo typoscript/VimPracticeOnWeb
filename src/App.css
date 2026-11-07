@@ -715,3 +715,103 @@
   border-left: 2px solid #7aa2f7;
 }
 
+/* 퀵픽스 윈도우 (Quickfix Window: :copen, :cclose, :cnext, :cprev) */
+.quickfix-window-container {
+  width: 100%;
+  max-width: 900px;
+  margin-top: 8px;
+  background: #1a1b26;
+  border: 1px solid #bb9af7;
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  overflow: hidden;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+}
+
+.quickfix-window-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 10px;
+  background: #24283b;
+  border-bottom: 1px solid rgba(187, 154, 247, 0.2);
+  font-size: 0.75rem;
+  color: #bb9af7;
+}
+
+.quickfix-window-title {
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.quickfix-window-hint {
+  color: #7982a9;
+  font-size: 0.7rem;
+}
+
+.quickfix-window-close {
+  background: transparent;
+  border: none;
+  color: #7982a9;
+  cursor: pointer;
+  padding: 0 4px;
+  font-size: 0.8rem;
+  line-height: 1;
+}
+
+.quickfix-window-close:hover {
+  color: #f7768e;
+}
+
+.quickfix-window-body {
+  max-height: 160px;
+  overflow-y: auto;
+  padding: 4px 0;
+  background: #16161e;
+}
+
+.quickfix-item {
+  display: flex;
+  align-items: center;
+  padding: 3px 8px;
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #a9b1d6;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.15s ease;
+}
+
+.quickfix-item:hover {
+  background: rgba(187, 154, 247, 0.1);
+}
+
+.quickfix-item.active {
+  background: rgba(187, 154, 247, 0.2);
+  color: #c0caf5;
+  font-weight: 600;
+}
+
+.quickfix-item-num {
+  color: #565f89;
+  font-size: 0.7rem;
+  width: 28px;
+  text-align: right;
+  margin-right: 8px;
+}
+
+.quickfix-item-loc {
+  color: #7aa2f7;
+  margin-right: 8px;
+  font-size: 0.75rem;
+}
+
+.quickfix-item-text {
+  flex: 1;
+  color: #c0caf5;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+

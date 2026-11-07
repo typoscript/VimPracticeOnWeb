@@ -604,8 +604,20 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson35!.checkComplete(stateNotDone)).toBe(false);
   });
 
-  it('모든 35개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(35);
+  it('레슨 36: 퀵픽스(Quickfix: :cc, :cn, :copen) 완료 조건 검증', () => {
+    const lesson36 = MISSIONS.find((m) => m.id === 36);
+    expect(lesson36).toBeDefined();
+
+    const stateNotDone: VimEditorState = {
+      lines: ['flag1 = BAD', 'flag2 = BAD'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson36!.checkComplete(stateNotDone)).toBe(false);
+  });
+
+  it('모든 36개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(36);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();
@@ -624,6 +636,9 @@ describe('MISSIONS 10 ~ 12 validation', () => {
         secondaryLines: m.secondaryLines,
         commandHistory: m.initialCommandHistory ? [...m.initialCommandHistory] : undefined,
         searchHistory: m.initialSearchHistory ? [...m.initialSearchHistory] : undefined,
+        quickfix: m.initialQuickfixItems
+          ? { items: [...m.initialQuickfixItems], currentIndex: 0, isOpen: false }
+          : undefined,
       };
 
       for (const key of m.optimalKeys!) {
