@@ -39,6 +39,7 @@ import {
   getRegisterContent,
 } from './registers';
 import { evaluateVimExpression } from './expressionParser';
+import { alternateBuffer } from './bufferEngine';
 import {
   splitWindow,
   closeSplitWindow,
@@ -1622,6 +1623,18 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
     };
   }
 
+  // 1-0-c. 직전 대안 버퍼 토글 (Ctrl-^ / Ctrl-6)
+  if (
+    key === 'Ctrl-^' ||
+    key === 'Ctrl+^' ||
+    key === 'ctrl-^' ||
+    key === 'Ctrl-6' ||
+    key === 'Ctrl+6' ||
+    key === 'ctrl-6'
+  ) {
+    return alternateBuffer(state);
+  }
+
   // 비주얼 모드 커스텀 키매핑 (예: H -> ^, L -> $)
   if (!state.pendingKeys) {
     const visualMapped =
@@ -2316,6 +2329,18 @@ function handleNormalModeKey(
       ...state,
       pendingKeys: 'Ctrl-w',
     };
+  }
+
+  // 1-0-c. 직전 대안 버퍼 토글 (Ctrl-^ / Ctrl-6)
+  if (
+    key === 'Ctrl-^' ||
+    key === 'Ctrl+^' ||
+    key === 'ctrl-^' ||
+    key === 'Ctrl-6' ||
+    key === 'Ctrl+6' ||
+    key === 'ctrl-6'
+  ) {
+    return alternateBuffer(state);
   }
 
   // 1-0. Ctrl+v: VISUAL_BLOCK 모드 진입

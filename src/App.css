@@ -450,3 +450,67 @@
   animation: fadeIn 0.2s ease;
 }
 
+/* 상단 버퍼라인 탭 바 (:ls, :b, :bn, :bp, Ctrl-^) */
+.editor-buffer-bar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  max-width: 900px;
+  padding: 4px 6px;
+  background: var(--bg-secondary, #1f2335);
+  border: 1px solid var(--border-color, #292e42);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  overflow-x: auto;
+  user-select: none;
+}
+
+.buffer-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 0.75rem;
+  color: #7982a9;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.buffer-tab:hover {
+  background: rgba(122, 162, 247, 0.1);
+  color: #c0caf5;
+}
+
+.buffer-tab.active {
+  background: rgba(122, 162, 247, 0.2);
+  color: #7aa2f7;
+  border-color: rgba(122, 162, 247, 0.4);
+  font-weight: 600;
+}
+
+.buffer-tab.alternate {
+  border-color: rgba(187, 154, 247, 0.3);
+  color: #bb9af7;
+}
+
+.buffer-number {
+  font-size: 0.7rem;
+  opacity: 0.7;
+}
+
+.buffer-indicator {
+  font-weight: bold;
+  font-size: 0.75rem;
+}
+
+.buffer-modified {
+  color: #f7768e;
+  font-weight: bold;
+}
+

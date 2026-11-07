@@ -49,6 +49,16 @@ export interface ConfirmSubstituteSession {
   currentMatch: ConfirmSubstituteMatch;
 }
 
+export interface VimBuffer {
+  id: number;
+  name: string;
+  lines: string[];
+  cursor: CursorPosition;
+  undoStack?: StateSnapshot[];
+  redoStack?: StateSnapshot[];
+  isModified?: boolean;
+}
+
 export interface RegisterEntry {
   type: 'char' | 'line' | 'macro';
   content: string | string[];
@@ -206,6 +216,12 @@ export interface VimEditorState {
   confirmSubstitute?: ConfirmSubstituteSession | null;
   /** REPLACE (R) 모드에서 백스페이스 시 복원할 원래 문자 스택 */
   replaceStack?: { char: string; line: number; col: number }[];
+  /** 열려 있는 버퍼 목록 (:ls, :b, :bn, :bp, :bd) */
+  buffers?: VimBuffer[];
+  /** 현재 활성화된 버퍼 ID */
+  currentBufferId?: number;
+  /** 직전 대안 버퍼 ID ('#' 및 Ctrl-^용) */
+  alternateBufferId?: number;
 }
 
 

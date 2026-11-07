@@ -31,6 +31,7 @@ import { VimEditorState, SplitPaneState } from './types/vim';
 import { Mission } from './types/mission';
 import { handleKey } from './engine/vimEngine';
 import { switchPaneFocus } from './engine/splitWindow';
+import { switchBuffer, ensureBuffers } from './engine/bufferEngine';
 import { MISSIONS } from './data/missions';
 import { SANDBOX_INITIAL_LINES } from './data/sandbox';
 import {
@@ -213,6 +214,11 @@ export function App() {
 
   const handleSwitchPane = useCallback((targetIndex: number) => {
     setEditorState((prevState) => switchPaneFocus(prevState, targetIndex));
+    setIsEditorFocused(true);
+  }, []);
+
+  const handleSwitchBuffer = useCallback((targetId: number) => {
+    setEditorState((prevState) => switchBuffer(prevState, targetId));
     setIsEditorFocused(true);
   }, []);
 
@@ -978,6 +984,13 @@ export function App() {
         }
       }
 
+      // Ctrl+^ 또는 Ctrl+6: 대안 버퍼(Alternate Buffer) 토글
+      if ((e.ctrlKey || e.metaKey) && (e.key === '^' || e.key === '6')) {
+        e.preventDefault();
+        processKeyInput('Ctrl-^');
+        return;
+      }
+
       // Ctrl+o 또는 Cmd+o 또는 Alt+o: 점프 리스트 이전 위치(NORMAL) 및 일회성 Normal 명령(INSERT)
       if ((e.ctrlKey || e.metaKey || e.altKey) && (e.key === 'o' || e.key === 'O')) {
         if (editorState.mode === 'NORMAL' || editorState.mode === 'INSERT') {
@@ -1467,6 +1480,41 @@ export function App() {
                   </button>
                 </div>
               )}
+
+              {/* 상단 버퍼 탭 바 (Bufferline) */}
+              {(() => {
+                const stateWithBuffers = ensureBuffers(displayEditorState);
+                const bufferList = stateWithBuffers.buffers ?? [];
+                if (bufferList.length <= 1) return null;
+                const currentBufId = stateWithBuffers.currentBufferId ?? 1;
+                const altBufId = stateWithBuffers.alternateBufferId;
+
+                return (
+                  <div className="editor-buffer-bar" data-testid="editor-buffer-bar">
+                    {bufferList.map((buf) => {
+                      const isCurrent = buf.id === currentBufId;
+                      const isAlt = buf.id === altBufId;
+                      return (
+                        <div
+                          key={buf.id}
+                          className={`buffer-tab ${isCurrent ? 'active' : ''} ${isAlt ? 'alternate' : ''}`}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSwitchBuffer(buf.id);
+                          }}
+                          data-testid={`buffer-tab-${buf.id}`}
+                          title={`버퍼 ${buf.id}: ${buf.name}`}
+                        >
+                          <span className="buffer-number">{buf.id}</span>
+                          <span className="buffer-indicator">{isCurrent ? '%' : isAlt ? '#' : ''}</span>
+                          <span className="buffer-name">{buf.name}</span>
+                          {buf.isModified && <span className="buffer-modified">*</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
 
               {/* 에디터 렌더링: 분할 창 모드 vs 단일 창 모드 */}
               {editorState.splitDirection && editorState.splitDirection !== 'none' && editorState.splitPanes ? (

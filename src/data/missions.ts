@@ -1,4 +1,5 @@
 import { Mission } from '../types/mission';
+import { ensureBuffers } from '../engine/bufferEngine';
 
 export const MISSIONS: Mission[] = [
   {
@@ -890,6 +891,42 @@ export const MISSIONS: Mission[] = [
         state.lines[3] === 'apple' &&
         state.lines[4] === 'banana' &&
         state.lines[5] === 'cherry'
+      );
+    },
+  },
+  {
+    id: 33,
+    title: '레슨 33: :bnext, :bprev와 Ctrl+^로 여러 버퍼(파일) 자유자재로 넘나들기',
+    description: 'Vim의 버퍼(Buffer)는 메모리에 열린 파일 탭입니다. :ls로 버퍼 목록을 확인하고, :bnext/:bprev와 초고속 단축키 Ctrl+^(또는 Ctrl+6)을 사용하여 여러 파일 사이를 자유자재로 오가며 코드를 완성하세요.',
+    hint: '$r2로 source.ts의 버전을 2로 올린 뒤, :bn으로 config.ts 버퍼로 이동하세요. 그 다음 $r8로 포트를 3008로 변경하고, Ctrl-^(또는 Ctrl-6)을 눌러 직전 버퍼 source.ts로 초고속 복귀하세요.',
+    par: 12,
+    optimalKeys: ['$', 'r', '2', ':', 'b', 'n', 'Enter', '$', 'r', '8', 'Ctrl-^'],
+    primaryFilename: 'source.ts',
+    secondaryFilename: 'config.ts',
+    initialLines: [
+      'const API_VERSION = 1',
+      'export function initApp() {}',
+    ],
+    secondaryLines: [
+      'export const PORT = 3000',
+      'export const HOST = "localhost"',
+    ],
+    targetLines: [
+      'const API_VERSION = 2',
+      'export function initApp() {}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const s = ensureBuffers(state);
+      const buf1 = s.buffers?.find((b) => b.name === 'source.ts' || b.id === 1);
+      const buf2 = s.buffers?.find((b) => b.name === 'config.ts' || b.id === 2);
+      const isCurrentBuf1 = s.currentBufferId === 1 || s.primaryFilename === 'source.ts';
+
+      return (
+        state.mode === 'NORMAL' &&
+        isCurrentBuf1 &&
+        buf1?.lines[0] === 'const API_VERSION = 2' &&
+        buf2?.lines[0] === 'export const PORT = 3008'
       );
     },
   },

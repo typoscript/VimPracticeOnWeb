@@ -6,6 +6,16 @@ import {
 import { clampCursor } from './cursor';
 import { pushUndoSnapshot } from './operators';
 import { splitWindow, closeSplitWindow } from './splitWindow';
+import {
+  formatBufferList,
+  switchBuffer,
+  nextBuffer,
+  prevBuffer,
+  firstBuffer,
+  lastBuffer,
+  deleteBuffer,
+  editBuffer,
+} from './bufferEngine';
 
 export type KeyRunner = (
   state: VimEditorState,
@@ -667,6 +677,96 @@ export function executeCommandLine(
   }
 
   const cleanCmd = cleanCmdRaw.toLowerCase();
+
+  // 버퍼 목록 조회: :ls, :buffers, :files
+  if (cleanCmd === 'ls' || cleanCmd === 'buffers' || cleanCmd === 'files') {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: formatBufferList(state),
+    };
+  }
+
+  // 버퍼 순회: :bn, :bnext, :bp, :bprev, :bprevious ([count] 지원)
+  const bnMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?(bn|bnext|bp|bprev|bprevious)$/i);
+  if (bnMatch) {
+    const count = bnMatch[1] ? parseInt(bnMatch[1], 10) : 1;
+    const isNext = bnMatch[2].toLowerCase().startsWith('bn');
+    const res = isNext ? nextBuffer(state, count) : prevBuffer(state, count);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 버퍼 양 끝 이동: :bf, :bfirst, :bl, :blast
+  if (cleanCmd === 'bf' || cleanCmd === 'bfirst') {
+    return {
+      ...firstBuffer(state),
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+  if (cleanCmd === 'bl' || cleanCmd === 'blast') {
+    return {
+      ...lastBuffer(state),
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 버퍼 삭제: :bd, :bdelete, :bdel
+  const bdMatch = cleanCmdRaw.match(/^(?:bd|bdelete|bdel)(?:\s+(.+))?$/i);
+  if (bdMatch) {
+    const target = bdMatch[1]?.trim();
+    const res = deleteBuffer(state, target);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 파일 열기/새 버퍼 생성: :e, :edit
+  const eMatch = cleanCmdRaw.match(/^(?:e|edit)\s+(\S+)$/i);
+  if (eMatch) {
+    const filename = eMatch[1].trim();
+    const res = editBuffer(state, filename);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 버퍼 전환: :b {target}, :buffer {target}
+  const bMatch = cleanCmdRaw.match(/^(?:b|buffer)(?:\s+(.+))?$/i);
+  if (bMatch && !cleanCmdRaw.match(/^(?:bn|bnext|bp|bprev|bprevious|bf|bfirst|bl|blast|bd|bdelete|bdel)/i)) {
+    const target = bMatch[1]?.trim();
+    const res = target ? switchBuffer(state, target) : nextBuffer(state, 1);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
   if (cleanCmd === 'w' || cleanCmd === 'write') {
     return {
       ...state,
