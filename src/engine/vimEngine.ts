@@ -53,6 +53,7 @@ import {
   cancelWildmenu,
   acceptWildmenu,
 } from './wildmenu';
+import { jumpToTag, popTagStack } from './tagEngine';
 import {
   splitWindow,
   closeSplitWindow,
@@ -2499,6 +2500,37 @@ function handleNormalModeKey(
     key === 'ctrl-6'
   ) {
     return alternateBuffer(state);
+  }
+
+  // 1-0-d. 태그 점프: Ctrl+] (또는 Ctrl-] / <C-]>)
+  if (
+    key === 'Ctrl-]' ||
+    key === 'Ctrl+]' ||
+    key === 'ctrl-]' ||
+    key === '<C-]>' ||
+    key === 'Ctrl-5'
+  ) {
+    const curLine = state.lines[state.cursor.line] ?? '';
+    const word = getWordAtCursor(curLine, state.cursor.col);
+    if (!word) {
+      return {
+        ...state,
+        commandMessage: 'E431: 커서 위치에 식별자가 없습니다 (no identifier under cursor)',
+        pendingKeys: undefined,
+      };
+    }
+    return { ...jumpToTag(state, word), pendingKeys: undefined };
+  }
+
+  // 1-0-e. 태그 스택 팝: Ctrl+t (또는 Ctrl-t / <C-t>)
+  if (
+    key === 'Ctrl-t' ||
+    key === 'Ctrl+t' ||
+    key === 'ctrl-t' ||
+    key === '<C-t>'
+  ) {
+    const count = parsed.count1 || 1;
+    return { ...popTagStack(state, count), pendingKeys: undefined };
   }
 
   // 1-0. Ctrl+v: VISUAL_BLOCK 모드 진입

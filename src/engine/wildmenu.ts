@@ -1,6 +1,7 @@
 import { VimEditorState } from '../types/vim';
 import { DEFAULT_VFS_FILES } from './vfs';
 import { OPTION_ALIASES } from './setEngine';
+import { buildProjectTags } from './tagEngine';
 
 /**
  * 자동완성 가능한 순정 Vim Ex 커맨드 목록
@@ -44,6 +45,8 @@ export const AVAILABLE_COMMANDS: string[] = [
   'norm',
   'normal',
   'only',
+  'pop',
+  'po',
   'prev',
   'quit',
   'q',
@@ -63,6 +66,9 @@ export const AVAILABLE_COMMANDS: string[] = [
   'tabn',
   'tabprev',
   'tabp',
+  'tag',
+  'ta',
+  'tags',
   'vimrc',
   'vsplit',
   'vsp',
@@ -238,6 +244,21 @@ export function calculateCompletions(
     let matched = allFiles.filter((f) => f.toLowerCase().startsWith(arg));
     if (matched.length === 0 && arg) {
       matched = allFiles.filter((f) => f.toLowerCase().includes(arg));
+    }
+    if (matched.length === 0) return null;
+    return { prefix, candidates: matched };
+  }
+
+  // 4. 태그 관련 커맨드 (:tag, :ta)
+  if (cmd === 'tag' || cmd === 'ta') {
+    const prefix = `${cmd} `;
+    const arg = rest.toLowerCase();
+    const allTags = buildProjectTags(state);
+    const tagNames = Array.from(new Set(allTags.map((t) => t.name))).sort();
+
+    let matched = tagNames.filter((name) => name.toLowerCase().startsWith(arg));
+    if (matched.length === 0 && arg) {
+      matched = tagNames.filter((name) => name.toLowerCase().includes(arg));
     }
     if (matched.length === 0) return null;
     return { prefix, candidates: matched };

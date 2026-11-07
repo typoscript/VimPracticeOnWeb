@@ -55,6 +55,7 @@ import { openNetrw } from './netrwEngine';
 import { formatRegisters } from './registers';
 import { executeSetCommand } from './setEngine';
 import { sourceScript } from './sourceEngine';
+import { jumpToTag, popTagStack, formatTagStack } from './tagEngine';
 
 export type KeyRunner = (
   state: VimEditorState,
@@ -1232,6 +1233,46 @@ export function executeCommandLine(
   if (sourceMatch) {
     const targetFile = sourceMatch[1]?.trim() || '%';
     const res = sourceScript(state, targetFile);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 태그 스택 조회: :tags
+  if (/^tags$/i.test(cleanCmdRaw)) {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: formatTagStack(state),
+    };
+  }
+
+  // 태그 스택 팝 복귀: :pop, :po, :[count]pop
+  const popMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?(?:pop|po)$/i);
+  if (popMatch) {
+    const count = popMatch[1] ? parseInt(popMatch[1], 10) : 1;
+    const res = popTagStack(state, count);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 태그 점프: :tag [name], :ta [name]
+  const tagMatch = cleanCmdRaw.match(/^(?:tag|ta)(?:\s+(.*))?$/i);
+  if (tagMatch) {
+    const tagName = tagMatch[1]?.trim() || '';
+    const res = jumpToTag(state, tagName);
     return {
       ...res,
       mode: 'NORMAL',

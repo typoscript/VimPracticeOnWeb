@@ -144,6 +144,19 @@ export interface VimOptions {
   wildmenu: boolean;
 }
 
+export interface TagEntry {
+  name: string;
+  filename: string;
+  line: number;
+  col: number;
+}
+
+export interface TagStackItem {
+  tag: string;
+  filename: string;
+  cursor: CursorPosition;
+}
+
 export interface WildmenuState {
   /** 와일드메뉴 활성 상태 */
   active: boolean;
@@ -352,6 +365,10 @@ export interface VimEditorState {
   options?: VimOptions;
   /** 명령행 와일드메뉴 자동완성 세션 상태 */
   wildmenu?: WildmenuState | null;
+  /** ctags 태그 스택 (Ctrl+], Ctrl+t, :tag, :pop) */
+  tagStack?: TagStackItem[];
+  /** 수동 또는 외부 정의 태그 목록 */
+  tags?: TagEntry[];
 }
 
 
