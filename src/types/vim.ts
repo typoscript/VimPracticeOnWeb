@@ -140,6 +140,21 @@ export interface VimOptions {
   expandtab: boolean;
   /** 탭/공백 특수문자 표시 (:set list / nolist) */
   list: boolean;
+  /** 명령행 완성 와일드메뉴 표시 여부 (:set wildmenu / nowildmenu) */
+  wildmenu: boolean;
+}
+
+export interface WildmenuState {
+  /** 와일드메뉴 활성 상태 */
+  active: boolean;
+  /** 현재 완성 후보 목록 */
+  candidates: string[];
+  /** 현재 선택된 후보 인덱스 (0 .. candidates.length - 1) */
+  selectedIndex: number;
+  /** Tab 키 누르기 직전의 원본 커맨드라인 텍스트 */
+  originalBuffer: string;
+  /** 완성 인수 앞부분 (예: "set " 또는 "e ") */
+  prefix: string;
 }
 
 export interface RegisterEntry {
@@ -335,6 +350,8 @@ export interface VimEditorState {
   showConfigModal?: boolean;
   /** 순정 Vim 환경 옵션 설정 (:set nu, :set rnu, :set ic 등) */
   options?: VimOptions;
+  /** 명령행 와일드메뉴 자동완성 세션 상태 */
+  wildmenu?: WildmenuState | null;
 }
 
 

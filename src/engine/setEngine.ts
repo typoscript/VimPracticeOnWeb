@@ -12,6 +12,7 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   shiftwidth: 2,
   expandtab: true,
   list: false,
+  wildmenu: true,
 };
 
 export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
@@ -35,6 +36,8 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   et: 'expandtab',
   expandtab: 'expandtab',
   list: 'list',
+  wmenu: 'wildmenu',
+  wildmenu: 'wildmenu',
 };
 
 /**

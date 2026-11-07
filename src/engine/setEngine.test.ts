@@ -25,12 +25,21 @@ describe('setEngine (:set Option System)', () => {
       expect(opts.hlsearch).toBe(true);
       expect(opts.wrap).toBe(true);
       expect(opts.cursorline).toBe(true);
+      expect(opts.wildmenu).toBe(true);
       expect(opts.tabstop).toBe(2);
       expect(opts.shiftwidth).toBe(2);
     });
   });
 
   describe('executeSetCommand boolean toggles & assignments', () => {
+    it(':set wildmenu / :set nowildmenu 및 :set wmenu', () => {
+      let state = createBaseState();
+      state = executeSetCommand(state, 'nowildmenu');
+      expect(state.options?.wildmenu).toBe(false);
+
+      state = executeSetCommand(state, 'wmenu');
+      expect(state.options?.wildmenu).toBe(true);
+    });
     it(':set nu / :set nonu 및 :set rnu / :set nornu', () => {
       let state = createBaseState();
       state = executeSetCommand(state, 'rnu');

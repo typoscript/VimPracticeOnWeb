@@ -826,6 +826,7 @@ export function App() {
           shiftwidth: st.options?.shiftwidth ?? 2,
           expandtab: st.options?.expandtab ?? true,
           list: st.options?.list ?? false,
+          wildmenu: st.options?.wildmenu ?? true,
         },
       }));
       return next;
@@ -1880,6 +1881,8 @@ export function App() {
               commandType={displayEditorState.commandType}
               commandBuffer={displayEditorState.commandBuffer}
               commandMessage={displayEditorState.commandMessage}
+              wildmenu={displayEditorState.wildmenu}
+              showWildmenuBar={displayEditorState.options?.wildmenu ?? true}
             />
 
             {/* 실시간 레지스터 인스펙터 패널 */}

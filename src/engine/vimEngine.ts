@@ -49,6 +49,11 @@ import {
 } from './cmdlineWindow';
 import { handleNetrwKey } from './netrwEngine';
 import {
+  handleTabCompletion,
+  cancelWildmenu,
+  acceptWildmenu,
+} from './wildmenu';
+import {
   splitWindow,
   closeSplitWindow,
   closeOtherPanes,
@@ -984,23 +989,26 @@ function handleCommandLineModeKey(state: VimEditorState, key: string): VimEditor
     return navigateHistory(state, 'down', ':');
   }
 
-  // 3. 기존 콜론 커맨드라인 키 처리
-  if (key === 'Escape') {
-    return {
-      ...state,
-      mode: 'NORMAL',
-      commandBuffer: undefined,
-      commandType: undefined,
-      insertRegisterPending: undefined,
-    };
+  // 와일드메뉴 자동완성 키 처리 (Tab / Shift-Tab 및 활성 상태에서의 ArrowLeft/ArrowRight)
+  if (key === 'Tab') {
+    return handleTabCompletion(state, false);
+  }
+  if (key === 'Shift-Tab' || key === '<S-Tab>') {
+    return handleTabCompletion(state, true);
+  }
+  if (state.wildmenu?.active) {
+    if (key === 'ArrowRight') {
+      return handleTabCompletion(state, false);
+    }
+    if (key === 'ArrowLeft') {
+      return handleTabCompletion(state, true);
+    }
   }
 
-  if (key === 'Backspace') {
-    if (state.commandBuffer && state.commandBuffer.length > 0) {
-      return {
-        ...state,
-        commandBuffer: state.commandBuffer.slice(0, -1),
-      };
+  // 3. 기존 콜론 커맨드라인 키 처리
+  if (key === 'Escape') {
+    if (state.wildmenu?.active) {
+      return cancelWildmenu(state, true);
     }
     return {
       ...state,
@@ -1008,20 +1016,41 @@ function handleCommandLineModeKey(state: VimEditorState, key: string): VimEditor
       commandBuffer: undefined,
       commandType: undefined,
       insertRegisterPending: undefined,
+      wildmenu: null,
+    };
+  }
+
+  if (key === 'Backspace') {
+    const s = state.wildmenu?.active ? cancelWildmenu(state, false) : state;
+    if (s.commandBuffer && s.commandBuffer.length > 0) {
+      return {
+        ...s,
+        commandBuffer: s.commandBuffer.slice(0, -1),
+      };
+    }
+    return {
+      ...s,
+      mode: 'NORMAL',
+      commandBuffer: undefined,
+      commandType: undefined,
+      insertRegisterPending: undefined,
+      wildmenu: null,
     };
   }
 
   if (key === 'Enter') {
-    const cmd = state.commandBuffer ?? '';
-    const nextState = addHistory(state, cmd, ':');
+    const s = state.wildmenu?.active ? acceptWildmenu(state) : state;
+    const cmd = s.commandBuffer ?? '';
+    const nextState = addHistory(s, cmd, ':');
     return executeCommandLine(nextState, cmd, handleKey);
   }
 
   // 일반 타이핑 문자 누적
   if (key.length === 1) {
+    const s = state.wildmenu?.active ? acceptWildmenu(state) : state;
     return {
-      ...state,
-      commandBuffer: (state.commandBuffer ?? '') + key,
+      ...s,
+      commandBuffer: (s.commandBuffer ?? '') + key,
     };
   }
 

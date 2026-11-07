@@ -113,4 +113,28 @@ describe('StatusBar Component', () => {
     );
     expect(screen.queryByTestId('status-macro-recording')).not.toBeInTheDocument();
   });
+
+  it('wildmenu 활성화 시 와일드메뉴 후보 바와 선택된 항목을 렌더링한다', () => {
+    render(
+      <StatusBar
+        mode="COMMAND"
+        cursor={{ line: 0, col: 0 }}
+        commandType=":"
+        commandBuffer="e src/main.ts"
+        wildmenu={{
+          active: true,
+          candidates: ['service.ts', 'src/main.ts', 'src/utils.ts'],
+          selectedIndex: 1,
+          originalBuffer: 'e s',
+          prefix: 'e ',
+        }}
+        showWildmenuBar={true}
+      />
+    );
+
+    const wildmenuBar = screen.getByTestId('wildmenu-bar');
+    expect(wildmenuBar).toBeInTheDocument();
+    expect(screen.getByTestId('wildmenu-item-selected')).toHaveTextContent('src/main.ts');
+    expect(screen.getAllByTestId('wildmenu-item')).toHaveLength(2);
+  });
 });

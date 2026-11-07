@@ -21,6 +21,10 @@ export interface StatusBarProps {
   insertRegisterPending?: boolean;
   /** :s/.../.../gc 대화형 치환 확인 세션 */
   confirmSubstitute?: ConfirmSubstituteSession | null;
+  /** 와일드메뉴 자동완성 세션 상태 */
+  wildmenu?: import('../../types/vim').WildmenuState | null;
+  /** 와일드메뉴 비주얼 바 표시 여부 (:set wildmenu) */
+  showWildmenuBar?: boolean;
 }
 
 export const StatusBar: React.FC<StatusBarProps> = ({
@@ -35,6 +39,8 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   insertNormalSession,
   insertRegisterPending,
   confirmSubstitute,
+  wildmenu,
+  showWildmenuBar = true,
 }) => {
   const displayMode =
     insertNormalSession
@@ -64,6 +70,19 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       className={`status-bar ${isCommandLineActive || confirmSubstitute ? 'status-bar-active-command' : ''}`}
       data-testid="status-bar"
     >
+      {wildmenu?.active && showWildmenuBar && wildmenu.candidates.length > 0 && (
+        <div className="wildmenu-bar" data-testid="wildmenu-bar">
+          {wildmenu.candidates.map((cand, idx) => (
+            <span
+              key={`${cand}-${idx}`}
+              className={`wildmenu-item ${idx === wildmenu.selectedIndex ? 'selected' : ''}`}
+              data-testid={idx === wildmenu.selectedIndex ? 'wildmenu-item-selected' : 'wildmenu-item'}
+            >
+              {cand}
+            </span>
+          ))}
+        </div>
+      )}
       <div className="status-bar-left">
         {confirmSubstitute ? (
           <div className="commandline-prompt" data-testid="commandline-prompt">
