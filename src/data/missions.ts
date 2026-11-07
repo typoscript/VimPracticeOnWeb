@@ -967,6 +967,36 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 35,
+    title: '레슨 35: q: 커맨드라인 윈도우와 히스토리로 과거 명령어 재사용 및 수정하기',
+    description: 'Vim의 커맨드라인 윈도우(q:, q/)는 이전에 실행했던 모든 명령어와 검색 기록을 독립된 Vim 편집 버퍼로 열어주는 강력한 기능입니다. 작은 프롬프트 한 줄에서 방향키로 헤매지 않고, k/j 이동과 cw, dd 등 평소 쓰던 모든 Vim 편집 명령으로 과거 명령어를 손쉽게 재사용 및 수정하여 실행할 수 있습니다.',
+    hint: 'NORMAL 모드에서 q:를 눌러 커맨드라인 윈도우를 엽니다. k를 눌러 윗줄의 이전 명령어(%s/DEBUG/RELEASE/g)로 이동한 뒤 Enter를 눌러 실행하세요. (Esc로 취소 가능)',
+    par: 4,
+    optimalKeys: ['q', ':', 'k', 'Enter'],
+    primaryFilename: 'config.ts',
+    initialLines: [
+      'mode: DEBUG',
+      'target: DEBUG',
+    ],
+    targetLines: [
+      'mode: RELEASE',
+      'target: RELEASE',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    initialCommandHistory: [
+      'set nu',
+      '%s/DEBUG/RELEASE/g',
+    ],
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        !state.cmdlineWindow &&
+        state.lines[0] === 'mode: RELEASE' &&
+        state.lines[1] === 'target: RELEASE'
+      );
+    },
+  },
 ];
 
 

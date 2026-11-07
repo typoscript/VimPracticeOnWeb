@@ -33,6 +33,7 @@ import { handleKey } from './engine/vimEngine';
 import { switchPaneFocus } from './engine/splitWindow';
 import { switchBuffer, ensureBuffers } from './engine/bufferEngine';
 import { switchTab, openNewTab, closeTab, ensureTabPages } from './engine/tabEngine';
+import { closeCommandLineWindow } from './engine/cmdlineWindow';
 import { MISSIONS } from './data/missions';
 import { SANDBOX_INITIAL_LINES } from './data/sandbox';
 import {
@@ -238,6 +239,11 @@ export function App() {
     setIsEditorFocused(true);
   }, []);
 
+  const handleCloseCommandLineWindow = useCallback(() => {
+    setEditorState((prevState) => closeCommandLineWindow(prevState));
+    setIsEditorFocused(true);
+  }, []);
+
   const currentMission = MISSIONS[currentMissionIndex];
 
   // 총 입력 타수 및 최근 키 입력 히스토리, 가상 키보드 프레스 상태
@@ -299,6 +305,8 @@ export function App() {
       splitDirection: m.initialSplit ?? 'none',
       splitPanes,
       activePaneIndex: 0,
+      commandHistory: m.initialCommandHistory ? [...m.initialCommandHistory] : undefined,
+      searchHistory: m.initialSearchHistory ? [...m.initialSearchHistory] : undefined,
       userKeymaps: compileUserKeymaps(activePresets, leaderKey),
       leaderKey,
     };
@@ -1694,6 +1702,60 @@ export function App() {
                 />
               )}
             </div>
+
+            {/* 커맨드라인 윈도우 (Command-line Window: q:, q/, q?, Ctrl-f) */}
+            {displayEditorState.cmdlineWindow && (
+              <div className="cmdline-window-container" data-testid="cmdline-window">
+                <div className="cmdline-window-header">
+                  <span className="cmdline-window-title">
+                    Command-line Window ({displayEditorState.cmdlineWindow.type === ':' ? 'Commands' : 'Search'}) [{displayEditorState.cmdlineWindow.mode}]
+                  </span>
+                  <span className="cmdline-window-hint">Enter: 실행 | Esc: 닫기 | k/j: 탐색 | i/cw/dd: 편집</span>
+                  <button
+                    className="cmdline-window-close"
+                    onClick={handleCloseCommandLineWindow}
+                    title="커맨드라인 윈도우 닫기 (Esc)"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="cmdline-window-body">
+                  {displayEditorState.cmdlineWindow.lines.map((line, lineIdx) => {
+                    const isCurrentLine = lineIdx === displayEditorState.cmdlineWindow!.cursor.line;
+                    const cursorCol = displayEditorState.cmdlineWindow!.cursor.col;
+                    const isInsert = displayEditorState.cmdlineWindow!.mode === 'INSERT';
+
+                    return (
+                      <div
+                        key={lineIdx}
+                        className={`cmdline-line ${isCurrentLine ? 'active' : ''}`}
+                      >
+                        <span className="cmdline-prompt">{displayEditorState.cmdlineWindow!.type}</span>
+                        <span className="cmdline-num">{lineIdx + 1}</span>
+                        <div className="cmdline-text">
+                          {isCurrentLine ? (
+                            <>
+                              {line.slice(0, cursorCol)}
+                              <span
+                                className={`cmdline-cursor ${
+                                  isInsert ? 'cursor-insert' : 'cursor-normal'
+                                }`}
+                              >
+                                {line[cursorCol] || ' '}
+                              </span>
+                              {line.slice(cursorCol + 1)}
+                            </>
+                          ) : (
+                            line || ' '
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <Keycaster recentKeys={recentKeys} />
             <StatusBar
               mode={displayEditorState.mode}

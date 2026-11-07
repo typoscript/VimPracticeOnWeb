@@ -42,6 +42,12 @@ import { evaluateVimExpression } from './expressionParser';
 import { alternateBuffer } from './bufferEngine';
 import { nextTab, prevTab } from './tabEngine';
 import {
+  addHistory,
+  navigateHistory,
+  openCommandLineWindow,
+  handleCommandLineWindowKey,
+} from './cmdlineWindow';
+import {
   splitWindow,
   closeSplitWindow,
   closeOtherPanes,
@@ -220,6 +226,17 @@ export function rawHandleKey(
   // 대화형 치환 확인 프롬프트 (:s/.../.../gc) 처리
   if (state.confirmSubstitute) {
     return handleConfirmSubstituteKey(state, key);
+  }
+
+  // 커맨드라인 윈도우 (q:, q/, q?, Ctrl-f) 활성화 시 처리
+  if (state.cmdlineWindow) {
+    return handleCommandLineWindowKey(
+      state,
+      key,
+      (s, k) => rawHandleKey(s, k, isReplayingDot, macroDepth + 1),
+      (s, cmd) => executeCommandLine(s, cmd, handleKey),
+      (s, query) => executeSearchQuery(s, query, isReplayingDot)
+    );
   }
 
   // 매크로 기록 중인 상태 처리
@@ -579,6 +596,103 @@ function executeGn(
 }
 
 /**
+ * 검색 쿼리 문자열을 파싱 및 실행합니다.
+ */
+export function executeSearchQuery(
+  state: VimEditorState,
+  rawQuery: string,
+  isReplayingDot = false
+): VimEditorState {
+  if (rawQuery.length === 0) {
+    const returnCursor = state.searchOperator?.initialCursor ?? state.cursor;
+    return {
+      ...state,
+      mode: 'NORMAL',
+      cursor: returnCursor,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: undefined,
+      searchOperator: undefined,
+    };
+  }
+
+  const { pattern, offset } = parseSearchQuery(rawQuery);
+  const matches = findMatches(state.lines, pattern);
+  if (matches.length === 0) {
+    const returnCursor = state.searchOperator?.initialCursor ?? state.cursor;
+    return {
+      ...state,
+      mode: 'NORMAL',
+      cursor: returnCursor,
+      lastSearchQuery: pattern,
+      lastSearchOffset: offset,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: `E486: 패턴을 찾을 수 없습니다: ${pattern}`,
+      searchOperator: undefined,
+    };
+  }
+
+  const fromLine = state.searchOperator ? state.searchOperator.initialCursor.line : state.cursor.line;
+  const fromCol = state.searchOperator ? state.searchOperator.initialCursor.col : state.cursor.col;
+  const targetMatch =
+    findNextMatch(matches, { line: fromLine, col: fromCol - 1 }) ??
+    matches[0];
+
+  const targetPos = applySearchOffset(state.lines, targetMatch, offset);
+
+  // 연산자(d/pat/e, c/pat/e, y/pat/e 등) 결합 처리
+  if (state.searchOperator) {
+    const op = state.searchOperator.op;
+    const startPos = state.searchOperator.initialCursor;
+    const isLinewise = offset?.type === 'line';
+
+    const res = executeSearchOperator(state, op, startPos, targetPos, isLinewise, offset?.type === 'end');
+    const synced = syncRegisters(state, res, op === 'y');
+    const opKeys = [op, '/', ...rawQuery.split(''), 'Enter'];
+
+    if (op === 'c') {
+      return {
+        ...synced,
+        lastSearchQuery: pattern,
+        lastSearchOffset: offset,
+        commandBuffer: undefined,
+        commandType: undefined,
+        searchOperator: undefined,
+        currentChangeKeys: isReplayingDot ? state.currentChangeKeys : opKeys,
+      };
+    }
+
+    return {
+      ...synced,
+      lastSearchQuery: pattern,
+      lastSearchOffset: offset,
+      commandBuffer: undefined,
+      commandType: undefined,
+      searchOperator: undefined,
+      lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys,
+    };
+  }
+
+  const matchIdx = matches.findIndex(
+    (m) => m.line === targetMatch.line && m.col === targetMatch.col
+  );
+
+  const stateWithJump = recordJump(state);
+
+  return {
+    ...stateWithJump,
+    mode: 'NORMAL',
+    cursor: targetPos,
+    lastSearchQuery: pattern,
+    lastSearchOffset: offset,
+    commandBuffer: undefined,
+    commandType: undefined,
+    commandMessage: `검색 일치 (${matchIdx + 1}/${matches.length}): ${pattern}`,
+  };
+}
+
+/**
  * SEARCH 모드(/) 키 입력 처리
  */
 function handleSearchModeKey(state: VimEditorState, key: string, isReplayingDot = false): VimEditorState {
@@ -592,6 +706,18 @@ function handleSearchModeKey(state: VimEditorState, key: string, isReplayingDot 
       commandType: undefined,
       searchOperator: undefined,
     };
+  }
+
+  if (key === 'Ctrl-f' || key === 'Ctrl+f' || key === 'ctrl-f') {
+    return openCommandLineWindow(state, '/', state.commandBuffer);
+  }
+
+  if (key === 'ArrowUp' || key === 'Ctrl-p' || key === 'Ctrl+p' || key === 'ctrl-p') {
+    return navigateHistory(state, 'up', '/');
+  }
+
+  if (key === 'ArrowDown' || key === 'Ctrl-n' || key === 'Ctrl+n' || key === 'ctrl-n') {
+    return navigateHistory(state, 'down', '/');
   }
 
   if (key === 'Backspace') {
@@ -614,93 +740,8 @@ function handleSearchModeKey(state: VimEditorState, key: string, isReplayingDot 
 
   if (key === 'Enter') {
     const rawQuery = state.commandBuffer ?? '';
-    if (rawQuery.length === 0) {
-      const returnCursor = state.searchOperator?.initialCursor ?? state.cursor;
-      return {
-        ...state,
-        mode: 'NORMAL',
-        cursor: returnCursor,
-        commandBuffer: undefined,
-        commandType: undefined,
-        commandMessage: undefined,
-        searchOperator: undefined,
-      };
-    }
-
-    const { pattern, offset } = parseSearchQuery(rawQuery);
-    const matches = findMatches(state.lines, pattern);
-    if (matches.length === 0) {
-      const returnCursor = state.searchOperator?.initialCursor ?? state.cursor;
-      return {
-        ...state,
-        mode: 'NORMAL',
-        cursor: returnCursor,
-        lastSearchQuery: pattern,
-        lastSearchOffset: offset,
-        commandBuffer: undefined,
-        commandType: undefined,
-        commandMessage: `E486: 패턴을 찾을 수 없습니다: ${pattern}`,
-        searchOperator: undefined,
-      };
-    }
-
-    const fromLine = state.searchOperator ? state.searchOperator.initialCursor.line : state.cursor.line;
-    const fromCol = state.searchOperator ? state.searchOperator.initialCursor.col : state.cursor.col;
-    const targetMatch =
-      findNextMatch(matches, { line: fromLine, col: fromCol - 1 }) ??
-      matches[0];
-
-    const targetPos = applySearchOffset(state.lines, targetMatch, offset);
-
-    // 연산자(d/pat/e, c/pat/e, y/pat/e 등) 결합 처리
-    if (state.searchOperator) {
-      const op = state.searchOperator.op;
-      const startPos = state.searchOperator.initialCursor;
-      const isLinewise = offset?.type === 'line';
-
-      const res = executeSearchOperator(state, op, startPos, targetPos, isLinewise, offset?.type === 'end');
-      const synced = syncRegisters(state, res, op === 'y');
-      const opKeys = [op, '/', ...rawQuery.split(''), 'Enter'];
-
-      if (op === 'c') {
-        return {
-          ...synced,
-          lastSearchQuery: pattern,
-          lastSearchOffset: offset,
-          commandBuffer: undefined,
-          commandType: undefined,
-          searchOperator: undefined,
-          currentChangeKeys: isReplayingDot ? state.currentChangeKeys : opKeys,
-        };
-      }
-
-      return {
-        ...synced,
-        lastSearchQuery: pattern,
-        lastSearchOffset: offset,
-        commandBuffer: undefined,
-        commandType: undefined,
-        searchOperator: undefined,
-        lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys,
-      };
-    }
-
-    const matchIdx = matches.findIndex(
-      (m) => m.line === targetMatch.line && m.col === targetMatch.col
-    );
-
-    const stateWithJump = recordJump(state);
-
-    return {
-      ...stateWithJump,
-      mode: 'NORMAL',
-      cursor: targetPos,
-      lastSearchQuery: pattern,
-      lastSearchOffset: offset,
-      commandBuffer: undefined,
-      commandType: undefined,
-      commandMessage: `검색 일치 (${matchIdx + 1}/${matches.length}): ${pattern}`,
-    };
+    const nextState = addHistory(state, rawQuery, '/');
+    return executeSearchQuery(nextState, rawQuery, isReplayingDot);
   }
 
   // 일반 타이핑 문자 누적
@@ -921,6 +962,19 @@ function handleCommandLineModeKey(state: VimEditorState, key: string): VimEditor
     };
   }
 
+  // Ctrl+f: 커맨드라인 윈도우(q:) 열기
+  if (key === 'Ctrl-f' || key === 'Ctrl+f' || key === 'ctrl-f') {
+    return openCommandLineWindow(state, ':', state.commandBuffer);
+  }
+
+  // 히스토리 순회 (↑/↓ 및 Ctrl+p/Ctrl+n)
+  if (key === 'ArrowUp' || key === 'Ctrl-p' || key === 'Ctrl+p' || key === 'ctrl-p') {
+    return navigateHistory(state, 'up', ':');
+  }
+  if (key === 'ArrowDown' || key === 'Ctrl-n' || key === 'Ctrl+n' || key === 'ctrl-n') {
+    return navigateHistory(state, 'down', ':');
+  }
+
   // 3. 기존 콜론 커맨드라인 키 처리
   if (key === 'Escape') {
     return {
@@ -949,7 +1003,9 @@ function handleCommandLineModeKey(state: VimEditorState, key: string): VimEditor
   }
 
   if (key === 'Enter') {
-    return executeCommandLine(state, state.commandBuffer ?? '', handleKey);
+    const cmd = state.commandBuffer ?? '';
+    const nextState = addHistory(state, cmd, ':');
+    return executeCommandLine(nextState, cmd, handleKey);
   }
 
   // 일반 타이핑 문자 누적
@@ -2775,8 +2831,11 @@ function handleNormalModeKey(
     state = { ...state, pendingKeys: undefined };
   }
 
-  // 1-1. 매크로 녹화 시작 대기 (q) - 소문자(q{a-z}) 새로 녹화, 대문자(q{A-Z}) 누적 덧붙이기
+  // 1-1. 매크로 녹화 시작 대기 (q) 또는 커맨드라인 윈도우 (q:, q/, q?)
   if (state.pendingKeys === 'q' || parsed.operator === 'q') {
+    if (key === ':' || key === '/' || key === '?') {
+      return openCommandLineWindow(state, key as ':' | '/' | '?');
+    }
     if (/^[a-zA-Z0-9]$/.test(key)) {
       const isAppend = /^[A-Z]$/.test(key);
       const targetReg = isAppend ? key.toLowerCase() : key;

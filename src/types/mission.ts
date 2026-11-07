@@ -23,5 +23,9 @@ export interface Mission {
   secondaryLines?: string[];
   /** 초기 창 분할 상태 */
   initialSplit?: 'none' | 'horizontal' | 'vertical';
+  /** 초기 커맨드라인 히스토리 (: 명령 기록) */
+  initialCommandHistory?: string[];
+  /** 초기 검색 히스토리 (/, ? 패턴 기록) */
+  initialSearchHistory?: string[];
   checkComplete: (state: VimEditorState) => boolean;
 }

@@ -77,6 +77,17 @@ export interface VimTabPage {
   alternateBufferId?: number;
 }
 
+export interface CommandLineWindowSession {
+  type: ':' | '/' | '?';
+  lines: string[];
+  cursor: CursorPosition;
+  mode: VimMode;
+  visualAnchor?: CursorPosition;
+  pendingKeys?: string;
+  undoStack?: StateSnapshot[];
+  redoStack?: StateSnapshot[];
+}
+
 export interface RegisterEntry {
   type: 'char' | 'line' | 'macro';
   content: string | string[];
@@ -248,6 +259,16 @@ export interface VimEditorState {
   tabPages?: VimTabPage[];
   /** 현재 활성화된 탭 페이지 ID */
   currentTabId?: number;
+  /** Ex 커맨드 실행 히스토리 목록 */
+  commandHistory?: string[];
+  /** 검색어 히스토리 목록 */
+  searchHistory?: string[];
+  /** 현재 커맨드라인 히스토리 탐색 인덱스 */
+  historyIndex?: number;
+  /** 히스토리 탐색 시작 전 원래 타이핑 중이던 임시 버퍼 */
+  historyDraft?: string;
+  /** 커맨드라인 윈도우(q:, q/, Ctrl-f) 활성 세션 */
+  cmdlineWindow?: CommandLineWindowSession | null;
 }
 
 
