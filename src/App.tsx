@@ -117,6 +117,14 @@ export function App() {
   const [isEditorShaking, setIsEditorShaking] = useState(false);
   const [hardcoreWarning, setHardcoreWarning] = useState<string | null>(null);
   const shakeTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const warningTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (shakeTimerRef.current) clearTimeout(shakeTimerRef.current);
+      if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+    };
+  }, []);
 
   const handleToggleHardcoreMode = useCallback(() => {
     setHardcoreMode((prev) => {
@@ -135,9 +143,10 @@ export function App() {
       setIsEditorShaking(false);
     }, 400);
 
-    setTimeout(() => {
+    if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
+    warningTimerRef.current = setTimeout(() => {
       setHardcoreWarning(null);
-    }, 2500);
+    }, 2800);
   }, []);
 
   const handleEditorAreaClick = useCallback(() => {
@@ -1214,6 +1223,35 @@ export function App() {
 
   return (
     <div className="app-layout">
+      {/* 🚀 상단 고정 플로팅 알림 토스트 (레이아웃 흔들림/깨짐 방지) */}
+      <div className="top-toast-container" data-testid="top-toast-container" aria-live="polite">
+        {hardcoreWarning && (
+          <div
+            className="hardcore-warning-banner hardcore-warning-toast"
+            role="alert"
+            data-testid="hardcore-warning-banner"
+          >
+            <div className="hardcore-warning-content">
+              <span className="hardcore-warning-icon">🚫</span>
+              <span className="hardcore-warning-text">{hardcoreWarning}</span>
+            </div>
+            <button
+              type="button"
+              className="hardcore-warning-close-btn"
+              onClick={() => setHardcoreWarning(null)}
+              aria-label="닫기"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        <CoachingToast
+          message={coachingMessage}
+          onDismiss={() => setCoachingMessage(null)}
+        />
+      </div>
+
       <header className="app-header">
         <div className="header-brand">
           <span className="brand-icon">⌨</span>
@@ -1422,11 +1460,6 @@ export function App() {
       </section>
 
       <main className="editor-wrapper">
-        <CoachingToast
-          message={coachingMessage}
-          onDismiss={() => setCoachingMessage(null)}
-        />
-
         {/* 실시간 Vim 명령어 문법 AST 인스펙터 */}
         {showGrammarAST && currentTab !== 'arcade' && currentTab !== 'dungeon' && currentTab !== 'dojo' && (
           <VimGrammarASTViewer
@@ -1532,37 +1565,12 @@ export function App() {
               />
             )}
 
-            {/* 에디터 렌더링 영역 및 하드코어 셰이크/마우스 감시 */}
+            {/* 에디터 렌더링 영역 및 하드코어 펄스/마우스 감시 */}
             <div
               className={`editor-main-viewport ${isEditorShaking ? 'shake-hardcore' : ''}`}
               onClick={handleEditorAreaClick}
               data-testid="editor-main-viewport"
             >
-              {hardcoreWarning && (
-                <div
-                  className="hardcore-warning-banner"
-                  role="alert"
-                  data-testid="hardcore-warning-banner"
-                >
-                  <span>{hardcoreWarning}</span>
-                  <button
-                    type="button"
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      cursor: 'pointer',
-                      fontWeight: 'bold',
-                      color: 'inherit',
-                      marginLeft: '0.5rem',
-                    }}
-                    onClick={() => setHardcoreWarning(null)}
-                    aria-label="닫기"
-                  >
-                    ✕
-                  </button>
-                </div>
-              )}
-
               {/* 상단 탭 페이지 바 (Tabline: :tabnew, :tabc, gt, gT) */}
               {(() => {
                 const stateWithTabs = ensureTabPages(displayEditorState);

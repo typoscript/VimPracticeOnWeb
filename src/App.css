@@ -421,33 +421,113 @@
   letter-spacing: 0.5px;
 }
 
-/* Hardcore Mode Shake Animation & Warning Banner */
+/* Hardcore Mode Pulse Glow & Top Toast Notifications */
 .shake-hardcore {
-  animation: hardcore-shake 0.35s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
-  box-shadow: 0 0 16px rgba(247, 118, 142, 0.6) !important;
+  animation: hardcore-pulse-glow 0.4s ease-in-out;
+  box-shadow: 0 0 20px rgba(247, 118, 142, 0.85), inset 0 0 8px rgba(247, 118, 142, 0.3) !important;
   border-color: #f7768e !important;
 }
 
-@keyframes hardcore-shake {
-  10%, 90% { transform: translate3d(-2px, 0, 0); }
-  20%, 80% { transform: translate3d(4px, 0, 0); }
-  30%, 50%, 70% { transform: translate3d(-6px, 0, 0); }
-  40%, 60% { transform: translate3d(6px, 0, 0); }
+@keyframes hardcore-pulse-glow {
+  0% {
+    box-shadow: 0 0 4px rgba(247, 118, 142, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 24px rgba(247, 118, 142, 0.95), inset 0 0 12px rgba(247, 118, 142, 0.35);
+  }
+  100% {
+    box-shadow: 0 0 16px rgba(247, 118, 142, 0.7);
+  }
 }
 
-.hardcore-warning-banner {
-  background: #f7768e;
-  color: #1a1b26;
-  font-weight: 700;
-  font-size: 0.88rem;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  margin-bottom: 0.75rem;
+/* 상단 고정 플로팅 알림 토스트 (레이아웃 흔들림/깨짐 방지) */
+.top-toast-container {
+  position: fixed;
+  top: 1.25rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  width: 90%;
+  max-width: 680px;
+}
+
+.hardcore-warning-banner,
+.hardcore-warning-toast {
+  pointer-events: auto;
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  box-shadow: 0 4px 12px rgba(247, 118, 142, 0.4);
-  animation: fadeIn 0.2s ease;
+  gap: 0.75rem;
+  background: rgba(26, 27, 38, 0.95);
+  color: #f7768e;
+  border: 1px solid #f7768e;
+  border-left: 5px solid #f7768e;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5), 0 0 14px rgba(247, 118, 142, 0.35);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 0.65rem 1.1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.88rem;
+  animation: toast-drop-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+  margin-bottom: 0;
+}
+
+@keyframes toast-drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.hardcore-warning-content {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.hardcore-warning-icon {
+  font-size: 1.15rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.hardcore-warning-text {
+  word-break: break-word;
+  line-height: 1.4;
+  color: #ff9eaf;
+}
+
+.hardcore-warning-close-btn {
+  background: transparent;
+  border: none;
+  color: #f7768e;
+  opacity: 0.8;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.hardcore-warning-close-btn:hover {
+  opacity: 1;
+  background: rgba(247, 118, 142, 0.2);
 }
 
 /* 상단 탭라인 바 (:tabnew, :tabc, gt, gT) */

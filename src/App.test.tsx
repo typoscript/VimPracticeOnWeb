@@ -396,5 +396,18 @@ describe('App Component with Keyboard Navigation', () => {
     fireEvent.click(editorViewport);
 
     expect(screen.getByText(/마우스 대신 Vim 모션/)).toBeInTheDocument();
+
+    // 상단 플로팅 컨테이너에 위치하고 에디터 뷰포트 내부에는 없어야 함 (레이아웃 밀림 방지)
+    const toastContainer = screen.getByTestId('top-toast-container');
+    const warningBanner = screen.getByTestId('hardcore-warning-banner');
+    expect(toastContainer).toContainElement(warningBanner);
+    expect(editorViewport).not.toContainElement(warningBanner);
+
+    // 닫기 버튼 클릭 시 정상적으로 닫힘
+    const closeBtn = warningBanner.querySelector('.hardcore-warning-close-btn');
+    if (closeBtn) {
+      fireEvent.click(closeBtn);
+      expect(screen.queryByTestId('hardcore-warning-banner')).not.toBeInTheDocument();
+    }
   });
 });
