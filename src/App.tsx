@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react';
 import { Editor } from './components/Editor/Editor';
 import { StatusBar } from './components/StatusBar/StatusBar';
 import { MissionPanel, calculateStars } from './components/MissionPanel/MissionPanel';
@@ -10,17 +10,9 @@ import { VirtualKeyboard } from './components/VirtualKeyboard/VirtualKeyboard';
 import { SpeedrunPanel } from './components/SpeedrunPanel/SpeedrunPanel';
 import { ThemeSwitcher } from './components/ThemeSwitcher/ThemeSwitcher';
 import { ViewPanelsDropdown } from './components/ViewPanelsDropdown/ViewPanelsDropdown';
-import { CustomMissionModal } from './components/CustomMissionModal/CustomMissionModal';
 import { RegisterInspector } from './components/RegisterInspector/RegisterInspector';
 import { MacroDebugger } from './components/MacroDebugger/MacroDebugger';
-import { ArcadeSurvival } from './components/ArcadeSurvival/ArcadeSurvival';
-import { AnalyticsModal } from './components/AnalyticsModal/AnalyticsModal';
-import { DailyChallengeModal } from './components/DailyChallengeModal/DailyChallengeModal';
-import { ConfigExporterModal } from './components/ConfigExporterModal/ConfigExporterModal';
-import { DungeonRPG } from './components/DungeonRPG/DungeonRPG';
-import { HardcoreDojo } from './components/HardcoreDojo/HardcoreDojo';
 import { VimGrammarASTViewer } from './components/VimGrammarASTViewer/VimGrammarASTViewer';
-import { BYOCModal } from './components/BYOCModal/BYOCModal';
 import { ActionTimelinePanel } from './components/ActionTimelinePanel/ActionTimelinePanel';
 import {
   ActionTimelineStep,
@@ -90,6 +82,33 @@ import {
 } from './utils/keymapStorage';
 import './App.css';
 
+// 첫 화면에 필요 없는 탭 화면과 모달은 처음 열 때 별도 청크로 불러옵니다 (초기 번들 크기 절감)
+const ArcadeSurvival = lazy(() => import('./components/ArcadeSurvival/ArcadeSurvival').then((m) => ({ default: m.ArcadeSurvival })));
+const DungeonRPG = lazy(() => import('./components/DungeonRPG/DungeonRPG').then((m) => ({ default: m.DungeonRPG })));
+const HardcoreDojo = lazy(() => import('./components/HardcoreDojo/HardcoreDojo').then((m) => ({ default: m.HardcoreDojo })));
+const CustomMissionModal = lazy(() => import('./components/CustomMissionModal/CustomMissionModal').then((m) => ({ default: m.CustomMissionModal })));
+const AnalyticsModal = lazy(() => import('./components/AnalyticsModal/AnalyticsModal').then((m) => ({ default: m.AnalyticsModal })));
+const DailyChallengeModal = lazy(() => import('./components/DailyChallengeModal/DailyChallengeModal').then((m) => ({ default: m.DailyChallengeModal })));
+const ConfigExporterModal = lazy(() => import('./components/ConfigExporterModal/ConfigExporterModal').then((m) => ({ default: m.ConfigExporterModal })));
+const BYOCModal = lazy(() => import('./components/BYOCModal/BYOCModal').then((m) => ({ default: m.BYOCModal })));
+
+/**
+ * 한 번이라도 열린 적이 있으면 true 를 유지합니다.
+ * 모달을 처음 열 때 불러온 뒤에는 계속 마운트해 두어, 닫았다 다시 열어도 내부 상태가 유지됩니다 (기존 동작과 동일).
+ */
+function useOpenedOnce(isOpen: boolean): boolean {
+  const [opened, setOpened] = useState(isOpen);
+  if (isOpen && !opened) setOpened(true);
+  return opened || isOpen;
+}
+
+/** 지연 로딩되는 탭 화면을 불러오는 동안 보여줄 자리 표시 */
+const TAB_LOADING_FALLBACK = (
+  <div className="lazy-tab-loading" data-testid="lazy-tab-loading">
+    불러오는 중…
+  </div>
+);
+
 /** 스피드런 챌린지 후보 미션 ID 목록 (리팩토링/편집 미션) */
 export const SPEEDRUN_CANDIDATE_IDS = [
   4, 6, 7, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 21, 23, 25, 26, 28, 29, 30, 31, 32, 43, 44,
@@ -115,6 +134,12 @@ export function App() {
   const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [isBYOCModalOpen, setIsBYOCModalOpen] = useState(false);
+  // 지연 로딩 모달: 처음 열 때 불러오고 이후에는 마운트 유지
+  const customModalLoaded = useOpenedOnce(isCustomModalOpen);
+  const analyticsModalLoaded = useOpenedOnce(isAnalyticsModalOpen);
+  const dailyModalLoaded = useOpenedOnce(isDailyModalOpen);
+  const configModalLoaded = useOpenedOnce(isConfigModalOpen);
+  const byocModalLoaded = useOpenedOnce(isBYOCModalOpen);
   const [showGrammarAST, setShowGrammarAST] = useState<boolean>(() => loadGrammarASTSetting());
 
   // 🔥 하드코어 수련 모드 및 가드 상태
@@ -1518,23 +1543,29 @@ export function App() {
         )}
 
         {currentTab === 'arcade' ? (
-          <ArcadeSurvival
-            onPlayKeySound={playKeySound}
-            onPlaySuccessSound={playSuccessSound}
-            isMuted={isMuted}
-          />
+          <Suspense fallback={TAB_LOADING_FALLBACK}>
+            <ArcadeSurvival
+              onPlayKeySound={playKeySound}
+              onPlaySuccessSound={playSuccessSound}
+              isMuted={isMuted}
+            />
+          </Suspense>
         ) : currentTab === 'dungeon' ? (
-          <DungeonRPG
-            onPlayKeySound={playKeySound}
-            onPlaySuccessSound={playSuccessSound}
-            isMuted={isMuted}
-          />
+          <Suspense fallback={TAB_LOADING_FALLBACK}>
+            <DungeonRPG
+              onPlayKeySound={playKeySound}
+              onPlaySuccessSound={playSuccessSound}
+              isMuted={isMuted}
+            />
+          </Suspense>
         ) : currentTab === 'dojo' ? (
-          <HardcoreDojo
-            onBackToCourse={() => handleSwitchTab('course')}
-            playKeySound={playKeySound}
-            playSuccessSound={playSuccessSound}
-          />
+          <Suspense fallback={TAB_LOADING_FALLBACK}>
+            <HardcoreDojo
+              onBackToCourse={() => handleSwitchTab('course')}
+              playKeySound={playKeySound}
+              playSuccessSound={playSuccessSound}
+            />
+          </Suspense>
         ) : (
           <>
             {currentTab === 'course' && (
@@ -2084,44 +2115,56 @@ export function App() {
         }}
       />
 
-      <CustomMissionModal
-        isOpen={isCustomModalOpen}
-        onClose={() => setIsCustomModalOpen(false)}
-        onPlayMission={handlePlayCustomMission}
-      />
+      <Suspense fallback={null}>
+        {customModalLoaded && (
+          <CustomMissionModal
+            isOpen={isCustomModalOpen}
+            onClose={() => setIsCustomModalOpen(false)}
+            onPlayMission={handlePlayCustomMission}
+          />
+        )}
 
-      <AnalyticsModal
-        isOpen={isAnalyticsModalOpen}
-        onClose={() => setIsAnalyticsModalOpen(false)}
-        progress={progress}
-        onOpenDailyChallenge={() => setIsDailyModalOpen(true)}
-      />
+        {analyticsModalLoaded && (
+          <AnalyticsModal
+            isOpen={isAnalyticsModalOpen}
+            onClose={() => setIsAnalyticsModalOpen(false)}
+            progress={progress}
+            onOpenDailyChallenge={() => setIsDailyModalOpen(true)}
+          />
+        )}
 
-      <DailyChallengeModal
-        isOpen={isDailyModalOpen}
-        onClose={() => setIsDailyModalOpen(false)}
-        onPlayKeySound={playKeySound}
-        onPlaySuccessSound={playSuccessSound}
-      />
+        {dailyModalLoaded && (
+          <DailyChallengeModal
+            isOpen={isDailyModalOpen}
+            onClose={() => setIsDailyModalOpen(false)}
+            onPlayKeySound={playKeySound}
+            onPlaySuccessSound={playSuccessSound}
+          />
+        )}
 
-      <ConfigExporterModal
-        isOpen={isConfigModalOpen}
-        onClose={() => setIsConfigModalOpen(false)}
-        relativenumber={relativeLineNumbers}
-        theme={currentTheme}
-        leaderKey={leaderKey}
-        activePresets={activePresets}
-        onTogglePreset={handleTogglePreset}
-        onChangeLeaderKey={handleChangeLeaderKey}
-        options={editorState.options}
-      />
+        {configModalLoaded && (
+          <ConfigExporterModal
+            isOpen={isConfigModalOpen}
+            onClose={() => setIsConfigModalOpen(false)}
+            relativenumber={relativeLineNumbers}
+            theme={currentTheme}
+            leaderKey={leaderKey}
+            activePresets={activePresets}
+            onTogglePreset={handleTogglePreset}
+            onChangeLeaderKey={handleChangeLeaderKey}
+            options={editorState.options}
+          />
+        )}
 
-      <BYOCModal
-        isOpen={isBYOCModalOpen}
-        onClose={() => setIsBYOCModalOpen(false)}
-        initialCode={editorState.lines.join('\n')}
-        onStartMission={handlePlayBYOCMission}
-      />
+        {byocModalLoaded && (
+          <BYOCModal
+            isOpen={isBYOCModalOpen}
+            onClose={() => setIsBYOCModalOpen(false)}
+            initialCode={editorState.lines.join('\n')}
+            onStartMission={handlePlayBYOCMission}
+          />
+        )}
+      </Suspense>
     </div>
   );
 }

@@ -15,12 +15,13 @@
   `npm test -- src/engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 99개 테스트 파일, 1,269개 테스트 100% 통과 필수)*
+  *(현재 99개 테스트 파일, 1,276개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
 - **로컬 개발 서버 실행**:
   `npm run dev`
+- **번들 분할**: 아케이드·던전·도장 탭과 커스텀 미션·분석·데일리·설정 내보내기·BYOC 모달은 `App.tsx`에서 `React.lazy`로 지연 로딩되고, React는 `react-vendor` 청크로 분리됩니다(`vite.config.ts`). 모달은 `useOpenedOnce`로 처음 열 때 불러온 뒤 마운트를 유지합니다. 이 화면들을 테스트할 때는 처음 나타나는 요소를 `await screen.findBy...`로 기다리세요.
 
 ---
 
@@ -66,7 +67,7 @@
   - `:nmap, :nnoremap, :imap, :vmap, :unmap` (키매핑 인터프리터)
   - `cs, ds, ysiw, yss, S` (순정 vim-surround 괄호/따옴표 감싸기 엔진)
 - **매크로 심화 & 디버깅 (레슨 53)**: `@a, @@, [count]@@` + 매크로 슬로우모션 디버거 (`src/engine/macroDebugger.ts`, `src/components/MacroDebugger/`: 1x/0.5x/0.2x 재생, 키 단위 스텝, 프레임 미리보기).
-- **실패 신호(bell) & 연산자+모션**: 실패한 키는 상태에 일시적 `bell: true`를 남기며(매 키 입력 시작 시 제거), `@` 매크로·`.` 반복·`:normal`·키매핑 재생은 bell에서 중단됩니다. `src/engine/operatorMotion.ts`가 `d/c/y` + `j k G gg`(줄 단위), `h l b B ^`(배타적 문자 단위)를 처리하며 실패 시 bell을 울립니다. UI는 bell마다 에디터 테두리를 깜빡입니다(visualbell, `Editor`의 `bellSignal`).
+- **실패 신호(bell) & 연산자+모션**: 실패한 키는 상태에 일시적 `bell: true`를 남기며(매 키 입력 시작 시 제거), `@` 매크로·`.` 반복·`:normal`·키매핑 재생은 bell에서 중단됩니다. `src/engine/operatorMotion.ts`가 `d/c/y` + `j k G gg`(줄 단위), `h l b B ^`(배타적 문자 단위)를 처리하며 실패 시 bell을 울립니다. UI는 bell마다 에디터 테두리를 깜빡입니다(visualbell, `Editor`의 `bellSignal`). VISUAL 모드 모션, `%`, `*`/`#`(E348), 미설정 마크(E20), 빈 레지스터 `p`(E353), 마지막 줄 `J`, 숫자 없는 `Ctrl-a`, 줄보다 긴 `[count]r`, 알 수 없는 Ex 명령(E492)도 bell을 울립니다. ⚠ Vim `nv_wordcmd`처럼 연산자와 함께 쓴 `e`는 버퍼 끝에서도 실패하지 않습니다(`de`는 마지막 문자 삭제) — 판정 기준은 Vim 소스와 `test/vimDifferential.fuzz.test.ts`.
 - **인덴트 텍스트 객체 (레슨 54)**: `ii, ai, iI, aI, [count]ii` + `d/c/y/v/=/gu/gU/g~` (`textObjects.ts`의 `getIndentObjectRange`, `executeIndentObjectOperator`, 항상 줄 단위)
 - **사용자 정의 Ex 명령 (레슨 55)**: `:command[!] [-nargs] [-range[=%]] [-bang] Name ...`, `:delcommand`, `:comclear`, `:command` 목록, `<args> <q-args> <line1> <line2> <bang> <lt>` 치환, 접두어 호출, `.vimrc` 소싱 (`src/engine/userCommandEngine.ts`). 내장 명령이 먼저 평가되어 사용자 명령에 가려지지 않습니다. `<f-args>`로 함수에 인자를 나눠 전달합니다.
 - **Vim script 함수 (레슨 56)**: `:function[!] Name(a, ...) [range] [abort]` → 커맨드라인 본문 입력(`functionDraft`) → `:endfunction`, `:delfunction`, `:[range]call`(range 속성 없으면 줄마다 호출), `:let`/`:unlet`/`:echo`/`:execute`, 본문의 `return`·`if/elseif/else/endif`·`while/break/continue`. 표현식은 `src/engine/vimscriptEval.ts`(숫자·문자열, g:/l:/a:/@r, 내장 함수), 실행은 `src/engine/vimscriptEngine.ts`. `:call` 하나는 한 번의 실행 취소 단위입니다.

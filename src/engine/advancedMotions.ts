@@ -39,7 +39,16 @@ export function moveToNextParagraph(
     }
   }
 
+  // Vim: 마지막 줄에 도달하면 그 줄의 마지막 문자로 이동하고 모션은 inclusive 가 됩니다 (:help })
+  if (currentLine === maxLine) {
+    return { line: currentLine, col: Math.max(0, (lines[currentLine] ?? '').length - 1) };
+  }
   return { line: currentLine, col: 0 };
+}
+
+/** '}' 의 목표가 마지막 줄이면 inclusive 이므로 끝 문자까지 포함하는 배타적 끝 컬럼을 돌려줍니다. */
+function paragraphEndCol(lines: string[], target: CursorPosition): number {
+  return target.line === lines.length - 1 ? target.col + 1 : target.col;
 }
 
 /**
@@ -113,11 +122,12 @@ export function deleteParagraph(
     } else {
       const startLineText = state.lines[cur.line] ?? '';
       const endLineText = state.lines[target.line] ?? '';
+      const endCol = paragraphEndCol(state.lines, target);
       let deleted: string;
       let nextLines: string[];
       if (cur.line === target.line) {
-        deleted = startLineText.slice(cur.col, target.col);
-        const newLine = startLineText.slice(0, cur.col) + startLineText.slice(target.col);
+        deleted = startLineText.slice(cur.col, endCol);
+        const newLine = startLineText.slice(0, cur.col) + startLineText.slice(endCol);
         nextLines = [...state.lines];
         nextLines[cur.line] = newLine;
       } else {
@@ -125,9 +135,9 @@ export function deleteParagraph(
         deleted = [
           startLineText.slice(cur.col),
           ...intermediate,
-          endLineText.slice(0, target.col),
+          endLineText.slice(0, endCol),
         ].join('\n');
-        const merged = startLineText.slice(0, cur.col) + endLineText.slice(target.col);
+        const merged = startLineText.slice(0, cur.col) + endLineText.slice(endCol);
         nextLines = [
           ...state.lines.slice(0, cur.line),
           merged,
@@ -228,7 +238,11 @@ export function changeParagraph(
     ...delState,
     lines: nextLines,
     mode: 'INSERT',
-    cursor: { line: cursorLine, col: 0 },
+    // 문자 단위 변경은 삭제한 범위의 시작 위치에서 INSERT ('}' 는 커서, '{' 는 목표 위치)
+    cursor: {
+      line: cursorLine,
+      col: isLinewise ? 0 : Math.min(direction === 'next' ? state.cursor.col : target.col, (nextLines[cursorLine] ?? '').length),
+    },
     pendingKeys: undefined,
   };
 }
@@ -265,15 +279,16 @@ export function yankParagraph(
     } else {
       const startLineText = state.lines[cur.line] ?? '';
       const endLineText = state.lines[target.line] ?? '';
+      const endCol = paragraphEndCol(state.lines, target);
       let yanked: string;
       if (cur.line === target.line) {
-        yanked = startLineText.slice(cur.col, target.col);
+        yanked = startLineText.slice(cur.col, endCol);
       } else {
         const intermediate = state.lines.slice(cur.line + 1, target.line);
         yanked = [
           startLineText.slice(cur.col),
           ...intermediate,
-          endLineText.slice(0, target.col),
+          endLineText.slice(0, endCol),
         ].join('\n');
       }
       return {

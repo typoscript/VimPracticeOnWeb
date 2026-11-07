@@ -1864,6 +1864,7 @@ export function executeCommandLine(
       commandBuffer: undefined,
       commandType: undefined,
       commandMessage: extracted.error,
+      bell: true,
     };
   }
 
@@ -1973,6 +1974,7 @@ export function executeCommandLine(
     commandBuffer: undefined,
     commandType: undefined,
     commandMessage: `E492: 지원하지 않는 에디터 명령어입니다: ${trimmed}`,
+    bell: true,
   };
 }
 

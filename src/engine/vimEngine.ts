@@ -2197,7 +2197,7 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
         pendingKeys: undefined,
       };
     }
-    return { ...state, pendingKeys: undefined };
+    return ringBell(state);
   }
 
   // ';' 및 ',' 키: 줄 내 문자 탐색 반복
@@ -2432,6 +2432,9 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
   );
 
   if (motionCursor) {
+    if (isFailedMotion(key, state.cursor, motionCursor)) {
+      return ringBell(state);
+    }
     return {
       ...state,
       cursor: motionCursor,
@@ -2440,6 +2443,17 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
   }
 
   return state;
+}
+
+/** 붙여넣을 내용이 없어 버퍼도 실행 취소 기록도 바뀌지 않았는지 */
+function isEmptyPut(before: VimEditorState, after: VimEditorState): boolean {
+  return after.lines === before.lines && after.undoStack === before.undoStack;
+}
+
+/** E353: 레지스터가 비어 있을 때의 실패 */
+function emptyRegisterBell(state: VimEditorState): VimEditorState {
+  const reg = state.activeRegister ?? '"';
+  return { ...ringBell(state), activeRegister: undefined, commandMessage: `E353: 레지스터 ${reg} 가 비어 있습니다` };
 }
 
 /** 연산자 + 일반 모션을 실행하고 레지스터 동기화와 `.` 반복 키를 기록합니다. */
@@ -2795,7 +2809,7 @@ function handleNormalModeKey(
         return syncRegisters(state, res, true);
       }
     }
-    return { ...state, pendingKeys: undefined };
+    return ringBell(state);
   }
 
   // 1-0-2. 연산자 결합: d;, c;, y;, d,, c,, y,
@@ -2839,7 +2853,7 @@ function handleNormalModeKey(
         pendingKeys: undefined,
       };
     }
-    return state;
+    return ringBell(state);
   }
 
   // 1-0-4. 단독 ; 및 ,: 줄 내 탐색 반복
@@ -2895,6 +2909,8 @@ function handleNormalModeKey(
   // 1-0-6. Ctrl-a / Ctrl-x: 커서 위치 숫자 증감
   if ((key === 'Ctrl-a' || key === 'Ctrl+a' || key === 'ctrl-a') && !parsed.operator) {
     const res = modifyNumberAtCursor(state, parsed.totalCount);
+    // 커서 뒤에 숫자가 없으면 실패 (Vim 의 beep)
+    if (res.lines.join('\n') === state.lines.join('\n')) return ringBell(state);
     const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'Ctrl-a'] : ['Ctrl-a'];
     return {
       ...res,
@@ -2903,6 +2919,7 @@ function handleNormalModeKey(
   }
   if ((key === 'Ctrl-x' || key === 'Ctrl+x' || key === 'ctrl-x') && !parsed.operator) {
     const res = modifyNumberAtCursor(state, -parsed.totalCount);
+    if (res.lines.join('\n') === state.lines.join('\n')) return ringBell(state);
     const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'Ctrl-x'] : ['Ctrl-x'];
     return {
       ...res,
@@ -2945,6 +2962,8 @@ function handleNormalModeKey(
 
   // 1-0-7. J: 줄 이어 붙이기
   if (key === 'J' && !parsed.operator) {
+    // 마지막 줄에서는 이어 붙일 줄이 없으므로 실패
+    if (state.cursor.line >= state.lines.length - 1) return ringBell(state);
     const res = joinLines(state, parsed.totalCount);
     const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'J'] : ['J'];
     return {
@@ -3229,6 +3248,8 @@ function handleNormalModeKey(
   // 3. 'r' (단일 문자 교체) 대기 상태
   if (parsed.operator === 'r') {
     if (key.length === 1) {
+      // 남은 문자 수보다 많이 바꾸려 하면 실패 (5rx 를 3글자 줄에서)
+      if (state.cursor.col + parsed.totalCount > currentLine.length) return ringBell(state);
       const res = replaceChar(state, key, parsed.totalCount);
       const changeKeys =
         parsed.totalCount > 1
@@ -3850,6 +3871,7 @@ function handleNormalModeKey(
       return traverseChangeList(state, 'next', parsed.totalCount);
     }
     if (key === 'J') {
+      if (state.cursor.line >= state.lines.length - 1) return ringBell(state);
       const res = joinLines(state, parsed.totalCount, false);
       const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'g', 'J'] : ['g', 'J'];
       return {
@@ -4015,7 +4037,7 @@ function handleNormalModeKey(
         pendingKeys: undefined,
       };
     }
-    return { ...state, pendingKeys: undefined };
+    return { ...ringBell(state), commandMessage: 'E348: 커서 아래에 단어가 없습니다' };
   }
 
   // #: 커서 아래 단어로 검색어 설정 후 이전 결과로 점프
@@ -4036,7 +4058,7 @@ function handleNormalModeKey(
         pendingKeys: undefined,
       };
     }
-    return { ...state, pendingKeys: undefined };
+    return { ...ringBell(state), commandMessage: 'E348: 커서 아래에 단어가 없습니다' };
   }
 
 
@@ -4053,6 +4075,7 @@ function handleNormalModeKey(
   // p: 레지스터/클립보드 붙여넣기 (커서 뒤)
   if (key === 'p') {
     const res = putFromRegister(state, state.activeRegister, false);
+    if (isEmptyPut(state, res)) return emptyRegisterBell(state);
     return {
       ...res,
       lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['p'],
@@ -4062,6 +4085,7 @@ function handleNormalModeKey(
   // P: 레지스터/클립보드 붙여넣기 (커서 앞)
   if (key === 'P') {
     const res = putFromRegister(state, state.activeRegister, true);
+    if (isEmptyPut(state, res)) return emptyRegisterBell(state);
     return {
       ...res,
       lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['P'],
@@ -4302,10 +4326,7 @@ function handleNormalModeKey(
     const isDollar = key === '$';
     const isVertical = key === 'j' || key === 'k' || key === 'ArrowDown' || key === 'ArrowUp';
     // 커서를 전혀 움직이지 못한 모션은 실패(bell): 마지막 줄의 j, 줄 시작의 h, 버퍼 끝의 w 등
-    const failed = FAILABLE_MOTION_KEYS.has(key) && (isVertical
-      ? motionCursor.line === state.cursor.line
-      : motionCursor.line === state.cursor.line && motionCursor.col === state.cursor.col);
-    if (failed) {
+    if (isFailedMotion(key, state.cursor, motionCursor)) {
       return ringBell(state);
     }
     if (state.stickyDollar && isVertical) {
@@ -4368,6 +4389,13 @@ const FAILABLE_MOTION_KEYS = new Set([
   'h', 'j', 'k', 'l', 'w', 'b', 'e', 'W', 'B', 'E',
   'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
 ]);
+
+/** 모션이 커서를 전혀 움직이지 못했는지 (세로 모션은 줄 기준) */
+function isFailedMotion(key: string, from: CursorPosition, to: CursorPosition): boolean {
+  if (!FAILABLE_MOTION_KEYS.has(key)) return false;
+  const isVertical = key === 'j' || key === 'k' || key === 'ArrowDown' || key === 'ArrowUp';
+  return isVertical ? to.line === from.line : to.line === from.line && to.col === from.col;
+}
 
 /**
  * 카운트 배수를 적용하여 단일 모션을 여러 번 반복 평가합니다.

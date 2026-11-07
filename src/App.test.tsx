@@ -365,14 +365,15 @@ describe('App Component with Keyboard Navigation', () => {
     expect(slashSpy).toHaveBeenCalled();
   });
 
-  it('도장 탭 클릭 시 하드코어 도장(HardcoreDojo) 컴포넌트로 전환된다', () => {
+  it('도장 탭 클릭 시 하드코어 도장(HardcoreDojo) 컴포넌트로 전환된다', async () => {
     render(<App />);
 
     const dojoTabBtn = screen.getByTestId('tab-dojo-btn');
     fireEvent.click(dojoTabBtn);
 
+    // 도장 화면은 지연 로딩되므로 처음 나타날 때까지 비동기로 대기
+    expect((await screen.findAllByText('상대 라인 스나이퍼')).length).toBeGreaterThan(0);
     expect(screen.getByText(/하드코어 도장/)).toBeInTheDocument();
-    expect(screen.getAllByText('상대 라인 스나이퍼').length).toBeGreaterThan(0);
   });
 
   it('하드코어 수련 모드 토글 시 방향키 및 마우스 클릭을 차단하고 경고 배너를 띄운다', () => {

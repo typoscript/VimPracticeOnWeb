@@ -45,7 +45,7 @@ describe('Gamification & UX Client Features Integration', () => {
     const openModalBtn = screen.getByTestId('open-custom-modal-btn');
     fireEvent.click(openModalBtn);
 
-    expect(screen.getByTestId('custom-mission-modal')).toBeDefined();
+    expect(await screen.findByTestId('custom-mission-modal')).toBeDefined();
 
     // Customize mission
     const titleInput = screen.getByTestId('custom-input-title');

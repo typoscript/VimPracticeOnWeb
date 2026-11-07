@@ -169,6 +169,7 @@ export function jumpToMark(
       ...state,
       pendingKeys: undefined,
       commandMessage: `E20: Mark not set`,
+      bell: true,
     };
   }
 

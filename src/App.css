@@ -906,3 +906,13 @@
 }
 
 
+
+/* 지연 로딩 탭 화면(아케이드·던전·도장)을 불러오는 동안의 자리 표시 */
+.lazy-tab-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 240px;
+  color: var(--text-muted, #565f89);
+  font-size: 0.9rem;
+}

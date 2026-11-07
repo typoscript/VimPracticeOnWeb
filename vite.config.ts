@@ -7,6 +7,16 @@ export default defineConfig(({ mode }) => ({
   // 프로덕션 빌드(GitHub Pages 배포) 시 '/VimPracticeOnWeb/', 로컬 개발/테스트 시에는 '/' 사용
   base: mode === 'production' ? '/VimPracticeOnWeb/' : '/',
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        // React 는 앱 코드와 따로 묶어 배포마다 바뀌지 않는 장기 캐시 청크로 둡니다
+        manualChunks(id) {
+          if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'react-vendor';
+        },
+      },
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom',

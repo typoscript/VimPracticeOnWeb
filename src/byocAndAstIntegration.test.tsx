@@ -41,7 +41,7 @@ describe('Vim Grammar AST Inspector & BYOC Integration', () => {
     expect(screen.queryByTestId('ast-candidates-guide')).not.toBeInTheDocument();
   });
 
-  it('opens BYOC Modal from Sandbox and launches custom refactoring challenge with diff', () => {
+  it('opens BYOC Modal from Sandbox and launches custom refactoring challenge with diff', async () => {
     render(<App />);
 
     // Switch to Sandbox tab
@@ -54,7 +54,7 @@ describe('Vim Grammar AST Inspector & BYOC Integration', () => {
 
     // Open BYOC Modal
     fireEvent.click(openByocBtn);
-    expect(screen.getByTestId('byoc-modal-overlay')).toBeInTheDocument();
+    expect(await screen.findByTestId('byoc-modal-overlay')).toBeInTheDocument();
 
     // Select the React preset
     const reactPresetBtn = screen.getByTestId('byoc-preset-React 이벤트 핸들러');

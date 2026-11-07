@@ -61,7 +61,8 @@ export function executeOperatorMotion(
     case 'l':
     case 'ArrowRight':
       // 연산자와 함께 쓰인 l은 줄 끝 너머(마지막 문자 포함)까지 이동할 수 있습니다. (dl == x)
-      if (lineText.length === 0) return null;
+      // 빈 줄에서는 아무것도 하지 않지만 실패(beep)로 보지 않습니다. (Vim nv_right)
+      if (lineText.length === 0) return { ...state, pendingKeys: undefined };
       return applyCharwise(state, op, cursor, { line: cursor.line, col: Math.min(lineText.length, cursor.col + n) });
 
     case '^': {

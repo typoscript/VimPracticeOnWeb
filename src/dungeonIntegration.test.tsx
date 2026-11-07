@@ -7,7 +7,7 @@ describe('Dungeon RPG Mode Integration with App', () => {
     localStorage.clear();
   });
 
-  it('renders tab button for Dungeon RPG and switches view when clicked', () => {
+  it('renders tab button for Dungeon RPG and switches view when clicked', async () => {
     render(<App />);
 
     const dungeonTabBtn = screen.getByTestId('tab-dungeon-btn');
@@ -17,8 +17,8 @@ describe('Dungeon RPG Mode Integration with App', () => {
     // Click Dungeon RPG tab
     fireEvent.click(dungeonTabBtn);
 
-    // Verify Dungeon RPG is rendered
-    expect(screen.getByTestId('dungeon-rpg-container')).toBeInTheDocument();
+    // Verify Dungeon RPG is rendered (탭 화면은 지연 로딩되므로 비동기로 대기)
+    expect(await screen.findByTestId('dungeon-rpg-container')).toBeInTheDocument();
     expect(screen.getByTestId('dungeon-grid-viewport')).toBeInTheDocument();
     expect(screen.getByTestId('dungeon-skills-bar')).toBeInTheDocument();
   });
