@@ -1,7 +1,7 @@
 import { CursorPosition, VimEditorState } from '../types/vim';
 import { clampCursor } from './cursor';
 import { pushUndoSnapshot } from './operators';
-import { formatLinesRange, changeCaseVisual } from './lineOperators';
+import { formatLinesRange, changeCaseVisual, caseTypeForOperator } from './lineOperators';
 import { moveToFirstNonBlank } from './motions';
 
 export type TextObjectModifier = 'i' | 'a';
@@ -29,6 +29,8 @@ export interface TextObjectRange {
   startLine?: number;
   endLine?: number;
   isEmpty?: boolean;
+  /** i{ 처럼 여는 괄호가 줄 끝, 닫는 괄호가 줄 처음(들여쓰기 뒤)에 있으면 사이 줄 전체를 줄 단위로 다룸 */
+  linewise?: boolean;
 }
 
 type CharClass = 'word' | 'space' | 'punct';
@@ -173,6 +175,10 @@ export function getTextObjectRange(
   } else if (bracketTarget === '{' || bracketTarget === '}' || bracketTarget === 'B') {
     openChar = '{';
     closeChar = '}';
+  } else if (bracketTarget === '<' || bracketTarget === '>') {
+    // i< / a< : 꺾쇠 괄호 (HTML 태그 속성, 제네릭 타입 등)
+    openChar = '<';
+    closeChar = '>';
   }
 
   if (openChar && closeChar) {
@@ -280,11 +286,32 @@ export function getTextObjectRange(
 
     // 멀티 라인 매칭 (target.open.line < target.close.line)
     if (bracketModifier === 'i') {
+      // Vim current_block(): 여는 괄호가 줄 끝이면 다음 줄 처음부터, 닫는 괄호 앞이 들여쓰기뿐이면 이전 줄 끝까지.
+      // 둘 다 해당하면 사이 줄들을 줄 단위로 다룹니다. (di{ 는 { 줄과 } 줄을 남기고 안쪽 줄만 삭제)
+      const openAtEol = (lines[target.open.line] ?? '').slice(target.open.col + 1).trim() === '';
+      const closeAtSol = (lines[target.close.line] ?? '').slice(0, target.close.col).trim() === '';
+      const start = openAtEol
+        ? { line: target.open.line + 1, col: 0 }
+        : { line: target.open.line, col: target.open.col + 1 };
+      const end = closeAtSol
+        ? { line: target.close.line - 1, col: Math.max(0, (lines[target.close.line - 1] ?? '').length - 1) }
+        : { line: target.close.line, col: target.close.col - 1 };
+      if (start.line > end.line) {
+        // 괄호 사이에 내용이 없음 ({ 다음 줄에 바로 })
+        return {
+          startLine: target.open.line,
+          startCol: target.open.col + 1,
+          endLine: target.open.line,
+          endCol: target.open.col,
+          isEmpty: true,
+        };
+      }
       return {
-        startLine: target.open.line,
-        startCol: target.open.col + 1,
-        endLine: target.close.line,
-        endCol: target.close.col - 1,
+        startLine: start.line,
+        startCol: start.col,
+        endLine: end.line,
+        endCol: end.col,
+        linewise: openAtEol && closeAtSol,
       };
     } else {
       // bracketModifier === 'a'
@@ -516,7 +543,7 @@ export function getTagTextObjectRange(
  */
 export function executeTextObjectOperator(
   state: VimEditorState,
-  operator: 'd' | 'c' | 'y' | 'v' | '=' | 'gu' | 'gU' | 'g~',
+  operator: 'd' | 'c' | 'y' | 'v' | '=' | 'gu' | 'gU' | 'g~' | 'g?',
   objectType: TextObjectType,
   count = 1
 ): VimEditorState {
@@ -545,8 +572,13 @@ export function executeTextObjectOperator(
     const startCol = range.startCol;
     const endCol = range.endCol;
 
+    // 줄 단위 블록 (여러 줄 i{ 등): d / c / y / = / 대소문자 연산은 줄 단위로
+    if (range.linewise && operator !== 'v') {
+      return executeLinewiseObjectOperator(curState, operator, { startLine, endLine });
+    }
+
     // 대소문자 변환 (gu, gU, g~)
-    if (operator === 'gu' || operator === 'gU' || operator === 'g~') {
+    if (operator === 'gu' || operator === 'gU' || operator === 'g~' || operator === 'g?') {
       const visualState: VimEditorState = {
         ...curState,
         mode: 'VISUAL',
@@ -559,7 +591,7 @@ export function executeTextObjectOperator(
           col: endCol,
         },
       };
-      const caseType = operator === 'g~' ? 'toggle' : operator === 'gu' ? 'lower' : 'upper';
+      const caseType = caseTypeForOperator(operator);
       return changeCaseVisual(visualState, caseType);
     }
 
@@ -774,7 +806,7 @@ export function getIndentObjectRange(
  */
 export function executeIndentObjectOperator(
   state: VimEditorState,
-  operator: 'd' | 'c' | 'y' | 'v' | '=' | 'gu' | 'gU' | 'g~',
+  operator: 'd' | 'c' | 'y' | 'v' | '=' | 'gu' | 'gU' | 'g~' | 'g?',
   objectType: IndentObjectType,
   count = 1
 ): VimEditorState {
@@ -796,7 +828,7 @@ export function executeIndentObjectOperator(
  */
 export function executeLinewiseObjectOperator(
   state: VimEditorState,
-  operator: 'd' | 'c' | 'y' | 'v' | '=' | 'gu' | 'gU' | 'g~',
+  operator: 'd' | 'c' | 'y' | 'v' | '=' | 'gu' | 'gU' | 'g~' | 'g?',
   range: IndentObjectRange
 ): VimEditorState {
   const { startLine, endLine } = range;
@@ -814,14 +846,14 @@ export function executeLinewiseObjectOperator(
   }
 
   // 대소문자 변환 (guii, gUai, g~ip)
-  if (operator === 'gu' || operator === 'gU' || operator === 'g~') {
+  if (operator === 'gu' || operator === 'gU' || operator === 'g~' || operator === 'g?') {
     const visualState: VimEditorState = {
       ...state,
       mode: 'VISUAL_LINE',
       visualAnchor: { line: startLine, col: 0 },
       cursor: { line: endLine, col: 0 },
     };
-    const caseType = operator === 'g~' ? 'toggle' : operator === 'gu' ? 'lower' : 'upper';
+    const caseType = caseTypeForOperator(operator);
     return changeCaseVisual(visualState, caseType);
   }
 
@@ -839,11 +871,11 @@ export function executeLinewiseObjectOperator(
 
   const clipboard = { type: 'line' as const, content };
 
-  // 복사 (yii, yap): 커서는 복사 영역의 첫 줄로 이동
+  // 복사 (yii, yap, yi{): 커서는 복사한 텍스트의 시작(첫 줄 첫 칸)으로 이동 (Neovim 으로 확인)
   if (operator === 'y') {
     return {
       ...state,
-      cursor: moveToFirstNonBlank(state.lines, { line: startLine, col: 0 }),
+      cursor: { line: startLine, col: 0 },
       clipboard,
       pendingKeys: undefined,
     };
@@ -941,7 +973,7 @@ export function getParagraphObjectRange(
 /** 문단 텍스트 객체와 연산자를 줄 단위로 실행합니다. (dap, yip, cip, vap, =ip, gUap ...) */
 export function executeParagraphObjectOperator(
   state: VimEditorState,
-  operator: 'd' | 'c' | 'y' | 'v' | '=' | 'gu' | 'gU' | 'g~',
+  operator: 'd' | 'c' | 'y' | 'v' | '=' | 'gu' | 'gU' | 'g~' | 'g?',
   objectType: ParagraphObjectType,
   count = 1
 ): VimEditorState | null {

@@ -1920,6 +1920,19 @@ export function executeCommandLine(
   const currentLineRange = { startLine: state.cursor.line, endLine: state.cursor.line };
   const fullBufferRange = { startLine: 0, endLine: Math.max(0, state.lines.length - 1) };
 
+  // 4-1-1. :nohlsearch / :noh — 다음 검색 전까지 검색 하이라이트 끄기
+  if (/^noh(?:l(?:s(?:e(?:a(?:r(?:c(?:h)?)?)?)?)?)?)?$/.test(cmdTrimmed)) {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: undefined,
+      hlsearchSuppressed: true,
+    };
+  }
+
   // 4-2. 치환: :[range]s/old/new/flags 또는 :s/old/new/flags
   const sub = parseSubstitutionCommand(command);
   if (sub) {
@@ -1976,14 +1989,15 @@ export function executeCommandLine(
   }
 
   // 4-7. 이동: :[range]m {address}, :m {address}
-  const moveMatch = cmdTrimmed.match(/^(?:m|move)\s+(.*)$/);
+  // :m0 / :t. 처럼 공백 없이 주소를 바로 붙여 쓸 수 있습니다 (주소 문자가 올 때만, :marks 등과 구분)
+  const moveMatch = cmdTrimmed.match(/^(?:m|move)(?=\s|[\d.$+\-'])\s*(.*)$/);
   if (moveMatch) {
     const targetRange = range ?? currentLineRange;
     return executeMove(state, targetRange, moveMatch[1]);
   }
 
   // 4-8. 복제: :[range]t {address}, :t {address}, :co, :copy
-  const copyMatch = cmdTrimmed.match(/^(?:t|co|copy)\s+(.*)$/);
+  const copyMatch = cmdTrimmed.match(/^(?:t|co|copy)(?=\s|[\d.$+\-'])\s*(.*)$/);
   if (copyMatch) {
     const targetRange = range ?? currentLineRange;
     return executeCopy(state, targetRange, copyMatch[1]);

@@ -229,7 +229,7 @@ export function parsePending(pendingKeys?: string): ParsedPending {
   }
 
   // 2. 연산자 및 카운트 조합: "d", "2d", "d2", "2d3", "c", "r", "y", "v", "g", "gu", "gU", "g~", "@", ">", "<", "=", "m", "'", "`"
-  const opMatch = pendingKeys.match(/^([1-9][0-9]*)?(g[uU~]|[a-zA-Z@'`><=])([0-9]*)$/);
+  const opMatch = pendingKeys.match(/^([1-9][0-9]*)?(g[uU~?]|[a-zA-Z@'`><=])([0-9]*)$/);
   if (opMatch) {
     const count1 = opMatch[1] ? parseInt(opMatch[1], 10) : undefined;
     const operator = opMatch[2];
@@ -1987,6 +1987,10 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
     if (key === 'e' || key === 'E' || key === '_') {
       return moveByExtraMotion(state, `g${key}`, parsed.totalCount);
     }
+    // g?: 선택 영역 ROT13 변환
+    if (key === '?') {
+      return changeCaseVisual(state, 'rot13');
+    }
     if (key === 'd') {
       return goToDeclaration(state);
     }
@@ -2263,12 +2267,13 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
     if (key === 'p') {
       return executeParagraphObjectOperator(state, 'v', `${modifier}p` as ParagraphObjectType, count) ?? ringBell(state);
     }
-    const validTargets = ['w', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't', 's'];
+    const validTargets = ['w', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't', 's', '<', '>'];
     if (validTargets.includes(key)) {
       let targetChar = key;
       if (key === 'b' || key === ')') targetChar = '(';
       else if (key === 'B' || key === '}') targetChar = '{';
       else if (key === ']') targetChar = '[';
+      else if (key === '>') targetChar = '<';
 
       const objType: TextObjectType = `${modifier}${targetChar}` as TextObjectType;
       return executeTextObjectOperator(state, 'v', objType, count);
@@ -2438,6 +2443,18 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
   // VISUAL 모드 보조 모션 (, ), +, -, Enter, |
   if (!state.pendingKeys && VISUAL_EXTRA_KEYS.has(key)) {
     return moveByExtraMotion(state, key, parsed.totalCount);
+  }
+
+  // VISUAL 모드 괄호 모션 [( [{ ]) ]}
+  const visualBracket = state.pendingKeys?.match(/^([1-9][0-9]*)?([\[\]])$/);
+  if (visualBracket) {
+    const bracket = visualBracket[2];
+    const valid = (bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'));
+    if (valid) return moveByExtraMotion(state, `${bracket}${key}`, visualBracket[1] ? parseInt(visualBracket[1], 10) : 1);
+    return { ...state, pendingKeys: undefined };
+  }
+  if ((key === '[' || key === ']') && (!state.pendingKeys || /^[1-9][0-9]*$/.test(state.pendingKeys))) {
+    return { ...state, pendingKeys: (state.pendingKeys ?? '') + key };
   }
 
   // VISUAL 모드 내 커서 이동 (모션 평가 및 카운트 반영)
@@ -3059,6 +3076,28 @@ function handleNormalModeKey(
   }
 
   // 1-0-12. 들여쓰기 / 내어쓰기 / 정렬 (>>, <<, ==)
+  // >{motion} / <{motion} / >{텍스트 객체} (>ip, >}, >j, <a{, >3j, >gg ...): 항상 줄 단위 들여쓰기
+  const shiftMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([<>])([1-9][0-9]*)?([iagfFtT'`\[\]])?$/);
+  if (shiftMatch && key !== shiftMatch[2]) {
+    const [, c1, dir, c2, prefix] = shiftMatch;
+    if (!prefix && (/^[1-9]$/.test(key) || (key === '0' && c2))) {
+      return { ...state, pendingKeys: state.pendingKeys + key };
+    }
+    if (!prefix && "iagfFtT'`[]".includes(key)) {
+      return { ...state, pendingKeys: state.pendingKeys + key };
+    }
+    const count = (c1 ? parseInt(c1, 10) : 1) * (c2 ? parseInt(c2, 10) : 1);
+    const range = findShiftRange(state, prefix ? [prefix, key] : [key], count);
+    if (!range) return ringBell(state);
+    const res = indentLines(
+      { ...state, cursor: { line: range.startLine, col: 0 }, pendingKeys: undefined },
+      range.endLine - range.startLine + 1,
+      dir === '>' ? 'in' : 'out'
+    );
+    const keys = [...(state.pendingKeys ?? '').split(''), key];
+    return { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : keys };
+  }
+
   if (parsed.operator === '>') {
     if (key === '>') {
       const res = indentLines(state, parsed.totalCount, 'in');
@@ -3143,9 +3182,23 @@ function handleNormalModeKey(
     state = { ...state, pendingKeys: undefined };
   }
 
+  // gugu / gUgU / g~g~ / g?g? (gUgg 포함): 대소문자 연산자 뒤에 g 를 다시 누른 상태
+  const caseOpG = state.pendingKeys?.match(/^([1-9][0-9]*)?(g[uU~?])g$/);
+  if (caseOpG) {
+    const op = caseOpG[2] as 'gu' | 'gU' | 'g~' | 'g?';
+    const count = caseOpG[1] ? parseInt(caseOpG[1], 10) : 1;
+    if (key === op[1] || key === 'g') {
+      const motionKey = key === 'g' ? 'gg' : key;
+      const res = executeCaseMotion({ ...state, pendingKeys: undefined }, op, motionKey, count);
+      const opKeys = [...(count > 1 ? [String(count)] : []), op, 'g', key];
+      return { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys, pendingKeys: undefined };
+    }
+    return { ...state, pendingKeys: undefined };
+  }
+
   // 1-0-13. 순정 Vim 대소문자 변환 연산자 (gu, gU, g~ + 모션 / 텍스트객체 / 라인반복)
-  if (parsed.operator === 'gu' || parsed.operator === 'gU' || parsed.operator === 'g~') {
-    const op = parsed.operator as 'gu' | 'gU' | 'g~';
+  if (parsed.operator === 'gu' || parsed.operator === 'gU' || parsed.operator === 'g~' || parsed.operator === 'g?') {
+    const op = parsed.operator as 'gu' | 'gU' | 'g~' | 'g?';
     // 텍스트 객체 대기 (i, a)
     if (key === 'i' || key === 'a') {
       return {
@@ -3316,12 +3369,12 @@ function handleNormalModeKey(
 
   // 4. 텍스트 객체 대기 상태 (di, da, ci, ca, yi, ya, vi, va, =i, =a, gui, gua, gUi, gUa, g~i, g~a 및 카운트 조합)
   // 카운트는 연산자 앞(2das)과 뒤(d2as) 모두 가능하며 서로 곱해집니다
-  const textObjPendingMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([dcyv=]|g[uU~])([1-9][0-9]*)?([ia])$/);
+  const textObjPendingMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([dcyv=]|g[uU~?])([1-9][0-9]*)?([ia])$/);
   if (textObjPendingMatch) {
     const count =
       (textObjPendingMatch[1] ? parseInt(textObjPendingMatch[1], 10) : 1) *
       (textObjPendingMatch[3] ? parseInt(textObjPendingMatch[3], 10) : 1);
-    const op = textObjPendingMatch[2] as 'd' | 'c' | 'y' | 'v' | '=' | 'gu' | 'gU' | 'g~';
+    const op = textObjPendingMatch[2] as 'd' | 'c' | 'y' | 'v' | '=' | 'gu' | 'gU' | 'g~' | 'g?';
     const modifier = textObjPendingMatch[4] as 'i' | 'a';
 
     // 인덴트 텍스트 객체 (dii, cai, yii, =ii, gUai, daI 등) / 문단 텍스트 객체 (dap, yip, cip, =ap): 줄 단위 연산
@@ -3348,12 +3401,13 @@ function handleNormalModeKey(
       return synced;
     }
 
-    const validTargets = ['w', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't', 's'];
+    const validTargets = ['w', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't', 's', '<', '>'];
     if (validTargets.includes(key)) {
       let targetChar = key;
       if (key === 'b' || key === ')') targetChar = '(';
       else if (key === 'B' || key === '}') targetChar = '{';
       else if (key === ']') targetChar = '[';
+      else if (key === '>') targetChar = '<';
 
       const objType: TextObjectType = `${modifier}${targetChar}` as TextObjectType;
       const res = executeTextObjectOperator(state, op, objType, count);
@@ -3886,6 +3940,10 @@ function handleNormalModeKey(
     }
     state = { ...state, pendingKeys: undefined };
   } else if (parsed.operator === 'g') {
+    // ga: 커서 문자의 코드 값 표시 (:help ga)
+    if (key === 'a') {
+      return { ...state, pendingKeys: undefined, commandMessage: describeCharAt(currentLine, state.cursor.col) };
+    }
     // ge / gE / g_: 이전 단어 끝, 이전 WORD 끝, 줄의 마지막 공백 아닌 문자
     if (key === 'e' || key === 'E' || key === '_') {
       return moveByExtraMotion(state, `g${key}`, parsed.totalCount);
@@ -3955,7 +4013,7 @@ function handleNormalModeKey(
         pendingKeys: undefined,
       };
     }
-    if (key === '~' || key === 'u' || key === 'U') {
+    if (key === '~' || key === 'u' || key === 'U' || key === '?') {
 
       return {
         ...state,
@@ -4140,21 +4198,21 @@ function handleNormalModeKey(
 
   // p: 레지스터/클립보드 붙여넣기 (커서 뒤)
   if (key === 'p') {
-    const res = putFromRegister(state, state.activeRegister, false);
+    const res = putFromRegister(state, state.activeRegister, false, parsed.totalCount);
     if (isEmptyPut(state, res)) return emptyRegisterBell(state);
     return {
       ...res,
-      lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['p'],
+      lastChangeKeys: isReplayingDot ? state.lastChangeKeys : parsed.totalCount > 1 ? [String(parsed.totalCount), 'p'] : ['p'],
     };
   }
 
   // P: 레지스터/클립보드 붙여넣기 (커서 앞)
   if (key === 'P') {
-    const res = putFromRegister(state, state.activeRegister, true);
+    const res = putFromRegister(state, state.activeRegister, true, parsed.totalCount);
     if (isEmptyPut(state, res)) return emptyRegisterBell(state);
     return {
       ...res,
-      lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['P'],
+      lastChangeKeys: isReplayingDot ? state.lastChangeKeys : parsed.totalCount > 1 ? [String(parsed.totalCount), 'P'] : ['P'],
     };
   }
 
@@ -4433,13 +4491,28 @@ export function handleKey(
 ): VimEditorState {
   // bell은 "직전 키가 실패했다"는 일시적 신호이므로 매 키 입력마다 새로 시작합니다.
   const input = withoutBell(state);
+  let nextState: VimEditorState;
   if (process.env.NODE_ENV !== 'production') {
     deepFreeze(input);
-    const nextState = rawHandleKey(input, key, isReplayingDot, macroDepth);
+    nextState = rawHandleKey(input, key, isReplayingDot, macroDepth);
     assertValidVimState(input, nextState, key);
-    return nextState;
+  } else {
+    nextState = rawHandleKey(input, key, isReplayingDot, macroDepth);
   }
-  return rawHandleKey(input, key, isReplayingDot, macroDepth);
+  return releaseHlsearchSuppression(input, nextState, key);
+}
+
+/** :noh 로 끈 하이라이트는 다음 검색(/ ? Enter, n, N, *, #, 새 검색 패턴)에서 다시 켜집니다. */
+function releaseHlsearchSuppression(prev: VimEditorState, next: VimEditorState, key: string): VimEditorState {
+  if (!next.hlsearchSuppressed) return next;
+  const searched =
+    next.lastSearchQuery !== prev.lastSearchQuery ||
+    (prev.mode === 'SEARCH' && key === 'Enter') ||
+    (prev.mode === 'NORMAL' && !prev.pendingKeys && ['n', 'N', '*', '#'].includes(key));
+  if (!searched) return next;
+  const copy = { ...next };
+  delete copy.hlsearchSuppressed;
+  return copy;
 }
 
 /** 일시적인 실패 신호(bell)를 제거한 상태를 반환합니다. */
@@ -4475,6 +4548,48 @@ function moveByExtraMotion(state: VimEditorState, key: string, count: number): V
     stickyDollar: false,
     pendingKeys: undefined,
   };
+}
+
+/**
+ * > / < 연산자의 대상 줄 범위를 구합니다.
+ * 텍스트 객체(i/a + 대상)는 VISUAL 선택으로, 모션은 커서 이동으로 계산하여 어떤 모션·객체든 같은 방식으로 지원합니다.
+ */
+function findShiftRange(state: VimEditorState, keys: string[], count: number): { startLine: number; endLine: number } | null {
+  const base: VimEditorState = { ...state, mode: 'NORMAL', pendingKeys: undefined, visualAnchor: undefined };
+  const countKeys = count > 1 ? String(count).split('') : [];
+  if (keys[0] === 'i' || keys[0] === 'a') {
+    const selected = [...['v'], ...countKeys, ...keys].reduce((s, k) => handleKey(s, k), base);
+    if (!selected.mode.startsWith('VISUAL') || !selected.visualAnchor || selected.bell) return null;
+    return {
+      startLine: Math.min(selected.visualAnchor.line, selected.cursor.line),
+      endLine: Math.max(selected.visualAnchor.line, selected.cursor.line),
+    };
+  }
+  let moved = base;
+  for (const k of [...countKeys, ...keys]) {
+    moved = handleKey(moved, k);
+    if (moved.bell) return null;
+  }
+  if (moved.mode !== 'NORMAL' || moved.pendingKeys || moved.lines !== state.lines) return null;
+  let endLine = Math.max(state.cursor.line, moved.cursor.line);
+  // 배타적(exclusive) 모션이 아래 줄의 첫 칸에서 끝나면 그 줄은 범위에서 제외 (:help exclusive, 예: >} )
+  const motionKey = keys.join('');
+  if (!LINEWISE_SHIFT_MOTIONS.has(motionKey) && moved.cursor.line > state.cursor.line && moved.cursor.col === 0) {
+    endLine = Math.max(state.cursor.line, moved.cursor.line - 1);
+  }
+  return { startLine: Math.min(state.cursor.line, moved.cursor.line), endLine };
+}
+
+/** 줄 단위 모션 (끝 줄을 항상 포함) */
+const LINEWISE_SHIFT_MOTIONS = new Set(['j', 'k', 'G', 'gg', '+', '-', 'Enter', 'ArrowUp', 'ArrowDown', '_']);
+
+/** ga 출력: <A> 65, 16진수 41, 8진수 101 (빈 줄이면 NUL) */
+function describeCharAt(line: string, col: number): string {
+  const ch = [...line.slice(col)][0];
+  if (ch === undefined) return 'NUL';
+  const code = ch.codePointAt(0) ?? 0;
+  const label = ch === ' ' ? '<Space>' : ch === '\t' ? '<Tab>' : `<${ch}>`;
+  return `${label} ${code}, 16진수 ${code.toString(16)}, 8진수 ${code.toString(8)}`;
 }
 
 /** 모션이 커서를 전혀 움직이지 못했는지 (세로 모션은 줄 기준) */

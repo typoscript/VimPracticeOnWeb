@@ -187,7 +187,7 @@ describe('textObjects module (iw, i", i(, i))', () => {
       expect(btResult.clipboard?.content).toBe('`template literal`');
     });
 
-    it('멀티라인 ci{: 여러 줄에 걸친 중괄호 내부를 삭제하고 INSERT 모드로 진입한다', () => {
+    it('멀티라인 ci{: { 줄과 } 줄은 남기고 안쪽 줄들을 한 줄로 바꾼 뒤 INSERT 모드로 진입한다 (Neovim 으로 확인)', () => {
       const state: VimEditorState = {
         lines: [
           'function compute() {',
@@ -201,9 +201,11 @@ describe('textObjects module (iw, i", i(, i))', () => {
       };
 
       const next = executeTextObjectOperator(state, 'c', 'i{');
-      expect(next.lines).toEqual(['function compute() {}']);
-      expect(next.cursor).toEqual({ line: 0, col: 20 }); // '{' 바로 다음 칸
+      // 실제 Vim/Neovim: { 가 줄 끝, } 가 줄 처음이면 안쪽 줄 전체가 줄 단위로 바뀌고 들여쓰기가 남은 빈 줄에서 입력
+      expect(next.lines).toEqual(['function compute() {', '  ', '}']);
+      expect(next.cursor).toEqual({ line: 1, col: 2 });
       expect(next.mode).toBe('INSERT');
+      expect(next.clipboard?.type).toBe('line');
       expect(next.clipboard?.content).toContain('const a = 10;');
       expect(next.clipboard?.content).toContain('return a + b;');
     });

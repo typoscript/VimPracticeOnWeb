@@ -104,13 +104,29 @@ export function toggleCaseChar(state: VimEditorState, count = 1): VimEditorState
   };
 }
 
+/** 대소문자 연산자: gu(소문자) gU(대문자) g~(반전) g?(ROT13) */
+export type CaseOperator = 'gu' | 'gU' | 'g~' | 'g?';
+export type CaseType = 'toggle' | 'lower' | 'upper' | 'rot13';
+
+export function caseTypeForOperator(op: CaseOperator): CaseType {
+  return op === 'g~' ? 'toggle' : op === 'gu' ? 'lower' : op === 'gU' ? 'upper' : 'rot13';
+}
+
+/** ROT13: 영문자를 알파벳 순서로 13칸 돌립니다 (그 밖의 문자는 그대로) */
+function rot13(ch: string): string {
+  const code = ch.charCodeAt(0);
+  if (code >= 65 && code <= 90) return String.fromCharCode(((code - 65 + 13) % 26) + 65);
+  if (code >= 97 && code <= 122) return String.fromCharCode(((code - 97 + 13) % 26) + 97);
+  return ch;
+}
+
 /**
  * VISUAL 모드 대소문자 변환:
  * ~ (대소문자 반전), u (모두 소문자), U (모두 대문자)
  */
 export function changeCaseVisual(
   state: VimEditorState,
-  type: 'toggle' | 'lower' | 'upper'
+  type: CaseType
 ): VimEditorState {
   if (!state.visualAnchor) {
     return { ...state, mode: 'NORMAL', pendingKeys: undefined };
@@ -139,6 +155,8 @@ export function changeCaseVisual(
           chars[c] = ch.toLowerCase();
         } else if (type === 'upper') {
           chars[c] = ch.toUpperCase();
+        } else if (type === 'rot13') {
+          chars[c] = rot13(ch);
         }
       }
     }
@@ -165,17 +183,18 @@ export function changeCaseVisual(
  */
 export function executeCaseMotion(
   state: VimEditorState,
-  op: 'gu' | 'gU' | 'g~',
+  op: CaseOperator,
   motionKey: string,
   count = 1
 ): VimEditorState {
-  const caseType = op === 'g~' ? 'toggle' : op === 'gu' ? 'lower' : 'upper';
+  const caseType = caseTypeForOperator(op);
 
-  // 1. 라인 단위 변환 (guu, gUU, g~~, gugu, gUgU, g~g~)
+  // 1. 라인 단위 변환 (guu, gUU, g~~, g??, gugu, gUgU, g~g~, g?g?)
   if (
     (op === 'gu' && (motionKey === 'u' || motionKey === 'g')) ||
     (op === 'gU' && (motionKey === 'U' || motionKey === 'g')) ||
-    (op === 'g~' && (motionKey === '~' || motionKey === 'g'))
+    (op === 'g~' && (motionKey === '~' || motionKey === 'g')) ||
+    (op === 'g?' && (motionKey === '?' || motionKey === 'g'))
   ) {
     const endLine = Math.min(state.lines.length - 1, state.cursor.line + count - 1);
     const visualState: VimEditorState = {
@@ -279,7 +298,8 @@ export function indentLines(
   for (let i = startLine; i <= endLine; i++) {
     const line = newLines[i];
     if (direction === 'in') {
-      newLines[i] = '  ' + line;
+      // Vim 은 빈 줄을 들여쓰지 않습니다
+      if (line.length > 0) newLines[i] = '  ' + line;
     } else {
       if (line.startsWith('  ')) {
         newLines[i] = line.slice(2);

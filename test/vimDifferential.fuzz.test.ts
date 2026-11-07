@@ -1,5 +1,20 @@
 import { describe, it, expect } from 'vitest';
 import { runDifferentialCheck } from './oracle/codemirrorOracle';
+import { handleKey } from '../src/engine/vimEngine';
+import type { VimEditorState } from '../src/types/vim';
+
+/**
+ * CodeMirror Vim 오라클이 실제 Vim 과 다르게 동작하는 퍼징 케이스는 실제 Neovim(nvim --headless -u NONE)
+ * 으로 확인한 결과와 비교합니다. (시드가 고정되어 있어 케이스 번호와 키 시퀀스는 항상 같습니다)
+ */
+const NEOVIM_VERIFIED_CASES: Record<number, { keys: string; lines: string[]; cursor: { line: number; col: number } }> = {
+  // 3ggdi{yyP: 여러 줄 di{ 는 { 줄과 } 줄을 남깁니다 (CodeMirror 는 한 줄로 합침)
+  82: {
+    keys: '3 g g d i { y y P',
+    lines: ['class UserManager {', '  getUser(id) {', '  }', '  }', '}'],
+    cursor: { line: 2, col: 2 },
+  },
+};
 
 /**
  * 시드 기반 의사 난수 생성기 (재현 가능한 퍼징 테스트용)
@@ -142,6 +157,17 @@ describe('Vim Differential Fuzzer: Random Command Combinations', () => {
     const keys = generateRandomVimCommands(rng, numCmds);
 
     it(`Fuzz Test #${i}: ${keys.slice(0, 6).join(' ')}${keys.length > 6 ? '...' : ''}`, () => {
+      const verified = NEOVIM_VERIFIED_CASES[i];
+      if (verified) {
+        // 시드가 바뀌어 다른 키 시퀀스가 나오면 이 예외 목록도 다시 확인해야 합니다
+        expect(keys.join(' ')).toBe(verified.keys);
+        const start: VimEditorState = { lines: text.split('\n'), cursor: { line: 0, col: 0 }, mode: 'NORMAL' };
+        const end = keys.reduce((s, k) => handleKey(s, k), start);
+        expect(end.lines).toEqual(verified.lines);
+        expect(end.cursor).toEqual(verified.cursor);
+        return;
+      }
+
       const res = runDifferentialCheck(text, keys);
 
       if (!res.passed) {

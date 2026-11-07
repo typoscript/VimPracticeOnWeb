@@ -371,6 +371,8 @@ export interface VimEditorState {
   userKeymaps?: Record<string, string>;
   /** 사용자 정의 Ex 명령 (:command! Name ...) */
   userCommands?: Record<string, UserCommand>;
+  /** :nohlsearch 로 검색 하이라이트를 잠시 끈 상태 (다음 검색·n·N·*·# 에서 해제) */
+  hlsearchSuppressed?: boolean;
   /** 직전 :s 의 패턴·치환 문자열·플래그 (:&, :&&, &, g&, ~, 빈 패턴 :s//new/ 에 사용) */
   lastSubstitute?: { pattern: string; replacement: string; flags: string };
   /** 사용자 정의 함수 (:function) */

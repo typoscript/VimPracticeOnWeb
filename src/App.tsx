@@ -1767,6 +1767,8 @@ export function App() {
                       searchQuery={
                         editorState.activePaneIndex === 0 && editorState.mode === 'SEARCH'
                           ? editorState.commandBuffer
+                          : editorState.hlsearchSuppressed
+                          ? undefined
                           : editorState.lastSearchQuery
                       }
                       isFocused={isEditorFocused && editorState.activePaneIndex === 0}
@@ -1809,6 +1811,8 @@ export function App() {
                       searchQuery={
                         editorState.activePaneIndex === 1 && editorState.mode === 'SEARCH'
                           ? editorState.commandBuffer
+                          : editorState.hlsearchSuppressed
+                          ? undefined
                           : editorState.lastSearchQuery
                       }
                       isFocused={isEditorFocused && editorState.activePaneIndex === 1}
@@ -1838,6 +1842,8 @@ export function App() {
                   searchQuery={
                     displayEditorState.mode === 'SEARCH'
                       ? displayEditorState.commandBuffer
+                      : displayEditorState.hlsearchSuppressed
+                      ? undefined
                       : displayEditorState.lastSearchQuery
                   }
                   isFocused={isEditorFocused}

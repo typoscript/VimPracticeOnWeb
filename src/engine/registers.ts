@@ -146,9 +146,21 @@ export function getRegisterContent(
 export function putFromRegister(
   state: VimEditorState,
   reg?: string | null,
-  isBefore = false
+  isBefore = false,
+  count = 1
 ): VimEditorState {
-  const clip = getRegisterContent(state, reg ?? state.activeRegister);
+  const rawClip = getRegisterContent(state, reg ?? state.activeRegister);
+  // [count]p: 내용을 count 번 이어 붙여 한 번에 넣습니다 (실행 취소 1회, 여러 줄 레지스터도 a b a b 순서)
+  const clip =
+    rawClip && count > 1
+      ? {
+          ...rawClip,
+          content:
+            rawClip.type === 'line'
+              ? Array.from({ length: count }, () => rawClip.content).join('\n')
+              : rawClip.content.repeat(count),
+        }
+      : rawClip;
 
   if (!clip || clip.content === undefined || clip.content === null) {
     return {
