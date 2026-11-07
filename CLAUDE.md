@@ -15,7 +15,7 @@
   `npm test -- src/engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 90개 테스트 파일, 1,150개 테스트 100% 통과 필수)*
+  *(현재 92개 테스트 파일, 1,164개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -41,7 +41,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 52)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 53)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -65,13 +65,13 @@
   - `mA~mZ, 'A~'Z, :marks` (대문자 전역 마크 및 버퍼 자동 전환)
   - `:nmap, :nnoremap, :imap, :vmap, :unmap` (키매핑 인터프리터)
   - `cs, ds, ysiw, yss, S` (순정 vim-surround 괄호/따옴표 감싸기 엔진)
+- **매크로 심화 & 디버깅 (레슨 53)**: `@a, @@, [count]@@` + 매크로 슬로우모션 디버거 (`src/engine/macroDebugger.ts`, `src/components/MacroDebugger/`: 1x/0.5x/0.2x 재생, 키 단위 스텝, 프레임 미리보기)
 
 ---
 
 ## 5. 다음 개발 로드맵 추천 후보
 클로드에게 다음 작업을 지시할 때 아래 항목 중에서 지정하시면 됩니다:
-1. **매크로 슬로우모션 뷰어 & 비주얼 디버거 (`MacroDebugger`)**:
-   - `@a` 매크로 실행 시 0.1~0.3초 딜레이를 주어 글자가 지워지고 커서가 이동하는 과정을 한 프레임씩 보여주는 재생 속도 조절(1x, 0.5x, 0.2x) 및 단계별 스텝 실행 UI.
+1. ~~**매크로 슬로우모션 뷰어 & 비주얼 디버거 (`MacroDebugger`)**~~ — 레슨 53과 함께 구현 완료.
 2. **사용자 정의 Ex 커맨드 및 Vim 함수 엔진 (`:command!`, `:function`)**:
    - 사용자가 커맨드라인 또는 `.vimrc`에서 커스텀 Ex 명령어(`:command! W w`, `:command! Q q`)를 선언하고 호출할 수 있는 인터프리터.
 3. **순정 Vim 맞춤법 검사기 (`:set spell`, `]s`, `[s`, `z=`, `zg`)**:

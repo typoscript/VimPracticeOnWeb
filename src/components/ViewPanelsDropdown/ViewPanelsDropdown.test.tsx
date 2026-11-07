@@ -114,4 +114,19 @@ describe('ViewPanelsDropdown Component', () => {
     fireEvent.keyDown(document, { key: 'Escape' });
     expect(menuContainer).not.toHaveClass('open');
   });
+
+  it('매크로 디버거 토글 핸들러가 주어지면 토글 버튼을 표시하고 활성 개수에 반영한다', () => {
+    const onToggleMacroDebugger = vi.fn();
+    render(
+      <ViewPanelsDropdown
+        {...defaultProps}
+        showMacroDebugger={true}
+        onToggleMacroDebugger={onToggleMacroDebugger}
+      />
+    );
+
+    expect(screen.getByTestId('toggle-view-panels-menu-btn')).toHaveTextContent('4');
+    fireEvent.click(screen.getByTestId('toggle-macro-debugger-btn'));
+    expect(onToggleMacroDebugger).toHaveBeenCalledTimes(1);
+  });
 });

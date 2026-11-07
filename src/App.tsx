@@ -12,6 +12,7 @@ import { ThemeSwitcher } from './components/ThemeSwitcher/ThemeSwitcher';
 import { ViewPanelsDropdown } from './components/ViewPanelsDropdown/ViewPanelsDropdown';
 import { CustomMissionModal } from './components/CustomMissionModal/CustomMissionModal';
 import { RegisterInspector } from './components/RegisterInspector/RegisterInspector';
+import { MacroDebugger } from './components/MacroDebugger/MacroDebugger';
 import { ArcadeSurvival } from './components/ArcadeSurvival/ArcadeSurvival';
 import { AnalyticsModal } from './components/AnalyticsModal/AnalyticsModal';
 import { DailyChallengeModal } from './components/DailyChallengeModal/DailyChallengeModal';
@@ -92,7 +93,7 @@ import './App.css';
 /** 스피드런 챌린지 후보 미션 ID 목록 (리팩토링/편집 미션) */
 export const SPEEDRUN_CANDIDATE_IDS = [
   4, 6, 7, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 21, 23, 25, 26, 28, 29, 30, 31, 32, 43, 44,
-  47, 48, 49, 50, 51, 52,
+  47, 48, 49, 50, 51, 52, 53,
 ];
 
 export function generateSpeedrunStages(): Mission[] {
@@ -403,6 +404,9 @@ export function App() {
   const [pendingActionKeys, setPendingActionKeys] = useState<string[]>([]);
   const [allKeysSoFar, setAllKeysSoFar] = useState<string[]>([]);
   const [previewStepIndex, setPreviewStepIndex] = useState<number | null>(null);
+  // 매크로 슬로우모션 디버거: 패널 표시 여부 및 현재 프레임 미리보기 상태
+  const [showMacroDebugger, setShowMacroDebugger] = useState<boolean>(false);
+  const [macroPreviewState, setMacroPreviewState] = useState<VimEditorState | null>(null);
 
   const editorStateRef = useRef(editorState);
   editorStateRef.current = editorState;
@@ -483,7 +487,9 @@ export function App() {
   }, []);
 
   const displayEditorState =
-    previewStepIndex !== null && timelineSteps[previewStepIndex]
+    macroPreviewState
+      ? macroPreviewState
+      : previewStepIndex !== null && timelineSteps[previewStepIndex]
       ? timelineSteps[previewStepIndex].snapshot
       : editorState;
 
@@ -872,6 +878,10 @@ export function App() {
     });
   }, []);
 
+  const handleToggleMacroDebugger = useCallback(() => {
+    setShowMacroDebugger((prev) => !prev);
+  }, []);
+
   // 실제 키 입력 또는 가상 키보드 클릭 시 공통 실행 함수
   const processKeyInput = useCallback(
     (key: string) => {
@@ -912,6 +922,8 @@ export function App() {
         previewStepIndexRef.current = null;
         setPreviewStepIndex(null);
       }
+      // 실제 키 입력이 들어오면 매크로 디버거 미리보기를 해제합니다.
+      setMacroPreviewState(null);
 
       setLastPressedKey(key);
       const nextKeystrokes = baseKeystrokes + 1;
@@ -974,6 +986,15 @@ export function App() {
       }
     },
     [currentTab, speedrunStatus, playKeySound, hardcoreMode, triggerHardcoreViolation]
+  );
+
+  // 매크로 디버거의 실행 버튼: 실제 키 입력과 동일하게 [count]@{reg}를 전달하여 타수·타임라인에 반영합니다.
+  const handleRunMacroFromDebugger = useCallback(
+    (register: string, count: number) => {
+      const keys = [...(count > 1 ? String(count).split('') : []), '@', register];
+      keys.forEach((k) => processKeyInput(k));
+    },
+    [processKeyInput]
   );
 
   // 브라우저 윈도우 포커스/블러 감지
@@ -1424,6 +1445,8 @@ export function App() {
               onToggleVirtualKeyboard={handleToggleVirtualKeyboard}
               relativeLineNumbers={relativeLineNumbers}
               onToggleRelativeLineNumbers={handleToggleRelativeLine}
+              showMacroDebugger={showMacroDebugger}
+              onToggleMacroDebugger={handleToggleMacroDebugger}
             />
           </div>
 
@@ -1961,6 +1984,15 @@ export function App() {
               registers={editorState.registers}
               activeRegister={editorState.activeRegister}
               clipboard={editorState.clipboard}
+            />
+
+            {/* 매크로 슬로우모션 디버거 패널 */}
+            <MacroDebugger
+              isOpen={showMacroDebugger}
+              onToggle={handleToggleMacroDebugger}
+              baseState={editorState}
+              onPreviewFrame={setMacroPreviewState}
+              onRunMacro={handleRunMacroFromDebugger}
             />
 
             {/* 목표 상태 Diff 비교 하이라이트 뷰 */}

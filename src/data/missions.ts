@@ -1686,6 +1686,43 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 53,
+    title: '레슨 53: 매크로 반복 실행([count]@a, @@)과 슬로우모션 디버거로 매크로 검증하기',
+    description:
+      '매크로는 한 번 녹화하면 원하는 만큼 재생할 수 있습니다. 하지만 긴 매크로가 어디서 꼬였는지 눈으로 따라가기는 어렵습니다.\n\n1) @a: 레지스터 a의 매크로를 한 번 실행합니다.\n2) @@: 마지막으로 실행한 매크로를 다시 실행합니다.\n3) [count]@@ / [count]@a: 숫자를 붙이면 그 횟수만큼 반복합니다. (예: 3@@)\n\n💡 상단 [패널 보기] → [🎞️ 매크로 디버거]를 켜면 녹화한 매크로를 1x / 0.5x / 0.2x 슬로우모션으로 재생하거나 키 하나씩 스텝 실행하며 커서와 모드 변화를 미리볼 수 있습니다. 미리보기는 실제 버퍼를 바꾸지 않습니다.\n\n미션:\n1) 첫 줄에서 qa I- [ ] <Esc> j q 로 체크박스를 붙이고 다음 줄로 내려가는 매크로를 녹화하세요.\n2) @a 로 두 번째 줄에 매크로를 적용하세요.\n3) 3@@ 로 나머지 세 줄에 한 번에 반복 적용하세요.',
+    hint: 'qa → I → "- [ ] " 입력 → Esc → j → q 로 녹화한 뒤, @a 와 3@@ 를 입력하세요. 매크로 디버거 패널에서 슬로우모션으로 미리 확인해 볼 수 있습니다.',
+    par: 17,
+    optimalKeys: [
+      'q', 'a', 'I', '-', ' ', '[', ' ', ']', ' ', 'Escape', 'j', 'q',
+      '@', 'a',
+      '3', '@', '@',
+    ],
+    initialLines: [
+      'fix login bug',
+      'update README',
+      'add unit tests',
+      'refactor parser',
+      'bump version',
+    ],
+    targetLines: [
+      '- [ ] fix login bug',
+      '- [ ] update README',
+      '- [ ] add unit tests',
+      '- [ ] refactor parser',
+      '- [ ] bump version',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const target = [
+        '- [ ] fix login bug',
+        '- [ ] update README',
+        '- [ ] add unit tests',
+        '- [ ] refactor parser',
+        '- [ ] bump version',
+      ];
+      return state.lines.length === target.length && target.every((t, i) => state.lines[i] === t);
+    },
+  },
 ];
-
-

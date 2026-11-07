@@ -1,0 +1,239 @@
+.macro-debugger-panel {
+  background: var(--bg-secondary, #1f2335);
+  border: 1px solid var(--border-color, #292e42);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-top: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.macro-debugger-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-color, #292e42);
+}
+
+.macro-debugger-title-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.macro-debugger-icon {
+  font-size: 1.15rem;
+}
+
+.macro-debugger-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary, #c0caf5);
+}
+
+.macro-debugger-subtitle {
+  font-size: 0.8rem;
+  color: var(--text-muted, #565f89);
+}
+
+.macro-debugger-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #565f89);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.macro-debugger-close-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary, #c0caf5);
+}
+
+.macro-debugger-empty {
+  font-size: 0.85rem;
+  color: var(--text-muted, #565f89);
+  padding: 6px 0;
+}
+
+.macro-debugger-empty code,
+.macro-line-preview {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+}
+
+.macro-debugger-controls,
+.macro-debugger-transport {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.macro-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: var(--text-muted, #565f89);
+}
+
+.macro-count-value {
+  min-width: 20px;
+  text-align: center;
+  color: var(--text-primary, #c0caf5);
+  font-weight: 700;
+}
+
+.macro-register-group,
+.macro-speed-group {
+  display: inline-flex;
+  border: 1px solid var(--border-color, #292e42);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.macro-speed-btn,
+.macro-register-btn,
+.macro-count-btn,
+.macro-debugger-transport button {
+  background: var(--bg-primary, #1a1b26);
+  color: var(--text-primary, #c0caf5);
+  border: 1px solid var(--border-color, #292e42);
+  border-radius: 4px;
+  padding: 3px 10px;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.macro-speed-btn,
+.macro-register-btn {
+  border: none;
+  border-radius: 0;
+}
+
+.macro-speed-btn.active,
+.macro-register-btn.active {
+  background: var(--accent-color, #7aa2f7);
+  color: var(--bg-primary, #1a1b26);
+  font-weight: 700;
+}
+
+.macro-debugger-transport button:hover {
+  border-color: var(--accent-color, #7aa2f7);
+}
+
+.macro-play-btn {
+  min-width: 96px;
+  font-weight: 700;
+}
+
+.macro-run-btn {
+  margin-left: auto;
+  color: #e0af68 !important;
+}
+
+.macro-key-strip {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 120px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}
+
+.macro-iteration {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+}
+
+.macro-iteration-label {
+  font-size: 0.7rem;
+  color: var(--text-muted, #565f89);
+  min-width: 24px;
+}
+
+.macro-key-chip {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 0.8rem;
+  min-width: 22px;
+  text-align: center;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color, #292e42);
+  color: var(--text-primary, #c0caf5);
+  transition: all 0.12s ease;
+}
+
+.macro-key-chip.done {
+  opacity: 0.45;
+}
+
+.macro-key-chip.current {
+  background: var(--accent-color, #7aa2f7);
+  color: var(--bg-primary, #1a1b26);
+  border-color: var(--accent-color, #7aa2f7);
+  font-weight: 700;
+  transform: scale(1.12);
+}
+
+.macro-frame-info {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: var(--text-muted, #565f89);
+}
+
+.macro-frame-counter,
+.macro-cursor-pos {
+  color: var(--text-primary, #c0caf5);
+}
+
+.macro-mode-badge {
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+  font-size: 0.7rem;
+  background: rgba(122, 162, 247, 0.2);
+  color: #7aa2f7;
+}
+
+.macro-mode-badge.mode-insert {
+  background: rgba(158, 206, 106, 0.2);
+  color: #9ece6a;
+}
+
+.macro-mode-badge.mode-visual,
+.macro-mode-badge.mode-visual_line,
+.macro-mode-badge.mode-visual_block {
+  background: rgba(187, 154, 247, 0.2);
+  color: #bb9af7;
+}
+
+.macro-changed-badge {
+  color: #e0af68;
+}
+
+.macro-line-preview {
+  flex-basis: 100%;
+  background: var(--bg-primary, #1a1b26);
+  color: var(--text-primary, #c0caf5);
+  padding: 4px 8px;
+  border-radius: 4px;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.macro-cursor-char {
+  background: var(--accent-color, #7aa2f7);
+  color: var(--bg-primary, #1a1b26);
+}

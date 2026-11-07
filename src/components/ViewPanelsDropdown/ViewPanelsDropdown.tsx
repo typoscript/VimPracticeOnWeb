@@ -20,6 +20,9 @@ export interface ViewPanelsDropdownProps {
 
   relativeLineNumbers: boolean;
   onToggleRelativeLineNumbers: () => void;
+
+  showMacroDebugger?: boolean;
+  onToggleMacroDebugger?: () => void;
 }
 
 export const ViewPanelsDropdown: React.FC<ViewPanelsDropdownProps> = ({
@@ -36,6 +39,8 @@ export const ViewPanelsDropdown: React.FC<ViewPanelsDropdownProps> = ({
   onToggleVirtualKeyboard,
   relativeLineNumbers,
   onToggleRelativeLineNumbers,
+  showMacroDebugger = false,
+  onToggleMacroDebugger,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -48,6 +53,7 @@ export const ViewPanelsDropdown: React.FC<ViewPanelsDropdownProps> = ({
     showActionTimeline,
     showVirtualKeyboard,
     relativeLineNumbers,
+    !!onToggleMacroDebugger && showMacroDebugger,
   ].filter(Boolean).length;
 
   // 외부 클릭 시 드롭다운 닫기
@@ -252,6 +258,30 @@ export const ViewPanelsDropdown: React.FC<ViewPanelsDropdownProps> = ({
               relativenumber: {relativeLineNumbers ? 'ON' : 'OFF'}
             </span>
           </button>
+
+          {/* 7. 매크로 슬로우모션 디버거 */}
+          {onToggleMacroDebugger && (
+            <button
+              type="button"
+              className={`view-panel-item ${showMacroDebugger ? 'active' : ''}`}
+              onClick={onToggleMacroDebugger}
+              data-testid="toggle-macro-debugger-btn"
+              title="매크로 슬로우모션 디버거 패널 토글"
+              role="menuitemcheckbox"
+              aria-checked={showMacroDebugger}
+            >
+              <div className="panel-item-left">
+                <span className="panel-icon">🎞️</span>
+                <div className="panel-text-block">
+                  <span className="panel-title">매크로 디버거</span>
+                  <span className="panel-desc">@a 매크로를 슬로우모션·키 단위 스텝으로 재생</span>
+                </div>
+              </div>
+              <span className={`panel-switch-badge ${showMacroDebugger ? 'on' : 'off'}`}>
+                🎞️ 매크로 디버거: {showMacroDebugger ? 'ON' : 'OFF'}
+              </span>
+            </button>
+          )}
         </div>
       </div>
     </div>
