@@ -2,12 +2,18 @@ import { FunctionDraft, UserFunction, VimEditorState, VimScriptValue } from '../
 import {
   EvalContext,
   VimScriptError,
+  addValues,
+  displayValue,
   evaluateVimScript,
   evaluateVimScriptList,
+  isList,
   isTruthy,
-  resolveVariableName,
+  parseLValue,
+  readLValue,
   toNumber,
   toVimString,
+  unsetLValue,
+  writeLValue,
 } from './vimscriptEval';
 import { pushUndoSnapshot } from './operators';
 
@@ -16,7 +22,8 @@ import { pushUndoSnapshot } from './operators';
  *
  * - 커맨드라인에서 `:function! Name(a, b)` 를 입력하면 실제 Vim처럼 본문 입력 모드(functionDraft)로 들어가고,
  *   이어서 입력하는 줄이 본문에 쌓이다가 `endfunction` 에서 확정됩니다. (.vimrc 소싱 시에는 여러 줄을 한 번에 정의)
- * - 본문 문법: let / unlet / echo / execute / call / return / if·elseif·else·endif / while·endwhile·break·continue
+ * - 본문 문법: let / unlet / echo / execute / call / return / if·elseif·else·endif / while·endwhile /
+ *   for·endfor (for x in list, for [a, b] in pairs) / break·continue
  *   그 밖의 줄은 일반 Ex 명령(:normal, :s, :g ...)으로 실행됩니다.
  * - `:[range]call F()` 는 range 속성이 없으면 범위의 줄마다(커서를 그 줄 첫 칸에 두고) 호출하고,
  *   range 속성이 있으면 한 번만 호출합니다. 두 경우 모두 a:firstline / a:lastline 이 설정됩니다.
@@ -205,9 +212,10 @@ export function callUserFunction(
     return { state, value: 0, error: `E118: 함수의 인자가 너무 많습니다: ${name}` };
   }
 
-  const aArgs: Record<string, VimScriptValue> = { firstline, lastline, '0': args.length - fn.params.length };
+  const extra = args.slice(fn.params.length);
+  const aArgs: Record<string, VimScriptValue> = { firstline, lastline, '0': extra.length, '000': extra };
   fn.params.forEach((p, i) => (aArgs[p] = args[i]));
-  args.slice(fn.params.length).forEach((v, i) => (aArgs[String(i + 1)] = v));
+  extra.forEach((v, i) => (aArgs[String(i + 1)] = v));
 
   const ctx: EvalContext = {
     state,
@@ -226,7 +234,10 @@ export function callUserFunction(
 
 type BlockFrame =
   | { type: 'if'; active: boolean; taken: boolean }
-  | { type: 'while'; start: number; active: boolean; continued: boolean };
+  | { type: 'while'; start: number; active: boolean; continued: boolean }
+  | { type: 'for'; start: number; active: boolean; continued: boolean; items: VimScriptValue[]; index: number; target: string };
+
+type LoopFrame = Extract<BlockFrame, { type: 'while' | 'for' }>;
 
 function runFunctionBody(fn: UserFunction, ctx: EvalContext, runEx: ExRunner): CallResult {
   const stack: BlockFrame[] = [];
@@ -286,11 +297,42 @@ function runFunctionBody(fn: UserFunction, ctx: EvalContext, runEx: ExRunner): C
         }
         continue;
       }
+      if (word === 'for') {
+        const m = rest.match(/^(.+?)\s+in\s+(.+)$/);
+        if (!m) throw new VimScriptError(`E690: :for 뒤에 "in" 이 없습니다: ${line}`);
+        let items: VimScriptValue[] = [];
+        if (executing()) {
+          const value = evaluateVimScript(m[2], ctx);
+          if (!isList(value)) throw new VimScriptError('E714: :for 에는 리스트가 필요합니다');
+          items = value;
+        }
+        const frame: BlockFrame = { type: 'for', start: pc, active: items.length > 0, continued: false, items, index: 0, target: m[1].trim() };
+        stack.push(frame);
+        if (frame.active) assignTargets(ctx, frame.target, items[0]);
+        continue;
+      }
+      if (word === 'endfor' || word === 'endfo') {
+        const top = stack[stack.length - 1];
+        if (top?.type !== 'for') throw new VimScriptError('E588: :for 없이 :endfor 가 사용되었습니다');
+        const parentActive = stack.slice(0, -1).every((f) => f.active);
+        // 본문을 끝까지 실행했거나 continue 로 왔으면 다음 항목으로, break 로 왔으면 종료
+        if (parentActive && (top.active || top.continued) && top.index + 1 < top.items.length) {
+          if (++iterations > MAX_LOOP_ITERATIONS) throw new VimScriptError('E169: for 반복이 너무 많습니다');
+          top.index++;
+          top.active = true;
+          top.continued = false;
+          assignTargets(ctx, top.target, top.items[top.index]);
+          pc = top.start; // 본문 첫 줄로
+          continue;
+        }
+        stack.pop();
+        continue;
+      }
       if (word === 'break' || word === 'brea' || word === 'continue' || word === 'con') {
         if (!executing()) continue;
-        const idx = stack.map((f) => f.type).lastIndexOf('while');
-        if (idx < 0) throw new VimScriptError(`E587: :while 없이 :${word} 가 사용되었습니다`);
-        const loop = stack[idx] as Extract<BlockFrame, { type: 'while' }>;
+        const idx = stack.map((f) => f.type !== 'if').lastIndexOf(true);
+        if (idx < 0) throw new VimScriptError(`E587: :while/:for 없이 :${word} 가 사용되었습니다`);
+        const loop = stack[idx] as LoopFrame;
         loop.active = false;
         loop.continued = word.startsWith('con');
         for (let i = idx + 1; i < stack.length; i++) stack[i].active = false;
@@ -337,34 +379,29 @@ function runScriptCommand(ctx: EvalContext, line: string, runEx: ExRunner): bool
   const rest = line.slice(word[0].length).trim();
 
   if (cmd === 'let') {
-    const m = rest.match(/^(@.|[gblwtsalv]:\w+|\w+)\s*(\+=|-=|\.\.=|\.=|=)\s*(.+)$/);
-    if (!m) throw new VimScriptError(`E15: 잘못된 :let 구문입니다: ${line}`);
-    assignVariable(ctx, m[1], m[2], evaluateVimScript(m[3], ctx));
+    const parts = splitLet(rest);
+    if (!parts) throw new VimScriptError(`E15: 잘못된 :let 구문입니다: ${line}`);
+    const value = evaluateVimScript(parts.expr, ctx);
+    if (parts.target.startsWith('[')) {
+      if (parts.op !== '=') throw new VimScriptError(`E15: 리스트 풀기에는 = 만 쓸 수 있습니다: ${line}`);
+      assignTargets(ctx, parts.target, value);
+    } else {
+      const lv = parseLValue(parts.target, ctx);
+      writeLValue(ctx, lv, parts.op === '=' ? value : combine(readLValue(ctx, lv), parts.op, value));
+    }
     return true;
   }
 
   if (cmd === 'unl' || cmd === 'unlet') {
-    for (const name of rest.split(/\s+/).filter((n) => n.length > 0)) {
-      const { scope, key } = resolveVariableName(ctx, name);
-      const store = scope === 'l' ? ctx.locals : scope === 'g' ? ctx.state.globalVars : undefined;
-      if (!store || !(key in store)) {
-        if (word[2] === '!') continue;
-        throw new VimScriptError(`E108: 해당 변수가 없습니다: ${name}`);
-      }
-      if (scope === 'l') {
-        delete ctx.locals![key];
-      } else {
-        const globals = { ...(ctx.state.globalVars ?? {}) };
-        delete globals[key];
-        ctx.state = { ...ctx.state, globalVars: globals };
-      }
+    for (const target of splitTargets(rest)) {
+      unsetLValue(ctx, parseLValue(target, ctx), word[2] === '!');
     }
     return true;
   }
 
   if (cmd === 'ec' || cmd === 'echo' || cmd === 'echom' || cmd === 'echomsg') {
     const values = evaluateVimScriptList(rest, ctx);
-    ctx.state = { ...ctx.state, commandMessage: values.map(toVimString).join(' ') };
+    ctx.state = { ...ctx.state, commandMessage: values.map(displayValue).join(' ') };
     return true;
   }
 
@@ -385,38 +422,72 @@ function runScriptCommand(ctx: EvalContext, line: string, runEx: ExRunner): bool
   return false;
 }
 
-function assignVariable(ctx: EvalContext, target: string, op: string, value: VimScriptValue): void {
-  if (target.startsWith('@')) {
-    const reg = target[1] === '"' ? '"' : target[1].toLowerCase();
-    const prev = ctx.state.registers?.[reg];
-    const prevText = prev ? (Array.isArray(prev.content) ? prev.content.join('') : prev.content) : '';
-    const text = op === '=' ? toVimString(value) : prevText + toVimString(value);
-    ctx.state = {
-      ...ctx.state,
-      registers: { ...(ctx.state.registers ?? {}), [reg]: { type: 'char', content: text } },
-    };
+/** :let 의 대입 연산자를 찾아 대상·연산자·표현식으로 나눕니다. (괄호·따옴표 안의 = 는 무시) */
+function splitLet(rest: string): { target: string; op: string; expr: string } | null {
+  let depth = 0;
+  let quote: string | null = null;
+  for (let i = 0; i < rest.length; i++) {
+    const ch = rest[i];
+    if (quote) {
+      if (ch === quote) quote = null;
+      continue;
+    }
+    if (ch === '"' || ch === "'") quote = ch;
+    else if (ch === '[' || ch === '(' || ch === '{') depth++;
+    else if (ch === ']' || ch === ')' || ch === '}') depth--;
+    else if (depth === 0) {
+      const op = ['..=', '.=', '+=', '-=', '='].find((o) => rest.startsWith(o, i));
+      if (!op) continue;
+      if (op === '=' && (rest[i + 1] === '=' || rest[i + 1] === '~')) return null;
+      const target = rest.slice(0, i).trim();
+      const expr = rest.slice(i + op.length).trim();
+      return target && expr ? { target, op, expr } : null;
+    }
+  }
+  return null;
+}
+
+/** :unlet 대상 목록을 공백으로 나눕니다. (괄호 안의 공백은 유지) */
+function splitTargets(rest: string): string[] {
+  const out: string[] = [];
+  let cur = '';
+  let depth = 0;
+  for (const ch of rest) {
+    if (ch === '[') depth++;
+    if (ch === ']') depth--;
+    if (/\s/.test(ch) && depth === 0) {
+      if (cur) out.push(cur);
+      cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
+/** += -= .= ..= 복합 대입 */
+function combine(current: VimScriptValue, op: string, value: VimScriptValue): VimScriptValue {
+  if (op === '+=') return addValues(current, value);
+  if (op === '-=') return toNumber(current) - toNumber(value);
+  return toVimString(current) + toVimString(value);
+}
+
+/** 대입 대상 하나 또는 리스트 풀기([a, b] / [a, b; rest])에 값을 씁니다. (:let, :for 공용) */
+function assignTargets(ctx: EvalContext, target: string, value: VimScriptValue): void {
+  const t = target.trim();
+  if (!t.startsWith('[')) {
+    writeLValue(ctx, parseLValue(t, ctx), value);
     return;
   }
-
-  const { scope, key } = resolveVariableName(ctx, target);
-  if (scope === 'a' || scope === 'v') throw new VimScriptError(`E46: 읽기 전용 변수는 바꿀 수 없습니다: ${target}`);
-
-  const read = (): VimScriptValue => {
-    const store = scope === 'l' ? ctx.locals : ctx.state.globalVars;
-    if (!store || !(key in store)) throw new VimScriptError(`E121: 정의되지 않은 변수입니다: ${target}`);
-    return store[key];
-  };
-
-  let next: VimScriptValue = value;
-  if (op === '+=') next = toNumber(read()) + toNumber(value);
-  else if (op === '-=') next = toNumber(read()) - toNumber(value);
-  else if (op === '.=' || op === '..=') next = toVimString(read()) + toVimString(value);
-
-  if (scope === 'l') {
-    ctx.locals![key] = next;
-  } else {
-    ctx.state = { ...ctx.state, globalVars: { ...(ctx.state.globalVars ?? {}), [key]: next } };
-  }
+  if (!t.endsWith(']')) throw new VimScriptError(`E475: 잘못된 대입 대상입니다: ${target}`);
+  if (!isList(value)) throw new VimScriptError('E714: 리스트 풀기에는 리스트가 필요합니다');
+  const [namesPart, restName] = t.slice(1, -1).split(';').map((x) => x.trim());
+  const names = namesPart.split(',').map((n) => n.trim()).filter((n) => n.length > 0);
+  if (value.length < names.length) throw new VimScriptError('E688: 리스트 항목보다 대상이 더 많습니다');
+  if (value.length > names.length && !restName) throw new VimScriptError('E687: 리스트 항목보다 대상이 더 적습니다');
+  names.forEach((n, i) => writeLValue(ctx, parseLValue(n, ctx), value[i]));
+  if (restName) writeLValue(ctx, parseLValue(restName, ctx), value.slice(names.length));
 }
 
 /** 함수 밖(커맨드라인·.vimrc)에서 사용하는 평가 컨텍스트 */

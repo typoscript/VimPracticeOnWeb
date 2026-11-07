@@ -1,16 +1,22 @@
-import { VimEditorState, VimScriptValue } from '../types/vim';
+import { VimEditorState, VimScriptDict, VimScriptValue } from '../types/vim';
+import { vimRegexToJsRegex } from './vimRegex';
 
 /**
  * Vim script 표현식 평가기 (eval / Function 미사용, 재귀 하강 파서)
  *
  * 지원 범위 (:help expression-syntax 의 부분 집합):
- * - 값: 정수(10진, 0x16진), "문자열"(\n \t \" \\ 이스케이프), '문자열'('' 이스케이프)
- * - 변수: g:x, l:x, a:x, x(함수 안에서는 l:, 밖에서는 g:), @r(레지스터), v:true / v:false
- * - 연산자 (우선순위 순): ?: / || / && / == != > >= < <= (#: 대소문자 구분, ?: 무시) / + - . .. / * / % / ! - + (단항)
- * - 함수 호출: 사용자 함수 Name(...) 및 내장 함수 (line, col, getline, setline, strlen, len, toupper, tolower,
- *   repeat, string, str2nr, abs, exists, trim)
+ * - 값: 정수(10진, 0x16진), "문자열"(\n \t \" \\ 이스케이프), '문자열'('' 이스케이프),
+ *       리스트 [1, 'a'], 딕셔너리 {'k': v}, 리터럴 딕셔너리 #{k: v}
+ * - 변수: g:x, l:x, a:x, a:000, x(함수 안에서는 l:, 밖에서는 g:), @r(레지스터), v:true / v:false / v:val / v:key
+ * - 연산자 (우선순위 순): ?: / || / && / == != > >= < <= =~ !~ is isnot (#: 대소문자 구분, ?: 무시)
+ *   / + - . .. / * / % / ! - + (단항) / 인덱스 x[i], 슬라이스 x[a:b], 멤버 d.key, 함수 호출
+ * - 내장 함수: BUILTINS 참고 (리스트·딕셔너리·문자열·버퍼 함수, substitute, printf, map, filter ...)
  *
- * Vim과 같이 숫자와 문자열은 연산에 따라 자동 변환됩니다. ("12abc" + 1 == 13, 1 . 2 == "12")
+ * Vim과 같이 숫자와 문자열은 연산에 따라 자동 변환되며, 리스트·딕셔너리를 숫자·문자열로 쓰면 에러입니다.
+ *
+ * ⚠ 리스트·딕셔너리는 불변 상태 규약에 맞춰 값(value) 의미론으로 동작합니다. 대신 add(), sort() 처럼 인자를
+ *   제자리에서 바꾸는 내장 함수는 첫 인자가 변수이면 결과를 그 변수에 다시 저장하므로 `call add(l, x)` 같은
+ *   관용구는 Vim과 같게 동작합니다. (let b = a 로 만든 별칭은 함께 바뀌지 않습니다)
  */
 
 export class VimScriptError extends Error {
@@ -27,17 +33,33 @@ export interface EvalContext {
   locals?: Record<string, VimScriptValue>;
   /** 함수 인자 (a:) */
   args?: Record<string, VimScriptValue>;
+  /** map() / filter() 표현식 안의 v:val, v:key */
+  vvars?: Record<string, VimScriptValue>;
   /** 사용자 함수 호출. ctx.state 를 갱신할 수 있습니다. */
   callUserFunction: (ctx: EvalContext, name: string, args: VimScriptValue[]) => VimScriptValue;
 }
 
 // ---------------------------------------------------------------------------
-// 값 변환 (:help expr-conversion)
+// 값 판별·변환 (:help expr-conversion)
 // ---------------------------------------------------------------------------
+
+export function isList(value: VimScriptValue): value is VimScriptValue[] {
+  return Array.isArray(value);
+}
+
+export function isDict(value: VimScriptValue): value is VimScriptDict {
+  return typeof value === 'object' && !Array.isArray(value) && value.kind === 'dict';
+}
+
+export function makeDict(items: Record<string, VimScriptValue> = {}): VimScriptDict {
+  return { kind: 'dict', items };
+}
 
 /** 문자열 → 숫자: 앞부분의 정수만 해석하고 나머지는 무시 ("12abc" → 12, "abc" → 0) */
 export function toNumber(value: VimScriptValue): number {
   if (typeof value === 'number') return value;
+  if (isList(value)) throw new VimScriptError('E745: 리스트를 숫자로 사용할 수 없습니다');
+  if (isDict(value)) throw new VimScriptError('E728: 딕셔너리를 숫자로 사용할 수 없습니다');
   const m = value.match(/^\s*([-+]?)(0[xX][0-9a-fA-F]+|\d+)/);
   if (!m) return 0;
   const n = m[2].toLowerCase().startsWith('0x') ? parseInt(m[2], 16) : parseInt(m[2], 10);
@@ -45,50 +67,112 @@ export function toNumber(value: VimScriptValue): number {
 }
 
 export function toVimString(value: VimScriptValue): string {
-  return typeof value === 'number' ? String(value) : value;
+  if (typeof value === 'number') return String(value);
+  if (isList(value)) throw new VimScriptError('E730: 리스트를 문자열로 사용할 수 없습니다');
+  if (isDict(value)) throw new VimScriptError('E731: 딕셔너리를 문자열로 사용할 수 없습니다');
+  return value;
 }
 
 export function isTruthy(value: VimScriptValue): boolean {
   return toNumber(value) !== 0;
 }
 
-/** :echo string() 처럼 값을 표시용 문자열로 바꿉니다. (문자열은 작은따옴표로 감쌈) */
+/** string() 처럼 값을 다시 읽을 수 있는 표현으로 바꿉니다. (문자열은 작은따옴표로 감쌈) */
 export function formatValue(value: VimScriptValue): string {
-  return typeof value === 'number' ? String(value) : `'${value.replace(/'/g, "''")}'`;
+  if (typeof value === 'number') return String(value);
+  if (isList(value)) return `[${value.map(formatValue).join(', ')}]`;
+  if (isDict(value)) {
+    const entries = Object.entries(value.items).map(([k, v]) => `${formatValue(k)}: ${formatValue(v)}`);
+    return `{${entries.join(', ')}}`;
+  }
+  return `'${value.replace(/'/g, "''")}'`;
+}
+
+/** :echo 출력 형식: 최상위 문자열은 그대로, 리스트·딕셔너리는 string() 형식 */
+export function displayValue(value: VimScriptValue): string {
+  return typeof value === 'string' ? value : formatValue(value);
+}
+
+/** + 연산: 리스트끼리는 연결, 그 밖에는 숫자 덧셈 */
+export function addValues(a: VimScriptValue, b: VimScriptValue): VimScriptValue {
+  if (isList(a) && isList(b)) return [...a, ...b];
+  return toNumber(a) + toNumber(b);
+}
+
+function typeCode(v: VimScriptValue): number {
+  return typeof v === 'number' ? 0 : typeof v === 'string' ? 1 : isList(v) ? 3 : 4;
+}
+
+/** == 비교 (리스트·딕셔너리는 내용 비교) */
+function valuesEqual(a: VimScriptValue, b: VimScriptValue, ignoreCase: boolean): boolean {
+  if (isList(a) || isList(b)) {
+    if (!isList(a) || !isList(b)) throw new VimScriptError('E691: 리스트는 리스트와만 비교할 수 있습니다');
+    return a.length === b.length && a.every((v, i) => valuesEqual(v, b[i], ignoreCase));
+  }
+  if (isDict(a) || isDict(b)) {
+    if (!isDict(a) || !isDict(b)) throw new VimScriptError('E735: 딕셔너리는 딕셔너리와만 비교할 수 있습니다');
+    const ka = Object.keys(a.items);
+    return ka.length === Object.keys(b.items).length && ka.every((k) => k in b.items && valuesEqual(a.items[k], b.items[k], ignoreCase));
+  }
+  if (typeof a === 'string' && typeof b === 'string') {
+    return ignoreCase ? a.toLowerCase() === b.toLowerCase() : a === b;
+  }
+  return toNumber(a) === toNumber(b);
+}
+
+/** Vim 패턴을 JS RegExp 로 변환합니다. 패턴 안의 \c / \C 는 대소문자 무시 여부를 덮어씁니다. */
+export function compileVimPattern(pattern: string, ignoreCase: boolean, flags = ''): RegExp {
+  let ic = ignoreCase;
+  let pat = pattern;
+  if (/\\c/.test(pat)) ic = true;
+  else if (/\\C/.test(pat)) ic = false;
+  pat = pat.replace(/\\[cC]/g, '');
+  try {
+    return new RegExp(vimRegexToJsRegex(pat), flags + (ic ? 'i' : ''));
+  } catch {
+    throw new VimScriptError(`E383: 잘못된 검색 패턴입니다: ${pattern}`);
+  }
 }
 
 // ---------------------------------------------------------------------------
 // 렉서
 // ---------------------------------------------------------------------------
 
-type Token =
+type Token = (
   | { type: 'num'; value: number }
   | { type: 'str'; value: string }
   | { type: 'name'; value: string }
   | { type: 'reg'; value: string }
   | { type: 'op'; value: string }
-  | { type: 'eof' };
+  | { type: 'eof'; value?: undefined }
+) & { space: boolean };
 
 const OPERATORS = [
-  '==#', '==?', '!=#', '!=?', '>=#', '>=?', '<=#', '<=?',
-  '..', '==', '!=', '>=', '<=', '&&', '||',
+  '==#', '==?', '!=#', '!=?', '>=#', '>=?', '<=#', '<=?', '=~#', '=~?', '!~#', '!~?',
+  '..', '==', '!=', '>=', '<=', '=~', '!~', '&&', '||', '#{',
   '>#', '>?', '<#', '<?',
-  '+', '-', '*', '/', '%', '.', '!', '<', '>', '(', ')', ',', '?', ':',
+  '+', '-', '*', '/', '%', '.', '!', '<', '>', '(', ')', '[', ']', '{', '}', ',', '?', ':',
 ];
 
 function tokenize(src: string): Token[] {
   const tokens: Token[] = [];
   let i = 0;
+  let space = false;
+  const push = (t: Omit<Token, 'space'>) => {
+    tokens.push({ ...t, space } as Token);
+    space = false;
+  };
   while (i < src.length) {
     const ch = src[i];
     if (/\s/.test(ch)) {
+      space = true;
       i++;
       continue;
     }
     // 숫자
     const num = src.slice(i).match(/^(0[xX][0-9a-fA-F]+|\d+)/);
     if (num) {
-      tokens.push({ type: 'num', value: toNumber(num[1]) });
+      push({ type: 'num', value: toNumber(num[1]) });
       i += num[1].length;
       continue;
     }
@@ -106,7 +190,7 @@ function tokenize(src: string): Token[] {
         }
       }
       if (j >= src.length) throw new VimScriptError(`E114: 큰따옴표가 닫히지 않았습니다: ${src.slice(i)}`);
-      tokens.push({ type: 'str', value: out });
+      push({ type: 'str', value: out });
       i = j + 1;
       continue;
     }
@@ -126,40 +210,210 @@ function tokenize(src: string): Token[] {
         out += src[j++];
       }
       if (j >= src.length) throw new VimScriptError(`E115: 작은따옴표가 닫히지 않았습니다: ${src.slice(i)}`);
-      tokens.push({ type: 'str', value: out });
+      push({ type: 'str', value: out });
       i = j + 1;
       continue;
     }
     // @r 레지스터
     if (ch === '@' && i + 1 < src.length) {
-      tokens.push({ type: 'reg', value: src[i + 1] });
+      push({ type: 'reg', value: src[i + 1] });
       i += 2;
       continue;
     }
-    // a:0, a:1 ... (가변 인자 개수 / 순번)
+    // a:0, a:1, a:000 (가변 인자)
     const argIdx = src.slice(i).match(/^a:\d+/);
     if (argIdx) {
-      tokens.push({ type: 'name', value: argIdx[0] });
+      push({ type: 'name', value: argIdx[0] });
       i += argIdx[0].length;
       continue;
     }
     // 이름 (g:x, a:name, v:true, Func)
     const name = src.slice(i).match(/^([gblwtsav]:)?[A-Za-z_][A-Za-z0-9_]*/);
     if (name) {
-      tokens.push({ type: 'name', value: name[0] });
+      push({ type: 'name', value: name[0] });
       i += name[0].length;
       continue;
     }
     const op = OPERATORS.find((o) => src.startsWith(o, i));
     if (op) {
-      tokens.push({ type: 'op', value: op });
+      push({ type: 'op', value: op });
       i += op.length;
       continue;
     }
     throw new VimScriptError(`E15: 잘못된 표현식입니다: "${src}"`);
   }
-  tokens.push({ type: 'eof' });
+  push({ type: 'eof' });
   return tokens;
+}
+
+// ---------------------------------------------------------------------------
+// 대입 대상 (lvalue): 변수 / 레지스터 + [인덱스] / .키 경로
+// ---------------------------------------------------------------------------
+
+export interface LValue {
+  /** 변수 이름(g:x, x) 또는 레지스터(@a) */
+  base: string;
+  /** 인덱스 경로 (리스트 인덱스는 number, 딕셔너리 키는 string) */
+  path: (number | string)[];
+}
+
+function indexError(index: number): VimScriptError {
+  return new VimScriptError(`E684: 리스트 인덱스가 범위를 벗어났습니다: ${index}`);
+}
+
+function getIn(container: VimScriptValue, key: number | string): VimScriptValue {
+  if (isList(container)) {
+    const n = toNumber(key);
+    const idx = n < 0 ? container.length + n : n;
+    if (idx < 0 || idx >= container.length) throw indexError(n);
+    return container[idx];
+  }
+  if (isDict(container)) {
+    const k = toVimString(key);
+    if (!(k in container.items)) throw new VimScriptError(`E716: 딕셔너리에 키가 없습니다: "${k}"`);
+    return container.items[k];
+  }
+  throw new VimScriptError('E689: 리스트나 딕셔너리만 인덱스로 접근할 수 있습니다');
+}
+
+function setIn(container: VimScriptValue, path: (number | string)[], value: VimScriptValue): VimScriptValue {
+  if (path.length === 0) return value;
+  const [key, ...rest] = path;
+  if (isList(container)) {
+    const n = toNumber(key);
+    const idx = n < 0 ? container.length + n : n;
+    if (idx < 0 || idx >= container.length) throw indexError(n);
+    const copy = [...container];
+    copy[idx] = setIn(container[idx], rest, value);
+    return copy;
+  }
+  if (isDict(container)) {
+    const k = toVimString(key);
+    if (rest.length > 0 && !(k in container.items)) throw new VimScriptError(`E716: 딕셔너리에 키가 없습니다: "${k}"`);
+    return makeDict({ ...container.items, [k]: setIn(container.items[k], rest, value) });
+  }
+  throw new VimScriptError('E689: 리스트나 딕셔너리만 인덱스로 접근할 수 있습니다');
+}
+
+function removeIn(container: VimScriptValue, path: (number | string)[]): VimScriptValue {
+  const [key, ...rest] = path;
+  if (rest.length > 0) {
+    return setIn(container, [key], removeIn(getIn(container, key), rest));
+  }
+  if (isList(container)) {
+    const n = toNumber(key);
+    const idx = n < 0 ? container.length + n : n;
+    if (idx < 0 || idx >= container.length) throw indexError(n);
+    return container.filter((_, i) => i !== idx);
+  }
+  if (isDict(container)) {
+    const k = toVimString(key);
+    if (!(k in container.items)) throw new VimScriptError(`E716: 딕셔너리에 키가 없습니다: "${k}"`);
+    const items = { ...container.items };
+    delete items[k];
+    return makeDict(items);
+  }
+  throw new VimScriptError('E689: 리스트나 딕셔너리만 인덱스로 접근할 수 있습니다');
+}
+
+/** 이름의 스코프를 판별합니다. 함수 안에서는 접두어 없는 이름이 l:, 밖에서는 g: 입니다. */
+export function resolveVariableName(ctx: Pick<EvalContext, 'locals'>, name: string): { scope: 'g' | 'l' | 'a' | 'v'; key: string } {
+  const m = name.match(/^([gblwtsav]):(.+)$/);
+  if (m) {
+    const scope = m[1];
+    if (scope === 'a' || scope === 'l' || scope === 'v') return { scope, key: m[2] };
+    // b: w: t: s: 는 단순화를 위해 g: 공간에 접두어를 붙여 저장
+    return { scope: 'g', key: scope === 'g' ? m[2] : `${scope}:${m[2]}` };
+  }
+  return ctx.locals ? { scope: 'l', key: name } : { scope: 'g', key: name };
+}
+
+function readRegister(state: VimEditorState, reg: string): string {
+  const entry = state.registers?.[reg === '"' ? '"' : reg.toLowerCase()];
+  if (entry) return Array.isArray(entry.content) ? entry.content.join('') : entry.content;
+  if (reg === '"') return state.clipboard?.content ?? '';
+  return '';
+}
+
+export function readVariable(ctx: EvalContext, name: string): VimScriptValue {
+  const { scope, key } = resolveVariableName(ctx, name);
+  if (scope === 'v') {
+    if (key === 'true') return 1;
+    if (key === 'false') return 0;
+    if (ctx.vvars && key in ctx.vvars) return ctx.vvars[key];
+  } else if (scope === 'a') {
+    if (ctx.args && key in ctx.args) return ctx.args[key];
+  } else if (scope === 'l') {
+    if (ctx.locals && key in ctx.locals) return ctx.locals[key];
+  } else {
+    const globals = ctx.state.globalVars ?? {};
+    if (key in globals) return globals[key];
+  }
+  throw new VimScriptError(`E121: 정의되지 않은 변수입니다: ${name}`);
+}
+
+/** 변수에 값을 씁니다. (a: / v: 는 읽기 전용) */
+export function writeVariable(ctx: EvalContext, name: string, value: VimScriptValue): void {
+  const { scope, key } = resolveVariableName(ctx, name);
+  if (scope === 'a' || scope === 'v') throw new VimScriptError(`E46: 읽기 전용 변수는 바꿀 수 없습니다: ${name}`);
+  if (scope === 'l') {
+    ctx.locals![key] = value;
+  } else {
+    ctx.state = { ...ctx.state, globalVars: { ...(ctx.state.globalVars ?? {}), [key]: value } };
+  }
+}
+
+function deleteVariable(ctx: EvalContext, name: string, force: boolean): void {
+  const { scope, key } = resolveVariableName(ctx, name);
+  const store = scope === 'l' ? ctx.locals : scope === 'g' ? ctx.state.globalVars : undefined;
+  if (!store || !(key in store)) {
+    if (force) return;
+    throw new VimScriptError(`E108: 해당 변수가 없습니다: ${name}`);
+  }
+  if (scope === 'l') {
+    delete ctx.locals![key];
+  } else {
+    const globals = { ...(ctx.state.globalVars ?? {}) };
+    delete globals[key];
+    ctx.state = { ...ctx.state, globalVars: globals };
+  }
+}
+
+/** 대입 대상의 현재 값을 읽습니다. */
+export function readLValue(ctx: EvalContext, lv: LValue): VimScriptValue {
+  let value: VimScriptValue = lv.base.startsWith('@') ? readRegister(ctx.state, lv.base[1]) : readVariable(ctx, lv.base);
+  for (const key of lv.path) value = getIn(value, key);
+  return value;
+}
+
+/** 대입 대상에 값을 씁니다. (l[0] = x, d.key = x 는 리스트·딕셔너리를 복사해 바꾼 뒤 변수에 다시 저장) */
+export function writeLValue(ctx: EvalContext, lv: LValue, value: VimScriptValue): void {
+  if (lv.base.startsWith('@')) {
+    if (lv.path.length > 0) throw new VimScriptError(`E15: 레지스터에는 인덱스를 쓸 수 없습니다: ${lv.base}`);
+    const reg = lv.base[1] === '"' ? '"' : lv.base[1].toLowerCase();
+    ctx.state = {
+      ...ctx.state,
+      registers: { ...(ctx.state.registers ?? {}), [reg]: { type: 'char', content: toVimString(value) } },
+    };
+    return;
+  }
+  const next = lv.path.length === 0 ? value : setIn(readVariable(ctx, lv.base), lv.path, value);
+  writeVariable(ctx, lv.base, next);
+}
+
+/** :unlet 대상(변수, 리스트 항목, 딕셔너리 키)을 지웁니다. */
+export function unsetLValue(ctx: EvalContext, lv: LValue, force: boolean): void {
+  if (lv.path.length === 0) {
+    deleteVariable(ctx, lv.base, force);
+    return;
+  }
+  writeVariable(ctx, lv.base, removeIn(readVariable(ctx, lv.base), lv.path));
+}
+
+/** "g:list[0]", "d.key", "@a" 같은 대입 대상 문자열을 해석합니다. (인덱스 표현식은 평가) */
+export function parseLValue(source: string, ctx: EvalContext): LValue {
+  const trimmed = source.trim();
+  return new Evaluator(tokenize(trimmed), trimmed, ctx).lvalue();
 }
 
 // ---------------------------------------------------------------------------
@@ -171,8 +425,8 @@ class Evaluator {
 
   constructor(private tokens: Token[], private source: string, private ctx: EvalContext) {}
 
-  private peek(): Token {
-    return this.tokens[this.pos];
+  private peek(offset = 0): Token {
+    return this.tokens[Math.min(this.pos + offset, this.tokens.length - 1)];
   }
 
   private isOp(value: string): boolean {
@@ -180,16 +434,18 @@ class Evaluator {
     return t.type === 'op' && t.value === value;
   }
 
-  private expectOp(value: string): void {
-    if (!this.isOp(value)) throw new VimScriptError(`E15: 잘못된 표현식입니다: "${this.source}"`);
+  private invalid(): VimScriptError {
+    return new VimScriptError(`E15: 잘못된 표현식입니다: "${this.source}"`);
+  }
+
+  private expectOp(value: string, error?: () => VimScriptError): void {
+    if (!this.isOp(value)) throw error ? error() : this.invalid();
     this.pos++;
   }
 
   evaluateAll(): VimScriptValue {
     const value = this.ternary();
-    if (this.peek().type !== 'eof') {
-      throw new VimScriptError(`E15: 잘못된 표현식입니다: "${this.source}"`);
-    }
+    if (this.peek().type !== 'eof') throw this.invalid();
     return value;
   }
 
@@ -200,6 +456,32 @@ class Evaluator {
       values.push(this.ternary());
     }
     return values;
+  }
+
+  lvalue(): LValue {
+    const t = this.peek();
+    let base: string;
+    if (t.type === 'reg') base = `@${t.value}`;
+    else if (t.type === 'name') base = t.value;
+    else throw new VimScriptError(`E475: 잘못된 대입 대상입니다: ${this.source}`);
+    this.pos++;
+    const path: (number | string)[] = [];
+    for (;;) {
+      if (this.isOp('[')) {
+        this.pos++;
+        const key = this.ternary();
+        this.expectOp(']');
+        path.push(typeof key === 'number' ? key : toVimString(key));
+      } else if (this.isOp('.') && this.peek(1).type === 'name' && !this.peek(1).space) {
+        this.pos++;
+        path.push(String(this.peek().value));
+        this.pos++;
+      } else {
+        break;
+      }
+    }
+    if (this.peek().type !== 'eof') throw new VimScriptError(`E475: 잘못된 대입 대상입니다: ${this.source}`);
+    return { base, path };
   }
 
   private ternary(): VimScriptValue {
@@ -235,13 +517,33 @@ class Evaluator {
   private compare(): VimScriptValue {
     const left = this.additive();
     const t = this.peek();
-    if (t.type !== 'op' || !/^(==|!=|>=|<=|>|<)[#?]?$/.test(t.value)) return left;
+    let op: string | null = null;
+    if (t.type === 'op' && /^(==|!=|>=|<=|>|<|=~|!~)[#?]?$/.test(t.value)) op = t.value;
+    else if (t.type === 'name' && (t.value === 'is' || t.value === 'isnot')) op = t.value;
+    if (!op) return left;
     this.pos++;
     const right = this.additive();
-    const base = t.value.replace(/[#?]$/, '');
-    const ignoreCase =
-      t.value.endsWith('?') || (!t.value.endsWith('#') && !!this.ctx.state.options?.ignorecase);
 
+    const base = op.replace(/[#?]$/, '');
+    const ignoreCase = op.endsWith('?') || (!op.endsWith('#') && !!this.ctx.state.options?.ignorecase);
+
+    if (base === '=~' || base === '!~') {
+      const matched = compileVimPattern(toVimString(right), ignoreCase).test(toVimString(left));
+      return matched === (base === '=~') ? 1 : 0;
+    }
+    if (base === 'is' || base === 'isnot') {
+      // 값 의미론이므로 같은 종류·같은 내용이면 같은 것으로 봅니다
+      const same = typeCode(left) === typeCode(right) && valuesEqual(left, right, false);
+      return same === (base === 'is') ? 1 : 0;
+    }
+    if (base === '==' || base === '!=') {
+      const eq = valuesEqual(left, right, ignoreCase);
+      return eq === (base === '==') ? 1 : 0;
+    }
+
+    if (isList(left) || isList(right) || isDict(left) || isDict(right)) {
+      throw new VimScriptError('E692: 리스트·딕셔너리에는 크기 비교를 쓸 수 없습니다');
+    }
     let cmp: number;
     if (typeof left === 'string' && typeof right === 'string') {
       const l = ignoreCase ? left.toLowerCase() : left;
@@ -250,23 +552,19 @@ class Evaluator {
     } else {
       cmp = toNumber(left) - toNumber(right);
     }
-    const result =
-      base === '==' ? cmp === 0 :
-      base === '!=' ? cmp !== 0 :
-      base === '>' ? cmp > 0 :
-      base === '>=' ? cmp >= 0 :
-      base === '<' ? cmp < 0 : cmp <= 0;
+    const result = base === '>' ? cmp > 0 : base === '>=' ? cmp >= 0 : base === '<' ? cmp < 0 : cmp <= 0;
     return result ? 1 : 0;
   }
 
   private additive(): VimScriptValue {
     let left = this.multiplicative();
     for (;;) {
-      if (this.isOp('+') || this.isOp('-')) {
-        const op = (this.peek() as { value: string }).value;
+      if (this.isOp('+')) {
         this.pos++;
-        const right = this.multiplicative();
-        left = op === '+' ? toNumber(left) + toNumber(right) : toNumber(left) - toNumber(right);
+        left = addValues(left, this.multiplicative());
+      } else if (this.isOp('-')) {
+        this.pos++;
+        left = toNumber(left) - toNumber(this.multiplicative());
       } else if (this.isOp('.') || this.isOp('..')) {
         this.pos++;
         const right = this.multiplicative();
@@ -280,7 +578,7 @@ class Evaluator {
   private multiplicative(): VimScriptValue {
     let left = this.unary();
     while (this.isOp('*') || this.isOp('/') || this.isOp('%')) {
-      const op = (this.peek() as { value: string }).value;
+      const op = String(this.peek().value);
       this.pos++;
       const l = toNumber(left);
       const r = toNumber(this.unary());
@@ -305,7 +603,56 @@ class Evaluator {
       this.pos++;
       return toNumber(this.unary());
     }
-    return this.primary();
+    return this.postfix();
+  }
+
+  /** 인덱스 x[i], 슬라이스 x[a:b], 멤버 d.key (앞에 공백이 없을 때만) */
+  private postfix(): VimScriptValue {
+    let value = this.primary();
+    for (;;) {
+      if (this.isOp('[') && !this.peek().space) {
+        this.pos++;
+        value = this.subscript(value);
+      } else if (
+        this.isOp('.') && !this.peek().space && isDict(value) &&
+        this.peek(1).type === 'name' && !this.peek(1).space
+      ) {
+        this.pos++;
+        value = getIn(value, String(this.peek().value));
+        this.pos++;
+      } else {
+        return value;
+      }
+    }
+  }
+
+  private subscript(value: VimScriptValue): VimScriptValue {
+    // [:b] / [a:] / [a:b] / [i]
+    let start: VimScriptValue | undefined;
+    if (!this.isOp(':')) {
+      start = this.or();
+      if (this.isOp('?')) {
+        this.pos++;
+        const a = this.ternary();
+        this.expectOp(':');
+        const b = this.ternary();
+        start = isTruthy(start) ? a : b;
+      }
+    }
+    if (this.isOp(':')) {
+      this.pos++;
+      const end = this.isOp(']') ? undefined : this.or();
+      this.expectOp(']');
+      return slice(value, start, end);
+    }
+    this.expectOp(']');
+    if (typeof value === 'number' || typeof value === 'string') {
+      // 문자열 인덱스는 범위를 벗어나면 빈 문자열
+      const s = toVimString(value);
+      const n = toNumber(start!);
+      return n >= 0 && n < s.length ? s[n] : '';
+    }
+    return getIn(value, isDict(value) ? toVimString(start!) : toNumber(start!));
   }
 
   private primary(): VimScriptValue {
@@ -324,27 +671,64 @@ class Evaluator {
       this.expectOp(')');
       return v;
     }
+    if (t.type === 'op' && t.value === '[') {
+      this.pos++;
+      const items: VimScriptValue[] = [];
+      while (!this.isOp(']')) {
+        items.push(this.ternary());
+        if (!this.isOp(',')) break;
+        this.pos++;
+      }
+      this.expectOp(']', () => new VimScriptError(`E697: 리스트 끝에 ] 가 없습니다: ${this.source}`));
+      return items;
+    }
+    if (t.type === 'op' && (t.value === '{' || t.value === '#{')) {
+      const literalKeys = t.value === '#{';
+      this.pos++;
+      const items: Record<string, VimScriptValue> = {};
+      while (!this.isOp('}')) {
+        let key: string;
+        const kt = this.peek();
+        if (literalKeys && (kt.type === 'name' || kt.type === 'num')) {
+          key = String(kt.value);
+          this.pos++;
+        } else {
+          key = toVimString(this.or());
+        }
+        this.expectOp(':', () => new VimScriptError(`E720: 딕셔너리 키 뒤에 : 가 없습니다: ${this.source}`));
+        items[key] = this.ternary();
+        if (!this.isOp(',')) break;
+        this.pos++;
+      }
+      this.expectOp('}', () => new VimScriptError(`E723: 딕셔너리 끝에 } 가 없습니다: ${this.source}`));
+      return makeDict(items);
+    }
     if (t.type === 'name') {
       this.pos++;
       if (this.isOp('(')) {
         this.pos++;
         const args: VimScriptValue[] = [];
+        // 제자리 변경 내장 함수(add, sort ...)의 결과를 되돌려 쓸 첫 인자 변수 이름
+        let firstArgVar: string | null = null;
         if (!this.isOp(')')) {
+          const startPos = this.pos;
           args.push(this.ternary());
+          const consumed = this.tokens.slice(startPos, this.pos);
+          if (consumed.length === 1 && consumed[0].type === 'name') firstArgVar = String(consumed[0].value);
           while (this.isOp(',')) {
             this.pos++;
             args.push(this.ternary());
           }
         }
         this.expectOp(')');
-        return this.call(t.value, args);
+        return this.call(t.value, args, firstArgVar);
       }
       return readVariable(this.ctx, t.value);
     }
-    throw new VimScriptError(`E15: 잘못된 표현식입니다: "${this.source}"`);
+    throw this.invalid();
   }
 
-  private call(name: string, args: VimScriptValue[]): VimScriptValue {
+  private call(name: string, args: VimScriptValue[], firstArgVar: string | null): VimScriptValue {
     if (/^[A-Z]/.test(name) || name.startsWith('g:') || name.startsWith('s:')) {
       return this.ctx.callUserFunction(this.ctx, name.replace(/^g:/, ''), args);
     }
@@ -352,43 +736,56 @@ class Evaluator {
     if (!builtin) throw new VimScriptError(`E117: 알 수 없는 함수입니다: ${name}`);
     if (args.length < builtin.min) throw new VimScriptError(`E119: 함수의 인자가 부족합니다: ${name}`);
     if (args.length > builtin.max) throw new VimScriptError(`E118: 함수의 인자가 너무 많습니다: ${name}`);
-    return builtin.fn(this.ctx, args);
+    const result = builtin.fn(this.ctx, args);
+    if (builtin.mutates) {
+      const { value, updated } = result as MutationResult;
+      if (firstArgVar && !firstArgVar.startsWith('a:')) writeVariable(this.ctx, firstArgVar, updated);
+      return value;
+    }
+    return result as VimScriptValue;
   }
 }
 
-function readRegister(state: VimEditorState, reg: string): string {
-  const entry = state.registers?.[reg === '"' ? '"' : reg.toLowerCase()];
-  if (entry) return Array.isArray(entry.content) ? entry.content.join('') : entry.content;
-  if (reg === '"') return state.clipboard?.content ?? '';
-  return '';
+function slice(value: VimScriptValue, start: VimScriptValue | undefined, end: VimScriptValue | undefined): VimScriptValue {
+  if (isDict(value)) throw new VimScriptError('E719: 딕셔너리에는 [:] 슬라이스를 쓸 수 없습니다');
+  const seq = isList(value) ? value : toVimString(value);
+  const len = seq.length;
+  const norm = (v: VimScriptValue | undefined, fallback: number) => {
+    if (v === undefined) return fallback;
+    const n = toNumber(v);
+    return n < 0 ? len + n : n;
+  };
+  const s = Math.max(0, norm(start, 0));
+  const e = Math.min(len - 1, norm(end, len - 1)); // Vim 슬라이스는 끝 인덱스를 포함
+  if (isList(seq)) return e < s ? [] : seq.slice(s, e + 1);
+  return e < s ? '' : seq.slice(s, e + 1);
 }
 
-/** 이름의 스코프를 판별합니다. 함수 안에서는 접두어 없는 이름이 l:, 밖에서는 g: 입니다. */
-export function resolveVariableName(ctx: Pick<EvalContext, 'locals'>, name: string): { scope: 'g' | 'l' | 'a' | 'v'; key: string } {
-  const m = name.match(/^([gblwtsav]):(.+)$/);
-  if (m) {
-    const scope = m[1];
-    if (scope === 'a' || scope === 'l' || scope === 'v') return { scope, key: m[2] };
-    // b: w: t: s: 는 단순화를 위해 g: 공간에 접두어를 붙여 저장
-    return { scope: 'g', key: scope === 'g' ? m[2] : `${scope}:${m[2]}` };
-  }
-  return ctx.locals ? { scope: 'l', key: name } : { scope: 'g', key: name };
+// ---------------------------------------------------------------------------
+// 내장 함수
+// ---------------------------------------------------------------------------
+
+interface MutationResult {
+  value: VimScriptValue;
+  updated: VimScriptValue;
 }
 
-function readVariable(ctx: EvalContext, name: string): VimScriptValue {
-  const { scope, key } = resolveVariableName(ctx, name);
-  if (scope === 'v') {
-    if (key === 'true') return 1;
-    if (key === 'false') return 0;
-  } else if (scope === 'a') {
-    if (ctx.args && key in ctx.args) return ctx.args[key];
-  } else if (scope === 'l') {
-    if (ctx.locals && key in ctx.locals) return ctx.locals[key];
-  } else {
-    const globals = ctx.state.globalVars ?? {};
-    if (key in globals) return globals[key];
-  }
-  throw new VimScriptError(`E121: 정의되지 않은 변수입니다: ${name}`);
+interface Builtin {
+  min: number;
+  max: number;
+  /** 첫 인자를 제자리에서 바꾸는 함수 (add, sort ...): { value, updated } 를 반환 */
+  mutates?: boolean;
+  fn: (ctx: EvalContext, args: VimScriptValue[]) => VimScriptValue | MutationResult;
+}
+
+function asList(value: VimScriptValue, fn: string): VimScriptValue[] {
+  if (!isList(value)) throw new VimScriptError(`E714: ${fn}() 의 인자는 리스트여야 합니다`);
+  return value;
+}
+
+function asDict(value: VimScriptValue, fn: string): VimScriptDict {
+  if (!isDict(value)) throw new VimScriptError(`E715: ${fn}() 의 인자는 딕셔너리여야 합니다`);
+  return value;
 }
 
 /** line('.'), getline('$') 등 줄 지정 인자를 0-based 줄 번호로 변환합니다. (범위 밖이면 -1) */
@@ -399,13 +796,97 @@ function resolveLineArg(state: VimEditorState, arg: VimScriptValue): number {
   return n >= 1 && n <= state.lines.length ? n - 1 : -1;
 }
 
-interface Builtin {
-  min: number;
-  max: number;
-  fn: (ctx: EvalContext, args: VimScriptValue[]) => VimScriptValue;
+/** map() / filter() 의 문자열 표현식을 v:val, v:key 로 평가합니다. */
+function evalWithItem(ctx: EvalContext, expr: VimScriptValue, val: VimScriptValue, key: VimScriptValue): VimScriptValue {
+  const inner: EvalContext = { ...ctx, vvars: { ...(ctx.vvars ?? {}), val, key } };
+  const result = evaluateVimScript(toVimString(expr), inner);
+  ctx.state = inner.state;
+  return result;
+}
+
+/** substitute() 의 치환 문자열: & / \0 (전체), \1~\9 (그룹), \n, \\, \u \U \l \L \e \E (대소문자) */
+function expandReplacement(rep: string, groups: string[]): string {
+  let out = '';
+  let caseMode: 'u' | 'l' | null = null;
+  let oneShot: 'u' | 'l' | null = null;
+  const emit = (text: string) => {
+    for (const ch of text) {
+      let c = caseMode === 'u' ? ch.toUpperCase() : caseMode === 'l' ? ch.toLowerCase() : ch;
+      if (oneShot) {
+        c = oneShot === 'u' ? c.toUpperCase() : c.toLowerCase();
+        oneShot = null;
+      }
+      out += c;
+    }
+  };
+  for (let i = 0; i < rep.length; i++) {
+    const ch = rep[i];
+    if (ch === '&') {
+      emit(groups[0] ?? '');
+    } else if (ch === '\\' && i + 1 < rep.length) {
+      const next = rep[++i];
+      if (/[0-9]/.test(next)) emit(groups[Number(next)] ?? '');
+      else if (next === 'n') out += '\n';
+      else if (next === 't') out += '\t';
+      else if (next === 'u' || next === 'l') oneShot = next;
+      else if (next === 'U' || next === 'L') caseMode = next === 'U' ? 'u' : 'l';
+      else if (next === 'e' || next === 'E') caseMode = null;
+      else emit(next);
+    } else {
+      emit(ch);
+    }
+  }
+  return out;
+}
+
+/** printf() 서식: %[-0][폭][.정밀도](d s x X o c %) */
+function formatPrintf(fmt: string, args: VimScriptValue[]): string {
+  let argIdx = 0;
+  const next = (): VimScriptValue => {
+    if (argIdx >= args.length) throw new VimScriptError(`E766: printf() 의 인자가 부족합니다: ${fmt}`);
+    return args[argIdx++];
+  };
+  const out = fmt.replace(/%([-0]*)(\d*)(?:\.(\d+))?([dsxXocS%])/g, (_m, flags: string, width: string, prec: string | undefined, conv: string) => {
+    if (conv === '%') return '%';
+    let body: string;
+    if (conv === 'd') body = String(toNumber(next()));
+    else if (conv === 'x' || conv === 'X') {
+      body = toNumber(next()).toString(16);
+      if (conv === 'X') body = body.toUpperCase();
+    } else if (conv === 'o') body = toNumber(next()).toString(8);
+    else if (conv === 'c') body = String.fromCharCode(toNumber(next()));
+    else {
+      const v = next();
+      body = typeof v === 'string' ? v : formatValue(v);
+      if (prec !== undefined) body = body.slice(0, Number(prec));
+    }
+    const w = width ? Number(width) : 0;
+    if (body.length >= w) return body;
+    if (flags.includes('-')) return body.padEnd(w);
+    if (flags.includes('0') && conv !== 's' && conv !== 'S') {
+      const neg = body.startsWith('-');
+      return (neg ? '-' : '') + body.slice(neg ? 1 : 0).padStart(w - (neg ? 1 : 0), '0');
+    }
+    return body.padStart(w);
+  });
+  if (argIdx < args.length) throw new VimScriptError(`E767: printf() 의 인자가 너무 많습니다: ${fmt}`);
+  return out;
+}
+
+function compareForSort(how: VimScriptValue | undefined) {
+  const mode = how === undefined ? '' : typeof how === 'number' ? (how ? 'i' : '') : how;
+  return (a: VimScriptValue, b: VimScriptValue): number => {
+    if (mode === 'n' || mode === 'N') return toNumber(a) - toNumber(b);
+    const sa = typeof a === 'string' ? a : formatValue(a);
+    const sb = typeof b === 'string' ? b : formatValue(b);
+    const x = mode === 'i' ? sa.toLowerCase() : sa;
+    const y = mode === 'i' ? sb.toLowerCase() : sb;
+    return x < y ? -1 : x > y ? 1 : 0;
+  };
 }
 
 const BUILTINS: Record<string, Builtin> = {
+  // ---- 버퍼·커서 ----
   line: { min: 1, max: 1, fn: (ctx, [a]) => resolveLineArg(ctx.state, a) + 1 },
   col: {
     min: 1,
@@ -415,10 +896,12 @@ const BUILTINS: Record<string, Builtin> = {
   },
   getline: {
     min: 1,
-    max: 1,
-    fn: (ctx, [a]) => {
-      const l = resolveLineArg(ctx.state, a);
-      return l >= 0 ? ctx.state.lines[l] ?? '' : '';
+    max: 2,
+    fn: (ctx, [a, b]) => {
+      const start = resolveLineArg(ctx.state, a);
+      if (b === undefined) return start >= 0 ? ctx.state.lines[start] ?? '' : '';
+      const end = resolveLineArg(ctx.state, b);
+      return start < 0 || end < start ? [] : ctx.state.lines.slice(start, end + 1);
     },
   },
   setline: {
@@ -426,22 +909,120 @@ const BUILTINS: Record<string, Builtin> = {
     max: 2,
     fn: (ctx, [a, text]) => {
       const l = resolveLineArg(ctx.state, a);
-      if (l < 0) return 1;
+      // 마지막 줄 바로 다음 줄 번호는 줄 추가로 처리 (Vim 과 동일)
+      const at = l >= 0 ? l : toNumber(a) === ctx.state.lines.length + 1 ? ctx.state.lines.length : -1;
+      if (at < 0) return 1;
+      const newLines = isList(text) ? text.map(toVimString) : [toVimString(text)];
       const lines = [...ctx.state.lines];
-      lines[l] = toVimString(text);
+      newLines.forEach((t, i) => (lines[at + i] = t));
       ctx.state = { ...ctx.state, lines };
       return 0;
     },
   },
+  append: {
+    min: 2,
+    max: 2,
+    fn: (ctx, [a, text]) => {
+      const n = a === '.' ? ctx.state.cursor.line + 1 : a === '$' ? ctx.state.lines.length : toNumber(a);
+      if (n < 0 || n > ctx.state.lines.length) return 1;
+      const newLines = isList(text) ? text.map(toVimString) : [toVimString(text)];
+      const lines = [...ctx.state.lines.slice(0, n), ...newLines, ...ctx.state.lines.slice(n)];
+      ctx.state = { ...ctx.state, lines };
+      return 0;
+    },
+  },
+
+  // ---- 문자열 ----
   strlen: { min: 1, max: 1, fn: (_c, [s]) => toVimString(s).length },
-  len: { min: 1, max: 1, fn: (_c, [s]) => toVimString(s).length },
   toupper: { min: 1, max: 1, fn: (_c, [s]) => toVimString(s).toUpperCase() },
   tolower: { min: 1, max: 1, fn: (_c, [s]) => toVimString(s).toLowerCase() },
-  repeat: { min: 2, max: 2, fn: (_c, [s, n]) => toVimString(s).repeat(Math.max(0, toNumber(n))) },
-  string: { min: 1, max: 1, fn: (_c, [v]) => formatValue(v) },
-  str2nr: { min: 1, max: 1, fn: (_c, [s]) => toNumber(toVimString(s)) },
-  abs: { min: 1, max: 1, fn: (_c, [n]) => Math.abs(toNumber(n)) },
   trim: { min: 1, max: 1, fn: (_c, [s]) => toVimString(s).trim() },
+  str2nr: { min: 1, max: 1, fn: (_c, [s]) => toNumber(toVimString(s)) },
+  string: { min: 1, max: 1, fn: (_c, [v]) => formatValue(v) },
+  stridx: {
+    min: 2,
+    max: 3,
+    fn: (_c, [s, sub, start]) => toVimString(s).indexOf(toVimString(sub), start === undefined ? 0 : toNumber(start)),
+  },
+  escape: {
+    min: 2,
+    max: 2,
+    fn: (_c, [s, chars]) => {
+      const set = toVimString(chars);
+      return [...toVimString(s)].map((c) => (set.includes(c) || c === '\\' ? `\\${c}` : c)).join('');
+    },
+  },
+  repeat: {
+    min: 2,
+    max: 2,
+    fn: (_c, [v, n]) => {
+      const times = Math.max(0, toNumber(n));
+      if (isList(v)) return Array.from({ length: times }, () => v).flat();
+      return toVimString(v).repeat(times);
+    },
+  },
+  substitute: {
+    min: 4,
+    max: 4,
+    fn: (ctx, [s, pat, rep, flags]) => {
+      const global = toVimString(flags).includes('g');
+      const re = compileVimPattern(toVimString(pat), !!ctx.state.options?.ignorecase, global ? 'g' : '');
+      const template = toVimString(rep);
+      return toVimString(s).replace(re, (...m: unknown[]) => {
+        const groups = m.slice(0, -2).filter((g) => typeof g === 'string' || g === undefined).map((g) => (g as string) ?? '');
+        return expandReplacement(template, groups);
+      });
+    },
+  },
+  matchstr: {
+    min: 2,
+    max: 2,
+    fn: (ctx, [s, pat]) => compileVimPattern(toVimString(pat), !!ctx.state.options?.ignorecase).exec(toVimString(s))?.[0] ?? '',
+  },
+  match: {
+    min: 2,
+    max: 2,
+    fn: (ctx, [s, pat]) => {
+      if (isList(s)) {
+        const re = compileVimPattern(toVimString(pat), !!ctx.state.options?.ignorecase);
+        return s.findIndex((item) => re.test(toVimString(item)));
+      }
+      return toVimString(s).search(compileVimPattern(toVimString(pat), !!ctx.state.options?.ignorecase));
+    },
+  },
+  split: {
+    min: 1,
+    max: 3,
+    fn: (ctx, [s, pat, keepEmpty]) => {
+      const text = toVimString(s);
+      const re = pat === undefined || toVimString(pat) === ''
+        ? /\s+/
+        : compileVimPattern(toVimString(pat), !!ctx.state.options?.ignorecase);
+      const parts = text.split(re);
+      if (keepEmpty !== undefined && isTruthy(keepEmpty)) return parts;
+      // keepempty 가 아니면 맨 앞·맨 뒤의 빈 항목을 버림 (Vim 동작)
+      while (parts.length > 0 && parts[0] === '') parts.shift();
+      while (parts.length > 0 && parts[parts.length - 1] === '') parts.pop();
+      return parts;
+    },
+  },
+  printf: { min: 1, max: 20, fn: (_c, [fmt, ...rest]) => formatPrintf(toVimString(fmt), rest) },
+
+  // ---- 공통 ----
+  len: {
+    min: 1,
+    max: 1,
+    fn: (_c, [v]) => (isList(v) ? v.length : isDict(v) ? Object.keys(v.items).length : toVimString(v).length),
+  },
+  empty: {
+    min: 1,
+    max: 1,
+    fn: (_c, [v]) => (isList(v) ? v.length === 0 : isDict(v) ? Object.keys(v.items).length === 0 : typeof v === 'number' ? v === 0 : v === '') ? 1 : 0,
+  },
+  type: { min: 1, max: 1, fn: (_c, [v]) => typeCode(v) },
+  copy: { min: 1, max: 1, fn: (_c, [v]) => v },
+  deepcopy: { min: 1, max: 1, fn: (_c, [v]) => v },
+  abs: { min: 1, max: 1, fn: (_c, [n]) => Math.abs(toNumber(n)) },
   exists: {
     min: 1,
     max: 1,
@@ -456,6 +1037,168 @@ const BUILTINS: Record<string, Builtin> = {
       }
     },
   },
+  get: {
+    min: 2,
+    max: 3,
+    fn: (_c, [container, key, def]) => {
+      if (isList(container)) {
+        const n = toNumber(key);
+        const idx = n < 0 ? container.length + n : n;
+        return idx >= 0 && idx < container.length ? container[idx] : def ?? 0;
+      }
+      const k = toVimString(key);
+      const dict = asDict(container, 'get');
+      return k in dict.items ? dict.items[k] : def ?? 0;
+    },
+  },
+  count: {
+    min: 2,
+    max: 3,
+    fn: (_c, [container, needle, ic]) => {
+      const items = isDict(container) ? Object.values(container.items) : asList(container, 'count');
+      return items.filter((v) => typeCode(v) === typeCode(needle) && valuesEqual(v, needle, !!ic && isTruthy(ic))).length;
+    },
+  },
+
+  // ---- 리스트 ----
+  range: {
+    min: 1,
+    max: 3,
+    fn: (_c, [a, b, c]) => {
+      const start = b === undefined ? 0 : toNumber(a);
+      const end = b === undefined ? toNumber(a) - 1 : toNumber(b);
+      const step = c === undefined ? 1 : toNumber(c);
+      if (step === 0) throw new VimScriptError('E726: range() 의 간격은 0 일 수 없습니다');
+      const out: number[] = [];
+      for (let i = start; step > 0 ? i <= end : i >= end; i += step) {
+        out.push(i);
+        if (out.length > 100000) break;
+      }
+      return out;
+    },
+  },
+  join: {
+    min: 1,
+    max: 2,
+    fn: (_c, [l, sep]) => asList(l, 'join').map((v) => (typeof v === 'string' ? v : formatValue(v))).join(sep === undefined ? ' ' : toVimString(sep)),
+  },
+  index: {
+    min: 2,
+    max: 2,
+    fn: (_c, [l, needle]) => asList(l, 'index').findIndex((v) => typeCode(v) === typeCode(needle) && valuesEqual(v, needle, false)),
+  },
+  max: {
+    min: 1,
+    max: 1,
+    fn: (_c, [l]) => {
+      const items = isDict(l) ? Object.values(l.items) : asList(l, 'max');
+      return items.length === 0 ? 0 : Math.max(...items.map(toNumber));
+    },
+  },
+  min: {
+    min: 1,
+    max: 1,
+    fn: (_c, [l]) => {
+      const items = isDict(l) ? Object.values(l.items) : asList(l, 'min');
+      return items.length === 0 ? 0 : Math.min(...items.map(toNumber));
+    },
+  },
+  add: {
+    min: 2,
+    max: 2,
+    mutates: true,
+    fn: (_c, [l, item]) => {
+      const updated = [...asList(l, 'add'), item];
+      return { value: updated, updated };
+    },
+  },
+  insert: {
+    min: 2,
+    max: 3,
+    mutates: true,
+    fn: (_c, [l, item, at]) => {
+      const list = asList(l, 'insert');
+      const n = at === undefined ? 0 : toNumber(at);
+      const idx = n < 0 ? list.length + n : n;
+      if (idx < 0 || idx > list.length) throw indexError(n);
+      const updated = [...list.slice(0, idx), item, ...list.slice(idx)];
+      return { value: updated, updated };
+    },
+  },
+  extend: {
+    min: 2,
+    max: 2,
+    mutates: true,
+    fn: (_c, [a, b]) => {
+      const updated = isDict(a) ? makeDict({ ...a.items, ...asDict(b, 'extend').items }) : [...asList(a, 'extend'), ...asList(b, 'extend')];
+      return { value: updated, updated };
+    },
+  },
+  remove: {
+    min: 2,
+    max: 2,
+    mutates: true,
+    fn: (_c, [container, key]) => {
+      const removed = getIn(container, isDict(container) ? toVimString(key) : toNumber(key));
+      return { value: removed, updated: removeIn(container, [isDict(container) ? toVimString(key) : toNumber(key)]) };
+    },
+  },
+  reverse: {
+    min: 1,
+    max: 1,
+    mutates: true,
+    fn: (_c, [l]) => {
+      const updated = [...asList(l, 'reverse')].reverse();
+      return { value: updated, updated };
+    },
+  },
+  sort: {
+    min: 1,
+    max: 2,
+    mutates: true,
+    fn: (_c, [l, how]) => {
+      const updated = [...asList(l, 'sort')].sort(compareForSort(how));
+      return { value: updated, updated };
+    },
+  },
+  uniq: {
+    min: 1,
+    max: 1,
+    mutates: true,
+    fn: (_c, [l]) => {
+      // Vim 의 uniq() 는 연속으로 반복되는 항목만 하나로 줄입니다
+      const updated = asList(l, 'uniq').filter((v, i, arr) => i === 0 || !(typeCode(v) === typeCode(arr[i - 1]) && valuesEqual(v, arr[i - 1], false)));
+      return { value: updated, updated };
+    },
+  },
+  map: {
+    min: 2,
+    max: 2,
+    mutates: true,
+    fn: (ctx, [container, expr]) => {
+      const updated = isDict(container)
+        ? makeDict(Object.fromEntries(Object.entries(container.items).map(([k, v]) => [k, evalWithItem(ctx, expr, v, k)])))
+        : asList(container, 'map').map((v, i) => evalWithItem(ctx, expr, v, i));
+      return { value: updated, updated };
+    },
+  },
+  filter: {
+    min: 2,
+    max: 2,
+    mutates: true,
+    fn: (ctx, [container, expr]) => {
+      const updated = isDict(container)
+        ? makeDict(Object.fromEntries(Object.entries(container.items).filter(([k, v]) => isTruthy(evalWithItem(ctx, expr, v, k)))))
+        : asList(container, 'filter').filter((v, i) => isTruthy(evalWithItem(ctx, expr, v, i)));
+      return { value: updated, updated };
+    },
+  },
+
+  // ---- 딕셔너리 ----
+  keys: { min: 1, max: 1, fn: (_c, [d]) => Object.keys(asDict(d, 'keys').items) },
+  values: { min: 1, max: 1, fn: (_c, [d]) => Object.values(asDict(d, 'values').items) },
+  items: { min: 1, max: 1, fn: (_c, [d]) => Object.entries(asDict(d, 'items').items).map(([k, v]) => [k, v]) },
+  has_key: { min: 2, max: 2, fn: (_c, [d, k]) => (toVimString(k) in asDict(d, 'has_key').items ? 1 : 0) },
 };
 
 /** 표현식 문자열을 평가합니다. 실패하면 VimScriptError를 던집니다. ctx.state 는 setline 등으로 갱신될 수 있습니다. */

@@ -5,8 +5,14 @@ export interface CursorPosition {
   col: number;  // 0-indexed 열 번호
 }
 
-/** Vim script 값 (숫자 또는 문자열) */
-export type VimScriptValue = number | string;
+/** Vim script 값: 숫자, 문자열, 리스트, 딕셔너리 */
+export type VimScriptValue = number | string | VimScriptValue[] | VimScriptDict;
+
+/** Vim script 딕셔너리 ({'key': value}). 키는 항상 문자열이며 입력 순서를 유지합니다. */
+export interface VimScriptDict {
+  kind: 'dict';
+  items: Record<string, VimScriptValue>;
+}
 
 /** 사용자 정의 함수 (:function[!] Name(params) [range] [abort] ... :endfunction) */
 export interface UserFunction {

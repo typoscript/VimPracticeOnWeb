@@ -1822,4 +1822,33 @@ export const MISSIONS: Mission[] = [
       return hasFunction && state.lines.length === target.length && target.every((t, i) => state.lines[i] === t);
     },
   },
+  {
+    id: 57,
+    title: '레슨 57: Vim script 리스트·map()·printf()로 버퍼 전체를 한 번에 가공하기',
+    description:
+      'Vim script 는 숫자·문자열뿐 아니라 리스트 [1, 2] 와 딕셔너리 {\'k\': v} 를 다룰 수 있습니다. 버퍼의 줄들을 리스트로 읽어 가공한 뒤 다시 써 넣으면, 정규식 치환만으로는 어려운 편집도 한 줄 명령으로 끝납니다.\n\n- getline(1, \'$\'): 1번 줄부터 마지막 줄까지를 리스트로 읽기\n- map(list, \'표현식\'): 각 항목을 v:val(값), v:key(인덱스)로 바꾼 새 리스트\n- printf(\'%d. %s\', n, s): 서식 문자열 (%d 숫자, %s 문자열, %03d 0 채움, %-5s 왼쪽 정렬)\n- setline(1, list): 1번 줄부터 리스트의 항목을 차례로 써 넣기\n\n그 밖에 filter(), sort(), join(), split(), substitute(), range(), len(), keys()/values()/items(), =~ 정규식 비교, :for x in list ... :endfor, :let [a, b] = [1, 2] 도 사용할 수 있습니다. :call 하나는 u 한 번으로 되돌릴 수 있습니다.\n\n미션:\n:call setline(1, map(getline(1, \'$\'), \'printf("%d. %s", v:key + 1, v:val)\')) 로 모든 할 일 앞에 번호를 붙이세요.',
+    hint: ':call setline(1, map(getline(1, \'$\'), \'printf("%d. %s", v:key + 1, v:val)\')) 를 입력하고 Enter',
+    par: 77,
+    optimalKeys: [
+      ':', 'c', 'a', 'l', 'l', ' ', 's', 'e', 't', 'l', 'i', 'n', 'e', '(', '1', ',', ' ', 'm', 'a', 'p', '(', 'g', 'e', 't', 'l', 'i', 'n', 'e', '(', '1', ',', ' ', "'", '$', "'", ')', ',', ' ', "'", 'p', 'r', 'i', 'n', 't', 'f', '(', '"', '%', 'd', '.', ' ', '%', 's', '"', ',', ' ', 'v', ':', 'k', 'e', 'y', ' ', '+', ' ', '1', ',', ' ', 'v', ':', 'v', 'a', 'l', ')', "'", ')', ')', 'Enter',
+    ],
+    initialLines: [
+      'Install dependencies',
+      'Run the tests',
+      'Build for production',
+      'Deploy',
+    ],
+    targetLines: [
+      '1. Install dependencies',
+      '2. Run the tests',
+      '3. Build for production',
+      '4. Deploy',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const target = ['1. Install dependencies', '2. Run the tests', '3. Build for production', '4. Deploy'];
+      return state.lines.length === target.length && target.every((t, i) => state.lines[i] === t);
+    },
+  },
 ];
