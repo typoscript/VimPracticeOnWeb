@@ -15,6 +15,13 @@ export interface StateSnapshot {
   cursor: CursorPosition;
 }
 
+export interface MarkPosition {
+  row: number;
+  col: number;
+  bufferId?: number;
+  filename?: string;
+}
+
 export interface SearchMatch {
   line: number;
   col: number;
@@ -289,8 +296,8 @@ export interface VimEditorState {
   lastPlayedMacro?: string | null;
   /** 직전 줄 내 문자 탐색 정보 (';' 및 ',' 반복용) */
   lastCharSearch?: { type: 'f' | 'F' | 't' | 'T'; char: string } | null;
-  /** 마크 위치 저장소 (m{a-z}) */
-  marks?: Record<string, { row: number; col: number }>;
+  /** 마크 위치 저장소 (m{a-zA-Z}, 전역 마크 A-Z는 파일/버퍼 위치 포함) */
+  marks?: Record<string, MarkPosition>;
   /** 점프 리스트 (Ctrl+o, Ctrl+i) */
   jumpList?: Array<{ row: number; col: number }>;
   /** 점프 리스트 현재 인덱스 */

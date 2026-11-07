@@ -2322,9 +2322,9 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
     return formatIndentVisual(state);
   }
 
-  // 마크 설정 (m{a-z})
+  // 마크 설정 (m{a-zA-Z})
   if (state.pendingKeys === 'm') {
-    if (/^[a-z]$/.test(key)) {
+    if (/^[a-zA-Z]$/.test(key)) {
       return setMark(state, key);
     }
     return { ...state, pendingKeys: undefined };
@@ -2333,10 +2333,10 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
     return { ...state, pendingKeys: 'm' };
   }
 
-  // 마크 점프 ('{a-z}, `{a-z}) - 선택 영역 확장
+  // 마크 점프 ('{a-zA-Z}, `{a-zA-Z}) - 선택 영역 확장
   if (state.pendingKeys === "'" || state.pendingKeys === '`') {
     const quote = state.pendingKeys;
-    if (/^[a-z]$/.test(key)) {
+    if (/^[a-zA-Z]$/.test(key)) {
       const mark = state.marks?.[key];
       if (mark) {
         const targetLine = Math.max(0, Math.min(mark.row, state.lines.length - 1));
@@ -2809,7 +2809,7 @@ function handleNormalModeKey(
   if (markOpMatch) {
     const op = markOpMatch[2] as 'd' | 'c' | 'y' | 'v';
     const quote = markOpMatch[3] as "'" | '`';
-    if (/^[a-z]$/.test(key)) {
+    if (/^[a-zA-Z]$/.test(key)) {
       const isLineWise = quote === "'";
       const res = executeMarkOperator(state, op, key, isLineWise);
       const synced = syncRegisters(state, res, op === 'y');
@@ -2830,19 +2830,19 @@ function handleNormalModeKey(
     return { ...state, pendingKeys: undefined };
   }
 
-  // 1-0-10. 단독 마크 점프 ('{a-z}, `{a-z})
+  // 1-0-10. 단독 마크 점프 ('{a-zA-Z}, `{a-zA-Z})
   const standaloneMarkMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?(['`])$/);
   if (standaloneMarkMatch) {
     const quote = standaloneMarkMatch[2];
-    if (/^[a-z]$/.test(key)) {
+    if (/^[a-zA-Z]$/.test(key)) {
       return jumpToMark(state, key, quote === "'");
     }
     return { ...state, pendingKeys: undefined };
   }
 
-  // 1-0-11. 마크 설정 (m{a-z})
+  // 1-0-11. 마크 설정 (m{a-zA-Z})
   if (state.pendingKeys === 'm' || parsed.operator === 'm') {
-    if (/^[a-z]$/.test(key)) {
+    if (/^[a-zA-Z]$/.test(key)) {
       return setMark(state, key);
     }
     return { ...state, pendingKeys: undefined };

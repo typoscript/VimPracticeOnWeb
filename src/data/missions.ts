@@ -1575,6 +1575,44 @@ export const MISSIONS: Mission[] = [
       return state.lines.every((line, idx) => line === target[idx]);
     },
   },
+  {
+    id: 50,
+    title: "레슨 50: 순정 대문자 전역 마크(mA~mZ, 'A~'Z)로 파일/버퍼 간 순간이동하기",
+    description:
+      "소문자 마크(ma~mz)는 현재 열려 있는 단일 파일 내에서만 유효하지만, 대문자 전역 마크(mA~mZ)는 파일명과 버퍼 정보를 함께 기억하는 순정 Vim의 강력한 기능입니다.\n\n다른 파일로 버퍼를 이동하거나 수많은 파일을 오가며 작업하더라도, 언제든 'A (또는 `A)를 누르면 해당 마크가 저장된 파일로 즉시 자동 전환되며 해당 라인으로 순간이동합니다.\n\n1) mA: 현재 파일의 커서 위치를 대문자 전역 마크 A에 저장합니다.\n2) :bn: 다른 버퍼 파일(config.ts)로 이동합니다.\n3) 'A: 어떤 파일에 있든 상관없이 마크 A가 설정된 원래 파일(server.ts)로 버퍼를 자동 전환하며 점프합니다.\n4) :marks: 저장된 모든 마크의 파일과 행/열 목록을 표 형태로 조회합니다.\n\n미션: server.ts에서 mA로 전역 마크를 저장한 뒤, :bn 명령으로 config.ts로 넘어가 port 값을 8080으로 수정(2w cw8080<Esc>)하고, 'A 를 눌러 1초 만에 server.ts의 원래 위치로 순간이동 복귀하세요.",
+    hint: "mA 를 눌러 현재 위치를 전역 마크 A에 기억시키세요. :bn 으로 config.ts로 이동한 뒤, 2w cw8080<Esc> 로 포트를 수정하세요. 그 다음 'A 를 누르면 자동으로 server.ts로 돌아오며 미션이 완료됩니다.",
+    par: 17,
+    optimalKeys: ['m', 'A', ':', 'b', 'n', 'Enter', '2', 'w', 'c', 'w', '8', '0', '8', '0', 'Escape', "'", 'A'],
+    primaryFilename: 'server.ts',
+    secondaryFilename: 'config.ts',
+    initialLines: [
+      '// Server Entry Point',
+      'export const API_URL = "/api/v1";',
+      'startServer();',
+    ],
+    secondaryLines: [
+      'PORT = 3000;',
+      'HOST = "localhost";',
+    ],
+    targetLines: [
+      '// Server Entry Point',
+      'export const API_URL = "/api/v1";',
+      'startServer();',
+    ],
+    initialCursor: { line: 1, col: 13 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const s = ensureBuffers(state);
+      const buf1 = s.buffers?.find((b) => b.name === 'server.ts' || b.id === 1);
+      const buf2 = s.buffers?.find((b) => b.name === 'config.ts' || b.id === 2);
+      const isBackOnServer = s.currentBufferId === 1 || s.primaryFilename === 'server.ts';
+      const isConfigUpdated = buf2?.lines[0] === 'PORT = 8080;';
+      const isServerIntact = !!buf1 && buf1.lines[1] === 'export const API_URL = "/api/v1";';
+      const isCursorAtMark = state.cursor.line === 1;
+
+      return isBackOnServer && isConfigUpdated && isServerIntact && isCursorAtMark;
+    },
+  },
 ];
 
 

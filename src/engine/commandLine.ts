@@ -62,6 +62,7 @@ import {
   loadLocationListFromFile,
 } from './locationListEngine';
 import { formatChangeList } from './advancedMotions';
+import { formatMarksList } from './marks';
 import {
   startDiffSplit,
   diffThis,
@@ -1483,6 +1484,20 @@ export function executeCommandLine(
       commandBuffer: undefined,
       commandType: undefined,
       commandMessage: formatChangeList(state),
+    };
+  }
+
+  // 마크 목록 조회: :marks [filter]
+  const marksMatch = cleanCmdRaw.match(/^(?:marks)(?:\s+(.*))?$/i);
+  if (marksMatch) {
+    const filter = marksMatch[1]?.trim();
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: formatMarksList(state, filter),
     };
   }
 
