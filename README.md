@@ -32,12 +32,13 @@ flowchart TD
         subgraph Sub_Engines["모듈별 세부 처리기"]
             Motions["모션 & 카운트 (motions / wordMotion)"]
             Operators["연산자 (operators / dd, dw, cw, r)"]
-            TextObjects["텍스트 객체 (textObjects / iw, i&quot;, i()"]
+            TextObjects["텍스트 객체 (textObjects / iw, aw, ciw, da')"]
             FindChar["줄 내 문자 탐색 (findChar / f, F, t, T)"]
             SearchEngine["키워드 검색 엔진 (search / /, n, N, *)"]
             CommandLine["커맨드라인 엔진 (commandLine / :, :s, :%s)"]
             DotRepeat["직전 변경 반복 (. Dot Repeat)"]
-            UndoRedo["실행 취소 & 다시 실행 (Undo / Redo Stack)"]
+            UndoRedo["실행 취소 및 Undo Tree (u, Ctrl+r, g-, g+)"]
+            DiffEngine["Diff 비교 및 병합 (:diffsplit, ]c, do, dp)"]
         end
     end
 
