@@ -39,6 +39,7 @@ import {
   vimgrep,
   setQuickfixList,
 } from './quickfixEngine';
+import { formatChangeList } from './advancedMotions';
 
 export type KeyRunner = (
   state: VimEditorState,
@@ -1108,6 +1109,18 @@ export function executeCommandLine(
         commandMessage: '퀵픽스 목록 초기화됨',
       };
     }
+  }
+
+  // 체인지 리스트 조회: :changes
+  if (cleanCmd === 'changes') {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: formatChangeList(state),
+    };
   }
 
   if (cleanCmd === 'w' || cleanCmd === 'write') {

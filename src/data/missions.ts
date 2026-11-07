@@ -1031,6 +1031,38 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 37,
+    title: '레슨 37: 체인지 리스트(Change List: g;, g,, :changes)로 과거 편집 위치 탐색 및 복귀하기',
+    description: '순정 Vim의 체인지 리스트(Change List)는 버퍼에서 텍스트를 수정한 모든 위치를 시간 순서대로 기억하는 강력한 내비게이션 기능입니다. 대형 코드베이스에서 여러 군데를 수정한 뒤 다른 곳을 둘러보더라도, g;를 누르면 이전 수정 위치로, g,를 누르면 다시 최근 수정 위치로 1초 만에 되돌아갈 수 있습니다.',
+    hint: 'g;를 눌러 직전 수정 위치(val2의 0)로 점프한 뒤 r1으로 1로 수정합니다. 다시 g;를 눌러 그 이전 수정 위치(val1의 0)로 점프한 뒤 .(점 반복)으로 1로 수정하세요. (:changes로 전체 수정 이력을 조회할 수 있습니다)',
+    par: 7,
+    optimalKeys: ['g', ';', 'r', '1', 'g', ';', '.'],
+    primaryFilename: 'state.ts',
+    initialLines: [
+      'val1 = 0;',
+      'val2 = 0;',
+      '// footer',
+    ],
+    targetLines: [
+      'val1 = 1;',
+      'val2 = 1;',
+      '// footer',
+    ],
+    initialCursor: { line: 2, col: 0 },
+    initialChangeList: [
+      { row: 0, col: 7, line: 0 },
+      { row: 1, col: 7, line: 1 },
+    ],
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines[0] === 'val1 = 1;' &&
+        state.lines[1] === 'val2 = 1;' &&
+        state.lines[2] === '// footer'
+      );
+    },
+  },
 ];
 
 

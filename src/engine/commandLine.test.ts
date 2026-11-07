@@ -483,5 +483,24 @@ describe('commandLine module', () => {
       const result = executeCommandLine(state, ':.,.+1m $');
       expect(result.lines).toEqual(['third', 'fourth', 'first', 'second']);
     });
+
+    it(':changes 명령어로 체인지 리스트를 출력한다', () => {
+      const state: VimEditorState = {
+        lines: ['hello world', 'second line'],
+        cursor: { line: 0, col: 0 },
+        changeList: [
+          { row: 0, col: 5, line: 0 },
+          { row: 1, col: 2, line: 1 },
+        ],
+        changeIndex: 1,
+        mode: 'COMMAND',
+      };
+
+      const result = executeCommandLine(state, ':changes');
+      expect(result.commandMessage).toContain('change line  col text');
+      expect(result.commandMessage).toContain('hello world');
+      expect(result.commandMessage).toContain('second line');
+      expect(result.commandMessage).toContain('>');
+    });
   });
 });

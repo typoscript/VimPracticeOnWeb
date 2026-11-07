@@ -321,6 +321,8 @@ export function App() {
       quickfix: m.initialQuickfixItems
         ? { items: [...m.initialQuickfixItems], currentIndex: 0, isOpen: false }
         : undefined,
+      changeList: m.initialChangeList ? [...m.initialChangeList] : undefined,
+      changeIndex: m.initialChangeList ? m.initialChangeList.length : undefined,
       userKeymaps: compileUserKeymaps(activePresets, leaderKey),
       leaderKey,
     };

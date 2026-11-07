@@ -278,5 +278,71 @@ describe('Advanced Pure Vim Motions & History Restoration', () => {
       state = handleKey(state, ',');
       expect(state.commandMessage).toContain('변경 목록의 끝');
     });
+
+    it(':changes 명령어로 체인지 리스트를 테이블 형태로 조회한다', () => {
+      let state: VimEditorState = {
+        lines: ['line 1', 'line 2', 'line 3'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      // 변경 1: 0번 라인 수정
+      state = handleKey(state, 'A');
+      state = handleKey(state, '!');
+      state = handleKey(state, 'Escape');
+
+      // 변경 2: 2번 라인 수정
+      state = handleKey(state, '2');
+      state = handleKey(state, 'j');
+      state = handleKey(state, 'A');
+      state = handleKey(state, '?');
+      state = handleKey(state, 'Escape');
+
+      // :changes 실행
+      const cmd = ':changes\n';
+      for (const char of cmd) {
+        state = handleKey(state, char === '\n' ? 'Enter' : char);
+      }
+
+      expect(state.commandMessage).toContain('change line  col text');
+      expect(state.commandMessage).toContain('line 1!');
+      expect(state.commandMessage).toContain('line 3?');
+    });
+
+    it('2g; 와 같이 카운트를 붙여 한 번에 여러 단계 이전 변경으로 점프할 수 있다', () => {
+      let state: VimEditorState = {
+        lines: ['line 1', 'line 2', 'line 3'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      // 3개 라인 순차 수정
+      state = handleKey(state, 'A');
+      state = handleKey(state, 'a');
+      state = handleKey(state, 'Escape');
+
+      state = handleKey(state, 'j');
+      state = handleKey(state, 'A');
+      state = handleKey(state, 'b');
+      state = handleKey(state, 'Escape');
+
+      state = handleKey(state, 'j');
+      state = handleKey(state, 'A');
+      state = handleKey(state, 'c');
+      state = handleKey(state, 'Escape');
+
+      expect(state.cursor.line).toBe(2);
+
+      // 2g; -> 2단계 이전인 1번 라인으로 점프 (3 - 2 = 1)
+      state = handleKey(state, '2');
+      state = handleKey(state, 'g');
+      state = handleKey(state, ';');
+      expect(state.cursor.line).toBe(1);
+
+      // 한번 더 g; -> 0번 라인으로 점프
+      state = handleKey(state, 'g');
+      state = handleKey(state, ';');
+      expect(state.cursor.line).toBe(0);
+    });
   });
 });

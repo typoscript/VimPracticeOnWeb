@@ -1,4 +1,4 @@
-import { ClipboardRegister, StateSnapshot, VimEditorState, QuickfixItem } from './vim';
+import { ClipboardRegister, StateSnapshot, VimEditorState, QuickfixItem, ChangeListItem } from './vim';
 
 export interface Mission {
   id: number;
@@ -29,5 +29,7 @@ export interface Mission {
   initialSearchHistory?: string[];
   /** 초기 퀵픽스 목록 (:copen, :cn, :cp 미션용) */
   initialQuickfixItems?: QuickfixItem[];
+  /** 초기 체인지 리스트 (g;, g, 미션용) */
+  initialChangeList?: ChangeListItem[];
   checkComplete: (state: VimEditorState) => boolean;
 }

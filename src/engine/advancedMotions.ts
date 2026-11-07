@@ -460,6 +460,14 @@ export function traverseChangeList(
 
 
   if (direction === 'prev') {
+    // 만약 현재 커서가 이미 최신 변경 위치에 서 있다면, 한 단계 더 이전 변경으로 점프
+    if (idx >= list.length && list.length > 0) {
+      const last = list[list.length - 1];
+      if (last.row === state.cursor.line && last.col === state.cursor.col) {
+        idx = list.length - 1;
+      }
+    }
+
     if (idx <= 0) {
       const target = list[0];
       const clamped = clampCursor(state.lines, { line: target.row, col: target.col }, 'NORMAL');
@@ -533,5 +541,28 @@ export function recordChangePosition(
     changeList: list,
     changeIndex: list.length,
   };
+}
+
+/**
+ * :changes 명령어를 위한 체인지 리스트 포맷팅 문자열을 생성합니다.
+ */
+export function formatChangeList(state: VimEditorState): string {
+  const list = state.changeList ?? [];
+  if (list.length === 0) {
+    return 'E664: 변경 목록이 비어 있습니다 (changelist is empty)';
+  }
+
+  const header = 'change line  col text';
+  const lines = list.map((item, idx) => {
+    const isCurrent = idx === state.changeIndex;
+    const mark = isCurrent ? '>' : ' ';
+    const num = String(idx + 1).padStart(5, ' ');
+    const lineNum = String(item.line + 1).padStart(5, ' ');
+    const colNum = String(item.col + 1).padStart(4, ' ');
+    const textPreview = (state.lines[item.line] ?? '').trim();
+    return `${mark} ${num} ${lineNum} ${colNum} ${textPreview}`;
+  });
+
+  return [header, ...lines].join('\n');
 }
 
