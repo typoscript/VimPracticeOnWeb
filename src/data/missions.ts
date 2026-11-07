@@ -1102,6 +1102,31 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 39,
+    title: '레슨 39: 순정 파일 탐색기 Netrw(:Explore, :E)로 프로젝트 파일 탐색 및 열기',
+    description: 'Vim은 외부 플러그인 없이도 순정 상태에서 강력한 내장 디렉터리/파일 탐색기 Netrw를 제공합니다. 명령행 모드에서 :Explore 또는 축약형인 :E(:edit .)를 입력하면 현재 프로젝트 디렉터리를 브라우징하는 Netrw 버퍼가 열립니다. j/k 모션으로 이동한 뒤 Enter(<CR>)를 누르면 선택한 파일이 열리고, v(세로 분할)나 o(가로 분할) 또는 t(새 탭)로도 열 수 있습니다.',
+    hint: ':E 를 입력하고 Enter를 눌러 Netrw 파일 탐색기를 연 뒤, j를 세 번 눌러 README.md 로 이동하고 Enter를 누르면 README.md 파일이 열립니다. (q를 누르면 언제든 닫고 복귀할 수 있습니다)',
+    par: 7,
+    optimalKeys: [':', 'E', 'Enter', 'j', 'j', 'j', 'Enter'],
+    primaryFilename: 'index.ts',
+    initialLines: [
+      'console.log("Welcome to Netrw lesson");',
+    ],
+    targetLines: [
+      '# Vim Practice on Web',
+      'Pure Vim experience right in your browser.',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        state.primaryFilename === 'README.md' &&
+        state.lines[0] === '# Vim Practice on Web' &&
+        !state.netrw
+      );
+    },
+  },
 ];
 
 

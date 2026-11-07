@@ -51,6 +51,7 @@ import {
   formatArgs,
   argdo,
 } from './argEngine';
+import { openNetrw } from './netrwEngine';
 
 export type KeyRunner = (
   state: VimEditorState,
@@ -833,10 +834,43 @@ export function executeCommandLine(
     };
   }
 
+  // 순정 파일 탐색기 Netrw 열기: :Explore, :E, :Vexplore, :Ve, :Sexplore, :Se, :Texplore, :Te
+  const netrwMatch = cleanCmdRaw.match(/^(?:Explore|E|Vexplore|Ve|Sexplore|Se|Texplore|Te)(?:\s+(.*))?$/);
+  if (netrwMatch) {
+    const cmdName = netrwMatch[0].split(/\s+/)[0];
+    const targetDir = netrwMatch[1]?.trim() || '';
+    let mode: 'current' | 'vsplit' | 'split' | 'tab' = 'current';
+    if (cmdName === 'Vexplore' || cmdName === 'Ve') {
+      mode = 'vsplit';
+    } else if (cmdName === 'Sexplore' || cmdName === 'Se') {
+      mode = 'split';
+    } else if (cmdName === 'Texplore' || cmdName === 'Te') {
+      mode = 'tab';
+    }
+    const res = openNetrw(state, targetDir, mode);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
   // 파일 열기/새 버퍼 생성: :e, :edit
   const eMatch = cleanCmdRaw.match(/^(?:e|edit)\s+(\S+)$/i);
   if (eMatch) {
     const filename = eMatch[1].trim();
+    if (filename === '.' || filename === './') {
+      const res = openNetrw(state, '', 'current');
+      return {
+        ...res,
+        mode: 'NORMAL',
+        visualAnchor: undefined,
+        commandBuffer: undefined,
+        commandType: undefined,
+      };
+    }
     const res = editBuffer(state, filename);
     return {
       ...res,

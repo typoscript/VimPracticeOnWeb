@@ -640,8 +640,22 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson38!.checkComplete(stateNotDone)).toBe(false);
   });
 
-  it('모든 38개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(38);
+  it('레슨 39: 순정 파일 탐색기 Netrw(:Explore, :E) 완료 조건 검증', () => {
+    const lesson39 = MISSIONS.find((m) => m.id === 39);
+    expect(lesson39).toBeDefined();
+    expect(lesson39?.par).toBe(7);
+
+    const stateNotDone: VimEditorState = {
+      lines: ['console.log("Welcome to Netrw lesson");'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+      primaryFilename: 'index.ts',
+    };
+    expect(lesson39!.checkComplete(stateNotDone)).toBe(false);
+  });
+
+  it('모든 39개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(39);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();

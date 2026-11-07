@@ -47,6 +47,7 @@ import {
   openCommandLineWindow,
   handleCommandLineWindowKey,
 } from './cmdlineWindow';
+import { handleNetrwKey } from './netrwEngine';
 import {
   splitWindow,
   closeSplitWindow,
@@ -237,6 +238,14 @@ export function rawHandleKey(
       (s, cmd) => executeCommandLine(s, cmd, handleKey),
       (s, query) => executeSearchQuery(s, query, isReplayingDot)
     );
+  }
+
+  // Netrw 순정 파일 탐색기 활성화 시 전용 키 처리
+  if (state.netrw?.isOpen) {
+    const netrwHandled = handleNetrwKey(state, key);
+    if (netrwHandled !== null) {
+      return netrwHandled;
+    }
   }
 
   // 매크로 기록 중인 상태 처리

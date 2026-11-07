@@ -109,6 +109,14 @@ export interface ArgListState {
   currentIndex: number; // 0-based 인덱스
 }
 
+export interface NetrwState {
+  isOpen: boolean;
+  currentPath: string; // e.g. "" 또는 "src"
+  returnBufferId?: number;
+  returnFilename?: string;
+  files: Record<string, string[]>; // 가상 파일 맵: 경로 -> 줄 목록
+}
+
 export interface RegisterEntry {
   type: 'char' | 'line' | 'macro';
   content: string | string[];
@@ -294,6 +302,8 @@ export interface VimEditorState {
   quickfix?: QuickfixState | null;
   /** 아규먼트 리스트 (Arglist: :args, :argdo, :next, :prev) */
   argList?: ArgListState | null;
+  /** Netrw 순정 파일 탐색기 상태 (:Explore, :edit ., :E) */
+  netrw?: NetrwState | null;
 }
 
 
