@@ -1169,6 +1169,46 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 41,
+    title: '레슨 41: 순정 ctags 심볼 점프(Ctrl+])와 태그 스택 복귀(Ctrl+t)로 프로젝트 코드 탐색하기',
+    description: 'Vim은 외부 플러그인 없이도 순정 ctags 시스템을 통해 함수와 변수 정의부로 빛의 속도로 점프할 수 있습니다. NORMAL 모드에서 식별자(함수명, 변수명) 위에 커서를 두고 Ctrl+](또는 :tag <이름>)를 누르면 정의부가 선언된 파일과 라인으로 버퍼를 전환하며 즉시 이동합니다. 코드 분석을 마친 뒤 Ctrl+t(또는 :pop)를 누르면 태그 스택(Tag Stack)을 거슬러 올라가 원래 호출했던 코드 위치로 정확하게 복귀합니다.',
+    hint: 'fa 로 호출 중인 add 함수 위로 커서를 이동한 뒤 Ctrl-](또는 :tag add)를 눌러 정의부(src/utils.ts)로 점프하세요. 정의부를 확인한 뒤 Ctrl-t(또는 :pop)를 눌러 원래 파일(app.ts)로 복귀하면 미션이 완료됩니다.',
+    par: 6,
+    optimalKeys: ['f', 'a', 'Ctrl-]', 'Ctrl-t'],
+    primaryFilename: 'app.ts',
+    initialLines: [
+      'import { add } from "./utils";',
+      '',
+      'function calculate() {',
+      '  const sum = add(10, 20);',
+      '  return sum;',
+      '}',
+    ],
+    targetLines: [
+      'import { add } from "./utils";',
+      '',
+      'function calculate() {',
+      '  const sum = add(10, 20);',
+      '  return sum;',
+      '}',
+    ],
+    initialCursor: { line: 3, col: 2 },
+    checkComplete: (state) => {
+      const isReturnedToApp = state.primaryFilename === 'app.ts';
+      const hasVisitedUtils = Boolean(
+        state.buffers?.some((b) => b.name === 'src/utils.ts')
+      );
+      const isTagStackCleared = (state.tagStack?.length ?? 0) === 0;
+
+      return (
+        state.mode === 'NORMAL' &&
+        isReturnedToApp &&
+        hasVisitedUtils &&
+        isTagStackCleared
+      );
+    },
+  },
 ];
 
 

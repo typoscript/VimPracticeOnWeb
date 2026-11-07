@@ -710,8 +710,45 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson40!.checkComplete(stateDone)).toBe(true);
   });
 
-  it('모든 40개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(40);
+  it('레슨 41: 순정 ctags 심볼 점프(Ctrl+])와 태그 스택 복귀(Ctrl+t) 완료 조건 검증', () => {
+    const lesson41 = MISSIONS.find((m) => m.id === 41);
+    expect(lesson41).toBeDefined();
+    expect(lesson41?.par).toBe(6);
+
+    const stateNotDone: VimEditorState = {
+      lines: ['const sum = add(10, 20);'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+      primaryFilename: 'app.ts',
+    };
+    expect(lesson41!.checkComplete(stateNotDone)).toBe(false);
+
+    const stateDone: VimEditorState = {
+      lines: ['const sum = add(10, 20);'],
+      cursor: { line: 0, col: 12 },
+      mode: 'NORMAL',
+      primaryFilename: 'app.ts',
+      buffers: [
+        {
+          id: 1,
+          name: 'app.ts',
+          lines: ['const sum = add(10, 20);'],
+          cursor: { line: 0, col: 12 },
+        },
+        {
+          id: 2,
+          name: 'src/utils.ts',
+          lines: ['export function add() {}'],
+          cursor: { line: 0, col: 0 },
+        },
+      ],
+      tagStack: [],
+    };
+    expect(lesson41!.checkComplete(stateDone)).toBe(true);
+  });
+
+  it('모든 41개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(41);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();
