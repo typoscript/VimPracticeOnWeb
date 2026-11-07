@@ -33,12 +33,37 @@ export function syncRegisters(
   const regType: 'char' | 'line' = clip.type === 'line' ? 'line' : 'char';
   const newRegisters: Record<string, RegisterEntry> = { ...(prevState.registers ?? {}) };
 
-  // 명명된 레지스터("a~"z 등)에 저장
+  // 명명된 레지스터("a~"z, "A~"Z 등)에 저장
   if (reg && reg !== '"' && reg !== '_') {
-    newRegisters[reg] = {
-      type: regType,
-      content: clip.content,
-    };
+    const isAppend = /^[A-Z]$/.test(reg);
+    const targetKey = isAppend ? reg.toLowerCase() : reg;
+    const existing = newRegisters[targetKey];
+
+    if (isAppend && existing) {
+      const existingContent = Array.isArray(existing.content) ? existing.content.join('') : existing.content;
+      if (existing.type === 'line' && regType === 'line') {
+        newRegisters[targetKey] = {
+          type: 'line',
+          content: `${existingContent}\n${clip.content}`,
+        };
+      } else if (existing.type === 'char' && regType === 'char') {
+        newRegisters[targetKey] = {
+          type: 'char',
+          content: `${existingContent}${clip.content}`,
+        };
+      } else {
+        // 라인과 텍스트 혼합 누적 시 개행으로 구분하여 라인 타입으로 승격
+        newRegisters[targetKey] = {
+          type: 'line',
+          content: `${existingContent}\n${clip.content}`,
+        };
+      }
+    } else {
+      newRegisters[targetKey] = {
+        type: regType,
+        content: clip.content,
+      };
+    }
   }
 
   // 기본 무명 레지스터("")는 항상 동기화
@@ -90,9 +115,10 @@ export function getRegisterContent(
     };
   }
 
-  // 특정 명명된 레지스터 지정 시
+  // 특정 명명된 레지스터 지정 시 ("a~"z 및 "A~"Z 동일 참조)
   if (targetReg && targetReg !== '"') {
-    const entry = state.registers?.[targetReg];
+    const regKey = /^[A-Z]$/.test(targetReg) ? targetReg.toLowerCase() : targetReg;
+    const entry = state.registers?.[regKey];
     if (!entry) return null;
     const content = Array.isArray(entry.content) ? entry.content.join('') : entry.content;
     return {
@@ -137,12 +163,14 @@ export function putFromRegister(
 
   if (clip.type === 'line') {
     const targetLine = isBefore ? line : line + 1;
+    const insertedLines = clip.content.split('\n');
     const nextLines = [
       ...state.lines.slice(0, targetLine),
-      clip.content,
+      ...insertedLines,
       ...state.lines.slice(targetLine),
     ];
-    const firstNonWs = clip.content.search(/\S/);
+    const firstLine = insertedLines[0] ?? '';
+    const firstNonWs = firstLine.search(/\S/);
     const targetCol = firstNonWs !== -1 ? firstNonWs : 0;
     return {
       ...stateWithSnapshot,

@@ -522,27 +522,54 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson30!.checkComplete(stateDone)).toBe(true);
   });
 
-  it('레슨 31: g Ctrl+a 및 :sort u 완료 조건 검증', () => {
+  it('레슨 31: 대문자 "A 누적 복사 및 qA 매크로 덧붙이기 완료 조건 검증', () => {
     const lesson31 = MISSIONS.find((m) => m.id === 31);
     expect(lesson31).toBeDefined();
 
     const stateNotDone: VimEditorState = {
-      lines: ['data_0', 'data_0', 'data_0', 'cherry', 'apple', 'banana', 'cherry'],
+      lines: ['const port = 3000;', 'const debug = true;'],
       cursor: { line: 0, col: 0 },
       mode: 'NORMAL',
     };
     expect(lesson31!.checkComplete(stateNotDone)).toBe(false);
 
     const stateDone: VimEditorState = {
-      lines: ['data_1', 'data_2', 'data_3', 'apple', 'banana', 'cherry'],
-      cursor: { line: 3, col: 0 },
+      lines: [
+        '// const port = 3000;',
+        '// const debug = true;',
+        '// const host = "localhost";',
+        '',
+        '// TARGET BUNDLE:',
+        'const port = 3000;',
+        'const host = "localhost";',
+      ],
+      cursor: { line: 2, col: 0 },
       mode: 'NORMAL',
     };
     expect(lesson31!.checkComplete(stateDone)).toBe(true);
   });
 
-  it('모든 31개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(31);
+  it('레슨 32: g Ctrl+a 및 :sort u 완료 조건 검증', () => {
+    const lesson32 = MISSIONS.find((m) => m.id === 32);
+    expect(lesson32).toBeDefined();
+
+    const stateNotDone: VimEditorState = {
+      lines: ['data_0', 'data_0', 'data_0', 'cherry', 'apple', 'banana', 'cherry'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson32!.checkComplete(stateNotDone)).toBe(false);
+
+    const stateDone: VimEditorState = {
+      lines: ['data_1', 'data_2', 'data_3', 'apple', 'banana', 'cherry'],
+      cursor: { line: 3, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson32!.checkComplete(stateDone)).toBe(true);
+  });
+
+  it('모든 32개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(32);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();

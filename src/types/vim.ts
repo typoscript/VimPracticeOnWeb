@@ -1,4 +1,4 @@
-export type VimMode = 'NORMAL' | 'INSERT' | 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK' | 'COMMAND' | 'SEARCH';
+export type VimMode = 'NORMAL' | 'INSERT' | 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK' | 'COMMAND' | 'SEARCH' | 'REPLACE';
 
 export interface CursorPosition {
   line: number; // 0-indexed 줄 번호
@@ -204,6 +204,8 @@ export interface VimEditorState {
   } | null;
   /** :s/.../.../gc 대화형 치환 확인 세션 */
   confirmSubstitute?: ConfirmSubstituteSession | null;
+  /** REPLACE (R) 모드에서 백스페이스 시 복원할 원래 문자 스택 */
+  replaceStack?: { char: string; line: number; col: number }[];
 }
 
 

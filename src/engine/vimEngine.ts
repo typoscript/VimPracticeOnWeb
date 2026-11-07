@@ -219,10 +219,11 @@ export function rawHandleKey(
     // NORMAL 모드에서 대기 키 없이 'q'를 누르면 매크로 기록 종료
     if (state.mode === 'NORMAL' && !state.pendingKeys && key === 'q') {
       const reg = state.recordingMacro.register;
+      const targetReg = /^[A-Z]$/.test(reg) ? reg.toLowerCase() : reg;
       const recordedKeys = [...state.recordingMacro.keys];
       const newRegisters = {
         ...(state.registers ?? {}),
-        [reg]: {
+        [targetReg]: {
           type: 'macro' as const,
           content: recordedKeys,
         },
@@ -252,6 +253,8 @@ export function rawHandleKey(
     nextState = handleSearchModeKey(state, key, isReplayingDot);
   } else if (state.mode === 'COMMAND') {
     nextState = handleCommandLineModeKey(state, key);
+  } else if (state.mode === 'REPLACE') {
+    nextState = handleReplaceModeKey(state, key, isReplayingDot, macroDepth);
   } else if (state.mode === 'INSERT') {
     nextState = handleInsertModeKey(state, key, isReplayingDot);
   } else if (state.mode === 'VISUAL' || state.mode === 'VISUAL_LINE' || state.mode === 'VISUAL_BLOCK') {
@@ -1396,6 +1399,137 @@ function handleInsertModeKey(
 }
 
 /**
+ * REPLACE (R) 모드 키 입력 처리:
+ * 1:1 글자 덮어쓰기 및 Backspace 시 원본 글자 복원
+ */
+function handleReplaceModeKey(
+  state: VimEditorState,
+  key: string,
+  isReplayingDot = false,
+  _macroDepth = 0
+): VimEditorState {
+  if (key === 'Escape') {
+    const curLine = state.lines[state.cursor.line] ?? '';
+    const maxCol = getMaxCol(curLine, 'NORMAL');
+    const newCol = Math.max(0, Math.min(state.cursor.col - 1, maxCol));
+    const nextLastChange = state.currentChangeKeys ? [...state.currentChangeKeys, 'Escape'] : undefined;
+    return {
+      ...state,
+      mode: 'NORMAL',
+      cursor: { line: state.cursor.line, col: newCol },
+      replaceStack: undefined,
+      currentChangeKeys: undefined,
+      lastChangeKeys: isReplayingDot ? state.lastChangeKeys : nextLastChange,
+    };
+  }
+
+  if (key === 'Backspace') {
+    const stack = state.replaceStack ?? [];
+    if (stack.length === 0) {
+      // 교체 모드 진입 지점 이전으로는 백스페이스 이동 불가
+      return state;
+    }
+    const last = stack[stack.length - 1];
+    const newStack = stack.slice(0, -1);
+    const lineIdx = last.line;
+    const curLine = state.lines[lineIdx] ?? '';
+    let newLine: string;
+
+    if (last.char === '') {
+      // 줄 끝을 초과하여 덧붙여졌던 문자 삭제
+      newLine = curLine.slice(0, last.col) + curLine.slice(last.col + 1);
+    } else {
+      // 덮어써졌던 원본 문자 복구
+      newLine = curLine.slice(0, last.col) + last.char + curLine.slice(last.col + 1);
+    }
+
+    const nextLines = [...state.lines];
+    nextLines[lineIdx] = newLine;
+    const nextChangeKeys = state.currentChangeKeys ? [...state.currentChangeKeys, 'Backspace'] : undefined;
+
+    return {
+      ...state,
+      lines: nextLines,
+      cursor: { line: lineIdx, col: last.col },
+      replaceStack: newStack,
+      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : nextChangeKeys,
+    };
+  }
+
+  if (key === 'Enter') {
+    const lineIdx = state.cursor.line;
+    const col = state.cursor.col;
+    const curLine = state.lines[lineIdx] ?? '';
+    const before = curLine.slice(0, col);
+    const after = curLine.slice(col);
+    const nextLines = [
+      ...state.lines.slice(0, lineIdx),
+      before,
+      after,
+      ...state.lines.slice(lineIdx + 1),
+    ];
+    const nextChangeKeys = state.currentChangeKeys ? [...state.currentChangeKeys, 'Enter'] : undefined;
+    return {
+      ...state,
+      lines: nextLines,
+      cursor: { line: lineIdx + 1, col: 0 },
+      replaceStack: [],
+      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : nextChangeKeys,
+    };
+  }
+
+  if (key === 'ArrowLeft') {
+    return { ...state, cursor: { line: state.cursor.line, col: Math.max(0, state.cursor.col - 1) } };
+  }
+  if (key === 'ArrowRight') {
+    return { ...state, cursor: { line: state.cursor.line, col: state.cursor.col + 1 } };
+  }
+  if (key === 'ArrowUp') {
+    return { ...state, cursor: { line: Math.max(0, state.cursor.line - 1), col: state.cursor.col } };
+  }
+  if (key === 'ArrowDown') {
+    return { ...state, cursor: { line: Math.min(state.lines.length - 1, state.cursor.line + 1), col: state.cursor.col } };
+  }
+
+  // 단일 입력 문자 1:1 덮어쓰기
+  if (key.length === 1) {
+    const lineIdx = state.cursor.line;
+    const col = state.cursor.col;
+    const curLine = state.lines[lineIdx] ?? '';
+    const stack = state.replaceStack ?? [];
+
+    let newLine: string;
+    let oldChar = '';
+
+    if (col < curLine.length) {
+      oldChar = curLine[col];
+      newLine = curLine.slice(0, col) + key + curLine.slice(col + 1);
+    } else {
+      const padding = ' '.repeat(col - curLine.length);
+      newLine = curLine + padding + key;
+      oldChar = '';
+    }
+
+    const nextLines = [...state.lines];
+    nextLines[lineIdx] = newLine;
+    const newStack = [...stack, { char: oldChar, line: lineIdx, col }];
+    const nextChangeKeys = state.currentChangeKeys
+      ? [...state.currentChangeKeys, key]
+      : ['R', key];
+
+    return {
+      ...state,
+      lines: nextLines,
+      cursor: { line: lineIdx, col: col + 1 },
+      replaceStack: newStack,
+      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : nextChangeKeys,
+    };
+  }
+
+  return state;
+}
+
+/**
  * VISUAL / VISUAL_LINE 모드 키 입력 처리
  */
 function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState {
@@ -1428,7 +1562,7 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
 
   // 명명된 레지스터 지정 ("{register})
   if (state.pendingKeys === '"') {
-    if (/^[a-z0-9"+_]$/.test(key)) {
+    if (/^[a-zA-Z0-9"+_]$/.test(key)) {
       const reg = key === '""' ? '"' : key;
       return {
         ...state,
@@ -1563,6 +1697,20 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
       key === '<C-x>'
     ) {
       return modifyNumberVisual(state, false, true, parsed.totalCount);
+    }
+    if (key === 'J') {
+      if (!state.visualAnchor) return { ...state, mode: 'NORMAL', pendingKeys: undefined };
+      const minLine = Math.min(state.visualAnchor.line, state.cursor.line);
+      const maxLine = Math.max(state.visualAnchor.line, state.cursor.line);
+      const joinCount = maxLine - minLine;
+      const tempState: VimEditorState = {
+        ...state,
+        cursor: { line: minLine, col: 0 },
+        mode: 'NORMAL',
+        visualAnchor: undefined,
+        pendingKeys: undefined,
+      };
+      return joinLines(tempState, Math.max(1, joinCount), false);
     }
     return { ...state, pendingKeys: undefined };
   }
@@ -2110,7 +2258,7 @@ function handleNormalModeKey(
 
   // 1-0-a. 명명된 레지스터 지정 ("{register})
   if (state.pendingKeys === '"') {
-    if (/^[a-z0-9"+_]$/.test(key)) {
+    if (/^[a-zA-Z0-9"+_]$/.test(key)) {
       const reg = key === '""' ? '"' : key;
       return {
         ...state,
@@ -2538,15 +2686,20 @@ function handleNormalModeKey(
     state = { ...state, pendingKeys: undefined };
   }
 
-  // 1-1. 매크로 녹화 시작 대기 (q)
+  // 1-1. 매크로 녹화 시작 대기 (q) - 소문자(q{a-z}) 새로 녹화, 대문자(q{A-Z}) 누적 덧붙이기
   if (state.pendingKeys === 'q' || parsed.operator === 'q') {
-    if (/^[a-z0-9]$/.test(key)) {
+    if (/^[a-zA-Z0-9]$/.test(key)) {
+      const isAppend = /^[A-Z]$/.test(key);
+      const targetReg = isAppend ? key.toLowerCase() : key;
+      const existingEntry = isAppend ? state.registers?.[targetReg] : undefined;
+      const existingKeys = (existingEntry && Array.isArray(existingEntry.content)) ? [...existingEntry.content] : [];
+
       return {
         ...state,
         pendingKeys: undefined,
         recordingMacro: {
           register: key,
-          keys: [],
+          keys: existingKeys,
         },
       };
     }
@@ -2561,8 +2714,8 @@ function handleNormalModeKey(
     let targetReg: string | null = null;
     if (key === '@') {
       targetReg = state.lastPlayedMacro ?? null;
-    } else if (/^[a-z0-9]$/.test(key)) {
-      targetReg = key;
+    } else if (/^[a-zA-Z0-9]$/.test(key)) {
+      targetReg = key.toLowerCase();
     }
 
     if (!targetReg) {
@@ -3197,6 +3350,14 @@ function handleNormalModeKey(
     if (key === ',') {
       return traverseChangeList(state, 'next', parsed.totalCount);
     }
+    if (key === 'J') {
+      const res = joinLines(state, parsed.totalCount, false);
+      const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'g', 'J'] : ['g', 'J'];
+      return {
+        ...res,
+        lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
+      };
+    }
     if (key === '~' || key === 'u' || key === 'U') {
 
       return {
@@ -3546,6 +3707,18 @@ function handleNormalModeKey(
       cursor: { line: state.cursor.line, col: newCol },
       pendingKeys: undefined,
       currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['a'],
+    };
+  }
+
+  // R: REPLACE 모드 진입
+  if (key === 'R' && !parsed.operator && !state.pendingKeys) {
+    const stateWithSnapshot = pushUndoSnapshot(state);
+    return {
+      ...stateWithSnapshot,
+      mode: 'REPLACE',
+      replaceStack: [],
+      pendingKeys: undefined,
+      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['R'],
     };
   }
 

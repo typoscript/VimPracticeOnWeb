@@ -4,10 +4,11 @@ import { moveToFirstNonBlank } from './motions';
 import { isPositionSelected } from './visual';
 
 /**
- * J: 현재 줄과 아랫줄을 공백 하나를 두고 이어 붙입니다.
+ * J / gJ: 현재 줄과 아랫줄을 이어 붙입니다.
  * [count]J 지원 (예: 3J -> 현재 줄 포함 3개 줄 연결)
+ * insertSpace = false (gJ): 공백을 삽입하지 않고 뒷줄의 들여쓰기를 제거하여 딱 붙임
  */
-export function joinLines(state: VimEditorState, count = 1): VimEditorState {
+export function joinLines(state: VimEditorState, count = 1, insertSpace = true): VimEditorState {
   if (state.lines.length <= 1 || state.cursor.line >= state.lines.length - 1) {
     return { ...state, pendingKeys: undefined };
   }
@@ -22,15 +23,20 @@ export function joinLines(state: VimEditorState, count = 1): VimEditorState {
 
   for (let i = currentLineIdx + 1; i <= maxJoinLine; i++) {
     const nextLineTrimmed = (state.lines[i] ?? '').trimStart();
-    if (currentJoined.length === 0) {
-      currentJoined = nextLineTrimmed;
-      if (i === currentLineIdx + 1) firstJoinCol = 0;
-    } else if (currentJoined.endsWith(' ')) {
-      if (i === currentLineIdx + 1) firstJoinCol = currentJoined.length - 1;
+    if (!insertSpace) {
+      if (i === currentLineIdx + 1) firstJoinCol = currentJoined.length;
       currentJoined += nextLineTrimmed;
     } else {
-      if (i === currentLineIdx + 1) firstJoinCol = currentJoined.length;
-      currentJoined += ' ' + nextLineTrimmed;
+      if (currentJoined.length === 0) {
+        currentJoined = nextLineTrimmed;
+        if (i === currentLineIdx + 1) firstJoinCol = 0;
+      } else if (currentJoined.endsWith(' ')) {
+        if (i === currentLineIdx + 1) firstJoinCol = currentJoined.length - 1;
+        currentJoined += nextLineTrimmed;
+      } else {
+        if (i === currentLineIdx + 1) firstJoinCol = currentJoined.length;
+        currentJoined += ' ' + nextLineTrimmed;
+      }
     }
   }
 
@@ -40,10 +46,12 @@ export function joinLines(state: VimEditorState, count = 1): VimEditorState {
     ...state.lines.slice(maxJoinLine + 1),
   ];
 
+  const targetCol = Math.max(0, Math.min(firstJoinCol, Math.max(0, currentJoined.length - 1)));
+
   return {
     ...stateWithUndo,
     lines: newLines,
-    cursor: { line: currentLineIdx, col: Math.max(0, Math.min(firstJoinCol, Math.max(0, currentJoined.length - 1))) },
+    cursor: { line: currentLineIdx, col: targetCol },
     pendingKeys: undefined,
   };
 }

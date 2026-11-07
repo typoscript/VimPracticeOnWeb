@@ -809,7 +809,55 @@ export const MISSIONS: Mission[] = [
   },
   {
     id: 31,
-    title: '레슨 31: g Ctrl+a로 배열 번호를 한 번에 매기고 :sort u로 중복 데이터 정제하기',
+    title: '레슨 31: 대문자 "A로 흩어진 코드 수집하기 & 실수한 매크로에 qA로 명령 덧붙이기',
+    description: '소문자 레지스터("a)와 달리 대문자 레지스터("A)는 기존 내용 뒤에 텍스트를 누적(Append)합니다. 파일 곳곳의 핵심 라인을 "Ayy로 수집해 한 번에 붙여넣고, qA로 기존 매크로에 아랫줄 이동(j) 명령을 덧붙여 반복 작업을 단번에 끝내세요.',
+    hint: '"ayy로 첫 줄을 복사하고 2j "Ayy로 3번째 줄을 누적 복사한 뒤, G "ap로 아래에 붙여넣으세요. 그 다음 gg로 올라가 qa I// <Esc> q로 주석 매크로를 만든 뒤, qAjq로 아랫줄 이동을 덧붙이고 2@a를 실행하세요.',
+    par: 31,
+    optimalKeys: [
+      '"', 'a', 'y', 'y',
+      '2', 'j',
+      '"', 'A', 'y', 'y',
+      'G',
+      '"', 'a', 'p',
+      'g', 'g',
+      'q', 'a', 'I', '/', '/', ' ', 'Escape', 'q',
+      'q', 'A', 'j', 'q',
+      '2', '@', 'a',
+    ],
+    initialLines: [
+      'const port = 3000;',
+      'const debug = true;',
+      'const host = "localhost";',
+      '',
+      '// TARGET BUNDLE:',
+    ],
+    targetLines: [
+      '// const port = 3000;',
+      '// const debug = true;',
+      '// const host = "localhost";',
+      '',
+      '// TARGET BUNDLE:',
+      'const port = 3000;',
+      'const host = "localhost";',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines.length === 7 &&
+        state.lines[0] === '// const port = 3000;' &&
+        state.lines[1] === '// const debug = true;' &&
+        state.lines[2] === '// const host = "localhost";' &&
+        state.lines[3] === '' &&
+        state.lines[4] === '// TARGET BUNDLE:' &&
+        state.lines[5] === 'const port = 3000;' &&
+        state.lines[6] === 'const host = "localhost";'
+      );
+    },
+  },
+  {
+    id: 32,
+    title: '레슨 32: g Ctrl+a로 배열 번호를 한 번에 매기고 :sort u로 중복 데이터 정제하기',
     description: 'Visual 모드에서 g Ctrl+a(또는 Alt+a)를 사용하여 목업 데이터에 1, 2, 3 순차 인덱스를 일괄 부여하고, :4,$sort u 명령으로 중복 태그 목록을 가나다순으로 정제하세요.',
     hint: 'V2j로 3개 줄을 선택 후 g와 Ctrl-a(또는 Alt-a)를 눌러 순차 번호를 매긴 뒤, :4,$sort u 를 입력하고 Enter를 누르세요.',
     par: 16,

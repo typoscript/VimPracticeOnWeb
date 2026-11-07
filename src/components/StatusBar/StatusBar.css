@@ -75,6 +75,12 @@
   color: #11111b;
 }
 
+.mode-replace {
+  background-color: #f38ba8;
+  color: #11111b;
+  font-weight: 700;
+}
+
 .status-filename {
   color: #a6adc8;
   font-size: 12px;

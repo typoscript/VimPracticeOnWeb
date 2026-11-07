@@ -225,6 +225,13 @@
   font-weight: bold;
 }
 
+/* REPLACE 모드: 핑크 블록 */
+.cursor-replace {
+  background-color: #f38ba8;
+  color: #11111b;
+  font-weight: bold;
+}
+
 .empty-char {
   display: inline-block;
   min-width: 0.6em;

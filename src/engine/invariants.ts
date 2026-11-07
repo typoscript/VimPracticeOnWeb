@@ -42,7 +42,7 @@ export function getMaxAllowedCol(lineText: string | undefined, mode: VimMode = '
   if (!lineText || lineText.length === 0) {
     return 0;
   }
-  if (mode === 'INSERT' || mode === 'COMMAND' || mode === 'SEARCH') {
+  if (mode === 'INSERT' || mode === 'COMMAND' || mode === 'SEARCH' || mode === 'REPLACE') {
     return lineText.length;
   }
   return Math.max(0, lineText.length - 1);

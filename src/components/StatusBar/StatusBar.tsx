@@ -41,6 +41,8 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       ? 'INSERT (normal)'
       : insertRegisterPending
       ? 'INSERT (register)'
+      : mode === 'REPLACE'
+      ? '-- REPLACE --'
       : mode === 'VISUAL_LINE'
       ? 'VISUAL LINE'
       : mode === 'VISUAL_BLOCK'
