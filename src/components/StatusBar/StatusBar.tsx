@@ -27,6 +27,8 @@ export interface StatusBarProps {
   wildmenu?: import('../../types/vim').WildmenuState | null;
   /** 와일드메뉴 비주얼 바 표시 여부 (:set wildmenu) */
   showWildmenuBar?: boolean;
+  /** :function 본문 입력 중인 함수 이름과 지금까지 입력한 줄 수 */
+  functionDraft?: { name: string; lines: number } | null;
 }
 
 export const StatusBar: React.FC<StatusBarProps> = ({
@@ -43,6 +45,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   insertCtrlXMode,
   confirmSubstitute,
   wildmenu,
+  functionDraft,
   showWildmenuBar = true,
 }) => {
   const displayMode =
@@ -104,7 +107,9 @@ export const StatusBar: React.FC<StatusBarProps> = ({
             <span className="prompt-text">{commandBuffer ?? ''}</span>
             <span className="prompt-cursor">_</span>
             <span className="prompt-hint">
-              {commandType === '='
+              {functionDraft
+                ? `(함수 ${functionDraft.name} 본문 ${functionDraft.lines + 1}번째 줄 • endfunction 으로 끝내기, Esc 취소)`
+                : commandType === '='
                 ? '(수식 입력 후 Enter 계산 삽입, Esc 취소)'
                 : mode === 'COMMAND'
                 ? '(예: 10, %s/old/new/g, w • Enter 실행, Esc 취소)'

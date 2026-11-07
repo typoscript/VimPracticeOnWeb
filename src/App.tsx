@@ -93,7 +93,7 @@ import './App.css';
 /** 스피드런 챌린지 후보 미션 ID 목록 (리팩토링/편집 미션) */
 export const SPEEDRUN_CANDIDATE_IDS = [
   4, 6, 7, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 21, 23, 25, 26, 28, 29, 30, 31, 32, 43, 44,
-  47, 48, 49, 50, 51, 52, 53, 54, 55,
+  47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
 ];
 
 export function generateSpeedrunStages(): Mission[] {
@@ -1984,6 +1984,11 @@ export function App() {
               commandMessage={displayEditorState.commandMessage}
               wildmenu={displayEditorState.wildmenu}
               showWildmenuBar={displayEditorState.options?.wildmenu ?? true}
+              functionDraft={
+                displayEditorState.functionDraft
+                  ? { name: displayEditorState.functionDraft.name, lines: displayEditorState.functionDraft.body.length }
+                  : null
+              }
             />
 
             {/* 실시간 레지스터 인스펙터 패널 */}

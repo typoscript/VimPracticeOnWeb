@@ -1794,4 +1794,32 @@ export const MISSIONS: Mission[] = [
       return hasCommand && state.lines.length === target.length && target.every((t, i) => state.lines[i] === t);
     },
   },
+  {
+    id: 56,
+    title: '레슨 56: Vim script 함수(:function, :call)로 반복 작업을 함수로 만들기',
+    description:
+      'Vim script 함수를 만들면 여러 단계의 편집을 이름 하나로 묶어 다시 쓸 수 있습니다.\n\n1) :function! Name(인자) 를 입력하고 Enter 를 누르면 본문 입력이 이어집니다. (상태 표시줄에 몇 번째 줄인지 표시)\n2) 본문을 한 줄씩 입력하고 endfunction(endf) 으로 끝냅니다. Esc 를 누르면 정의가 취소됩니다.\n3) :call Name() 으로 실행합니다. :[범위]call 은 함수에 range 속성이 없으면 범위의 줄마다 커서를 옮겨 가며 호출합니다.\n\n본문에서 쓸 수 있는 것: let, echo, execute(문자열을 Ex 명령으로 실행), return, if/elseif/else/endif, while, call, 그리고 :normal 같은 모든 Ex 명령. a:인자, a:firstline/a:lastline, getline()/setline()/line() 같은 내장 함수도 지원합니다.\n\n미션:\n1) :fu! Cmt() 를 입력해 함수 정의를 시작하세요.\n2) 본문에 exe "norm! I// " 를 입력하세요. (현재 줄 맨 앞에 // 를 붙임)\n3) endf 로 정의를 마치세요.\n4) :%call Cmt() 로 모든 줄을 한 번에 주석 처리하세요.',
+    hint: ':fu! Cmt() Enter → exe "norm! I// " Enter → endf Enter → :%call Cmt() Enter',
+    par: 46,
+    optimalKeys: [
+      ':', 'f', 'u', '!', ' ', 'C', 'm', 't', '(', ')', 'Enter', 'e', 'x', 'e', ' ', '"', 'n', 'o', 'r', 'm', '!', ' ', 'I', '/', '/', ' ', '"', 'Enter', 'e', 'n', 'd', 'f', 'Enter', ':', '%', 'c', 'a', 'l', 'l', ' ', 'C', 'm', 't', '(', ')', 'Enter',
+    ],
+    initialLines: [
+      'const a = 1;',
+      'const b = 2;',
+      'const c = 3;',
+    ],
+    targetLines: [
+      '// const a = 1;',
+      '// const b = 2;',
+      '// const c = 3;',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const target = ['// const a = 1;', '// const b = 2;', '// const c = 3;'];
+      const hasFunction = !!state.userFunctions?.Cmt;
+      return hasFunction && state.lines.length === target.length && target.every((t, i) => state.lines[i] === t);
+    },
+  },
 ];

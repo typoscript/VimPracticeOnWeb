@@ -3,12 +3,16 @@ import { executeSetCommand } from './setEngine';
 import { getVfsFile } from './vfs';
 import { registerKeymap } from './keymapEngine';
 import { executeUserCommandDefinition } from './userCommandEngine';
+import { defineFunctionFromLines, isEndFunctionLine, isFunctionHeaderLine } from './vimscriptEngine';
+
+/** 소싱 중 let / call / echo 등 Vim script 명령을 실행하기 위한 Ex 실행기 */
+export type SourceExRunner = (state: VimEditorState, command: string) => VimEditorState;
 
 /**
  * .vimrc 또는 스크립트 파일을 한 줄씩 읽어 에디터 상태에 적용합니다 (:source, :so).
  * (:so %, :so ~/.vimrc, :source .vimrc 등)
  */
-export function sourceScript(state: VimEditorState, targetFile = '%'): VimEditorState {
+export function sourceScript(state: VimEditorState, targetFile = '%', runEx?: SourceExRunner): VimEditorState {
   const target = targetFile.trim();
   let linesToRun: string[] = [];
   let sourceName = target;
@@ -41,10 +45,24 @@ export function sourceScript(state: VimEditorState, targetFile = '%'): VimEditor
   let curState = state;
   let appliedCount = 0;
 
-  for (const rawLine of linesToRun) {
-    const line = rawLine.trim();
+  for (let idx = 0; idx < linesToRun.length; idx++) {
+    const line = linesToRun[idx].trim();
     if (!line || line.startsWith('"')) {
       // 주석 및 빈 줄 무시
+      continue;
+    }
+
+    // 0. 함수 정의 블록 (function! Name() ... endfunction)
+    if (isFunctionHeaderLine(line)) {
+      const body: string[] = [];
+      let end = idx + 1;
+      while (end < linesToRun.length && !isEndFunctionLine(linesToRun[end])) {
+        body.push(linesToRun[end]);
+        end++;
+      }
+      curState = defineFunctionFromLines(curState, line, body);
+      idx = end;
+      appliedCount++;
       continue;
     }
 
@@ -84,6 +102,13 @@ export function sourceScript(state: VimEditorState, targetFile = '%'): VimEditor
         ...curState,
         leaderKey: leaderVal,
       };
+      appliedCount++;
+      continue;
+    }
+
+    // 5. Vim script 명령 (let, unlet, call, echo, execute)
+    if (runEx && /^(let|unl|unlet|cal|call|ec|echo|echom|exe|execute)(!?)\s/.test(line)) {
+      curState = runEx(curState, line);
       appliedCount++;
       continue;
     }

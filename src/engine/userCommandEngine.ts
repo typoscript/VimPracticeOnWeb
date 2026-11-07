@@ -7,6 +7,7 @@ import { UserCommand, VimEditorState } from '../types/vim';
  *
  * replacement 안의 특수 토큰은 호출 시점에 치환됩니다:
  *   <args>   인자 원문           <q-args>  큰따옴표로 감싼 인자
+ *   <f-args> 공백으로 나눈 인자를 함수 인자 목록으로 ("a","b")
  *   <line1>  범위 시작 줄 (1-based) <line2>   범위 끝 줄
  *   <bang>   ! 로 호출했으면 "!"   <lt>      리터럴 "<"
  *
@@ -148,6 +149,25 @@ function quoteArgs(args: string): string {
   return `"${args.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 }
 
+/** <f-args>: 공백으로 인자를 나눕니다. (\ 로 이스케이프한 공백은 유지) */
+function splitFunctionArgs(args: string): string[] {
+  const out: string[] = [];
+  let cur = '';
+  for (let i = 0; i < args.length; i++) {
+    const ch = args[i];
+    if (ch === '\\' && (args[i + 1] === ' ' || args[i + 1] === '\\')) {
+      cur += args[++i];
+    } else if (/\s/.test(ch)) {
+      if (cur.length > 0) out.push(cur);
+      cur = '';
+    } else {
+      cur += ch;
+    }
+  }
+  if (cur.length > 0) out.push(cur);
+  return out;
+}
+
 /** replacement의 특수 토큰을 치환합니다. */
 export function expandUserCommand(
   command: UserCommand,
@@ -155,10 +175,11 @@ export function expandUserCommand(
   line1: number,
   line2: number
 ): string {
-  return command.replacement.replace(/<(args|q-args|line1|line2|bang|lt)>/gi, (_, token: string) => {
+  return command.replacement.replace(/<(args|q-args|f-args|line1|line2|bang|lt)>/gi, (_, token: string) => {
     switch (token.toLowerCase()) {
       case 'args': return invocation.args;
       case 'q-args': return quoteArgs(invocation.args);
+      case 'f-args': return splitFunctionArgs(invocation.args).map(quoteArgs).join(',');
       case 'line1': return String(line1);
       case 'line2': return String(line2);
       case 'bang': return invocation.bang ? '!' : '';

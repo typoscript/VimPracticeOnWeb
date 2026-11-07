@@ -1,5 +1,6 @@
 import { VimEditorState, CursorPosition, FoldRange } from '../types/vim';
 import { executeOperatorMotion, OPERATOR_MOTION_KEYS } from './operatorMotion';
+import { cancelFunctionDraft } from './vimscriptEngine';
 import { clampCursor, getMaxCol } from './cursor';
 import {
   moveLeft,
@@ -1034,6 +1035,10 @@ function handleCommandLineModeKey(state: VimEditorState, key: string): VimEditor
     if (state.wildmenu?.active) {
       return cancelWildmenu(state, true);
     }
+    // :function 본문 입력 중 Esc: 정의 취소
+    if (state.functionDraft) {
+      return cancelFunctionDraft(state);
+    }
     return {
       ...state,
       mode: 'NORMAL',
@@ -1051,6 +1056,10 @@ function handleCommandLineModeKey(state: VimEditorState, key: string): VimEditor
         ...s,
         commandBuffer: s.commandBuffer.slice(0, -1),
       };
+    }
+    // :function 본문 입력 중에는 빈 줄에서 Backspace 를 눌러도 커맨드라인을 떠나지 않음
+    if (s.functionDraft) {
+      return s;
     }
     return {
       ...s,

@@ -5,6 +5,27 @@ export interface CursorPosition {
   col: number;  // 0-indexed 열 번호
 }
 
+/** Vim script 값 (숫자 또는 문자열) */
+export type VimScriptValue = number | string;
+
+/** 사용자 정의 함수 (:function[!] Name(params) [range] [abort] ... :endfunction) */
+export interface UserFunction {
+  name: string;
+  params: string[];
+  /** 마지막 인자가 ... 인 가변 인자 함수 (a:0 = 추가 인자 개수, a:1 ...) */
+  varargs: boolean;
+  /** range 속성: [range]call 시 줄마다 호출하지 않고 한 번만 호출 (a:firstline, a:lastline) */
+  range: boolean;
+  /** abort 속성: 본문에서 에러가 나면 즉시 중단 */
+  abort: boolean;
+  body: string[];
+}
+
+/** 커맨드라인에서 :function 본문을 입력 중인 상태 (:endfunction 으로 확정) */
+export interface FunctionDraft extends UserFunction {
+  overwrite: boolean;
+}
+
 /** 사용자 정의 Ex 명령 (:command[!] [-nargs] [-range] [-bang] Name replacement) */
 export interface UserCommand {
   name: string;
@@ -341,6 +362,12 @@ export interface VimEditorState {
   userKeymaps?: Record<string, string>;
   /** 사용자 정의 Ex 명령 (:command! Name ...) */
   userCommands?: Record<string, UserCommand>;
+  /** 사용자 정의 함수 (:function) */
+  userFunctions?: Record<string, UserFunction>;
+  /** 전역 변수 (:let g:x = ..., 함수 밖의 :let x = ...) */
+  globalVars?: Record<string, VimScriptValue>;
+  /** 커맨드라인에서 입력 중인 함수 정의 */
+  functionDraft?: FunctionDraft | null;
   /** 리더 키 (Leader Key, 기본값: ' ') */
   leaderKey?: string;
   /** $ 키 입력 후 j/k 수직 이동 시 줄 끝 유지 여부 (Vim sticky end-of-line) */

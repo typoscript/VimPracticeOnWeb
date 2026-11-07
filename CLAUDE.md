@@ -15,7 +15,7 @@
   `npm test -- src/engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 96개 테스트 파일, 1,214개 테스트 100% 통과 필수)*
+  *(현재 98개 테스트 파일, 1,246개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -41,7 +41,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 55)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 56)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -68,14 +68,15 @@
 - **매크로 심화 & 디버깅 (레슨 53)**: `@a, @@, [count]@@` + 매크로 슬로우모션 디버거 (`src/engine/macroDebugger.ts`, `src/components/MacroDebugger/`: 1x/0.5x/0.2x 재생, 키 단위 스텝, 프레임 미리보기).
 - **실패 신호(bell) & 연산자+모션**: 실패한 키는 상태에 일시적 `bell: true`를 남기며(매 키 입력 시작 시 제거), `@` 매크로·`.` 반복·`:normal`·키매핑 재생은 bell에서 중단됩니다. `src/engine/operatorMotion.ts`가 `d/c/y` + `j k G gg`(줄 단위), `h l b B ^`(배타적 문자 단위)를 처리하며 실패 시 bell을 울립니다. UI는 bell마다 에디터 테두리를 깜빡입니다(visualbell, `Editor`의 `bellSignal`).
 - **인덴트 텍스트 객체 (레슨 54)**: `ii, ai, iI, aI, [count]ii` + `d/c/y/v/=/gu/gU/g~` (`textObjects.ts`의 `getIndentObjectRange`, `executeIndentObjectOperator`, 항상 줄 단위)
-- **사용자 정의 Ex 명령 (레슨 55)**: `:command[!] [-nargs] [-range[=%]] [-bang] Name ...`, `:delcommand`, `:comclear`, `:command` 목록, `<args> <q-args> <line1> <line2> <bang> <lt>` 치환, 접두어 호출, `.vimrc` 소싱 (`src/engine/userCommandEngine.ts`). 내장 명령이 먼저 평가되어 사용자 명령에 가려지지 않습니다.
+- **사용자 정의 Ex 명령 (레슨 55)**: `:command[!] [-nargs] [-range[=%]] [-bang] Name ...`, `:delcommand`, `:comclear`, `:command` 목록, `<args> <q-args> <line1> <line2> <bang> <lt>` 치환, 접두어 호출, `.vimrc` 소싱 (`src/engine/userCommandEngine.ts`). 내장 명령이 먼저 평가되어 사용자 명령에 가려지지 않습니다. `<f-args>`로 함수에 인자를 나눠 전달합니다.
+- **Vim script 함수 (레슨 56)**: `:function[!] Name(a, ...) [range] [abort]` → 커맨드라인 본문 입력(`functionDraft`) → `:endfunction`, `:delfunction`, `:[range]call`(range 속성 없으면 줄마다 호출), `:let`/`:unlet`/`:echo`/`:execute`, 본문의 `return`·`if/elseif/else/endif`·`while/break/continue`. 표현식은 `src/engine/vimscriptEval.ts`(숫자·문자열, g:/l:/a:/@r, 내장 함수), 실행은 `src/engine/vimscriptEngine.ts`. `:call` 하나는 한 번의 실행 취소 단위입니다.
 
 ---
 
 ## 5. 다음 개발 로드맵 추천 후보
 클로드에게 다음 작업을 지시할 때 아래 항목 중에서 지정하시면 됩니다:
 1. ~~**매크로 슬로우모션 뷰어 & 비주얼 디버거 (`MacroDebugger`)**~~ — 레슨 53과 함께 구현 완료.
-2. ~~**사용자 정의 Ex 커맨드 (`:command!`)**~~ — 레슨 55와 함께 구현 완료. 남은 항목: **Vim 함수 엔진 (`:function`, `:call`, `<f-args>`)**.
+2. ~~**사용자 정의 Ex 커맨드 (`:command!`) 및 Vim 함수 엔진 (`:function`, `:call`)**~~ — 레슨 55·56과 함께 구현 완료. 남은 확장: 리스트/딕셔너리 타입, `:for`, `=~` 정규식 비교, `printf()`/`substitute()` 등 내장 함수.
 3. **순정 Vim 맞춤법 검사기 (`:set spell`, `]s`, `[s`, `z=`, `zg`)**:
    - 코드 주석이나 문자열에서 오탈자를 탐색하고 `z=`로 교체 추천 목록을 띄우는 기능.
 4. ~~**인덴트 텍스트 객체 확장 (`ii`, `ai`)**~~ — 레슨 54와 함께 구현 완료.

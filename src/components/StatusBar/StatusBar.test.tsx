@@ -137,4 +137,19 @@ describe('StatusBar Component', () => {
     expect(screen.getByTestId('wildmenu-item-selected')).toHaveTextContent('src/main.ts');
     expect(screen.getAllByTestId('wildmenu-item')).toHaveLength(2);
   });
+
+  it(':function 본문 입력 중에는 몇 번째 줄인지와 종료 방법을 안내한다', () => {
+    render(
+      <StatusBar
+        mode="COMMAND"
+        cursor={{ line: 0, col: 0 }}
+        commandType=":"
+        commandBuffer="return 1"
+        functionDraft={{ name: 'Add', lines: 1 }}
+      />
+    );
+    const prompt = screen.getByTestId('commandline-prompt');
+    expect(prompt).toHaveTextContent('함수 Add 본문 2번째 줄');
+    expect(prompt).toHaveTextContent('endfunction');
+  });
 });

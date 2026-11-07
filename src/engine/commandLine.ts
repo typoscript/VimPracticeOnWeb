@@ -93,6 +93,7 @@ import {
   formatKeymapsList,
 } from './keymapEngine';
 import { executeUserCommandDefinition, executeUserCommand, lookupUserCommand } from './userCommandEngine';
+import { appendFunctionDraftLine, executeCallCommand, executeScriptCommandLine } from './vimscriptEngine';
 
 export type KeyRunner = (
   state: VimEditorState,
@@ -715,6 +716,11 @@ export function executeCommandLine(
 ): VimEditorState {
   const trimmed = commandStr.trimStart();
 
+  // 0. :function 본문 입력 중이면 입력한 줄을 본문에 추가 (endfunction 에서 확정)
+  if (state.functionDraft) {
+    return appendFunctionDraftLine(state, commandStr);
+  }
+
   // 1. 빈 명령인 경우 NORMAL 모드로 복귀
   if (trimmed.trim().length === 0) {
     return {
@@ -725,6 +731,18 @@ export function executeCommandLine(
       commandType: undefined,
       commandMessage: undefined,
     };
+  }
+
+  // 1-1. Vim script: :function, :endfunction, :delfunction, :let, :unlet, :echo, :execute, :[range]call
+  const runEx = (s: VimEditorState, cmd: string) => executeCommandLine(s, cmd, keyRunner, userCommandDepth);
+  const scriptRes = executeScriptCommandLine(state, trimmed, runEx);
+  if (scriptRes) {
+    return scriptRes;
+  }
+  const callExtracted = extractRangeAndCommand(trimmed, state);
+  const callMatch = !callExtracted.error && callExtracted.command.trim().match(/^cal(?:l)?\s+(.+)$/);
+  if (callMatch) {
+    return executeCallCommand(state, callMatch[1], callExtracted.hasRange ? callExtracted.range : null, runEx);
   }
 
   // 2. 글로벌 명령: :g/pattern/cmd, :v/pattern/cmd, :g!/pattern/cmd
@@ -1568,7 +1586,7 @@ export function executeCommandLine(
   const sourceMatch = cleanCmdRaw.match(/^(?:source|so)(?:\s+(.*))?$/i);
   if (sourceMatch) {
     const targetFile = sourceMatch[1]?.trim() || '%';
-    const res = sourceScript(state, targetFile);
+    const res = sourceScript(state, targetFile, (s, cmd) => executeCommandLine(s, cmd, keyRunner));
     return {
       ...res,
       mode: 'NORMAL',
