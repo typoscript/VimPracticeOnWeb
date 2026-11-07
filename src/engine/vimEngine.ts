@@ -130,6 +130,13 @@ import {
 import { executeCommandLine, handleConfirmSubstituteKey } from './commandLine';
 import { parseKeySequence } from './keymapEngine';
 import {
+  executeDeleteSurround,
+  executeChangeSurround,
+  executeYouSurround,
+  executeLineSurround,
+  executeVisualSurround,
+} from './surroundEngine';
+import {
   scrollToCenter,
   scrollToTop,
   scrollToBottom,
@@ -1828,6 +1835,14 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
     };
   }
 
+  // Visual 모드 vim-surround (S{char})
+  if (state.pendingKeys === 'S') {
+    return executeVisualSurround(state, key);
+  }
+  if (key === 'S' && !state.pendingKeys) {
+    return { ...state, pendingKeys: 'S' };
+  }
+
   // Visual 모드 내 gn / gN (다음/이전 검색 매치로 선택 영역 확장) 및 gt / gT (탭 전환)
   if (state.pendingKeys === 'g') {
     if (key === 'n' || key === 'N') {
@@ -2568,6 +2583,58 @@ function handleNormalModeKey(
       ...state,
       pendingKeys: 'Ctrl-w',
     };
+  }
+
+  // 1-0-s. 순정 vim-surround 지원 (ds{char}, cs{old}{new}, ys{motion}{char}, yss{char})
+  // 1) Delete Surround (ds{char})
+  if (state.pendingKeys === 'd' && key === 's') {
+    return { ...state, pendingKeys: 'ds' };
+  }
+  if (state.pendingKeys === 'ds') {
+    return executeDeleteSurround(state, key);
+  }
+
+  // 2) Change Surround (cs{old}{new})
+  if (state.pendingKeys === 'c' && key === 's') {
+    return { ...state, pendingKeys: 'cs' };
+  }
+  if (state.pendingKeys === 'cs') {
+    return { ...state, pendingKeys: 'cs' + key };
+  }
+  if (state.pendingKeys?.startsWith('cs') && state.pendingKeys.length === 3) {
+    const oldChar = state.pendingKeys[2];
+    return executeChangeSurround(state, oldChar, key);
+  }
+
+  // 3) You Surround / Line Surround (ys{motion}{char}, yss{char})
+  if (state.pendingKeys === 'y' && key === 's') {
+    return { ...state, pendingKeys: 'ys' };
+  }
+  if (state.pendingKeys === 'ys') {
+    if (key === 's' || key === '_') {
+      return { ...state, pendingKeys: 'yss' };
+    }
+    if (key === 'i' || key === 'a') {
+      return { ...state, pendingKeys: 'ys' + key };
+    }
+    if (key === '$' || key === 'e' || key === 'w') {
+      return { ...state, pendingKeys: 'ys' + key };
+    }
+    return { ...state, pendingKeys: undefined };
+  }
+  if (state.pendingKeys === 'yss') {
+    return executeLineSurround(state, key);
+  }
+  if (state.pendingKeys === 'ysi' || state.pendingKeys === 'ysa') {
+    return { ...state, pendingKeys: state.pendingKeys + key };
+  }
+  if (
+    state.pendingKeys?.startsWith('ys') &&
+    state.pendingKeys.length >= 3 &&
+    state.pendingKeys !== 'yss'
+  ) {
+    const motion = state.pendingKeys.slice(2);
+    return executeYouSurround(state, motion, key);
   }
 
   // 1-0-c. 직전 대안 버퍼 토글 (Ctrl-^ / Ctrl-6)

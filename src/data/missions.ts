@@ -1649,6 +1649,43 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 52,
+    title: '레슨 52: 사실상 Vim 필수 표준 플러그인 vim-surround로 괄호·따옴표 감싸고 변경하기',
+    description:
+      'Vim 생태계에서 가장 유명하고 사랑받는 플러그인이자 Neovim, VSCode Vim, IdeaVim에 기본 내장된 사실상 표준 기능인 vim-surround입니다.\n\n괄호나 따옴표를 지우고 새로 입력하느라 고생할 필요 없이, 단 2~4타의 키스트로크로 텍스트를 감싸거나(ys), 변경하거나(cs), 벗겨낼(ds) 수 있습니다.\n\n1) cs{old}{new}: 둘러싸인 기호를 변경합니다. (예: cs"\' 큰따옴표를 작은따옴표로 교체, cs)] 소괄호를 대괄호로 교체)\n2) ds{char}: 둘러싸인 기호를 삭제합니다. (예: ds" 따옴표 벗기기, ds) 괄호 벗기기)\n3) ys{motion}{char}: 지정한 모션 영역을 기호로 감쌉니다. (예: ysiw" 커서 단어를 큰따옴표로 감싸기)\n4) yss{char}: 들여쓰기를 유지하며 줄 전체를 기호로 감쌉니다.\n\n미션:\n1) 첫 번째 줄에서 cs"\' 로 큰따옴표를 작은따옴표(\')로 변경하세요.\n2) 다음 줄(j)로 이동하여 cs)] 로 소괄호를 대괄호([])로 변경하세요.\n3) 다음 줄(j)로 내려간 후 ysiw" 로 product 단어를 큰따옴표로 감싸세요.',
+    hint: 'cs"\' 로 1번 줄 큰따옴표를 작은따옴표로 바꾸고, j 로 내려가 cs)] 로 괄호를 대괄호로 바꾼 뒤, j 로 내려가 ysiw" 로 product 를 감싸세요.',
+    par: 15,
+    optimalKeys: [
+      'c', 's', '"', "'",
+      'j',
+      'c', 's', ')', ']',
+      'j',
+      'y', 's', 'i', 'w', '"',
+    ],
+    initialLines: [
+      'const title = "Welcome to Vim";',
+      'const tags = (frontend, react);',
+      'const item = product;',
+    ],
+    targetLines: [
+      "const title = 'Welcome to Vim';",
+      'const tags = [frontend, react];',
+      'const item = "product";',
+    ],
+    initialCursor: { line: 0, col: 14 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const target0 = "const title = 'Welcome to Vim';";
+      const target1 = 'const tags = [frontend, react];';
+      const target2 = 'const item = "product";';
+      return (
+        state.lines[0] === target0 &&
+        state.lines[1] === target1 &&
+        state.lines[2] === target2
+      );
+    },
+  },
 ];
 
 
