@@ -76,6 +76,8 @@ import {
   startOrCycleCompletion,
   cancelCompletion,
   acceptCompletion,
+  startFilenameCompletion,
+  startWholeLineCompletion,
 } from './completion';
 import {
   findMatchingBracket,
@@ -1168,6 +1170,36 @@ function handleInsertModeKey(
   }
 
 
+  // 1. Ctrl+x 자동완성 서브모드 진입 (^X mode)
+  if (key === 'Ctrl-x' || key === 'Ctrl+x') {
+    return {
+      ...state,
+      insertCtrlXMode: true,
+      commandMessage: undefined,
+    };
+  }
+
+  // 2. ^X mode 상태에서의 서브 자동완성 명령 처리
+  if (state.insertCtrlXMode) {
+    if (key === 'Ctrl-f' || key === 'Ctrl+f' || key === 'f') {
+      return startFilenameCompletion(state, 'next');
+    }
+    if (key === 'Ctrl-l' || key === 'Ctrl+l' || key === 'l') {
+      return startWholeLineCompletion(state, 'next');
+    }
+    if (key === 'Ctrl-n' || key === 'Ctrl+n' || key === 'n') {
+      return startOrCycleCompletion({ ...state, insertCtrlXMode: false }, 'next');
+    }
+    if (key === 'Ctrl-p' || key === 'Ctrl+p' || key === 'p') {
+      return startOrCycleCompletion({ ...state, insertCtrlXMode: false }, 'prev');
+    }
+    if (key === 'Escape' || key === 'Ctrl-e' || key === 'Ctrl+e') {
+      return { ...state, insertCtrlXMode: false };
+    }
+    // 기타 키 입력 시 ^X mode 해제 후 계속 진행
+    state = { ...state, insertCtrlXMode: false };
+  }
+
   // 자동완성 (Ctrl+n / Ctrl+p / Ctrl+e / Ctrl+y)
   if (key === 'Ctrl-n' || key === 'Ctrl+n' || key === 'Alt-n' || key === 'Alt+n') {
     return startOrCycleCompletion(state, 'next');
@@ -1180,9 +1212,18 @@ function handleInsertModeKey(
       return cancelCompletion(state);
     }
   }
-  if (key === 'Ctrl-y' || key === 'Ctrl+y') {
+  if (key === 'Ctrl-y' || key === 'Ctrl+y' || (key === 'Enter' && state.completionSession)) {
     if (state.completionSession) {
       return acceptCompletion(state);
+    }
+  }
+
+  if (state.completionSession) {
+    if (key === 'ArrowDown') {
+      return startOrCycleCompletion(state, 'next');
+    }
+    if (key === 'ArrowUp') {
+      return startOrCycleCompletion(state, 'prev');
     }
   }
 

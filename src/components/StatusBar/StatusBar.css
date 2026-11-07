@@ -61,6 +61,12 @@
   font-weight: 700;
 }
 
+.mode-insert-ctrlx {
+  background-color: #f5a97f;
+  color: #1a1b26;
+  font-weight: 700;
+}
+
 .mode-visual {
   background-color: #cba6f7;
   color: #11111b;

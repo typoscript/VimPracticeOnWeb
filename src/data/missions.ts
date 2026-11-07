@@ -1267,6 +1267,50 @@ export const MISSIONS: Mission[] = [
       return state.lines.every((line, idx) => line === target[idx]);
     },
   },
+  {
+    id: 43,
+    title: '레슨 43: 순정 경로 완성(Ctrl+x Ctrl+f) & 전체 라인 복제(Ctrl+x Ctrl+l)',
+    description: 'Vim의 INSERT 모드에서는 Ctrl+x를 눌러 특수 자동완성 서브모드(^X mode)로 진입할 수 있습니다. 1) 파일 경로 완성: 따옴표 뒤에서 Ctrl+x Ctrl+f를 누르면 프로젝트/VFS 내 파일 경로 목록이 팝업되며, Ctrl+n/Ctrl+p로 순환 선택할 수 있습니다. 2) 전체 라인 완성: 줄 머리에서 키워드를 친 뒤 Ctrl+x Ctrl+l을 누르면 버퍼 내 다른 줄들과 대조하여 일치하는 전체 라인을 단번에 복제 완성합니다.',
+    hint: 'A로 줄 끝 입력 모드로 진입한 뒤 Ctrl-x Ctrl-f를 누르고 Ctrl-n으로 utils.ts를 선택하세요. 따옴표와 세미콜론("; )을 닫고 Esc를 누른 뒤, 2j로 아래 줄로 내려가 A 후 Ctrl-x Ctrl-l을 입력해 adminSettings 전체 라인을 복제하면 완료됩니다.',
+    par: 15,
+    optimalKeys: [
+      'A',
+      'Ctrl-x',
+      'Ctrl-f',
+      'Ctrl-n',
+      '"',
+      ';',
+      'Escape',
+      '2',
+      'j',
+      'A',
+      'Ctrl-x',
+      'Ctrl-l',
+      'Escape',
+    ],
+    primaryFilename: 'app.ts',
+    initialLines: [
+      'import { add } from "./src/',
+      'export const adminSettings = { theme: "dark", autoSave: true };',
+      'export const ',
+    ],
+    targetLines: [
+      'import { add } from "./src/utils.ts";',
+      'export const adminSettings = { theme: "dark", autoSave: true };',
+      'export const adminSettings = { theme: "dark", autoSave: true };',
+    ],
+    initialCursor: { line: 0, col: 26 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const target = [
+        'import { add } from "./src/utils.ts";',
+        'export const adminSettings = { theme: "dark", autoSave: true };',
+        'export const adminSettings = { theme: "dark", autoSave: true };',
+      ];
+      if (state.lines.length !== target.length) return false;
+      return state.lines.every((line, idx) => line === target[idx]);
+    },
+  },
 ];
 
 

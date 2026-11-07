@@ -19,6 +19,8 @@ export interface StatusBarProps {
   insertNormalSession?: boolean;
   /** Insert 모드 레지스터 삽입 대기 상태 (Ctrl+r) */
   insertRegisterPending?: boolean;
+  /** Insert 모드 Ctrl+x 자동완성 서브모드 활성 여부 (^X mode) */
+  insertCtrlXMode?: boolean;
   /** :s/.../.../gc 대화형 치환 확인 세션 */
   confirmSubstitute?: ConfirmSubstituteSession | null;
   /** 와일드메뉴 자동완성 세션 상태 */
@@ -38,12 +40,15 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   commandMessage,
   insertNormalSession,
   insertRegisterPending,
+  insertCtrlXMode,
   confirmSubstitute,
   wildmenu,
   showWildmenuBar = true,
 }) => {
   const displayMode =
-    insertNormalSession
+    insertCtrlXMode
+      ? '-- ^X mode (^]^D^E^F^I^K^L^N^O^Ps^U^V^Y) --'
+      : insertNormalSession
       ? 'INSERT (normal)'
       : insertRegisterPending
       ? 'INSERT (register)'
@@ -55,7 +60,9 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       ? 'VISUAL BLOCK'
       : mode;
   const modeClass =
-    insertNormalSession || insertRegisterPending
+    insertCtrlXMode
+      ? 'mode-insert-ctrlx'
+      : insertNormalSession || insertRegisterPending
       ? 'mode-insert-normal'
       : mode === 'VISUAL_LINE' || mode === 'VISUAL_BLOCK'
       ? 'mode-visual'

@@ -193,6 +193,8 @@ export interface CompletionSession {
   candidates: string[];
   selectedIndex: number; // 0-indexed into candidates
   originalWord: string;
+  /** 자동완성 종류: 단어(keyword), 파일 경로(file), 전체 라인(line) */
+  type?: 'keyword' | 'file' | 'line';
 }
 
 export interface LastVisualSelection {
@@ -322,6 +324,8 @@ export interface VimEditorState {
   } | null;
   /** 버퍼 내 단어 자동완성 팝업 세션 (Ctrl+n, Ctrl+p) */
   completionSession?: CompletionSession | null;
+  /** Insert 모드 Ctrl+x 자동완성 서브모드 활성 여부 (^X mode) */
+  insertCtrlXMode?: boolean;
   /** 마지막 INSERT 모드 종료 시점의 커서 위치 (gi용) */
   lastInsertPos?: { row: number; col: number; line: number } | null;
   /** 직전 비주얼 모드 선택 영역 정보 (gv 복구용) */

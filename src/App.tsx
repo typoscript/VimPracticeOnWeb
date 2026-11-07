@@ -1881,6 +1881,7 @@ export function App() {
               cursor={displayEditorState.cursor}
               insertNormalSession={displayEditorState.insertNormalSession}
               insertRegisterPending={displayEditorState.insertRegisterPending}
+              insertCtrlXMode={displayEditorState.insertCtrlXMode}
               confirmSubstitute={displayEditorState.confirmSubstitute}
               filename={
                 displayEditorState.splitPanes

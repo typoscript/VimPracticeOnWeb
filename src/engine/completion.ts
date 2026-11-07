@@ -1,4 +1,5 @@
 import { VimEditorState } from '../types/vim';
+import { buildVfsMap } from './vfs';
 
 /**
  * 커서 바로 앞의 접두사(Prefix)를 검출합니다.
@@ -29,7 +30,6 @@ export function scanBufferWords(
   _cursorLine?: number,
   _currentCol?: number
 ): string[] {
-
   const seen = new Set<string>();
   const candidates: string[] = [];
 
@@ -48,6 +48,204 @@ export function scanBufferWords(
 }
 
 /**
+ * 파일 경로 자동완성용 접두사 및 시작 열 위치를 찾습니다.
+ * 따옴표/공백 뒤의 경로 문자(예: './src/', 'src/', 'utils', 'assets/icon')를 추출합니다.
+ */
+export function findFilePrefix(
+  lineText: string,
+  col: number
+): { prefix: string; startCol: number } {
+  const textBeforeCursor = lineText.slice(0, col);
+  const match = textBeforeCursor.match(/(?:['"`(\s]|^)([a-zA-Z0-9_.\-\/~]*)$/);
+  const prefix = match ? match[1] : '';
+  const startCol = col - prefix.length;
+  return { prefix, startCol };
+}
+
+/**
+ * VFS, 열려 있는 버퍼, 프로젝트 파일 목록에서 경로 접두사와 일치하는 파일 목록을 반환합니다.
+ */
+export function scanWorkspaceFiles(
+  state: VimEditorState,
+  prefix: string
+): string[] {
+  const vfsMap = buildVfsMap(state);
+  const fileList = Object.keys(vfsMap);
+
+  if (state.secondaryFilename && !fileList.includes(state.secondaryFilename)) {
+    fileList.push(state.secondaryFilename);
+  }
+
+  const cleanPrefix = prefix.toLowerCase();
+  const startsWithDotSlash = prefix.startsWith('./');
+  const targetPrefix = startsWithDotSlash ? cleanPrefix.slice(2) : cleanPrefix;
+
+  const matched = fileList.filter((f) => {
+    const lower = f.toLowerCase();
+    if (!targetPrefix) return true;
+    return lower.startsWith(targetPrefix) || lower.includes(targetPrefix);
+  });
+
+  const formatted = matched.map((f) => (startsWithDotSlash ? `./${f}` : f));
+  return Array.from(new Set(formatted)).sort();
+}
+
+/**
+ * Ctrl+x Ctrl+f 파일 경로 자동완성을 시작합니다.
+ */
+export function startFilenameCompletion(
+  state: VimEditorState,
+  direction: 'next' | 'prev' = 'next'
+): VimEditorState {
+  const { line, col } = state.cursor;
+  const currentLine = state.lines[line] ?? '';
+  const found = findFilePrefix(currentLine, col);
+
+  const candidates = scanWorkspaceFiles(state, found.prefix);
+  if (candidates.length === 0) {
+    return {
+      ...state,
+      insertCtrlXMode: false,
+      commandMessage: '-- Pattern not found --',
+    };
+  }
+
+  const initialIndex = direction === 'next' ? 0 : candidates.length - 1;
+  const chosen = candidates[initialIndex];
+  const newLine =
+    currentLine.slice(0, found.startCol) + chosen + currentLine.slice(col);
+  const nextLines = [...state.lines];
+  nextLines[line] = newLine;
+  const nextCol = found.startCol + chosen.length;
+
+  return {
+    ...state,
+    lines: nextLines,
+    cursor: { line, col: nextCol },
+    insertCtrlXMode: false,
+    commandMessage: undefined,
+    completionSession: {
+      prefix: found.prefix,
+      prefixStartCol: found.startCol,
+      candidates,
+      selectedIndex: initialIndex,
+      originalWord: found.prefix,
+      type: 'file',
+    },
+  };
+}
+
+/**
+ * 전체 라인(Whole Line) 자동완성용 접두사를 찾습니다.
+ */
+export function findLinePrefix(
+  lineText: string,
+  col: number
+): { prefix: string; startCol: number } {
+  const prefix = lineText.slice(0, col);
+  return { prefix, startCol: 0 };
+}
+
+/**
+ * 현재 버퍼 및 열려 있는 다른 버퍼들에서 현재 행의 접두사로 시작하는 전체 라인 목록을 수집합니다.
+ */
+export function scanBufferLines(
+  state: VimEditorState,
+  prefix: string,
+  currentLineIdx: number
+): string[] {
+  const candidates: string[] = [];
+  const seen = new Set<string>();
+
+  const trimmedPrefix = prefix.trimStart();
+
+  const checkAndAdd = (line: string) => {
+    if (!line || line.length === 0) return;
+    if (seen.has(line)) return;
+
+    if (prefix.length === 0) {
+      seen.add(line);
+      candidates.push(line);
+      return;
+    }
+
+    if (line.startsWith(prefix) || line.trimStart().startsWith(trimmedPrefix)) {
+      seen.add(line);
+      candidates.push(line);
+    }
+  };
+
+  // 1. 현재 버퍼의 다른 줄들 탐색
+  for (let i = 0; i < state.lines.length; i++) {
+    if (i === currentLineIdx) continue;
+    checkAndAdd(state.lines[i]);
+  }
+
+  // 2. 분할 창의 줄들 탐색
+  if (state.splitPanes) {
+    for (const pane of state.splitPanes) {
+      for (const l of pane.lines) {
+        checkAndAdd(l);
+      }
+    }
+  }
+
+  // 3. 다른 버퍼들의 줄들 탐색
+  if (state.buffers) {
+    for (const b of state.buffers) {
+      for (const l of b.lines) {
+        checkAndAdd(l);
+      }
+    }
+  }
+
+  return candidates;
+}
+
+/**
+ * Ctrl+x Ctrl+l 전체 라인 자동완성을 시작합니다.
+ */
+export function startWholeLineCompletion(
+  state: VimEditorState,
+  direction: 'next' | 'prev' = 'next'
+): VimEditorState {
+  const { line, col } = state.cursor;
+  const currentLine = state.lines[line] ?? '';
+  const found = findLinePrefix(currentLine, col);
+
+  const candidates = scanBufferLines(state, found.prefix, line);
+  if (candidates.length === 0) {
+    return {
+      ...state,
+      insertCtrlXMode: false,
+      commandMessage: '-- Pattern not found --',
+    };
+  }
+
+  const initialIndex = direction === 'next' ? 0 : candidates.length - 1;
+  const chosen = candidates[initialIndex];
+  const nextLines = [...state.lines];
+  nextLines[line] = chosen;
+  const nextCol = chosen.length;
+
+  return {
+    ...state,
+    lines: nextLines,
+    cursor: { line, col: nextCol },
+    insertCtrlXMode: false,
+    commandMessage: undefined,
+    completionSession: {
+      prefix: found.prefix,
+      prefixStartCol: 0,
+      candidates,
+      selectedIndex: initialIndex,
+      originalWord: currentLine,
+      type: 'line',
+    },
+  };
+}
+
+/**
  * Ctrl+n (next) 또는 Ctrl+p (prev) 입력 시 자동완성을 시작하거나 후보를 순환 교체합니다.
  */
 export function startOrCycleCompletion(
@@ -58,7 +256,7 @@ export function startOrCycleCompletion(
   const currentLine = state.lines[line] ?? '';
 
   if (state.completionSession) {
-    const { prefix, prefixStartCol, candidates, selectedIndex, originalWord } =
+    const { prefix, prefixStartCol, candidates, selectedIndex, originalWord, type: sessionType } =
       state.completionSession;
     if (candidates.length === 0) {
       return state;
@@ -69,12 +267,21 @@ export function startOrCycleCompletion(
         ? (selectedIndex + 1) % candidates.length
         : (selectedIndex - 1 + candidates.length) % candidates.length;
 
-    const chosenWord = candidates[nextIndex];
-    const newLine =
-      currentLine.slice(0, prefixStartCol) + chosenWord + currentLine.slice(col);
+    const chosen = candidates[nextIndex];
+    let newLine: string;
+    let nextCol: number;
+
+    if (sessionType === 'line') {
+      newLine = chosen;
+      nextCol = chosen.length;
+    } else {
+      newLine =
+        currentLine.slice(0, prefixStartCol) + chosen + currentLine.slice(col);
+      nextCol = prefixStartCol + chosen.length;
+    }
+
     const nextLines = [...state.lines];
     nextLines[line] = newLine;
-    const nextCol = prefixStartCol + chosenWord.length;
 
     return {
       ...state,
@@ -86,6 +293,7 @@ export function startOrCycleCompletion(
         candidates,
         selectedIndex: nextIndex,
         originalWord,
+        type: sessionType,
       },
     };
   }
@@ -119,6 +327,7 @@ export function startOrCycleCompletion(
       candidates,
       selectedIndex: initialIndex,
       originalWord: found.prefix,
+      type: 'keyword',
     },
   };
 }
@@ -131,20 +340,31 @@ export function cancelCompletion(state: VimEditorState): VimEditorState {
     return state;
   }
 
-  const { prefixStartCol, originalWord } = state.completionSession;
+  const { prefixStartCol, originalWord, type: sessionType } = state.completionSession;
   const { line, col } = state.cursor;
   const currentLine = state.lines[line] ?? '';
 
-  const newLine =
-    currentLine.slice(0, prefixStartCol) + originalWord + currentLine.slice(col);
+  let newLine: string;
+  let nextCol: number;
+
+  if (sessionType === 'line') {
+    newLine = originalWord;
+    nextCol = originalWord.length;
+  } else {
+    newLine =
+      currentLine.slice(0, prefixStartCol) + originalWord + currentLine.slice(col);
+    nextCol = prefixStartCol + originalWord.length;
+  }
+
   const nextLines = [...state.lines];
   nextLines[line] = newLine;
 
   return {
     ...state,
     lines: nextLines,
-    cursor: { line, col: prefixStartCol + originalWord.length },
+    cursor: { line, col: nextCol },
     completionSession: null,
+    insertCtrlXMode: false,
   };
 }
 
@@ -153,10 +373,14 @@ export function cancelCompletion(state: VimEditorState): VimEditorState {
  */
 export function acceptCompletion(state: VimEditorState): VimEditorState {
   if (!state.completionSession) {
-    return state;
+    return {
+      ...state,
+      insertCtrlXMode: false,
+    };
   }
   return {
     ...state,
     completionSession: null,
+    insertCtrlXMode: false,
   };
 }

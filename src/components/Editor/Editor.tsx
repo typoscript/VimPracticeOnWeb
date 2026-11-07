@@ -217,7 +217,11 @@ export const Editor: React.FC<EditorProps> = ({
                           >
                             <div className="completion-header">
                               <span className="completion-prefix-tag">
-                                {completionSession.prefix}
+                                {completionSession.type === 'file'
+                                  ? `📁 [FILE] ${completionSession.prefix || '/'}`
+                                  : completionSession.type === 'line'
+                                  ? `📄 [LINE] ${completionSession.prefix.trim().slice(0, 16)}`
+                                  : completionSession.prefix}
                               </span>
                               <span className="completion-count-tag">
                                 {completionSession.selectedIndex + 1}/
@@ -225,28 +229,39 @@ export const Editor: React.FC<EditorProps> = ({
                               </span>
                             </div>
                             <div className="completion-list">
-                              {completionSession.candidates.map((cand, idx) => (
-                                <div
-                                  key={cand}
-                                  className={`completion-item ${
-                                    idx === completionSession.selectedIndex ? 'selected' : ''
-                                  }`}
-                                  data-testid={`completion-item-${idx}`}
-                                >
-                                  <span className="cand-match-prefix">
-                                    {cand.slice(0, completionSession.prefix.length)}
-                                  </span>
-                                  <span className="cand-remainder">
-                                    {cand.slice(completionSession.prefix.length)}
-                                  </span>
-                                  {idx === completionSession.selectedIndex && (
-                                    <span className="cand-selected-indicator">⏎</span>
-                                  )}
-                                </div>
-                              ))}
+                              {completionSession.candidates.map((cand, idx) => {
+                                const isLineType = completionSession.type === 'line';
+                                return (
+                                  <div
+                                    key={`${cand}-${idx}`}
+                                    className={`completion-item ${
+                                      idx === completionSession.selectedIndex ? 'selected' : ''
+                                    }`}
+                                    data-testid={`completion-item-${idx}`}
+                                  >
+                                    {isLineType ? (
+                                      <span className="cand-remainder">
+                                        {cand.length > 50 ? `${cand.slice(0, 50)}...` : cand}
+                                      </span>
+                                    ) : (
+                                      <>
+                                        <span className="cand-match-prefix">
+                                          {cand.slice(0, completionSession.prefix.length)}
+                                        </span>
+                                        <span className="cand-remainder">
+                                          {cand.slice(completionSession.prefix.length)}
+                                        </span>
+                                      </>
+                                    )}
+                                    {idx === completionSession.selectedIndex && (
+                                      <span className="cand-selected-indicator">⏎</span>
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
                             <div className="completion-footer">
-                              <span>Ctrl+n: 다음 | Ctrl+p: 이전</span>
+                              <span>Ctrl+n: 다음 | Ctrl+p: 이전 | Enter/Ctrl+y: 선택</span>
                             </div>
                           </div>
                         )}
