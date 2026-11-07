@@ -1,6 +1,7 @@
 import { QuickfixItem, QuickfixState, VimEditorState, SplitPaneState } from '../types/vim';
 import { switchBuffer, syncCurrentBuffer } from './bufferEngine';
 import { parseQuickfixErrorLines } from './quickfixEngine';
+import { compileVimRegex } from './vimRegex';
 
 /**
  * 활성 분할 창이 있을 경우 해당 창의 locationList도 동기화합니다.
@@ -272,10 +273,12 @@ export function lvimgrep(
     fileTarget = parts.slice(1).join(' ') || '%';
   }
 
+  // :lvimgrep 패턴은 순정 Vim 정규식 ('ignorecase' / 'smartcase' 적용)
+  const regexOpts = { ignorecase: state.options?.ignorecase, smartcase: state.options?.smartcase };
   try {
-    new RegExp(pattern, flags.includes('g') ? 'g' : '');
+    compileVimRegex(pattern, regexOpts);
   } catch {
-    return { ...state, commandMessage: `E486: Pattern not found: ${pattern}` };
+    return { ...state, commandMessage: `E486: Pattern not found: ${pattern}`, bell: true };
   }
 
   const synced = syncCurrentBuffer(state);
@@ -344,12 +347,11 @@ export function lvimgrep(
   }
 
   const matchedItems: QuickfixItem[] = [];
-  const regexFlags = (flags.includes('i') ? 'i' : '') + 'g';
 
   for (const target of targets) {
     for (let lineIdx = 0; lineIdx < target.lines.length; lineIdx++) {
       const lineStr = target.lines[lineIdx] ?? '';
-      const regex = new RegExp(pattern, regexFlags);
+      const regex = compileVimRegex(pattern, { ...regexOpts, ignorecase: regexOpts.ignorecase || flags.includes('i'), flags: 'g' });
       let m: RegExpExecArray | null;
 
       while ((m = regex.exec(lineStr)) !== null) {

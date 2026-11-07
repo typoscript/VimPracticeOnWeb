@@ -1,5 +1,5 @@
 import { VimEditorState, VimScriptDict, VimScriptValue } from '../types/vim';
-import { vimRegexToJsRegex } from './vimRegex';
+import { compileVimRegex } from './vimRegex';
 
 /**
  * Vim script 표현식 평가기 (eval / Function 미사용, 재귀 하강 파서)
@@ -120,15 +120,10 @@ function valuesEqual(a: VimScriptValue, b: VimScriptValue, ignoreCase: boolean):
   return toNumber(a) === toNumber(b);
 }
 
-/** Vim 패턴을 JS RegExp 로 변환합니다. 패턴 안의 \c / \C 는 대소문자 무시 여부를 덮어씁니다. */
+/** Vim 패턴을 JS RegExp 로 변환합니다. 패턴 안의 \c / \C 는 대소문자 무시 여부를 덮어씁니다. (=~ 는 smartcase 미적용) */
 export function compileVimPattern(pattern: string, ignoreCase: boolean, flags = ''): RegExp {
-  let ic = ignoreCase;
-  let pat = pattern;
-  if (/\\c/.test(pat)) ic = true;
-  else if (/\\C/.test(pat)) ic = false;
-  pat = pat.replace(/\\[cC]/g, '');
   try {
-    return new RegExp(vimRegexToJsRegex(pat), flags + (ic ? 'i' : ''));
+    return compileVimRegex(pattern, { ignorecase: ignoreCase, flags });
   } catch {
     throw new VimScriptError(`E383: 잘못된 검색 패턴입니다: ${pattern}`);
   }

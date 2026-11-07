@@ -1331,9 +1331,16 @@ describe('Vim Engine - Search Mode (/, n, N, *)', () => {
   it('* 키로 현재 커서 위치의 단어를 즉시 검색하고 다음 위치로 점프한다', () => {
     let state = createState(['apple and banana and apple again'], 0, 0); // 'apple' 위
     state = handleKey(state, '*');
-    expect(state.lastSearchQuery).toBe('apple');
+    // 순정 Vim 처럼 단어 전체만 찾는 \<apple\> 패턴으로 저장된다
+    expect(state.lastSearchQuery).toBe('\\<apple\\>');
     // 두 번째 'apple' 위치 (col 21)로 점프
     expect(state.cursor).toEqual({ line: 0, col: 21 });
+  });
+
+  it('* 는 단어 일부(pineapple)에는 일치하지 않는다', () => {
+    let state = createState(['apple pineapple apple'], 0, 0);
+    state = handleKey(state, '*');
+    expect(state.cursor).toEqual({ line: 0, col: 16 });
   });
 
   it('Escape로 검색 입력을 취소하고 NORMAL 모드로 복귀한다', () => {

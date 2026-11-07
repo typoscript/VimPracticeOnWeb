@@ -1,5 +1,6 @@
 import { QuickfixItem, QuickfixState, VimEditorState } from '../types/vim';
 import { switchBuffer, syncCurrentBuffer } from './bufferEngine';
+import { compileVimRegex } from './vimRegex';
 
 /**
  * 퀵픽스(Quickfix) 목록을 설정합니다.
@@ -229,10 +230,12 @@ export function vimgrep(
     fileTarget = parts.slice(1).join(' ') || '%';
   }
 
+  // :vimgrep 패턴은 순정 Vim 정규식 ('ignorecase' / 'smartcase' 적용)
+  const regexOpts = { ignorecase: state.options?.ignorecase, smartcase: state.options?.smartcase };
   try {
-    new RegExp(pattern, flags.includes('g') ? 'g' : '');
+    compileVimRegex(pattern, regexOpts);
   } catch {
-    return { ...state, commandMessage: `E486: Pattern not found: ${pattern}` };
+    return { ...state, commandMessage: `E486: Pattern not found: ${pattern}`, bell: true };
   }
 
   // 검색 대상 버퍼 리스트 추출
@@ -294,7 +297,7 @@ export function vimgrep(
     for (let lineIdx = 0; lineIdx < t.lines.length; lineIdx++) {
       const lineText = t.lines[lineIdx];
       if (flags.includes('g')) {
-        const lineRegex = new RegExp(pattern, 'g');
+        const lineRegex = compileVimRegex(pattern, { ...regexOpts, flags: 'g' });
         let m: RegExpExecArray | null;
         while ((m = lineRegex.exec(lineText)) !== null) {
           items.push({
@@ -309,7 +312,7 @@ export function vimgrep(
           }
         }
       } else {
-        const m = lineText.match(new RegExp(pattern));
+        const m = lineText.match(compileVimRegex(pattern, regexOpts));
         if (m && m.index !== undefined) {
           items.push({
             filename: t.name,

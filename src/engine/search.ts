@@ -1,4 +1,5 @@
 import { CursorPosition, SearchMatch, SearchOffset } from '../types/vim';
+import { compileVimRegex } from './vimRegex';
 
 /**
  * 정규식 특수문자를 안전하게 이스케이프 처리합니다.
@@ -13,8 +14,9 @@ export interface SearchOptions {
 }
 
 /**
- * 버퍼 전체 줄에서 검색어(query)와 일치하는 모든 위치를 찾습니다.
- * 순정 Vim 정규식과 일반 문자열 모두 안전하게 처리합니다.
+ * 버퍼 전체 줄에서 검색 패턴(query)과 일치하는 모든 위치를 찾습니다.
+ * 패턴은 순정 Vim 정규식(magic, \v, \zs 등)으로 해석하며 'ignorecase' / 'smartcase' / \c \C 를 따릅니다.
+ * 잘못된 패턴이면 빈 목록을 반환합니다.
  */
 export function findMatches(
   lines: string[],
@@ -26,18 +28,16 @@ export function findMatches(
   }
 
   const matches: SearchMatch[] = [];
-  const escaped = escapeRegExp(query);
-
-  let isCaseInsensitive = options?.ignorecase ?? false;
-  if (isCaseInsensitive && options?.smartcase) {
-    // smartcase: 만약 검색어에 대문자가 하나라도 포함되어 있다면 대소문자를 구분합니다.
-    if (/[A-Z]/.test(query)) {
-      isCaseInsensitive = false;
-    }
+  let regex: RegExp;
+  try {
+    regex = compileVimRegex(query, {
+      ignorecase: options?.ignorecase,
+      smartcase: options?.smartcase,
+      flags: 'g',
+    });
+  } catch {
+    return [];
   }
-
-  const flags = isCaseInsensitive ? 'gi' : 'g';
-  const regex = new RegExp(escaped, flags);
 
   for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
     const lineText = lines[lineIdx] ?? '';

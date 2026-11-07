@@ -216,15 +216,23 @@ describe('commandLine module', () => {
       expect(result.commandMessage).toContain('3개 항목을 치환했습니다.');
     });
 
-    it('표준 괄호 (\\w+): (\\w+) 구문도 캡처 그룹으로 호환되어 동일하게 동작한다', () => {
+    it('magic 모드에서 \\ 없는 ( ) + 는 리터럴이고, \\v 또는 \\( \\) \\+ 로 캡처 그룹을 쓴다 (순정 Vim)', () => {
       const state: VimEditorState = {
         lines: ['name: alice', 'age: 30'],
         cursor: { line: 0, col: 0 },
         mode: 'COMMAND',
       };
 
-      const result = executeCommandLine(state, ':%s/(\\w+): (\\w+)/\\2 = \\1/g');
-      expect(result.lines).toEqual(['alice = name', '30 = age']);
+      // Vim 에서 (\\w+) 는 "(" + 단어 문자 + "+)" 를 글자 그대로 찾으므로 일치하는 곳이 없다
+      const literal = executeCommandLine(state, ':%s/(\\w+): (\\w+)/\\2 = \\1/g');
+      expect(literal.lines).toEqual(['name: alice', 'age: 30']);
+      expect(literal.commandMessage).toMatch(/^E486/);
+
+      const veryMagic = executeCommandLine(state, ':%s/\\v(\\w+): (\\w+)/\\2 = \\1/g');
+      expect(veryMagic.lines).toEqual(['alice = name', '30 = age']);
+
+      const magic = executeCommandLine(state, ':%s/\\(\\w\\+\\): \\(\\w\\+\\)/\\2 = \\1/g');
+      expect(magic.lines).toEqual(['alice = name', '30 = age']);
     });
 
     it(':%s/[0-9]\\+/[&]/g 명령으로 모든 숫자를 대괄호 [&]로 감싼다', () => {

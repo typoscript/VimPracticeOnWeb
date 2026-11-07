@@ -106,7 +106,7 @@ describe('Advanced Pure Vim Motions & History Restoration', () => {
       state = handleKey(state, '#');
       expect(state.cursor.line).toBe(0);
       expect(state.cursor.col).toBe(6);
-      expect(state.lastSearchQuery).toBe('target');
+      expect(state.lastSearchQuery).toBe('\\<target\\>');
       expect(state.commandMessage).toContain('역방향 검색');
     });
 

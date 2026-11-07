@@ -1,4 +1,5 @@
 import { VimEditorState, CursorPosition, FoldRange } from '../types/vim';
+import { starSearchPattern } from './vimRegex';
 import { executeOperatorMotion, OPERATOR_MOTION_KEYS } from './operatorMotion';
 import { cancelFunctionDraft } from './vimscriptEngine';
 import { clampCursor, getMaxCol } from './cursor';
@@ -2335,7 +2336,8 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
   if (key === '*' || key === '#') {
     const word = getWordAtCursor(state.lines[state.cursor.line] ?? '', state.cursor.col);
     if (word) {
-      const matches = findMatches(state.lines, word, state.options);
+      const query = starSearchPattern(word);
+      const matches = findMatches(state.lines, query, state.options);
       const match =
         key === '*'
           ? findNextMatch(matches, state.cursor) ?? matches[0]
@@ -2344,7 +2346,7 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
         return {
           ...state,
           cursor: { line: match.line, col: match.col },
-          lastSearchQuery: word,
+          lastSearchQuery: query,
           pendingKeys: undefined,
         };
       }
@@ -4036,7 +4038,8 @@ function handleNormalModeKey(
   if (key === '*') {
     const word = getWordAtCursor(currentLine, state.cursor.col);
     if (word) {
-      const matches = findMatches(state.lines, word, state.options);
+      const query = starSearchPattern(word);
+      const matches = findMatches(state.lines, query, state.options);
       const nextMatch = findNextMatch(matches, state.cursor) ?? matches[0];
       const matchIdx = nextMatch
         ? matches.findIndex((m) => m.line === nextMatch.line && m.col === nextMatch.col)
@@ -4045,7 +4048,7 @@ function handleNormalModeKey(
       return {
         ...stateWithJump,
         cursor: nextMatch ? { line: nextMatch.line, col: nextMatch.col } : state.cursor,
-        lastSearchQuery: word,
+        lastSearchQuery: query,
         commandMessage: `단어 '${word}' 검색 (${matchIdx + 1}/${matches.length})`,
         pendingKeys: undefined,
       };
@@ -4057,7 +4060,8 @@ function handleNormalModeKey(
   if (key === '#') {
     const word = getWordAtCursor(currentLine, state.cursor.col);
     if (word) {
-      const matches = findMatches(state.lines, word, state.options);
+      const query = starSearchPattern(word);
+      const matches = findMatches(state.lines, query, state.options);
       const prevMatch = findPrevMatch(matches, state.cursor) ?? matches[matches.length - 1];
       const matchIdx = prevMatch
         ? matches.findIndex((m) => m.line === prevMatch.line && m.col === prevMatch.col)
@@ -4066,7 +4070,7 @@ function handleNormalModeKey(
       return {
         ...stateWithJump,
         cursor: prevMatch ? { line: prevMatch.line, col: prevMatch.col } : state.cursor,
-        lastSearchQuery: word,
+        lastSearchQuery: query,
         commandMessage: `단어 '${word}' 역방향 검색 (${matchIdx + 1}/${matches.length})`,
         pendingKeys: undefined,
       };

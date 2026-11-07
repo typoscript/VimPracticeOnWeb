@@ -94,7 +94,7 @@ import {
 } from './keymapEngine';
 import { executeUserCommandDefinition, executeUserCommand, lookupUserCommand } from './userCommandEngine';
 import { appendFunctionDraftLine, executeCallCommand, executeScriptCommandLine } from './vimscriptEngine';
-import { vimRegexToJsRegex } from './vimRegex';
+import { compileVimRegex, vimRegexToJsRegex } from './vimRegex';
 
 export { vimRegexToJsRegex };
 
@@ -314,10 +314,9 @@ function searchPatternLine(
   forward: boolean
 ): number | null {
   if (state.lines.length === 0) return null;
-  const jsPat = vimRegexToJsRegex(pattern);
   let regex: RegExp;
   try {
-    regex = new RegExp(jsPat);
+    regex = compileVimRegex(pattern, { ignorecase: state.options?.ignorecase, smartcase: state.options?.smartcase });
   } catch {
     return null;
   }
@@ -2224,7 +2223,7 @@ function executeGlobalCommand(
 
   let regex: RegExp;
   try {
-    regex = new RegExp(pattern);
+    regex = compileVimRegex(pattern, { ignorecase: state.options?.ignorecase, smartcase: state.options?.smartcase });
   } catch {
     return {
       ...state,
@@ -2498,14 +2497,12 @@ export function executeSubstitution(
 
   const isGlobal = flags.includes('g');
   const isIgnoreCase = flags.includes('i');
-  let regFlags = '';
-  if (isGlobal) regFlags += 'g';
-  if (isIgnoreCase) regFlags += 'i';
 
-  const jsPattern = vimRegexToJsRegex(oldText);
   let regex: RegExp;
+  let testRegex: RegExp;
   try {
-    regex = new RegExp(jsPattern, regFlags);
+    regex = compileVimRegex(oldText, { ignorecase: isIgnoreCase, flags: isGlobal ? 'g' : '' });
+    testRegex = compileVimRegex(oldText, { ignorecase: isIgnoreCase });
   } catch {
     return {
       ...state,
@@ -2571,7 +2568,6 @@ export function executeSubstitution(
   for (let l = range.startLine; l <= range.endLine; l++) {
     const line = nextLines[l];
     // 패턴 매칭 여부 사전 테스트
-    const testRegex = new RegExp(jsPattern, isIgnoreCase ? 'i' : '');
     if (!testRegex.test(line)) {
       continue;
     }
@@ -2632,10 +2628,9 @@ export function findNextSubstituteOccurrence(
 ): ConfirmSubstituteMatch | null {
   const isGlobal = flags.includes('g');
   const isIgnoreCase = flags.includes('i');
-  const jsPattern = vimRegexToJsRegex(oldText);
   let regex: RegExp;
   try {
-    regex = new RegExp(jsPattern, isIgnoreCase ? 'gi' : 'g');
+    regex = compileVimRegex(oldText, { ignorecase: isIgnoreCase, flags: 'g' });
   } catch {
     return null;
   }
