@@ -21,6 +21,7 @@ export interface ConfigExporterModalProps {
   onTogglePreset: (presetId: string) => void;
   onChangeLeaderKey: (newLeader: string) => void;
   customKeymaps?: Array<{ mode: string; from: string; to: string }>;
+  options?: Partial<import('../../types/vim').VimOptions>;
 }
 
 export const ConfigExporterModal: React.FC<ConfigExporterModalProps> = ({
@@ -33,6 +34,7 @@ export const ConfigExporterModal: React.FC<ConfigExporterModalProps> = ({
   onTogglePreset,
   onChangeLeaderKey,
   customKeymaps,
+  options,
 }) => {
   const [activeTab, setActiveTab] = useState<ConfigPlatform>('vimrc');
   const [copied, setCopied] = useState(false);
@@ -44,8 +46,9 @@ export const ConfigExporterModal: React.FC<ConfigExporterModalProps> = ({
       leaderKey,
       activePresets,
       customKeymaps,
+      options,
     }),
-    [relativenumber, theme, leaderKey, activePresets, customKeymaps]
+    [relativenumber, theme, leaderKey, activePresets, customKeymaps, options]
   );
 
   const configContent = useMemo(() => {

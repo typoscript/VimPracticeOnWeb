@@ -1,4 +1,5 @@
 import { VimBuffer, VimEditorState } from '../types/vim';
+import { getVfsFile } from './vfs';
 
 /**
  * 버퍼 목록이 초기화되어 있지 않은 경우, 기본 1번 버퍼(및 2번 보조 버퍼)를 구성합니다.
@@ -217,10 +218,13 @@ export function editBuffer(state: VimEditorState, filename: string): VimEditorSt
   const newId = maxId + 1;
   const curId = syncedState.currentBufferId ?? 1;
 
+  const vfsLines = getVfsFile(state.netrw?.files, cleanName);
+  const initialLines = vfsLines ? [...vfsLines] : [''];
+
   const newBuf: VimBuffer = {
     id: newId,
     name: cleanName,
-    lines: [''],
+    lines: [...initialLines],
     cursor: { line: 0, col: 0 },
     undoStack: [],
     redoStack: [],
@@ -232,14 +236,14 @@ export function editBuffer(state: VimEditorState, filename: string): VimEditorSt
   return {
     ...syncedState,
     buffers: nextBuffers,
-    lines: [''],
+    lines: [...initialLines],
     cursor: { line: 0, col: 0 },
     undoStack: [],
     redoStack: [],
     primaryFilename: cleanName,
     alternateBufferId: curId,
     currentBufferId: newId,
-    commandMessage: `"${cleanName}" [새 파일 버퍼 ${newId}]`,
+    commandMessage: `"${cleanName}" [${vfsLines ? '파일 로드됨' : '새 파일'} 버퍼 ${newId}]`,
   };
 }
 

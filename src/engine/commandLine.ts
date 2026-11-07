@@ -54,6 +54,7 @@ import {
 import { openNetrw } from './netrwEngine';
 import { formatRegisters } from './registers';
 import { executeSetCommand } from './setEngine';
+import { sourceScript } from './sourceEngine';
 
 export type KeyRunner = (
   state: VimEditorState,
@@ -1204,6 +1205,33 @@ export function executeCommandLine(
   if (setMatch) {
     const rawArgs = setMatch[1] ?? '';
     const res = executeSetCommand(state, rawArgs);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // .vimrc / 설정 내보내기 및 다운로드 모달 열기: :vimrc, :config, :export
+  if (/^(?:vimrc|config|export)$/i.test(cleanCmdRaw)) {
+    return {
+      ...state,
+      showConfigModal: true,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: '설정 및 .vimrc 내보내기/다운로드 창 열림',
+    };
+  }
+
+  // 스크립트 소싱 실행: :source, :so (:so %, :so ~/.vimrc 등)
+  const sourceMatch = cleanCmdRaw.match(/^(?:source|so)(?:\s+(.*))?$/i);
+  if (sourceMatch) {
+    const targetFile = sourceMatch[1]?.trim() || '%';
+    const res = sourceScript(state, targetFile);
     return {
       ...res,
       mode: 'NORMAL',

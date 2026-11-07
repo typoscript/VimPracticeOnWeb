@@ -497,6 +497,13 @@ export function App() {
     }
   }, [editorState.options?.relativenumber]);
 
+  // :vimrc / :config / :export Ex 명령 실행 시 설정 내보내기 모달 자동 열림 연동
+  useEffect(() => {
+    if (editorState.showConfigModal !== undefined) {
+      setIsConfigModalOpen(editorState.showConfigModal);
+    }
+  }, [editorState.showConfigModal]);
+
   // 스피드런 타이머 연동 (100ms마다 0.1초 증가)
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
@@ -1988,6 +1995,7 @@ export function App() {
         activePresets={activePresets}
         onTogglePreset={handleTogglePreset}
         onChangeLeaderKey={handleChangeLeaderKey}
+        options={editorState.options}
       />
 
       <BYOCModal

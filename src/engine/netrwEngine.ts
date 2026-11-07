@@ -5,81 +5,8 @@ import { openNewTab } from './tabEngine';
 
 export const BANNER_LINES_COUNT = 5;
 
-/**
- * 기본 가상 파일 시스템 맵
- */
-export const DEFAULT_VFS_FILES: Record<string, string[]> = {
-  'src/main.ts': [
-    'console.log("Hello from main.ts");',
-    'export const APP_NAME = "VimPractice";',
-  ],
-  'src/utils.ts': [
-    'export function add(a: number, b: number) {',
-    '  return a + b;',
-    '}',
-  ],
-  'package.json': [
-    '{',
-    '  "name": "vim-practice-on-web",',
-    '  "version": "1.0.0"',
-    '}',
-  ],
-  'README.md': [
-    '# Vim Practice on Web',
-    'Pure Vim experience right in your browser.',
-  ],
-};
-
-/**
- * 현재 버퍼 및 기본 파일들로부터 VFS 파일 맵을 구성합니다.
- */
-export function buildVfsMap(state: VimEditorState): Record<string, string[]> {
-  const map: Record<string, string[]> = { ...DEFAULT_VFS_FILES };
-
-  if (state.buffers && state.buffers.length > 0) {
-    for (const b of state.buffers) {
-      if (b.name && !b.name.startsWith('Netrw')) {
-        map[b.name] = [...b.lines];
-      }
-    }
-  }
-
-  const curName = state.primaryFilename;
-  if (curName && !curName.startsWith('Netrw')) {
-    map[curName] = [...state.lines];
-  }
-
-  return map;
-}
-
-/**
- * 지정된 가상 경로(currentPath)의 파일 및 디렉터리 목록을 생성합니다.
- */
-export function getDirectoryListing(
-  files: Record<string, string[]>,
-  currentPath: string
-): { dirs: string[]; files: string[] } {
-  const prefix = currentPath ? (currentPath.endsWith('/') ? currentPath : `${currentPath}/`) : '';
-  const dirSet = new Set<string>();
-  const fileSet = new Set<string>();
-
-  for (const filePath of Object.keys(files)) {
-    if (prefix === '' || filePath.startsWith(prefix)) {
-      const rest = filePath.slice(prefix.length);
-      const slashIdx = rest.indexOf('/');
-      if (slashIdx >= 0) {
-        dirSet.add(rest.slice(0, slashIdx));
-      } else if (rest.length > 0) {
-        fileSet.add(rest);
-      }
-    }
-  }
-
-  return {
-    dirs: Array.from(dirSet).sort(),
-    files: Array.from(fileSet).sort(),
-  };
-}
+import { buildVfsMap, getDirectoryListing } from './vfs';
+export { DEFAULT_VFS_FILES, buildVfsMap, getDirectoryListing } from './vfs';
 
 /**
  * Netrw 브라우저 버퍼 라인을 생성합니다.

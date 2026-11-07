@@ -1,3 +1,5 @@
+import { VimOptions } from '../types/vim';
+
 export type ConfigPlatform = 'vimrc' | 'initLua' | 'vscode' | 'ideaVim';
 
 export interface KeymapPreset {
@@ -82,6 +84,7 @@ export interface ConfigExportOptions {
   leaderKey: string; // " " or "\\" or ","
   activePresets: Record<string, boolean>;
   customKeymaps?: Array<{ mode: string; from: string; to: string }>;
+  options?: Partial<VimOptions>;
 }
 
 /**
@@ -100,18 +103,20 @@ export function generateVimrc(options: ConfigExportOptions): string {
     `set encoding=utf-8`,
     `set autoindent`,
     `set smartindent`,
-    `set tabstop=2`,
-    `set shiftwidth=2`,
-    `set expandtab`,
-    `set hlsearch`,
+    `set tabstop=${options.options?.tabstop ?? 2}`,
+    `set shiftwidth=${options.options?.shiftwidth ?? 2}`,
+    `${options.options?.expandtab ?? true ? 'set expandtab' : 'set noexpandtab'}`,
+    `${options.options?.hlsearch ?? true ? 'set hlsearch' : 'set nohlsearch'}`,
     `set incsearch`,
-    `set ignorecase`,
-    `set smartcase`,
+    `${options.options?.ignorecase ? 'set ignorecase' : 'set noignorecase'}`,
+    `${options.options?.smartcase ? 'set smartcase' : 'set nosmartcase'}`,
+    `${options.options?.wrap ?? true ? 'set wrap' : 'set nowrap'}`,
+    `${options.options?.cursorline ?? true ? 'set cursorline' : 'set nocursorline'}`,
     `set clipboard=unnamedplus,unnamed`,
     ``,
     `" [줄 번호 설정]`,
-    `set number`,
-    options.relativenumber ? `set relativenumber` : `set norelativenumber`,
+    `${options.options?.number ?? true ? 'set number' : 'set nonumber'}`,
+    `${options.options?.relativenumber ?? options.relativenumber ? 'set relativenumber' : 'set norelativenumber'}`,
     ``,
     `" [구문 강조 및 컬러 테마]`,
     `syntax on`,
@@ -176,17 +181,17 @@ export function generateInitLua(options: ConfigExportOptions): string {
     ``,
     `-- [기본 에디터 옵션]`,
     `local opt = vim.opt`,
-    `opt.number = true`,
-    `opt.relativenumber = ${options.relativenumber}`,
+    `opt.number = ${options.options?.number ?? true}`,
+    `opt.relativenumber = ${options.options?.relativenumber ?? options.relativenumber}`,
     `opt.autoindent = true`,
     `opt.smartindent = true`,
-    `opt.tabstop = 2`,
-    `opt.shiftwidth = 2`,
-    `opt.expandtab = true`,
-    `opt.hlsearch = true`,
+    `opt.tabstop = ${options.options?.tabstop ?? 2}`,
+    `opt.shiftwidth = ${options.options?.shiftwidth ?? 2}`,
+    `opt.expandtab = ${options.options?.expandtab ?? true}`,
+    `opt.hlsearch = ${options.options?.hlsearch ?? true}`,
     `opt.incsearch = true`,
-    `opt.ignorecase = true`,
-    `opt.smartcase = true`,
+    `opt.ignorecase = ${options.options?.ignorecase ?? true}`,
+    `opt.smartcase = ${options.options?.smartcase ?? true}`,
     `opt.clipboard = "unnamedplus"`,
     `opt.termguicolors = true`,
     ``,

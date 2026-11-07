@@ -331,6 +331,8 @@ export interface VimEditorState {
   netrw?: NetrwState | null;
   /** 레지스터 인스펙터 패널 표시 여부 (:reg, :registers) */
   showRegisterInspector?: boolean;
+  /** 커스텀 설정 및 .vimrc 내보내기/다운로드 모달 표시 여부 (:vimrc, :export, :config) */
+  showConfigModal?: boolean;
   /** 순정 Vim 환경 옵션 설정 (:set nu, :set rnu, :set ic 등) */
   options?: VimOptions;
 }
