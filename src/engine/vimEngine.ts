@@ -2968,6 +2968,12 @@ function handleNormalModeKey(
     return { ...state, pendingKeys: undefined };
   }
 
+  // 1-0-6-1. &: 직전 :s 를 현재 줄에 다시 실행 (플래그 없이, :s 와 동일)
+  if (key === '&' && !state.pendingKeys) {
+    const res = executeCommandLine({ ...state, pendingKeys: undefined }, 's', handleKey);
+    return res.bell ? res : { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['&'] };
+  }
+
   // 1-0-7. J: 줄 이어 붙이기
   if (key === 'J' && !parsed.operator) {
     // 마지막 줄에서는 이어 붙일 줄이 없으므로 실패
@@ -3846,6 +3852,11 @@ function handleNormalModeKey(
     }
     state = { ...state, pendingKeys: undefined };
   } else if (parsed.operator === 'g') {
+    // g&: 직전 치환을 같은 플래그로 모든 줄에 다시 실행 (:%s//~/&)
+    if (key === '&') {
+      const res = executeCommandLine({ ...state, pendingKeys: undefined }, '%&&', handleKey);
+      return res.bell ? res : { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['g', '&'] };
+    }
     if (key === '-') {
       return travelUndoTime(state, 'older', parsed.totalCount);
     }

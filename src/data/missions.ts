@@ -1895,4 +1895,33 @@ export const MISSIONS: Mission[] = [
       return state.lines.length === target.length && target.every((t, i) => state.lines[i] === t);
     },
   },
+  {
+    id: 59,
+    title: '레슨 59: 순정 Vim 정규식(\\zs, \\d\\+)과 \\= 계산식 치환으로 설정 값 일괄 변경하기',
+    description:
+      'Vim 의 기본(magic) 정규식에서는 + ? | ( ) { } 가 그냥 글자이고, 앞에 \\ 를 붙여야 기호가 됩니다. (\\+ 하나 이상, \\( \\) 묶음, \\| 또는) 기호를 \\ 없이 쓰고 싶으면 패턴 앞에 \\v 를 붙이세요.\n\n- \\d\\+ : 숫자 하나 이상\n- \\zs / \\ze : 찾은 부분 중 실제로 바꿀 시작·끝을 지정 (= \\zs\\d\\+ 는 "= " 뒤의 숫자만 바꿈)\n- \\=식 : 바꿀 내용을 Vim script 식으로 계산, submatch(0) 은 찾은 전체, submatch(1) 은 첫 번째 묶음\n- :&& / g& : 직전 치환 반복, 치환 문자열의 ~ : 직전 치환 문자열\n\n미션:\n:%s/= \\zs\\d\\+/\\=submatch(0) * 2/ 로 숫자로 된 설정 값만 모두 두 배로 바꾸세요. (name 처럼 문자열 값은 그대로 두어야 합니다)',
+    hint: ':%s/= \\zs\\d\\+/\\=submatch(0) * 2/ 를 입력하고 Enter',
+    par: 33,
+    optimalKeys: [
+      ':', '%', 's', '/', '=', ' ', '\\', 'z', 's', '\\', 'd', '\\', '+', '/', '\\', '=', 's', 'u', 'b', 'm', 'a', 't', 'c', 'h', '(', '0', ')', ' ', '*', ' ', '2', '/', 'Enter',
+    ],
+    initialLines: [
+      'timeout = 30',
+      'retries = 3',
+      'name = "api"',
+      'port = 8080',
+    ],
+    targetLines: [
+      'timeout = 60',
+      'retries = 6',
+      'name = "api"',
+      'port = 16160',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const target = ['timeout = 60', 'retries = 6', 'name = "api"', 'port = 16160'];
+      return state.lines.length === target.length && target.every((t, i) => state.lines[i] === t);
+    },
+  },
 ];

@@ -90,10 +90,13 @@ export interface ConfirmSubstituteSession {
   newText: string;
   flags: string;
   isGlobal: boolean;
+  /** 'ignorecase'·'smartcase'·i/I 플래그를 반영해 확정한 대소문자 무시 여부 */
   isIgnoreCase: boolean;
   commandStr: string;
   substitutedCount: number;
   currentMatch: ConfirmSubstituteMatch;
+  /** 패턴 안의 ~ 가 가리키는 직전 치환 문자열 */
+  tildeText?: string;
 }
 
 export interface VimBuffer {
@@ -368,6 +371,8 @@ export interface VimEditorState {
   userKeymaps?: Record<string, string>;
   /** 사용자 정의 Ex 명령 (:command! Name ...) */
   userCommands?: Record<string, UserCommand>;
+  /** 직전 :s 의 패턴·치환 문자열·플래그 (:&, :&&, &, g&, ~, 빈 패턴 :s//new/ 에 사용) */
+  lastSubstitute?: { pattern: string; replacement: string; flags: string };
   /** 사용자 정의 함수 (:function) */
   userFunctions?: Record<string, UserFunction>;
   /** 전역 변수 (:let g:x = ..., 함수 밖의 :let x = ...) */

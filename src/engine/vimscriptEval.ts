@@ -35,6 +35,8 @@ export interface EvalContext {
   args?: Record<string, VimScriptValue>;
   /** map() / filter() 표현식 안의 v:val, v:key */
   vvars?: Record<string, VimScriptValue>;
+  /** :s 의 \= 치환식에서 submatch(n) 이 돌려줄 값 (0: 전체 일치, 1~9: 그룹) */
+  submatches?: string[];
   /** 사용자 함수 호출. ctx.state 를 갱신할 수 있습니다. */
   callUserFunction: (ctx: EvalContext, name: string, args: VimScriptValue[]) => VimScriptValue;
 }
@@ -924,6 +926,16 @@ const BUILTINS: Record<string, Builtin> = {
       const lines = [...ctx.state.lines.slice(0, n), ...newLines, ...ctx.state.lines.slice(n)];
       ctx.state = { ...ctx.state, lines };
       return 0;
+    },
+  },
+
+  // ---- :s 의 \= 치환식 ----
+  submatch: {
+    min: 1,
+    max: 1,
+    fn: (ctx, [n]) => {
+      if (!ctx.submatches) throw new VimScriptError('E935: submatch() 는 :s 의 \\= 치환식 안에서만 쓸 수 있습니다');
+      return ctx.submatches[toNumber(n)] ?? '';
     },
   },
 
