@@ -1613,6 +1613,42 @@ export const MISSIONS: Mission[] = [
       return isBackOnServer && isConfigUpdated && isServerIntact && isCursorAtMark;
     },
   },
+  {
+    id: 51,
+    title: '레슨 51: 순정 키매핑 인터프리터(:nmap, :nnoremap)로 나만의 단축키 정의하고 실행하기',
+    description:
+      'Vim의 가장 강력한 확장성 중 하나는 키매핑 인터프리터입니다. 반복되는 긴 명령어 시퀀스나 비효율적인 기본 동작을 나만의 직관적인 단축키로 재정의할 수 있습니다.\n\n순정 Vim에서 D(줄 끝까지 삭제), C(줄 끝까지 변경)와 달리, 기본 Y는 줄 전체 복사(yy)로 동작하여 일관성이 떨어집니다. 따라서 전 세계 대부분의 Vim 사용자는 Y를 "커서 위치부터 줄 끝까지 복사(y$)"로 재정의하여 사용합니다.\n\n1) :nmap Y y$: 일반 모드(Normal Mode)에서 Y를 누르면 y$가 실행되도록 키매핑을 등록합니다.\n2) :nnoremap Y y$: 비재귀적(No-Remap) 안전 매핑으로, y나 $에 다른 매핑이 걸려 있어도 본래의 순정 동작으로 실행되도록 보호합니다.\n3) :nmap: 현재 등록된 일반 모드 키매핑 목록을 표 형태로 조회합니다.\n4) :nunmap Y: 등록된 노멀 모드 키매핑을 해제합니다.\n\n미션: :nmap Y y$<Enter> 명령으로 필수 단축키 Y를 정의하세요. 그 다음 Y 를 눌러 현재 위치부터 줄 끝("alpha-beta";)까지 복사하고, j 로 다음 줄로 이동한 후 p 로 붙여넣어 백업 키를 완성하세요.',
+    hint: ':nmap Y y$<Enter> 를 입력하여 Y 단축키를 정의한 뒤, Y 를 눌러 복사하고, j 로 아래 줄로 내려가 p 로 붙여넣으세요.',
+    par: 14,
+    optimalKeys: [
+      ':', 'n', 'm', 'a', 'p', ' ', 'Y', ' ', 'y', '$', 'Enter',
+      'Y',
+      'j',
+      'p',
+    ],
+    initialLines: [
+      'primaryKey = "alpha-beta";',
+      'backupKey = ',
+    ],
+    targetLines: [
+      'primaryKey = "alpha-beta";',
+      'backupKey = "alpha-beta";',
+    ],
+    initialCursor: { line: 0, col: 13 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const isMappingRegistered =
+        state.userKeymaps?.['n:Y'] === 'y$' ||
+        state.userKeymaps?.['Y'] === 'y$';
+      const target0 = 'primaryKey = "alpha-beta";';
+      const target1 = 'backupKey = "alpha-beta";';
+      return (
+        isMappingRegistered &&
+        state.lines[0] === target0 &&
+        state.lines[1] === target1
+      );
+    },
+  },
 ];
 
 

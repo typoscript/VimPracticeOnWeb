@@ -128,6 +128,7 @@ import {
   findCurrentOrNextMatch,
 } from './search';
 import { executeCommandLine, handleConfirmSubstituteKey } from './commandLine';
+import { parseKeySequence } from './keymapEngine';
 import {
   scrollToCenter,
   scrollToTop,
@@ -303,7 +304,7 @@ export function rawHandleKey(
   } else if (state.mode === 'INSERT') {
     nextState = handleInsertModeKey(state, key, isReplayingDot);
   } else if (state.mode === 'VISUAL' || state.mode === 'VISUAL_LINE' || state.mode === 'VISUAL_BLOCK') {
-    nextState = handleVisualModeKey(state, key);
+    nextState = handleVisualModeKey(state, key, macroDepth);
   } else if (state.mode === 'NORMAL') {
     nextState = handleNormalModeKey(state, key, isReplayingDot, macroDepth);
     // 일회성 NORMAL 모드 명령 (Ctrl+o) 완료 여부 검사
@@ -1144,7 +1145,7 @@ function handleInsertModeKey(
       state.userKeymaps?.[`i:${combined}`] ||
       state.userKeymaps?.[combined];
 
-    if (mapped === '<Esc>' || mapped === '<esc>') {
+    if (mapped === '<Esc>' || mapped === '<esc>' || mapped === 'Escape') {
       // 직전에 입력되어 버퍼에 기록된 pendingKeys 문자(예: 'j')를 삭제
       const cleanedLine =
         currentLine.slice(0, Math.max(0, col - 1)) + currentLine.slice(col);
@@ -1173,6 +1174,24 @@ function handleInsertModeKey(
         changeIndex: changeRecord.changeIndex,
         marks: { ...(state.marks ?? {}), '^': { row: line, col: nextCol } },
       };
+    } else if (mapped) {
+      // 일반 Insert 모드 커스텀 키매핑 확장
+      const cleanedLine =
+        currentLine.slice(0, Math.max(0, col - 1)) + currentLine.slice(col);
+      const nextLines = [...state.lines];
+      nextLines[line] = cleanedLine;
+      const nextCol = Math.max(0, col - 1);
+      let s: VimEditorState = {
+        ...state,
+        lines: nextLines,
+        cursor: { line, col: nextCol },
+        pendingKeys: undefined,
+      };
+      const tokens = parseKeySequence(mapped, state.leaderKey || ' ');
+      for (const tok of tokens) {
+        s = rawHandleKey(s, tok, isReplayingDot, 1);
+      }
+      return s;
     }
   }
 
@@ -1789,7 +1808,7 @@ function handleCtrlWKey(
 /**
  * VISUAL / VISUAL_LINE 모드 키 입력 처리
  */
-function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState {
+function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0): VimEditorState {
   const parsed = parsePending(state.pendingKeys);
 
   if (key === 'Escape') {
@@ -1870,15 +1889,23 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
     return alternateBuffer(state);
   }
 
-  // 비주얼 모드 커스텀 키매핑 (예: H -> ^, L -> $)
-  if (!state.pendingKeys) {
+  // 비주얼 모드 커스텀 키매핑 (예: H -> ^, L -> $, Y -> y, <leader>y -> "+y 등)
+  if (!state.pendingKeys && macroDepth === 0) {
     const visualMapped =
       state.userKeymaps?.[`v:${key}`] || state.userKeymaps?.[key];
-    if (visualMapped === '^') {
-      return { ...state, cursor: moveToFirstNonBlank(state.lines, state.cursor) };
-    }
-    if (visualMapped === '$') {
-      return { ...state, cursor: moveToLineEnd(state.lines, state.cursor) };
+    if (visualMapped) {
+      if (visualMapped === '^') {
+        return { ...state, cursor: moveToFirstNonBlank(state.lines, state.cursor) };
+      }
+      if (visualMapped === '$') {
+        return { ...state, cursor: moveToLineEnd(state.lines, state.cursor) };
+      }
+      const tokens = parseKeySequence(visualMapped, state.leaderKey || ' ');
+      let s: VimEditorState = state;
+      for (const tok of tokens) {
+        s = rawHandleKey(s, tok, false, macroDepth + 1);
+      }
+      return s;
     }
   }
 
@@ -2435,15 +2462,17 @@ function handleNormalModeKey(
 
     if (mapped) {
       if (mapped.startsWith(':')) {
+        const cmd = mapped.slice(1).replace(/<CR>$/i, '');
         return executeCommandLine(
           { ...state, pendingKeys: undefined },
-          mapped.slice(1),
+          cmd,
           handleKey
         );
       }
       let s: VimEditorState = { ...state, pendingKeys: undefined };
-      for (const ch of mapped.split('')) {
-        s = handleKey(s, ch, isReplayingDot, macroDepth);
+      const tokens = parseKeySequence(mapped, leaderKey);
+      for (const tok of tokens) {
+        s = rawHandleKey(s, tok, isReplayingDot, macroDepth + 1);
       }
       return s;
     }
@@ -2470,8 +2499,8 @@ function handleNormalModeKey(
     }
   }
 
-  // 1-0-3. 단일 키 매핑 처리 (H -> ^, L -> $, Ctrl-h -> Ctrl-w h 등)
-  if (!state.pendingKeys) {
+  // 1-0-3. 단일 키 매핑 처리 (H -> ^, L -> $, Ctrl-h -> Ctrl-w h, Y -> y$ 등)
+  if (!state.pendingKeys && macroDepth === 0) {
     const singleMapped =
       state.userKeymaps?.[`n:${key}`] || state.userKeymaps?.[key];
     if (singleMapped) {
@@ -2494,11 +2523,13 @@ function handleNormalModeKey(
         return switchPaneFocus(state, 0);
       }
       if (singleMapped.startsWith(':')) {
-        return executeCommandLine(state, singleMapped.slice(1), handleKey);
+        const cmd = singleMapped.slice(1).replace(/<CR>$/i, '');
+        return executeCommandLine(state, cmd, handleKey);
       }
       let s: VimEditorState = state;
-      for (const ch of singleMapped.split('')) {
-        s = handleKey(s, ch, isReplayingDot, macroDepth);
+      const tokens = parseKeySequence(singleMapped, leaderKey);
+      for (const tok of tokens) {
+        s = rawHandleKey(s, tok, isReplayingDot, macroDepth + 1);
       }
       return s;
     }

@@ -1,6 +1,7 @@
 import { VimEditorState } from '../types/vim';
 import { executeSetCommand } from './setEngine';
 import { getVfsFile } from './vfs';
+import { registerKeymap } from './keymapEngine';
 
 /**
  * .vimrc 또는 스크립트 파일을 한 줄씩 읽어 에디터 상태에 적용합니다 (:source, :so).
@@ -53,17 +54,13 @@ export function sourceScript(state: VimEditorState, targetFile = '%'): VimEditor
       continue;
     }
 
-    // 2. 키매핑 명령어 (inoremap, nnoremap, vnoremap 등)
-    const mapMatch = line.match(/^(?:inoremap|nnoremap|vnoremap|nmap|imap)\s+(\S+)\s+(.+)$/);
+    // 2. 키매핑 명령어 (inoremap, nnoremap, vnoremap, nmap, imap, vmap, map, noremap 등)
+    const mapMatch = line.match(/^([a-zA-Z]+map|noremap)\s+(\S+)\s+(.+)$/i);
     if (mapMatch) {
-      const fromKey = mapMatch[1];
-      const toKey = mapMatch[2].replace(/<CR>/gi, 'Enter').replace(/<Esc>/gi, 'Escape');
-      const userKeymaps = { ...(curState.userKeymaps ?? {}) };
-      userKeymaps[fromKey] = toKey;
-      curState = {
-        ...curState,
-        userKeymaps,
-      };
+      const cmdType = mapMatch[1];
+      const fromKey = mapMatch[2];
+      const toKey = mapMatch[3].replace(/<CR>/gi, 'Enter').replace(/<Esc>/gi, 'Escape');
+      curState = registerKeymap(curState, cmdType, fromKey, toKey);
       appliedCount++;
       continue;
     }

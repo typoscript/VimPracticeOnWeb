@@ -87,6 +87,11 @@ import { formatRegisters } from './registers';
 import { executeSetCommand } from './setEngine';
 import { sourceScript } from './sourceEngine';
 import { jumpToTag, popTagStack, formatTagStack } from './tagEngine';
+import {
+  registerKeymap,
+  unregisterKeymap,
+  formatKeymapsList,
+} from './keymapEngine';
 
 export type KeyRunner = (
   state: VimEditorState,
@@ -1871,60 +1876,44 @@ export function executeCommandLine(
     };
   }
 
+  // 3-x. 키매핑 목록 조회: :map, :nmap, :imap, :vmap, :noremap, :nnoremap, :inoremap, :vnoremap (인자 없음)
+  const listMatch = trimmed.match(
+    /^:?\s*(map|nmap|imap|vmap|noremap|nnoremap|inoremap|vnoremap)$/i
+  );
+  if (listMatch) {
+    const cmd = listMatch[1].toLowerCase();
+    let modeFilter = 'all';
+    if (cmd.startsWith('i')) modeFilter = 'i';
+    else if (cmd.startsWith('n')) modeFilter = 'n';
+    else if (cmd.startsWith('v')) modeFilter = 'v';
+
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: formatKeymapsList(state, modeFilter),
+    };
+  }
+
   // 커스텀 키매핑 등록: :imap, :inoremap, :nmap, :nnoremap, :vmap, :vnoremap, :map, :noremap
   const mapMatch = trimmed.match(
     /^:?\s*(nmap|nnoremap|imap|inoremap|vmap|vnoremap|map|noremap)\s+(\S+)\s+(.+)$/i
   );
   if (mapMatch) {
-    const cmdType = mapMatch[1].toLowerCase();
+    const cmdType = mapMatch[1];
     const from = mapMatch[2];
     const to = mapMatch[3].trim();
-    let modePrefix = 'all';
-    if (cmdType.startsWith('i')) modePrefix = 'i';
-    else if (cmdType.startsWith('n')) modePrefix = 'n';
-    else if (cmdType.startsWith('v')) modePrefix = 'v';
-
-    const newKeymaps = { ...(state.userKeymaps ?? {}) };
-    if (modePrefix === 'all') {
-      newKeymaps[`n:${from}`] = to;
-      newKeymaps[`i:${from}`] = to;
-      newKeymaps[`v:${from}`] = to;
-      newKeymaps[from] = to;
-    } else {
-      newKeymaps[`${modePrefix}:${from}`] = to;
-      newKeymaps[from] = to;
-    }
-
-    return {
-      ...state,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-      userKeymaps: newKeymaps,
-      commandMessage: `[키매핑 등록] ${cmdType}: ${from} -> ${to}`,
-    };
+    return registerKeymap(state, cmdType, from, to);
   }
 
   // 키매핑 해제: :unmap, :nunmap, :iunmap, :vunmap
   const unmapMatch = trimmed.match(/^:?\s*(unmap|nunmap|iunmap|vunmap)\s+(\S+)$/i);
   if (unmapMatch) {
+    const cmdType = unmapMatch[1];
     const from = unmapMatch[2];
-    const newKeymaps = { ...(state.userKeymaps ?? {}) };
-    delete newKeymaps[`n:${from}`];
-    delete newKeymaps[`i:${from}`];
-    delete newKeymaps[`v:${from}`];
-    delete newKeymaps[from];
-
-    return {
-      ...state,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-      userKeymaps: newKeymaps,
-      commandMessage: `[키매핑 해제] ${from}`,
-    };
+    return unregisterKeymap(state, cmdType, from);
   }
 
   // 4. 공통 Range 파서 및 Ex 명령어 실행
