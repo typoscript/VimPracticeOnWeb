@@ -549,14 +549,7 @@ export function App() {
         const nextStageIdx = speedrunCurrentStage + 1;
         setSpeedrunCurrentStage(nextStageIdx);
         const nextMission = speedrunStages[nextStageIdx];
-        setEditorState({
-          lines: [...nextMission.initialLines],
-          cursor: { ...nextMission.initialCursor },
-          mode: 'NORMAL',
-          undoStack: nextMission.initialUndoStack ? [...nextMission.initialUndoStack] : [],
-          redoStack: [],
-          clipboard: nextMission.initialClipboard,
-        });
+        setEditorState(getMissionInitialState(nextMission));
         setCoachingMessage(`🎉 스테이지 ${speedrunCurrentStage + 1} 돌파! 다음 목표로 이동합니다.`);
       } else {
         // 5개 스테이지 최종 완료!
@@ -707,21 +700,14 @@ export function App() {
     setSpeedrunStatus('running');
 
     const first = newStages[0];
-    const initState: VimEditorState = {
-      lines: [...first.initialLines],
-      cursor: { ...first.initialCursor },
-      mode: 'NORMAL',
-      undoStack: first.initialUndoStack ? [...first.initialUndoStack] : [],
-      redoStack: [],
-      clipboard: first.initialClipboard,
-    };
+    const initState = getMissionInitialState(first);
     setEditorState(initState);
     resetActionTimeline(initState);
     setRecentKeys([]);
     setLastPressedKey(undefined);
     setCoachingMessage(null);
     antiPatternDetectorRef.current.reset();
-  }, [handleStopGhostReplay, resetActionTimeline]);
+  }, [handleStopGhostReplay, resetActionTimeline, getMissionInitialState]);
 
   const handleResetCustomMission = useCallback(() => {
     if (!customMission) return;
@@ -761,7 +747,7 @@ export function App() {
     setLastPressedKey(undefined);
     setCoachingMessage(`⛳ 커스텀 미션 [${newMission.title}] 시작! 최소 타수로 완성을 노려보세요.`);
     antiPatternDetectorRef.current.reset();
-  }, [handleStopGhostReplay, resetActionTimeline]);
+  }, [handleStopGhostReplay, resetActionTimeline, getMissionInitialState]);
 
   const handlePlayBYOCMission = useCallback(
     (missionData: {
