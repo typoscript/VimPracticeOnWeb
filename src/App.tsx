@@ -1600,6 +1600,7 @@ export function App() {
                     className={`editor-split-pane ${editorState.activePaneIndex === 0 ? 'active' : ''}`}
                     onClick={() => handleSwitchPane(0)}
                     data-testid="split-pane-0"
+                    style={{ flex: `${editorState.splitRatio ?? 50} 1 0%` }}
                   >
                     <div className="pane-header">
                       <span className="pane-filename">
@@ -1636,6 +1637,7 @@ export function App() {
                     className={`editor-split-pane ${editorState.activePaneIndex === 1 ? 'active' : ''}`}
                     onClick={() => handleSwitchPane(1)}
                     data-testid="split-pane-1"
+                    style={{ flex: `${100 - (editorState.splitRatio ?? 50)} 1 0%` }}
                   >
                     <div className="pane-header">
                       <span className="pane-filename">

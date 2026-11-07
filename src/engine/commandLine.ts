@@ -5,7 +5,7 @@ import {
 } from '../types/vim';
 import { clampCursor } from './cursor';
 import { pushUndoSnapshot } from './operators';
-import { splitWindow, closeSplitWindow } from './splitWindow';
+import { splitWindow, closeSplitWindow, closeOtherPanes, resizeSplit } from './splitWindow';
 import {
   formatBufferList,
   switchBuffer,
@@ -686,7 +686,66 @@ export function executeCommandLine(
     };
   }
 
+  // 새 파일 창 분할: :new, :vnew [filename]
+  const newWinMatch = cleanCmdRaw.match(/^(new|vnew)(?:\s+(.+))?$/i);
+  if (newWinMatch) {
+    const isVertical = newWinMatch[1].toLowerCase() === 'vnew';
+    const targetFile = newWinMatch[2]?.trim() || '[No Name]';
+    const splitRes = splitWindow(
+      state,
+      isVertical ? 'vertical' : 'horizontal',
+      [''],
+      targetFile
+    );
+    return {
+      ...splitRes,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
   const cleanCmd = cleanCmdRaw.toLowerCase();
+
+  // 창 닫기: :close, :clo
+  if (cleanCmd === 'close' || cleanCmd === 'clo') {
+    const res = closeSplitWindow(state);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 현재 창만 유지: :only, :on
+  if (cleanCmd === 'only' || cleanCmd === 'on') {
+    const res = closeOtherPanes(state);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 창 크기 조절: :res, :resize, :vertical res
+  const resizeMatch = cleanCmdRaw.match(/^(?:(vertical|vert)\s+)?(?:res|resize)(?:\s+([+-]?\d+|=))?$/i);
+  if (resizeMatch) {
+    const deltaStr = resizeMatch[2];
+    const delta = deltaStr === '=' ? '=' : deltaStr ? parseInt(deltaStr, 10) : 5;
+    const res = resizeSplit(state, delta);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
 
   // 버퍼 목록 조회: :ls, :buffers, :files
   if (cleanCmd === 'ls' || cleanCmd === 'buffers' || cleanCmd === 'files') {

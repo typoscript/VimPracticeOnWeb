@@ -44,8 +44,14 @@ import { nextTab, prevTab } from './tabEngine';
 import {
   splitWindow,
   closeSplitWindow,
+  closeOtherPanes,
   switchPaneFocus,
   syncActivePane,
+  exchangePanes,
+  rotatePanes,
+  movePaneToDirection,
+  resizeSplit,
+  moveWindowToNewTab,
 } from './splitWindow';
 import {
   deleteVisualSelection,
@@ -1532,6 +1538,111 @@ function handleReplaceModeKey(
 }
 
 /**
+ * 순정 Vim 윈도우/스플릿 제어 키스트로크 (Ctrl-w) 처리
+ */
+function handleCtrlWKey(
+  state: VimEditorState,
+  key: string,
+  count?: number
+): VimEditorState {
+  // 창 생성: s, v, n
+  if (key === 's' || key === 'Ctrl-s' || key === 'Ctrl+s') {
+    return { ...splitWindow(state, 'horizontal', state.secondaryLines), pendingKeys: undefined };
+  }
+  if (key === 'v' || key === 'Ctrl-v' || key === 'Ctrl+v') {
+    return { ...splitWindow(state, 'vertical', state.secondaryLines), pendingKeys: undefined };
+  }
+  if (key === 'n' || key === 'Ctrl-n' || key === 'Ctrl+n') {
+    return { ...splitWindow(state, 'horizontal', [''], '[No Name]'), pendingKeys: undefined };
+  }
+
+  // 창 포커스 이동: w, W, h, l, k, j, t, b, p
+  if (key === 'w' || key === 'Ctrl-w' || key === 'Ctrl+w') {
+    return { ...switchPaneFocus(state, (state.activePaneIndex ?? 0) === 0 ? 1 : 0), pendingKeys: undefined };
+  }
+  if (key === 'W') {
+    return { ...switchPaneFocus(state, (state.activePaneIndex ?? 0) === 0 ? 1 : 0), pendingKeys: undefined };
+  }
+  if (key === 'h' || key === 'Ctrl-h' || key === 'Ctrl+h' || key === 'ArrowLeft') {
+    return { ...switchPaneFocus(state, 0), pendingKeys: undefined };
+  }
+  if (key === 'l' || key === 'Ctrl-l' || key === 'Ctrl+l' || key === 'ArrowRight') {
+    return { ...switchPaneFocus(state, 1), pendingKeys: undefined };
+  }
+  if (key === 'k' || key === 'Ctrl-k' || key === 'Ctrl+k' || key === 'ArrowUp') {
+    return { ...switchPaneFocus(state, 0), pendingKeys: undefined };
+  }
+  if (key === 'j' || key === 'Ctrl-j' || key === 'Ctrl+j' || key === 'ArrowDown') {
+    return { ...switchPaneFocus(state, 1), pendingKeys: undefined };
+  }
+  if (key === 't' || key === 'Ctrl-t' || key === 'Ctrl+t') {
+    return { ...switchPaneFocus(state, 0), pendingKeys: undefined };
+  }
+  if (key === 'b' || key === 'Ctrl-b' || key === 'Ctrl+b') {
+    return { ...switchPaneFocus(state, 1), pendingKeys: undefined };
+  }
+  if (key === 'p' || key === 'Ctrl-p' || key === 'Ctrl+p') {
+    const prev = state.previousPaneIndex ?? ((state.activePaneIndex ?? 0) === 0 ? 1 : 0);
+    return { ...switchPaneFocus(state, prev), pendingKeys: undefined };
+  }
+
+  // 창 닫기 및 유일 창: c, q, o
+  if (key === 'c' || key === 'q') {
+    return { ...closeSplitWindow(state), pendingKeys: undefined };
+  }
+  if (key === 'o' || key === 'Ctrl-o' || key === 'Ctrl+o') {
+    return { ...closeOtherPanes(state), pendingKeys: undefined };
+  }
+
+  // 창 위치 맞바꾸기 및 회전: x, r, R
+  if (key === 'x' || key === 'Ctrl-x' || key === 'Ctrl+x') {
+    return { ...exchangePanes(state), pendingKeys: undefined };
+  }
+  if (key === 'r' || key === 'Ctrl-r' || key === 'Ctrl+r') {
+    return { ...rotatePanes(state, false), pendingKeys: undefined };
+  }
+  if (key === 'R') {
+    return { ...rotatePanes(state, true), pendingKeys: undefined };
+  }
+
+  // 레이아웃 이동 및 전환: H, J, K, L, T
+  if (key === 'H') {
+    return { ...movePaneToDirection(state, 'H'), pendingKeys: undefined };
+  }
+  if (key === 'L') {
+    return { ...movePaneToDirection(state, 'L'), pendingKeys: undefined };
+  }
+  if (key === 'K') {
+    return { ...movePaneToDirection(state, 'K'), pendingKeys: undefined };
+  }
+  if (key === 'J') {
+    return { ...movePaneToDirection(state, 'J'), pendingKeys: undefined };
+  }
+  if (key === 'T') {
+    return { ...moveWindowToNewTab(state), pendingKeys: undefined };
+  }
+
+  // 창 크기 조절: =, +, -, >, <, _, |
+  if (key === '=') {
+    return { ...resizeSplit(state, '='), pendingKeys: undefined };
+  }
+  if (key === '_' || key === '|') {
+    return { ...resizeSplit(state, key), pendingKeys: undefined };
+  }
+  if (key === '+' || key === '>') {
+    return { ...resizeSplit(state, count ?? 5), pendingKeys: undefined };
+  }
+  if (key === '-' || key === '<') {
+    return { ...resizeSplit(state, -(count ?? 5)), pendingKeys: undefined };
+  }
+
+  return {
+    ...state,
+    pendingKeys: undefined,
+  };
+}
+
+/**
  * VISUAL / VISUAL_LINE 모드 키 입력 처리
  */
 function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState {
@@ -1586,34 +1697,7 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
 
   // 윈도우 분할 및 포커스 제어 (Ctrl-w)
   if (state.pendingKeys === 'Ctrl-w' || state.pendingKeys === 'Ctrl+w') {
-    if (key === 's') {
-      return { ...splitWindow(state, 'horizontal', state.secondaryLines), pendingKeys: undefined };
-    }
-    if (key === 'v') {
-      return { ...splitWindow(state, 'vertical', state.secondaryLines), pendingKeys: undefined };
-    }
-    if (key === 'w' || key === 'Ctrl-w' || key === 'Ctrl+w') {
-      return { ...switchPaneFocus(state, (state.activePaneIndex ?? 0) === 0 ? 1 : 0), pendingKeys: undefined };
-    }
-    if (key === 'h' || key === 'ArrowLeft') {
-      return { ...switchPaneFocus(state, 0), pendingKeys: undefined };
-    }
-    if (key === 'l' || key === 'ArrowRight') {
-      return { ...switchPaneFocus(state, 1), pendingKeys: undefined };
-    }
-    if (key === 'k' || key === 'ArrowUp') {
-      return { ...switchPaneFocus(state, 0), pendingKeys: undefined };
-    }
-    if (key === 'j' || key === 'ArrowDown') {
-      return { ...switchPaneFocus(state, 1), pendingKeys: undefined };
-    }
-    if (key === 'c' || key === 'q') {
-      return { ...closeSplitWindow(state), pendingKeys: undefined };
-    }
-    return {
-      ...state,
-      pendingKeys: undefined,
-    };
+    return handleCtrlWKey(state, key, parsed.count1);
   }
 
   if (key === '"' && !state.pendingKeys) {
@@ -2294,34 +2378,7 @@ function handleNormalModeKey(
 
   // 1-0-b. 윈도우 분할 및 포커스 제어 (Ctrl-w)
   if (state.pendingKeys === 'Ctrl-w' || state.pendingKeys === 'Ctrl+w') {
-    if (key === 's') {
-      return { ...splitWindow(state, 'horizontal', state.secondaryLines), pendingKeys: undefined };
-    }
-    if (key === 'v') {
-      return { ...splitWindow(state, 'vertical', state.secondaryLines), pendingKeys: undefined };
-    }
-    if (key === 'w' || key === 'Ctrl-w' || key === 'Ctrl+w') {
-      return { ...switchPaneFocus(state, (state.activePaneIndex ?? 0) === 0 ? 1 : 0), pendingKeys: undefined };
-    }
-    if (key === 'h' || key === 'ArrowLeft') {
-      return { ...switchPaneFocus(state, 0), pendingKeys: undefined };
-    }
-    if (key === 'l' || key === 'ArrowRight') {
-      return { ...switchPaneFocus(state, 1), pendingKeys: undefined };
-    }
-    if (key === 'k' || key === 'ArrowUp') {
-      return { ...switchPaneFocus(state, 0), pendingKeys: undefined };
-    }
-    if (key === 'j' || key === 'ArrowDown') {
-      return { ...switchPaneFocus(state, 1), pendingKeys: undefined };
-    }
-    if (key === 'c' || key === 'q') {
-      return { ...closeSplitWindow(state), pendingKeys: undefined };
-    }
-    return {
-      ...state,
-      pendingKeys: undefined,
-    };
+    return handleCtrlWKey(state, key, parsed.count1);
   }
 
   if (key === '"' && !state.pendingKeys) {

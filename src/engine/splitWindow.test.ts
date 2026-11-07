@@ -161,4 +161,154 @@ describe('Multi-Window Splits & Focus Control (:sp, :vsp, Ctrl+w)', () => {
     expect(state.splitPanes).toBeUndefined();
     expect(state.lines).toEqual(['Primary content']);
   });
+
+  it(':only 및 Ctrl-w o로 현재 창만 남기고 나머지 분할 창을 닫는다', () => {
+    let state: VimEditorState = {
+      lines: ['Main file'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+      secondaryLines: ['Other file'],
+    };
+
+    // :vsp 분할
+    for (const ch of ':vsp\n') state = handleKey(state, ch === '\n' ? 'Enter' : ch);
+    expect(state.splitPanes).toHaveLength(2);
+
+    // Ctrl-w w 로 보조 창 이동 후 :only 실행
+    state = handleKey(state, 'Ctrl-w');
+    state = handleKey(state, 'w');
+    expect(state.activePaneIndex).toBe(1);
+
+    for (const ch of ':only\n') state = handleKey(state, ch === '\n' ? 'Enter' : ch);
+    expect(state.splitPanes).toBeUndefined();
+    expect(state.splitDirection).toBe('none');
+    expect(state.lines).toEqual(['Other file']);
+
+    // 단일 창에서 Ctrl-w c 실행 시 E444 가드
+    state = handleKey(state, 'Ctrl-w');
+    state = handleKey(state, 'c');
+    expect(state.commandMessage).toContain('E444');
+  });
+
+  it(':new 및 :vnew로 새 빈 버퍼 분할 창을 생성한다', () => {
+    let state: VimEditorState = {
+      lines: ['original code'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+
+    for (const ch of ':vnew helper.ts\n') state = handleKey(state, ch === '\n' ? 'Enter' : ch);
+    expect(state.splitDirection).toBe('vertical');
+    expect(state.secondaryFilename).toBe('helper.ts');
+    expect(state.splitPanes![1].lines).toEqual(['']);
+  });
+
+  it('Ctrl-w x로 두 분할 창의 위치를 맞바꾸고, Ctrl-w r로 회전한다', () => {
+    let state: VimEditorState = {
+      lines: ['LeftPane'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+      primaryFilename: 'left.ts',
+      secondaryFilename: 'right.ts',
+      secondaryLines: ['RightPane'],
+    };
+
+    for (const ch of ':vsp\n') state = handleKey(state, ch === '\n' ? 'Enter' : ch);
+
+    // Ctrl-w x : 두 창의 위치와 내용 교환
+    state = handleKey(state, 'Ctrl-w');
+    state = handleKey(state, 'x');
+    expect(state.splitPanes![0].filename).toBe('right.ts');
+    expect(state.splitPanes![1].filename).toBe('left.ts');
+
+    // Ctrl-w r : 창 회전 및 포커스 토글
+    state = handleKey(state, 'Ctrl-w');
+    state = handleKey(state, 'r');
+    expect(state.activePaneIndex).toBe(1);
+    expect(state.splitPanes![0].filename).toBe('left.ts');
+    expect(state.splitPanes![1].filename).toBe('right.ts');
+  });
+
+  it('Ctrl-w H/J/K/L로 분할 방향 및 창 배치를 자유자재로 재배치한다', () => {
+    let state: VimEditorState = {
+      lines: ['Top content'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+      secondaryLines: ['Bottom content'],
+    };
+
+    // :sp 가로 분할
+    for (const ch of ':sp\n') state = handleKey(state, ch === '\n' ? 'Enter' : ch);
+    expect(state.splitDirection).toBe('horizontal');
+
+    // Ctrl-w H -> 세로 분할로 변경하며 현재 창을 왼쪽(0)으로 배치
+    state = handleKey(state, 'Ctrl-w');
+    state = handleKey(state, 'H');
+    expect(state.splitDirection).toBe('vertical');
+    expect(state.activePaneIndex).toBe(0);
+
+    // Ctrl-w J -> 가로 분할로 변경하며 현재 창을 아래쪽(1)으로 배치
+    state = handleKey(state, 'Ctrl-w');
+    state = handleKey(state, 'J');
+    expect(state.splitDirection).toBe('horizontal');
+    expect(state.activePaneIndex).toBe(1);
+  });
+
+  it('Ctrl-w =, +, -, >, <, _, | 및 :res 명령어로 창 크기를 조절한다', () => {
+    let state: VimEditorState = {
+      lines: ['Pane 1'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+      secondaryLines: ['Pane 2'],
+    };
+
+    for (const ch of ':vsp\n') state = handleKey(state, ch === '\n' ? 'Enter' : ch);
+    expect(state.splitRatio).toBe(50);
+
+    // Ctrl-w + (주 창 크기 확대)
+    state = handleKey(state, 'Ctrl-w');
+    state = handleKey(state, '+');
+    expect(state.splitRatio).toBe(55);
+
+    // Ctrl-w = (균등화)
+    state = handleKey(state, 'Ctrl-w');
+    state = handleKey(state, '=');
+    expect(state.splitRatio).toBe(50);
+
+    // Ctrl-w | (최대화)
+    state = handleKey(state, 'Ctrl-w');
+    state = handleKey(state, '|');
+    expect(state.splitRatio).toBe(80);
+
+    // :res = 명령어로 균등화
+    for (const ch of ':res =\n') state = handleKey(state, ch === '\n' ? 'Enter' : ch);
+    expect(state.splitRatio).toBe(50);
+  });
+
+  it('Ctrl-w T로 분할 창을 독립된 새 탭 페이지로 떼어낸다', () => {
+    let state: VimEditorState = {
+      lines: ['Main file'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+      primaryFilename: 'main.ts',
+      secondaryFilename: 'breakout.ts',
+      secondaryLines: ['Breakout file'],
+    };
+
+    for (const ch of ':vsp\n') state = handleKey(state, ch === '\n' ? 'Enter' : ch);
+    // 보조 창으로 이동
+    state = handleKey(state, 'Ctrl-w');
+    state = handleKey(state, 'w');
+    expect(state.activePaneIndex).toBe(1);
+
+    // Ctrl-w T 실행
+    state = handleKey(state, 'Ctrl-w');
+    state = handleKey(state, 'T');
+
+    // 2개의 탭이 생기고 현재 탭은 breakout.ts 버퍼 단일 창
+    expect(state.tabPages).toHaveLength(2);
+    expect(state.currentTabId).toBe(2);
+    expect(state.primaryFilename).toBe('breakout.ts');
+    expect(state.splitPanes).toBeUndefined();
+  });
 });

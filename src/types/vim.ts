@@ -188,6 +188,10 @@ export interface VimEditorState {
   activePaneIndex?: number;
   /** 분할된 윈도우 페인 목록 */
   splitPanes?: [SplitPaneState, SplitPaneState];
+  /** 분할 창 크기 비율 (기본 50: 50%) */
+  splitRatio?: number;
+  /** 직전에 활성화되었던 창 인덱스 (Ctrl-w p 용) */
+  previousPaneIndex?: number;
   /** 주 창 파일명 (예: source.ts) */
   primaryFilename?: string;
   /** 보조 창 파일명 (예: target.ts) */
