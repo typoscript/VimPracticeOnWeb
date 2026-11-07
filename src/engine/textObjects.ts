@@ -1097,3 +1097,27 @@ export function getSentenceObjectRange(
     endCol: chars[end].col,
   };
 }
+
+/**
+ * 버퍼 전체의 문장 시작 위치 목록 ( / ) 모션용)
+ * 문단 안의 각 문장 시작(첫 공백 아닌 문자)과, 빈 줄 묶음의 첫 줄을 문장 경계로 봅니다. (:help sentence)
+ */
+export function getSentenceStarts(lines: string[]): CursorPosition[] {
+  const starts: CursorPosition[] = [];
+  let line = 0;
+  while (line < lines.length) {
+    if (isWhiteLine(lines[line])) {
+      starts.push({ line, col: 0 });
+      while (line < lines.length && isWhiteLine(lines[line])) line++;
+      continue;
+    }
+    const split = splitSentences(lines, line);
+    if (split) {
+      for (const seg of split.segments) {
+        if (seg.kind === 'sentence') starts.push({ line: split.chars[seg.start].line, col: split.chars[seg.start].col });
+      }
+    }
+    while (line < lines.length && !isWhiteLine(lines[line])) line++;
+  }
+  return starts;
+}

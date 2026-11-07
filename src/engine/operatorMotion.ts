@@ -2,12 +2,15 @@ import { CursorPosition, VimEditorState } from '../types/vim';
 import { clampCursor } from './cursor';
 import { pushUndoSnapshot } from './operators';
 import { moveToFirstNonBlank, moveToPrevWord, moveToPrevWORD } from './motions';
+import { EXTRA_MOTION_KEYS, evaluateExtraMotion } from './extraMotions';
 
 /**
  * 연산자(d, c, y) + 일반 모션 실행 엔진
  *
  * - 줄 단위(linewise) 모션: j, k, G, gg  → 시작~끝 줄 전체가 대상
  * - 배타적 문자 단위(exclusive) 모션: h, l, b, B, ^ → 커서와 목표 위치 사이 (끝 위치 문자 제외)
+ *
+ * - 보조 모션(extraMotions.ts): + - Enter (줄 단위), ( ) | [( ]) (exclusive), ge gE g_ (inclusive)
  *
  * 모션이 실패하면(마지막 줄의 dj, 줄 시작의 dh, 버퍼 시작의 db 등) null을 반환하며,
  * 호출부는 이를 bell(실패 신호)로 처리합니다. 실제 Vim처럼 버퍼는 변경되지 않습니다.
@@ -16,6 +19,7 @@ import { moveToFirstNonBlank, moveToPrevWord, moveToPrevWORD } from './motions';
 export const OPERATOR_MOTION_KEYS = new Set([
   'j', 'k', 'G', 'ArrowDown', 'ArrowUp',
   'h', 'l', 'b', 'B', '^', 'ArrowLeft', 'ArrowRight',
+  '(', ')', '+', '-', 'Enter', '|',
 ]);
 
 type Operator = 'd' | 'c' | 'y';
@@ -34,6 +38,18 @@ export function executeOperatorMotion(
   const n = Math.max(1, count ?? 1);
   const lastLine = lines.length - 1;
   const lineText = lines[cursor.line] ?? '';
+
+  if (EXTRA_MOTION_KEYS.has(motionKey)) {
+    const res = evaluateExtraMotion(lines, cursor, motionKey, n);
+    if (!res) return null;
+    const before = res.target.line < cursor.line || (res.target.line === cursor.line && res.target.col < cursor.col);
+    const start = before ? res.target : cursor;
+    const end = before ? cursor : res.target;
+    if (res.kind === 'linewise') return applyLinewise(state, op, start.line, end.line);
+    if (res.kind === 'inclusive') return applyCharwise(state, op, start, { line: end.line, col: end.col + 1 });
+    if (start.line === end.line && start.col === end.col) return { ...state, pendingKeys: undefined };
+    return applyCharwise(state, op, start, end);
+  }
 
   switch (motionKey) {
     case 'j':

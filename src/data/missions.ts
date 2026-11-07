@@ -1924,4 +1924,26 @@ export const MISSIONS: Mission[] = [
       return state.lines.length === target.length && target.every((t, i) => state.lines[i] === t);
     },
   },
+  {
+    id: 60,
+    title: '레슨 60: 보조 모션(]), [(, g_, ge, +, -, (, ))으로 정밀하게 이동하고 지우기',
+    description:
+      'hjkl, w, b, e 외에도 Vim 에는 코드와 문장을 다룰 때 유용한 이동 키가 많습니다. 모두 d, c, y 와 함께 쓸 수 있습니다.\n\n- [( / ]) : 커서를 감싸고 있는 ( 의 시작 / ) 의 끝으로 ([{ / ]} 는 중괄호). 안쪽의 짝 있는 괄호는 건너뜁니다.\n- ( / ) : 이전 / 다음 문장의 시작\n- ge / gE : 이전 단어 / WORD 의 끝 (e 의 반대 방향)\n- g_ : 줄의 마지막 공백 아닌 문자 ($ 와 달리 뒤 공백을 건너뜀)\n- + / Enter / - : 다음 / 이전 줄의 첫 공백 아닌 문자\n- [count]| : count 번째 칸\n\n미션:\n1) 커서가 있는 쉼표에서 d]) 로 닫는 괄호 앞까지 인자를 지우세요.\n2) g_ 로 줄의 마지막 공백 아닌 문자(;)로 가서 l → D 로 뒤에 남은 공백을 지우세요.\n3) + 로 다음 줄로 내려가 d) 로 첫 문장 "Remove this. " 를 지우세요.',
+    hint: 'd]) → g_ → l → D → + → d)',
+    par: 10,
+    optimalKeys: ['d', ']', ')', 'g', '_', 'l', 'D', '+', 'd', ')'],
+    initialLines: [
+      'call(alpha, beta, gamma);   ',
+      'Remove this. Keep me.',
+    ],
+    targetLines: [
+      'call(alpha);',
+      'Keep me.',
+    ],
+    initialCursor: { line: 0, col: 10 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      return state.lines.length === 2 && state.lines[0] === 'call(alpha);' && state.lines[1] === 'Keep me.';
+    },
+  },
 ];

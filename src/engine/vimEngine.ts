@@ -1,5 +1,6 @@
 import { VimEditorState, CursorPosition, FoldRange } from '../types/vim';
 import { starSearchPattern } from './vimRegex';
+import { evaluateExtraMotion } from './extraMotions';
 import { executeOperatorMotion, OPERATOR_MOTION_KEYS } from './operatorMotion';
 import { cancelFunctionDraft } from './vimscriptEngine';
 import { clampCursor, getMaxCol } from './cursor';
@@ -1982,6 +1983,10 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
     if (key === 'v') {
       return reselectLastVisual(state);
     }
+    // ge / gE / g_: VISUAL 선택 영역을 보조 모션으로 확장
+    if (key === 'e' || key === 'E' || key === '_') {
+      return moveByExtraMotion(state, `g${key}`, parsed.totalCount);
+    }
     if (key === 'd') {
       return goToDeclaration(state);
     }
@@ -2430,6 +2435,11 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
     return { ...state, pendingKeys: key };
   }
 
+  // VISUAL 모드 보조 모션 (, ), +, -, Enter, |
+  if (!state.pendingKeys && VISUAL_EXTRA_KEYS.has(key)) {
+    return moveByExtraMotion(state, key, parsed.totalCount);
+  }
+
   // VISUAL 모드 내 커서 이동 (모션 평가 및 카운트 반영)
   const motionCursor = evaluateMotionWithCount(
     state.lines,
@@ -2481,7 +2491,7 @@ function applyOperatorMotion(
     return ringBell(state);
   }
   const synced = syncRegisters(state, res, op === 'y');
-  const motionKeys = motionKey === 'gg' ? ['g', 'g'] : [motionKey];
+  const motionKeys = motionKey === 'Enter' ? ['Enter'] : [...motionKey];
   const opKeys = hasCount ? [String(parsed.totalCount), op, ...motionKeys] : [op, ...motionKeys];
   if (op === 'c') {
     return { ...synced, currentChangeKeys: isReplayingDot ? state.currentChangeKeys : opKeys };
@@ -2528,6 +2538,14 @@ function handleNormalModeKey(
     const op = gnMatch[2];
     return executeGn(state, key === 'n', op, isReplayingDot);
   }
+  // dge / dgE / dg_ (cge, yg_ ...)
+  const gMotionOpMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([cdy])([1-9][0-9]*)?g$/);
+  if (gMotionOpMatch && (key === 'e' || key === 'E' || key === '_')) {
+    const op = gMotionOpMatch[2] as 'd' | 'c' | 'y';
+    const total = (gMotionOpMatch[1] ? parseInt(gMotionOpMatch[1], 10) : 1) * (gMotionOpMatch[3] ? parseInt(gMotionOpMatch[3], 10) : 1);
+    return applyOperatorMotion(state, op, `g${key}`, { operator: op, count1: total > 1 ? total : undefined, totalCount: total }, isReplayingDot);
+  }
+
   // dgg / cgg / ygg ([count]은 줄 번호)
   const ggOpMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([cdy])([1-9][0-9]*)?g$/);
   if (ggOpMatch && key === 'g') {
@@ -3164,6 +3182,22 @@ function handleNormalModeKey(
         pendingKeys: undefined,
       };
     }
+    // [( [{ ]) ]}: 감싸고 있는 짝 없는 괄호로 이동
+    if ((bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'))) {
+      return moveByExtraMotion(state, `${bracket}${key}`, bCount);
+    }
+    state = { ...state, pendingKeys: undefined };
+  }
+
+  // 연산자 + 괄호 모션 (d[(, c]}, y[{ ...)
+  const opBracketMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([cdy])([1-9][0-9]*)?([\]\[])$/);
+  if (opBracketMatch) {
+    const bracket = opBracketMatch[4];
+    if ((bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'))) {
+      const op = opBracketMatch[2] as 'd' | 'c' | 'y';
+      const total = (opBracketMatch[1] ? parseInt(opBracketMatch[1], 10) : 1) * (opBracketMatch[3] ? parseInt(opBracketMatch[3], 10) : 1);
+      return applyOperatorMotion(state, op, `${bracket}${key}`, { operator: op, count1: total > 1 ? total : undefined, totalCount: total }, isReplayingDot);
+    }
     state = { ...state, pendingKeys: undefined };
   }
 
@@ -3586,7 +3620,7 @@ function handleNormalModeKey(
       };
     }
 
-    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a' || key === "'" || key === '`' || key === 'g') {
+    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a' || key === "'" || key === '`' || key === 'g' || key === '[' || key === ']') {
       return {
         ...state,
         pendingKeys: (state.pendingKeys ?? '') + key,
@@ -3718,7 +3752,7 @@ function handleNormalModeKey(
         currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
       };
     }
-    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a' || key === "'" || key === '`' || key === 'g') {
+    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a' || key === "'" || key === '`' || key === 'g' || key === '[' || key === ']') {
       return {
         ...state,
         pendingKeys: (state.pendingKeys ?? '') + key,
@@ -3830,7 +3864,7 @@ function handleNormalModeKey(
       return syncRegisters(state, res, true);
     }
 
-    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a' || key === "'" || key === '`' || key === 'g') {
+    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a' || key === "'" || key === '`' || key === 'g' || key === '[' || key === ']') {
       return {
         ...state,
         pendingKeys: (state.pendingKeys ?? '') + key,
@@ -3852,6 +3886,10 @@ function handleNormalModeKey(
     }
     state = { ...state, pendingKeys: undefined };
   } else if (parsed.operator === 'g') {
+    // ge / gE / g_: 이전 단어 끝, 이전 WORD 끝, 줄의 마지막 공백 아닌 문자
+    if (key === 'e' || key === 'E' || key === '_') {
+      return moveByExtraMotion(state, `g${key}`, parsed.totalCount);
+    }
     // g&: 직전 치환을 같은 플래그로 모든 줄에 다시 실행 (:%s//~/&)
     if (key === '&') {
       const res = executeCommandLine({ ...state, pendingKeys: undefined }, '%&&', handleKey);
@@ -4340,6 +4378,11 @@ function handleNormalModeKey(
     };
   }
 
+  // 10-1. 보조 모션: ( ) 문장, + - Enter 줄 첫 문자, | 칸 번호
+  if (!parsed.operator && NORMAL_EXTRA_KEYS.has(key)) {
+    return moveByExtraMotion(state, key, parsed.totalCount);
+  }
+
   // 11. 이동 모션 키 평가 (카운트 반복 반영)
 
   let motionCursor = evaluateMotionWithCount(
@@ -4417,6 +4460,22 @@ const FAILABLE_MOTION_KEYS = new Set([
   'h', 'j', 'k', 'l', 'w', 'b', 'e', 'W', 'B', 'E',
   'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
 ]);
+
+const NORMAL_EXTRA_KEYS = new Set(['(', ')', '+', '-', 'Enter', '|']);
+const VISUAL_EXTRA_KEYS = new Set(['(', ')', '+', '-', 'Enter', '|']);
+
+/** 보조 모션( ) ge g_ + - | [( 등)으로 커서를 옮깁니다. 이동할 수 없으면 bell. */
+function moveByExtraMotion(state: VimEditorState, key: string, count: number): VimEditorState {
+  const res = evaluateExtraMotion(state.lines, state.cursor, key, count);
+  if (!res) return ringBell(state);
+  const mode = state.mode === 'NORMAL' ? 'NORMAL' : state.mode;
+  return {
+    ...state,
+    cursor: clampCursor(state.lines, res.target, mode),
+    stickyDollar: false,
+    pendingKeys: undefined,
+  };
+}
 
 /** 모션이 커서를 전혀 움직이지 못했는지 (세로 모션은 줄 기준) */
 function isFailedMotion(key: string, from: CursorPosition, to: CursorPosition): boolean {

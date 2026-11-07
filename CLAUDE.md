@@ -15,7 +15,7 @@
   `npm test -- src/engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 103개 테스트 파일, 1,331개 테스트 100% 통과 필수)*
+  *(현재 104개 테스트 파일, 1,348개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -42,7 +42,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 59)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 60)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -70,6 +70,7 @@
 - **실패 신호(bell) & 연산자+모션**: 실패한 키는 상태에 일시적 `bell: true`를 남기며(매 키 입력 시작 시 제거), `@` 매크로·`.` 반복·`:normal`·키매핑 재생은 bell에서 중단됩니다. `src/engine/operatorMotion.ts`가 `d/c/y` + `j k G gg`(줄 단위), `h l b B ^`(배타적 문자 단위)를 처리하며 실패 시 bell을 울립니다. UI는 bell마다 에디터 테두리를 깜빡입니다(visualbell, `Editor`의 `bellSignal`). VISUAL 모드 모션, `%`, `*`/`#`(E348), 미설정 마크(E20), 빈 레지스터 `p`(E353), 마지막 줄 `J`, 숫자 없는 `Ctrl-a`, 줄보다 긴 `[count]r`, 알 수 없는 Ex 명령(E492)도 bell을 울립니다. ⚠ Vim `nv_wordcmd`처럼 연산자와 함께 쓴 `e`는 버퍼 끝에서도 실패하지 않습니다(`de`는 마지막 문자 삭제) — 판정 기준은 Vim 소스와 `test/vimDifferential.fuzz.test.ts`.
 - **순정 Vim 정규식 (`src/engine/vimRegex.ts`의 `compileVimRegex`)**: `/` `?` `n` `N` `*` `#` `gn` 하이라이트, `:s`, `:g`, `:/pat/` 범위, `:vimgrep`, `:lvimgrep`, `=~`, `substitute()`/`split()`/`match()` 가 모두 같은 변환기를 씁니다. magic 기본 모드에서 `+ ? = | ( ) { } < >`는 리터럴이며 `\` 를 붙여야 특수 문자입니다(`\+`, `\(…\)`). `\v`/`\m`/`\M`/`\V`, `\zs`/`\ze`, `\{-}`, `\%(`, `\@=` 류, `\a \l \u \x \h \k`, `[[:alpha:]]`, `\c`/`\C`, smartcase(`\` 뒤 대문자 제외)를 지원합니다. `*`/`#`은 `\<word\>` 로 단어 전체를 찾습니다. ⚠ 새 코드에서 Vim 패턴을 다룰 때 `new RegExp(pattern)` 을 직접 쓰지 말고 반드시 `compileVimRegex` 를 사용하세요.
 - **`:s` 고급 기능 (레슨 59)**: `\=expr` 계산식 치환(`submatch(n)`, 치환 중인 줄이 `line('.')`, 리스트 결과는 여러 줄), `\r` 줄 나누기, 치환 문자열·패턴의 `~`(직전 치환 문자열), 빈 패턴 `:s//new/`, `:&` / `:&&` / 인자 없는 `:s`, 노멀 `&` / `g&`. 대소문자는 `I`(구분) > `i`(무시) > `ignorecase`+`smartcase` 순이며 `gc` 확인 모드도 같은 값을 씁니다. 직전 치환은 `state.lastSubstitute`, 성공한 `:s` 패턴은 `lastSearchQuery` 가 됩니다.
+- **보조 모션 (레슨 60, `src/engine/extraMotions.ts`)**: `(` `)` 문장(exclusive), `ge` `gE` 이전 단어 끝(inclusive, 뒤로), `g_`(inclusive), `+` `-` `Enter`(줄 단위), `[count]|`(exclusive), `[(` `[{` `])` `]}` 짝 없는 괄호(exclusive, 여러 줄). 노멀·VISUAL·`d/c/y`·`.` 반복·bell 지원. 연산자 처리는 `operatorMotion.ts`가 모션 종류(inclusive/exclusive/linewise)로 분기합니다.
 - **문단·문장 텍스트 객체 (레슨 58)**: `ip`/`ap`(Vim `current_par()` 규칙, 공백만 있는 줄도 빈 줄, 줄 단위), `is`/`as`(문자 단위, 여러 줄 문장, 앞뒤 공백은 같은 줄까지). 카운트는 `2dap`·`d2ap` 모두 지원 (`textObjects.ts`의 `getParagraphObjectRange`, `getSentenceObjectRange`, `executeLinewiseObjectOperator`).
 - **인덴트 텍스트 객체 (레슨 54)**: `ii, ai, iI, aI, [count]ii` + `d/c/y/v/=/gu/gU/g~` (`textObjects.ts`의 `getIndentObjectRange`, `executeIndentObjectOperator`, 항상 줄 단위)
 - **사용자 정의 Ex 명령 (레슨 55)**: `:command[!] [-nargs] [-range[=%]] [-bang] Name ...`, `:delcommand`, `:comclear`, `:command` 목록, `<args> <q-args> <line1> <line2> <bang> <lt>` 치환, 접두어 호출, `.vimrc` 소싱 (`src/engine/userCommandEngine.ts`). 내장 명령이 먼저 평가되어 사용자 명령에 가려지지 않습니다. `<f-args>`로 함수에 인자를 나눠 전달합니다.
