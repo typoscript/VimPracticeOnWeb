@@ -15,7 +15,7 @@
   `npm test -- src/engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 93개 테스트 파일, 1,173개 테스트 100% 통과 필수)*
+  *(현재 94개 테스트 파일, 1,184개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -41,7 +41,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 53)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 54)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -65,7 +65,8 @@
   - `mA~mZ, 'A~'Z, :marks` (대문자 전역 마크 및 버퍼 자동 전환)
   - `:nmap, :nnoremap, :imap, :vmap, :unmap` (키매핑 인터프리터)
   - `cs, ds, ysiw, yss, S` (순정 vim-surround 괄호/따옴표 감싸기 엔진)
-- **매크로 심화 & 디버깅 (레슨 53)**: `@a, @@, [count]@@` + 매크로 슬로우모션 디버거 (`src/engine/macroDebugger.ts`, `src/components/MacroDebugger/`: 1x/0.5x/0.2x 재생, 키 단위 스텝, 프레임 미리보기)
+- **매크로 심화 & 디버깅 (레슨 53)**: `@a, @@, [count]@@` + 매크로 슬로우모션 디버거 (`src/engine/macroDebugger.ts`, `src/components/MacroDebugger/`: 1x/0.5x/0.2x 재생, 키 단위 스텝, 프레임 미리보기). 모션 실패 시 매크로 중단은 `src/engine/macroAbort.ts`
+- **인덴트 텍스트 객체 (레슨 54)**: `ii, ai, iI, aI, [count]ii` + `d/c/y/v/=/gu/gU/g~` (`textObjects.ts`의 `getIndentObjectRange`, `executeIndentObjectOperator`, 항상 줄 단위)
 
 ---
 
@@ -76,5 +77,6 @@
    - 사용자가 커맨드라인 또는 `.vimrc`에서 커스텀 Ex 명령어(`:command! W w`, `:command! Q q`)를 선언하고 호출할 수 있는 인터프리터.
 3. **순정 Vim 맞춤법 검사기 (`:set spell`, `]s`, `[s`, `z=`, `zg`)**:
    - 코드 주석이나 문자열에서 오탈자를 탐색하고 `z=`로 교체 추천 목록을 띄우는 기능.
-4. **인덴트 텍스트 객체 확장 (`ii`, `ai`)**:
-   - Python이나 들여쓰기 기반 블록을 한 번에 다루는 `vii`, `dii`, `cai` 등의 실무 텍스트 객체 확장.
+4. ~~**인덴트 텍스트 객체 확장 (`ii`, `ai`)**~~ — 레슨 54와 함께 구현 완료.
+5. **엔진 전역 실패 신호 (bell/abort)**:
+   - 현재 매크로 중단은 키 전후 상태 비교(`macroAbort.ts`)로 판정합니다. 모션·연산자가 직접 실패를 보고하도록 바꾸면 `dj`(마지막 줄), `:normal`, `.` 반복의 실패 처리까지 실제 Vim과 일치시킬 수 있습니다.

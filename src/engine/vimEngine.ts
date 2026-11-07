@@ -118,6 +118,8 @@ import {
 import {
   executeTextObjectOperator,
   TextObjectType,
+  executeIndentObjectOperator,
+  IndentObjectType,
 } from './textObjects';
 import {
   findMatches,
@@ -2232,6 +2234,10 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
   if (visualObjMatch) {
     const count = visualObjMatch[1] ? parseInt(visualObjMatch[1], 10) : 1;
     const modifier = visualObjMatch[2] as 'i' | 'a';
+    // 인덴트 텍스트 객체 (vii, vai, vaI): 줄 단위 VISUAL LINE 선택
+    if (key === 'i' || key === 'I') {
+      return executeIndentObjectOperator(state, 'v', `${modifier}${key}` as IndentObjectType, count);
+    }
     const validTargets = ['w', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't'];
     if (validTargets.includes(key)) {
       let targetChar = key;
@@ -3194,6 +3200,26 @@ function handleNormalModeKey(
     const count = textObjPendingMatch[1] ? parseInt(textObjPendingMatch[1], 10) : 1;
     const op = textObjPendingMatch[2] as 'd' | 'c' | 'y' | 'v' | '=' | 'gu' | 'gU' | 'g~';
     const modifier = textObjPendingMatch[3] as 'i' | 'a';
+
+    // 인덴트 텍스트 객체 (dii, cai, yii, =ii, gUai, daI 등): 줄 단위 연산
+    if (key === 'i' || key === 'I') {
+      const res = executeIndentObjectOperator(state, op, `${modifier}${key}` as IndentObjectType, count);
+      const synced = syncRegisters(state, res, op === 'y');
+      const opKeys = count > 1 ? [String(count), op, modifier, key] : [op, modifier, key];
+      if (op === 'c') {
+        return {
+          ...synced,
+          currentChangeKeys: isReplayingDot ? state.currentChangeKeys : opKeys,
+        };
+      }
+      if (op === 'd' || op === '=' || op === 'gu' || op === 'gU' || op === 'g~') {
+        return {
+          ...synced,
+          lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys,
+        };
+      }
+      return synced;
+    }
 
     const validTargets = ['w', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't'];
     if (validTargets.includes(key)) {

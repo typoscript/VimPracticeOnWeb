@@ -1725,4 +1725,43 @@ export const MISSIONS: Mission[] = [
       return state.lines.length === target.length && target.every((t, i) => state.lines[i] === t);
     },
   },
+  {
+    id: 54,
+    title: '레슨 54: 인덴트 텍스트 객체(ii, ai, aI)로 YAML·Python 들여쓰기 블록 통째로 다루기',
+    description:
+      'Python, YAML처럼 괄호 대신 들여쓰기로 블록을 나누는 코드에서는 i{ 같은 괄호 텍스트 객체를 쓸 수 없습니다. 이럴 때는 들여쓰기 깊이 자체를 범위로 삼는 인덴트 텍스트 객체를 씁니다. (vim-indent-object 플러그인과 동일한 동작, 항상 줄 단위)\n\n1) ii: 커서 줄과 들여쓰기가 같거나 더 깊은 연속된 줄 (중간 빈 줄 포함)\n2) ai: ii + 바로 위의 헤더 줄 (예: `legacy:`, `def foo():`)\n3) aI: ai + 바로 아래의 경계 줄\n4) 2ii, 3ii: 숫자를 붙이면 한 단계씩 바깥 블록으로 확장\n\nd, c, y, v, =, gU 등 모든 연산자와 조합할 수 있습니다. (dii, cii, yai, vii ...)\n\n미션:\n1) 커서가 있는 legacy 블록을 dai 로 헤더 줄(legacy:)까지 통째로 삭제하세요.\n2) j 로 database 의 첫 항목으로 내려가 cii 로 블록 전체를 지우고 path: ./dev.db 를 입력한 뒤 Esc 를 누르세요.',
+    hint: 'dai 로 legacy 블록을 지운 뒤, j 로 내려가 cii → "path: ./dev.db" 입력 → Esc 를 누르세요.',
+    par: 22,
+    optimalKeys: [
+      'd', 'a', 'i',
+      'j',
+      'c', 'i', 'i',
+      'p', 'a', 't', 'h', ':', ' ', '.', '/', 'd', 'e', 'v', '.', 'd', 'b',
+      'Escape',
+    ],
+    initialLines: [
+      'server:',
+      '  port: 8080',
+      '  debug: true',
+      '  legacy:',
+      '    host: old.example.com',
+      '    retries: 3',
+      'database:',
+      '  host: db.internal',
+      '  user: admin',
+    ],
+    targetLines: [
+      'server:',
+      '  port: 8080',
+      '  debug: true',
+      'database:',
+      '  path: ./dev.db',
+    ],
+    initialCursor: { line: 4, col: 4 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const target = ['server:', '  port: 8080', '  debug: true', 'database:', '  path: ./dev.db'];
+      return state.lines.length === target.length && target.every((t, i) => state.lines[i] === t);
+    },
+  },
 ];

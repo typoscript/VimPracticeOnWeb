@@ -676,3 +676,187 @@ export function executeTextObjectOperator(
 
   return curState;
 }
+
+/** 인덴트 텍스트 객체 타입: ii(안쪽), ai(+위 헤더 줄), iI(=ii), aI(+위·아래 경계 줄) */
+export type IndentObjectType = 'ii' | 'ai' | 'iI' | 'aI';
+
+export interface IndentObjectRange {
+  startLine: number;
+  endLine: number;
+}
+
+function isBlankLine(text: string | undefined): boolean {
+  return !text || text.trim().length === 0;
+}
+
+/** 줄 앞 공백의 화면 너비 (탭은 다음 tabstop 위치까지 확장) */
+function getIndentWidth(text: string, tabstop: number): number {
+  let width = 0;
+  for (const ch of text) {
+    if (ch === ' ') width++;
+    else if (ch === '\t') width += tabstop - (width % tabstop);
+    else break;
+  }
+  return width;
+}
+
+/** from 에서 step 방향으로 빈 줄을 건너뛴 첫 비어 있지 않은 줄 번호 (없으면 -1) */
+function findNonBlankLine(lines: string[], from: number, step: 1 | -1): number {
+  for (let l = from; l >= 0 && l < lines.length; l += step) {
+    if (!isBlankLine(lines[l])) return l;
+  }
+  return -1;
+}
+
+/**
+ * 인덴트 텍스트 객체 범위를 구합니다. (vim-indent-object 동작 기준, 항상 줄 단위)
+ * - ii / iI: 기준 줄과 들여쓰기가 같거나 더 깊은 연속 줄 (중간 빈 줄 포함, 앞뒤 빈 줄 제외)
+ * - ai: ii + 바로 위의 덜 들여쓴 헤더 줄 (예: `def foo():`)
+ * - aI: ai + 바로 아래의 덜 들여쓴 경계 줄 (예: 닫는 `}` / `end`)
+ * - [count]: 한 단계씩 바깥 들여쓰기 블록으로 확장합니다.
+ * 기준 줄이 빈 줄이면 아래(없으면 위)의 가장 가까운 비어 있지 않은 줄을 기준으로 합니다.
+ */
+export function getIndentObjectRange(
+  lines: string[],
+  line: number,
+  objectType: IndentObjectType,
+  count = 1,
+  tabstop = 8
+): IndentObjectRange | null {
+  if (lines.length === 0) return null;
+
+  let pivot = isBlankLine(lines[line]) ? findNonBlankLine(lines, line, 1) : line;
+  if (pivot === -1) pivot = findNonBlankLine(lines, line, -1);
+  if (pivot === -1) return null;
+
+  const width = (l: number) => getIndentWidth(lines[l] ?? '', tabstop);
+  const belongs = (l: number, indent: number) => isBlankLine(lines[l]) || width(l) >= indent;
+
+  let indent = width(pivot);
+  let start = pivot;
+  let end = pivot;
+
+  for (let level = 0; level < Math.max(1, count); level++) {
+    if (level > 0) {
+      // 바깥 단계: 현재 블록의 헤더 줄 들여쓰기를 기준으로 다시 확장
+      const header = findNonBlankLine(lines, start - 1, -1);
+      if (header === -1) break;
+      indent = width(header);
+      start = header;
+      end = Math.max(end, header);
+    }
+    while (start > 0 && belongs(start - 1, indent)) start--;
+    while (end < lines.length - 1 && belongs(end + 1, indent)) end++;
+    while (start < end && isBlankLine(lines[start])) start++;
+    while (end > start && isBlankLine(lines[end])) end--;
+  }
+
+  if (objectType === 'ai' || objectType === 'aI') {
+    const header = findNonBlankLine(lines, start - 1, -1);
+    if (header !== -1) start = header;
+  }
+  if (objectType === 'aI') {
+    const footer = findNonBlankLine(lines, end + 1, 1);
+    if (footer !== -1) end = footer;
+  }
+
+  return { startLine: start, endLine: end };
+}
+
+/**
+ * 인덴트 텍스트 객체와 연산자(d, c, y, v, =, gu, gU, g~)를 줄 단위로 실행합니다.
+ */
+export function executeIndentObjectOperator(
+  state: VimEditorState,
+  operator: 'd' | 'c' | 'y' | 'v' | '=' | 'gu' | 'gU' | 'g~',
+  objectType: IndentObjectType,
+  count = 1
+): VimEditorState {
+  const range = getIndentObjectRange(
+    state.lines,
+    state.cursor.line,
+    objectType,
+    count,
+    state.options?.tabstop ?? 8
+  );
+  if (!range) {
+    return { ...state, pendingKeys: undefined };
+  }
+
+  const { startLine, endLine } = range;
+  const content = state.lines.slice(startLine, endLine + 1).join('\n');
+
+  // VISUAL LINE 모드 영역 지정 (vii, vai)
+  if (operator === 'v') {
+    return {
+      ...state,
+      mode: 'VISUAL_LINE',
+      visualAnchor: { line: startLine, col: 0 },
+      cursor: clampCursor(state.lines, { line: endLine, col: state.cursor.col }, 'VISUAL_LINE'),
+      pendingKeys: undefined,
+    };
+  }
+
+  // 대소문자 변환 (guii, gUai, g~ii)
+  if (operator === 'gu' || operator === 'gU' || operator === 'g~') {
+    const visualState: VimEditorState = {
+      ...state,
+      mode: 'VISUAL_LINE',
+      visualAnchor: { line: startLine, col: 0 },
+      cursor: { line: endLine, col: 0 },
+    };
+    const caseType = operator === 'g~' ? 'toggle' : operator === 'gu' ? 'lower' : 'upper';
+    return changeCaseVisual(visualState, caseType);
+  }
+
+  // 자동 들여쓰기 정렬 (=ii)
+  if (operator === '=') {
+    const stateWithSnapshot = pushUndoSnapshot(state);
+    const nextLines = formatLinesRange(state.lines, startLine, endLine);
+    return {
+      ...stateWithSnapshot,
+      lines: nextLines,
+      cursor: moveToFirstNonBlank(nextLines, { line: startLine, col: 0 }),
+      pendingKeys: undefined,
+    };
+  }
+
+  const clipboard = { type: 'line' as const, content };
+
+  // 복사 (yii): 커서는 복사 영역의 첫 줄로 이동
+  if (operator === 'y') {
+    return {
+      ...state,
+      cursor: moveToFirstNonBlank(state.lines, { line: startLine, col: 0 }),
+      clipboard,
+      pendingKeys: undefined,
+    };
+  }
+
+  const stateWithSnapshot = pushUndoSnapshot(state);
+  const before = state.lines.slice(0, startLine);
+  const after = state.lines.slice(endLine + 1);
+
+  // 수정 (cii): 블록을 첫 줄의 들여쓰기만 남긴 빈 줄 하나로 교체하고 INSERT 진입 (autoindent)
+  if (operator === 'c') {
+    const indentStr = (state.lines[startLine] ?? '').match(/^[ \t]*/)?.[0] ?? '';
+    return {
+      ...stateWithSnapshot,
+      lines: [...before, indentStr, ...after],
+      cursor: { line: startLine, col: indentStr.length },
+      mode: 'INSERT',
+      clipboard,
+      pendingKeys: undefined,
+    };
+  }
+
+  // 삭제 (dii)
+  const nextLines = before.length + after.length === 0 ? [''] : [...before, ...after];
+  return {
+    ...stateWithSnapshot,
+    lines: nextLines,
+    cursor: moveToFirstNonBlank(nextLines, { line: Math.min(startLine, nextLines.length - 1), col: 0 }),
+    clipboard,
+    pendingKeys: undefined,
+  };
+}
