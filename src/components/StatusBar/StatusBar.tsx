@@ -9,14 +9,16 @@ export interface StatusBarProps {
   pendingKeys?: string;
   /** 매크로 기록 중 상태 정보 */
   recordingMacro?: { register: string; keys: string[] } | null;
-  /** 커맨드라인 종류 (':' | '/') */
-  commandType?: ':' | '/';
+  /** 커맨드라인 종류 (':' | '/' | '=') */
+  commandType?: ':' | '/' | '=';
   /** 커맨드라인 입력 문자열 */
   commandBuffer?: string;
   /** 커맨드/검색 실행 결과 알림 메시지 */
   commandMessage?: string;
   /** Insert 모드 일회성 Normal 명령 실행 세션 (Ctrl+o) */
   insertNormalSession?: boolean;
+  /** Insert 모드 레지스터 삽입 대기 상태 (Ctrl+r) */
+  insertRegisterPending?: boolean;
 }
 
 export const StatusBar: React.FC<StatusBarProps> = ({
@@ -29,17 +31,20 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   commandBuffer,
   commandMessage,
   insertNormalSession,
+  insertRegisterPending,
 }) => {
   const displayMode =
     insertNormalSession
       ? 'INSERT (normal)'
+      : insertRegisterPending
+      ? 'INSERT (register)'
       : mode === 'VISUAL_LINE'
       ? 'VISUAL LINE'
       : mode === 'VISUAL_BLOCK'
       ? 'VISUAL BLOCK'
       : mode;
   const modeClass =
-    insertNormalSession
+    insertNormalSession || insertRegisterPending
       ? 'mode-insert-normal'
       : mode === 'VISUAL_LINE' || mode === 'VISUAL_BLOCK'
       ? 'mode-visual'
@@ -61,7 +66,9 @@ export const StatusBar: React.FC<StatusBarProps> = ({
             <span className="prompt-text">{commandBuffer ?? ''}</span>
             <span className="prompt-cursor">_</span>
             <span className="prompt-hint">
-              {mode === 'COMMAND'
+              {commandType === '='
+                ? '(수식 입력 후 Enter 계산 삽입, Esc 취소)'
+                : mode === 'COMMAND'
                 ? '(예: 10, %s/old/new/g, w • Enter 실행, Esc 취소)'
                 : '(단어 입력 후 Enter 실행, Esc 취소)'}
             </span>

@@ -76,6 +76,20 @@ export function getRegisterContent(
     return null;
   }
 
+  // 특수 읽기 전용 레지스터 (%: 현재 파일명, /: 마지막 검색어)
+  if (targetReg === '%') {
+    return {
+      type: 'text',
+      content: state.primaryFilename ?? 'practice.txt',
+    };
+  }
+  if (targetReg === '/') {
+    return {
+      type: 'text',
+      content: state.lastSearchQuery ?? '',
+    };
+  }
+
   // 특정 명명된 레지스터 지정 시
   if (targetReg && targetReg !== '"') {
     const entry = state.registers?.[targetReg];

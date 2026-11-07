@@ -100,8 +100,8 @@ export interface VimEditorState {
   currentChangeKeys?: string[];
   /** 커맨드라인(:) 또는 검색(/) 입력 버퍼 */
   commandBuffer?: string;
-  /** 커맨드라인 종류 (':' | '/') */
-  commandType?: ':' | '/';
+  /** 커맨드라인 종류 (':' | '/' | '=') */
+  commandType?: ':' | '/' | '=';
   /** 마지막 검색어 ('n', 'N', '*' 재검색용) */
   lastSearchQuery?: string;
   /** 커맨드라인 또는 검색 실행 결과 피드백 메시지 (예: '10번째 줄로 이동', 'E492: 알 수 없는 명령어') */
@@ -148,6 +148,14 @@ export interface VimEditorState {
   folds?: FoldRange[];
   /** Insert 모드 일회성 Normal 명령 실행 세션 (Ctrl+o) */
   insertNormalSession?: boolean;
+  /** Insert 모드 및 Command 모드 Ctrl+r 레지스터 입력 대기 상태 */
+  insertRegisterPending?: boolean;
+  /** Ctrl+r = 표현식 레지스터 계산 완료 후 복귀할 컨텍스트 */
+  expressionReturnContext?: {
+    mode: 'INSERT' | 'COMMAND';
+    cursor?: CursorPosition;
+    commandBuffer?: string;
+  } | null;
   /** 버퍼 내 단어 자동완성 팝업 세션 (Ctrl+n, Ctrl+p) */
   completionSession?: CompletionSession | null;
   /** 마지막 INSERT 모드 종료 시점의 커서 위치 (gi용) */

@@ -474,27 +474,46 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson28!.checkComplete(stateDone)).toBe(true);
   });
 
-  it('레슨 29: g Ctrl+a 및 :sort u 완료 조건 검증', () => {
+  it('레슨 29: Ctrl+r 0 및 Ctrl+r = 완료 조건 검증', () => {
     const lesson29 = MISSIONS.find((m) => m.id === 29);
     expect(lesson29).toBeDefined();
+
+    const stateNotDone: VimEditorState = {
+      lines: ['const CHUNK_SIZE = 1024;', 'const maxBytes = '],
+      cursor: { line: 1, col: 17 },
+      mode: 'NORMAL',
+    };
+    expect(lesson29!.checkComplete(stateNotDone)).toBe(false);
+
+    const stateDone: VimEditorState = {
+      lines: ['const CHUNK_SIZE = 1024;', 'const maxBytes = CHUNK_SIZE * 65536;'],
+      cursor: { line: 1, col: 35 },
+      mode: 'NORMAL',
+    };
+    expect(lesson29!.checkComplete(stateDone)).toBe(true);
+  });
+
+  it('레슨 30: g Ctrl+a 및 :sort u 완료 조건 검증', () => {
+    const lesson30 = MISSIONS.find((m) => m.id === 30);
+    expect(lesson30).toBeDefined();
 
     const stateNotDone: VimEditorState = {
       lines: ['data_0', 'data_0', 'data_0', 'cherry', 'apple', 'banana', 'cherry'],
       cursor: { line: 0, col: 0 },
       mode: 'NORMAL',
     };
-    expect(lesson29!.checkComplete(stateNotDone)).toBe(false);
+    expect(lesson30!.checkComplete(stateNotDone)).toBe(false);
 
     const stateDone: VimEditorState = {
       lines: ['data_1', 'data_2', 'data_3', 'apple', 'banana', 'cherry'],
       cursor: { line: 3, col: 0 },
       mode: 'NORMAL',
     };
-    expect(lesson29!.checkComplete(stateDone)).toBe(true);
+    expect(lesson30!.checkComplete(stateDone)).toBe(true);
   });
 
-  it('모든 29개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(29);
+  it('모든 30개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(30);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();

@@ -738,7 +738,40 @@ export const MISSIONS: Mission[] = [
   },
   {
     id: 29,
-    title: '레슨 29: g Ctrl+a로 배열 번호를 한 번에 매기고 :sort u로 중복 데이터 정제하기',
+    title: '레슨 29: 타이핑 도중 Ctrl+r 0으로 변수명 붙여넣고 Ctrl+r =로 매직 넘버 계산하기',
+    description: 'INSERT 모드에서 빠져나가지 않고 Ctrl+r {reg}로 복사된 레지스터 값을 즉시 붙여넣고, Ctrl+r =로 수식을 계산하여 코드에 바로 삽입하세요.',
+    hint: 'yiw로 CHUNK_SIZE를 복사한 뒤, jA로 줄 끝에서 편집을 시작하세요. Ctrl+r 0으로 변수명을 붙여넣고, Ctrl+r =을 누른 뒤 1024*64 Enter로 계산값을 삽입하세요.',
+    par: 22,
+    optimalKeys: [
+      'y', 'i', 'w',
+      'j', 'A',
+      'Ctrl-r', '0',
+      ' ', '*', ' ',
+      'Ctrl-r', '=', '1', '0', '2', '4', '*', '6', '4', 'Enter',
+      ';',
+      'Escape',
+    ],
+    initialLines: [
+      'const CHUNK_SIZE = 1024;',
+      'const maxBytes = ',
+    ],
+    targetLines: [
+      'const CHUNK_SIZE = 1024;',
+      'const maxBytes = CHUNK_SIZE * 65536;',
+    ],
+    initialCursor: { line: 0, col: 6 },
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines.length === 2 &&
+        state.lines[0] === 'const CHUNK_SIZE = 1024;' &&
+        state.lines[1] === 'const maxBytes = CHUNK_SIZE * 65536;'
+      );
+    },
+  },
+  {
+    id: 30,
+    title: '레슨 30: g Ctrl+a로 배열 번호를 한 번에 매기고 :sort u로 중복 데이터 정제하기',
     description: 'Visual 모드에서 g Ctrl+a(또는 Alt+a)를 사용하여 목업 데이터에 1, 2, 3 순차 인덱스를 일괄 부여하고, :4,$sort u 명령으로 중복 태그 목록을 가나다순으로 정제하세요.',
     hint: 'V2j로 3개 줄을 선택 후 g와 Ctrl-a(또는 Alt-a)를 눌러 순차 번호를 매긴 뒤, :4,$sort u 를 입력하고 Enter를 누르세요.',
     par: 16,

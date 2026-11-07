@@ -36,7 +36,9 @@ import {
 import {
   syncRegisters,
   putFromRegister,
+  getRegisterContent,
 } from './registers';
+import { evaluateVimExpression } from './expressionParser';
 import {
   splitWindow,
   closeSplitWindow,
@@ -385,15 +387,220 @@ function handleSearchModeKey(state: VimEditorState, key: string): VimEditorState
 }
 
 /**
- * COMMAND 모드(:) 키 입력 처리
+ * 현재 커서 위치에 텍스트를 즉시 삽입하고 커서를 끝 위치로 전진시킵니다.
+ */
+export function insertTextAtCursor(
+  state: VimEditorState,
+  text: string
+): VimEditorState {
+  if (text.length === 0) {
+    return state;
+  }
+
+  const { line, col } = state.cursor;
+  const currentLine = state.lines[line] ?? '';
+
+  if (state.blockInsertSession) {
+    const updatedChars = [...state.blockInsertSession.typedChars, ...text.split('')];
+    state = {
+      ...state,
+      blockInsertSession: {
+        ...state.blockInsertSession,
+        typedChars: updatedChars,
+      },
+    };
+  }
+
+  if (!text.includes('\n')) {
+    const newLine = currentLine.slice(0, col) + text + currentLine.slice(col);
+    const nextLines = [...state.lines];
+    nextLines[line] = newLine;
+    return {
+      ...state,
+      lines: nextLines,
+      cursor: { line, col: col + text.length },
+    };
+  }
+
+  const parts = text.split('\n');
+  const prefix = currentLine.slice(0, col);
+  const suffix = currentLine.slice(col);
+
+  const newLines = [
+    ...state.lines.slice(0, line),
+    prefix + parts[0],
+    ...parts.slice(1, -1),
+    parts[parts.length - 1] + suffix,
+    ...state.lines.slice(line + 1),
+  ];
+
+  const finalLine = line + parts.length - 1;
+  const finalCol = (parts[parts.length - 1] ?? '').length;
+
+  return {
+    ...state,
+    lines: newLines,
+    cursor: { line: finalLine, col: finalCol },
+  };
+}
+
+/**
+ * COMMAND 모드(: 또는 =) 키 입력 처리
  */
 function handleCommandLineModeKey(state: VimEditorState, key: string): VimEditorState {
+  // 1. 표현식 레지스터(=) 프롬프트 처리
+  if (state.commandType === '=') {
+    if (key === 'Escape' || key === 'Ctrl-c' || key === 'Ctrl+c') {
+      const returnMode = state.expressionReturnContext?.mode ?? 'INSERT';
+      return {
+        ...state,
+        mode: returnMode,
+        commandBuffer: undefined,
+        commandType: undefined,
+        expressionReturnContext: undefined,
+        insertRegisterPending: undefined,
+      };
+    }
+
+    if (key === 'Backspace') {
+      if (state.commandBuffer && state.commandBuffer.length > 0) {
+        return {
+          ...state,
+          commandBuffer: state.commandBuffer.slice(0, -1),
+        };
+      }
+      const returnMode = state.expressionReturnContext?.mode ?? 'INSERT';
+      return {
+        ...state,
+        mode: returnMode,
+        commandBuffer: undefined,
+        commandType: undefined,
+        expressionReturnContext: undefined,
+        insertRegisterPending: undefined,
+      };
+    }
+
+    if (key === 'Enter') {
+      const evalRes = evaluateVimExpression(state.commandBuffer ?? '');
+      const returnCtx = state.expressionReturnContext;
+      const returnMode = returnCtx?.mode ?? 'INSERT';
+
+      if (!evalRes.success) {
+        return {
+          ...state,
+          mode: returnMode,
+          commandBuffer: undefined,
+          commandType: undefined,
+          expressionReturnContext: undefined,
+          commandMessage: `E15: ${evalRes.error ?? '잘못된 수식입니다'}`,
+        };
+      }
+
+      // 성공 시 '=' 레지스터에 결과값 저장
+      const newRegisters = {
+        ...(state.registers ?? {}),
+        '=': {
+          type: 'char' as const,
+          content: evalRes.result,
+        },
+      };
+
+      if (returnMode === 'COMMAND') {
+        const prevCmd = returnCtx?.commandBuffer ?? '';
+        return {
+          ...state,
+          mode: 'COMMAND',
+          commandType: ':',
+          commandBuffer: prevCmd + evalRes.result,
+          registers: newRegisters,
+          expressionReturnContext: undefined,
+        };
+      } else {
+        // INSERT 모드 복귀 및 계산 결과 즉시 삽입
+        const stateWithRegisters: VimEditorState = {
+          ...state,
+          mode: 'INSERT',
+          registers: newRegisters,
+          commandBuffer: undefined,
+          commandType: undefined,
+          expressionReturnContext: undefined,
+          cursor: returnCtx?.cursor ?? state.cursor,
+        };
+
+        const insertedState = insertTextAtCursor(stateWithRegisters, evalRes.result);
+        if (insertedState.currentChangeKeys) {
+          insertedState.currentChangeKeys = [
+            ...insertedState.currentChangeKeys,
+            'Ctrl-r',
+            '=',
+            ...(state.commandBuffer?.split('') ?? []),
+            'Enter',
+          ];
+        }
+
+        return insertedState;
+      }
+    }
+
+    // 일반 수식 문자 타이핑
+    if (key.length === 1) {
+      return {
+        ...state,
+        commandBuffer: (state.commandBuffer ?? '') + key,
+      };
+    }
+
+    return state;
+  }
+
+  // 2. 일반 COMMAND (:) 모드 내 Ctrl+r {reg} 처리
+  if (state.insertRegisterPending) {
+    if (key === 'Escape' || key === 'Ctrl-c' || key === 'Ctrl+c') {
+      return { ...state, insertRegisterPending: undefined };
+    }
+
+    if (key === '=') {
+      return {
+        ...state,
+        commandType: '=',
+        expressionReturnContext: {
+          mode: 'COMMAND',
+          commandBuffer: state.commandBuffer,
+        },
+        commandBuffer: '',
+        insertRegisterPending: undefined,
+      };
+    }
+
+    const regKey = key.length === 1 ? key : undefined;
+    if (regKey) {
+      const regClip = getRegisterContent(state, regKey);
+      const textToInsert = regClip?.content ?? '';
+      return {
+        ...state,
+        commandBuffer: (state.commandBuffer ?? '') + textToInsert,
+        insertRegisterPending: undefined,
+      };
+    }
+
+    return { ...state, insertRegisterPending: undefined };
+  }
+
+  if (key === 'Ctrl-r' || key === 'Ctrl+r' || key === 'ctrl-r' || key === '<C-r>') {
+    return {
+      ...state,
+      insertRegisterPending: true,
+    };
+  }
+
+  // 3. 기존 콜론 커맨드라인 키 처리
   if (key === 'Escape') {
     return {
       ...state,
       mode: 'NORMAL',
       commandBuffer: undefined,
       commandType: undefined,
+      insertRegisterPending: undefined,
     };
   }
 
@@ -409,6 +616,7 @@ function handleCommandLineModeKey(state: VimEditorState, key: string): VimEditor
       mode: 'NORMAL',
       commandBuffer: undefined,
       commandType: undefined,
+      insertRegisterPending: undefined,
     };
   }
 
@@ -440,7 +648,60 @@ function handleInsertModeKey(
 
   // 타임아웃 발생 시 대기 버퍼 초기화
   if (key === 'Timeout') {
-    return { ...state, pendingKeys: undefined };
+    return { ...state, pendingKeys: undefined, insertRegisterPending: undefined };
+  }
+
+  // Ctrl+r 레지스터 대기 상태 (INSERT_REGISTER_PENDING)
+  if (state.insertRegisterPending) {
+    if (key === 'Escape' || key === 'Ctrl-c' || key === 'Ctrl+c') {
+      return { ...state, insertRegisterPending: undefined };
+    }
+
+    // Ctrl+r = (표현식 레지스터 입력 프롬프트)
+    if (key === '=') {
+      return {
+        ...state,
+        mode: 'COMMAND',
+        commandType: '=',
+        commandBuffer: '',
+        insertRegisterPending: undefined,
+        expressionReturnContext: {
+          mode: 'INSERT',
+          cursor: state.cursor,
+        },
+      };
+    }
+
+    // 레지스터 키 입력 (", 0~9, a~z, %, /, _, =)
+    const regKey = key.length === 1 ? key : undefined;
+    if (regKey) {
+      const regClip = getRegisterContent(state, regKey);
+      const textToInsert = regClip?.content ?? '';
+
+      let nextState: VimEditorState = {
+        ...state,
+        insertRegisterPending: undefined,
+      };
+
+      if (textToInsert.length > 0) {
+        nextState = insertTextAtCursor(nextState, textToInsert);
+        if (!isReplayingDot && state.currentChangeKeys) {
+          nextState.currentChangeKeys = [...state.currentChangeKeys, 'Ctrl-r', regKey];
+        }
+      }
+
+      return nextState;
+    }
+
+    return { ...state, insertRegisterPending: undefined };
+  }
+
+  // Ctrl+r: 레지스터 즉시 삽입 대기 상태 진입
+  if (key === 'Ctrl-r' || key === 'Ctrl+r' || key === 'ctrl-r' || key === '<C-r>') {
+    return {
+      ...state,
+      insertRegisterPending: true,
+    };
   }
 
   // 커스텀 키매핑 검사 (예: Insert 모드 jk 또는 jj -> <Esc>)

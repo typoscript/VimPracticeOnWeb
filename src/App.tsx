@@ -1505,6 +1505,7 @@ export function App() {
                       folds={editorState.folds}
                       completionSession={editorState.activePaneIndex === 0 ? editorState.completionSession : undefined}
                       insertNormalSession={editorState.activePaneIndex === 0 ? editorState.insertNormalSession : undefined}
+                      insertRegisterPending={editorState.activePaneIndex === 0 ? editorState.insertRegisterPending : undefined}
                     />
                   </div>
 
@@ -1539,6 +1540,7 @@ export function App() {
                       folds={editorState.folds}
                       completionSession={editorState.activePaneIndex === 1 ? editorState.completionSession : undefined}
                       insertNormalSession={editorState.activePaneIndex === 1 ? editorState.insertNormalSession : undefined}
+                      insertRegisterPending={editorState.activePaneIndex === 1 ? editorState.insertRegisterPending : undefined}
                     />
                   </div>
                 </div>
@@ -1562,6 +1564,7 @@ export function App() {
                   folds={displayEditorState.folds}
                   completionSession={displayEditorState.completionSession}
                   insertNormalSession={displayEditorState.insertNormalSession}
+                  insertRegisterPending={displayEditorState.insertRegisterPending}
                 />
               )}
             </div>
@@ -1570,6 +1573,7 @@ export function App() {
               mode={displayEditorState.mode}
               cursor={displayEditorState.cursor}
               insertNormalSession={displayEditorState.insertNormalSession}
+              insertRegisterPending={displayEditorState.insertRegisterPending}
               filename={
                 displayEditorState.splitPanes
                   ? (displayEditorState.activePaneIndex === 1

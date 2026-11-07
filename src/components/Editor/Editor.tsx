@@ -35,6 +35,8 @@ export interface EditorProps {
   completionSession?: CompletionSession | null;
   /** Insert 모드 일회성 Normal 명령 실행 세션 (Ctrl+o) */
   insertNormalSession?: boolean;
+  /** Insert 모드 및 Command 모드 Ctrl+r 레지스터 입력 대기 상태 */
+  insertRegisterPending?: boolean;
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -52,6 +54,7 @@ export const Editor: React.FC<EditorProps> = ({
   folds,
   completionSession,
   insertNormalSession,
+  insertRegisterPending,
 }) => {
   const scrollerRef = React.useRef<HTMLDivElement>(null);
 
@@ -166,6 +169,7 @@ export const Editor: React.FC<EditorProps> = ({
                         lineMatches,
                         isFocused,
                         insertNormalSession,
+                        insertRegisterPending,
                       })}
                       {isCursorLine &&
                         completionSession &&
@@ -232,6 +236,7 @@ interface RenderLineOptions {
   lineMatches: SearchMatch[];
   isFocused: boolean;
   insertNormalSession?: boolean;
+  insertRegisterPending?: boolean;
 }
 
 function renderLineContent(opts: RenderLineOptions): React.ReactNode {
@@ -245,6 +250,7 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     lineMatches,
     isFocused,
     insertNormalSession,
+    insertRegisterPending,
   } = opts;
   const isCursorLine = cursor.line === lineIdx;
   const cursorCol = isCursorLine ? cursor.col : null;
@@ -301,15 +307,20 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     const isTrailingCursor = isCursor && i >= text.length;
 
     // 빈 줄이거나 줄 끝 뒤의 가상 커서 위치에서는 공백 너비 유지를 위해 non-breaking space 사용
+    // Ctrl+r 레지스터 대기 상태에서는 커서 위치에 " 표시
     const displayChar =
-      (text.length === 0 || isTrailingCursor) && char === ' '
+      insertRegisterPending && isCursor
+        ? '"'
+        : (text.length === 0 || isTrailingCursor) && char === ' '
         ? '\u00A0'
         : char;
 
     let classNames = isCursor
       ? `vim-cursor ${
           isFocused
-            ? insertNormalSession
+            ? insertRegisterPending
+              ? 'cursor-insert-register'
+              : insertNormalSession
               ? 'cursor-insert-normal'
               : `cursor-${mode.toLowerCase()}`
             : 'cursor-unfocused'

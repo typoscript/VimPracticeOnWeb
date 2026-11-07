@@ -186,6 +186,14 @@
   box-shadow: 0 0 6px rgba(187, 154, 247, 0.6);
 }
 
+/* INSERT (register) 모드: 주황/골드 블록 커서 (Ctrl+r " 프롬프트 대기) */
+.cursor-insert-register {
+  background-color: #fab387;
+  color: #11111b;
+  font-weight: bold;
+  box-shadow: 0 0 6px rgba(250, 179, 135, 0.7);
+}
+
 /* VISUAL 모드: 보라/핑크 블록 */
 .cursor-visual,
 .cursor-visual_block {

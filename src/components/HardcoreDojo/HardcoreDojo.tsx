@@ -58,6 +58,14 @@ export function HardcoreDojo({
   const [isTargetHit, setIsTargetHit] = useState(false);
   const [warningMessage, setWarningMessage] = useState<string | null>(null);
 
+  const isMountedRef = useRef(true);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const hardcoreGuardRef = useRef(new HardcoreGuard());
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const arenaRef = useRef<HTMLDivElement>(null);
@@ -193,11 +201,15 @@ export function HardcoreDojo({
     setWarningMessage(`${message}${suggestion ? ` 👉 ${suggestion}` : ''}`);
 
     setTimeout(() => {
-      setIsShaking(false);
+      if (isMountedRef.current) {
+        setIsShaking(false);
+      }
     }, 400);
 
     setTimeout(() => {
-      setWarningMessage(null);
+      if (isMountedRef.current) {
+        setWarningMessage(null);
+      }
     }, 1800);
   }, []);
 
