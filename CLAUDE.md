@@ -15,7 +15,7 @@
   `npm test -- src/engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 92개 테스트 파일, 1,164개 테스트 100% 통과 필수)*
+  *(현재 93개 테스트 파일, 1,173개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*

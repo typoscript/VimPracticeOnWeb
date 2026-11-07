@@ -294,6 +294,8 @@ export interface VimEditorState {
   recordingMacro?: { register: string; keys: string[] } | null;
   /** 가장 마지막에 실행했던 매크로 레지스터 이름 (@@ 재실행용) */
   lastPlayedMacro?: string | null;
+  /** 중첩 매크로 실행 중 모션 실패로 매크로가 중단되었음을 상위 매크로에 알리는 일시적 신호 (최상위 입력에서는 항상 제거됨) */
+  macroAborted?: boolean;
   /** 직전 줄 내 문자 탐색 정보 (';' 및 ',' 반복용) */
   lastCharSearch?: { type: 'f' | 'F' | 't' | 'T'; char: string } | null;
   /** 마크 위치 저장소 (m{a-zA-Z}, 전역 마크 A-Z는 파일/버퍼 위치 포함) */

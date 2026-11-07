@@ -1,5 +1,6 @@
 import { VimEditorState } from '../types/vim';
 import { handleKey } from './vimEngine';
+import { isMacroKeyFailure } from './macroAbort';
 
 /**
  * 매크로 슬로우모션 디버거 엔진 (MacroDebugger)
@@ -23,6 +24,8 @@ export interface MacroFrame {
   state: VimEditorState;
   /** 직전 프레임 대비 버퍼 텍스트가 변경되었는지 여부 */
   changed: boolean;
+  /** 이 키에서 모션이 실패하여 매크로가 중단되었는지 여부 (실제 Vim과 동일하게 이후 키는 실행되지 않음) */
+  failed: boolean;
 }
 
 export interface MacroTrace {
@@ -30,6 +33,8 @@ export interface MacroTrace {
   keys: string[];
   count: number;
   frames: MacroFrame[];
+  /** 모션 실패로 매크로가 중간에 중단되었는지 여부 */
+  aborted: boolean;
 }
 
 /** 매크로 레지스터 이름 정규화: 대문자 레지스터(qA로 이어 녹화)는 소문자 레지스터에 저장됩니다. */
@@ -71,34 +76,40 @@ export function buildMacroTrace(state: VimEditorState, register: string, count =
   };
 
   const frames: MacroFrame[] = [
-    { index: 0, key: null, iteration: -1, keyIndex: -1, state: initial, changed: false },
+    { index: 0, key: null, iteration: -1, keyIndex: -1, state: initial, changed: false, failed: false },
   ];
 
   if (keys.length === 0) {
-    return { register: reg, keys, count: repeat, frames };
+    return { register: reg, keys, count: repeat, frames, aborted: false };
   }
 
   let cur = initial;
-  for (let it = 0; it < repeat; it++) {
-    keys.forEach((k, ki) => {
+  let aborted = false;
+  for (let it = 0; it < repeat && !aborted; it++) {
+    for (let ki = 0; ki < keys.length; ki++) {
+      const k = keys[ki];
       const next = handleKey(cur, k, false, 1);
+      aborted = !!next.macroAborted || isMacroKeyFailure(cur, next, k);
+      const frameState = next.macroAborted ? { ...next, macroAborted: undefined } : next;
       frames.push({
         index: frames.length,
         key: k,
         iteration: it,
         keyIndex: ki,
-        state: next,
+        state: frameState,
         changed: next.lines !== cur.lines && next.lines.join('\n') !== cur.lines.join('\n'),
+        failed: aborted,
       });
-      cur = next;
-    });
+      cur = frameState;
+      if (aborted) break;
+    }
   }
 
   // 실제 @{reg} 실행 결과와 동일하게 마지막 재생 레지스터를 유지합니다.
   const last = frames[frames.length - 1];
   frames[frames.length - 1] = { ...last, state: { ...last.state, lastPlayedMacro: reg } };
 
-  return { register: reg, keys, count: repeat, frames };
+  return { register: reg, keys, count: repeat, frames, aborted };
 }
 
 /** 재생 속도 배율별 프레임 간 딜레이(ms). 1x = 300ms 기준입니다. */

@@ -111,6 +111,41 @@ describe('MacroDebugger Component', () => {
     expect(screen.getByTestId('macro-play-btn')).toHaveTextContent('재생');
   });
 
+  it('INSERT 모드에서는 추적·실행을 막고 안내를 표시한다', () => {
+    const onRunMacro = vi.fn();
+    render(
+      <MacroDebugger
+        baseState={{ ...createRecordedState(), mode: 'INSERT' }}
+        isOpen={true}
+        onToggle={vi.fn()}
+        onPreviewFrame={vi.fn()}
+        onRunMacro={onRunMacro}
+      />
+    );
+
+    expect(screen.getByTestId('macro-debugger-mode-warning')).toHaveTextContent('INSERT');
+    expect(screen.getByTestId('macro-run-btn')).toBeDisabled();
+    fireEvent.click(screen.getByTestId('macro-next-btn'));
+    expect(screen.queryByTestId('macro-current-key')).not.toBeInTheDocument();
+    expect(onRunMacro).not.toHaveBeenCalled();
+  });
+
+  it('모션 실패 프레임에서 중단 배지를 표시한다', () => {
+    render(
+      <MacroDebugger
+        baseState={{ ...createRecordedState(), cursor: { line: 2, col: 0 } }}
+        isOpen={true}
+        onToggle={vi.fn()}
+        onPreviewFrame={vi.fn()}
+        onRunMacro={vi.fn()}
+      />
+    );
+
+    for (let i = 0; i < 5; i++) fireEvent.click(screen.getByTestId('macro-next-btn'));
+    expect(screen.getByTestId('macro-current-key')).toHaveTextContent('j');
+    expect(screen.getByTestId('macro-failed-badge')).toBeInTheDocument();
+  });
+
   it('실행 버튼은 미리보기를 해제하고 [count]@{reg} 실행을 요청한다', () => {
     const onPreviewFrame = vi.fn();
     const onRunMacro = vi.fn();

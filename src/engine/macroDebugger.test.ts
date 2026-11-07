@@ -93,6 +93,21 @@ describe('MacroDebugger Engine: 매크로 프레임 분해', () => {
     expect(clampFrameIndex(trace, 999)).toBe(trace.frames.length - 1);
   });
 
+  it('모션이 실패한 프레임에서 추적을 멈추고 실제 실행 결과와 일치한다', () => {
+    const recorded = press(createState(['abc', 'abc', 'abc']), ['q', 'a', 'x', 'j', 'q']);
+    const trace = buildMacroTrace(recorded, 'a', 10);
+    const real = press(recorded, ['1', '0', '@', 'a']);
+    const last = trace.frames[trace.frames.length - 1];
+
+    expect(trace.aborted).toBe(true);
+    // 2번째 줄: x, j / 3번째 줄: x, j(실패)
+    expect(trace.frames).toHaveLength(1 + 4);
+    expect(last.key).toBe('j');
+    expect(last.failed).toBe(true);
+    expect(trace.frames.filter((f) => f.failed)).toHaveLength(1);
+    expect(last.state.lines).toEqual(real.lines);
+  });
+
   it('@@ 와 [count]@@ 로 마지막 매크로를 반복 실행한다 (레슨 53 키 흐름)', () => {
     let state = press(createState(['apple', 'banana', 'cherry', 'grape', 'melon']), RECORD_BULLET);
     state = press(state, ['@', 'a']);

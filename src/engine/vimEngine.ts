@@ -1,4 +1,5 @@
 import { VimEditorState, CursorPosition, FoldRange } from '../types/vim';
+import { isMacroKeyFailure } from './macroAbort';
 import { clampCursor, getMaxCol } from './cursor';
 import {
   moveLeft,
@@ -3125,25 +3126,31 @@ function handleNormalModeKey(
     }
 
     const macroKeys = Array.isArray(regEntry.content) ? regEntry.content : [regEntry.content];
-    let curState: VimEditorState = {
+    let curState: VimEditorState = withoutMacroAborted({
       ...state,
       pendingKeys: undefined,
       lastPlayedMacro: targetReg,
-    };
+    });
 
+    // 실제 Vim과 동일하게 모션 실패(또는 중첩 매크로 중단) 시 남은 키와 반복 횟수를 모두 버립니다.
+    let aborted = false;
     const repeatCount = parsed.totalCount;
-    for (let c = 0; c < repeatCount; c++) {
+    for (let c = 0; c < repeatCount && !aborted; c++) {
       if (macroDepth >= 100) break;
-      curState = macroKeys.reduce((accState, mk) => {
-        if (macroDepth >= 100) return accState;
-        return handleKey(accState, mk, false, macroDepth + 1);
-      }, curState);
+      for (const mk of macroKeys) {
+        const nextState = handleKey(curState, mk, false, macroDepth + 1);
+        aborted = !!nextState.macroAborted || isMacroKeyFailure(curState, nextState, mk);
+        curState = nextState;
+        if (aborted) break;
+      }
     }
 
-    return {
+    const result: VimEditorState = withoutMacroAborted({
       ...curState,
       lastPlayedMacro: targetReg,
-    };
+    });
+    // 중첩 매크로(@b 안의 @a 등)에서는 상위 매크로도 함께 중단되도록 신호를 전달합니다.
+    return aborted && macroDepth > 0 ? { ...result, macroAborted: true } : result;
   }
 
   // 2. 직전 변경 반복 ('.' Dot Repeat)
@@ -4235,13 +4242,24 @@ export function handleKey(
   isReplayingDot = false,
   macroDepth = 0
 ): VimEditorState {
+  let nextState: VimEditorState;
   if (process.env.NODE_ENV !== 'production') {
     deepFreeze(state);
-    const nextState = rawHandleKey(state, key, isReplayingDot, macroDepth);
+    nextState = rawHandleKey(state, key, isReplayingDot, macroDepth);
     assertValidVimState(state, nextState, key);
-    return nextState;
+  } else {
+    nextState = rawHandleKey(state, key, isReplayingDot, macroDepth);
   }
-  return rawHandleKey(state, key, isReplayingDot, macroDepth);
+  // 매크로 중단 신호는 매크로 실행 중에만 의미가 있으므로 최상위 입력에서는 제거합니다.
+  return macroDepth === 0 ? withoutMacroAborted(nextState) : nextState;
+}
+
+/** 일시적인 매크로 중단 신호(macroAborted)를 제거한 상태를 반환합니다. */
+function withoutMacroAborted(state: VimEditorState): VimEditorState {
+  if (!state.macroAborted) return state;
+  const copy = { ...state };
+  delete copy.macroAborted;
+  return copy;
 }
 
 /**

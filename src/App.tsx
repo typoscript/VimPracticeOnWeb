@@ -486,12 +486,13 @@ export function App() {
     keystrokeCountRef.current = 0;
   }, []);
 
-  const displayEditorState =
-    macroPreviewState
-      ? macroPreviewState
-      : previewStepIndex !== null && timelineSteps[previewStepIndex]
+  // 타임라인 스텝 미리보기 중이면 해당 스냅샷이 다음 키 입력의 기준 상태가 됩니다.
+  const timelineBaseState =
+    previewStepIndex !== null && timelineSteps[previewStepIndex]
       ? timelineSteps[previewStepIndex].snapshot
       : editorState;
+
+  const displayEditorState = macroPreviewState ?? timelineBaseState;
 
   const isCompleted =
     currentTab === 'course'
@@ -1990,7 +1991,7 @@ export function App() {
             <MacroDebugger
               isOpen={showMacroDebugger}
               onToggle={handleToggleMacroDebugger}
-              baseState={editorState}
+              baseState={timelineBaseState}
               onPreviewFrame={setMacroPreviewState}
               onRunMacro={handleRunMacroFromDebugger}
             />

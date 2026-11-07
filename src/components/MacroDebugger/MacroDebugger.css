@@ -237,3 +237,29 @@
   background: var(--accent-color, #7aa2f7);
   color: var(--bg-primary, #1a1b26);
 }
+
+.macro-debugger-transport button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.macro-debugger-warning {
+  font-size: 0.8rem;
+  color: #e0af68;
+  margin-bottom: 8px;
+}
+
+.macro-key-chip.failed {
+  background: #f7768e;
+  border-color: #f7768e;
+}
+
+.macro-key-chip.skipped {
+  opacity: 0.3;
+  text-decoration: line-through;
+}
+
+.macro-failed-badge {
+  color: #f7768e;
+  font-weight: 700;
+}

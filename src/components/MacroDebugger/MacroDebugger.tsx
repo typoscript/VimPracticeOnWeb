@@ -48,6 +48,8 @@ export const MacroDebugger: React.FC<MacroDebuggerProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
 
   const register = macroRegisters.includes(selectedRegister) ? selectedRegister : macroRegisters[0] ?? '';
+  // @{reg}는 NORMAL 모드의 새 명령으로만 실행되므로, 다른 모드나 대기 키가 있을 때는 추적·실행을 막습니다.
+  const canDebug = baseState.mode === 'NORMAL' && !baseState.pendingKeys;
 
   // 에디터 상태가 바뀌면(키 입력, 실제 실행 등) 기존 추적 결과는 더 이상 유효하지 않으므로 초기화합니다.
   useEffect(() => {
@@ -86,7 +88,7 @@ export const MacroDebugger: React.FC<MacroDebuggerProps> = ({
 
   const ensureTrace = (): MacroTrace | null => {
     if (trace) return trace;
-    if (!register) return null;
+    if (!register || !canDebug) return null;
     const next = buildMacroTrace(baseState, register, count);
     setTrace(next);
     setFrameIndex(0);
@@ -127,7 +129,7 @@ export const MacroDebugger: React.FC<MacroDebuggerProps> = ({
   };
 
   const handleRun = () => {
-    if (!register) return;
+    if (!register || !canDebug) return;
     handleReset();
     onPreviewFrame(null);
     onRunMacro(register, count);
@@ -243,6 +245,7 @@ export const MacroDebugger: React.FC<MacroDebuggerProps> = ({
               type="button"
               className="macro-play-btn"
               onClick={handlePlayPause}
+              disabled={!canDebug && !trace}
               title={isPlaying ? '일시정지' : '슬로우모션 재생'}
               data-testid="macro-play-btn"
             >
@@ -255,12 +258,20 @@ export const MacroDebugger: React.FC<MacroDebuggerProps> = ({
               type="button"
               className="macro-run-btn"
               onClick={handleRun}
+              disabled={!canDebug}
               title={`에디터에 ${count > 1 ? count : ''}@${register} 실제 실행`}
               data-testid="macro-run-btn"
             >
               ⚡ {count > 1 ? count : ''}@{register} 실행
             </button>
           </div>
+
+          {!canDebug && (
+            <div className="macro-debugger-warning" data-testid="macro-debugger-mode-warning">
+              ⚠ NORMAL 모드에서 대기 중인 키 없이만 매크로를 추적·실행할 수 있습니다. (현재: {baseState.mode}
+              {baseState.pendingKeys ? ` · 대기 키 ${baseState.pendingKeys}` : ''})
+            </div>
+          )}
 
           <div className="macro-key-strip" data-testid="macro-key-strip">
             {Array.from({ length: trace ? trace.count : 1 }).map((_, it) => (
@@ -270,10 +281,13 @@ export const MacroDebugger: React.FC<MacroDebuggerProps> = ({
                   const isCurrent = !!frame && frame.iteration === it && frame.keyIndex === ki;
                   const isDone =
                     !!frame && (frame.iteration > it || (frame.iteration === it && frame.keyIndex > ki));
+                  const isSkipped = !!frame?.failed && !isCurrent && !isDone;
                   return (
                     <span
                       key={ki}
-                      className={`macro-key-chip ${isCurrent ? 'current' : ''} ${isDone ? 'done' : ''}`}
+                      className={`macro-key-chip ${isCurrent ? 'current' : ''} ${isDone ? 'done' : ''} ${
+                        isCurrent && frame?.failed ? 'failed' : ''
+                      } ${isSkipped ? 'skipped' : ''}`}
                       data-testid={isCurrent ? 'macro-current-key' : undefined}
                     >
                       {formatMacroKey(k)}
@@ -295,6 +309,11 @@ export const MacroDebugger: React.FC<MacroDebuggerProps> = ({
                   {frameState.cursor.line + 1}:{frameState.cursor.col + 1}
                 </span>
                 {frame.changed && <span className="macro-changed-badge">✎ 버퍼 변경</span>}
+                {frame.failed && (
+                  <span className="macro-failed-badge" data-testid="macro-failed-badge">
+                    ⚠ 모션 실패 → 매크로 중단 (남은 키·반복 생략)
+                  </span>
+                )}
                 <code className="macro-line-preview" data-testid="macro-line-preview">
                   {cursorLine.slice(0, cursorCol)}
                   <span className="macro-cursor-char">{cursorLine[cursorCol] ?? ' '}</span>
