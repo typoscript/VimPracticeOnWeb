@@ -52,6 +52,7 @@ import {
   argdo,
 } from './argEngine';
 import { openNetrw } from './netrwEngine';
+import { formatRegisters } from './registers';
 
 export type KeyRunner = (
   state: VimEditorState,
@@ -1165,6 +1166,35 @@ export function executeCommandLine(
       commandBuffer: undefined,
       commandType: undefined,
       commandMessage: formatChangeList(state),
+    };
+  }
+
+  // 레지스터 뷰어 닫기: :reg close, :registers close, :regclose
+  if (/^(?:reg|registers|display|di)\s+close$/i.test(cleanCmdRaw) || cleanCmdRaw === 'regclose') {
+    return {
+      ...state,
+      showRegisterInspector: false,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: '레지스터 뷰어 닫힘',
+    };
+  }
+
+  // 레지스터 뷰어 조회: :reg, :registers, :display, :di ([arg] 필터링 지원)
+  const regMatch = cleanCmdRaw.match(/^(?:reg|registers|display|di)(?:!?)(?:\s+(.*))?$/i);
+  if (regMatch) {
+    const filterArg = regMatch[1]?.trim();
+    const formatted = formatRegisters(state, filterArg);
+    return {
+      ...state,
+      showRegisterInspector: true,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: formatted,
     };
   }
 

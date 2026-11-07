@@ -229,3 +229,150 @@ export function putFromRegister(
     pendingKeys: undefined,
   };
 }
+
+/**
+ * 레지스터 내용을 순정 Vim :registers / :reg 형식으로 포맷팅합니다.
+ */
+export function formatRegisters(state: VimEditorState, filterArg?: string): string {
+  interface RegDisplay {
+    name: string;
+    type: 'l' | 'c' | 'b' | 'm';
+    content: string;
+  }
+
+  const list: RegDisplay[] = [];
+
+  // 1. "" (무명 기본 레지스터)
+  const unnamedEntry = state.registers?.['"'];
+  if (unnamedEntry && unnamedEntry.content) {
+    const rawContent = Array.isArray(unnamedEntry.content) ? unnamedEntry.content.join('') : unnamedEntry.content;
+    if (rawContent) {
+      list.push({
+        name: '"',
+        type: unnamedEntry.type === 'line' ? 'l' : 'c',
+        content: rawContent,
+      });
+    }
+  } else if (state.clipboard?.content) {
+    list.push({
+      name: '"',
+      type: state.clipboard.type === 'line' ? 'l' : 'c',
+      content: state.clipboard.content,
+    });
+  }
+
+  // 2. "0 ~ "9 (숫자 레지스터)
+  for (let i = 0; i <= 9; i++) {
+    const key = String(i);
+    const entry = state.registers?.[key];
+    if (entry && entry.content) {
+      const rawContent = Array.isArray(entry.content) ? entry.content.join('') : entry.content;
+      if (rawContent) {
+        list.push({
+          name: key,
+          type: entry.type === 'line' ? 'l' : 'c',
+          content: rawContent,
+        });
+      }
+    }
+  }
+
+  // 3. "- (작은 삭제 레지스터)
+  const smallDel = state.registers?.['-'];
+  if (smallDel && smallDel.content) {
+    const rawContent = Array.isArray(smallDel.content) ? smallDel.content.join('') : smallDel.content;
+    if (rawContent) {
+      list.push({
+        name: '-',
+        type: smallDel.type === 'line' ? 'l' : 'c',
+        content: rawContent,
+      });
+    }
+  }
+
+  // 4. "a ~ "z (명명된 레지스터 및 매크로)
+  const alphaKeys = 'abcdefghijklmnopqrstuvwxyz'.split('');
+  for (const k of alphaKeys) {
+    const entry = state.registers?.[k];
+    if (entry && entry.content) {
+      const isMacro = entry.type === 'macro';
+      let rawContent = '';
+      if (Array.isArray(entry.content)) {
+        if (isMacro) {
+          rawContent = entry.content
+            .map((tok) => {
+              if (tok === 'Escape') return '<Esc>';
+              if (tok === 'Enter') return '<CR>';
+              return tok;
+            })
+            .join('');
+        } else {
+          rawContent = entry.content.join('');
+        }
+      } else {
+        rawContent = entry.content;
+      }
+
+      if (rawContent) {
+        list.push({
+          name: k,
+          type: isMacro ? 'm' : (entry.type === 'line' ? 'l' : 'c'),
+          content: rawContent,
+        });
+      }
+    }
+  }
+
+  // 5. "% (현재 파일명)
+  if (state.primaryFilename) {
+    list.push({
+      name: '%',
+      type: 'c',
+      content: state.primaryFilename,
+    });
+  }
+
+  // 6. ": (마지막 실행된 Ex 명령)
+  if (state.commandHistory && state.commandHistory.length > 0) {
+    const lastCmd = state.commandHistory[state.commandHistory.length - 1];
+    if (lastCmd) {
+      list.push({
+        name: ':',
+        type: 'c',
+        content: lastCmd,
+      });
+    }
+  }
+
+  // 7. "/ (마지막 검색어)
+  if (state.lastSearchQuery) {
+    list.push({
+      name: '/',
+      type: 'c',
+      content: state.lastSearchQuery,
+    });
+  }
+
+  // 필터링 적용 (예: :reg a b 0 ")
+  let filtered = list;
+  if (filterArg && filterArg.trim().length > 0) {
+    const cleaned = filterArg.replace(/[\s"]/g, '');
+    const targetSet = new Set(cleaned.split(''));
+    if (filterArg.includes('"')) {
+      targetSet.add('"');
+    }
+    filtered = list.filter((item) => targetSet.has(item.name));
+  }
+
+  const header = '--- Registers ---';
+  if (filtered.length === 0) {
+    return header;
+  }
+
+  const lines = filtered.map((item) => {
+    const singleLinePreview = item.content.replace(/\r?\n/g, '^J');
+    return `"${item.name}   ${item.type}   ${singleLinePreview}`;
+  });
+
+  return [header, ...lines].join('\n');
+}

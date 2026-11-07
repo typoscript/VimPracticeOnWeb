@@ -304,6 +304,8 @@ export interface VimEditorState {
   argList?: ArgListState | null;
   /** Netrw 순정 파일 탐색기 상태 (:Explore, :edit ., :E) */
   netrw?: NetrwState | null;
+  /** 레지스터 인스펙터 패널 표시 여부 (:reg, :registers) */
+  showRegisterInspector?: boolean;
 }
 
 

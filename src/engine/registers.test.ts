@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { handleKey } from './vimEngine';
 import { VimEditorState } from '../types/vim';
+import { formatRegisters } from './registers';
 
 describe('Named Registers & Black Hole Register ("a~"z, "0, "_)', () => {
   it('"ayiw: 단어를 명명된 레지스터 a에 복사하고 "0과 기본 레지스터에도 저장한다', () => {
@@ -168,5 +169,123 @@ describe('Named Registers & Black Hole Register ("a~"z, "0, "_)', () => {
 
     expect(state.registers?.b?.content).toBe('World');
     expect(state.lines[0]).toBe('const greeting = "Hello ";');
+  });
+
+  describe('formatRegisters & :reg, :registers Ex command viewer', () => {
+    it('formatRegisters: 순정 Vim 스타일로 레지스터 내용 및 ^J 개행 치환을 포맷팅한다', () => {
+      const state: VimEditorState = {
+        lines: ['first line'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+        primaryFilename: 'app.ts',
+        lastSearchQuery: 'findMe',
+        commandHistory: ['w', 'reg'],
+        registers: {
+          '"': { type: 'char', content: 'unnamed content' },
+          '0': { type: 'line', content: 'line 1\nline 2' },
+          a: { type: 'char', content: 'alpha token' },
+          m: { type: 'macro', content: ['c', 'i', 'w', 'hello', 'Escape'] },
+        },
+      };
+
+      const out = formatRegisters(state);
+      expect(out).toContain('--- Registers ---');
+      expect(out).toContain('""   c   unnamed content');
+      expect(out).toContain('"0   l   line 1^Jline 2');
+      expect(out).toContain('"a   c   alpha token');
+      expect(out).toContain('"m   m   ciwhello<Esc>');
+      expect(out).toContain('"%   c   app.ts');
+      expect(out).toContain('"/   c   findMe');
+      expect(out).toContain('":   c   reg');
+    });
+
+    it('formatRegisters: 필터 인자가 주어지면 지정된 레지스터만 표시한다', () => {
+      const state: VimEditorState = {
+        lines: ['test'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+        registers: {
+          '"': { type: 'char', content: 'unnamed content' },
+          '0': { type: 'line', content: 'yanked' },
+          a: { type: 'char', content: 'apple' },
+          b: { type: 'char', content: 'banana' },
+        },
+      };
+
+      const outA = formatRegisters(state, 'a');
+      expect(outA).toContain('"a   c   apple');
+      expect(outA).not.toContain('"b   c   banana');
+      expect(outA).not.toContain('"0');
+
+      const outAB = formatRegisters(state, 'a b');
+      expect(outAB).toContain('"a   c   apple');
+      expect(outAB).toContain('"b   c   banana');
+      expect(outAB).not.toContain('"0');
+
+      const outZero = formatRegisters(state, '0');
+      expect(outZero).toContain('"0   l   yanked');
+      expect(outZero).not.toContain('"a');
+    });
+
+    it(':reg 또는 :registers 실행 시 레지스터 뷰어 패널이 열리고 commandMessage에 목록이 출력된다', () => {
+      let state: VimEditorState = {
+        lines: ['hello world'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+        registers: {
+          a: { type: 'char', content: 'hello' },
+        },
+      };
+
+      // :reg Enter
+      state = handleKey(state, ':');
+      state = handleKey(state, 'r');
+      state = handleKey(state, 'e');
+      state = handleKey(state, 'g');
+      state = handleKey(state, 'Enter');
+
+      expect(state.showRegisterInspector).toBe(true);
+      expect(state.commandMessage).toContain('--- Registers ---');
+      expect(state.commandMessage).toContain('"a   c   hello');
+    });
+
+    it(':display 및 :di 명령어도 동일하게 레지스터 뷰어를 실행한다', () => {
+      let state: VimEditorState = {
+        lines: ['hello'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+        registers: {
+          x: { type: 'char', content: 'target' },
+        },
+      };
+
+      // :di Enter
+      state = handleKey(state, ':');
+      state = handleKey(state, 'd');
+      state = handleKey(state, 'i');
+      state = handleKey(state, 'Enter');
+
+      expect(state.showRegisterInspector).toBe(true);
+      expect(state.commandMessage).toContain('"x   c   target');
+    });
+
+    it(':reg close 또는 :regclose 실행 시 레지스터 뷰어가 닫힌다', () => {
+      let state: VimEditorState = {
+        lines: ['hello'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+        showRegisterInspector: true,
+      };
+
+      // :reg close Enter
+      state = handleKey(state, ':');
+      for (const ch of 'reg close') {
+        state = handleKey(state, ch);
+      }
+      state = handleKey(state, 'Enter');
+
+      expect(state.showRegisterInspector).toBe(false);
+      expect(state.commandMessage).toBe('레지스터 뷰어 닫힘');
+    });
   });
 });

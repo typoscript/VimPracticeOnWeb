@@ -482,6 +482,13 @@ export function App() {
     }
   }, [initialCustomMission]);
 
+  // :reg / :registers Ex 명령 실행 시 레지스터 인스펙터 패널 자동 열림/닫힘 연동
+  useEffect(() => {
+    if (editorState.showRegisterInspector !== undefined) {
+      setShowRegisterInspector(editorState.showRegisterInspector);
+    }
+  }, [editorState.showRegisterInspector]);
+
   // 스피드런 타이머 연동 (100ms마다 0.1초 증가)
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
