@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { MISSIONS } from './missions';
-import { VimEditorState } from '../types/vim';
+import { VimEditorState, SplitPaneState } from '../types/vim';
 import { handleKey } from '../engine/vimEngine';
+import { computeDiffHunks } from '../engine/diffEngine';
 
 describe('MISSIONS 10 ~ 12 validation', () => {
   it('레슨 10 (숫자 반복 카운트) 설정 및 완료 조건이 정상 동작한다', () => {
@@ -747,13 +748,62 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson41!.checkComplete(stateDone)).toBe(true);
   });
 
-  it('모든 41개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(41);
+  it('레슨 42: 순정 diffsplit과 ]c, do로 코드 변경점 비교 및 버그 패치 병합 완료 조건 검증', () => {
+    const lesson42 = MISSIONS.find((m) => m.id === 42);
+    expect(lesson42).toBeDefined();
+    expect(lesson42?.par).toBe(8);
+
+    const stateNotDone: VimEditorState = {
+      lines: ['function test() {', '  return 1;', '}'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson42!.checkComplete(stateNotDone)).toBe(false);
+
+    const stateDone: VimEditorState = {
+      lines: [
+        'function calculateCartTotal(cart: CartItem[]) {',
+        '  let subtotal = 0;',
+        '  for (const item of cart) {',
+        '    subtotal += item.price * item.quantity; // [FIX] 수량 정상 반영',
+        '  }',
+        '  const discount = subtotal * 0.15; // [FIX] 15% 신규 프로모션 할인율',
+        '  return subtotal - discount;',
+        '}',
+      ],
+      cursor: { line: 5, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson42!.checkComplete(stateDone)).toBe(true);
+  });
+
+  it('모든 42개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(42);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();
       expect(m.optimalKeys!.length).toBeGreaterThan(0);
       expect(m.optimalKeys!.length).toBeLessThanOrEqual(m.par);
+
+      let splitPanes: [SplitPaneState, SplitPaneState] | undefined = undefined;
+      if (m.initialSplit && m.initialSplit !== 'none') {
+        splitPanes = [
+          {
+            filename: m.primaryFilename || 'source.ts',
+            lines: [...m.initialLines],
+            cursor: { ...m.initialCursor },
+            mode: 'NORMAL',
+            diff: m.initialDiffMode ?? false,
+          },
+          {
+            filename: m.secondaryFilename || 'target.ts',
+            lines: m.secondaryLines ? [...m.secondaryLines] : [...m.initialLines],
+            cursor: { line: 0, col: 0 },
+            mode: 'NORMAL',
+            diff: m.initialDiffMode ?? false,
+          },
+        ];
+      }
 
       let state: VimEditorState = {
         lines: [...m.initialLines],
@@ -765,6 +815,10 @@ describe('MISSIONS 10 ~ 12 validation', () => {
         primaryFilename: m.primaryFilename,
         secondaryFilename: m.secondaryFilename,
         secondaryLines: m.secondaryLines,
+        splitDirection: m.initialSplit ?? 'none',
+        splitPanes,
+        diffMode: m.initialDiffMode ?? false,
+        diffHunks: m.initialDiffMode && splitPanes ? computeDiffHunks(splitPanes[0].lines, splitPanes[1].lines) : undefined,
         commandHistory: m.initialCommandHistory ? [...m.initialCommandHistory] : undefined,
         searchHistory: m.initialSearchHistory ? [...m.initialSearchHistory] : undefined,
         quickfix: m.initialQuickfixItems

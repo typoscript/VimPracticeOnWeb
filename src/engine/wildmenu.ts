@@ -28,6 +28,12 @@ export const AVAILABLE_COMMANDS: string[] = [
   'cp',
   'cc',
   'config',
+  'diffsplit',
+  'diffthis',
+  'diffoff',
+  'diffupdate',
+  'diffget',
+  'diffput',
   'display',
   'di',
   'edit',
@@ -235,7 +241,9 @@ export function calculateCompletions(
     cmd === 'vsp' ||
     cmd === 'vsplit' ||
     cmd === 'so' ||
-    cmd === 'source'
+    cmd === 'source' ||
+    cmd === 'diffs' ||
+    cmd === 'diffsplit'
   ) {
     const prefix = `${cmd} `;
     const arg = rest.toLowerCase();

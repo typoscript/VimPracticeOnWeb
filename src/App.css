@@ -421,6 +421,17 @@
   letter-spacing: 0.5px;
 }
 
+.pane-diff-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(247, 118, 142, 0.25);
+  color: #f7768e;
+  border: 1px solid rgba(247, 118, 142, 0.4);
+  letter-spacing: 0.5px;
+}
+
 /* Hardcore Mode Pulse Glow & Top Toast Notifications */
 .shake-hardcore {
   animation: hardcore-pulse-glow 0.4s ease-in-out;

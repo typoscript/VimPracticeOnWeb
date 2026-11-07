@@ -48,6 +48,7 @@ import {
   handleCommandLineWindowKey,
 } from './cmdlineWindow';
 import { handleNetrwKey } from './netrwEngine';
+import { jumpDiffHunk, diffObtain, diffPut } from './diffEngine';
 import {
   handleTabCompletion,
   cancelWildmenu,
@@ -2901,6 +2902,21 @@ function handleNormalModeKey(
     state = { ...state, pendingKeys: undefined };
   }
 
+  // 1-0-14. 순정 Vim Diff 점프 모션 (]c, [c, [count]]c, [count][c)
+  const bracketMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([\]\[])$/);
+  if (bracketMatch) {
+    const bCount = bracketMatch[1] ? parseInt(bracketMatch[1], 10) : 1;
+    const bracket = bracketMatch[2];
+    if (key === 'c') {
+      const dir = bracket === ']' ? 'next' : 'prev';
+      return {
+        ...jumpDiffHunk(state, dir, bCount),
+        pendingKeys: undefined,
+      };
+    }
+    state = { ...state, pendingKeys: undefined };
+  }
+
   // 1-1. 매크로 녹화 시작 대기 (q) 또는 커맨드라인 윈도우 (q:, q/, q?)
   if (state.pendingKeys === 'q' || parsed.operator === 'q') {
     if (key === ':' || key === '/' || key === '?') {
@@ -3145,6 +3161,18 @@ function handleNormalModeKey(
   // 8. 연산자 대기 처리 (d, c, y, g, v)
 
   if (parsed.operator === 'd') {
+    if (key === 'o') {
+      return {
+        ...diffObtain(state),
+        pendingKeys: undefined,
+      };
+    }
+    if (key === 'p') {
+      return {
+        ...diffPut(state),
+        pendingKeys: undefined,
+      };
+    }
     if (key === 'd') {
       const res = deleteFoldOrLine(state, parsed.totalCount);
       const synced = syncRegisters(state, res, false);
@@ -3598,11 +3626,11 @@ function handleNormalModeKey(
     state = { ...state, pendingKeys: undefined };
   }
 
-  // 9. 연산자 및 매크로 키 등록 (d, c, r, g, y, f, F, t, T, @, q, m, ', `, >, <, =, z)
+  // 9. 연산자 및 매크로 키 등록 (d, c, r, g, y, f, F, t, T, @, q, m, ', `, >, <, =, z, ], [)
   if (
     key === 'd' || key === 'c' || key === 'r' || key === 'g' || key === 'y' ||
     key === '@' || key === '>' || key === '<' || key === '=' || key === 'm' ||
-    key === "'" || key === '`' || key === 'z'
+    key === "'" || key === '`' || key === 'z' || key === ']' || key === '['
   ) {
     return {
       ...state,

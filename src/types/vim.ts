@@ -232,6 +232,17 @@ export interface SplitPaneState {
   redoStack?: StateSnapshot[];
   pendingKeys?: string;
   blockInsertSession?: BlockInsertSession | null;
+  /** 해당 창이 diff 모드인지 여부 (:diffsplit, :diffthis) */
+  diff?: boolean;
+}
+
+export interface DiffHunk {
+  id: number;
+  pane0Start: number;
+  pane0Count: number;
+  pane1Start: number;
+  pane1Count: number;
+  type: 'change' | 'add' | 'delete';
 }
 
 export interface VimEditorState {
@@ -369,6 +380,10 @@ export interface VimEditorState {
   tagStack?: TagStackItem[];
   /** 수동 또는 외부 정의 태그 목록 */
   tags?: TagEntry[];
+  /** 순정 Vim Diff 모드 활성화 여부 (:diffsplit, :diffthis, :diffoff) */
+  diffMode?: boolean;
+  /** 현재 계산된 Diff Hunk 목록 */
+  diffHunks?: DiffHunk[];
 }
 
 

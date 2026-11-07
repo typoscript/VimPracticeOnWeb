@@ -8,6 +8,7 @@ import {
   CompletionSession,
   ConfirmSubstituteSession,
   VimOptions,
+  DiffHunk,
 } from '../../types/vim';
 import { isPositionSelected } from '../../engine/visual';
 import { findMatches } from '../../engine/search';
@@ -43,6 +44,10 @@ export interface EditorProps {
   confirmSubstitute?: ConfirmSubstituteSession | null;
   /** 순정 Vim 환경 옵션 설정 (:set nu, :set rnu, :set ic 등) */
   options?: VimOptions;
+  /** 순정 Vim diff 차이점 목록 */
+  diffHunks?: DiffHunk[];
+  /** 현재 에디터가 분할 창의 몇 번째 창인지 (0 또는 1) */
+  diffPaneIndex?: number;
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -63,6 +68,8 @@ export const Editor: React.FC<EditorProps> = ({
   insertRegisterPending,
   confirmSubstitute,
   options,
+  diffHunks,
+  diffPaneIndex = 0,
 }) => {
   const scrollerRef = React.useRef<HTMLDivElement>(null);
 
@@ -139,10 +146,22 @@ export const Editor: React.FC<EditorProps> = ({
                   .map(([name]) => name)
               : [];
 
+            let diffLineType: 'change' | 'add' | 'delete' | null = null;
+            if (diffHunks && diffHunks.length > 0) {
+              for (const h of diffHunks) {
+                const hStart = diffPaneIndex === 0 ? h.pane0Start : h.pane1Start;
+                const hCount = diffPaneIndex === 0 ? h.pane0Count : h.pane1Count;
+                if (hCount > 0 && lineIdx >= hStart && lineIdx < hStart + hCount) {
+                  diffLineType = h.type;
+                  break;
+                }
+              }
+            }
+
             return (
               <div
                 key={lineIdx}
-                className={`editor-row ${isCursorLineActive ? 'active-row' : ''} ${isFoldedHeader ? 'folded-row' : ''}`}
+                className={`editor-row ${isCursorLineActive ? 'active-row' : ''} ${isFoldedHeader ? 'folded-row' : ''} ${diffLineType ? `diff-row diff-row-${diffLineType}` : ''}`}
                 data-testid={`editor-row-${lineIdx + 1}`}
               >
                 <div

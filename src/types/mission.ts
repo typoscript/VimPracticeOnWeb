@@ -23,6 +23,8 @@ export interface Mission {
   secondaryLines?: string[];
   /** 초기 창 분할 상태 */
   initialSplit?: 'none' | 'horizontal' | 'vertical';
+  /** 초기 Diff 모드 활성화 여부 (:diffsplit 미션용) */
+  initialDiffMode?: boolean;
   /** 초기 커맨드라인 히스토리 (: 명령 기록) */
   initialCommandHistory?: string[];
   /** 초기 검색 히스토리 (/, ? 패턴 기록) */

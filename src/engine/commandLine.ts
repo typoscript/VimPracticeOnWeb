@@ -41,6 +41,14 @@ import {
 } from './quickfixEngine';
 import { formatChangeList } from './advancedMotions';
 import {
+  startDiffSplit,
+  diffThis,
+  diffOff,
+  diffUpdate,
+  diffObtain,
+  diffPut,
+} from './diffEngine';
+import {
   setArgs,
   addArgs,
   deleteArgs,
@@ -729,6 +737,83 @@ export function executeCommandLine(
     );
     return {
       ...splitRes,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 순정 Vim Diff 모드 분할: :diffsplit, :diffs, :vert diffsplit, :vertical diffsplit
+  const diffSplitMatch = cleanCmdRaw.match(/^(?:(vert(?:ical)?|hor(?:izontal)?)\s+)?(diffs(?:plit)?)(?:\s+(.+))?$/i);
+  if (diffSplitMatch) {
+    const mod = diffSplitMatch[1]?.toLowerCase();
+    const isVert = mod ? mod.startsWith('vert') : true; // 기본값 세로(vertical) 분할
+    const targetFile = diffSplitMatch[3]?.trim();
+    const res = startDiffSplit(state, targetFile, isVert ? 'vertical' : 'horizontal');
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // :diffthis, :difft
+  if (cleanCmdRaw.toLowerCase() === 'diffthis' || cleanCmdRaw.toLowerCase() === 'difft') {
+    const res = diffThis(state);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // :diffoff, :diffo, :diffoff!
+  if (/^diffo(?:ff)?!?$/i.test(cleanCmdRaw)) {
+    const isAll = cleanCmdRaw.includes('!');
+    const res = diffOff(state, isAll);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // :diffupdate, :diffu
+  if (cleanCmdRaw.toLowerCase() === 'diffupdate' || cleanCmdRaw.toLowerCase() === 'diffu') {
+    const res = diffUpdate(state);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // :diffget, :diffg (do)
+  if (cleanCmdRaw.toLowerCase() === 'diffget' || cleanCmdRaw.toLowerCase() === 'diffg') {
+    const res = diffObtain(state);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // :diffput, :diffp (dp)
+  if (cleanCmdRaw.toLowerCase() === 'diffput' || cleanCmdRaw.toLowerCase() === 'diffp') {
+    const res = diffPut(state);
+    return {
+      ...res,
       mode: 'NORMAL',
       visualAnchor: undefined,
       commandBuffer: undefined,

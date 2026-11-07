@@ -1209,6 +1209,64 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 42,
+    title: '레슨 42: 순정 diffsplit과 ]c, do로 코드 변경점 비교 및 버그 패치 병합하기',
+    description: 'Vim은 별도의 외부 도구 없이도 내장된 순정 diff 모드로 두 파일 간의 차이점을 시각적으로 비교하고 즉시 병합할 수 있습니다. :diffsplit <파일명>(또는 :vert diffsplit)을 실행하면 화면이 세로로 분할되며 변경점(Diff Hunk)이 하이라이트됩니다. ]c와 [c를 눌러 변경점 사이를 초고속으로 점프할 수 있고, do(diffobtain)를 누르면 상대 창의 패치 코드를 현재 버퍼로 가져와 단 1초 만에 병합할 수 있습니다.',
+    hint: ']c를 눌러 첫 번째 버그 라인으로 이동한 뒤 do를 입력해 patch.ts의 올바른 코드를 가져오세요. 다시 ]c로 다음 변경점으로 이동해 do를 누르면 모든 차이점이 해결되어 미션이 완료됩니다!',
+    par: 8,
+    optimalKeys: [']', 'c', 'd', 'o', ']', 'c', 'd', 'o'],
+    primaryFilename: 'checkout.ts',
+    secondaryFilename: 'patch.ts',
+    initialSplit: 'vertical',
+    initialDiffMode: true,
+    initialLines: [
+      'function calculateCartTotal(cart: CartItem[]) {',
+      '  let subtotal = 0;',
+      '  for (const item of cart) {',
+      '    subtotal += item.price; // [BUG] 수량 누락됨',
+      '  }',
+      '  const discount = subtotal * 0.05; // [BUG] 5% 구버전 할인율',
+      '  return subtotal - discount;',
+      '}',
+    ],
+    secondaryLines: [
+      'function calculateCartTotal(cart: CartItem[]) {',
+      '  let subtotal = 0;',
+      '  for (const item of cart) {',
+      '    subtotal += item.price * item.quantity; // [FIX] 수량 정상 반영',
+      '  }',
+      '  const discount = subtotal * 0.15; // [FIX] 15% 신규 프로모션 할인율',
+      '  return subtotal - discount;',
+      '}',
+    ],
+    targetLines: [
+      'function calculateCartTotal(cart: CartItem[]) {',
+      '  let subtotal = 0;',
+      '  for (const item of cart) {',
+      '    subtotal += item.price * item.quantity; // [FIX] 수량 정상 반영',
+      '  }',
+      '  const discount = subtotal * 0.15; // [FIX] 15% 신규 프로모션 할인율',
+      '  return subtotal - discount;',
+      '}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const target = [
+        'function calculateCartTotal(cart: CartItem[]) {',
+        '  let subtotal = 0;',
+        '  for (const item of cart) {',
+        '    subtotal += item.price * item.quantity; // [FIX] 수량 정상 반영',
+        '  }',
+        '  const discount = subtotal * 0.15; // [FIX] 15% 신규 프로모션 할인율',
+        '  return subtotal - discount;',
+        '}',
+      ];
+      if (state.lines.length !== target.length) return false;
+      return state.lines.every((line, idx) => line === target[idx]);
+    },
+  },
 ];
 
 

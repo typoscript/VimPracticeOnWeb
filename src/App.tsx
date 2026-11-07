@@ -35,6 +35,7 @@ import { switchBuffer, ensureBuffers } from './engine/bufferEngine';
 import { switchTab, openNewTab, closeTab, ensureTabPages } from './engine/tabEngine';
 import { closeCommandLineWindow } from './engine/cmdlineWindow';
 import { closeQuickfixWindow, jumpToQuickfixItem } from './engine/quickfixEngine';
+import { computeDiffHunks } from './engine/diffEngine';
 import { MISSIONS } from './data/missions';
 import { SANDBOX_INITIAL_LINES } from './data/sandbox';
 import {
@@ -303,12 +304,14 @@ export function App() {
         lines: [...m.initialLines],
         cursor: { ...m.initialCursor },
         mode: 'NORMAL',
+        diff: m.initialDiffMode ?? false,
       };
       const p1: SplitPaneState = {
         filename: m.secondaryFilename || 'target.ts',
         lines: m.secondaryLines ? [...m.secondaryLines] : [...m.initialLines],
         cursor: { line: 0, col: 0 },
         mode: 'NORMAL',
+        diff: m.initialDiffMode ?? false,
       };
       splitPanes = [p0, p1];
     }
@@ -324,6 +327,8 @@ export function App() {
       secondaryLines: m.secondaryLines,
       splitDirection: m.initialSplit ?? 'none',
       splitPanes,
+      diffMode: m.initialDiffMode ?? false,
+      diffHunks: m.initialDiffMode && splitPanes ? computeDiffHunks(splitPanes[0].lines, splitPanes[1].lines) : undefined,
       activePaneIndex: 0,
       commandHistory: m.initialCommandHistory ? [...m.initialCommandHistory] : undefined,
       searchHistory: m.initialSearchHistory ? [...m.initialSearchHistory] : undefined,
@@ -1680,6 +1685,7 @@ export function App() {
                       <span className="pane-filename">
                         📄 {editorState.primaryFilename || editorState.splitPanes[0].filename || 'source.ts'}
                       </span>
+                      {displayEditorState.diffMode && <span className="pane-diff-badge" data-testid="diff-badge-0">[DIFF]</span>}
                       {editorState.activePaneIndex === 0 && <span className="pane-active-indicator">FOCUS</span>}
                     </div>
                     <Editor
@@ -1704,6 +1710,8 @@ export function App() {
                       insertRegisterPending={editorState.activePaneIndex === 0 ? editorState.insertRegisterPending : undefined}
                       confirmSubstitute={editorState.activePaneIndex === 0 ? editorState.confirmSubstitute : undefined}
                       options={displayEditorState.options}
+                      diffHunks={displayEditorState.diffMode ? displayEditorState.diffHunks : undefined}
+                      diffPaneIndex={0}
                     />
                   </div>
 
@@ -1718,6 +1726,7 @@ export function App() {
                       <span className="pane-filename">
                         📄 {editorState.secondaryFilename || editorState.splitPanes[1].filename || 'target.ts'}
                       </span>
+                      {displayEditorState.diffMode && <span className="pane-diff-badge" data-testid="diff-badge-1">[DIFF]</span>}
                       {editorState.activePaneIndex === 1 && <span className="pane-active-indicator">FOCUS</span>}
                     </div>
                     <Editor
@@ -1742,6 +1751,8 @@ export function App() {
                       insertRegisterPending={editorState.activePaneIndex === 1 ? editorState.insertRegisterPending : undefined}
                       confirmSubstitute={editorState.activePaneIndex === 1 ? editorState.confirmSubstitute : undefined}
                       options={displayEditorState.options}
+                      diffHunks={displayEditorState.diffMode ? displayEditorState.diffHunks : undefined}
+                      diffPaneIndex={1}
                     />
                   </div>
                 </div>
