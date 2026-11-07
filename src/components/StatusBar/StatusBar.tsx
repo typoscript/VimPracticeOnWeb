@@ -1,5 +1,5 @@
 import React from 'react';
-import { CursorPosition, VimMode } from '../../types/vim';
+import { CursorPosition, VimMode, ConfirmSubstituteSession } from '../../types/vim';
 import './StatusBar.css';
 
 export interface StatusBarProps {
@@ -19,6 +19,8 @@ export interface StatusBarProps {
   insertNormalSession?: boolean;
   /** Insert 모드 레지스터 삽입 대기 상태 (Ctrl+r) */
   insertRegisterPending?: boolean;
+  /** :s/.../.../gc 대화형 치환 확인 세션 */
+  confirmSubstitute?: ConfirmSubstituteSession | null;
 }
 
 export const StatusBar: React.FC<StatusBarProps> = ({
@@ -32,6 +34,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   commandMessage,
   insertNormalSession,
   insertRegisterPending,
+  confirmSubstitute,
 }) => {
   const displayMode =
     insertNormalSession
@@ -56,11 +59,18 @@ export const StatusBar: React.FC<StatusBarProps> = ({
 
   return (
     <footer
-      className={`status-bar ${isCommandLineActive ? 'status-bar-active-command' : ''}`}
+      className={`status-bar ${isCommandLineActive || confirmSubstitute ? 'status-bar-active-command' : ''}`}
       data-testid="status-bar"
     >
       <div className="status-bar-left">
-        {isCommandLineActive ? (
+        {confirmSubstitute ? (
+          <div className="commandline-prompt" data-testid="commandline-prompt">
+            <span className="prompt-text">
+              replace with {confirmSubstitute.currentMatch.replacement} (y/n/a/q)?
+            </span>
+            <span className="prompt-cursor">_</span>
+          </div>
+        ) : isCommandLineActive ? (
           <div className="commandline-prompt" data-testid="commandline-prompt">
             <span className="prompt-prefix">{promptPrefix}</span>
             <span className="prompt-text">{commandBuffer ?? ''}</span>

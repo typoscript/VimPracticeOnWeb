@@ -771,7 +771,45 @@ export const MISSIONS: Mission[] = [
   },
   {
     id: 30,
-    title: '레슨 30: g Ctrl+a로 배열 번호를 한 번에 매기고 :sort u로 중복 데이터 정제하기',
+    title: '레슨 30: cgn + . 콤보와 /pattern/e 오프셋으로 초고속 정밀 타격하기',
+    description: '검색 매치 텍스트 객체 cgn과 . (Dot Repeat) 연속 치환으로 특정 변수를 초고속으로 리팩토링하고, /pattern/e 오프셋 검색으로 단어의 끝으로 정확하게 이동하여 편집을 완료하세요.',
+    hint: '/oldVal로 검색 후 cgnnewVal<Esc>를 입력하세요. 그 다음 . 키를 두 번 눌러 나머지 oldVal들을 순차 치환하고, /Value/e Enter 후 a s <Esc>로 processValue를 processValues로 완성하세요.',
+    par: 32,
+    optimalKeys: [
+      '/', 'o', 'l', 'd', 'V', 'a', 'l', 'Enter',
+      'c', 'g', 'n', 'n', 'e', 'w', 'V', 'a', 'l', 'Escape',
+      '.',
+      '.',
+      '/', 'V', 'a', 'l', 'u', 'e', '/', 'e', 'Enter',
+      'a', 's', 'Escape',
+    ],
+    initialLines: [
+      'const oldVal = 10;',
+      'const tempVal = oldVal + 5;',
+      'const finalVal = oldVal * 2;',
+      'function processValue() {}',
+    ],
+    targetLines: [
+      'const newVal = 10;',
+      'const tempVal = newVal + 5;',
+      'const finalVal = newVal * 2;',
+      'function processValues() {}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines.length === 4 &&
+        state.lines[0] === 'const newVal = 10;' &&
+        state.lines[1] === 'const tempVal = newVal + 5;' &&
+        state.lines[2] === 'const finalVal = newVal * 2;' &&
+        state.lines[3] === 'function processValues() {}'
+      );
+    },
+  },
+  {
+    id: 31,
+    title: '레슨 31: g Ctrl+a로 배열 번호를 한 번에 매기고 :sort u로 중복 데이터 정제하기',
     description: 'Visual 모드에서 g Ctrl+a(또는 Alt+a)를 사용하여 목업 데이터에 1, 2, 3 순차 인덱스를 일괄 부여하고, :4,$sort u 명령으로 중복 태그 목록을 가나다순으로 정제하세요.',
     hint: 'V2j로 3개 줄을 선택 후 g와 Ctrl-a(또는 Alt-a)를 눌러 순차 번호를 매긴 뒤, :4,$sort u 를 입력하고 Enter를 누르세요.',
     par: 16,

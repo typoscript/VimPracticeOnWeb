@@ -21,6 +21,34 @@ export interface SearchMatch {
   length: number;
 }
 
+export type SearchOffsetType = 'start' | 'end' | 'line';
+
+export interface SearchOffset {
+  type: SearchOffsetType;
+  offset: number;
+}
+
+export interface ConfirmSubstituteMatch {
+  line: number;
+  col: number;
+  length: number;
+  matchedText: string;
+  groups: (string | undefined)[];
+  replacement: string;
+}
+
+export interface ConfirmSubstituteSession {
+  range: { startLine: number; endLine: number };
+  oldText: string;
+  newText: string;
+  flags: string;
+  isGlobal: boolean;
+  isIgnoreCase: boolean;
+  commandStr: string;
+  substitutedCount: number;
+  currentMatch: ConfirmSubstituteMatch;
+}
+
 export interface RegisterEntry {
   type: 'char' | 'line' | 'macro';
   content: string | string[];
@@ -166,6 +194,16 @@ export interface VimEditorState {
   changeList?: ChangeListItem[];
   /** changeList 현재 인덱스 */
   changeIndex?: number;
+  /** 마지막 검색 시 사용된 커서 오프셋 (/pattern/e, /pattern/+1 등) */
+  lastSearchOffset?: SearchOffset | null;
+  /** 검색 모드 진입 전 대기 중이던 연산자 정보 (예: d/pattern/e) */
+  searchOperator?: {
+    op: string;
+    count?: number;
+    initialCursor: CursorPosition;
+  } | null;
+  /** :s/.../.../gc 대화형 치환 확인 세션 */
+  confirmSubstitute?: ConfirmSubstituteSession | null;
 }
 
 

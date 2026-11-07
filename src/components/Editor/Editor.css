@@ -154,6 +154,15 @@
   border-radius: 1px;
 }
 
+/* 대화형 치환 확인 대상 단어 하이라이트 (:s/old/new/gc) */
+.char-confirm-substitute {
+  background-color: #f38ba8 !important;
+  color: #11111b !important;
+  font-weight: bold;
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(243, 139, 168, 0.8);
+}
+
 /* 포커스 이탈(Blur) 시 아웃라인 커서 */
 .cursor-unfocused {
   outline: 1.5px solid #a6adc8 !important;

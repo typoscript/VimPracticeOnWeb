@@ -493,27 +493,56 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson29!.checkComplete(stateDone)).toBe(true);
   });
 
-  it('레슨 30: g Ctrl+a 및 :sort u 완료 조건 검증', () => {
+  it('레슨 30: cgn 및 /pattern/e 완료 조건 검증', () => {
     const lesson30 = MISSIONS.find((m) => m.id === 30);
     expect(lesson30).toBeDefined();
 
     const stateNotDone: VimEditorState = {
-      lines: ['data_0', 'data_0', 'data_0', 'cherry', 'apple', 'banana', 'cherry'],
+      lines: [
+        'const oldVal = 10;',
+        'const tempVal = oldVal + 5;',
+        'const finalVal = oldVal * 2;',
+        'function processValue() {}',
+      ],
       cursor: { line: 0, col: 0 },
       mode: 'NORMAL',
     };
     expect(lesson30!.checkComplete(stateNotDone)).toBe(false);
 
     const stateDone: VimEditorState = {
-      lines: ['data_1', 'data_2', 'data_3', 'apple', 'banana', 'cherry'],
-      cursor: { line: 3, col: 0 },
+      lines: [
+        'const newVal = 10;',
+        'const tempVal = newVal + 5;',
+        'const finalVal = newVal * 2;',
+        'function processValues() {}',
+      ],
+      cursor: { line: 3, col: 23 },
       mode: 'NORMAL',
     };
     expect(lesson30!.checkComplete(stateDone)).toBe(true);
   });
 
-  it('모든 30개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(30);
+  it('레슨 31: g Ctrl+a 및 :sort u 완료 조건 검증', () => {
+    const lesson31 = MISSIONS.find((m) => m.id === 31);
+    expect(lesson31).toBeDefined();
+
+    const stateNotDone: VimEditorState = {
+      lines: ['data_0', 'data_0', 'data_0', 'cherry', 'apple', 'banana', 'cherry'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson31!.checkComplete(stateNotDone)).toBe(false);
+
+    const stateDone: VimEditorState = {
+      lines: ['data_1', 'data_2', 'data_3', 'apple', 'banana', 'cherry'],
+      cursor: { line: 3, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson31!.checkComplete(stateDone)).toBe(true);
+  });
+
+  it('모든 31개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(31);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();

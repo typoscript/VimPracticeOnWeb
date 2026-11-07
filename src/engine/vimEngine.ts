@@ -98,8 +98,11 @@ import {
   findNextMatch,
   findPrevMatch,
   getWordAtCursor,
+  parseSearchQuery,
+  applySearchOffset,
+  findCurrentOrNextMatch,
 } from './search';
-import { executeCommandLine } from './commandLine';
+import { executeCommandLine, handleConfirmSubstituteKey } from './commandLine';
 import {
   scrollToCenter,
   scrollToTop,
@@ -206,6 +209,11 @@ export function rawHandleKey(
   isReplayingDot = false,
   macroDepth = 0
 ): VimEditorState {
+  // 대화형 치환 확인 프롬프트 (:s/.../.../gc) 처리
+  if (state.confirmSubstitute) {
+    return handleConfirmSubstituteKey(state, key);
+  }
+
   // 매크로 기록 중인 상태 처리
   if (state.recordingMacro) {
     // NORMAL 모드에서 대기 키 없이 'q'를 누르면 매크로 기록 종료
@@ -241,7 +249,7 @@ export function rawHandleKey(
 
   let nextState: VimEditorState;
   if (state.mode === 'SEARCH') {
-    nextState = handleSearchModeKey(state, key);
+    nextState = handleSearchModeKey(state, key, isReplayingDot);
   } else if (state.mode === 'COMMAND') {
     nextState = handleCommandLineModeKey(state, key);
   } else if (state.mode === 'INSERT') {
@@ -301,15 +309,277 @@ export function rawHandleKey(
 }
 
 /**
+ * 검색 모션과 결합된 연산자(d/pat/e, c/pat/e, d/TODO/+1 등)를 실행합니다.
+ */
+function executeSearchOperator(
+  state: VimEditorState,
+  op: string,
+  from: CursorPosition,
+  to: CursorPosition,
+  isLinewise: boolean,
+  isEndInclusive: boolean
+): VimEditorState {
+  if (isLinewise) {
+    const startLine = Math.min(from.line, to.line);
+    const endLine = Math.max(from.line, to.line);
+    const deletedLines = state.lines.slice(startLine, endLine + 1).join('\n');
+
+    if (op === 'y') {
+      return {
+        ...state,
+        clipboard: { type: 'line', content: deletedLines },
+      };
+    }
+
+    const stateWithSnapshot = pushUndoSnapshot(state);
+
+    if (op === 'c') {
+      const nextLines = [
+        ...state.lines.slice(0, startLine),
+        '',
+        ...state.lines.slice(endLine + 1),
+      ];
+      return {
+        ...stateWithSnapshot,
+        lines: nextLines,
+        cursor: { line: startLine, col: 0 },
+        mode: 'INSERT',
+        clipboard: { type: 'line', content: deletedLines },
+      };
+    }
+
+    // op === 'd'
+    const nextLines = [
+      ...state.lines.slice(0, startLine),
+      ...state.lines.slice(endLine + 1),
+    ];
+    if (nextLines.length === 0) nextLines.push('');
+    const firstNonBlank = (nextLines[startLine] ?? '').search(/\S/);
+    const targetCol = firstNonBlank >= 0 ? firstNonBlank : 0;
+    return {
+      ...stateWithSnapshot,
+      lines: nextLines,
+      cursor: clampCursor(nextLines, { line: Math.min(startLine, nextLines.length - 1), col: targetCol }, 'NORMAL'),
+      clipboard: { type: 'line', content: deletedLines },
+    };
+  }
+
+  // Character-wise operator
+  let start = from;
+  let end = to;
+  if (from.line > to.line || (from.line === to.line && from.col > to.col)) {
+    start = to;
+    end = from;
+  }
+
+  if (start.line === end.line) {
+    const lineText = state.lines[start.line] ?? '';
+    const endOffset = isEndInclusive ? 1 : 0;
+    const sCol = Math.max(0, Math.min(lineText.length, start.col));
+    const eCol = Math.max(sCol, Math.min(lineText.length, end.col + endOffset));
+    const textFragment = lineText.slice(sCol, eCol);
+
+    if (op === 'y') {
+      return {
+        ...state,
+        clipboard: { type: 'text', content: textFragment },
+      };
+    }
+
+    const stateWithSnapshot = pushUndoSnapshot(state);
+    const newLine = lineText.slice(0, sCol) + lineText.slice(eCol);
+    const nextLines = [...state.lines];
+    nextLines[start.line] = newLine;
+
+    if (op === 'c') {
+      return {
+        ...stateWithSnapshot,
+        lines: nextLines,
+        mode: 'INSERT',
+        cursor: { line: start.line, col: sCol },
+        clipboard: { type: 'text', content: textFragment },
+      };
+    }
+
+    return {
+      ...stateWithSnapshot,
+      lines: nextLines,
+      cursor: clampCursor(nextLines, { line: start.line, col: Math.min(sCol, Math.max(0, newLine.length - 1)) }, 'NORMAL'),
+      clipboard: { type: 'text', content: textFragment },
+    };
+  }
+
+  // Multi-line character-wise
+  const firstLineText = state.lines[start.line] ?? '';
+  const lastLineText = state.lines[end.line] ?? '';
+  const endOffset = isEndInclusive ? 1 : 0;
+  const sCol = Math.max(0, Math.min(firstLineText.length, start.col));
+  const eCol = Math.max(0, Math.min(lastLineText.length, end.col + endOffset));
+
+  const textFragments = [
+    firstLineText.slice(sCol),
+    ...state.lines.slice(start.line + 1, end.line),
+    lastLineText.slice(0, eCol),
+  ].join('\n');
+
+  if (op === 'y') {
+    return {
+      ...state,
+      clipboard: { type: 'text', content: textFragments },
+    };
+  }
+
+  const stateWithSnapshot = pushUndoSnapshot(state);
+  const mergedLine = firstLineText.slice(0, sCol) + lastLineText.slice(eCol);
+  const nextLines = [
+    ...state.lines.slice(0, start.line),
+    mergedLine,
+    ...state.lines.slice(end.line + 1),
+  ];
+
+  if (op === 'c') {
+    return {
+      ...stateWithSnapshot,
+      lines: nextLines,
+      mode: 'INSERT',
+      cursor: { line: start.line, col: sCol },
+      clipboard: { type: 'text', content: textFragments },
+    };
+  }
+
+  return {
+    ...stateWithSnapshot,
+    lines: nextLines,
+    cursor: clampCursor(nextLines, { line: start.line, col: Math.min(sCol, Math.max(0, mergedLine.length - 1)) }, 'NORMAL'),
+    clipboard: { type: 'text', content: textFragments },
+  };
+}
+
+/**
+ * 검색 매치 텍스트 객체(gn, gN) 및 연산자 결합(cgn, dgn, ygn)을 실행합니다.
+ */
+function executeGn(
+  state: VimEditorState,
+  isForward: boolean,
+  op?: string,
+  isReplayingDot = false
+): VimEditorState {
+  if (!state.lastSearchQuery) {
+    return {
+      ...state,
+      commandMessage: 'E35: 이전 정규식이 없습니다',
+      pendingKeys: undefined,
+    };
+  }
+
+  const matches = findMatches(state.lines, state.lastSearchQuery);
+  if (matches.length === 0) {
+    return {
+      ...state,
+      commandMessage: `E486: 패턴을 찾을 수 없습니다: ${state.lastSearchQuery}`,
+      pendingKeys: undefined,
+    };
+  }
+
+  const res = findCurrentOrNextMatch(matches, state.cursor, isForward);
+  if (!res) {
+    return { ...state, pendingKeys: undefined };
+  }
+
+  const target = res.match;
+
+  // 1. 단독 gn / gN (연산자 없음)
+  if (!op) {
+    if (state.mode === 'VISUAL' || state.mode === 'VISUAL_LINE' || state.mode === 'VISUAL_BLOCK') {
+      const nextMatch = isForward ? findNextMatch(matches, state.cursor) : findPrevMatch(matches, state.cursor);
+      if (nextMatch) {
+        return {
+          ...state,
+          cursor: { line: nextMatch.line, col: nextMatch.col + Math.max(0, nextMatch.length - 1) },
+          pendingKeys: undefined,
+        };
+      }
+      return { ...state, pendingKeys: undefined };
+    }
+
+    const anchor = isForward
+      ? { line: target.line, col: target.col }
+      : { line: target.line, col: target.col + Math.max(0, target.length - 1) };
+    const cur = isForward
+      ? { line: target.line, col: target.col + Math.max(0, target.length - 1) }
+      : { line: target.line, col: target.col };
+
+    return {
+      ...state,
+      mode: 'VISUAL',
+      visualAnchor: anchor,
+      cursor: cur,
+      pendingKeys: undefined,
+    };
+  }
+
+  // 2. 연산자 결합 (cgn, dgn, ygn)
+  const targetLine = target.line;
+  const startCol = target.col;
+  const endCol = target.col + target.length;
+  const lineText = state.lines[targetLine] ?? '';
+  const matchText = lineText.slice(startCol, endCol);
+
+  if (op === 'y') {
+    const nextState = {
+      ...state,
+      clipboard: { type: 'text' as const, content: matchText },
+      pendingKeys: undefined,
+    };
+    return syncRegisters(state, nextState, true);
+  }
+
+  const stateWithSnapshot = pushUndoSnapshot(state);
+  const newLine = lineText.slice(0, startCol) + lineText.slice(endCol);
+  const nextLines = [...state.lines];
+  nextLines[targetLine] = newLine;
+
+  const keyName = isForward ? 'n' : 'N';
+  const opKeys = [op, 'g', keyName];
+
+  if (op === 'c') {
+    const resState: VimEditorState = {
+      ...stateWithSnapshot,
+      lines: nextLines,
+      mode: 'INSERT',
+      cursor: { line: targetLine, col: startCol },
+      clipboard: { type: 'text' as const, content: matchText },
+      pendingKeys: undefined,
+      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : opKeys,
+    };
+    return syncRegisters(state, resState, false);
+  }
+
+  // op === 'd'
+  const resState: VimEditorState = {
+    ...stateWithSnapshot,
+    lines: nextLines,
+    cursor: clampCursor(nextLines, { line: targetLine, col: Math.min(startCol, Math.max(0, newLine.length - 1)) }, 'NORMAL'),
+    clipboard: { type: 'text' as const, content: matchText },
+    pendingKeys: undefined,
+    lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys,
+  };
+  return syncRegisters(state, resState, false);
+}
+
+/**
  * SEARCH 모드(/) 키 입력 처리
  */
-function handleSearchModeKey(state: VimEditorState, key: string): VimEditorState {
+function handleSearchModeKey(state: VimEditorState, key: string, isReplayingDot = false): VimEditorState {
   if (key === 'Escape') {
+    const returnCursor = state.searchOperator?.initialCursor ?? state.cursor;
     return {
       ...state,
       mode: 'NORMAL',
+      cursor: returnCursor,
       commandBuffer: undefined,
       commandType: undefined,
+      searchOperator: undefined,
     };
   }
 
@@ -320,43 +590,89 @@ function handleSearchModeKey(state: VimEditorState, key: string): VimEditorState
         commandBuffer: state.commandBuffer.slice(0, -1),
       };
     }
-    // 글자가 없는 상태에서 백스페이스 누르면 검색 취소
+    const returnCursor = state.searchOperator?.initialCursor ?? state.cursor;
     return {
       ...state,
       mode: 'NORMAL',
+      cursor: returnCursor,
       commandBuffer: undefined,
       commandType: undefined,
+      searchOperator: undefined,
     };
   }
 
   if (key === 'Enter') {
-    const query = state.commandBuffer ?? '';
-    if (query.length === 0) {
+    const rawQuery = state.commandBuffer ?? '';
+    if (rawQuery.length === 0) {
+      const returnCursor = state.searchOperator?.initialCursor ?? state.cursor;
       return {
         ...state,
         mode: 'NORMAL',
+        cursor: returnCursor,
         commandBuffer: undefined,
         commandType: undefined,
         commandMessage: undefined,
+        searchOperator: undefined,
       };
     }
 
-    const matches = findMatches(state.lines, query);
+    const { pattern, offset } = parseSearchQuery(rawQuery);
+    const matches = findMatches(state.lines, pattern);
     if (matches.length === 0) {
+      const returnCursor = state.searchOperator?.initialCursor ?? state.cursor;
       return {
         ...state,
         mode: 'NORMAL',
-        lastSearchQuery: query,
+        cursor: returnCursor,
+        lastSearchQuery: pattern,
+        lastSearchOffset: offset,
         commandBuffer: undefined,
         commandType: undefined,
-        commandMessage: `E486: 패턴을 찾을 수 없습니다: ${query}`,
+        commandMessage: `E486: 패턴을 찾을 수 없습니다: ${pattern}`,
+        searchOperator: undefined,
       };
     }
 
-    // 현재 커서 위치 또는 그 다음 위치의 매치로 이동
+    const fromLine = state.searchOperator ? state.searchOperator.initialCursor.line : state.cursor.line;
+    const fromCol = state.searchOperator ? state.searchOperator.initialCursor.col : state.cursor.col;
     const targetMatch =
-      findNextMatch(matches, { line: state.cursor.line, col: state.cursor.col - 1 }) ??
+      findNextMatch(matches, { line: fromLine, col: fromCol - 1 }) ??
       matches[0];
+
+    const targetPos = applySearchOffset(state.lines, targetMatch, offset);
+
+    // 연산자(d/pat/e, c/pat/e, y/pat/e 등) 결합 처리
+    if (state.searchOperator) {
+      const op = state.searchOperator.op;
+      const startPos = state.searchOperator.initialCursor;
+      const isLinewise = offset?.type === 'line';
+
+      const res = executeSearchOperator(state, op, startPos, targetPos, isLinewise, offset?.type === 'end');
+      const synced = syncRegisters(state, res, op === 'y');
+      const opKeys = [op, '/', ...rawQuery.split(''), 'Enter'];
+
+      if (op === 'c') {
+        return {
+          ...synced,
+          lastSearchQuery: pattern,
+          lastSearchOffset: offset,
+          commandBuffer: undefined,
+          commandType: undefined,
+          searchOperator: undefined,
+          currentChangeKeys: isReplayingDot ? state.currentChangeKeys : opKeys,
+        };
+      }
+
+      return {
+        ...synced,
+        lastSearchQuery: pattern,
+        lastSearchOffset: offset,
+        commandBuffer: undefined,
+        commandType: undefined,
+        searchOperator: undefined,
+        lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys,
+      };
+    }
 
     const matchIdx = matches.findIndex(
       (m) => m.line === targetMatch.line && m.col === targetMatch.col
@@ -367,11 +683,12 @@ function handleSearchModeKey(state: VimEditorState, key: string): VimEditorState
     return {
       ...stateWithJump,
       mode: 'NORMAL',
-      cursor: { line: targetMatch.line, col: targetMatch.col },
-      lastSearchQuery: query,
+      cursor: targetPos,
+      lastSearchQuery: pattern,
+      lastSearchOffset: offset,
       commandBuffer: undefined,
       commandType: undefined,
-      commandMessage: `검색 일치 (${matchIdx + 1}/${matches.length}): ${query}`,
+      commandMessage: `검색 일치 (${matchIdx + 1}/${matches.length}): ${pattern}`,
     };
   }
 
@@ -1101,6 +1418,13 @@ function handleVisualModeKey(state: VimEditorState, key: string): VimEditorState
     };
   }
 
+  // Visual 모드 내 gn / gN (다음/이전 검색 매치로 선택 영역 확장)
+  if (state.pendingKeys === 'g') {
+    if (key === 'n' || key === 'N') {
+      return executeGn(state, key === 'n');
+    }
+  }
+
 
   // 명명된 레지스터 지정 ("{register})
   if (state.pendingKeys === '"') {
@@ -1688,6 +2012,17 @@ function handleNormalModeKey(
       pendingKeys: undefined,
       activeRegister: undefined,
     };
+  }
+
+  // gn / gN (검색 매치 텍스트 객체 및 cgn, dgn, ygn 결합)
+  const gnMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([cdy])?g$/);
+  if (gnMatch && (key === 'n' || key === 'N')) {
+    const op = gnMatch[2];
+    return executeGn(state, key === 'n', op, isReplayingDot);
+  }
+  if (state.pendingKeys?.match(/^([1-9][0-9]*)?([cdy])g$/)) {
+    // cg, dg, yg 대기 상태에서 n/N이 아닌 다른 키가 들어오면 pending 취소
+    state = { ...state, pendingKeys: undefined };
   }
 
   // 1-0. 커스텀 키매핑 및 리더 키(Leader Key) 시뮬레이션
@@ -2563,10 +2898,24 @@ function handleNormalModeKey(
       };
     }
 
-    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a' || key === "'" || key === '`') {
+    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a' || key === "'" || key === '`' || key === 'g') {
       return {
         ...state,
         pendingKeys: (state.pendingKeys ?? '') + key,
+      };
+    }
+    if (key === '/') {
+      return {
+        ...state,
+        mode: 'SEARCH',
+        commandType: '/',
+        commandBuffer: '',
+        searchOperator: {
+          op: 'd',
+          count: parsed.totalCount,
+          initialCursor: { ...state.cursor },
+        },
+        pendingKeys: undefined,
       };
     }
     // d 뒤에 유효하지 않은 키가 오면 pendingKeys를 취소하고 아래에서 해당 키를 정상 평가
@@ -2681,10 +3030,24 @@ function handleNormalModeKey(
         currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
       };
     }
-    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a' || key === "'" || key === '`') {
+    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a' || key === "'" || key === '`' || key === 'g') {
       return {
         ...state,
         pendingKeys: (state.pendingKeys ?? '') + key,
+      };
+    }
+    if (key === '/') {
+      return {
+        ...state,
+        mode: 'SEARCH',
+        commandType: '/',
+        commandBuffer: '',
+        searchOperator: {
+          op: 'c',
+          count: parsed.totalCount,
+          initialCursor: { ...state.cursor },
+        },
+        pendingKeys: undefined,
       };
     }
     state = { ...state, pendingKeys: undefined };
@@ -2779,10 +3142,24 @@ function handleNormalModeKey(
       return syncRegisters(state, res, true);
     }
 
-    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a' || key === "'" || key === '`') {
+    if (key === 'f' || key === 'F' || key === 't' || key === 'T' || key === 'i' || key === 'a' || key === "'" || key === '`' || key === 'g') {
       return {
         ...state,
         pendingKeys: (state.pendingKeys ?? '') + key,
+      };
+    }
+    if (key === '/') {
+      return {
+        ...state,
+        mode: 'SEARCH',
+        commandType: '/',
+        commandBuffer: '',
+        searchOperator: {
+          op: 'y',
+          count: parsed.totalCount,
+          initialCursor: { ...state.cursor },
+        },
+        pendingKeys: undefined,
       };
     }
     state = { ...state, pendingKeys: undefined };
@@ -2859,6 +3236,21 @@ function handleNormalModeKey(
   // 10. 단일 키 명령 및 모드 진입
   // /: 검색 모드 진입
   if (key === '/') {
+    if (parsed.operator) {
+      return {
+        ...state,
+        mode: 'SEARCH',
+        commandType: '/',
+        commandBuffer: '',
+        searchOperator: {
+          op: parsed.operator,
+          count: parsed.totalCount,
+          initialCursor: { ...state.cursor },
+        },
+        pendingKeys: undefined,
+        commandMessage: undefined,
+      };
+    }
     return {
       ...state,
       mode: 'SEARCH',
@@ -2894,10 +3286,11 @@ function handleNormalModeKey(
       }
       const nextMatch = findNextMatch(matches, state.cursor) ?? matches[0];
       const matchIdx = matches.findIndex((m) => m.line === nextMatch.line && m.col === nextMatch.col);
+      const targetPos = applySearchOffset(state.lines, nextMatch, state.lastSearchOffset);
       const stateWithJump = recordJump(state);
       return {
         ...stateWithJump,
-        cursor: { line: nextMatch.line, col: nextMatch.col },
+        cursor: targetPos,
         commandMessage: `다음 검색 결과 (${matchIdx + 1}/${matches.length}): ${state.lastSearchQuery}`,
         pendingKeys: undefined,
       };
@@ -2918,10 +3311,11 @@ function handleNormalModeKey(
       }
       const prevMatch = findPrevMatch(matches, state.cursor) ?? matches[matches.length - 1];
       const matchIdx = matches.findIndex((m) => m.line === prevMatch.line && m.col === prevMatch.col);
+      const targetPos = applySearchOffset(state.lines, prevMatch, state.lastSearchOffset);
       const stateWithJump = recordJump(state);
       return {
         ...stateWithJump,
-        cursor: { line: prevMatch.line, col: prevMatch.col },
+        cursor: targetPos,
         commandMessage: `이전 검색 결과 (${matchIdx + 1}/${matches.length}): ${state.lastSearchQuery}`,
         pendingKeys: undefined,
       };

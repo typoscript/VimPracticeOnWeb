@@ -1,4 +1,8 @@
-import { VimEditorState } from '../types/vim';
+import {
+  VimEditorState,
+  ConfirmSubstituteMatch,
+  ConfirmSubstituteSession,
+} from '../types/vim';
 import { clampCursor } from './cursor';
 import { pushUndoSnapshot } from './operators';
 import { splitWindow, closeSplitWindow } from './splitWindow';
@@ -1411,6 +1415,52 @@ export function executeSubstitution(
   }
 
   const repTokens = parseReplacementTokens(newText);
+
+  // 대화형 확인 플래그 (c) 처리 (:s/old/new/gc)
+  if (flags.includes('c')) {
+    const firstMatch = findNextSubstituteOccurrence(
+      state.lines,
+      range,
+      oldText,
+      newText,
+      flags,
+      { line: range.startLine, col: 0 }
+    );
+
+    if (!firstMatch) {
+      return {
+        ...state,
+        mode: 'NORMAL',
+        visualAnchor: undefined,
+        commandBuffer: undefined,
+        commandType: undefined,
+        commandMessage: `E486: 패턴을 찾을 수 없습니다: ${oldText}`,
+      };
+    }
+
+    const stateWithSnapshot = pushUndoSnapshot(state);
+    return {
+      ...stateWithSnapshot,
+      mode: 'NORMAL',
+      cursor: { line: firstMatch.line, col: firstMatch.col },
+      confirmSubstitute: {
+        range,
+        oldText,
+        newText,
+        flags,
+        isGlobal,
+        isIgnoreCase,
+        commandStr,
+        substitutedCount: 0,
+        currentMatch: firstMatch,
+      },
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: undefined,
+    };
+  }
+
   let totalSubCount = 0;
 
   const nextLines = [...state.lines];
@@ -1461,5 +1511,240 @@ export function executeSubstitution(
     commandType: undefined,
     commandMessage: `${totalSubCount}개 항목을 치환했습니다.`,
     lastChangeKeys: [':', commandStr, 'Enter'],
+  };
+}
+
+/**
+ * 대화형 치환 확인(:s/.../.../gc) 모드에서 다음 매치 위치를 검색합니다.
+ */
+export function findNextSubstituteOccurrence(
+  lines: string[],
+  range: { startLine: number; endLine: number },
+  oldText: string,
+  newText: string,
+  flags: string,
+  fromPos: { line: number; col: number }
+): ConfirmSubstituteMatch | null {
+  const isGlobal = flags.includes('g');
+  const isIgnoreCase = flags.includes('i');
+  const jsPattern = vimRegexToJsRegex(oldText);
+  let regex: RegExp;
+  try {
+    regex = new RegExp(jsPattern, isIgnoreCase ? 'gi' : 'g');
+  } catch {
+    return null;
+  }
+
+  const repTokens = parseReplacementTokens(newText);
+
+  for (let l = fromPos.line; l <= range.endLine; l++) {
+    const lineText = lines[l] ?? '';
+    regex.lastIndex = l === fromPos.line ? fromPos.col : 0;
+
+    let match: RegExpExecArray | null;
+    while ((match = regex.exec(lineText)) !== null) {
+      const matchIndex = match.index;
+      const matchedText = match[0];
+      const matchLength = matchedText.length > 0 ? matchedText.length : 1;
+      const groups = match.slice(1);
+      const replacement = evaluateReplacement(repTokens, matchedText, groups);
+
+      return {
+        line: l,
+        col: matchIndex,
+        length: matchLength,
+        matchedText,
+        groups,
+        replacement,
+      };
+    }
+
+    if (!isGlobal && l === fromPos.line && fromPos.col > 0) {
+      continue;
+    }
+  }
+
+  return null;
+}
+
+/**
+ * 대화형 치환 확인(:s/.../.../gc) 모드에서 키(y/n/a/q/l) 입력을 처리합니다.
+ */
+export function handleConfirmSubstituteKey(
+  state: VimEditorState,
+  key: string
+): VimEditorState {
+  const session = state.confirmSubstitute;
+  if (!session) return state;
+
+  const { currentMatch, range, oldText, newText, flags, isGlobal, commandStr, substitutedCount } = session;
+
+  // 1. 'y': 현재 매치 치환 후 다음 매치로 이동
+  if (key === 'y' || key === 'Y') {
+    const lineText = state.lines[currentMatch.line] ?? '';
+    const newLineText =
+      lineText.slice(0, currentMatch.col) +
+      currentMatch.replacement +
+      lineText.slice(currentMatch.col + currentMatch.length);
+
+    const nextLines = [...state.lines];
+    nextLines[currentMatch.line] = newLineText;
+    const newCount = substitutedCount + 1;
+
+    const nextSearchPos = isGlobal
+      ? { line: currentMatch.line, col: currentMatch.col + currentMatch.replacement.length }
+      : { line: currentMatch.line + 1, col: 0 };
+
+    const nextMatch = findNextSubstituteOccurrence(
+      nextLines,
+      range,
+      oldText,
+      newText,
+      flags,
+      nextSearchPos
+    );
+
+    if (nextMatch) {
+      return {
+        ...state,
+        lines: nextLines,
+        cursor: { line: nextMatch.line, col: nextMatch.col },
+        confirmSubstitute: {
+          ...session,
+          substitutedCount: newCount,
+          currentMatch: nextMatch,
+        },
+      };
+    } else {
+      return {
+        ...state,
+        lines: nextLines,
+        cursor: clampCursor(nextLines, { line: currentMatch.line, col: currentMatch.col }, 'NORMAL'),
+        confirmSubstitute: null,
+        commandMessage: `${newCount}개 항목을 치환했습니다.`,
+        lastChangeKeys: [':', commandStr, 'Enter'],
+      };
+    }
+  }
+
+  // 2. 'n': 현재 매치 건너뛰고 다음 매치로 이동
+  if (key === 'n' || key === 'N') {
+    const nextSearchPos = isGlobal
+      ? { line: currentMatch.line, col: currentMatch.col + currentMatch.length }
+      : { line: currentMatch.line + 1, col: 0 };
+
+    const nextMatch = findNextSubstituteOccurrence(
+      state.lines,
+      range,
+      oldText,
+      newText,
+      flags,
+      nextSearchPos
+    );
+
+    if (nextMatch) {
+      return {
+        ...state,
+        cursor: { line: nextMatch.line, col: nextMatch.col },
+        confirmSubstitute: {
+          ...session,
+          currentMatch: nextMatch,
+        },
+      };
+    } else {
+      return {
+        ...state,
+        confirmSubstitute: null,
+        commandMessage: substitutedCount > 0
+          ? `${substitutedCount}개 항목을 치환했습니다.`
+          : '치환을 완료했습니다.',
+      };
+    }
+  }
+
+  // 3. 'a': 현재 매치 및 나머지 모든 매치 일괄 치환 후 종료
+  if (key === 'a' || key === 'A') {
+    return substituteAllRemaining(state, session);
+  }
+
+  // 4. 'l': 현재 매치 치환하고 즉시 종료 (last)
+  if (key === 'l' || key === 'L') {
+    const lineText = state.lines[currentMatch.line] ?? '';
+    const newLineText =
+      lineText.slice(0, currentMatch.col) +
+      currentMatch.replacement +
+      lineText.slice(currentMatch.col + currentMatch.length);
+
+    const nextLines = [...state.lines];
+    nextLines[currentMatch.line] = newLineText;
+    const newCount = substitutedCount + 1;
+
+    return {
+      ...state,
+      lines: nextLines,
+      cursor: clampCursor(nextLines, { line: currentMatch.line, col: currentMatch.col }, 'NORMAL'),
+      confirmSubstitute: null,
+      commandMessage: `${newCount}개 항목을 치환했습니다.`,
+      lastChangeKeys: [':', commandStr, 'Enter'],
+    };
+  }
+
+  // 5. 'q', 'Escape', 'Ctrl-c': 치환 중단 및 즉시 복귀
+  if (key === 'q' || key === 'Q' || key === 'Escape' || key === 'Ctrl-c' || key === 'Ctrl+c') {
+    return {
+      ...state,
+      confirmSubstitute: null,
+      commandMessage: substitutedCount > 0
+        ? `${substitutedCount}개 항목을 치환했습니다.`
+        : '치환이 취소되었습니다.',
+    };
+  }
+
+  return state;
+}
+
+/**
+ * 대화형 치환 확인 모드에서 나머지 모든 일치 항목을 일괄 치환합니다.
+ */
+export function substituteAllRemaining(
+  state: VimEditorState,
+  session: ConfirmSubstituteSession
+): VimEditorState {
+  let curLines = [...state.lines];
+  let totalCount = session.substitutedCount;
+  let curMatch: ConfirmSubstituteMatch | null = session.currentMatch;
+  let lastPos = { line: curMatch.line, col: curMatch.col };
+
+  while (curMatch) {
+    const lineText = curLines[curMatch.line] ?? '';
+    const newLineText =
+      lineText.slice(0, curMatch.col) +
+      curMatch.replacement +
+      lineText.slice(curMatch.col + curMatch.length);
+    curLines[curMatch.line] = newLineText;
+    totalCount++;
+    lastPos = { line: curMatch.line, col: curMatch.col };
+
+    const nextSearchPos = session.isGlobal
+      ? { line: curMatch.line, col: curMatch.col + curMatch.replacement.length }
+      : { line: curMatch.line + 1, col: 0 };
+
+    curMatch = findNextSubstituteOccurrence(
+      curLines,
+      session.range,
+      session.oldText,
+      session.newText,
+      session.flags,
+      nextSearchPos
+    );
+  }
+
+  return {
+    ...state,
+    lines: curLines,
+    cursor: clampCursor(curLines, lastPos, 'NORMAL'),
+    confirmSubstitute: null,
+    commandMessage: `${totalCount}개 항목을 치환했습니다.`,
+    lastChangeKeys: [':', session.commandStr, 'Enter'],
   };
 }

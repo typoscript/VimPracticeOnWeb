@@ -1506,6 +1506,7 @@ export function App() {
                       completionSession={editorState.activePaneIndex === 0 ? editorState.completionSession : undefined}
                       insertNormalSession={editorState.activePaneIndex === 0 ? editorState.insertNormalSession : undefined}
                       insertRegisterPending={editorState.activePaneIndex === 0 ? editorState.insertRegisterPending : undefined}
+                      confirmSubstitute={editorState.activePaneIndex === 0 ? editorState.confirmSubstitute : undefined}
                     />
                   </div>
 
@@ -1541,6 +1542,7 @@ export function App() {
                       completionSession={editorState.activePaneIndex === 1 ? editorState.completionSession : undefined}
                       insertNormalSession={editorState.activePaneIndex === 1 ? editorState.insertNormalSession : undefined}
                       insertRegisterPending={editorState.activePaneIndex === 1 ? editorState.insertRegisterPending : undefined}
+                      confirmSubstitute={editorState.activePaneIndex === 1 ? editorState.confirmSubstitute : undefined}
                     />
                   </div>
                 </div>
@@ -1565,6 +1567,7 @@ export function App() {
                   completionSession={displayEditorState.completionSession}
                   insertNormalSession={displayEditorState.insertNormalSession}
                   insertRegisterPending={displayEditorState.insertRegisterPending}
+                  confirmSubstitute={displayEditorState.confirmSubstitute}
                 />
               )}
             </div>
@@ -1574,6 +1577,7 @@ export function App() {
               cursor={displayEditorState.cursor}
               insertNormalSession={displayEditorState.insertNormalSession}
               insertRegisterPending={displayEditorState.insertRegisterPending}
+              confirmSubstitute={displayEditorState.confirmSubstitute}
               filename={
                 displayEditorState.splitPanes
                   ? (displayEditorState.activePaneIndex === 1

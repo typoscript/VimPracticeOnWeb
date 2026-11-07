@@ -6,6 +6,7 @@ import {
   ViewportState,
   FoldRange,
   CompletionSession,
+  ConfirmSubstituteSession,
 } from '../../types/vim';
 import { isPositionSelected } from '../../engine/visual';
 import { findMatches } from '../../engine/search';
@@ -37,6 +38,8 @@ export interface EditorProps {
   insertNormalSession?: boolean;
   /** Insert 모드 및 Command 모드 Ctrl+r 레지스터 입력 대기 상태 */
   insertRegisterPending?: boolean;
+  /** :s/.../.../gc 대화형 치환 확인 세션 */
+  confirmSubstitute?: ConfirmSubstituteSession | null;
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -55,6 +58,7 @@ export const Editor: React.FC<EditorProps> = ({
   completionSession,
   insertNormalSession,
   insertRegisterPending,
+  confirmSubstitute,
 }) => {
   const scrollerRef = React.useRef<HTMLDivElement>(null);
 
@@ -170,6 +174,7 @@ export const Editor: React.FC<EditorProps> = ({
                         isFocused,
                         insertNormalSession,
                         insertRegisterPending,
+                        confirmSubstitute,
                       })}
                       {isCursorLine &&
                         completionSession &&
@@ -237,6 +242,7 @@ interface RenderLineOptions {
   isFocused: boolean;
   insertNormalSession?: boolean;
   insertRegisterPending?: boolean;
+  confirmSubstitute?: ConfirmSubstituteSession | null;
 }
 
 function renderLineContent(opts: RenderLineOptions): React.ReactNode {
@@ -251,6 +257,7 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     isFocused,
     insertNormalSession,
     insertRegisterPending,
+    confirmSubstitute,
   } = opts;
   const isCursorLine = cursor.line === lineIdx;
   const cursorCol = isCursorLine ? cursor.col : null;
@@ -305,6 +312,11 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
       (m) => i >= m.col && i < m.col + m.length
     );
     const isTrailingCursor = isCursor && i >= text.length;
+    const isConfirmMatch =
+      confirmSubstitute &&
+      confirmSubstitute.currentMatch.line === lineIdx &&
+      i >= confirmSubstitute.currentMatch.col &&
+      i < confirmSubstitute.currentMatch.col + confirmSubstitute.currentMatch.length;
 
     // 빈 줄이거나 줄 끝 뒤의 가상 커서 위치에서는 공백 너비 유지를 위해 non-breaking space 사용
     // Ctrl+r 레지스터 대기 상태에서는 커서 위치에 " 표시
@@ -333,6 +345,10 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
 
     if (isSearchMatch) {
       classNames += ' search-match';
+    }
+
+    if (isConfirmMatch) {
+      classNames += ' char-confirm-substitute';
     }
 
     if (isTarget) {
