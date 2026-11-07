@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   DUNGEON_STAGES,
   DUNGEON_SKILLS,
@@ -53,6 +53,18 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  const isMountedRef = useRef(true);
+  const activeTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      activeTimersRef.current.forEach((t) => clearTimeout(t));
+      activeTimersRef.current = [];
+    };
+  }, []);
+
   // 스테이지 변경 시 초기화
   const loadStage = useCallback((index: number) => {
     const s = DUNGEON_STAGES[index];
@@ -77,9 +89,12 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
 
   const showToast = useCallback((msg: string) => {
     setToastMessage(msg);
-    setTimeout(() => {
-      setToastMessage((prev) => (prev === msg ? null : prev));
+    const timer = setTimeout(() => {
+      if (isMountedRef.current) {
+        setToastMessage((prev) => (prev === msg ? null : prev));
+      }
     }, 2000);
+    activeTimersRef.current.push(timer);
   }, []);
 
   // 키 입력 및 던전 상호작용 처리
@@ -147,7 +162,10 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
           col: nextCursor.col,
           label: 'SLASH! 🗡️',
         });
-        setTimeout(() => setSlashEffect(null), 600);
+        const timer = setTimeout(() => {
+          if (isMountedRef.current) setSlashEffect(null);
+        }, 600);
+        activeTimersRef.current.push(timer);
       }
 
       // 열쇠(K) 획득 검사

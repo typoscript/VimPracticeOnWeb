@@ -881,8 +881,54 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson46!.checkComplete(completeState)).toBe(true);
   });
 
-  it('모든 46개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(46);
+  it('레슨 47 (순정 코드 폴딩 za, zo, zM, zR) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson47 = MISSIONS.find((m) => m.id === 47);
+    expect(lesson47).toBeDefined();
+    expect(lesson47?.par).toBe(13);
+
+    const incompleteState: VimEditorState = {
+      lines: [...lesson47!.initialLines],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson47!.checkComplete(incompleteState)).toBe(false);
+
+    const completeState: VimEditorState = {
+      lines: [...lesson47!.targetLines!],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+      folds: [
+        { startRow: 1, endRow: 3, closed: true },
+        { startRow: 6, endRow: 8, closed: true },
+        { startRow: 11, endRow: 13, closed: true },
+      ],
+    };
+    expect(lesson47!.checkComplete(completeState)).toBe(true);
+  });
+
+  it('레슨 48 (대화형 치환 :%s/old/new/gc) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson48 = MISSIONS.find((m) => m.id === 48);
+    expect(lesson48).toBeDefined();
+    expect(lesson48?.par).toBe(23);
+
+    const incompleteState: VimEditorState = {
+      lines: [...lesson48!.initialLines],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson48!.checkComplete(incompleteState)).toBe(false);
+
+    const completeState: VimEditorState = {
+      lines: [...lesson48!.targetLines!],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+      confirmSubstitute: null,
+    };
+    expect(lesson48!.checkComplete(completeState)).toBe(true);
+  });
+
+  it('모든 48개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(48);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();
@@ -938,6 +984,7 @@ describe('MISSIONS 10 ~ 12 validation', () => {
         argList: m.initialArgs
           ? { files: [...m.initialArgs], currentIndex: 0 }
           : undefined,
+        folds: m.initialFolds ? [...m.initialFolds] : undefined,
       };
 
       for (const key of m.optimalKeys!) {

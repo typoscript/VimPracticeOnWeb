@@ -1,4 +1,4 @@
-import { ClipboardRegister, StateSnapshot, VimEditorState, QuickfixItem, ChangeListItem, UndoTreeNode } from './vim';
+import { ClipboardRegister, StateSnapshot, VimEditorState, QuickfixItem, ChangeListItem, UndoTreeNode, FoldRange } from './vim';
 
 export interface Mission {
   id: number;
@@ -40,5 +40,7 @@ export interface Mission {
   initialChangeList?: ChangeListItem[];
   /** 초기 아규먼트 리스트 (:args, :argdo 미션용) */
   initialArgs?: string[];
+  /** 초기 폴드 목록 (코드 폴딩 미션용) */
+  initialFolds?: FoldRange[];
   checkComplete: (state: VimEditorState) => boolean;
 }

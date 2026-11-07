@@ -1437,6 +1437,99 @@ export const MISSIONS: Mission[] = [
       return state.lines.every((line, idx) => line === target[idx]);
     },
   },
+  {
+    id: 47,
+    title: '레슨 47: 순정 코드 폴딩(za, zo, zM, zR)으로 대형 파일 탐색 및 특정 함수 리팩토링하기',
+    description:
+      '대형 코드베이스에서는 수백 줄의 함수들로 인해 원하는 코드를 찾기 어렵습니다. Vim의 순정 폴딩(Folding) 기능을 활용하면 블록 단위로 코드를 접고 펼치며 고속으로 탐색할 수 있습니다.\n\n1) zM: 버퍼 내의 모든 함수/중괄호 블록을 일괄 접습니다.\n2) za: 커서 위치의 접힌 블록을 펼치거나(zo), 열린 블록을 다시 접습니다(zc).\n3) zR: 버퍼 내의 모든 접힌 블록을 일괄 펼칩니다.\n\n미션: zM으로 모든 함수를 접은 뒤 calculateTotal 함수 블록으로 이동하여 za로 펼치고, discount 변수를 5로 수정한 다음 zM으로 다시 모든 블록을 접어 완료하세요.',
+    hint: 'zM을 눌러 모든 블록을 접은 뒤, 3j로 calculateTotal 함수 줄로 이동하여 za를 눌러 펼치세요. j f0 r5 로 discount = 0을 discount = 5로 수정한 뒤, zM을 눌러 다시 모두 접으면 완료됩니다.',
+    par: 13,
+    optimalKeys: ['z', 'M', '3', 'j', 'z', 'a', 'j', 'f', '0', 'r', '5', 'z', 'M'],
+    primaryFilename: 'cart.ts',
+    initialLines: [
+      'function validateCart() {',
+      '  const valid = true;',
+      '  checkInventory();',
+      '  return valid;',
+      '}',
+      'function calculateTotal() {',
+      '  const discount = 0;',
+      '  const tax = 10;',
+      '  return 100 - discount;',
+      '}',
+      'function printInvoice() {',
+      '  const sent = true;',
+      '  notifyUser();',
+      '  return sent;',
+      '}',
+    ],
+    targetLines: [
+      'function validateCart() {',
+      '  const valid = true;',
+      '  checkInventory();',
+      '  return valid;',
+      '}',
+      'function calculateTotal() {',
+      '  const discount = 5;',
+      '  const tax = 10;',
+      '  return 100 - discount;',
+      '}',
+      'function printInvoice() {',
+      '  const sent = true;',
+      '  notifyUser();',
+      '  return sent;',
+      '}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const isModifiedCorrectly =
+        state.lines.length === 15 && state.lines[6] === '  const discount = 5;';
+      const allClosed =
+        !!state.folds &&
+        state.folds.length > 0 &&
+        state.folds.every((f) => f.closed);
+      return isModifiedCorrectly && allClosed;
+    },
+  },
+  {
+    id: 48,
+    title: '레슨 48: 대화형 치환(:%s/old/new/gc)으로 안전하게 변수 선별 치환하기',
+    description:
+      '전체 일괄 치환(:%s/old/new/g)을 실행하면 의도치 않게 다른 라이브러리 속성이나 주석의 단어까지 모두 바뀌어 버그가 발생할 수 있습니다.\n\nVim에서는 c 플래그(:%s/old/new/gc)를 지정하여 각 일치 항목마다 치환 여부를 직접 결정하는 순정 대화형 확인(Confirm) 모드를 제공합니다.\n\n1) y: 현재 매칭을 새 문자열로 치환하고 다음 매칭으로 이동합니다.\n2) n: 현재 매칭을 건너뛰고(치환 안 함) 다음 매칭으로 이동합니다.\n3) a: 현재 매칭 및 남은 모든 매칭을 한 번에 일괄 치환합니다.\n4) q: 치환 작업을 즉시 중단하고 빠져나옵니다.\n\n미션: :%s/status/state/gc 명령을 실행하여 status 변수는 state로 치환(y)하고, HTTP 응답 속성(res.status)은 건너뛰어(n) 안전하게 리팩토링을 완료하세요.',
+    hint: ':%s/status/state/gc 를 입력하고 Enter를 누르면 대화형 확인 프롬프트가 열립니다. 첫 번째 매칭에서 y, 두 번째 매칭(res.status)에서 n, 세 번째 매칭에서 y를 차례대로 누르세요.',
+    par: 23,
+    optimalKeys: [
+      ':', '%', 's', '/', 's', 't', 'a', 't', 'u', 's', '/', 's', 't', 'a', 't', 'e', '/', 'g', 'c', 'Enter',
+      'y', 'n', 'y',
+    ],
+    primaryFilename: 'handler.ts',
+    initialLines: [
+      'let status = "pending";',
+      'if (res.status === 200) {',
+      '  status = "success";',
+      '}',
+    ],
+    targetLines: [
+      'let state = "pending";',
+      'if (res.status === 200) {',
+      '  state = "success";',
+      '}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      if (state.confirmSubstitute) return false;
+      const target = [
+        'let state = "pending";',
+        'if (res.status === 200) {',
+        '  state = "success";',
+        '}',
+      ];
+      if (state.lines.length !== target.length) return false;
+      return state.lines.every((line, idx) => line === target[idx]);
+    },
+  },
 ];
 
 
