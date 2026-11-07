@@ -45,6 +45,7 @@ import {
   formatQuickfixList,
   vimgrep,
   setQuickfixList,
+  loadQuickfixFromFile,
 } from './quickfixEngine';
 import { formatChangeList } from './advancedMotions';
 import {
@@ -1217,6 +1218,34 @@ export function executeCommandLine(
       commandBuffer: undefined,
       commandType: undefined,
       commandMessage: formatQuickfixList(state),
+    };
+  }
+
+  // 퀵픽스 파일 로드 및 첫 에러 점프: :cfile [filename], :cf [filename]
+  const cfileMatch = cleanCmdRaw.match(/^(?:cfile|cf)\s+(.+)$/i);
+  if (cfileMatch) {
+    const filename = cfileMatch[1].trim();
+    const res = loadQuickfixFromFile(state, filename, true);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 퀵픽스 파일 로드(점프 없음): :cgetfile [filename], :cg [filename]
+  const cgetfileMatch = cleanCmdRaw.match(/^(?:cgetfile|cg)\s+(.+)$/i);
+  if (cgetfileMatch) {
+    const filename = cgetfileMatch[1].trim();
+    const res = loadQuickfixFromFile(state, filename, false);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
     };
   }
 

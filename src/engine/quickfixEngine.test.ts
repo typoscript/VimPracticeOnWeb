@@ -221,5 +221,77 @@ describe('quickfixEngine module', () => {
       }
       expect(state.quickfix?.isOpen).toBe(false);
     });
+
+    it(':cfile 명령으로 외부 에러 로그 파일을 파싱하여 퀵픽스로 로드하고 첫 에러로 점프한다', () => {
+      let state: VimEditorState = {
+        lines: [
+          'const a = 1;',
+          'const b = 2;',
+          'const c = 3;',
+        ],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+        primaryFilename: 'app.ts',
+        buffers: [
+          {
+            id: 1,
+            name: 'app.ts',
+            lines: ['const a = 1;', 'const b = 2;', 'const c = 3;'],
+            cursor: { line: 0, col: 0 },
+          },
+          {
+            id: 2,
+            name: 'errors.log',
+            lines: [
+              'app.ts:2:7: error TS2304: Cannot find name "b"',
+              'app.ts:3:1: warning TS2322: Type "number" is not assignable',
+            ],
+            cursor: { line: 0, col: 0 },
+          },
+        ],
+        currentBufferId: 1,
+      };
+
+      // :cfile errors.log 실행
+      const cmd = ':cfile errors.log\n';
+      for (const char of cmd) {
+        state = handleKey(state, char === '\n' ? 'Enter' : char);
+      }
+
+      expect(state.quickfix).toBeDefined();
+      expect(state.quickfix?.items.length).toBe(2);
+      expect(state.quickfix?.items[0].filename).toBe('app.ts');
+      expect(state.quickfix?.items[0].line).toBe(2);
+      expect(state.quickfix?.items[0].col).toBe(7);
+      // 첫 번째 에러 위치 (line 2 -> index 1)로 점프
+      expect(state.cursor.line).toBe(1);
+    });
+
+    it(':cgetfile 명령은 퀵픽스 목록을 로드하되 커서 위치를 이동하지 않는다', () => {
+      let state: VimEditorState = {
+        lines: ['const a = 1;', 'const b = 2;'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+        primaryFilename: 'main.ts',
+        buffers: [
+          {
+            id: 1,
+            name: 'build.err',
+            lines: ['main.ts:2:5: syntax error'],
+            cursor: { line: 0, col: 0 },
+          },
+        ],
+        currentBufferId: 0,
+      };
+
+      const cmd = ':cgetfile build.err\n';
+      for (const char of cmd) {
+        state = handleKey(state, char === '\n' ? 'Enter' : char);
+      }
+
+      expect(state.quickfix?.items.length).toBe(1);
+      // 커서는 여전히 line 0 유지
+      expect(state.cursor.line).toBe(0);
+    });
   });
 });

@@ -152,6 +152,7 @@ import {
   joinLines,
   toggleCaseChar,
   changeCaseVisual,
+  executeCaseMotion,
   indentLines,
   indentVisual,
   modifyNumberAtCursor,
@@ -211,8 +212,8 @@ export function parsePending(pendingKeys?: string): ParsedPending {
     return { count1: c, totalCount: c };
   }
 
-  // 2. 연산자 및 카운트 조합: "d", "2d", "d2", "2d3", "c", "r", "y", "v", "g", "@", ">", "<", "=", "m", "'", "`"
-  const opMatch = pendingKeys.match(/^([1-9][0-9]*)?([a-zA-Z@'`><=])([0-9]*)$/);
+  // 2. 연산자 및 카운트 조합: "d", "2d", "d2", "2d3", "c", "r", "y", "v", "g", "gu", "gU", "g~", "@", ">", "<", "=", "m", "'", "`"
+  const opMatch = pendingKeys.match(/^([1-9][0-9]*)?(g[uU~]|[a-zA-Z@'`><=])([0-9]*)$/);
   if (opMatch) {
     const count1 = opMatch[1] ? parseInt(opMatch[1], 10) : undefined;
     const operator = opMatch[2];
@@ -2932,21 +2933,31 @@ function handleNormalModeKey(
     state = { ...state, pendingKeys: undefined };
   }
 
-  // 1-0-13. g 대소문자 변환 (guu, gUU, g~~)
-  const gCaseMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?g([~uU])$/);
-  if (gCaseMatch) {
-    const gType = gCaseMatch[2];
-    if (key === gType || (gType === 'u' && key === 'u') || (gType === 'U' && key === 'U') || (gType === '~' && key === '~')) {
-      const visualState: VimEditorState = {
+  // 1-0-13. 순정 Vim 대소문자 변환 연산자 (gu, gU, g~ + 모션 / 텍스트객체 / 라인반복)
+  if (parsed.operator === 'gu' || parsed.operator === 'gU' || parsed.operator === 'g~') {
+    const op = parsed.operator as 'gu' | 'gU' | 'g~';
+    // 텍스트 객체 대기 (i, a)
+    if (key === 'i' || key === 'a') {
+      return {
         ...state,
-        mode: 'VISUAL_LINE',
-        visualAnchor: { line: state.cursor.line, col: 0 },
-        cursor: { line: state.cursor.line, col: 0 },
+        pendingKeys: (state.pendingKeys ?? '') + key,
       };
-      const caseType = gType === '~' ? 'toggle' : gType === 'u' ? 'lower' : 'upper';
-      return changeCaseVisual(visualState, caseType);
     }
-    state = { ...state, pendingKeys: undefined };
+    // g 재입력 대기 (예: gUg -> gUgg, gUgU)
+    if (key === 'g' && !state.pendingKeys?.endsWith('g')) {
+      return {
+        ...state,
+        pendingKeys: (state.pendingKeys ?? '') + key,
+      };
+    }
+    const motionKey = state.pendingKeys?.endsWith('g') ? (key === 'g' ? 'gg' : key) : key;
+    const res = executeCaseMotion(state, op, motionKey, parsed.totalCount);
+    const opKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), op, motionKey] : [op, motionKey];
+    return {
+      ...res,
+      lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys,
+      pendingKeys: undefined,
+    };
   }
 
   // 1-0-14. 순정 Vim Diff 점프 모션 (]c, [c, [count]]c, [count][c)
@@ -3072,11 +3083,11 @@ function handleNormalModeKey(
     };
   }
 
-  // 4. 텍스트 객체 대기 상태 (di, da, ci, ca, yi, ya, vi, va, =i, =a 및 카운트 조합)
-  const textObjPendingMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([dcyv=])([ia])$/);
+  // 4. 텍스트 객체 대기 상태 (di, da, ci, ca, yi, ya, vi, va, =i, =a, gui, gua, gUi, gUa, g~i, g~a 및 카운트 조합)
+  const textObjPendingMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([dcyv=]|g[uU~])([ia])$/);
   if (textObjPendingMatch) {
     const count = textObjPendingMatch[1] ? parseInt(textObjPendingMatch[1], 10) : 1;
-    const op = textObjPendingMatch[2] as 'd' | 'c' | 'y' | 'v' | '=';
+    const op = textObjPendingMatch[2] as 'd' | 'c' | 'y' | 'v' | '=' | 'gu' | 'gU' | 'g~';
     const modifier = textObjPendingMatch[3] as 'i' | 'a';
 
     const validTargets = ['w', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't'];
@@ -3097,13 +3108,7 @@ function handleNormalModeKey(
           currentChangeKeys: isReplayingDot ? state.currentChangeKeys : opKeys,
         };
       }
-      if (op === 'd') {
-        return {
-          ...synced,
-          lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys,
-        };
-      }
-      if (op === '=') {
+      if (op === 'd' || op === '=' || op === 'gu' || op === 'gU' || op === 'g~') {
         return {
           ...synced,
           lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys,

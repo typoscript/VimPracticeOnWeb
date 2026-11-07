@@ -1,7 +1,7 @@
 import { CursorPosition, VimEditorState } from '../types/vim';
 import { clampCursor } from './cursor';
 import { pushUndoSnapshot } from './operators';
-import { formatLinesRange } from './lineOperators';
+import { formatLinesRange, changeCaseVisual } from './lineOperators';
 import { moveToFirstNonBlank } from './motions';
 
 export type TextObjectModifier = 'i' | 'a';
@@ -511,11 +511,11 @@ export function getTagTextObjectRange(
 }
 
 /**
- * 텍스트 객체와 연산자(d, c, y, v, =)를 조합하여 실행합니다. (숫자 카운트 및 멀티라인 지원)
+ * 텍스트 객체와 연산자(d, c, y, v, =, gu, gU, g~)를 조합하여 실행합니다. (숫자 카운트 및 멀티라인 지원)
  */
 export function executeTextObjectOperator(
   state: VimEditorState,
-  operator: 'd' | 'c' | 'y' | 'v' | '=',
+  operator: 'd' | 'c' | 'y' | 'v' | '=' | 'gu' | 'gU' | 'g~',
   objectType: TextObjectType,
   count = 1
 ): VimEditorState {
@@ -538,6 +538,24 @@ export function executeTextObjectOperator(
     const endLine = range.endLine ?? curState.cursor.line;
     const startCol = range.startCol;
     const endCol = range.endCol;
+
+    // 대소문자 변환 (gu, gU, g~)
+    if (operator === 'gu' || operator === 'gU' || operator === 'g~') {
+      const visualState: VimEditorState = {
+        ...curState,
+        mode: 'VISUAL',
+        visualAnchor: {
+          line: startLine,
+          col: Math.min(startCol, (curState.lines[startLine] ?? '').length),
+        },
+        cursor: {
+          line: endLine,
+          col: endCol,
+        },
+      };
+      const caseType = operator === 'g~' ? 'toggle' : operator === 'gu' ? 'lower' : 'upper';
+      return changeCaseVisual(visualState, caseType);
+    }
 
     // 자동 들여쓰기 정렬 (=)
     if (operator === '=') {

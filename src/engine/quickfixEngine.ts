@@ -346,3 +346,101 @@ export function vimgrep(
     };
   }
 }
+
+/**
+ * 에러 로그 텍스트 줄을 파싱하여 Quickfix 항목 목록을 생성합니다.
+ * 지원 형식:
+ * 1) filename:line:col: message
+ * 2) filename:line: message
+ * 3) filename(line,col): message
+ */
+export function parseQuickfixErrorLines(lines: string[]): QuickfixItem[] {
+  const items: QuickfixItem[] = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.length === 0) continue;
+
+    // 1. filename:line:col: message
+    const match1 = trimmed.match(/^([^:\s]+):(\d+):(\d+):\s*(.*)$/);
+    if (match1) {
+      const filename = match1[1];
+      const lineNum = parseInt(match1[2], 10);
+      const colNum = parseInt(match1[3], 10);
+      const text = match1[4] || '';
+      const type = /error/i.test(text) ? 'E' : /warn/i.test(text) ? 'W' : 'I';
+      items.push({ filename, line: lineNum, col: colNum, text, type });
+      continue;
+    }
+
+    // 2. filename:line: message
+    const match2 = trimmed.match(/^([^:\s]+):(\d+):\s*(.*)$/);
+    if (match2) {
+      const filename = match2[1];
+      const lineNum = parseInt(match2[2], 10);
+      const text = match2[3] || '';
+      const type = /error/i.test(text) ? 'E' : /warn/i.test(text) ? 'W' : 'I';
+      items.push({ filename, line: lineNum, col: 1, text, type });
+      continue;
+    }
+
+    // 3. filename(line,col): message
+    const match3 = trimmed.match(/^([^:\s\(]+)\((\d+),(\d+)\):\s*(.*)$/);
+    if (match3) {
+      const filename = match3[1];
+      const lineNum = parseInt(match3[2], 10);
+      const colNum = parseInt(match3[3], 10);
+      const text = match3[4] || '';
+      const type = /error/i.test(text) ? 'E' : /warn/i.test(text) ? 'W' : 'I';
+      items.push({ filename, line: lineNum, col: colNum, text, type });
+      continue;
+    }
+  }
+
+  return items;
+}
+
+/**
+ * 파일(또는 가상 파일 시스템)의 에러 로그를 읽어 퀵픽스 목록을 로드합니다. (:cfile, :cgetfile)
+ */
+export function loadQuickfixFromFile(
+  state: VimEditorState,
+  filename: string,
+  jumpToFirst = true
+): VimEditorState {
+  const cleanName = filename.trim();
+  if (cleanName.length === 0) {
+    return { ...state, commandMessage: 'E471: Argument required' };
+  }
+
+  // 파일 줄 내용 찾기 (버퍼 목록, Netrw VFS, 현재 버퍼 등)
+  let targetLines: string[] | undefined = undefined;
+
+  const buf = state.buffers?.find((b) => b.name === cleanName);
+  if (buf) {
+    targetLines = buf.lines;
+  } else if (state.netrw?.files?.[cleanName]) {
+    targetLines = state.netrw.files[cleanName];
+  } else if (cleanName === state.primaryFilename || cleanName === '%' || cleanName === '[No Name]') {
+    targetLines = state.lines;
+  } else if (cleanName === state.secondaryFilename && state.secondaryLines) {
+    targetLines = state.secondaryLines;
+  }
+
+  if (!targetLines) {
+    return {
+      ...state,
+      commandMessage: `E484: 파일을 열 수 없습니다: ${cleanName}`,
+    };
+  }
+
+  const items = parseQuickfixErrorLines(targetLines);
+  if (items.length === 0) {
+    return {
+      ...state,
+      commandMessage: `E42: 에러 목록이 비어 있습니다: ${cleanName}`,
+    };
+  }
+
+  return setQuickfixList(state, items, jumpToFirst);
+}

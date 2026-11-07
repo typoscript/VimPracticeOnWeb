@@ -825,8 +825,64 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson44!.checkComplete(completeState)).toBe(true);
   });
 
-  it('모든 44개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(44);
+  it('레슨 45 (대소문자 변환 gU, gu) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson45 = MISSIONS.find((m) => m.id === 45);
+    expect(lesson45).toBeDefined();
+    expect(lesson45?.par).toBe(8);
+
+    const incompleteState: VimEditorState = {
+      lines: [
+        'export const maxRetryCount = 5;',
+        'export const API_KEY_SECRET = "production_key";',
+      ],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson45!.checkComplete(incompleteState)).toBe(false);
+
+    const completeState: VimEditorState = {
+      lines: [
+        'export const MAXRETRYCOUNT = 5;',
+        'export const api_key_secret = "production_key";',
+      ],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson45!.checkComplete(completeState)).toBe(true);
+  });
+
+  it('레슨 46 (퀵픽스 로그 파일 로드 :cfile) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson46 = MISSIONS.find((m) => m.id === 46);
+    expect(lesson46).toBeDefined();
+    expect(lesson46?.par).toBe(26);
+
+    const incompleteState: VimEditorState = {
+      lines: [
+        'export function calculateTotal(items: number[]): number {',
+        '  const reslt = items.reduce((a, b) => a + b, 0);',
+        '  return reslt;',
+        '}',
+      ],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson46!.checkComplete(incompleteState)).toBe(false);
+
+    const completeState: VimEditorState = {
+      lines: [
+        'export function calculateTotal(items: number[]): number {',
+        '  const result = items.reduce((a, b) => a + b, 0);',
+        '  return reslt;',
+        '}',
+      ],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson46!.checkComplete(completeState)).toBe(true);
+  });
+
+  it('모든 46개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(46);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();

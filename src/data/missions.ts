@@ -1370,6 +1370,73 @@ export const MISSIONS: Mission[] = [
       return state.lines.every((line, idx) => line === target[idx]);
     },
   },
+  {
+    id: 45,
+    title: '레슨 45: 순정 대소문자 변환(gU, gu, g~ + 텍스트 객체/모션)으로 변수명 리팩토링하기',
+    description: 'Vim에서는 단어를 일일이 지우고 다시 치지 않아도, 대소문자 변환 연산자(gU, gu, g~)를 모션이나 텍스트 객체(iw, $)와 조합해 순식간에 표기법을 바꿀 수 있습니다. 1) 단어 대문자화: gUiw를 누르면 커서 위치의 단어가 상수형 대문자로 변환됩니다. 2) 단어 소문자화: guiw를 누르면 소문자로 변환됩니다. 3) 줄 끝까지 변환: gU$를 누르면 현재 위치부터 줄 끝까지 대문자가 됩니다. 4) 비주얼 모드: 영역 선택 후 U(대문자), u(소문자), ~(반전)를 누르면 선택 범위 전체가 즉시 변환됩니다.',
+    hint: '첫 번째 줄의 maxRetryCount 위에서 gUiw를 입력해 MAXRETRYCOUNT 상수로 만들고, j로 내려가 gu$로 api_key_secret 줄을 소문자로 정리하세요.',
+    par: 8,
+    optimalKeys: ['g', 'U', 'i', 'w', 'j', 'g', 'u', '$'],
+    primaryFilename: 'constants.ts',
+    initialLines: [
+      'export const maxRetryCount = 5;',
+      'export const API_KEY_SECRET = "production_key";',
+    ],
+    targetLines: [
+      'export const MAXRETRYCOUNT = 5;',
+      'export const api_key_secret = "production_key";',
+    ],
+    initialCursor: { line: 0, col: 15 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const target = [
+        'export const MAXRETRYCOUNT = 5;',
+        'export const api_key_secret = "production_key";',
+      ];
+      if (state.lines.length !== target.length) return false;
+      return state.lines.every((line, idx) => line === target[idx]);
+    },
+  },
+  {
+    id: 46,
+    title: '레슨 46: 린터/컴파일러 로그를 퀵픽스로 읽어와 점프하기 (:cfile, :cn, :cp)',
+    description: 'CI 빌드나 linter, TypeScript 컴파일러(tsc)가 출력한 에러 로그 파일을 Vim 퀵픽스로 불러오면, 각 소스 코드 파일의 에러 라인과 컬럼으로 즉시 점프하며 디버깅할 수 있습니다. 1) :cfile build.log: 파일의 에러 줄 목록(filename:line:col)을 퀵픽스로 로드하고 첫 번째 에러 위치로 바로 이동합니다. 2) :cn / :cp: 다음 및 이전 에러 위치로 점프합니다. 3) :copen: 퀵픽스 목록 창을 열어 전체 에러를 한눈에 확인합니다.',
+    hint: ':cfile build.log 를 입력해 에러 위치로 바로 점프한 뒤, cw로 잘못된 변수명을 정상 변수명(result)으로 교체하세요.',
+    par: 26,
+    optimalKeys: [
+      ':', 'c', 'f', 'i', 'l', 'e', ' ', 'b', 'u', 'i', 'l', 'd', '.', 'l', 'o', 'g', 'Enter',
+      'c', 'w', 'r', 'e', 's', 'u', 'l', 't', 'Escape',
+    ],
+    primaryFilename: 'calc.ts',
+    secondaryFilename: 'build.log',
+    initialLines: [
+      'export function calculateTotal(items: number[]): number {',
+      '  const reslt = items.reduce((a, b) => a + b, 0);',
+      '  return reslt;',
+      '}',
+    ],
+    secondaryLines: [
+      'calc.ts:2:9: error TS2304: Cannot find name "reslt". Did you mean "result"?',
+    ],
+    targetLines: [
+      'export function calculateTotal(items: number[]): number {',
+      '  const result = items.reduce((a, b) => a + b, 0);',
+      '  return reslt;',
+      '}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const target = [
+        'export function calculateTotal(items: number[]): number {',
+        '  const result = items.reduce((a, b) => a + b, 0);',
+        '  return reslt;',
+        '}',
+      ];
+      if (state.lines.length !== target.length) return false;
+      return state.lines.every((line, idx) => line === target[idx]);
+    },
+  },
 ];
 
 

@@ -1,6 +1,18 @@
 import { VimEditorState } from '../types/vim';
 import { pushUndoSnapshot } from './operators';
-import { moveToFirstNonBlank } from './motions';
+import {
+  moveToFirstNonBlank,
+  moveToNextWord,
+  moveToNextWORD,
+  moveToWordEnd,
+  moveToWORDEnd,
+  moveToPrevWord,
+  moveToPrevWORD,
+  moveToLineStart,
+  moveToLineEnd,
+  moveToFirstLine,
+  moveToLastLine,
+} from './motions';
 import { isPositionSelected } from './visual';
 
 /**
@@ -146,6 +158,109 @@ export function changeCaseVisual(
     visualAnchor: undefined,
     pendingKeys: undefined,
   };
+}
+
+/**
+ * 모션 또는 라인 단위 대소문자 변환을 실행합니다. (gu, gU, g~)
+ */
+export function executeCaseMotion(
+  state: VimEditorState,
+  op: 'gu' | 'gU' | 'g~',
+  motionKey: string,
+  count = 1
+): VimEditorState {
+  const caseType = op === 'g~' ? 'toggle' : op === 'gu' ? 'lower' : 'upper';
+
+  // 1. 라인 단위 변환 (guu, gUU, g~~, gugu, gUgU, g~g~)
+  if (
+    (op === 'gu' && (motionKey === 'u' || motionKey === 'g')) ||
+    (op === 'gU' && (motionKey === 'U' || motionKey === 'g')) ||
+    (op === 'g~' && (motionKey === '~' || motionKey === 'g'))
+  ) {
+    const endLine = Math.min(state.lines.length - 1, state.cursor.line + count - 1);
+    const visualState: VimEditorState = {
+      ...state,
+      mode: 'VISUAL_LINE',
+      visualAnchor: { line: state.cursor.line, col: 0 },
+      cursor: { line: endLine, col: 0 },
+    };
+    return changeCaseVisual(visualState, caseType);
+  }
+
+  // 2. 모션에 따른 대상 좌표 계산
+  let target = state.cursor;
+  let isLinewise = false;
+
+  if (motionKey === 'w') {
+    for (let i = 0; i < count; i++) target = moveToNextWord(state.lines, target);
+  } else if (motionKey === 'W') {
+    for (let i = 0; i < count; i++) target = moveToNextWORD(state.lines, target);
+  } else if (motionKey === 'e') {
+    for (let i = 0; i < count; i++) target = moveToWordEnd(state.lines, target);
+  } else if (motionKey === 'E') {
+    for (let i = 0; i < count; i++) target = moveToWORDEnd(state.lines, target);
+  } else if (motionKey === 'b') {
+    for (let i = 0; i < count; i++) target = moveToPrevWord(state.lines, target);
+  } else if (motionKey === 'B') {
+    for (let i = 0; i < count; i++) target = moveToPrevWORD(state.lines, target);
+  } else if (motionKey === '$') {
+    target = moveToLineEnd(state.lines, target);
+  } else if (motionKey === '0') {
+    target = moveToLineStart(state.lines, target);
+  } else if (motionKey === '^') {
+    target = moveToFirstNonBlank(state.lines, target);
+  } else if (motionKey === 'G') {
+    target = moveToLastLine(state.lines, target);
+    isLinewise = true;
+  } else if (motionKey === 'gg') {
+    target = moveToFirstLine(state.lines, target);
+    isLinewise = true;
+  } else if (motionKey === 'j') {
+    target = { line: Math.min(state.lines.length - 1, state.cursor.line + count), col: state.cursor.col };
+    isLinewise = true;
+  } else if (motionKey === 'k') {
+    target = { line: Math.max(0, state.cursor.line - count), col: state.cursor.col };
+    isLinewise = true;
+  } else if (motionKey === 'h') {
+    target = { line: state.cursor.line, col: Math.max(0, state.cursor.col - count) };
+  } else if (motionKey === 'l') {
+    const curLine = state.lines[state.cursor.line] ?? '';
+    target = { line: state.cursor.line, col: Math.min(curLine.length, state.cursor.col + count) };
+  } else {
+    return { ...state, pendingKeys: undefined };
+  }
+
+  if (isLinewise) {
+    const minLine = Math.min(state.cursor.line, target.line);
+    const maxLine = Math.max(state.cursor.line, target.line);
+    const visualState: VimEditorState = {
+      ...state,
+      mode: 'VISUAL_LINE',
+      visualAnchor: { line: minLine, col: 0 },
+      cursor: { line: maxLine, col: 0 },
+    };
+    return changeCaseVisual(visualState, caseType);
+  }
+
+  let start = state.cursor;
+  let end = target;
+  if (start.line > end.line || (start.line === end.line && start.col > end.col)) {
+    const tmp = start;
+    start = end;
+    end = tmp;
+  } else if (motionKey === 'w' || motionKey === 'W') {
+    if (end.col > 0 && end.line === start.line) {
+      end = { line: end.line, col: end.col - 1 };
+    }
+  }
+
+  const visualState: VimEditorState = {
+    ...state,
+    mode: 'VISUAL',
+    visualAnchor: start,
+    cursor: end,
+  };
+  return changeCaseVisual(visualState, caseType);
 }
 
 /**
