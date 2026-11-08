@@ -1946,4 +1946,53 @@ export const MISSIONS: Mission[] = [
       return state.lines.length === 2 && state.lines[0] === 'call(alpha);' && state.lines[1] === 'Keep me.';
     },
   },
+  {
+    id: 61,
+    title: '레슨 61: 순정 Vim 맞춤법 검사기(:set spell, ]s, z=, zg)로 오탈자 찾고 교정하기',
+    description:
+      '순정 Vim은 별도 외부 도구 없이도 내장된 스펠링 검사기(:set spell)를 제공합니다. 영문 문서나 코드 주석, 변수명을 작성할 때 흔히 발생하는 오탈자를 감지하고 최적의 추천 단어로 교체할 수 있습니다.\n\n1) :set spell : 현재 버퍼의 맞춤법 검사를 활성화합니다. 오탈자 단어에 빨간 물결 밑줄이 그어지고 상태바에 [SPELL] 배지가 표시됩니다. (:set nospell 로 비활성화)\n2) ]s / [s : 다음 / 이전 맞춤법 오류(오탈자) 단어로 점프합니다.\n3) z= : 커서 위치의 잘못된 단어에 대해 추천 목록(1~9)을 열고, 원하는 번호를 누르면 즉시 올바른 단어로 교체됩니다. (u 로 실행 취소 가능)\n4) zg : 커서 위치의 단어(예: 프로젝트 고유 용어, 기술 키워드)를 맞춤법 사전에 정상 단어로 등록합니다.\n\n미션:\n1) :set spell<Enter> 명령으로 맞춤법 검사기를 켜세요.\n2) ]s 로 첫 번째 오탈자인 recieve 로 점프한 뒤, z= 누르고 1 을 눌러 receive 로 교정하세요.\n3) ]s 로 다음 오탈자인 funtion 으로 점프한 뒤, z= 누르고 1 을 눌러 function 으로 교정하세요.\n4) ]s 로 고유 라이브러리 명칭인 redux 로 점프한 뒤, zg 를 눌러 사전에 정상 단어로 등록하세요.',
+    hint: ':set spell<Enter> 로 맞춤법 검사를 켜고, ]s → z= → 1 로 두 단어를 교정한 뒤, 마지막 ]s 위치에서 zg 를 누르세요.',
+    par: 25,
+    optimalKeys: [
+      ':', 's', 'e', 't', ' ', 's', 'p', 'e', 'l', 'l', 'Enter',
+      ']', 's',
+      'z', '=',
+      '1',
+      ']', 's',
+      'z', '=',
+      '1',
+      ']', 's',
+      'z', 'g',
+    ],
+    initialLines: [
+      '// Please recieve message',
+      'funtion start() {',
+      '  return redux;',
+      '}',
+    ],
+    targetLines: [
+      '// Please receive message',
+      'function start() {',
+      '  return redux;',
+      '}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const isSpellActive = state.options?.spell === true;
+      const target = [
+        '// Please receive message',
+        'function start() {',
+        '  return redux;',
+        '}',
+      ];
+      const linesMatch =
+        state.lines.length === target.length &&
+        target.every((line, idx) => state.lines[idx] === line);
+      const isGoodWordAdded =
+        (state.spellGoodWords?.includes('redux') ?? false) ||
+        (state.spellGoodWords?.includes('Redux') ?? false);
+      return isSpellActive && linesMatch && isGoodWordAdded;
+    },
+  },
 ];
