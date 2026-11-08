@@ -2117,4 +2117,46 @@ export const MISSIONS: Mission[] = [
       return isReturnedToIndex;
     },
   },
+  {
+    id: 65,
+    title: '레슨 65: 글로벌 프로젝트 리팩토링과 :vimgrep, :cdo / :cfdo 대규모 검색 치환 마스터',
+    description:
+      '실무 대규모 코드베이스에서 수십~수백 개의 파일에 걸쳐 있는 구형 API나 식별자를 한 번에 리팩토링할 때, 순정 Vim의 퀵픽스 배치 커맨드(:cdo / :cfdo)는 최강의 생산성을 발휘합니다.\n\n1) 다중 파일 검색 (:vimgrep):\n   - :vimgrep /pattern/ [files] 명령으로 프로젝트 내 모든 파일이나 버퍼(*)를 검색하여 퀵픽스 목록을 생성합니다.\n   - 예: :vimgrep /v1/ * (모든 열린 버퍼에서 v1 패턴 검색)\n\n2) 퀵픽스 일괄 치환 (:cdo / :cfdo):\n   - :cdo {cmd} : 퀵픽스 목록에 있는 모든 매칭 항목의 위치로 순차 점프하며 Ex 명령({cmd})을 실행합니다.\n     예: :cdo s/v1/v2/g (모든 매치 위치에서 치환 실행)\n   - :cfdo {cmd} : 퀵픽스에 매칭이 존재하는 각 파일마다 한 번씩 명령을 실행합니다.\n     예: :cfdo %s/v1/v2/g (파일 단위 전체 치환)\n\n3) 작업 완료 후 버퍼 복귀:\n   - 일괄 치환 후 Ctrl-^(또는 Ctrl-6, :b 1)을 누르면 원래 편집하던 기본 파일(api.ts)로 초고속 복귀합니다.\n\n미션:\n1. :vimgrep /v1/ * 명령으로 api.ts와 auth.ts의 모든 v1 엔드포인트를 검색하세요.\n2. :cdo s/v1/v2/g 명령으로 모든 파일의 v1을 v2로 일괄 치환하세요.\n3. Ctrl-^ 를 눌러 원래 파일(api.ts)로 복귀하여 미션을 완료하세요!',
+    hint: ':vimgrep /v1/ * 입력 후 Enter → :cdo s/v1/v2/g 입력 후 Enter → Ctrl-^ 로 원래 버퍼(api.ts) 복귀',
+    par: 35,
+    optimalKeys: [
+      ':', 'v', 'i', 'm', 'g', 'r', 'e', 'p', ' ', '/', 'v', '1', '/', ' ', '*', 'Enter',
+      ':', 'c', 'd', 'o', ' ', 's', '/', 'v', '1', '/', 'v', '2', '/', 'g', 'Enter',
+      'Ctrl-^',
+    ],
+    primaryFilename: 'api.ts',
+    secondaryFilename: 'auth.ts',
+    initialLines: [
+      'const BASE_URL = "https://api.io/v1";',
+      'export const getItems = () => "/v1/items";',
+    ],
+    secondaryLines: [
+      'export const tokenUrl = "https://api.io/v1/tokens";',
+    ],
+    targetLines: [
+      'const BASE_URL = "https://api.io/v2";',
+      'export const getItems = () => "/v2/items";',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const s = ensureBuffers(state);
+      const buf1 = s.buffers?.find((b) => b.name === 'api.ts' || b.id === 1);
+      const buf2 = s.buffers?.find((b) => b.name === 'auth.ts' || b.id === 2);
+      const isBackOnApi = s.currentBufferId === 1 || s.primaryFilename === 'api.ts';
+
+      const isApiUpdated =
+        buf1?.lines[0] === 'const BASE_URL = "https://api.io/v2";' &&
+        buf1?.lines[1] === 'export const getItems = () => "/v2/items";';
+      const isAuthUpdated =
+        buf2?.lines[0] === 'export const tokenUrl = "https://api.io/v2/tokens";';
+
+      return isBackOnApi && isApiUpdated && isAuthUpdated;
+    },
+  },
 ];

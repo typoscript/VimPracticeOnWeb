@@ -1296,8 +1296,28 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson64!.checkComplete(state)).toBe(true);
   });
 
-  it('모든 64개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(64);
+  it('레슨 65: 글로벌 프로젝트 리팩토링과 :vimgrep, :cdo / :cfdo 대규모 검색 치환 checkComplete 판정 검증', () => {
+    const lesson65 = MISSIONS.find((m) => m.id === 65);
+    expect(lesson65).toBeDefined();
+
+    let state: VimEditorState = {
+      lines: [...lesson65!.initialLines],
+      cursor: { ...lesson65!.initialCursor },
+      mode: 'NORMAL',
+      primaryFilename: lesson65!.primaryFilename,
+      secondaryFilename: lesson65!.secondaryFilename,
+      secondaryLines: lesson65!.secondaryLines,
+    };
+    expect(lesson65!.checkComplete(state)).toBe(false);
+
+    for (const key of lesson65!.optimalKeys!) {
+      state = handleKey(state, key);
+    }
+    expect(lesson65!.checkComplete(state)).toBe(true);
+  });
+
+  it('모든 65개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(65);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();
