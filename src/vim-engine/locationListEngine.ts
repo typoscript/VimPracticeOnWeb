@@ -1,5 +1,5 @@
 import { QuickfixItem, QuickfixState, VimEditorState, SplitPaneState } from './types';
-import { switchBuffer, syncCurrentBuffer } from './bufferEngine';
+import { switchBuffer, syncCurrentBuffer, editBuffer } from './bufferEngine';
 import { parseQuickfixErrorLines } from './quickfixEngine';
 import { compileVimRegex } from './vimRegex';
 import { msg } from './messages';
@@ -86,6 +86,8 @@ export function jumpToLocationListItem(
 
     if (targetBuf && targetBuf.id !== targetState.currentBufferId) {
       targetState = switchBuffer(targetState, targetBuf.id);
+    } else if (!targetBuf && item.filename) {
+      targetState = editBuffer(targetState, item.filename);
     }
   }
 
@@ -420,4 +422,89 @@ export function loadLocationListFromFile(
   }
 
   return setLocationList(state, items, jumpToFirst);
+}
+
+/**
+ * 로케이션 리스트의 유효한 항목들에 대해 지정된 Ex 명령어를 일괄 실행합니다 (:ldo[!] {cmd}).
+ * isFile = true 인 경우, 파일 단위로 첫 번째 매치에 대해 한 번씩만 실행합니다 (:lfdo[!] {cmd}).
+ */
+export function ldo(
+  state: VimEditorState,
+  commandStr: string,
+  executeCmd: (s: VimEditorState, c: string) => VimEditorState,
+  isFile = false,
+  isBang = false
+): VimEditorState {
+  const cleanCmd = commandStr.trim();
+  if (!cleanCmd) {
+    return {
+      ...state,
+      commandMessage: 'E471: Argument required',
+      bell: true,
+    };
+  }
+
+  const loc = state.locationList;
+  if (!loc || loc.items.length === 0) {
+    return {
+      ...state,
+      commandMessage: 'E776: No location list',
+      bell: true,
+    };
+  }
+
+  // 실행 대상 인덱스 목록 결정
+  let targetIndices: number[] = [];
+  if (isFile) {
+    const seenFiles = new Set<string>();
+    for (let i = 0; i < loc.items.length; i++) {
+      const item = loc.items[i];
+      const fileKey = item.filename || String(item.bufferId ?? '');
+      if (!seenFiles.has(fileKey)) {
+        seenFiles.add(fileKey);
+        targetIndices.push(i);
+      }
+    }
+  } else {
+    targetIndices = loc.items.map((_, idx) => idx);
+  }
+
+  let currState = state;
+  let executedCount = 0;
+
+  for (const idx of targetIndices) {
+    currState = jumpToLocationListItem(currState, idx);
+    currState = executeCmd(currState, cleanCmd);
+    currState = syncCurrentBuffer(currState);
+    executedCount++;
+
+    if (currState.bell) {
+      if (!isBang) {
+        break;
+      } else {
+        currState = { ...currState, bell: false };
+      }
+    }
+  }
+
+  const msgKey = isFile
+    ? msg('({filesCount}개 파일에 대해 :lfdo \'{cleanCmd}\' 실행 완료)', { filesCount: executedCount, cleanCmd })
+    : msg('({count}개 항목에 대해 :ldo \'{cleanCmd}\' 실행 완료)', { count: executedCount, cleanCmd });
+
+  return {
+    ...currState,
+    commandMessage: msgKey,
+  };
+}
+
+/**
+ * 로케이션 리스트에 속한 각 파일에 대해 Ex 명령어를 한 번씩 실행합니다 (:lfdo[!] {cmd}).
+ */
+export function lfdo(
+  state: VimEditorState,
+  commandStr: string,
+  executeCmd: (s: VimEditorState, c: string) => VimEditorState,
+  isBang = false
+): VimEditorState {
+  return ldo(state, commandStr, executeCmd, true, isBang);
 }

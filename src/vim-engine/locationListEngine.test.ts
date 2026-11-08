@@ -12,6 +12,8 @@ import {
   formatLocationList,
   lvimgrep,
   loadLocationListFromFile,
+  ldo,
+  lfdo,
 } from './locationListEngine';
 import { handleKey } from './vimEngine';
 import { QuickfixItem, VimEditorState } from './types';
@@ -451,6 +453,98 @@ describe('locationListEngine module', () => {
       // 왼쪽 창의 원래 1개짜리 로케이션 리스트가 그대로 복원되어야 함!
       expect(state.locationList?.items.length).toBe(1);
       expect(state.locationList?.items[0].text).toBe('left error');
+    });
+  });
+
+  describe('ldo and lfdo batch execution', () => {
+    it(':ldo 로 로케이션 리스트의 항목들에 대해 일괄 명령을 실행한다', () => {
+      let state: VimEditorState = {
+        lines: ['warn_alpha = true;', 'warn_beta = true;'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+        primaryFilename: 'app.ts',
+      };
+
+      state = setLocationList(state, [
+        { filename: 'app.ts', line: 1, col: 1, text: 'warn_alpha' },
+        { filename: 'app.ts', line: 2, col: 1, text: 'warn_beta' },
+      ]);
+
+      const cmd = ':ldo s/warn_/fixed_/\n';
+      for (const char of cmd) {
+        state = handleKey(state, char === '\n' ? 'Enter' : char);
+      }
+
+      expect(state.lines[0]).toBe('fixed_alpha = true;');
+      expect(state.lines[1]).toBe('fixed_beta = true;');
+      expect(state.commandMessage).toContain('2개 항목에 대해 :ldo');
+    });
+
+    it(':lfdo 로 파일 단위로 로케이션 리스트 명령을 실행한다', () => {
+      let state: VimEditorState = {
+        lines: ['BUG A', 'BUG B'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+        primaryFilename: 'app.ts',
+      };
+
+      state = setLocationList(state, [
+        { filename: 'app.ts', line: 1, col: 1, text: 'BUG A' },
+        { filename: 'app.ts', line: 2, col: 1, text: 'BUG B' },
+      ]);
+
+      const cmd = ':lfdo %s/BUG/CLEAN/g\n';
+      for (const char of cmd) {
+        state = handleKey(state, char === '\n' ? 'Enter' : char);
+      }
+
+      expect(state.lines[0]).toBe('CLEAN A');
+      expect(state.lines[1]).toBe('CLEAN B');
+      expect(state.commandMessage).toContain('1개 파일에 대해 :lfdo');
+    });
+
+    it('로케이션 리스트가 없을 때 :ldo 실행 시 E776 에러를 반환한다', () => {
+      let state: VimEditorState = {
+        lines: ['line 1'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      const cmd = ':ldo s/line/text/\n';
+      for (const char of cmd) {
+        state = handleKey(state, char === '\n' ? 'Enter' : char);
+      }
+
+      expect(state.commandMessage).toBe('E776: No location list');
+      expect(state.bell).toBe(true);
+    });
+
+    it('ldo 및 lfdo 함수를 직접 호출하여 일괄 실행할 수 있다', () => {
+      let state: VimEditorState = {
+        lines: ['err_A', 'err_B'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+        primaryFilename: 'a.ts',
+        buffers: [
+          { id: 1, name: 'a.ts', lines: ['err_A', 'err_B'], cursor: { line: 0, col: 0 } },
+        ],
+        currentBufferId: 1,
+      };
+      state = setLocationList(state, [
+        { filename: 'a.ts', line: 1, col: 1, text: 'err_A' },
+        { filename: 'a.ts', line: 2, col: 1, text: 'err_B' },
+      ]);
+      const res = ldo(state, 's/err/fixed/', (s) => {
+        const line = s.lines[s.cursor.line].replace('err', 'fixed');
+        const nextLines = [...s.lines];
+        nextLines[s.cursor.line] = line;
+        return { ...s, lines: nextLines };
+      });
+      expect(res.lines[0]).toBe('fixed_A');
+      expect(res.lines[1]).toBe('fixed_B');
+
+      const resFile = lfdo(state, 's/err/fixed/', (s) => s);
+      expect(resFile.commandMessage).toContain('1개 파일');
     });
   });
 });

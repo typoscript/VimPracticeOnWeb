@@ -13,6 +13,8 @@ import {
   toggleQuickfixWindow,
   formatQuickfixList,
   vimgrep,
+  cdo,
+  cfdo,
 } from './quickfixEngine';
 
 describe('quickfixEngine module', () => {
@@ -292,6 +294,177 @@ describe('quickfixEngine module', () => {
       expect(state.quickfix?.items.length).toBe(1);
       // 커서는 여전히 line 0 유지
       expect(state.cursor.line).toBe(0);
+    });
+  });
+
+  describe('cdo and cfdo batch execution', () => {
+    it(':cdo 로 퀵픽스 목록의 모든 매칭 항목에 대해 치환을 실행한다', () => {
+      let state: VimEditorState = {
+        lines: [
+          'const title = "TODO_1";',
+          'const msg = "TODO_2";',
+          'const done = true;',
+        ],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+        primaryFilename: 'app.ts',
+        buffers: [
+          {
+            id: 1,
+            name: 'app.ts',
+            lines: [
+              'const title = "TODO_1";',
+              'const msg = "TODO_2";',
+              'const done = true;',
+            ],
+            cursor: { line: 0, col: 0 },
+          },
+        ],
+        currentBufferId: 1,
+      };
+
+      // 1. :vimgrep /TODO_/ % 로 퀵픽스 생성
+      const cmdVimgrep = ':vimgrep /TODO_/ %\n';
+      for (const char of cmdVimgrep) {
+        state = handleKey(state, char === '\n' ? 'Enter' : char);
+      }
+      expect(state.quickfix?.items.length).toBe(2);
+
+      // 2. :cdo s/TODO_/DONE_/
+      const cmdCdo = ':cdo s/TODO_/DONE_/\n';
+      for (const char of cmdCdo) {
+        state = handleKey(state, char === '\n' ? 'Enter' : char);
+      }
+
+      expect(state.lines[0]).toBe('const title = "DONE_1";');
+      expect(state.lines[1]).toBe('const msg = "DONE_2";');
+      expect(state.commandMessage).toContain('2개 항목에 대해 :cdo');
+    });
+
+    it(':cfdo 로 퀵픽스 목록의 각 파일마다 한 번씩 명령을 실행한다', () => {
+      let state: VimEditorState = {
+        lines: ['TODO in file1 line 1', 'TODO in file1 line 2'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+        primaryFilename: 'file1.ts',
+        buffers: [
+          {
+            id: 1,
+            name: 'file1.ts',
+            lines: ['TODO in file1 line 1', 'TODO in file1 line 2'],
+            cursor: { line: 0, col: 0 },
+          },
+          {
+            id: 2,
+            name: 'file2.ts',
+            lines: ['TODO in file2 line 1'],
+            cursor: { line: 0, col: 0 },
+          },
+        ],
+        currentBufferId: 1,
+      };
+
+      // 1. :vimgrep /TODO/ * 로 두 파일 모두 매칭 (총 3개 매치)
+      const cmdVimgrep = ':vimgrep /TODO/ *\n';
+      for (const char of cmdVimgrep) {
+        state = handleKey(state, char === '\n' ? 'Enter' : char);
+      }
+      expect(state.quickfix?.items.length).toBe(3);
+
+      // 2. :cfdo %s/TODO/RESOLVED/g
+      const cmdCfdo = ':cfdo %s/TODO/RESOLVED/g\n';
+      for (const char of cmdCfdo) {
+        state = handleKey(state, char === '\n' ? 'Enter' : char);
+      }
+
+      // 두 파일 모두 치환 완료
+      expect(state.commandMessage).toContain('2개 파일에 대해 :cfdo');
+      const buf1 = state.buffers?.find((b) => b.id === 1);
+      const buf2 = state.buffers?.find((b) => b.id === 2);
+      expect(buf1?.lines[0]).toContain('RESOLVED');
+      expect(buf1?.lines[1]).toContain('RESOLVED');
+      expect(buf2?.lines[0]).toContain('RESOLVED');
+    });
+
+    it(':cdo 명령어 파이프(|)로 update 명령을 연계 실행할 수 있다', () => {
+      let state: VimEditorState = {
+        lines: ['error_one', 'error_two'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+        primaryFilename: 'test.ts',
+      };
+
+      state = setQuickfixList(state, [
+        { filename: 'test.ts', line: 1, col: 1, text: 'error_one' },
+        { filename: 'test.ts', line: 2, col: 1, text: 'error_two' },
+      ]);
+
+      const cmd = ':cdo s/error/fixed/ | update\n';
+      for (const char of cmd) {
+        state = handleKey(state, char === '\n' ? 'Enter' : char);
+      }
+
+      expect(state.lines[0]).toBe('fixed_one');
+      expect(state.lines[1]).toBe('fixed_two');
+    });
+
+    it('인자 없이 :cdo 입력 시 E471 에러를 발생시킨다', () => {
+      let state: VimEditorState = {
+        lines: ['a'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+      state = setQuickfixList(state, [{ filename: 'a.ts', line: 1, col: 1, text: 'a' }]);
+
+      const cmd = ':cdo\n';
+      for (const char of cmd) {
+        state = handleKey(state, char === '\n' ? 'Enter' : char);
+      }
+      expect(state.commandMessage).toBe('E471: Argument required');
+      expect(state.bell).toBe(true);
+    });
+
+    it('cdo 및 cfdo 함수를 직접 호출하여 일괄 실행할 수 있다', () => {
+      let state: VimEditorState = {
+        lines: ['TODO_A', 'TODO_B'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+        primaryFilename: 'a.ts',
+        buffers: [
+          { id: 1, name: 'a.ts', lines: ['TODO_A', 'TODO_B'], cursor: { line: 0, col: 0 } },
+        ],
+        currentBufferId: 1,
+      };
+      state = setQuickfixList(state, [
+        { filename: 'a.ts', line: 1, col: 1, text: 'TODO_A' },
+        { filename: 'a.ts', line: 2, col: 1, text: 'TODO_B' },
+      ]);
+      const res = cdo(state, 's/TODO/DONE/', (s) => {
+        const line = s.lines[s.cursor.line].replace('TODO', 'DONE');
+        const nextLines = [...s.lines];
+        nextLines[s.cursor.line] = line;
+        return { ...s, lines: nextLines };
+      });
+      expect(res.lines[0]).toBe('DONE_A');
+      expect(res.lines[1]).toBe('DONE_B');
+
+      const resFile = cfdo(state, 's/TODO/DONE/', (s) => s);
+      expect(resFile.commandMessage).toContain('1개 파일');
+    });
+
+    it('퀵픽스 목록이 비어있을 때 :cdo 실행 시 E42 에러를 발생시킨다', () => {
+      let state: VimEditorState = {
+        lines: ['a'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      const cmd = ':cdo s/a/b/\n';
+      for (const char of cmd) {
+        state = handleKey(state, char === '\n' ? 'Enter' : char);
+      }
+      expect(state.commandMessage).toBe('E42: No Errors');
+      expect(state.bell).toBe(true);
     });
   });
 });

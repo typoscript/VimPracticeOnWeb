@@ -27,10 +27,11 @@ export { findMatches } from './search';
 export { computeDiffHunks } from './diffEngine';
 export { switchPaneFocus } from './splitWindow';
 export { switchBuffer, ensureBuffers, syncCurrentBuffer } from './bufferEngine';
-export { switchTab, openNewTab, closeTab, ensureTabPages } from './tabEngine';
+export { switchTab, openNewTab, closeTab, ensureTabPages, tabdo } from './tabEngine';
+export { bufdo } from './bufferEngine';
 export { closeCommandLineWindow } from './cmdlineWindow';
-export { closeQuickfixWindow, jumpToQuickfixItem } from './quickfixEngine';
-export { closeLocationListWindow, jumpToLocationListItem } from './locationListEngine';
+export { closeQuickfixWindow, jumpToQuickfixItem, cdo, cfdo } from './quickfixEngine';
+export { closeLocationListWindow, jumpToLocationListItem, ldo, lfdo } from './locationListEngine';
 export {
   startOrCycleCompletion,
   cancelCompletion,

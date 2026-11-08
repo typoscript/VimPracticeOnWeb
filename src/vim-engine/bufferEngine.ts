@@ -370,3 +370,56 @@ export function formatBufferList(state: VimEditorState): string {
 
   return rows.join('\n');
 }
+
+/**
+ * 모든 버퍼에 대해 지정된 Ex 명령어를 일괄 실행합니다 (:bufdo[!] {cmd}).
+ */
+export function bufdo(
+  state: VimEditorState,
+  commandStr: string,
+  executeCmd: (s: VimEditorState, c: string) => VimEditorState,
+  isBang = false
+): VimEditorState {
+  const cleanCmd = commandStr.trim();
+  if (!cleanCmd) {
+    return {
+      ...state,
+      commandMessage: 'E471: Argument required',
+      bell: true,
+    };
+  }
+
+  const s = ensureBuffers(state);
+  const buffers = s.buffers && s.buffers.length > 0 ? s.buffers : null;
+  if (!buffers || buffers.length === 0) {
+    let currState = executeCmd(s, cleanCmd);
+    currState = syncCurrentBuffer(currState);
+    return {
+      ...currState,
+      commandMessage: msg('({count}개 버퍼에 대해 :bufdo \'{cleanCmd}\' 실행 완료)', { count: 1, cleanCmd }),
+    };
+  }
+
+  let currState = s;
+  let executedCount = 0;
+
+  for (const b of buffers) {
+    currState = switchBuffer(currState, b.id);
+    currState = executeCmd(currState, cleanCmd);
+    currState = syncCurrentBuffer(currState);
+    executedCount++;
+
+    if (currState.bell) {
+      if (!isBang) {
+        break;
+      } else {
+        currState = { ...currState, bell: false };
+      }
+    }
+  }
+
+  return {
+    ...currState,
+    commandMessage: msg('({count}개 버퍼에 대해 :bufdo \'{cleanCmd}\' 실행 완료)', { count: executedCount, cleanCmd }),
+  };
+}

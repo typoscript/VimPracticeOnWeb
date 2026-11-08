@@ -171,5 +171,47 @@ describe('argEngine module (Arglist)', () => {
       expect(bufA?.lines[0]).toBe('content of file A: RESOLVED_1');
       expect(bufB?.lines[0]).toBe('content of file B: RESOLVED_2');
     });
+
+    it(':bufdo 명령어로 모든 버퍼에 대해 일괄 치환을 실행한다', () => {
+      let state = createBaseState();
+
+      const cmd = ':bufdo %s/TODO/COMPLETED/g\n';
+      for (const char of cmd) {
+        state = handleKey(state, char === '\n' ? 'Enter' : char);
+      }
+
+      expect(state.commandMessage).toContain('3개 버퍼에 대해 :bufdo');
+      const bufA = state.buffers?.find((b) => b.name === 'fileA.ts');
+      const bufB = state.buffers?.find((b) => b.name === 'fileB.ts');
+      const bufC = state.buffers?.find((b) => b.name === 'fileC.ts');
+      expect(bufA?.lines[0]).toBe('content of file A: COMPLETED_1');
+      expect(bufB?.lines[0]).toBe('content of file B: COMPLETED_2');
+      expect(bufC?.lines[0]).toBe('content of file C: COMPLETED_3');
+    });
+
+    it(':tabdo 명령어로 모든 탭 페이지에 대해 일괄 명령을 실행한다', () => {
+      let state: VimEditorState = {
+        lines: ['tab 1 TODO'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      // 탭 2개 생성 (:tabnew)
+      const cmdTabnew = ':tabnew\n';
+      for (const char of cmdTabnew) {
+        state = handleKey(state, char === '\n' ? 'Enter' : char);
+      }
+      state.lines = ['tab 2 TODO'];
+
+      // :tabdo s/TODO/FIXED/
+      const cmdTabdo = ':tabdo s/TODO/FIXED/\n';
+      for (const char of cmdTabdo) {
+        state = handleKey(state, char === '\n' ? 'Enter' : char);
+      }
+
+      expect(state.commandMessage).toContain('2개 탭에 대해 :tabdo');
+      expect(state.tabPages?.[0].lines[0]).toBe('tab 1 FIXED');
+      expect(state.tabPages?.[1].lines[0]).toBe('tab 2 FIXED');
+    });
   });
 });

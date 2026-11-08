@@ -298,18 +298,20 @@ export function formatArgs(state: VimEditorState): string {
 }
 
 /**
- * 아규먼트 리스트의 모든 파일에 대해 지정된 Ex 명령어를 일괄 실행합니다 (:argdo {cmd}).
+ * 아규먼트 리스트의 모든 파일에 대해 지정된 Ex 명령어를 일괄 실행합니다 (:argdo[!] {cmd}).
  */
 export function argdo(
   state: VimEditorState,
   commandStr: string,
-  executeCmd: (s: VimEditorState, c: string) => VimEditorState
+  executeCmd: (s: VimEditorState, c: string) => VimEditorState,
+  isBang = false
 ): VimEditorState {
   const cleanCmd = commandStr.trim();
   if (!cleanCmd) {
     return {
       ...state,
       commandMessage: 'E471: Argument required',
+      bell: true,
     };
   }
 
@@ -325,6 +327,7 @@ export function argdo(
         ];
 
   let currState = state;
+  let executedCount = 0;
 
   // 순정 Vim: argdo 실행 시 각 파일을 순회하며 명령어 적용
   for (let i = 0; i < files.length; i++) {
@@ -342,10 +345,19 @@ export function argdo(
     // 치환 또는 Ex 명령어 실행
     currState = executeCmd(currState, cleanCmd);
     currState = syncCurrentBuffer(currState);
+    executedCount++;
+
+    if (currState.bell) {
+      if (!isBang) {
+        break;
+      } else {
+        currState = { ...currState, bell: false };
+      }
+    }
   }
 
   return {
     ...currState,
-    commandMessage: msg('({filesCount}개 파일에 대해 :argdo \'{cleanCmd}\' 실행 완료)', { filesCount: files.length, cleanCmd }),
+    commandMessage: msg('({filesCount}개 파일에 대해 :argdo \'{cleanCmd}\' 실행 완료)', { filesCount: executedCount, cleanCmd }),
   };
 }

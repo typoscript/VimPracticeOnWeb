@@ -22,6 +22,7 @@ import {
   lastBuffer,
   deleteBuffer,
   editBuffer,
+  bufdo,
 } from './bufferEngine';
 import {
   openNewTab,
@@ -32,6 +33,7 @@ import {
   firstTab,
   lastTab,
   moveTab,
+  tabdo,
 } from './tabEngine';
 import {
   openQuickfixWindow,
@@ -46,6 +48,8 @@ import {
   vimgrep,
   setQuickfixList,
   loadQuickfixFromFile,
+  cdo,
+  cfdo,
 } from './quickfixEngine';
 import {
   openLocationListWindow,
@@ -60,6 +64,8 @@ import {
   lvimgrep,
   setLocationList,
   loadLocationListFromFile,
+  ldo,
+  lfdo,
 } from './locationListEngine';
 import { formatChangeList } from './advancedMotions';
 import { formatMarksList } from './marks';
@@ -635,6 +641,11 @@ export function splitPipedCommands(input: string): string[] {
 
   // :g 또는 :v 글로벌 명령은 줄 단위 명령으로 전체를 넘김
   if (/^(g|global|v|vglobal)(!?)\s*[\/|\W]/.test(trimmed)) {
+    return [trimmed];
+  }
+
+  // :argdo, :bufdo, :cdo, :cfdo, :ldo, :lfdo, :tabdo 등은 파이프(|)를 자체 인자로 포함하여 순회 실행함
+  if (/^(argdo|bufdo|cdo|cfdo|ldo|lfdo|tabdo)(!?)\s+/.test(trimmed)) {
     return [trimmed];
   }
 
@@ -1772,11 +1783,80 @@ export function executeCommandLine(
     };
   }
 
-  // 아규먼트 일괄 실행: :argdo {cmd}
-  const argdoMatch = cleanCmdRaw.match(/^argdo\s+(.*)$/i);
+  // 아규먼트 일괄 실행: :argdo[!] {cmd}
+  const argdoMatch = cleanCmdRaw.match(/^argdo(!?)(?:\s+(.*))?$/i);
   if (argdoMatch) {
-    const cmdToRun = argdoMatch[1];
-    const res = argdo(state, cmdToRun, (s, c) => executeCommandLine(s, c, keyRunner));
+    const isBang = argdoMatch[1] === '!';
+    const cmdToRun = argdoMatch[2] ?? '';
+    const res = argdo(state, cmdToRun, (s, c) => executeCommandLine(s, c, keyRunner), isBang);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 버퍼 일괄 실행: :bufdo[!] {cmd}
+  const bufdoMatch = cleanCmdRaw.match(/^bufdo(!?)(?:\s+(.*))?$/i);
+  if (bufdoMatch) {
+    const isBang = bufdoMatch[1] === '!';
+    const cmdToRun = bufdoMatch[2] ?? '';
+    const res = bufdo(state, cmdToRun, (s, c) => executeCommandLine(s, c, keyRunner), isBang);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 탭 일괄 실행: :tabdo[!] {cmd}
+  const tabdoMatch = cleanCmdRaw.match(/^tabdo(!?)(?:\s+(.*))?$/i);
+  if (tabdoMatch) {
+    const isBang = tabdoMatch[1] === '!';
+    const cmdToRun = tabdoMatch[2] ?? '';
+    const res = tabdo(state, cmdToRun, (s, c) => executeCommandLine(s, c, keyRunner), isBang);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 퀵픽스 일괄 실행: :cdo[!] {cmd}, :cfdo[!] {cmd}
+  const cdoMatch = cleanCmdRaw.match(/^(cdo|cfdo)(!?)(?:\s+(.*))?$/i);
+  if (cdoMatch) {
+    const isFile = cdoMatch[1].toLowerCase() === 'cfdo';
+    const isBang = cdoMatch[2] === '!';
+    const cmdToRun = cdoMatch[3] ?? '';
+    const runner = (s: VimEditorState, c: string) => executeCommandLine(s, c, keyRunner);
+    const res = isFile
+      ? cfdo(state, cmdToRun, runner, isBang)
+      : cdo(state, cmdToRun, runner, false, isBang);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 로케이션 리스트 일괄 실행: :ldo[!] {cmd}, :lfdo[!] {cmd}
+  const ldoMatch = cleanCmdRaw.match(/^(ldo|lfdo)(!?)(?:\s+(.*))?$/i);
+  if (ldoMatch) {
+    const isFile = ldoMatch[1].toLowerCase() === 'lfdo';
+    const isBang = ldoMatch[2] === '!';
+    const cmdToRun = ldoMatch[3] ?? '';
+    const runner = (s: VimEditorState, c: string) => executeCommandLine(s, c, keyRunner);
+    const res = isFile
+      ? lfdo(state, cmdToRun, runner, isBang)
+      : ldo(state, cmdToRun, runner, false, isBang);
     return {
       ...res,
       mode: 'NORMAL',
@@ -1897,7 +1977,10 @@ export function executeCommandLine(
     };
   }
 
-  if (cleanCmd === 'w' || cleanCmd === 'write') {
+  if (
+    (cleanCmd === 'w' || cleanCmd === 'write' || cleanCmd === 'update' || cleanCmdRaw === 'up') &&
+    !(state.userCommands && lookupUserCommand(state, cleanCmdRaw).kind === 'found')
+  ) {
     const savedState = recordFileSave(state);
     return {
       ...savedState,

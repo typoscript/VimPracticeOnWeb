@@ -1,5 +1,5 @@
 import { QuickfixItem, QuickfixState, VimEditorState } from './types';
-import { switchBuffer, syncCurrentBuffer } from './bufferEngine';
+import { switchBuffer, syncCurrentBuffer, editBuffer } from './bufferEngine';
 import { compileVimRegex } from './vimRegex';
 import { msg } from './messages';
 
@@ -57,6 +57,8 @@ export function jumpToQuickfixItem(state: VimEditorState, index: number): VimEdi
 
     if (targetBuf && targetBuf.id !== targetState.currentBufferId) {
       targetState = switchBuffer(targetState, targetBuf.id);
+    } else if (!targetBuf && item.filename) {
+      targetState = editBuffer(targetState, item.filename);
     }
   }
 
@@ -447,4 +449,89 @@ export function loadQuickfixFromFile(
   }
 
   return setQuickfixList(state, items, jumpToFirst);
+}
+
+/**
+ * 퀵픽스 목록의 유효한 항목들에 대해 지정된 Ex 명령어를 일괄 실행합니다 (:cdo[!] {cmd}).
+ * isFile = true 인 경우, 파일 단위로 첫 번째 매치에 대해 한 번씩만 실행합니다 (:cfdo[!] {cmd}).
+ */
+export function cdo(
+  state: VimEditorState,
+  commandStr: string,
+  executeCmd: (s: VimEditorState, c: string) => VimEditorState,
+  isFile = false,
+  isBang = false
+): VimEditorState {
+  const cleanCmd = commandStr.trim();
+  if (!cleanCmd) {
+    return {
+      ...state,
+      commandMessage: 'E471: Argument required',
+      bell: true,
+    };
+  }
+
+  const qf = state.quickfix;
+  if (!qf || qf.items.length === 0) {
+    return {
+      ...state,
+      commandMessage: 'E42: No Errors',
+      bell: true,
+    };
+  }
+
+  // 실행 대상 인덱스 목록 결정
+  let targetIndices: number[] = [];
+  if (isFile) {
+    const seenFiles = new Set<string>();
+    for (let i = 0; i < qf.items.length; i++) {
+      const item = qf.items[i];
+      const fileKey = item.filename || String(item.bufferId ?? '');
+      if (!seenFiles.has(fileKey)) {
+        seenFiles.add(fileKey);
+        targetIndices.push(i);
+      }
+    }
+  } else {
+    targetIndices = qf.items.map((_, idx) => idx);
+  }
+
+  let currState = state;
+  let executedCount = 0;
+
+  for (const idx of targetIndices) {
+    currState = jumpToQuickfixItem(currState, idx);
+    currState = executeCmd(currState, cleanCmd);
+    currState = syncCurrentBuffer(currState);
+    executedCount++;
+
+    if (currState.bell) {
+      if (!isBang) {
+        break;
+      } else {
+        currState = { ...currState, bell: false };
+      }
+    }
+  }
+
+  const msgKey = isFile
+    ? msg('({filesCount}개 파일에 대해 :cfdo \'{cleanCmd}\' 실행 완료)', { filesCount: executedCount, cleanCmd })
+    : msg('({count}개 항목에 대해 :cdo \'{cleanCmd}\' 실행 완료)', { count: executedCount, cleanCmd });
+
+  return {
+    ...currState,
+    commandMessage: msgKey,
+  };
+}
+
+/**
+ * 퀵픽스 목록에 속한 각 파일에 대해 Ex 명령어를 한 번씩 실행합니다 (:cfdo[!] {cmd}).
+ */
+export function cfdo(
+  state: VimEditorState,
+  commandStr: string,
+  executeCmd: (s: VimEditorState, c: string) => VimEditorState,
+  isBang = false
+): VimEditorState {
+  return cdo(state, commandStr, executeCmd, true, isBang);
 }

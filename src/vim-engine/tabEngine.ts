@@ -410,3 +410,51 @@ export function moveTab(state: VimEditorState, targetPos?: string | number): Vim
     commandMessage: msg('탭 {id}을(를) {v}번째 위치로 이동', { id: removed.id, v: destIdx + 1 }),
   };
 }
+
+/**
+ * 모든 탭 페이지에 대해 지정된 Ex 명령어를 일괄 실행합니다 (:tabdo[!] {cmd}).
+ */
+export function tabdo(
+  state: VimEditorState,
+  commandStr: string,
+  executeCmd: (s: VimEditorState, c: string) => VimEditorState,
+  isBang = false
+): VimEditorState {
+  const cleanCmd = commandStr.trim();
+  if (!cleanCmd) {
+    return {
+      ...state,
+      commandMessage: 'E471: Argument required',
+      bell: true,
+    };
+  }
+
+  const s = ensureTabPages(state);
+  const tabs = s.tabPages && s.tabPages.length > 0 ? s.tabPages : [];
+  if (tabs.length === 0) {
+    return executeCmd(state, cleanCmd);
+  }
+
+  let currState = s;
+  let executedCount = 0;
+
+  for (const t of tabs) {
+    currState = switchTab(currState, t.id);
+    currState = executeCmd(currState, cleanCmd);
+    currState = syncCurrentTab(currState);
+    executedCount++;
+
+    if (currState.bell) {
+      if (!isBang) {
+        break;
+      } else {
+        currState = { ...currState, bell: false };
+      }
+    }
+  }
+
+  return {
+    ...currState,
+    commandMessage: msg('({count}개 탭에 대해 :tabdo \'{cleanCmd}\' 실행 완료)', { count: executedCount, cleanCmd }),
+  };
+}

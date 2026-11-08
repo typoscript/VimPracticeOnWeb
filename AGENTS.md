@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 114개 테스트 파일, 1,466개 테스트 100% 통과 필수)*
+  *(현재 114개 테스트 파일, 1,478개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -98,6 +98,7 @@
 - **순정 Netrw 프로젝트 탐색기 & 버퍼/파일 제어 (레슨 39, 64, `src/vim-engine/netrwEngine.ts`, `vfs.ts`)**: `:Explore`, `:Hexplore` (`:He`), `:Sexplore` (`:Se`), `:Vexplore` (`:Ve`), `:Texplore` (`:Te`). 디렉터리 브라우징(`j/k`, `Enter`, `-`), 신규 파일 생성(`%`), 신규 폴더 생성(`d`), 파일 삭제(`D`), 분할 창/새 탭 열기(`v`/`o`/`t`), `virtualFiles` 가상 파일 시스템 맵 영구 보존 및 버퍼 상호 전환(`Ctrl-^`). 레슨 64에서 Netrw 탐색기 분할 실행, 하위 폴더 진입, `%` 신규 파일 생성 및 대상 파일 수정 후 원래 버퍼로의 복귀 실전 통합 마스터.
 - **미션 검색 및 필터링 시스템 (`src/components/LessonSelectModal/`, `src/utils/missionFilters.ts`)**: 커리큘럼 모달 내 실시간 통합 검색(ID, 제목, 설명, 힌트, 단축키) 및 6개 핵심 카테고리 태그(기초, 모션, 텍스트객체, Ex 커맨드, Vimscript, Netrw) 필터링, 미완료 레슨 선별 토글, 레슨 카드별 컬러 태그 배지 렌더링 및 빈 검색 결과 상태/필터 초기화 지원.
 - **아케이드 서바이벌 보스전 & 파워업 아이템 시스템 (`src/components/ArcadeSurvival/`, `types/game.ts`)**: Wave 5 미니보스 `[👑 MINI-BOSS] GIGANTIC_MEMORY_LEAK` 및 Wave 10 최종 보스 `[👾 MEGA-BOSS] TITAN_KERNEL_PANIC` 신규 보스전 확장. 3종 파워업 스킬 시스템 — ⏳ **시간 정지 (Chrono Freeze - `Ctrl+z`)**: 5.0초간 생존 타이머 동결 및 HUD 카운트다운, 💣 **버그 폭탄 (Bug Annihilator Bomb - `Ctrl+b`)**: 현재 웨이브 버그 즉시 섬멸 및 점수 획득, 🛡️ **콤보 & 생명선 쉴드**: 3콤보마다 충전되며 방향키 오입력 페널티 흡수 및 타임아웃 시 +5초 비상 회생. 보스 출현/격퇴 경고 배너 및 보너스 점수(+500 / +1000) & 파워업 전면 재충전.
+- **글로벌 프로젝트 텍스트 치환 & 배치 실행 엔진 (`:cdo`, `:cfdo`, `:ldo`, `:lfdo`, `:bufdo`, `:tabdo`, `:argdo`)**: `:vimgrep` / `:lvimgrep` 결과 기반 퀵픽스 및 로케이션 리스트 순회 일괄 치환(`:cdo`, `:cfdo`, `:ldo`, `:lfdo`), 열려 있는 버퍼(`:bufdo`) 및 탭페이지(`:tabdo`) 일괄 실행, `splitPipedCommands`의 내부 파이프라인 보존(`:cdo s/a/b/ | update`), 가상 파일 시스템(`vfs`) 자동 버퍼 로드, `!`(bang) 에러 무시 및 실패 시(`bell: true`) 중단 제어 지원.
 
 ---
 
@@ -119,5 +120,6 @@
 14. ~~**신규 레슨 64 추가 (Netrw 프로젝트 탐색기 & 버퍼/파일 제어)**~~ — 레슨 64와 함께 구현 완료.
 15. ~~**미션 검색 및 필터링 기능 (Mission Search & Tags)**~~ — 구현 완료.
 16. ~~**아케이드 서바이벌 신규 보스 & 파워업 아이템 확장**~~ — 구현 완료.
-17. **글로벌 프로젝트 텍스트 치환 & 퀵픽스/아규먼트 리스트 연계**: `:vimgrep` / `:cdo` / `:cfdo` 및 `:argdo` 대규모 리팩토링 실무 마스터.
-18. **하드코어 도장 (HardcoreDojo) 연속 서든데스 챌린지**: 노미스 10연타 스피드런 및 실시간 랭킹 시스템.
+17. ~~**글로벌 프로젝트 텍스트 치환 & 퀵픽스/아규먼트 리스트 연계**: `:vimgrep` / `:cdo` / `:cfdo` 및 `:argdo` 대규모 리팩토링 실무 마스터.~~ — 구현 완료.
+18. **신규 레슨 65 추가 (글로벌 프로젝트 리팩토링과 :cdo / :cfdo 마스터)**: 다중 파일 검색 치환 실전 레슨.
+19. **하드코어 도장 (HardcoreDojo) 연속 서든데스 챌린지**: 노미스 10연타 스피드런 및 실시간 랭킹 시스템.
