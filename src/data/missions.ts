@@ -1995,4 +1995,33 @@ export const MISSIONS: Mission[] = [
       return isSpellActive && linesMatch && isGoodWordAdded;
     },
   },
+  {
+    id: 62,
+    title: '레슨 62: 고급 Vim script 람다({args -> expr})와 sort()로 길이순 정렬하기',
+    description:
+      '최신 Vim(Vim 8/9, Neovim)은 함수를 별도로 선언하지 않고도 인라인으로 간결하게 작성할 수 있는 람다 표현식 `{ [args] -> expr }` 과 함수 참조(Funcref), 예외 처리(:try / :catch / :finally)를 지원합니다.\n\n1) 람다 표현식: `{x -> x * 2}`, `{a, b -> a + b}`, `{-> 42}` 처럼 화살표(`->`)를 사용해 이름 없는 익명 함수를 정의합니다.\n2) 고차 함수와의 연계:\n   - map(list, {idx, val -> expr}) : 각 항목을 람다로 변환\n   - filter(list, {idx, val -> expr}) : 조건에 맞는 항목만 선별\n   - sort(list, {a, b -> expr}) : 커스텀 비교 람다로 정렬 (a > b 이면 양수, 같으면 0, 음수)\n3) 일반 :sort 명령은 알파벳/숫자 순서로만 정렬할 수 있지만, sort() 에 람다 `{a, b -> len(a) - len(b)}` 를 넘기면 문자열의 길이순으로 정렬할 수 있습니다!\n4) 예외 처리: :try ... :catch [ /pattern/ ] ... :finally ... :endtry 로 런타임 오류나 :throw 예외를 안전하게 포착하고 마무리 작업을 보장합니다.\n\n미션:\n:call setline(1, sort(getline(1, \'$\'), {a, b -> len(a) - len(b)})) 명령으로 과일 이름들을 글자 수(길이)가 짧은 순서대로 정렬하세요.',
+    hint: ':call setline(1, sort(getline(1, \'$\'), {a, b -> len(a) - len(b)})) 를 입력하고 Enter',
+    par: 68,
+    optimalKeys: [
+      ':', 'c', 'a', 'l', 'l', ' ', 's', 'e', 't', 'l', 'i', 'n', 'e', '(', '1', ',', ' ', 's', 'o', 'r', 't', '(', 'g', 'e', 't', 'l', 'i', 'n', 'e', '(', '1', ',', ' ', "'", '$', "'", ')', ',', ' ', '{', 'a', ',', ' ', 'b', ' ', '-', '>', ' ', 'l', 'e', 'n', '(', 'a', ')', ' ', '-', ' ', 'l', 'e', 'n', '(', 'b', ')', '}', ')', ')', 'Enter',
+    ],
+    initialLines: [
+      'watermelon',
+      'fig',
+      'banana',
+      'kiwi',
+    ],
+    targetLines: [
+      'fig',
+      'kiwi',
+      'banana',
+      'watermelon',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const target = ['fig', 'kiwi', 'banana', 'watermelon'];
+      return state.lines.length === target.length && target.every((t, i) => state.lines[i] === t);
+    },
+  },
 ];

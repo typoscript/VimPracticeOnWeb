@@ -1241,8 +1241,27 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson61!.checkComplete(completeState)).toBe(true);
   });
 
-  it('모든 61개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(61);
+  it('레슨 62: 고급 Vim script 람다와 sort() 로 길이순 정렬하기 checkComplete 판정 검증', () => {
+    const lesson62 = MISSIONS.find((m) => m.id === 62);
+    expect(lesson62).toBeDefined();
+
+    const completeState: VimEditorState = {
+      lines: ['fig', 'kiwi', 'banana', 'watermelon'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson62!.checkComplete(completeState)).toBe(true);
+
+    const incompleteState: VimEditorState = {
+      lines: ['watermelon', 'fig', 'banana', 'kiwi'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson62!.checkComplete(incompleteState)).toBe(false);
+  });
+
+  it('모든 62개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(62);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();
