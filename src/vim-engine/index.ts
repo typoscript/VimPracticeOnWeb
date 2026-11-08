@@ -36,9 +36,19 @@ export { closeLocationListWindow, jumpToLocationListItem } from './locationListE
 export { compileVimRegex, translateVimPattern, escapeVimPattern } from './vimRegex';
 export type { CompileOptions, VimPatternInfo } from './vimRegex';
 
-// ---- Vim script 표현식 ----
-export { evaluateVimScript, VimScriptError, formatValue, displayValue } from './vimscriptEval';
+// ---- Vim script 표현식 & 함수/람다/예외 처리 ----
+export {
+  evaluateVimScript,
+  VimScriptError,
+  formatValue,
+  displayValue,
+  isFuncref,
+  makeFuncref,
+  invokeFuncref,
+} from './vimscriptEval';
+export { runScriptLines } from './vimscriptEngine';
 export type { EvalContext } from './vimscriptEval';
+export type { VimScriptFuncref } from './types';
 
 // ---- 매크로 디버거 (매크로를 키 단위 상태 프레임으로 분해) ----
 export {

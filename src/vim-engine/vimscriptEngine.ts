@@ -1,4 +1,5 @@
 import { FunctionDraft, UserFunction, VimEditorState, VimScriptValue } from './types';
+import { compileVimRegex } from './vimRegex';
 import {
   EvalContext,
   VimScriptError,
@@ -6,6 +7,7 @@ import {
   displayValue,
   evaluateVimScript,
   evaluateVimScriptList,
+  formatValue,
   isList,
   isTruthy,
   parseLValue,
@@ -236,18 +238,42 @@ export function callUserFunction(
 type BlockFrame =
   | { type: 'if'; active: boolean; taken: boolean }
   | { type: 'while'; start: number; active: boolean; continued: boolean }
-  | { type: 'for'; start: number; active: boolean; continued: boolean; items: VimScriptValue[]; index: number; target: string };
+  | { type: 'for'; start: number; active: boolean; continued: boolean; items: VimScriptValue[]; index: number; target: string }
+  | {
+      type: 'try';
+      active: boolean;
+      tryActive: boolean;
+      hasError: boolean;
+      exception?: string;
+      caught: boolean;
+      inFinally: boolean;
+      hasFinally: boolean;
+      pendingReturn?: VimScriptValue;
+    };
 
 type LoopFrame = Extract<BlockFrame, { type: 'while' | 'for' }>;
 
 function runFunctionBody(fn: UserFunction, ctx: EvalContext, runEx: ExRunner): CallResult {
+  return runScriptLines(fn.body, ctx, runEx, fn.abort);
+}
+
+/**
+ * Vim script 줄 목록을 실행합니다 (함수 본문, 스크립트 블록).
+ * if/while/for/try-catch-finally/return/break/continue 및 Ex 명령을 지원합니다.
+ */
+export function runScriptLines(
+  lines: string[],
+  ctx: EvalContext,
+  runEx: ExRunner,
+  abort = false
+): { state: VimEditorState; value: VimScriptValue; error?: string } {
   const stack: BlockFrame[] = [];
   const executing = () => stack.every((f) => f.active);
   let firstError: string | undefined;
   let iterations = 0;
 
-  for (let pc = 0; pc < fn.body.length; pc++) {
-    const line = fn.body[pc].trim().replace(/^:\s*/, '');
+  for (let pc = 0; pc < lines.length; pc++) {
+    const line = lines[pc].trim().replace(/^:\s*/, '');
     if (line.length === 0 || line.startsWith('"')) continue;
     const word = line.match(/^(\w+)/)?.[1] ?? '';
     const rest = line.slice(word.length).trim();
@@ -331,7 +357,7 @@ function runFunctionBody(fn: UserFunction, ctx: EvalContext, runEx: ExRunner): C
       }
       if (word === 'break' || word === 'brea' || word === 'continue' || word === 'con') {
         if (!executing()) continue;
-        const idx = stack.map((f) => f.type !== 'if').lastIndexOf(true);
+        const idx = stack.map((f) => f.type !== 'if' && f.type !== 'try').lastIndexOf(true);
         if (idx < 0) throw new VimScriptError(msg('E587: :while/:for 없이 :{word} 가 사용되었습니다', { word }));
         const loop = stack[idx] as LoopFrame;
         loop.active = false;
@@ -339,12 +365,85 @@ function runFunctionBody(fn: UserFunction, ctx: EvalContext, runEx: ExRunner): C
         for (let i = idx + 1; i < stack.length; i++) stack[i].active = false;
         continue;
       }
+      if (word === 'try') {
+        const isParentActive = executing();
+        stack.push({
+          type: 'try',
+          active: isParentActive,
+          tryActive: isParentActive,
+          hasError: false,
+          caught: false,
+          inFinally: false,
+          hasFinally: false,
+        });
+        continue;
+      }
+      if (word === 'catch' || word === 'cat') {
+        const top = stack[stack.length - 1];
+        if (top?.type !== 'try') throw new VimScriptError(msg('E601: :try 없이 :catch 가 사용되었습니다'));
+        if (top.inFinally) throw new VimScriptError(msg('E602: :finally 뒤에 :catch 가 올 수 없습니다'));
+
+        if (top.tryActive && top.hasError && !top.caught) {
+          let matches = true;
+          if (rest.length > 0) {
+            let pat = rest;
+            if (pat.startsWith('/') && pat.endsWith('/') && pat.length >= 2) {
+              pat = pat.slice(1, -1);
+            }
+            const re = compileVimRegex(pat);
+            matches = re.test(top.exception ?? '');
+          }
+          if (matches) {
+            top.caught = true;
+            top.active = true;
+            ctx.vvars = { ...(ctx.vvars ?? {}), exception: top.exception ?? '' };
+          } else {
+            top.active = false;
+          }
+        } else {
+          top.active = false;
+        }
+        continue;
+      }
+      if (word === 'finally' || word === 'fin') {
+        const top = stack[stack.length - 1];
+        if (top?.type !== 'try') throw new VimScriptError(msg('E606: :try 없이 :finally 가 사용되었습니다'));
+        top.inFinally = true;
+        top.hasFinally = true;
+        top.active = top.tryActive;
+        continue;
+      }
+      if (word === 'endtry' || word === 'endt') {
+        const top = stack.pop();
+        if (top?.type !== 'try') throw new VimScriptError(msg('E607: :try 없이 :endtry 가 사용되었습니다'));
+        if (top.tryActive && top.hasError && !top.caught) {
+          throw new VimScriptError(top.exception ?? msg('E605: 예외가 처리되지 않았습니다: {v}', { v: '' }));
+        }
+        if (top.pendingReturn !== undefined) {
+          return { state: ctx.state, value: top.pendingReturn, error: firstError };
+        }
+        continue;
+      }
+      if (word === 'throw' || word === 'th') {
+        if (!executing()) continue;
+        const val = rest.length > 0 ? evaluateVimScript(rest, ctx) : '';
+        const excStr = typeof val === 'string' ? val : formatValue(val);
+        ctx.vvars = { ...(ctx.vvars ?? {}), exception: excStr };
+        throw new VimScriptError(excStr);
+      }
 
       if (!executing()) continue;
 
       // 2. return
       if (word === 'return' || word === 'retu') {
         const value = rest.length > 0 ? evaluateVimScript(rest, ctx) : 0;
+        const tryIdx = stack.map((f) => f.type === 'try').lastIndexOf(true);
+        if (tryIdx >= 0) {
+          const tryFrame = stack[tryIdx] as Extract<BlockFrame, { type: 'try' }>;
+          tryFrame.pendingReturn = value;
+          tryFrame.active = false;
+          continue;
+        }
         return { state: ctx.state, value, error: firstError };
       }
 
@@ -356,14 +455,29 @@ function runFunctionBody(fn: UserFunction, ctx: EvalContext, runEx: ExRunner): C
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      const tryIdx = stack.map((f) => f.type === 'try').lastIndexOf(true);
+      if (tryIdx >= 0 && (stack[tryIdx] as Extract<BlockFrame, { type: 'try' }>).active && !(stack[tryIdx] as Extract<BlockFrame, { type: 'try' }>).inFinally) {
+        const tryFrame = stack[tryIdx] as Extract<BlockFrame, { type: 'try' }>;
+        tryFrame.hasError = true;
+        tryFrame.exception = message;
+        tryFrame.active = false;
+        ctx.vvars = { ...(ctx.vvars ?? {}), exception: message };
+        continue;
+      }
       firstError = firstError ?? message;
       ctx.state = { ...withoutBell(ctx.state), commandMessage: message };
-      if (fn.abort) return { state: ctx.state, value: -1, error: firstError };
+      if (abort) return { state: ctx.state, value: -1, error: firstError };
     }
   }
 
   if (stack.length > 0) {
-    const missing = stack[stack.length - 1].type === 'if' ? msg('E171: :endif 가 없습니다') : msg('E170: :endwhile 이 없습니다');
+    const last = stack[stack.length - 1];
+    const missing =
+      last.type === 'if'
+        ? msg('E171: :endif 가 없습니다')
+        : last.type === 'try'
+        ? msg('E171: :endtry 가 없습니다')
+        : msg('E170: :endwhile 이 없습니다');
     return { state: ctx.state, value: 0, error: firstError ?? missing };
   }
   return { state: ctx.state, value: 0, error: firstError };
@@ -549,6 +663,31 @@ export function executeScriptCommandLine(state: VimEditorState, commandLine: str
       functionDraft: draft,
       commandMessage: draftMessage(draft),
     };
+  }
+
+  if (/^(catch|cat)(\s|$)/.test(line)) {
+    return finish(state, msg('E601: :try 없이 :catch 가 사용되었습니다'), true);
+  }
+  if (/^(finally|fin)(\s|$)/.test(line)) {
+    return finish(state, msg('E606: :try 없이 :finally 가 사용되었습니다'), true);
+  }
+  if (/^(endtry|endt)(\s|$)/.test(line)) {
+    return finish(state, msg('E607: :try 없이 :endtry 가 사용되었습니다'), true);
+  }
+  if (/^(throw|th)(\s|$)/.test(line)) {
+    const ctx = topLevelContext(state, runEx);
+    const rest = line.replace(/^(throw|th)\s*/, '');
+    let excStr = '';
+    try {
+      const val = rest.length > 0 ? evaluateVimScript(rest, ctx) : '';
+      excStr = typeof val === 'string' ? val : formatValue(val);
+    } catch (e) {
+      excStr = e instanceof Error ? e.message : String(e);
+    }
+    return finish(state, msg('E605: 예외가 처리되지 않았습니다: {v}', { v: excStr }), true);
+  }
+  if (/^try(\s|$)/.test(line)) {
+    return finish(state, msg('E171: :endtry 가 없습니다'), true);
   }
 
   // let mapleader 는 기존 리더 키 설정 경로에서 처리

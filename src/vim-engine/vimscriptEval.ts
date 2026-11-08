@@ -1,4 +1,4 @@
-import { VimEditorState, VimScriptDict, VimScriptValue } from './types';
+import { VimEditorState, VimScriptDict, VimScriptFuncref, VimScriptValue } from './types';
 import { compileVimRegex } from './vimRegex';
 import { msg } from './messages';
 
@@ -54,8 +54,39 @@ export function isDict(value: VimScriptValue): value is VimScriptDict {
   return typeof value === 'object' && !Array.isArray(value) && value.kind === 'dict';
 }
 
+export function isFuncref(value: VimScriptValue): value is VimScriptFuncref {
+  return typeof value === 'object' && !Array.isArray(value) && value.kind === 'funcref';
+}
+
 export function makeDict(items: Record<string, VimScriptValue> = {}): VimScriptDict {
   return { kind: 'dict', items };
+}
+
+export function makeFuncref(
+  target: string | VimScriptFuncref,
+  extraArgs?: VimScriptValue[],
+  dict?: VimScriptDict
+): VimScriptFuncref {
+  if (typeof target === 'string') {
+    return {
+      kind: 'funcref',
+      name: target,
+      args: extraArgs ? (isList(extraArgs) ? [...extraArgs] : [extraArgs]) : undefined,
+      dict,
+    };
+  }
+  if (isFuncref(target)) {
+    const mergedArgs = [
+      ...(target.args ?? []),
+      ...(extraArgs ? (isList(extraArgs) ? extraArgs : [extraArgs]) : []),
+    ];
+    return {
+      ...target,
+      args: mergedArgs.length > 0 ? mergedArgs : undefined,
+      dict: dict ?? target.dict,
+    };
+  }
+  throw new VimScriptError(msg('E129: 함수 이름 또는 funcref 가 필요합니다'));
 }
 
 /** 문자열 → 숫자: 앞부분의 정수만 해석하고 나머지는 무시 ("12abc" → 12, "abc" → 0) */
@@ -63,6 +94,7 @@ export function toNumber(value: VimScriptValue): number {
   if (typeof value === 'number') return value;
   if (isList(value)) throw new VimScriptError(msg('E745: 리스트를 숫자로 사용할 수 없습니다'));
   if (isDict(value)) throw new VimScriptError(msg('E728: 딕셔너리를 숫자로 사용할 수 없습니다'));
+  if (isFuncref(value)) throw new VimScriptError(msg('E703: Funcref를 숫자로 사용할 수 없습니다'));
   const m = value.match(/^\s*([-+]?)(0[xX][0-9a-fA-F]+|\d+)/);
   if (!m) return 0;
   const n = m[2].toLowerCase().startsWith('0x') ? parseInt(m[2], 16) : parseInt(m[2], 10);
@@ -73,10 +105,12 @@ export function toVimString(value: VimScriptValue): string {
   if (typeof value === 'number') return String(value);
   if (isList(value)) throw new VimScriptError(msg('E730: 리스트를 문자열로 사용할 수 없습니다'));
   if (isDict(value)) throw new VimScriptError(msg('E731: 딕셔너리를 문자열로 사용할 수 없습니다'));
+  if (isFuncref(value)) throw new VimScriptError(msg('E729: Funcref를 문자열로 사용할 수 없습니다'));
   return value;
 }
 
 export function isTruthy(value: VimScriptValue): boolean {
+  if (isFuncref(value)) return true;
   return toNumber(value) !== 0;
 }
 
@@ -87,6 +121,17 @@ export function formatValue(value: VimScriptValue): string {
   if (isDict(value)) {
     const entries = Object.entries(value.items).map(([k, v]) => `${formatValue(k)}: ${formatValue(v)}`);
     return `{${entries.join(', ')}}`;
+  }
+  if (isFuncref(value)) {
+    if (value.lambda) {
+      return `{${value.lambda.params.join(', ')} -> ${value.lambda.bodyExpr}}`;
+    }
+    if (value.name) {
+      return value.args && value.args.length > 0
+        ? `function('${value.name}', [${value.args.map(formatValue).join(', ')}])`
+        : `function('${value.name}')`;
+    }
+    return '<funcref>';
   }
   return `'${value.replace(/'/g, "''")}'`;
 }
@@ -103,11 +148,17 @@ export function addValues(a: VimScriptValue, b: VimScriptValue): VimScriptValue 
 }
 
 function typeCode(v: VimScriptValue): number {
-  return typeof v === 'number' ? 0 : typeof v === 'string' ? 1 : isList(v) ? 3 : 4;
+  return typeof v === 'number' ? 0 : typeof v === 'string' ? 1 : isList(v) ? 3 : isDict(v) ? 4 : isFuncref(v) ? 2 : 0;
 }
 
 /** == 비교 (리스트·딕셔너리는 내용 비교) */
 function valuesEqual(a: VimScriptValue, b: VimScriptValue, ignoreCase: boolean): boolean {
+  if (isFuncref(a) || isFuncref(b)) {
+    if (!isFuncref(a) || !isFuncref(b)) return false;
+    if (a.name !== b.name) return false;
+    if (a.lambda?.bodyExpr !== b.lambda?.bodyExpr) return false;
+    return true;
+  }
   if (isList(a) || isList(b)) {
     if (!isList(a) || !isList(b)) throw new VimScriptError(msg('E691: 리스트는 리스트와만 비교할 수 있습니다'));
     return a.length === b.length && a.every((v, i) => valuesEqual(v, b[i], ignoreCase));
@@ -143,12 +194,13 @@ type Token = (
   | { type: 'reg'; value: string }
   | { type: 'op'; value: string }
   | { type: 'eof'; value?: undefined }
-) & { space: boolean };
+) & { space: boolean; start: number; end: number };
 
 const OPERATORS = [
   '==#', '==?', '!=#', '!=?', '>=#', '>=?', '<=#', '<=?', '=~#', '=~?', '!~#', '!~?',
   '..', '==', '!=', '>=', '<=', '=~', '!~', '&&', '||', '#{',
   '>#', '>?', '<#', '<?',
+  '->',
   '+', '-', '*', '/', '%', '.', '!', '<', '>', '(', ')', '[', ']', '{', '}', ',', '?', ':',
 ];
 
@@ -156,8 +208,8 @@ function tokenize(src: string): Token[] {
   const tokens: Token[] = [];
   let i = 0;
   let space = false;
-  const push = (t: Omit<Token, 'space'>) => {
-    tokens.push({ ...t, space } as Token);
+  const push = (t: Omit<Token, 'space' | 'start' | 'end'>, start: number, end: number) => {
+    tokens.push({ ...t, space, start, end } as Token);
     space = false;
   };
   while (i < src.length) {
@@ -170,8 +222,9 @@ function tokenize(src: string): Token[] {
     // 숫자
     const num = src.slice(i).match(/^(0[xX][0-9a-fA-F]+|\d+)/);
     if (num) {
-      push({ type: 'num', value: toNumber(num[1]) });
-      i += num[1].length;
+      const len = num[1].length;
+      push({ type: 'num', value: toNumber(num[1]) }, i, i + len);
+      i += len;
       continue;
     }
     // "문자열"
@@ -188,7 +241,7 @@ function tokenize(src: string): Token[] {
         }
       }
       if (j >= src.length) throw new VimScriptError(msg('E114: 큰따옴표가 닫히지 않았습니다: {v}', { v: src.slice(i) }));
-      push({ type: 'str', value: out });
+      push({ type: 'str', value: out }, i, j + 1);
       i = j + 1;
       continue;
     }
@@ -208,39 +261,41 @@ function tokenize(src: string): Token[] {
         out += src[j++];
       }
       if (j >= src.length) throw new VimScriptError(msg('E115: 작은따옴표가 닫히지 않았습니다: {v}', { v: src.slice(i) }));
-      push({ type: 'str', value: out });
+      push({ type: 'str', value: out }, i, j + 1);
       i = j + 1;
       continue;
     }
     // @r 레지스터
     if (ch === '@' && i + 1 < src.length) {
-      push({ type: 'reg', value: src[i + 1] });
+      push({ type: 'reg', value: src[i + 1] }, i, i + 2);
       i += 2;
       continue;
     }
     // a:0, a:1, a:000 (가변 인자)
     const argIdx = src.slice(i).match(/^a:\d+/);
     if (argIdx) {
-      push({ type: 'name', value: argIdx[0] });
-      i += argIdx[0].length;
+      const len = argIdx[0].length;
+      push({ type: 'name', value: argIdx[0] }, i, i + len);
+      i += len;
       continue;
     }
     // 이름 (g:x, a:name, v:true, Func)
     const name = src.slice(i).match(/^([gblwtsav]:)?[A-Za-z_][A-Za-z0-9_]*/);
     if (name) {
-      push({ type: 'name', value: name[0] });
-      i += name[0].length;
+      const len = name[0].length;
+      push({ type: 'name', value: name[0] }, i, i + len);
+      i += len;
       continue;
     }
     const op = OPERATORS.find((o) => src.startsWith(o, i));
     if (op) {
-      push({ type: 'op', value: op });
+      push({ type: 'op', value: op }, i, i + op.length);
       i += op.length;
       continue;
     }
     throw new VimScriptError(msg('E15: 잘못된 표현식입니다: "{src}"', { src }));
   }
-  push({ type: 'eof' });
+  push({ type: 'eof' }, i, i);
   return tokens;
 }
 
@@ -338,6 +393,8 @@ export function readVariable(ctx: EvalContext, name: string): VimScriptValue {
   if (scope === 'v') {
     if (key === 'true') return 1;
     if (key === 'false') return 0;
+    if (key === 'exception') return ctx.vvars?.['exception'] ?? '';
+    if (key === 'throwpoint') return ctx.vvars?.['throwpoint'] ?? '';
     if (ctx.vvars && key in ctx.vvars) return ctx.vvars[key];
   } else if (scope === 'a') {
     if (ctx.args && key in ctx.args) return ctx.args[key];
@@ -604,7 +661,7 @@ class Evaluator {
     return this.postfix();
   }
 
-  /** 인덱스 x[i], 슬라이스 x[a:b], 멤버 d.key (앞에 공백이 없을 때만) */
+  /** 인덱스 x[i], 슬라이스 x[a:b], 멤버 d.key, 함수/람다 호출 () */
   private postfix(): VimScriptValue {
     let value = this.primary();
     for (;;) {
@@ -616,12 +673,136 @@ class Evaluator {
         this.peek(1).type === 'name' && !this.peek(1).space
       ) {
         this.pos++;
-        value = getIn(value, String(this.peek().value));
+        const key = String(this.peek().value);
         this.pos++;
+        const member = getIn(value, key);
+        if (isFuncref(member)) {
+          value = { ...member, dict: value };
+        } else {
+          value = member;
+        }
+      } else if (this.isOp('(') && !this.peek().space && (isFuncref(value) || typeof value === 'string')) {
+        this.pos++;
+        const args: VimScriptValue[] = [];
+        if (!this.isOp(')')) {
+          args.push(this.ternary());
+          while (this.isOp(',')) {
+            this.pos++;
+            args.push(this.ternary());
+          }
+        }
+        this.expectOp(')');
+        if (isFuncref(value)) {
+          value = invokeFuncref(this.ctx, value, args);
+        } else {
+          value = this.call(value, args, null);
+        }
       } else {
         return value;
       }
     }
+  }
+
+  private isLambdaAhead(): boolean {
+    if (this.peek().type !== 'op' || this.peek().value !== '{') return false;
+    let k = this.pos + 1;
+    const t = this.tokens[k];
+    if (!t || t.type === 'eof') return false;
+    if (t.type === 'op' && t.value === '->') return true;
+
+    while (k < this.tokens.length) {
+      const cur = this.tokens[k];
+      if (cur.type === 'name') {
+        k++;
+      } else if (
+        cur.type === 'op' && cur.value === '.' &&
+        this.tokens[k + 1]?.type === 'op' && this.tokens[k + 1]?.value === '.' &&
+        this.tokens[k + 2]?.type === 'op' && this.tokens[k + 2]?.value === '.'
+      ) {
+        k += 3;
+      } else {
+        return false;
+      }
+
+      const next = this.tokens[k];
+      if (!next) return false;
+      if (next.type === 'op' && next.value === '->') return true;
+      if (next.type === 'op' && next.value === ',') {
+        k++;
+        continue;
+      }
+      return false;
+    }
+    return false;
+  }
+
+  private parseLambda(): VimScriptFuncref {
+    this.expectOp('{');
+    const params: string[] = [];
+    if (!this.isOp('->')) {
+      for (;;) {
+        const t = this.peek();
+        if (t.type === 'name') {
+          params.push(t.value);
+          this.pos++;
+        } else if (
+          t.type === 'op' && t.value === '.' &&
+          this.peek(1).type === 'op' && this.peek(1).value === '.' &&
+          this.peek(2).type === 'op' && this.peek(2).value === '.'
+        ) {
+          params.push('...');
+          this.pos += 3;
+        } else {
+          throw this.invalid();
+        }
+
+        if (this.isOp('->')) break;
+        this.expectOp(',');
+      }
+    }
+    this.expectOp('->');
+
+    const bodyTokens: Token[] = [];
+    let braceDepth = 0;
+    while (this.pos < this.tokens.length) {
+      const cur = this.peek();
+      if (cur.type === 'eof') {
+        throw new VimScriptError(msg('E15: 람다 끝에 } 가 없습니다: {source}', { source: this.source }));
+      }
+      if (cur.type === 'op' && (cur.value === '{' || cur.value === '#{')) {
+        braceDepth++;
+      } else if (cur.type === 'op' && cur.value === '}') {
+        if (braceDepth === 0) {
+          break;
+        }
+        braceDepth--;
+      }
+      bodyTokens.push(cur);
+      this.pos++;
+    }
+    this.expectOp('}');
+
+    const bodyExpr =
+      bodyTokens.length > 0
+        ? this.source.slice(bodyTokens[0].start, bodyTokens[bodyTokens.length - 1].end).trim()
+        : '';
+
+    const closureVars: Record<string, VimScriptValue> = {
+      ...(this.ctx.locals ?? {}),
+    };
+    const closureArgs: Record<string, VimScriptValue> = {
+      ...(this.ctx.args ?? {}),
+    };
+
+    return {
+      kind: 'funcref',
+      lambda: {
+        params,
+        bodyExpr,
+        closureVars,
+        closureArgs,
+      },
+    };
   }
 
   private subscript(value: VimScriptValue): VimScriptValue {
@@ -680,6 +861,9 @@ class Evaluator {
       this.expectOp(']', () => new VimScriptError(msg('E697: 리스트 끝에 ] 가 없습니다: {source}', { source: this.source })));
       return items;
     }
+    if (t.type === 'op' && t.value === '{' && this.isLambdaAhead()) {
+      return this.parseLambda();
+    }
     if (t.type === 'op' && (t.value === '{' || t.value === '#{')) {
       const literalKeys = t.value === '#{';
       this.pos++;
@@ -727,6 +911,13 @@ class Evaluator {
   }
 
   private call(name: string, args: VimScriptValue[], firstArgVar: string | null): VimScriptValue {
+    let varVal: VimScriptValue | undefined;
+    try {
+      varVal = readVariable(this.ctx, name);
+    } catch {}
+    if (varVal && isFuncref(varVal)) {
+      return invokeFuncref(this.ctx, varVal, args);
+    }
     if (/^[A-Z]/.test(name) || name.startsWith('g:') || name.startsWith('s:')) {
       return this.ctx.callUserFunction(this.ctx, name.replace(/^g:/, ''), args);
     }
@@ -794,8 +985,81 @@ function resolveLineArg(state: VimEditorState, arg: VimScriptValue): number {
   return n >= 1 && n <= state.lines.length ? n - 1 : -1;
 }
 
-/** map() / filter() 의 문자열 표현식을 v:val, v:key 로 평가합니다. */
+/** Funcref 또는 람다를 호출합니다 */
+export function invokeFuncref(
+  ctx: EvalContext,
+  funcref: VimScriptFuncref,
+  passedArgs: VimScriptValue[]
+): VimScriptValue {
+  const allArgs = [...(funcref.args ?? []), ...passedArgs];
+  if (funcref.lambda) {
+    const { params, bodyExpr, closureVars, closureArgs } = funcref.lambda;
+    const lambdaLocals: Record<string, VimScriptValue> = {
+      ...(closureVars ?? {}),
+      ...(closureArgs ?? {}),
+    };
+    const lambdaArgs: Record<string, VimScriptValue> = {
+      ...(closureArgs ?? {}),
+    };
+
+    for (let i = 0; i < params.length; i++) {
+      const p = params[i];
+      if (p === '...') {
+        const extra = allArgs.slice(i);
+        lambdaArgs['0'] = extra.length;
+        lambdaArgs['000'] = extra;
+        extra.forEach((v, idx) => (lambdaArgs[String(idx + 1)] = v));
+        break;
+      }
+      const val = allArgs[i] ?? 0;
+      lambdaLocals[p] = val;
+      lambdaArgs[p] = val;
+    }
+    if (funcref.dict) {
+      lambdaLocals['self'] = funcref.dict;
+    }
+
+    const lambdaCtx: EvalContext = {
+      state: ctx.state,
+      locals: lambdaLocals,
+      args: lambdaArgs,
+      vvars: ctx.vvars,
+      submatches: ctx.submatches,
+      callUserFunction: ctx.callUserFunction,
+    };
+
+    const result = evaluateVimScript(bodyExpr, lambdaCtx);
+    ctx.state = lambdaCtx.state;
+    return result;
+  }
+
+  if (funcref.name) {
+    const name = funcref.name;
+    if (/^[A-Z]/.test(name) || name.startsWith('g:') || name.startsWith('s:')) {
+      const subCtx = funcref.dict ? { ...ctx, locals: { ...(ctx.locals ?? {}), self: funcref.dict } } : ctx;
+      return subCtx.callUserFunction(subCtx, name.replace(/^g:/, ''), allArgs);
+    }
+    const builtin = BUILTINS[name];
+    if (builtin) {
+      if (allArgs.length < builtin.min) throw new VimScriptError(msg('E119: 함수의 인자가 부족합니다: {name}', { name }));
+      if (allArgs.length > builtin.max) throw new VimScriptError(msg('E118: 함수의 인자가 너무 많습니다: {name}', { name }));
+      const res = builtin.fn(ctx, allArgs);
+      if (builtin.mutates) {
+        return (res as MutationResult).value;
+      }
+      return res as VimScriptValue;
+    }
+    throw new VimScriptError(msg('E117: 알 수 없는 함수입니다: {name}', { name }));
+  }
+
+  throw new VimScriptError(msg('E129: 잘못된 funcref 호출입니다'));
+}
+
+/** map() / filter() 의 표현식을 평가합니다. (람다/funcref 또는 v:val, v:key 문자열) */
 function evalWithItem(ctx: EvalContext, expr: VimScriptValue, val: VimScriptValue, key: VimScriptValue): VimScriptValue {
+  if (isFuncref(expr)) {
+    return invokeFuncref(ctx, expr, [key, val]);
+  }
   const inner: EvalContext = { ...ctx, vvars: { ...(ctx.vvars ?? {}), val, key } };
   const result = evaluateVimScript(toVimString(expr), inner);
   ctx.state = inner.state;
@@ -871,7 +1135,13 @@ function formatPrintf(fmt: string, args: VimScriptValue[]): string {
   return out;
 }
 
-function compareForSort(how: VimScriptValue | undefined) {
+function compareForSort(ctx: EvalContext, how: VimScriptValue | undefined) {
+  if (how && isFuncref(how)) {
+    return (a: VimScriptValue, b: VimScriptValue): number => {
+      const res = invokeFuncref(ctx, how, [a, b]);
+      return toNumber(res);
+    };
+  }
   const mode = how === undefined ? '' : typeof how === 'number' ? (how ? 'i' : '') : how;
   return (a: VimScriptValue, b: VimScriptValue): number => {
     if (mode === 'n' || mode === 'N') return toNumber(a) - toNumber(b);
@@ -1025,7 +1295,41 @@ const BUILTINS: Record<string, Builtin> = {
   empty: {
     min: 1,
     max: 1,
-    fn: (_c, [v]) => (isList(v) ? v.length === 0 : isDict(v) ? Object.keys(v.items).length === 0 : typeof v === 'number' ? v === 0 : v === '') ? 1 : 0,
+    fn: (_c, [v]) => (isFuncref(v) ? false : isList(v) ? v.length === 0 : isDict(v) ? Object.keys(v.items).length === 0 : typeof v === 'number' ? v === 0 : v === '') ? 1 : 0,
+  },
+  function: {
+    min: 1,
+    max: 3,
+    fn: (_ctx, [target, args, dict]) => {
+      const argList = args !== undefined ? asList(args, 'function') : undefined;
+      const d = dict !== undefined ? asDict(dict, 'function') : undefined;
+      return makeFuncref(target as string | VimScriptFuncref, argList, d);
+    },
+  },
+  funcref: {
+    min: 1,
+    max: 3,
+    fn: (_ctx, [target, args, dict]) => {
+      const argList = args !== undefined ? asList(args, 'funcref') : undefined;
+      const d = dict !== undefined ? asDict(dict, 'funcref') : undefined;
+      return makeFuncref(target as string | VimScriptFuncref, argList, d);
+    },
+  },
+  call: {
+    min: 2,
+    max: 3,
+    fn: (ctx, [func, argsList, dict]) => {
+      if (!isList(argsList)) throw new VimScriptError(msg('E714: call() 에는 인자 리스트가 필요합니다'));
+      const d = dict !== undefined ? asDict(dict, 'call') : undefined;
+      if (isFuncref(func)) {
+        return invokeFuncref(ctx, d ? { ...func, dict: d } : func, argsList);
+      }
+      if (typeof func === 'string') {
+        const fn = makeFuncref(func, undefined, d);
+        return invokeFuncref(ctx, fn, argsList);
+      }
+      throw new VimScriptError(msg('E129: 함수 이름 또는 funcref 가 필요합니다'));
+    },
   },
   type: { min: 1, max: 1, fn: (_c, [v]) => typeCode(v) },
   copy: { min: 1, max: 1, fn: (_c, [v]) => v },
@@ -1164,8 +1468,8 @@ const BUILTINS: Record<string, Builtin> = {
     min: 1,
     max: 2,
     mutates: true,
-    fn: (_c, [l, how]) => {
-      const updated = [...asList(l, 'sort')].sort(compareForSort(how));
+    fn: (ctx, [l, how]) => {
+      const updated = [...asList(l, 'sort')].sort(compareForSort(ctx, how));
       return { value: updated, updated };
     },
   },

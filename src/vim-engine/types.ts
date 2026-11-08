@@ -5,8 +5,31 @@ export interface CursorPosition {
   col: number;  // 0-indexed 열 번호
 }
 
-/** Vim script 값: 숫자, 문자열, 리스트, 딕셔너리 */
-export type VimScriptValue = number | string | VimScriptValue[] | VimScriptDict;
+/** Vim script 함수 참조 또는 람다 */
+export interface VimScriptFuncref {
+  kind: 'funcref';
+  /** 함수 이름 (내장 함수 또는 사용자 정의 함수) */
+  name?: string;
+  /** 람다 정의 */
+  lambda?: {
+    params: string[];
+    bodyExpr: string;
+    closureVars?: Record<string, VimScriptValue>;
+    closureArgs?: Record<string, VimScriptValue>;
+  };
+  /** 부분 적용 인자 (function('fn', [arg1])) */
+  args?: VimScriptValue[];
+  /** 바인딩된 딕셔너리 */
+  dict?: VimScriptDict;
+}
+
+/** Vim script 값: 숫자, 문자열, 리스트, 딕셔너리, 함수 참조(람다) */
+export type VimScriptValue =
+  | number
+  | string
+  | VimScriptValue[]
+  | VimScriptDict
+  | VimScriptFuncref;
 
 /** Vim script 딕셔너리 ({'key': value}). 키는 항상 문자열이며 입력 순서를 유지합니다. */
 export interface VimScriptDict {

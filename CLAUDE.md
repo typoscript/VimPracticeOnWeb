@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 110개 테스트 파일, 1,398개 테스트 100% 통과 필수)*
+  *(현재 111개 테스트 파일, 1,415개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -90,15 +90,18 @@
 - **Vim script 함수 (레슨 56)**: `:function[!] Name(a, ...) [range] [abort]` → 커맨드라인 본문 입력(`functionDraft`) → `:endfunction`, `:delfunction`, `:[range]call`(range 속성 없으면 줄마다 호출), `:let`/`:unlet`/`:echo`/`:execute`, 본문의 `return`·`if/elseif/else/endif`·`while/break/continue`. 표현식은 `src/vim-engine/vimscriptEval.ts`(숫자·문자열, g:/l:/a:/@r, 내장 함수), 실행은 `src/vim-engine/vimscriptEngine.ts`. `:call` 하나는 한 번의 실행 취소 단위입니다.
 - **Vim script 리스트·딕셔너리 (레슨 57)**: `[1, 'a']`, `{'k': v}`, `#{k: v}`, 인덱스·슬라이스(`l[1:]`, `s[-3:]`), `d.key`, `=~`/`!~`, `is`, `:for x in list` / `:for [k, v] in items(d)`, `:let l[0] = x` / `:let [a, b; rest] = list`, `:unlet d.k`, `a:000`, 내장 함수(`substitute`, `printf`, `map`, `filter`, `sort`, `split`, `join`, `range`, `keys`, `items` 등). Vim 정규식 변환은 `src/vim-engine/vimRegex.ts`(아래 '순정 Vim 정규식' 참고). ⚠ 불변 상태 규약 때문에 리스트·딕셔너리는 값 의미론이며, `add()`·`sort()` 등 제자리 변경 함수는 첫 인자가 변수이면 결과를 다시 저장합니다 (별칭은 함께 바뀌지 않음).
 - **순정 Vim 맞춤법 검사기 (레슨 61, `src/vim-engine/spellEngine.ts`, `spellData.ts`)**: `:set spell`, `:set nospell`, `]s`, `]S`, `[s`, `[S`, `z=`, `zg`, `zw`. 표준 Vim 영단어 사전(2,000+ 단어) 기반 오류 감지 및 Damerau-Levenshtein 거리 기반 맞춤법 추천(`z=`), 번호 선택 및 교체 실행 취소(undo) 지원. `Editor.tsx` 오탈자 빨간 물결 밑줄 렌더링, `StatusBar.tsx`의 `[SPELL]` 활성 배지 표시.
+- **고급 Vim script 기능 (람다, Funcref, 예외 처리, `src/vim-engine/vimscriptEval.ts`, `vimscriptEngine.ts`)**: 람다 표현식 `{ [args] -> expr }` (`{x -> x * 2}`, `{a, b -> a + b}`, `{-> 42}`), 클로저 변수 캡처(상위 함수 `a:`, `l:` 스코프 접근), 딕셔너리 메서드 호출 및 `self` 바인딩 (`d.method()`). 함수 참조 `function('fn' [, args [, dict]])`, `funcref(...)`, `call(fn, args [, dict])`, `type(fn) == 2` (`v:t_func`), 부분 적용(partial application), 고차 함수 (`map()`, `filter()`, `sort()`에 람다 전달). 예외 처리 `:try`, `:catch [ /pattern/ ]`, `:finally`, `:endtry`, `:throw expr`, 내장 런타임 에러(E-number) 포착, `v:exception` 변수 지원, `:try` 블록 내 조기 `:return` 시에도 `:finally` 실행 보장.
 
 ---
 
 ## 5. 다음 개발 로드맵 추천 후보
 에이전트에게 다음 작업을 지시할 때 아래 항목 중에서 지정하시면 됩니다:
 1. ~~**매크로 슬로우모션 뷰어 & 비주얼 디버거 (`MacroDebugger`)**~~ — 레슨 53과 함께 구현 완료.
-2. ~~**사용자 정의 Ex 커맨드 (`:command!`) 및 Vim 함수 엔진 (`:function`, `:call`)**~~ — 레슨 55·56과 함께 구현 완료. 리스트·딕셔너리·`:for`·`=~`·`substitute()`/`printf()`도 레슨 57과 함께 구현 완료. 남은 확장: 람다 `{x -> ...}`, `funcref`, `:try/:catch`, 커맨드라인 최상위 `:if`/`:for`.
+2. ~~**사용자 정의 Ex 커맨드 (`:command!`) 및 Vim 함수 엔진 (`:function`, `:call`)**~~ — 레슨 55·56과 함께 구현 완료. 리스트·딕셔너리·`:for`·`=~`·`substitute()`/`printf()`도 레슨 57과 함께 구현 완료.
 3. ~~**순정 Vim 맞춤법 검사기 (`:set spell`, `]s`, `[s`, `z=`, `zg`)**~~ — 레슨 61 연계 및 스펠링 체크 엔진 구현 완료.
 4. ~~**인덴트 텍스트 객체 확장 (`ii`, `ai`)**~~ — 레슨 54와 함께 구현 완료.
 5. ~~**엔진 전역 실패 신호 (bell/abort)**~~ — `bell` 신호 및 연산자+모션(`dj`, `dl`, `db`, `dG` 등)과 함께 구현 완료.
 6. ~~**레슨 61 추가 (스펠링 체크 마스터)**~~ — 구현 완료.
-7. **고급 Vim script 기능**: 람다 표현식 `{x -> expr}`, `funcref('func')`, `:try/:catch/:finally` 예외 처리 블록.
+7. ~~**고급 Vim script 기능**~~ — 람다 표현식 `{x -> expr}`, `funcref('func')` 및 `function()`, 부분 적용, `call()`, `:try/:catch/:finally` 예외 처리 블록 구현 완료.
+8. **신규 레슨 62 추가**: 고급 Vim script (람다와 funcref, 예외 처리로 에디터 자동화) 실무 튜토리얼 및 속도전 후보 추가.
+9. **커맨드라인 최상위 블록 (`:if`/`:for`/`:while`) 지원**: 단일 라인 파이프(`|`) 연결 제어문 또는 인터랙티브 연속 입력 블록.
