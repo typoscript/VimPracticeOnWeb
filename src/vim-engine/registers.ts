@@ -88,6 +88,99 @@ export function syncRegisters(
 }
 
 /**
+ * 매크로 키 배열을 Vim 표준 표기 문자열로 변환합니다. (예: ['A', ';', 'Escape'] -> "A;<Esc>")
+ */
+export function formatMacroKeysToString(keys: string[]): string {
+  return keys
+    .map((k) => {
+      if (k === 'Escape') return '<Esc>';
+      if (k === 'Enter') return '<CR>';
+      if (k === ' ') return ' ';
+      if (k === 'Tab') return '<Tab>';
+      if (k === 'Backspace') return '<BS>';
+      if (k.startsWith('Ctrl-')) return `<C-${k.slice(5)}>`;
+      return k;
+    })
+    .join('');
+}
+
+/**
+ * 텍스트 문자열(예: "A;<Esc>j" 또는 "ciwbar^[")을 Vim 매크로 실행 키 배열로 파싱합니다.
+ */
+export function parseMacroStringToKeys(text: string): string[] {
+  const keys: string[] = [];
+  let i = 0;
+  while (i < text.length) {
+    // 1. ASCII escape / ^[
+    if (text[i] === '\x1b') {
+      keys.push('Escape');
+      i++;
+      continue;
+    }
+    if (text[i] === '^' && i + 1 < text.length && text[i + 1] === '[') {
+      keys.push('Escape');
+      i += 2;
+      continue;
+    }
+
+    // 2. <...> 표기법 (<Esc>, <CR>, <Space>, <Tab>, <BS>, <C-x>, <Ctrl-x>)
+    if (text[i] === '<') {
+      const end = text.indexOf('>', i);
+      if (end !== -1) {
+        const tag = text.slice(i + 1, end).toLowerCase();
+        if (tag === 'esc' || tag === 'escape') {
+          keys.push('Escape');
+          i = end + 1;
+          continue;
+        }
+        if (tag === 'cr' || tag === 'enter') {
+          keys.push('Enter');
+          i = end + 1;
+          continue;
+        }
+        if (tag === 'space') {
+          keys.push(' ');
+          i = end + 1;
+          continue;
+        }
+        if (tag === 'tab') {
+          keys.push('Tab');
+          i = end + 1;
+          continue;
+        }
+        if (tag === 'bs' || tag === 'backspace') {
+          keys.push('Backspace');
+          i = end + 1;
+          continue;
+        }
+        if (tag.startsWith('c-') || tag.startsWith('ctrl-')) {
+          const char = tag.slice(tag.indexOf('-') + 1);
+          keys.push(`Ctrl-${char}`);
+          i = end + 1;
+          continue;
+        }
+      }
+    }
+
+    // 3. 개행/탭 리터럴
+    if (text[i] === '\r' || text[i] === '\n') {
+      keys.push('Enter');
+      i++;
+      continue;
+    }
+    if (text[i] === '\t') {
+      keys.push('Tab');
+      i++;
+      continue;
+    }
+
+    keys.push(text[i]);
+    i++;
+  }
+  return keys;
+}
+
+/**
  * 지정된 레지스터(또는 state.activeRegister, 기본 무명 레지스터)의 클립보드 데이터를 조회합니다.
  */
 export function getRegisterContent(
@@ -120,7 +213,9 @@ export function getRegisterContent(
     const regKey = /^[A-Z]$/.test(targetReg) ? targetReg.toLowerCase() : targetReg;
     const entry = state.registers?.[regKey];
     if (!entry) return null;
-    const content = Array.isArray(entry.content) ? entry.content.join('') : entry.content;
+    const content = Array.isArray(entry.content)
+      ? (entry.type === 'macro' ? formatMacroKeysToString(entry.content) : entry.content.join(''))
+      : entry.content;
     return {
       type: entry.type === 'line' ? 'line' : 'text',
       content,
@@ -130,7 +225,9 @@ export function getRegisterContent(
   // 기본 무명 레지스터("") 또는 clipboard
   if (state.registers?.['"']) {
     const entry = state.registers['"'];
-    const content = Array.isArray(entry.content) ? entry.content.join('') : entry.content;
+    const content = Array.isArray(entry.content)
+      ? (entry.type === 'macro' ? formatMacroKeysToString(entry.content) : entry.content.join(''))
+      : entry.content;
     return {
       type: entry.type === 'line' ? 'line' : 'text',
       content,

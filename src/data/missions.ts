@@ -2159,4 +2159,56 @@ export const MISSIONS: Mission[] = [
       return isBackOnApi && isApiUpdated && isAuthUpdated;
     },
   },
+  {
+    id: 66,
+    title: '레슨 66: 고급 매크로 레지스터 조작과 "ap / "ay 실전 편집 마스터',
+    description:
+      'Vim의 매크로는 특수 바이너리가 아니라 일반 텍스트 레지스터("a~"z)에 그대로 저장됩니다. 만약 복잡한 매크로를 녹화하다가 오타나 실수가 발생했다면 처음부터 다시 녹화할 필요 없이 버퍼에 붙여넣어 수정할 수 있습니다!\n\n1) 매크로를 버퍼에 붙여넣기 ("ap):\n   - 레지스터 a에 녹화된 매크로를 현재 커서 위치에 텍스트로 붙여넣습니다.\n   - <Esc>, <CR> 등의 특수 키도 시각적 텍스트로 변환되어 버퍼에 출력됩니다.\n   - 예: "ap → A,<Esc>j\n\n2) 버퍼에서 오타 수정:\n   - 일반 Vim 편집 명령(f, r, cw 등)으로 잘못된 키스트로크나 문자를 수정합니다.\n   - 예: 0f,r; (쉼표 , 를 세미콜론 ; 로 변경) → A;<Esc>j\n\n3) 수정한 매크로를 다시 레지스터에 복사 ("ay$):\n   - 수정된 라인을 0"ay$ 로 다시 레지스터 a에 복사합니다.\n\n4) 수정된 매크로 실행 (@a, 2@@):\n   - 대상 라인으로 이동하여 @a 를 실행하고, 2@@ 로 나머지 라인에 일괄 적용합니다.\n\n미션:\n1. 빈 1번 라인에서 "ap 로 레지스터 a의 매크로(A,<Esc>j)를 붙여넣으세요.\n2. 0f,r; 로 쉼표(,)를 세미콜론(;)으로 수정하세요 (A;<Esc>j).\n3. 0"ay$ 로 수정된 매크로를 다시 레지스터 a에 복사하세요.\n4. j 로 const a = 1 라인으로 이동한 후 @a 를 실행하세요.\n5. 2@@ 로 const b = 2 및 const c = 3 라인까지 세미콜론을 일괄 추가하세요!',
+    hint: '"ap 로 붙여넣기 → 0f,r; 로 , 를 ; 로 수정 → 0"ay$ 로 레지스터 a에 복사 → j 로 이동 → @a 및 2@@ 실행',
+    par: 22,
+    optimalKeys: [
+      '"', 'a', 'p',
+      '0', 'f', ',', 'r', ';',
+      '0', '"', 'a', 'y', '$',
+      'j',
+      '@', 'a',
+      '2', '@', '@',
+    ],
+    initialLines: [
+      '// Scratch line: paste "ap, fix typo, and yank back with "ay$',
+      '',
+      'const a = 1',
+      'const b = 2',
+      'const c = 3',
+    ],
+    targetLines: [
+      '// Scratch line: paste "ap, fix typo, and yank back with "ay$',
+      'A;<Esc>j',
+      'const a = 1;',
+      'const b = 2;',
+      'const c = 3;',
+    ],
+    initialRegisters: {
+      a: {
+        type: 'macro',
+        content: ['A', ',', 'Escape', 'j'],
+      },
+    },
+    initialCursor: { line: 1, col: 0 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const hasLines =
+        state.lines.some((l) => l === 'const a = 1;') &&
+        state.lines.some((l) => l === 'const b = 2;') &&
+        state.lines.some((l) => l === 'const c = 3;');
+
+      const aContent = state.registers?.a?.content;
+      const aStr = Array.isArray(aContent)
+        ? aContent.join('')
+        : (aContent ?? '');
+      const isMacroFixed = aStr.includes(';') && !aStr.includes(',');
+
+      return hasLines && isMacroFixed;
+    },
+  },
 ];

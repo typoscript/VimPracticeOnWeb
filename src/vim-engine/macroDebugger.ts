@@ -1,5 +1,6 @@
 import { VimEditorState } from './types';
 import { handleKey } from './vimEngine';
+import { parseMacroStringToKeys } from './registers';
 
 /**
  * 매크로 슬로우모션 디버거 엔진 (MacroDebugger)
@@ -48,7 +49,9 @@ export function getMacroKeys(state: VimEditorState, register: string): string[] 
   if (!reg) return [];
   const entry = state.registers?.[reg];
   if (!entry || !entry.content) return [];
-  return Array.isArray(entry.content) ? [...entry.content] : [entry.content];
+  return Array.isArray(entry.content)
+    ? [...entry.content]
+    : parseMacroStringToKeys(entry.content);
 }
 
 /** 재생 가능한 매크로(type === 'macro') 레지스터 이름 목록을 정렬하여 반환합니다. */

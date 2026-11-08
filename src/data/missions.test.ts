@@ -1316,8 +1316,26 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson65!.checkComplete(state)).toBe(true);
   });
 
-  it('모든 65개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(65);
+  it('레슨 66: 고급 매크로 레지스터 조작과 "ap / "ay 실전 편집 checkComplete 판정 검증', () => {
+    const lesson66 = MISSIONS.find((m) => m.id === 66);
+    expect(lesson66).toBeDefined();
+
+    let state: VimEditorState = {
+      lines: [...lesson66!.initialLines],
+      cursor: { ...lesson66!.initialCursor },
+      mode: 'NORMAL',
+      registers: lesson66!.initialRegisters ? { ...lesson66!.initialRegisters } : undefined,
+    };
+    expect(lesson66!.checkComplete(state)).toBe(false);
+
+    for (const key of lesson66!.optimalKeys!) {
+      state = handleKey(state, key);
+    }
+    expect(lesson66!.checkComplete(state)).toBe(true);
+  });
+
+  it('모든 66개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(66);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();
@@ -1377,6 +1395,7 @@ describe('MISSIONS 10 ~ 12 validation', () => {
           ? { files: [...m.initialArgs], currentIndex: 0 }
           : undefined,
         folds: m.initialFolds ? [...m.initialFolds] : undefined,
+        registers: m.initialRegisters ? { ...m.initialRegisters } : undefined,
       };
 
       for (const key of m.optimalKeys!) {

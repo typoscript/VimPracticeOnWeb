@@ -1,4 +1,4 @@
-import { ClipboardRegister, StateSnapshot, VimEditorState, QuickfixItem, ChangeListItem, UndoTreeNode, FoldRange } from '../vim-engine';
+import { ClipboardRegister, StateSnapshot, VimEditorState, QuickfixItem, ChangeListItem, UndoTreeNode, FoldRange, RegisterEntry } from '../vim-engine';
 
 export interface Mission {
   id: number;
@@ -20,6 +20,8 @@ export interface Mission {
   initialUndoTimeHistory?: number[];
   initialUndoTimeIndex?: number;
   initialClipboard?: ClipboardRegister;
+  /** 초기 레지스터 상태 (매크로/클립보드 실전 편집 미션용) */
+  initialRegisters?: Record<string, RegisterEntry>;
   /** 주 창 파일명 (기본: lesson_{id}.txt 또는 source.ts) */
   primaryFilename?: string;
   /** 보조 창 파일명 (예: target.ts) */

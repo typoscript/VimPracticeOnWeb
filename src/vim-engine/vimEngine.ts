@@ -42,6 +42,7 @@ import {
   syncRegisters,
   putFromRegister,
   getRegisterContent,
+  parseMacroStringToKeys,
 } from './registers';
 import { evaluateVimExpression } from './expressionParser';
 import { alternateBuffer } from './bufferEngine';
@@ -3331,7 +3332,9 @@ function handleNormalModeKey(
       };
     }
 
-    const macroKeys = Array.isArray(regEntry.content) ? regEntry.content : [regEntry.content];
+    const macroKeys = Array.isArray(regEntry.content)
+      ? regEntry.content
+      : parseMacroStringToKeys(regEntry.content);
     let curState: VimEditorState = {
       ...state,
       pendingKeys: undefined,

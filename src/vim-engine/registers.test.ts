@@ -288,4 +288,62 @@ describe('Named Registers & Black Hole Register ("a~"z, "0, "_)', () => {
       expect(state.commandMessage).toBe('레지스터 뷰어 닫힘');
     });
   });
+
+  describe('Macro register put & yank workflow ("ap & "ay)', () => {
+    it('녹화된 매크로를 "ap 로 붙여넣으면 특수키가 <Esc>, <CR> 등의 Vim 표기로 붙여넣어진다', () => {
+      let state: VimEditorState = {
+        lines: ['', 'line 1', 'line 2'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+        registers: {
+          a: {
+            type: 'macro',
+            content: ['A', ';', 'Escape', 'j'],
+          },
+        },
+      };
+
+      // " a p 로 빈 줄에 레지스터 a의 매크로 내용을 붙여넣음
+      state = handleKey(state, '"');
+      state = handleKey(state, 'a');
+      state = handleKey(state, 'p');
+
+      expect(state.lines[0]).toBe('A;<Esc>j');
+    });
+
+    it('버퍼에서 수정한 매크로 문자열을 "ay$ 로 레지스터에 복사한 후 @a 로 실행할 수 있다', () => {
+      let state: VimEditorState = {
+        lines: [
+          '0i// <Esc>j',
+          'item 1',
+          'item 2',
+        ],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      // 줄 0 전체를 레지스터 a에 복사 ("ay$)
+      state = handleKey(state, '"');
+      state = handleKey(state, 'a');
+      state = handleKey(state, 'y');
+      state = handleKey(state, '$');
+
+      expect(state.registers?.a?.content).toBe('0i// <Esc>j');
+
+      // 줄 1(item 1)로 이동하여 @a 실행
+      state = handleKey(state, 'j');
+      state = handleKey(state, '@');
+      state = handleKey(state, 'a');
+
+      expect(state.lines[1]).toBe('// item 1');
+      // j 모션 덕분에 커서가 줄 2(item 2)로 이동함
+      expect(state.cursor.line).toBe(2);
+
+      // @@ 로 다음 줄(item 2)도 동일 매크로 실행
+      state = handleKey(state, '@');
+      state = handleKey(state, '@');
+
+      expect(state.lines[2]).toBe('// item 2');
+    });
+  });
 });

@@ -1,5 +1,10 @@
 import React, { useMemo, useState } from 'react';
-import { ClipboardRegister, RegisterEntry } from '../../vim-engine';
+import {
+  ClipboardRegister,
+  RegisterEntry,
+  formatMacroKeysToString,
+  parseMacroStringToKeys,
+} from '../../vim-engine';
 import './RegisterInspector.css';
 import { t } from '../../i18n';
 
@@ -59,57 +64,12 @@ export function formatMacroKeyDisplay(key: string): string {
 }
 
 export function parseMacroInputToKeys(input: string): string[] {
-  const keys: string[] = [];
-  let i = 0;
-  while (i < input.length) {
-    if (input[i] === '<') {
-      const end = input.indexOf('>', i);
-      if (end !== -1) {
-        const tag = input.slice(i + 1, end).toLowerCase();
-        if (tag === 'esc' || tag === 'escape') {
-          keys.push('Escape');
-          i = end + 1;
-          continue;
-        }
-        if (tag === 'cr' || tag === 'enter') {
-          keys.push('Enter');
-          i = end + 1;
-          continue;
-        }
-        if (tag === 'space') {
-          keys.push(' ');
-          i = end + 1;
-          continue;
-        }
-        if (tag === 'tab') {
-          keys.push('Tab');
-          i = end + 1;
-          continue;
-        }
-        if (tag === 'bs' || tag === 'backspace') {
-          keys.push('Backspace');
-          i = end + 1;
-          continue;
-        }
-        if (tag.startsWith('c-') || tag.startsWith('ctrl-')) {
-          const char = tag.slice(tag.indexOf('-') + 1);
-          keys.push(`Ctrl-${char}`);
-          i = end + 1;
-          continue;
-        }
-      }
-    }
-    keys.push(input[i]);
-    i++;
-  }
-  return keys;
+  return parseMacroStringToKeys(input);
 }
 
 export function formatKeysToMacroInput(keys: string[] | string): string {
   if (typeof keys === 'string') return keys;
-  return keys
-    .map((k) => formatMacroKeyDisplay(k))
-    .join('');
+  return formatMacroKeysToString(keys);
 }
 
 export const RegisterInspector: React.FC<RegisterInspectorProps> = ({

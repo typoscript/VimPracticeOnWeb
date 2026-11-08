@@ -59,7 +59,7 @@ export { runScriptLines, executeScriptBlock } from './vimscriptEngine';
 export type { EvalContext } from './vimscriptEval';
 export type { VimScriptFuncref } from './types';
 
-// ---- 매크로 디버거 (매크로를 키 단위 상태 프레임으로 분해) ----
+// ---- 매크로 디버거 (매크로를 키 단위 상태 프레임으로 분해) & 레지스터 파싱 ----
 export {
   buildMacroTrace,
   getMacroKeys,
@@ -67,6 +67,11 @@ export {
   clampFrameIndex,
   MACRO_PLAYBACK_SPEEDS,
 } from './macroDebugger';
+export {
+  formatMacroKeysToString,
+  parseMacroStringToKeys,
+  getRegisterContent,
+} from './registers';
 export type { MacroTrace, MacroFrame } from './macroDebugger';
 
 // ---- 순정 맞춤법 검사기 (:set spell, ]s, [s, z=, zg, zw) ----
