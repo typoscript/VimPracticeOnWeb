@@ -4,8 +4,9 @@ import {
   WordJumpProblem,
   DojoDrillMeta,
 } from './HardcoreDojo.types';
+import { localized } from '../../i18n';
 
-export const DOJO_DRILL_METAS: Record<string, DojoDrillMeta> = {
+export const DOJO_DRILL_METAS: Record<string, DojoDrillMeta> = localized({
   'relative-jump': {
     id: 'relative-jump',
     title: '상대 라인 스나이퍼',
@@ -27,7 +28,7 @@ export const DOJO_DRILL_METAS: Record<string, DojoDrillMeta> = {
     description: '특수문자가 섞인 긴 심볼 덩어리를 작은 단어(w) 대신 대문자 WORD(W)로 단숨에 건너뛰세요!',
     keyInstructions: 'W, E, B를 활용해 기호가 많은 표현식을 최소 타수로 건너뛰세요.',
   },
-};
+});
 
 const CODE_LINES_TEMPLATE = [
   'import { useState, useEffect, useCallback } from "react";',
@@ -72,7 +73,7 @@ export function generateRelativeJumpProblem(prevTargetLine?: number): RelativeJu
   };
 }
 
-const FT_SNIPER_SAMPLES = [
+const FT_SNIPER_SAMPLES = localized([
   {
     line: 'const connection = "postgres://root:secret_pwd@db.internal.net:5432/app?ssl=true";',
     targets: [
@@ -118,7 +119,7 @@ const FT_SNIPER_SAMPLES = [
       { char: '(', col: 23, hint: 'f( 로 map 콜백 괄호로 점프' },
     ],
   },
-];
+]);
 
 export function generateFTSniperProblem(prevIndex?: number): FTSniperProblem {
   let sampleIndex = Math.floor(Math.random() * FT_SNIPER_SAMPLES.length);

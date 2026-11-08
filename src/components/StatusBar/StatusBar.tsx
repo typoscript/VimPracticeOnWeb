@@ -1,6 +1,7 @@
 import React from 'react';
 import { CursorPosition, VimMode, ConfirmSubstituteSession } from '../../vim-engine';
 import './StatusBar.css';
+import { t } from '../../i18n';
 
 export interface StatusBarProps {
   mode: VimMode;
@@ -73,7 +74,8 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   const isCommandLineActive = mode === 'COMMAND' || mode === 'SEARCH';
   const promptPrefix = commandType ?? (mode === 'COMMAND' ? ':' : '/');
 
-  const isErrorMessage = commandMessage?.startsWith('E') || commandMessage?.includes('오류') || commandMessage?.includes('찾을 수 없습니다');
+  // 언어와 무관하게 판정: Vim 에러 번호(E486 등)로 시작하거나 한/영 에러 문구를 포함
+  const isErrorMessage = !!commandMessage && (commandMessage.startsWith('E') || /오류|찾을 수 없습니다|error|not found/i.test(commandMessage));
 
   return (
     <footer
@@ -108,12 +110,12 @@ export const StatusBar: React.FC<StatusBarProps> = ({
             <span className="prompt-cursor">_</span>
             <span className="prompt-hint">
               {functionDraft
-                ? `(함수 ${functionDraft.name} 본문 ${functionDraft.lines + 1}번째 줄 • endfunction 으로 끝내기, Esc 취소)`
+                ? t('(함수 {name} 본문 {v}번째 줄 • endfunction 으로 끝내기, Esc 취소)', { name: functionDraft.name, v: functionDraft.lines + 1 })
                 : commandType === '='
-                ? '(수식 입력 후 Enter 계산 삽입, Esc 취소)'
+                ? t('(수식 입력 후 Enter 계산 삽입, Esc 취소)')
                 : mode === 'COMMAND'
-                ? '(예: 10, %s/old/new/g, w • Enter 실행, Esc 취소)'
-                : '(단어 입력 후 Enter 실행, Esc 취소)'}
+                ? t('(예: 10, %s/old/new/g, w • Enter 실행, Esc 취소)')
+                : t('(단어 입력 후 Enter 실행, Esc 취소)')}
             </span>
           </div>
         ) : (

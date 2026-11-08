@@ -21,6 +21,7 @@ import {
   DojoHighScore,
 } from '../../utils/storage';
 import './HardcoreDojo.css';
+import { t } from '../../i18n';
 
 export interface HardcoreDojoProps {
   onBackToCourse?: () => void;
@@ -318,15 +319,15 @@ export function HardcoreDojo({
   // 도장 수료 등급 산출
   const getTier = () => {
     if (score >= 1000 || targetsHit >= 10) {
-      return { title: '👑 MASTER', className: 'master', desc: '신들린 Vim 마스터의 손놀림!' };
+      return { title: '👑 MASTER', className: 'master', desc: t('신들린 Vim 마스터의 손놀림!') };
     }
     if (score >= 600 || targetsHit >= 6) {
-      return { title: '🥇 GOLD', className: 'gold', desc: '상위 5% 실무 고수 레벨!' };
+      return { title: '🥇 GOLD', className: 'gold', desc: t('상위 5% 실무 고수 레벨!') };
     }
     if (score >= 300 || targetsHit >= 3) {
-      return { title: '🥈 SILVER', className: 'silver', desc: '좋은 감각입니다. 조금 더 연습해 보세요.' };
+      return { title: '🥈 SILVER', className: 'silver', desc: t('좋은 감각입니다. 조금 더 연습해 보세요.') };
     }
-    return { title: '🥉 BRONZE', className: 'bronze', desc: 'hjkl 연타 대신 카운트와 점프를 의식해 보세요!' };
+    return { title: '🥉 BRONZE', className: 'bronze', desc: t('hjkl 연타 대신 카운트와 점프를 의식해 보세요!') };
   };
 
   const currentMeta = DOJO_DRILL_METAS[selectedDrill];
@@ -337,19 +338,19 @@ export function HardcoreDojo({
       {/* 상단 네비게이션 & 헤더 */}
       <div className="dojo-header">
         <div className="dojo-title-group">
-          <h2>🥋 하드코어 도장 (Vim Reflex Drills)</h2>
+          <h2>{t('🥋 하드코어 도장 (Vim Reflex Drills)')}</h2>
           <div className="dojo-subtitle">
-            나쁜 습관(방향키/연타)을 교정하고 30초 동안 순수 모션 근육 기억을 단련합니다.
+            {t('나쁜 습관(방향키/연타)을 교정하고 30초 동안 순수 모션 근육 기억을 단련합니다.')}
             {activeHighScore && (
               <span style={{ marginLeft: '0.75rem', color: '#ff9e64', fontWeight: 600 }}>
-                🏆 {currentMeta.title} 최고: {activeHighScore.score}점 ({activeHighScore.targetsHit}개)
+                {t('🏆 {title} 최고: {score}점 ({hits}개)', { title: currentMeta.title, score: activeHighScore.score, hits: activeHighScore.targetsHit })}
               </span>
             )}
           </div>
         </div>
         {onBackToCourse && (
           <button type="button" className="dojo-back-btn" onClick={onBackToCourse}>
-            ← 연습장으로 돌아가기
+            {t('← 연습장으로 돌아가기')}
           </button>
         )}
       </div>
@@ -371,7 +372,7 @@ export function HardcoreDojo({
               <div className="dojo-tab-desc">{meta.description}</div>
               {best && (
                 <div style={{ fontSize: '0.72rem', color: '#ff9e64', marginTop: '0.35rem' }}>
-                  👑 최고: {best.score}점 ({best.targetsHit}개)
+                  {t('👑 최고: {score}점 ({hits}개)', { score: best.score, hits: best.targetsHit })}
                 </div>
               )}
             </button>
@@ -391,25 +392,25 @@ export function HardcoreDojo({
 
         <div className="dojo-metrics-grid">
           <div className="dojo-metric-card">
-            <div className="dojo-metric-label">⏱️ 남은 시간</div>
+            <div className="dojo-metric-label">{t('⏱️ 남은 시간')}</div>
             <div className={`dojo-metric-value ${timeLeft <= 5 ? 'highlight' : ''}`}>
               {timeLeft.toFixed(1)}s
             </div>
           </div>
           <div className="dojo-metric-card">
-            <div className="dojo-metric-label">🎯 점수</div>
-            <div className="dojo-metric-value highlight">{score}점</div>
+            <div className="dojo-metric-label">{t('🎯 점수')}</div>
+            <div className="dojo-metric-value highlight">{t('{n}점', { n: score })}</div>
           </div>
           <div className="dojo-metric-card">
-            <div className="dojo-metric-label">👾 처치 과녁</div>
-            <div className="dojo-metric-value">{targetsHit}개</div>
+            <div className="dojo-metric-label">{t('👾 처치 과녁')}</div>
+            <div className="dojo-metric-value">{t('{n}개', { n: targetsHit })}</div>
           </div>
           <div className="dojo-metric-card">
-            <div className="dojo-metric-label">⚡ SPM (목표/분)</div>
+            <div className="dojo-metric-label">{t('⚡ SPM (목표/분)')}</div>
             <div className="dojo-metric-value">{currentSpm}</div>
           </div>
           <div className="dojo-metric-card">
-            <div className="dojo-metric-label">⌨️ APM (타수/분)</div>
+            <div className="dojo-metric-label">{t('⌨️ APM (타수/분)')}</div>
             <div className="dojo-metric-value">{currentApm}</div>
           </div>
         </div>
@@ -432,20 +433,20 @@ export function HardcoreDojo({
         {/* 상단 툴바 */}
         <div className="dojo-arena-toolbar">
           <div>
-            모드: <strong>{editorState.mode}</strong> | 대기 키:{' '}
-            <code>{editorState.pendingKeys || '(없음)'}</code>
+            {t('모드:')} <strong>{editorState.mode}</strong> | {t('대기 키:')}{' '}
+            <code>{editorState.pendingKeys || t('(없음)')}</code>
           </div>
-          <div className="dojo-rule-badge">🔥 방향키·마우스 차단 | 1.5초 3회 초과 연타 무시</div>
+          <div className="dojo-rule-badge">{t('🔥 방향키·마우스 차단 | 1.5초 3회 초과 연타 무시')}</div>
         </div>
 
         {/* 안내 지침 바 */}
         <div className="dojo-instruction-bar">
           <div>💡 {currentMeta.keyInstructions}</div>
           {currentProblem?.type === 'ft-sniper' && (
-            <div style={{ color: '#7aa2f7' }}>🎯 타깃: '{currentProblem.targetChar}'</div>
+            <div style={{ color: '#7aa2f7' }}>{t("🎯 타깃: '{char}'", { char: currentProblem.targetChar })}</div>
           )}
           {currentProblem?.type === 'word-jump' && (
-            <div style={{ color: '#7aa2f7' }}>🎯 타깃: '{currentProblem.targetToken}'</div>
+            <div style={{ color: '#7aa2f7' }}>{t("🎯 타깃: '{char}'", { char: currentProblem.targetToken })}</div>
           )}
         </div>
 
@@ -527,10 +528,10 @@ export function HardcoreDojo({
             <h3>{currentMeta.title}</h3>
             <p>{currentMeta.description}</p>
             <div style={{ color: '#bb9af7', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
-              ⚡ 30초 동안 방향키 없이 최단 경로로 과녁을 격파하세요!
+              {t('⚡ 30초 동안 방향키 없이 최단 경로로 과녁을 격파하세요!')}
             </div>
             <button type="button" className="dojo-start-btn" onClick={startGame}>
-              🥋 수련 시작 (30초)
+              {t('🥋 수련 시작 (30초)')}
             </button>
           </div>
         )}
@@ -546,30 +547,30 @@ export function HardcoreDojo({
               {getTier().desc}
             </div>
 
-            {isNewRecord && <div className="dojo-new-record-tag">🎉 신기록 달성!</div>}
+            {isNewRecord && <div className="dojo-new-record-tag">{t('🎉 신기록 달성!')}</div>}
 
             <div className="dojo-stats-summary">
               <div className="dojo-stat-item">
                 <div className="num">{score}</div>
-                <div className="label">최종 점수</div>
+                <div className="label">{t('최종 점수')}</div>
               </div>
               <div className="dojo-stat-item">
-                <div className="num">{targetsHit}개</div>
-                <div className="label">처치 과녁</div>
+                <div className="num">{t('{n}개', { n: targetsHit })}</div>
+                <div className="label">{t('처치 과녁')}</div>
               </div>
               <div className="dojo-stat-item">
                 <div className="num">{Math.round((targetsHit / 30) * 60)}</div>
-                <div className="label">SPM (목표/분)</div>
+                <div className="label">{t('SPM (목표/분)')}</div>
               </div>
               <div className="dojo-stat-item">
                 <div className="num">{Math.round((keystrokes / 30) * 60)}</div>
-                <div className="label">APM (타수/분)</div>
+                <div className="label">{t('APM (타수/분)')}</div>
               </div>
             </div>
 
             <div className="dojo-btn-row">
               <button type="button" className="dojo-start-btn" onClick={startGame}>
-                🔄 다시 수련하기
+                {t('🔄 다시 수련하기')}
               </button>
             </div>
           </div>

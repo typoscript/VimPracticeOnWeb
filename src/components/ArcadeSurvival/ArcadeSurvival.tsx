@@ -7,6 +7,7 @@ import { VimEditorState, VimMode } from '../../vim-engine';
 import { handleKey } from '../../vim-engine';
 import { saveArcadeRecord, loadUserAnalytics, recordKeyInputStats } from '../../utils/analyticsStorage';
 import './ArcadeSurvival.css';
+import { t, localized } from '../../i18n';
 
 export interface ArcadeSurvivalProps {
   onPlayKeySound: (key: string, mode: VimMode) => void;
@@ -14,7 +15,7 @@ export interface ArcadeSurvivalProps {
   isMuted: boolean;
 }
 
-const ARCADE_MISSIONS: ArcadeBugMission[] = [
+const ARCADE_MISSIONS: ArcadeBugMission[] = localized([
   {
     id: 1,
     title: 'Wave 1: 버그 블록 처치',
@@ -101,7 +102,7 @@ const ARCADE_MISSIONS: ArcadeBugMission[] = [
     timeLimit: 9,
     bugType: 'quote',
   },
-];
+]);
 
 export const ArcadeSurvival: React.FC<ArcadeSurvivalProps> = ({
   onPlayKeySound,
@@ -215,7 +216,7 @@ export const ArcadeSurvival: React.FC<ArcadeSurvivalProps> = ({
       // 방향키 사용 시 콤보 리셋 페널티!
       if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) {
         setCombo(0);
-        setPenaltyMessage('⚠️ 방향키 사용으로 콤보가 리셋되었습니다! (hjkl을 사용하세요)');
+        setPenaltyMessage(t('⚠️ 방향키 사용으로 콤보가 리셋되었습니다! (hjkl을 사용하세요)'));
         setTimeout(() => setPenaltyMessage(null), 1500);
       }
 
@@ -248,7 +249,7 @@ export const ArcadeSurvival: React.FC<ArcadeSurvivalProps> = ({
         setScore((prev) => prev + waveScore);
 
         if (isParBeaten) {
-          setPerfectMessage(`⭐ PERFECT! +${waveBonus} Bonus! (최소 타수 달성)`);
+          setPerfectMessage(t('⭐ PERFECT! +{waveBonus} Bonus! (최소 타수 달성)', { waveBonus }));
           setTimeout(() => setPerfectMessage(null), 1200);
         }
 
@@ -352,11 +353,11 @@ export const ArcadeSurvival: React.FC<ArcadeSurvivalProps> = ({
 
       {/* 미션 지침 가이드 */}
       <div className="arcade-instruction-card">
-        <span className="instruction-badge">🎯 목표</span>
+        <span className="instruction-badge">{t('🎯 목표')}</span>
         <span className="instruction-text" data-testid="arcade-instruction">
           {currentMission.instruction}
         </span>
-        <span className="instruction-par">Par: {currentMission.par}타</span>
+        <span className="instruction-par">{t('Par: {n}타', { n: currentMission.par })}</span>
       </div>
 
       {/* 에디터 뷰 */}
@@ -388,22 +389,22 @@ export const ArcadeSurvival: React.FC<ArcadeSurvivalProps> = ({
             <span className="dialog-icon">👾</span>
             <h2 className="dialog-title">Vim Defense: Bug Crusher</h2>
             <p className="dialog-desc">
-              에디터 코드 곳곳에 출몰하는 버그를 제한 시간 내에 정확한 Vim 명령어로 박멸하세요!
+              {t('에디터 코드 곳곳에 출몰하는 버그를 제한 시간 내에 정확한 Vim 명령어로 박멸하세요!')}
             </p>
             <ul className="dialog-rules">
-              <li>⏱️ 문제를 해결할 때마다 시간 보너스가 주어집니다.</li>
-              <li>⭐ Par 이하 최소 타수로 처치하면 <strong>PERFECT 보너스 (+200점)</strong>!</li>
-              <li>⚠️ 방향키 연타 사용 시 <strong>콤보가 0으로 리셋</strong>됩니다.</li>
+              <li>{t('⏱️ 문제를 해결할 때마다 시간 보너스가 주어집니다.')}</li>
+              <li>{t('⭐ Par 이하 최소 타수로 처치하면')} <strong>{t('PERFECT 보너스 (+200점)')}</strong>!</li>
+              <li>{t('⚠️ 방향키 연타 사용 시')} <strong>{t('콤보가 0으로 리셋')}</strong>{t('됩니다.')}</li>
             </ul>
             <div className="best-score-badge">
-              최고 기록: {analytics.arcadeBestScore.toLocaleString()}점 (최대 {analytics.arcadeHighestWave} Wave)
+              {t('최고 기록: {score}점 (최대 {wave} Wave)', { score: analytics.arcadeBestScore.toLocaleString(), wave: analytics.arcadeHighestWave })}
             </div>
             <button
               className="start-arcade-btn"
               onClick={handleStartGame}
               data-testid="start-arcade-btn"
             >
-              🚀 서바이벌 시작 (Enter)
+              {t('🚀 서바이벌 시작 (Enter)')}
             </button>
           </div>
         </div>
@@ -418,21 +419,21 @@ export const ArcadeSurvival: React.FC<ArcadeSurvivalProps> = ({
             {isNewRecord && <div className="new-record-tag">🎉 NEW HIGH SCORE!</div>}
             <div className="result-stats-grid">
               <div className="stat-card">
-                <span className="stat-label">최종 점수</span>
+                <span className="stat-label">{t('최종 점수')}</span>
                 <span className="stat-num highlight" data-testid="final-score">
                   {score.toLocaleString()}
                 </span>
               </div>
               <div className="stat-card">
-                <span className="stat-label">도달 웨이브</span>
+                <span className="stat-label">{t('도달 웨이브')}</span>
                 <span className="stat-num">{wave}</span>
               </div>
               <div className="stat-card">
-                <span className="stat-label">최대 콤보</span>
+                <span className="stat-label">{t('최대 콤보')}</span>
                 <span className="stat-num">{maxCombo}x</span>
               </div>
               <div className="stat-card">
-                <span className="stat-label">총 타수</span>
+                <span className="stat-label">{t('총 타수')}</span>
                 <span className="stat-num">{totalKeystrokes}</span>
               </div>
             </div>
@@ -441,7 +442,7 @@ export const ArcadeSurvival: React.FC<ArcadeSurvivalProps> = ({
               onClick={handleStartGame}
               data-testid="retry-arcade-btn"
             >
-              🔄 다시 도전하기 (Enter)
+              {t('🔄 다시 도전하기 (Enter)')}
             </button>
           </div>
         </div>

@@ -1,4 +1,5 @@
 import { Mission } from '../types/mission';
+import { t } from '../i18n';
 
 export interface CustomMissionData {
   title: string;
@@ -85,9 +86,9 @@ export function createCustomMissionObject(data: CustomMissionData): Mission {
 
   return {
     id: 999999,
-    title: data.title.trim() || '🏌️ 커스텀 Vim Golf 미션',
-    description: data.description.trim() || '목표 코드와 완벽히 일치하도록 텍스트를 편집하세요.',
-    hint: '목표 타수(Par) 이내로 최소 키 입력을 달성하여 최고 등급(3성)에 도전하세요!',
+    title: data.title.trim() || t('🏌️ 커스텀 Vim Golf 미션'),
+    description: data.description.trim() || t('목표 코드와 완벽히 일치하도록 텍스트를 편집하세요.'),
+    hint: t('목표 타수(Par) 이내로 최소 키 입력을 달성하여 최고 등급(3성)에 도전하세요!'),
     par: data.par > 0 ? data.par : 10,
     initialLines: initialLines.length > 0 ? initialLines : [''],
     targetLines: targetLines,

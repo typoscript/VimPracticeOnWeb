@@ -1,5 +1,6 @@
 import { UserAnalyticsData, ProficiencyAxes, CommandFrequency, DailyRecord } from '../types/game';
 import { LessonProgress } from './storage';
+import { t, i18nKey } from '../i18n';
 
 export const ANALYTICS_STORAGE_KEY = 'vim_user_analytics_v1';
 
@@ -52,24 +53,25 @@ export function recordKeyInputStats(key: string): void {
 
 /**
  * 안티패턴 감지 통계를 누적 기록합니다.
+ * 저장 키는 언어와 상관없이 한국어 원문이며, 화면에서 t(키)로 번역합니다.
  */
 export function recordAntiPatternDetection(adviceMsg: string): void {
   const data = loadUserAnalytics();
   data.totalAntiPatternsTriggered += 1;
 
-  let patternKey = '기타 비효율 조작';
-  if (adviceMsg.includes('x, dw, 또는 ciw')) {
-    patternKey = 'Backspace 연타 (x/ciw 권장)';
-  } else if (adviceMsg.includes('이동 키를 연타')) {
-    patternKey = '방향키/hjkl 연타 (w/b/숫자 이동 권장)';
-  } else if (adviceMsg.includes('대문자 A')) {
-    patternKey = '$ 후 a (대문자 A 권장)';
-  } else if (adviceMsg.includes('대문자 I')) {
-    patternKey = '0 후 i (대문자 I 권장)';
-  } else if (adviceMsg.includes('대문자 C')) {
-    patternKey = 'c$ 입력 (대문자 C 권장)';
-  } else if (adviceMsg.includes('대문자 D')) {
-    patternKey = 'd$ 입력 (대문자 D 권장)';
+  let patternKey = i18nKey('기타 비효율 조작');
+  if (adviceMsg.includes(t('x, dw, 또는 ciw'))) {
+    patternKey = i18nKey('Backspace 연타 (x/ciw 권장)');
+  } else if (adviceMsg.includes(t('이동 키를 연타'))) {
+    patternKey = i18nKey('방향키/hjkl 연타 (w/b/숫자 이동 권장)');
+  } else if (adviceMsg.includes(t('대문자 A'))) {
+    patternKey = i18nKey('$ 후 a (대문자 A 권장)');
+  } else if (adviceMsg.includes(t('대문자 I'))) {
+    patternKey = i18nKey('0 후 i (대문자 I 권장)');
+  } else if (adviceMsg.includes(t('대문자 C'))) {
+    patternKey = i18nKey('c$ 입력 (대문자 C 권장)');
+  } else if (adviceMsg.includes(t('대문자 D'))) {
+    patternKey = i18nKey('d$ 입력 (대문자 D 권장)');
   }
 
   data.antiPatternCounts[patternKey] = (data.antiPatternCounts[patternKey] ?? 0) + 1;
@@ -132,41 +134,41 @@ export function saveDailyRecord(record: DailyRecord): UserAnalyticsData {
  */
 export function getTopCommands(analytics: UserAnalyticsData, limit = 10): CommandFrequency[] {
   const friendlyLabels: Record<string, string> = {
-    h: '왼쪽 이동',
-    j: '아래 이동',
-    k: '위로 이동',
-    l: '오른쪽 이동',
-    w: '다음 단어',
-    b: '이전 단어',
-    e: '단어 끝',
-    $: '줄 끝 이동',
-    '0': '줄 맨 앞',
-    '^': '첫 비공백 문자',
-    i: '입력 모드',
-    a: '뒤에 입력',
-    I: '줄 앞 입력',
-    A: '줄 끝 입력',
-    o: '아래 줄 생성',
-    O: '윗 줄 생성',
-    x: '글자 삭제',
-    dd: '줄 삭제',
-    dw: '단어 삭제',
-    cw: '단어 수정',
-    cc: '줄 수정',
-    C: '줄 끝 수정',
-    D: '줄 끝 삭제',
-    p: '붙여넣기',
-    P: '앞에 붙여넣기',
-    u: '실행 취소',
-    'Ctrl-r': '다시 실행',
-    '.': '직전 명령 반복',
-    Escape: 'Normal 모드 복귀',
-    '/': '키워드 검색',
-    ':': '커맨드라인',
-    'Ctrl-v': '비주얼 블록',
-    'Ctrl-w': '창 분할/이동',
-    '~': '대소문자 반전',
-    'Ctrl-a': '숫자 증가',
+    h: t('왼쪽 이동'),
+    j: t('아래 이동'),
+    k: t('위로 이동'),
+    l: t('오른쪽 이동'),
+    w: t('다음 단어'),
+    b: t('이전 단어'),
+    e: t('단어 끝'),
+    $: t('줄 끝 이동'),
+    '0': t('줄 맨 앞'),
+    '^': t('첫 비공백 문자'),
+    i: t('입력 모드'),
+    a: t('뒤에 입력'),
+    I: t('줄 앞 입력'),
+    A: t('줄 끝 입력'),
+    o: t('아래 줄 생성'),
+    O: t('윗 줄 생성'),
+    x: t('글자 삭제'),
+    dd: t('줄 삭제'),
+    dw: t('단어 삭제'),
+    cw: t('단어 수정'),
+    cc: t('줄 수정'),
+    C: t('줄 끝 수정'),
+    D: t('줄 끝 삭제'),
+    p: t('붙여넣기'),
+    P: t('앞에 붙여넣기'),
+    u: t('실행 취소'),
+    'Ctrl-r': t('다시 실행'),
+    '.': t('직전 명령 반복'),
+    Escape: t('Normal 모드 복귀'),
+    '/': t('키워드 검색'),
+    ':': t('커맨드라인'),
+    'Ctrl-v': t('비주얼 블록'),
+    'Ctrl-w': t('창 분할/이동'),
+    '~': t('대소문자 반전'),
+    'Ctrl-a': t('숫자 증가'),
   };
 
   const entries = Object.entries(analytics.keyFrequencies)

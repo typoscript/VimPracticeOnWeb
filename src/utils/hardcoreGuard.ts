@@ -1,3 +1,4 @@
+import { t, localized } from '../i18n';
 export interface HardcoreCheckResult {
   blocked: boolean;
   reason?: 'arrow' | 'mouse' | 'spam';
@@ -7,7 +8,7 @@ export interface HardcoreCheckResult {
 
 export const HARDCORE_SPAM_KEYS = new Set(['h', 'j', 'k', 'l', 'x', 'Backspace', 'BackSpace']);
 
-export const SPAM_SUGGESTIONS: Record<string, string> = {
+export const SPAM_SUGGESTIONS: Record<string, string> = localized({
   h: 'b, 0, 또는 F{문자}를 사용하세요',
   j: '5j, }, 또는 /검색을 사용하세요',
   k: '5k, {, 또는 ?검색을 사용하세요',
@@ -15,7 +16,7 @@ export const SPAM_SUGGESTIONS: Record<string, string> = {
   x: 'dw, d$, 또는 d{motion}을 사용하세요',
   Backspace: 'dw, cw, 또는 d{motion}을 사용하세요',
   BackSpace: 'dw, cw, 또는 d{motion}을 사용하세요',
-};
+});
 
 export class HardcoreGuard {
   private lastKey: string | null = null;
@@ -32,8 +33,8 @@ export class HardcoreGuard {
       return {
         blocked: true,
         reason: 'arrow',
-        message: '🚫 하드코어 모드: 방향키 대신 hjkl 또는 w/b를 사용하세요!',
-        suggestion: 'hjkl 또는 w, b, e 이동 모션을 연습해 보세요.',
+        message: t('🚫 하드코어 모드: 방향키 대신 hjkl 또는 w/b를 사용하세요!'),
+        suggestion: t('hjkl 또는 w, b, e 이동 모션을 연습해 보세요.'),
       };
     }
 
@@ -45,11 +46,11 @@ export class HardcoreGuard {
         this.keyTimestamps.push(now);
 
         if (this.keyTimestamps.length > HardcoreGuard.MAX_ALLOWED_REPEATS) {
-          const suggestion = SPAM_SUGGESTIONS[key] || '효율적인 모션을 사용하세요';
+          const suggestion = SPAM_SUGGESTIONS[key] || t('효율적인 모션을 사용하세요');
           return {
             blocked: true,
             reason: 'spam',
-            message: `🚫 연타 금지! '${key}' 연타는 좋은 습관이 아닙니다.`,
+            message: t('🚫 연타 금지! \'{key}\' 연타는 좋은 습관이 아닙니다.', { key }),
             suggestion,
           };
         }
@@ -74,8 +75,8 @@ export class HardcoreGuard {
     return {
       blocked: true,
       reason: 'mouse',
-      message: '🚫 하드코어 모드: 마우스 대신 Vim 모션(hjkl, w, f)을 사용하세요!',
-      suggestion: '마우스를 멀리하고 키보드 모션만으로 커서를 이동해 보세요.',
+      message: t('🚫 하드코어 모드: 마우스 대신 Vim 모션(hjkl, w, f)을 사용하세요!'),
+      suggestion: t('마우스를 멀리하고 키보드 모션만으로 커서를 이동해 보세요.'),
     };
   }
 

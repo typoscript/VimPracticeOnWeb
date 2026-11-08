@@ -13,6 +13,7 @@ import {
 import { isPositionSelected } from '../../vim-engine';
 import { findMatches } from '../../vim-engine';
 import './Editor.css';
+import { t } from '../../i18n';
 
 export interface EditorProps {
   lines: string[];
@@ -116,11 +117,11 @@ export const Editor: React.FC<EditorProps> = ({
         <div
           className="editor-blur-overlay"
           data-testid="editor-blur-overlay"
-          title="클릭하여 에디터 포커스를 활성화하세요"
+          title={t('클릭하여 에디터 포커스를 활성화하세요')}
         >
           <div className="blur-overlay-pill">
             <span className="blur-icon">🖱️</span>
-            <span className="blur-text">클릭하여 에디터 포커스 활성화</span>
+            <span className="blur-text">{t('클릭하여 에디터 포커스 활성화')}</span>
           </div>
         </div>
       )}
@@ -277,7 +278,7 @@ export const Editor: React.FC<EditorProps> = ({
                               })}
                             </div>
                             <div className="completion-footer">
-                              <span>Ctrl+n: 다음 | Ctrl+p: 이전 | Enter/Ctrl+y: 선택</span>
+                              <span>{t('Ctrl+n: 다음 | Ctrl+p: 이전 | Enter/Ctrl+y: 선택')}</span>
                             </div>
                           </div>
                         )}

@@ -81,6 +81,7 @@ import {
   compileUserKeymaps,
 } from './utils/keymapStorage';
 import './App.css';
+import { t, useLocale, setLocale } from './i18n';
 
 // 첫 화면에 필요 없는 탭 화면과 모달은 처음 열 때 별도 청크로 불러옵니다 (초기 번들 크기 절감)
 const ArcadeSurvival = lazy(() => import('./components/ArcadeSurvival/ArcadeSurvival').then((m) => ({ default: m.ArcadeSurvival })));
@@ -105,7 +106,7 @@ function useOpenedOnce(isOpen: boolean): boolean {
 /** 지연 로딩되는 탭 화면을 불러오는 동안 보여줄 자리 표시 */
 const TAB_LOADING_FALLBACK = (
   <div className="lazy-tab-loading" data-testid="lazy-tab-loading">
-    불러오는 중…
+    {t('불러오는 중…')}
   </div>
 );
 
@@ -226,6 +227,9 @@ export function App() {
     saveThemeSetting(newTheme);
     applyTheme(newTheme);
   }, []);
+
+  // 화면 언어 (바꾸면 App 이 다시 렌더링되어 모든 t() 문구가 갱신됨)
+  const locale = useLocale();
 
   // Web Audio 기계식 키보드 음향 효과음 훅
   const { isMuted, toggleMute, playKeySound, playSuccessSound } = useSoundEffects();
@@ -496,7 +500,7 @@ export function App() {
     }
     allKeysSoFarRef.current = prunedKeys;
     setAllKeysSoFar(prunedKeys);
-    setCoachingMessage(`⏪ 스텝 #${stepIndex} (${targetStep.command}) 시점부터 이어서 플레이합니다!`);
+    setCoachingMessage(t('⏪ 스텝 #{stepIndex} ({command}) 시점부터 이어서 플레이합니다!', { stepIndex, command: targetStep.command }));
   }, []);
 
   const resetActionTimeline = useCallback((initialState: VimEditorState) => {
@@ -549,7 +553,7 @@ export function App() {
   // URL에서 커스텀 미션을 감지한 경우 안내 코칭 메시지 표시
   useEffect(() => {
     if (initialCustomMission) {
-      setCoachingMessage(`⛳ URL 커스텀 Vim Golf 미션 [${initialCustomMission.title}]이(가) 로드되었습니다!`);
+      setCoachingMessage(t('⛳ URL 커스텀 Vim Golf 미션 [{title}]이(가) 로드되었습니다!', { title: initialCustomMission.title }));
     }
   }, [initialCustomMission]);
 
@@ -602,7 +606,7 @@ export function App() {
         setSpeedrunCurrentStage(nextStageIdx);
         const nextMission = speedrunStages[nextStageIdx];
         setEditorState(getMissionInitialState(nextMission));
-        setCoachingMessage(`🎉 스테이지 ${speedrunCurrentStage + 1} 돌파! 다음 목표로 이동합니다.`);
+        setCoachingMessage(t('🎉 스테이지 {v} 돌파! 다음 목표로 이동합니다.', { v: speedrunCurrentStage + 1 }));
       } else {
         // 5개 스테이지 최종 완료!
         setSpeedrunStatus('completed');
@@ -797,7 +801,7 @@ export function App() {
     setKeystrokeCount(0);
     setRecentKeys([]);
     setLastPressedKey(undefined);
-    setCoachingMessage(`⛳ 커스텀 미션 [${newMission.title}] 시작! 최소 타수로 완성을 노려보세요.`);
+    setCoachingMessage(t('⛳ 커스텀 미션 [{title}] 시작! 최소 타수로 완성을 노려보세요.', { title: newMission.title }));
     antiPatternDetectorRef.current.reset();
   }, [handleStopGhostReplay, resetActionTimeline, getMissionInitialState]);
 
@@ -819,7 +823,7 @@ export function App() {
       });
       setShowDiffView(true);
       saveDiffViewSetting(true);
-      setCoachingMessage(`⛳ [BYOC] 리팩토링 미션 시작! 힌트: ${missionData.hint}`);
+      setCoachingMessage(t('⛳ [BYOC] 리팩토링 미션 시작! 힌트: {hint}', { hint: missionData.hint }));
     },
     [handlePlayCustomMission]
   );
@@ -1239,9 +1243,9 @@ export function App() {
       const { key: normalizedKey, isNormalized } = normalizeImeKey(e, editorState.mode);
 
       if (isNormalized) {
-        setCoachingMessage(`💡 한글 입력이 감지되어 영문('${normalizedKey}')으로 자동 매핑되었습니다. 원활한 입력을 위해 [한/영] 전환을 권장합니다.`);
+        setCoachingMessage(t('💡 한글 입력이 감지되어 영문(\'{normalizedKey}\')으로 자동 매핑되었습니다. 원활한 입력을 위해 [한/영] 전환을 권장합니다.', { normalizedKey }));
       } else if (e.key === 'Process' || /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(e.key)) {
-        setCoachingMessage('⚠️ 현재 한글 입력 상태입니다. 원활한 Vim 명령어 입력을 위해 [한/영] 키를 눌러 영문 모드로 전환해 주세요!');
+        setCoachingMessage(t('⚠️ 현재 한글 입력 상태입니다. 원활한 Vim 명령어 입력을 위해 [한/영] 키를 눌러 영문 모드로 전환해 주세요!'));
       }
 
       // 🔥 하드코어 모드 가드: 방향키/연타 조기 차단
@@ -1305,7 +1309,7 @@ export function App() {
               type="button"
               className="hardcore-warning-close-btn"
               onClick={() => setHardcoreWarning(null)}
-              aria-label="닫기"
+              aria-label={t('닫기')}
             >
               ✕
             </button>
@@ -1323,7 +1327,7 @@ export function App() {
           <span className="brand-icon">⌨</span>
           <h1 className="brand-title">VimPracticeOnWeb</h1>
         </div>
-        <p className="header-desc">인터랙티브 Vim 튜토리얼 &amp; 연습 코스</p>
+        <p className="header-desc">{t('인터랙티브 Vim 튜토리얼 & 연습 코스')}</p>
       </header>
 
       {/* 탭 전환 및 상단 툴바 */}
@@ -1336,7 +1340,7 @@ export function App() {
             onClick={() => handleSwitchTab('course')}
             data-testid="tab-course-btn"
           >
-            🎯 튜토리얼 코스
+            {t('🎯 튜토리얼 코스')}
           </button>
           <button
             role="tab"
@@ -1345,7 +1349,7 @@ export function App() {
             onClick={() => handleSwitchTab('sandbox')}
             data-testid="tab-sandbox-btn"
           >
-            🧪 자유 연습장
+            {t('🧪 자유 연습장')}
           </button>
           <button
             role="tab"
@@ -1354,7 +1358,7 @@ export function App() {
             onClick={() => handleSwitchTab('speedrun')}
             data-testid="tab-speedrun-btn"
           >
-            ⚡ 스피드런
+            {t('⚡ 스피드런')}
           </button>
           <button
             role="tab"
@@ -1363,7 +1367,7 @@ export function App() {
             onClick={() => handleSwitchTab('arcade')}
             data-testid="tab-arcade-btn"
           >
-            👾 아케이드
+            {t('👾 아케이드')}
           </button>
           <button
             role="tab"
@@ -1372,7 +1376,7 @@ export function App() {
             onClick={() => handleSwitchTab('dungeon')}
             data-testid="tab-dungeon-btn"
           >
-            🗡️ 던전 RPG
+            {t('🗡️ 던전 RPG')}
           </button>
           <button
             role="tab"
@@ -1381,7 +1385,7 @@ export function App() {
             onClick={() => handleSwitchTab('dojo')}
             data-testid="tab-dojo-btn"
           >
-            🥋 도장
+            {t('🥋 도장')}
           </button>
           {customMission && (
             <button
@@ -1391,7 +1395,7 @@ export function App() {
               onClick={() => handleSwitchTab('custom')}
               data-testid="tab-custom-btn"
             >
-              ⛳ 커스텀 골프
+              {t('⛳ 커스텀 골프')}
             </button>
           )}
         </div>
@@ -1404,9 +1408,9 @@ export function App() {
               className={`toolbar-btn hardcore-mode-btn ${hardcoreMode ? 'active' : ''}`}
               onClick={handleToggleHardcoreMode}
               data-testid="toggle-hardcore-mode-btn"
-              title="🔥 하드코어 수련 모드: 방향키 및 마우스 완전 차단, 1.5초 3회 초과 연타 무시"
+              title={t('🔥 하드코어 수련 모드: 방향키 및 마우스 완전 차단, 1.5초 3회 초과 연타 무시')}
             >
-              {hardcoreMode ? '🔥 하드코어: ON' : '🔥 하드코어: OFF'}
+              {hardcoreMode ? t('🔥 하드코어: ON') : t('🔥 하드코어: OFF')}
             </button>
 
             {/* 데일리 챌린지 모달 */}
@@ -1414,9 +1418,9 @@ export function App() {
               className="toolbar-btn daily-challenge-btn"
               onClick={() => setIsDailyModalOpen(true)}
               data-testid="open-daily-modal-btn"
-              title="오늘의 데일리 Vim Golf 챌린지"
+              title={t('오늘의 데일리 Vim Golf 챌린지')}
             >
-              📅 데일리
+              {t('📅 데일리')}
             </button>
 
             {/* 숙련도 분석 대시보드 모달 */}
@@ -1424,9 +1428,9 @@ export function App() {
               className="toolbar-btn analytics-btn"
               onClick={() => setIsAnalyticsModalOpen(true)}
               data-testid="open-analytics-modal-btn"
-              title="Vim 숙련도 5각 레이더 및 명령어 사용 통계 대시보드"
+              title={t('Vim 숙련도 5각 레이더 및 명령어 사용 통계 대시보드')}
             >
-              📊 숙련도 분석
+              {t('📊 숙련도 분석')}
             </button>
 
             {/* 커스텀 Vim Golf 미션 생성 모달 */}
@@ -1434,9 +1438,9 @@ export function App() {
               className="toolbar-btn custom-mission-btn"
               onClick={() => setIsCustomModalOpen(true)}
               data-testid="open-custom-modal-btn"
-              title="URL 공유 가능한 커스텀 Vim Golf 미션 생성기"
+              title={t('URL 공유 가능한 커스텀 Vim Golf 미션 생성기')}
             >
-              ⛳ 미션 만들기
+              {t('⛳ 미션 만들기')}
             </button>
 
             {/* 커스텀 키매핑 및 설정 파일 내보내기 모달 */}
@@ -1444,9 +1448,9 @@ export function App() {
               className="toolbar-btn config-export-btn"
               onClick={() => setIsConfigModalOpen(true)}
               data-testid="open-config-modal-btn"
-              title="키매핑 프리셋 설정 및 .vimrc/init.lua/VS Code/IdeaVim 설정 내보내기"
+              title={t('키매핑 프리셋 설정 및 .vimrc/init.lua/VS Code/IdeaVim 설정 내보내기')}
             >
-              ⚙️ 설정/내보내기
+              {t('⚙️ 설정/내보내기')}
             </button>
 
             {currentTab === 'course' && (
@@ -1455,7 +1459,7 @@ export function App() {
                 onClick={() => setIsModalOpen(true)}
                 data-testid="open-lesson-modal-btn"
               >
-                📚 레슨 목록
+                {t('📚 레슨 목록')}
               </button>
             )}
           </div>
@@ -1481,7 +1485,7 @@ export function App() {
             />
           </div>
 
-          {/* 환경 설정 (테마 및 타건음) 그룹 */}
+          {/* 환경 설정 (테마, 타건음, 언어) 그룹 */}
           <div className="nav-action-group nav-settings-group">
             {/* 에디터 컬러 테마 스위처 */}
             <ThemeSwitcher
@@ -1494,37 +1498,48 @@ export function App() {
               className={`toolbar-btn sound-toggle-btn ${isMuted ? 'muted' : ''}`}
               onClick={toggleMute}
               data-testid="toggle-sound-btn"
-              title="기계식 키보드 타건 효과음 토글"
+              title={t('기계식 키보드 타건 효과음 토글')}
             >
-              {isMuted ? '🔇 소리: OFF' : '🔊 소리: ON'}
+              {isMuted ? t('🔇 소리: OFF') : t('🔊 소리: ON')}
+            </button>
+
+            {/* 화면 언어 한/영 전환 */}
+            <button
+              className="toolbar-btn locale-toggle-btn"
+              onClick={() => setLocale(locale === 'ko' ? 'en' : 'ko')}
+              data-testid="toggle-locale-btn"
+              title={t('화면 언어 전환 (한국어 / English)')}
+              aria-label={t('화면 언어 전환 (한국어 / English)')}
+            >
+              🌐 {locale === 'ko' ? '한국어' : 'English'}
             </button>
           </div>
         </div>
       </div>
 
       <section className="key-cheatsheet" aria-label="Keyboard Shortcuts">
-        <span className="cheat-item"><code>h j k l</code> 이동</span>
-        <span className="cheat-item"><code>w b e</code> 단어 점프</span>
-        <span className="cheat-item"><code>f F t T</code> 문자 탐색</span>
-        <span className="cheat-item"><code>/ n N *</code> 키워드 검색</span>
-        <span className="cheat-item"><code>: [숫자] / :s</code> 커맨드라인</span>
-        <span className="cheat-item"><code>0 $ ^</code> 줄 이동</span>
-        <span className="cheat-item"><code>i a I A o O</code> 입력 진입</span>
-        <span className="cheat-item"><code>Esc</code> 일반 모드</span>
-        <span className="cheat-item"><code>x</code> 글자 삭제</span>
-        <span className="cheat-item"><code>cw cc C r</code> 수정/교체</span>
-        <span className="cheat-item"><code>iw i" i(</code> 텍스트 객체</span>
-        <span className="cheat-item"><code>v / V</code> 영역 선택</span>
-        <span className="cheat-item"><code>dd dw</code> 줄/단어 삭제</span>
-        <span className="cheat-item"><code>.</code> 직전 변경 반복</span>
-        <span className="cheat-item"><code>m ' Ctrl-o</code> 마크/점프</span>
-        <span className="cheat-item"><code>J ~ &gt;&gt; Ctrl-a</code> 라인/편집</span>
-        <span className="cheat-item"><code>:g :norm</code> 일괄/글로벌</span>
-        <span className="cheat-item"><code>zz H M L</code> 뷰포트/스크롤</span>
-        <span className="cheat-item"><code>"a "0 "_</code> 레지스터</span>
-        <span className="cheat-item"><code>:sp :vsp Ctrl-w</code> 창 분할</span>
-        <span className="cheat-item"><code>p</code> 붙여넣기</span>
-        <span className="cheat-item"><code>u / Ctrl-r</code> 실행취소/다시실행</span>
+        <span className="cheat-item"><code>h j k l</code> {t('이동')}</span>
+        <span className="cheat-item"><code>w b e</code> {t('단어 점프')}</span>
+        <span className="cheat-item"><code>f F t T</code> {t('문자 탐색')}</span>
+        <span className="cheat-item"><code>/ n N *</code> {t('키워드 검색')}</span>
+        <span className="cheat-item"><code>{t(': [숫자] / :s')}</code> {t('커맨드라인')}</span>
+        <span className="cheat-item"><code>0 $ ^</code> {t('줄 이동')}</span>
+        <span className="cheat-item"><code>i a I A o O</code> {t('입력 진입')}</span>
+        <span className="cheat-item"><code>Esc</code> {t('일반 모드')}</span>
+        <span className="cheat-item"><code>x</code> {t('글자 삭제')}</span>
+        <span className="cheat-item"><code>cw cc C r</code> {t('수정/교체')}</span>
+        <span className="cheat-item"><code>iw i" i(</code> {t('텍스트 객체')}</span>
+        <span className="cheat-item"><code>v / V</code> {t('영역 선택')}</span>
+        <span className="cheat-item"><code>dd dw</code> {t('줄/단어 삭제')}</span>
+        <span className="cheat-item"><code>.</code> {t('직전 변경 반복')}</span>
+        <span className="cheat-item"><code>m ' Ctrl-o</code> {t('마크/점프')}</span>
+        <span className="cheat-item"><code>J ~ &gt;&gt; Ctrl-a</code> {t('라인/편집')}</span>
+        <span className="cheat-item"><code>:g :norm</code> {t('일괄/글로벌')}</span>
+        <span className="cheat-item"><code>zz H M L</code> {t('뷰포트/스크롤')}</span>
+        <span className="cheat-item"><code>"a "0 "_</code> {t('레지스터')}</span>
+        <span className="cheat-item"><code>:sp :vsp Ctrl-w</code> {t('창 분할')}</span>
+        <span className="cheat-item"><code>p</code> {t('붙여넣기')}</span>
+        <span className="cheat-item"><code>u / Ctrl-r</code> {t('실행취소/다시실행')}</span>
       </section>
 
       <main className="editor-wrapper">
@@ -1601,7 +1616,7 @@ export function App() {
                 <div className="sandbox-info">
                   <span className="sandbox-badge">🧪 SANDBOX</span>
                   <span className="sandbox-desc">
-                    미션 제약 없이 모든 Vim 키보드 명령어를 자유롭게 실험해 볼 수 있습니다.
+                    {t('미션 제약 없이 모든 Vim 키보드 명령어를 자유롭게 실험해 볼 수 있습니다.')}
                   </span>
                 </div>
                 <div className="sandbox-actions">
@@ -1609,16 +1624,16 @@ export function App() {
                     className="sandbox-byoc-btn"
                     onClick={() => setIsBYOCModalOpen(true)}
                     data-testid="open-byoc-modal-btn"
-                    title="내 실제 업무 코드를 붙여넣어 자동 리팩토링 미션 생성"
+                    title={t('내 실제 업무 코드를 붙여넣어 자동 리팩토링 미션 생성')}
                   >
-                    ✨ 내 코드로 리팩토링 미션 생성 (BYOC)
+                    {t('✨ 내 코드로 리팩토링 미션 생성 (BYOC)')}
                   </button>
                   <button
                     className="sandbox-reset-btn"
                     onClick={handleResetSandbox}
                     data-testid="sandbox-reset-btn"
                   >
-                    🔄 코드 초기화
+                    {t('🔄 코드 초기화')}
                   </button>
                 </div>
               </div>
@@ -1666,7 +1681,7 @@ export function App() {
                               handleSwitchTabPage(tab.id);
                             }}
                             data-testid={`tab-page-${tab.id}`}
-                            title={`탭 ${idx + 1}: ${tab.filename}`}
+                            title={t('탭 {v}: {filename}', { v: idx + 1, filename: tab.filename })}
                           >
                             <span className="tab-number">{idx + 1}</span>
                             <span className="tab-filename">{tab.filename}</span>
@@ -1678,7 +1693,7 @@ export function App() {
                                   e.stopPropagation();
                                   handleCloseTabPage(tab.id);
                                 }}
-                                title="탭 닫기 (:tabclose)"
+                                title={t('탭 닫기 (:tabclose)')}
                               >
                                 ✕
                               </button>
@@ -1694,7 +1709,7 @@ export function App() {
                         e.stopPropagation();
                         handleNewTabPage();
                       }}
-                      title="새 탭 열기 (:tabnew)"
+                      title={t('새 탭 열기 (:tabnew)')}
                     >
                       +
                     </button>
@@ -1724,7 +1739,7 @@ export function App() {
                             handleSwitchBuffer(buf.id);
                           }}
                           data-testid={`buffer-tab-${buf.id}`}
-                          title={`버퍼 ${buf.id}: ${buf.name}`}
+                          title={t('버퍼 {id}: {name}', { id: buf.id, name: buf.name })}
                         >
                           <span className="buffer-number">{buf.id}</span>
                           <span className="buffer-indicator">{isCurrent ? '%' : isAlt ? '#' : ''}</span>
@@ -1868,11 +1883,11 @@ export function App() {
                   <span className="cmdline-window-title">
                     Command-line Window ({displayEditorState.cmdlineWindow.type === ':' ? 'Commands' : 'Search'}) [{displayEditorState.cmdlineWindow.mode}]
                   </span>
-                  <span className="cmdline-window-hint">Enter: 실행 | Esc: 닫기 | k/j: 탐색 | i/cw/dd: 편집</span>
+                  <span className="cmdline-window-hint">{t('Enter: 실행 | Esc: 닫기 | k/j: 탐색 | i/cw/dd: 편집')}</span>
                   <button
                     className="cmdline-window-close"
                     onClick={handleCloseCommandLineWindow}
-                    title="커맨드라인 윈도우 닫기 (Esc)"
+                    title={t('커맨드라인 윈도우 닫기 (Esc)')}
                   >
                     ✕
                   </button>
@@ -1922,12 +1937,12 @@ export function App() {
                     [Quickfix List] ({displayEditorState.quickfix.currentIndex + 1} of {displayEditorState.quickfix.items.length})
                   </span>
                   <span className="quickfix-window-hint">
-                    :cn / :cp 이동 | 항목 클릭 시 점프 | :cclose 닫기
+                    {t(':cn / :cp 이동 | 항목 클릭 시 점프 | :cclose 닫기')}
                   </span>
                   <button
                     className="quickfix-window-close"
                     onClick={handleCloseQuickfixWindow}
-                    title="퀵픽스 닫기 (:cclose)"
+                    title={t('퀵픽스 닫기 (:cclose)')}
                   >
                     ✕
                   </button>
@@ -1961,13 +1976,13 @@ export function App() {
                     [Location List] ({displayEditorState.locationList.currentIndex + 1} of {displayEditorState.locationList.items.length})
                   </span>
                   <span className="quickfix-window-hint">
-                    :lne / :lp 이동 | 항목 클릭 시 점프 | :lclose 닫기
+                    {t(':lne / :lp 이동 | 항목 클릭 시 점프 | :lclose 닫기')}
                   </span>
                   <button
                     type="button"
                     className="quickfix-window-close"
                     onClick={handleCloseLocationListWindow}
-                    title="로케이션 리스트 닫기 (:lclose)"
+                    title={t('로케이션 리스트 닫기 (:lclose)')}
                   >
                     ✕
                   </button>
@@ -2103,7 +2118,7 @@ export function App() {
       </main>
 
       <footer className="app-footer">
-        <span>VimPracticeOnWeb • 키보드로 미션을 완료하며 자연스럽게 Vim을 마스터하세요</span>
+        <span>{t('VimPracticeOnWeb • 키보드로 미션을 완료하며 자연스럽게 Vim을 마스터하세요')}</span>
       </footer>
 
       <LessonSelectModal

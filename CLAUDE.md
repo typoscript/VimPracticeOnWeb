@@ -19,13 +19,14 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 106개 테스트 파일, 1,368개 테스트 100% 통과 필수)*
+  *(현재 107개 테스트 파일, 1,375개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
 - **로컬 개발 서버 실행**:
   `npm run dev`
 - **번들 분할**: 아케이드·던전·도장 탭과 커스텀 미션·분석·데일리·설정 내보내기·BYOC 모달은 `App.tsx`에서 `React.lazy`로 지연 로딩되고, React는 `react-vendor`, Vim 엔진은 `vim-engine` 청크로 분리됩니다(`vite.config.ts`). 모달은 `useOpenedOnce`로 처음 열 때 불러온 뒤 마운트를 유지합니다. 이 화면들을 테스트할 때는 처음 나타나는 요소를 `await screen.findBy...`로 기다리세요.
+- **한/영 화면 언어 (`src/i18n/`)**: 화면 문구는 한국어 원문을 키로 쓰는 `t('한국어', { name })` 로 출력하고, 영어는 `src/i18n/en.ts` 의 `{ 한국어: English }` 사전에서 찾습니다(자리표시자 `{name}` 은 원문과 같아야 함). 모듈 최상위 상수는 `localized({...})` 로 감싸 읽을 때 번역되게 하고, localStorage 에 남기는 값은 번역하지 말고 `i18nKey('한국어')` 로 원문을 저장한 뒤 화면에서 `t(key)` 로 번역하세요. 언어는 `useLocale()`/`setLocale()` (저장 키 `vim_locale_v1`, 없으면 브라우저 언어), 헤더의 `toggle-locale-btn` 으로 바꿉니다. 테스트는 `setup.ts` 에서 한국어로 고정됩니다. ⚠ 새 문구를 추가하면 `en.ts` 에도 넣어야 `src/i18n/i18nCoverage.test.ts` 가 통과합니다. 레슨·던전 본문과 엔진 메시지는 아직 한국어입니다.
 
 ---
 

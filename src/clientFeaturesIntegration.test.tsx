@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { App } from './App';
 import { encodeCustomMission, CustomMissionData } from './utils/customMission';
+import { setLocale, LOCALE_STORAGE_KEY } from './i18n';
 
 describe('Gamification & UX Client Features Integration', () => {
   beforeEach(() => {
@@ -11,6 +12,7 @@ describe('Gamification & UX Client Features Integration', () => {
 
   afterEach(() => {
     window.history.pushState({}, '', '/');
+    setLocale('ko', { persist: false });
   });
 
   it('renders theme switcher and changes theme attribute on document root', () => {
@@ -37,6 +39,27 @@ describe('Gamification & UX Client Features Integration', () => {
     fireEvent.click(soundBtn);
     expect(soundBtn.textContent).toContain('🔊 소리: ON');
     expect(localStorage.getItem('vim_sound_muted')).toBe('false');
+  });
+
+  it('switches the UI between Korean and English and remembers the choice', () => {
+    render(<App />);
+
+    const localeBtn = screen.getByTestId('toggle-locale-btn');
+    const soundBtn = screen.getByTestId('toggle-sound-btn');
+    expect(localeBtn.textContent).toContain('한국어');
+    expect(soundBtn.textContent).toContain('🔊 소리: ON');
+
+    fireEvent.click(localeBtn);
+    expect(localeBtn.textContent).toContain('English');
+    expect(soundBtn.textContent).toContain('🔊 Sound: ON');
+    expect(screen.getByRole('combobox', { name: /Choose editor color theme/i })).toBeDefined();
+    expect(document.documentElement.lang).toBe('en');
+    expect(localStorage.getItem(LOCALE_STORAGE_KEY)).toBe('en');
+
+    fireEvent.click(localeBtn);
+    expect(soundBtn.textContent).toContain('🔊 소리: ON');
+    expect(document.documentElement.lang).toBe('ko');
+    expect(localStorage.getItem(LOCALE_STORAGE_KEY)).toBe('ko');
   });
 
   it('opens CustomMissionModal, configures a mission, and launches it into editor', async () => {

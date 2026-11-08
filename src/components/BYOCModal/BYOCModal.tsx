@@ -4,6 +4,7 @@ import {
   RefactoringRuleInfo,
 } from '../../utils/byocGenerator';
 import './BYOCModal.css';
+import { t, localized } from '../../i18n';
 
 export interface BYOCModalProps {
   isOpen: boolean;
@@ -19,7 +20,7 @@ export interface BYOCModalProps {
   }) => void;
 }
 
-const DEMO_PRESETS: Array<{ label: string; code: string }> = [
+const DEMO_PRESETS: Array<{ label: string; code: string }> = localized([
   {
     label: 'TypeScript 레거시 함수',
     code: `function fetchUserData(user_id) {\n  var cache_token = 'auth_token';\n  console.log("Fetching user: " + user_id);\n  return { id: user_id, token: cache_token }\n}`,
@@ -32,7 +33,7 @@ const DEMO_PRESETS: Array<{ label: string; code: string }> = [
     label: 'SQL 쿼리 빌더',
     code: `var query_str = 'SELECT user_id, user_email FROM users';\nconsole.log('Running query:', query_str);`,
   },
-];
+]);
 
 export const BYOCModal: React.FC<BYOCModalProps> = ({
   isOpen,
@@ -82,13 +83,13 @@ export const BYOCModal: React.FC<BYOCModalProps> = ({
         <header className="byoc-header">
           <div className="byoc-header-titles">
             <span className="byoc-badge">BYOC REFACTORING</span>
-            <h2 className="byoc-title">Bring Your Own Code 미션 생성기</h2>
+            <h2 className="byoc-title">{t('Bring Your Own Code 미션 생성기')}</h2>
           </div>
           <button
             className="byoc-close-btn"
             onClick={onClose}
             data-testid="byoc-close-btn"
-            aria-label="닫기"
+            aria-label={t('닫기')}
           >
             ✕
           </button>
@@ -97,7 +98,7 @@ export const BYOCModal: React.FC<BYOCModalProps> = ({
         <div className="byoc-content">
           {/* 프리셋 버튼 바 */}
           <div className="byoc-presets-row">
-            <span className="byoc-preset-label">코드 프리셋:</span>
+            <span className="byoc-preset-label">{t('코드 프리셋:')}</span>
             {DEMO_PRESETS.map((preset) => (
               <button
                 key={preset.label}
@@ -117,10 +118,10 @@ export const BYOCModal: React.FC<BYOCModalProps> = ({
           <div className="byoc-input-section">
             <div className="byoc-input-header">
               <label htmlFor="byoc-code-textarea" className="byoc-label">
-                내 업무 코드 붙여넣기 (TypeScript, React, Java, SQL 등):
+                {t('내 업무 코드 붙여넣기 (TypeScript, React, Java, SQL 등):')}
               </label>
               <span className="byoc-char-count">
-                {sourceCode.split('\n').length}줄 / {sourceCode.length}자
+                {t('{lines}줄 / {chars}자', { lines: sourceCode.split('\n').length, chars: sourceCode.length })}
               </span>
             </div>
             <textarea
@@ -131,7 +132,7 @@ export const BYOCModal: React.FC<BYOCModalProps> = ({
                 setSourceCode(e.target.value);
                 setSelectedRuleId(null);
               }}
-              placeholder="여기에 리팩토링을 연습하고 싶은 실제 업무 코드를 붙여넣으세요..."
+              placeholder={t('여기에 리팩토링을 연습하고 싶은 실제 업무 코드를 붙여넣으세요...')}
               data-testid="byoc-code-textarea"
             />
           </div>
@@ -139,7 +140,7 @@ export const BYOCModal: React.FC<BYOCModalProps> = ({
           {/* 감지된 리팩토링 규칙 탭 */}
           <div className="byoc-analysis-section">
             <div className="byoc-rules-label">
-              🔍 자동 감지된 리팩토링 규칙 ({analysis.detectedRules.length}개):
+              {t('🔍 자동 감지된 리팩토링 규칙 ({n}개):', { n: analysis.detectedRules.length })}
             </div>
             <div className="byoc-rules-tabs" data-testid="byoc-rules-tabs">
               {analysis.detectedRules.map((rule) => {
@@ -152,7 +153,7 @@ export const BYOCModal: React.FC<BYOCModalProps> = ({
                     data-testid={`byoc-rule-tab-${rule.id}`}
                   >
                     <span>{rule.title.split(':')[0]}</span>
-                    <span className="rule-match-pill">{rule.matchCount}건</span>
+                    <span className="rule-match-pill">{t('{n}건', { n: rule.matchCount })}</span>
                   </button>
                 );
               })}
@@ -163,12 +164,12 @@ export const BYOCModal: React.FC<BYOCModalProps> = ({
               <div className="rule-card-header">
                 <span className="rule-card-title">{currentRule.title}</span>
                 <span className="rule-card-par" data-testid="byoc-estimated-par">
-                  ⭐ 추천 Par: {currentRule.estimatedPar}타
+                  {t('⭐ 추천 Par: {n}타', { n: currentRule.estimatedPar })}
                 </span>
               </div>
               <p className="rule-card-desc">{currentRule.description}</p>
               <p className="rule-card-tip">
-                💡 <strong>추천 Vim 스킬:</strong> {currentRule.recommendedVimCommand}
+                💡 <strong>{t('추천 Vim 스킬:')}</strong> {currentRule.recommendedVimCommand}
                 <br />
                 {currentRule.hint}
               </p>
@@ -178,13 +179,13 @@ export const BYOCModal: React.FC<BYOCModalProps> = ({
           {/* 원본 vs 목표 텍스트 미리보기 */}
           <div className="byoc-preview-comparison">
             <div className="preview-col">
-              <span className="preview-title">현재 원본 코드</span>
+              <span className="preview-title">{t('현재 원본 코드')}</span>
               <pre className="preview-box" data-testid="byoc-preview-initial">
                 {sourceCode}
               </pre>
             </div>
             <div className="preview-col">
-              <span className="preview-title">목표 리팩토링 코드 (Target)</span>
+              <span className="preview-title">{t('목표 리팩토링 코드 (Target)')}</span>
               <pre className="preview-box target" data-testid="byoc-preview-target">
                 {currentRule.targetText}
               </pre>
@@ -199,14 +200,14 @@ export const BYOCModal: React.FC<BYOCModalProps> = ({
             onClick={onClose}
             data-testid="byoc-cancel-btn"
           >
-            취소
+            {t('취소')}
           </button>
           <button
             className="byoc-btn-play"
             onClick={handleStart}
             data-testid="byoc-start-btn"
           >
-            🚀 이 코드로 리팩토링 챌린지 시작
+            {t('🚀 이 코드로 리팩토링 챌린지 시작')}
           </button>
         </footer>
       </div>

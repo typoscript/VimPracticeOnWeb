@@ -1,5 +1,6 @@
 import React from 'react';
 import './DiffViewer.css';
+import { t } from '../../i18n';
 
 export interface DiffViewerProps {
   currentLines: string[];
@@ -16,11 +17,11 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
     return (
       <div className="diff-viewer empty" data-testid="diff-viewer">
         <div className="diff-header">
-          <span className="diff-title">🎯 목표 상태 비교 (Diff View)</span>
-          <span className="diff-badge match">위치 이동 미션</span>
+          <span className="diff-title">{t('🎯 목표 상태 비교 (Diff View)')}</span>
+          <span className="diff-badge match">{t('위치 이동 미션')}</span>
         </div>
         <p className="diff-empty-msg">
-          이 레슨은 텍스트 편집 없이 커서를 목표 위치로 이동하는 미션입니다.
+          {t('이 레슨은 텍스트 편집 없이 커서를 목표 위치로 이동하는 미션입니다.')}
         </p>
       </div>
     );
@@ -54,20 +55,20 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
     <div className="diff-viewer" data-testid="diff-viewer">
       <div className="diff-header">
         <div className="diff-header-left">
-          <span className="diff-title">🎯 목표 상태 비교 (Diff View)</span>
-          <span className="diff-subtitle">목표 코드와 일치하도록 편집하세요</span>
+          <span className="diff-title">{t('🎯 목표 상태 비교 (Diff View)')}</span>
+          <span className="diff-subtitle">{t('목표 코드와 일치하도록 편집하세요')}</span>
         </div>
         <span
           className={`diff-badge ${allTextMatch || isCompleted ? 'match' : 'mismatch'}`}
           data-testid="diff-status-badge"
         >
-          {allTextMatch || isCompleted ? '✨ 텍스트 일치' : `⚠️ ${diffCount}줄 수정 필요`}
+          {allTextMatch || isCompleted ? t('✨ 텍스트 일치') : t('⚠️ {diffCount}줄 수정 필요', { diffCount })}
         </span>
       </div>
 
       <div className="diff-grid" data-testid="diff-grid">
         <div className="diff-column current-col">
-          <div className="diff-column-header">현재 에디터 코드 (Current)</div>
+          <div className="diff-column-header">{t('현재 에디터 코드 (Current)')}</div>
           <div className="diff-lines">
             {rows.map((row) => (
               <div
@@ -78,7 +79,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
                 <span className="diff-line-no">{row.lineNum}</span>
                 <span className="diff-line-marker">{row.isMatch ? ' ' : '-'}</span>
                 <span className="diff-line-content">
-                  {row.current !== undefined ? row.current || <span className="diff-blank">〈빈 줄〉</span> : <span className="diff-none">〈줄 없음〉</span>}
+                  {row.current !== undefined ? row.current || <span className="diff-blank">{t('〈빈 줄〉')}</span> : <span className="diff-none">{t('〈줄 없음〉')}</span>}
                 </span>
               </div>
             ))}
@@ -86,7 +87,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
         </div>
 
         <div className="diff-column target-col">
-          <div className="diff-column-header">목표 완성 코드 (Target Goal)</div>
+          <div className="diff-column-header">{t('목표 완성 코드 (Target Goal)')}</div>
           <div className="diff-lines">
             {rows.map((row) => (
               <div
@@ -97,7 +98,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
                 <span className="diff-line-no">{row.lineNum}</span>
                 <span className="diff-line-marker">{row.isMatch ? '✓' : '+'}</span>
                 <span className="diff-line-content">
-                  {row.target !== undefined ? row.target || <span className="diff-blank">〈빈 줄〉</span> : <span className="diff-none">〈줄 삭제 대상〉</span>}
+                  {row.target !== undefined ? row.target || <span className="diff-blank">{t('〈빈 줄〉')}</span> : <span className="diff-none">{t('〈줄 삭제 대상〉')}</span>}
                 </span>
               </div>
             ))}

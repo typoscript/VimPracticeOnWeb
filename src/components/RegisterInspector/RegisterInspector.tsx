@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { ClipboardRegister, RegisterEntry } from '../../vim-engine';
 import './RegisterInspector.css';
+import { t } from '../../i18n';
 
 export interface RegisterInspectorProps {
   registers?: Record<string, RegisterEntry>;
@@ -37,7 +38,7 @@ export const RegisterInspector: React.FC<RegisterInspectorProps> = ({
 
     items.push({
       key: '""',
-      label: '기본 클립보드 (Unnamed)',
+      label: t('기본 클립보드 (Unnamed)'),
       type: unnamedEntry?.type === 'line' || clipboard?.type === 'line' ? 'line' : 'char',
       content: defaultContent,
       isSpecial: true,
@@ -48,7 +49,7 @@ export const RegisterInspector: React.FC<RegisterInspectorProps> = ({
     if (zeroEntry) {
       items.push({
         key: '"0',
-        label: '최근 복사본 (Yank)',
+        label: t('최근 복사본 (Yank)'),
         type: zeroEntry.type === 'line' ? 'line' : 'char',
         content: Array.isArray(zeroEntry.content) ? zeroEntry.content.join('') : zeroEntry.content,
         isSpecial: true,
@@ -70,7 +71,7 @@ export const RegisterInspector: React.FC<RegisterInspectorProps> = ({
 
       items.push({
         key: `"${k}`,
-        label: isMacro ? `매크로 @${k}` : `레지스터 "${k}`,
+        label: isMacro ? t('매크로 @{k}', { k }) : t('레지스터 "{k}', { k }),
         type: entry.type,
         content: contentStr,
       });
@@ -89,12 +90,12 @@ export const RegisterInspector: React.FC<RegisterInspectorProps> = ({
         <div className="inspector-title-area">
           <span className="inspector-icon">📋</span>
           <h3 className="inspector-title">Register Inspector</h3>
-          <span className="inspector-subtitle">레지스터 실시간 현황</span>
+          <span className="inspector-subtitle">{t('레지스터 실시간 현황')}</span>
         </div>
         <button
           className="inspector-close-btn"
           onClick={onToggle}
-          title="레지스터 패널 닫기"
+          title={t('레지스터 패널 닫기')}
           data-testid="close-register-inspector-btn"
         >
           ✕
@@ -106,27 +107,27 @@ export const RegisterInspector: React.FC<RegisterInspectorProps> = ({
         <div className="active-register-banner" data-testid="active-register-banner">
           <span className="pulse-dot" />
           <span>
-            다음 연산 대상 레지스터: <strong>&quot;{activeRegister}&quot;</strong>
-            {activeRegister === '_' && ' (블랙홀: 삭제/복사 시 기존 클립보드 보존)'}
+            {t('다음 연산 대상 레지스터:')} <strong>&quot;{activeRegister}&quot;</strong>
+            {activeRegister === '_' && t(' (블랙홀: 삭제/복사 시 기존 클립보드 보존)')}
           </span>
         </div>
       )}
 
       {/* 레지스터 가이드 툴팁 */}
       <div className="inspector-guide">
-        <span className="guide-chip"><code>&quot;ayiw</code> a에 복사</span>
-        <span className="guide-chip"><code>&quot;ap</code> a에서 붙여넣기</span>
-        <span className="guide-chip"><code>&quot;0p</code> 최근 복사본</span>
-        <span className="guide-chip"><code>&quot;_dd</code> 블랙홀 삭제</span>
+        <span className="guide-chip"><code>&quot;ayiw</code> {t('a에 복사')}</span>
+        <span className="guide-chip"><code>&quot;ap</code> {t('a에서 붙여넣기')}</span>
+        <span className="guide-chip"><code>&quot;0p</code> {t('최근 복사본')}</span>
+        <span className="guide-chip"><code>&quot;_dd</code> {t('블랙홀 삭제')}</span>
       </div>
 
       <div className="inspector-table-wrapper">
         <table className="inspector-table">
           <thead>
             <tr>
-              <th className="col-reg">레지스터</th>
-              <th className="col-type">타입</th>
-              <th className="col-content">내용</th>
+              <th className="col-reg">{t('레지스터')}</th>
+              <th className="col-type">{t('타입')}</th>
+              <th className="col-content">{t('내용')}</th>
             </tr>
           </thead>
           <tbody>
@@ -143,7 +144,7 @@ export const RegisterInspector: React.FC<RegisterInspectorProps> = ({
                 </td>
                 <td className="cell-type">
                   <span className={`type-badge type-${item.type}`}>
-                    {item.type === 'line' ? '줄 단위' : item.type === 'macro' ? '매크로' : '문자열'}
+                    {item.type === 'line' ? t('줄 단위') : item.type === 'macro' ? t('매크로') : t('문자열')}
                   </span>
                 </td>
                 <td className="cell-content">
@@ -152,7 +153,7 @@ export const RegisterInspector: React.FC<RegisterInspectorProps> = ({
                       {item.content.length > 60 ? `${item.content.slice(0, 60)}…` : item.content}
                     </code>
                   ) : (
-                    <span className="empty-content">(비어 있음)</span>
+                    <span className="empty-content">{t('(비어 있음)')}</span>
                   )}
                 </td>
               </tr>

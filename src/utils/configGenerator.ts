@@ -1,4 +1,5 @@
 import { VimOptions } from '../vim-engine';
+import { t, localized } from '../i18n';
 
 export type ConfigPlatform = 'vimrc' | 'initLua' | 'vscode' | 'ideaVim';
 
@@ -12,7 +13,7 @@ export interface KeymapPreset {
   defaultActive: boolean;
 }
 
-export const DEFAULT_KEYMAP_PRESETS: KeymapPreset[] = [
+export const DEFAULT_KEYMAP_PRESETS: KeymapPreset[] = localized([
   {
     id: 'jkEsc',
     title: 'jk -> <Esc>',
@@ -76,7 +77,7 @@ export const DEFAULT_KEYMAP_PRESETS: KeymapPreset[] = [
     to: '"_d',
     defaultActive: false,
   },
-];
+]);
 
 export interface ConfigExportOptions {
   relativenumber: boolean;
@@ -94,11 +95,11 @@ export function generateVimrc(options: ConfigExportOptions): string {
   const leaderChar = options.leaderKey === ' ' ? '<Space>' : options.leaderKey;
   const lines: string[] = [
     `" =============================================================================`,
-    `" VimPracticeOnWeb 자동 생성 설정 (.vimrc)`,
-    `" 생성일: ${new Date().toISOString().slice(0, 10)}`,
+    t('" VimPracticeOnWeb 자동 생성 설정 (.vimrc)'),
+    t('" 생성일: {v}', { v: new Date().toISOString().slice(0, 10) }),
     `" =============================================================================`,
     ``,
-    `" [기본 환경 설정]`,
+    t('" [기본 환경 설정]'),
     `set nocompatible`,
     `set encoding=utf-8`,
     `set autoindent`,
@@ -114,21 +115,21 @@ export function generateVimrc(options: ConfigExportOptions): string {
     `${options.options?.cursorline ?? true ? 'set cursorline' : 'set nocursorline'}`,
     `set clipboard=unnamedplus,unnamed`,
     ``,
-    `" [줄 번호 설정]`,
+    t('" [줄 번호 설정]'),
     `${options.options?.number ?? true ? 'set number' : 'set nonumber'}`,
     `${options.options?.relativenumber ?? options.relativenumber ? 'set relativenumber' : 'set norelativenumber'}`,
     ``,
-    `" [구문 강조 및 컬러 테마]`,
+    t('" [구문 강조 및 컬러 테마]'),
     `syntax on`,
     `set termguicolors`,
-    `" 추천 테마 플러그인 설정 예시 (vim-plug / packer)`,
+    t('" 추천 테마 플러그인 설정 예시 (vim-plug / packer)'),
     `colorscheme ${options.theme || 'tokyonight'}`,
     ``,
-    `" [리더 키(Leader Key) 설정]`,
+    t('" [리더 키(Leader Key) 설정]'),
     `let mapleader = "${leaderChar}"`,
     `let g:mapleader = "${leaderChar}"`,
     ``,
-    `" [커스텀 키매핑 프리셋]`,
+    t('" [커스텀 키매핑 프리셋]'),
   ];
 
   if (options.activePresets['jkEsc']) {
@@ -158,7 +159,7 @@ export function generateVimrc(options: ConfigExportOptions): string {
   }
 
   if (options.customKeymaps && options.customKeymaps.length > 0) {
-    lines.push(``, `" [런타임 추가 커스텀 매핑]`);
+    lines.push(``, t('" [런타임 추가 커스텀 매핑]'));
     options.customKeymaps.forEach((m) => {
       const cmd = m.mode === 'insert' ? 'inoremap' : 'nnoremap';
       lines.push(`${cmd} ${m.from} ${m.to}`);
@@ -175,11 +176,11 @@ export function generateInitLua(options: ConfigExportOptions): string {
   const leaderChar = options.leaderKey;
   const lines: string[] = [
     `-- =============================================================================`,
-    `-- VimPracticeOnWeb 자동 생성 설정 (init.lua - Neovim)`,
-    `-- 생성일: ${new Date().toISOString().slice(0, 10)}`,
+    t('-- VimPracticeOnWeb 자동 생성 설정 (init.lua - Neovim)'),
+    t('-- 생성일: {v}', { v: new Date().toISOString().slice(0, 10) }),
     `-- =============================================================================`,
     ``,
-    `-- [기본 에디터 옵션]`,
+    t('-- [기본 에디터 옵션]'),
     `local opt = vim.opt`,
     `opt.number = ${options.options?.number ?? true}`,
     `opt.relativenumber = ${options.options?.relativenumber ?? options.relativenumber}`,
@@ -195,44 +196,44 @@ export function generateInitLua(options: ConfigExportOptions): string {
     `opt.clipboard = "unnamedplus"`,
     `opt.termguicolors = true`,
     ``,
-    `-- [리더 키(Leader Key) 설정]`,
+    t('-- [리더 키(Leader Key) 설정]'),
     `vim.g.mapleader = "${leaderChar === '"' ? '\\"' : leaderChar}"`,
     `vim.g.maplocalleader = "${leaderChar === '"' ? '\\"' : leaderChar}"`,
     ``,
-    `-- [키매핑 헬퍼 함수]`,
+    t('-- [키매핑 헬퍼 함수]'),
     `local map = vim.keymap.set`,
     ``,
-    `-- [커스텀 키매핑 프리셋]`,
+    t('-- [커스텀 키매핑 프리셋]'),
   ];
 
   if (options.activePresets['jkEsc']) {
-    lines.push(`map('i', 'jk', '<Esc>', { desc = 'Insert 모드 빠른 탈출' })`);
+    lines.push(t('map(\'i\', \'jk\', \'<Esc>\', { desc = \'Insert 모드 빠른 탈출\' })'));
   }
   if (options.activePresets['jjEsc']) {
-    lines.push(`map('i', 'jj', '<Esc>', { desc = 'Insert 모드 빠른 탈출' })`);
+    lines.push(t('map(\'i\', \'jj\', \'<Esc>\', { desc = \'Insert 모드 빠른 탈출\' })'));
   }
   if (options.activePresets['leaderW']) {
-    lines.push(`map('n', '<leader>w', '<cmd>write<cr>', { desc = '빠른 파일 저장' })`);
+    lines.push(t('map(\'n\', \'<leader>w\', \'<cmd>write<cr>\', { desc = \'빠른 파일 저장\' })'));
   }
   if (options.activePresets['leaderQ']) {
-    lines.push(`map('n', '<leader>q', '<cmd>quit<cr>', { desc = '빠른 창 닫기' })`);
+    lines.push(t('map(\'n\', \'<leader>q\', \'<cmd>quit<cr>\', { desc = \'빠른 창 닫기\' })'));
   }
   if (options.activePresets['hlLineMove']) {
-    lines.push(`map('n', 'H', '^', { desc = '줄 첫 글자로 이동' })`);
-    lines.push(`map('n', 'L', '$', { desc = '줄 끝으로 이동' })`);
+    lines.push(t('map(\'n\', \'H\', \'^\', { desc = \'줄 첫 글자로 이동\' })'));
+    lines.push(t('map(\'n\', \'L\', \'$\', { desc = \'줄 끝으로 이동\' })'));
   }
   if (options.activePresets['ctrlWindowNav']) {
-    lines.push(`map('n', '<C-h>', '<C-w>h', { desc = '왼쪽 분할 창으로 이동' })`);
-    lines.push(`map('n', '<C-j>', '<C-w>j', { desc = '아래쪽 분할 창으로 이동' })`);
-    lines.push(`map('n', '<C-k>', '<C-w>k', { desc = '위쪽 분할 창으로 이동' })`);
-    lines.push(`map('n', '<C-l>', '<C-w>l', { desc = '오른쪽 분할 창으로 이동' })`);
+    lines.push(t('map(\'n\', \'<C-h>\', \'<C-w>h\', { desc = \'왼쪽 분할 창으로 이동\' })'));
+    lines.push(t('map(\'n\', \'<C-j>\', \'<C-w>j\', { desc = \'아래쪽 분할 창으로 이동\' })'));
+    lines.push(t('map(\'n\', \'<C-k>\', \'<C-w>k\', { desc = \'위쪽 분할 창으로 이동\' })'));
+    lines.push(t('map(\'n\', \'<C-l>\', \'<C-w>l\', { desc = \'오른쪽 분할 창으로 이동\' })'));
   }
   if (options.activePresets['leaderBlackhole']) {
-    lines.push(`map('n', '<leader>d', '"_d', { desc = '블랙홀 레지스터 삭제' })`);
+    lines.push(t('map(\'n\', \'<leader>d\', \'"_d\', { desc = \'블랙홀 레지스터 삭제\' })'));
   }
 
   if (options.customKeymaps && options.customKeymaps.length > 0) {
-    lines.push(``, `-- [런타임 추가 커스텀 매핑]`);
+    lines.push(``, t('-- [런타임 추가 커스텀 매핑]'));
     options.customKeymaps.forEach((m) => {
       const modeKey = m.mode === 'insert' ? 'i' : 'n';
       lines.push(`map('${modeKey}', '${m.from}', '${m.to}')`);
@@ -307,18 +308,18 @@ export function generateIdeaVimrc(options: ConfigExportOptions): string {
   const leaderChar = options.leaderKey === ' ' ? '<Space>' : options.leaderKey;
   const lines: string[] = [
     `" =============================================================================`,
-    `" VimPracticeOnWeb 자동 생성 설정 (.ideavimrc - IntelliJ / WebStorm)`,
-    `" 생성일: ${new Date().toISOString().slice(0, 10)}`,
+    t('" VimPracticeOnWeb 자동 생성 설정 (.ideavimrc - IntelliJ / WebStorm)'),
+    t('" 생성일: {v}', { v: new Date().toISOString().slice(0, 10) }),
     `" =============================================================================`,
     ``,
-    `" [IdeaVim 내장 플러그인 에뮬레이션]`,
+    t('" [IdeaVim 내장 플러그인 에뮬레이션]'),
     `set surround`,
     `set multiple-cursors`,
     `set commentary`,
     `set argtextobj`,
     `set textobj-entire`,
     ``,
-    `" [기본 옵션]`,
+    t('" [기본 옵션]'),
     `set number`,
     options.relativenumber ? `set relativenumber` : `set norelativenumber`,
     `set hlsearch`,
@@ -327,10 +328,10 @@ export function generateIdeaVimrc(options: ConfigExportOptions): string {
     `set smartcase`,
     `set clipboard+=unnamed`,
     ``,
-    `" [리더 키 설정]`,
+    t('" [리더 키 설정]'),
     `let mapleader = "${leaderChar}"`,
     ``,
-    `" [커스텀 키매핑]`,
+    t('" [커스텀 키매핑]'),
   ];
 
   if (options.activePresets['jkEsc']) {

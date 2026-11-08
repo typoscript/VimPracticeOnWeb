@@ -1,4 +1,5 @@
 import { VimMode } from '../vim-engine';
+import { t } from '../i18n';
 
 export const REPEATED_MOTION_KEYS = [
   'h', 'j', 'k', 'l',
@@ -35,7 +36,7 @@ export class AntiPatternDetector {
       if (key === 'Backspace') {
         this.backspaceCount += 1;
         if (this.backspaceCount >= 4) {
-          coachingMsg = 'Normal 모드에서 x, dw, 또는 ciw로 지우면 훨씬 빠릅니다!';
+          coachingMsg = t('Normal 모드에서 x, dw, 또는 ciw로 지우면 훨씬 빠릅니다!');
         }
       } else {
         this.backspaceCount = 0;
@@ -50,7 +51,7 @@ export class AntiPatternDetector {
       if (REPEATED_MOTION_KEYS.includes(key)) {
         this.motionCount += 1;
         if (this.motionCount >= 5) {
-          coachingMsg = '이동 키를 연타하는 대신 w, b 또는 숫자+이동(예: 5j)을 사용해 보세요!';
+          coachingMsg = t('이동 키를 연타하는 대신 w, b 또는 숫자+이동(예: 5j)을 사용해 보세요!');
         }
       } else {
         this.motionCount = 0;
@@ -58,24 +59,24 @@ export class AntiPatternDetector {
 
       // 2-2. $ 이동 직후 a 입력
       if (this.lastNormalKey === '$' && key === 'a') {
-        coachingMsg = 'A 키 하나로 줄 끝 이동과 입력 모드 진입을 한 번에 할 수 있습니다!';
+        coachingMsg = t('A 키 하나로 줄 끝 이동과 입력 모드 진입을 한 번에 할 수 있습니다!');
       }
 
       // 2-3. 0 또는 ^ 이동 직후 i 입력
       if ((this.lastNormalKey === '0' || this.lastNormalKey === '^') && key === 'i') {
-        coachingMsg = 'I 키 하나로 줄 첫 글자 앞에서 바로 입력 모드로 들어갈 수 있습니다!';
+        coachingMsg = t('I 키 하나로 줄 첫 글자 앞에서 바로 입력 모드로 들어갈 수 있습니다!');
       }
 
       // 2-4. d$ 또는 c$ 입력
       if ((pendingKeys === 'd' || pendingKeys === 'c') && key === '$') {
-        coachingMsg = '대문자 D 또는 C를 누르면 한 타수로 줄 끝까지 삭제/변경됩니다!';
+        coachingMsg = t('대문자 D 또는 C를 누르면 한 타수로 줄 끝까지 삭제/변경됩니다!');
       }
 
       // 2-5. x 3회 이상 연속 반복
       if (key === 'x') {
         this.xCount += 1;
         if (this.xCount >= 3) {
-          coachingMsg = '숫자 카운트(3dd, 5x)나 비주얼 라인(V + 이동 + d)을 활용해 보세요!';
+          coachingMsg = t('숫자 카운트(3dd, 5x)나 비주얼 라인(V + 이동 + d)을 활용해 보세요!');
         }
       } else {
         this.xCount = 0;
@@ -85,7 +86,7 @@ export class AntiPatternDetector {
       if (pendingKeys === 'd' && key === 'd') {
         this.ddCount += 1;
         if (this.ddCount >= 3) {
-          coachingMsg = '숫자 카운트(3dd, 5x)나 비주얼 라인(V + 이동 + d)을 활용해 보세요!';
+          coachingMsg = t('숫자 카운트(3dd, 5x)나 비주얼 라인(V + 이동 + d)을 활용해 보세요!');
         }
       } else if (pendingKeys !== 'd' && key !== 'd') {
         this.ddCount = 0;

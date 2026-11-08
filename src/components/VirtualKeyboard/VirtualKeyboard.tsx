@@ -1,6 +1,7 @@
 import React from 'react';
 import { VimMode } from '../../vim-engine';
 import './VirtualKeyboard.css';
+import { t, localized } from '../../i18n';
 
 export interface VirtualKeyboardProps {
   mode: VimMode;
@@ -16,7 +17,7 @@ interface KeyDef {
   width?: 'normal' | 'wide' | 'extra-wide' | 'space';
 }
 
-export const KEYBOARD_ROWS: KeyDef[][] = [
+export const KEYBOARD_ROWS: KeyDef[][] = localized([
   // 1행: 숫자 및 기호
   [
     { key: 'Escape', label: 'Esc', role: 'control', width: 'wide' },
@@ -89,7 +90,7 @@ export const KEYBOARD_ROWS: KeyDef[][] = [
     { key: ' ', label: 'Space', role: 'motion', width: 'space' },
     { key: ':', label: ':', subLabel: '명령어', role: 'search', width: 'wide' },
   ],
-];
+]);
 
 export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
   mode,
@@ -141,15 +142,15 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
     <div className="virtual-keyboard-panel" data-testid="virtual-keyboard">
       <div className="keyboard-header">
         <div className="keyboard-header-left">
-          <span className="keyboard-title">⌨ 인터랙티브 Vim 가상 키보드</span>
-          <span className="keyboard-mode-pill">현재 모드: {mode}</span>
+          <span className="keyboard-title">{t('⌨ 인터랙티브 Vim 가상 키보드')}</span>
+          <span className="keyboard-mode-pill">{t('현재 모드: {mode}', { mode })}</span>
         </div>
         <div className="keyboard-legend">
-          <span className="legend-item"><span className="legend-dot motion" />이동</span>
-          <span className="legend-item"><span className="legend-dot operator" />수정/삭제</span>
-          <span className="legend-item"><span className="legend-dot insert" />입력 진입</span>
-          <span className="legend-item"><span className="legend-dot visual" />비주얼 선택</span>
-          <span className="legend-item"><span className="legend-dot search" />탐색/검색</span>
+          <span className="legend-item"><span className="legend-dot motion" />{t('이동')}</span>
+          <span className="legend-item"><span className="legend-dot operator" />{t('수정/삭제')}</span>
+          <span className="legend-item"><span className="legend-dot insert" />{t('입력 진입')}</span>
+          <span className="legend-item"><span className="legend-dot visual" />{t('비주얼 선택')}</span>
+          <span className="legend-item"><span className="legend-dot search" />{t('탐색/검색')}</span>
         </div>
       </div>
 

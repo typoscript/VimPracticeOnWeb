@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import './ViewPanelsDropdown.css';
+import { t } from '../../i18n';
 
 export interface ViewPanelsDropdownProps {
   showDiffView: boolean;
@@ -97,10 +98,10 @@ export const ViewPanelsDropdown: React.FC<ViewPanelsDropdownProps> = ({
         data-testid="toggle-view-panels-menu-btn"
         aria-haspopup="true"
         aria-expanded={isOpen}
-        title="에디터 보조 패널 및 뷰어 표시/숨김 설정"
+        title={t('에디터 보조 패널 및 뷰어 표시/숨김 설정')}
       >
         <span className="trigger-icon">👁️</span>
-        <span className="trigger-label">패널 보기</span>
+        <span className="trigger-label">{t('패널 보기')}</span>
         <span className="active-badge">{activeCount}</span>
         <span className={`trigger-arrow ${isOpen ? 'rotated' : ''}`}>▾</span>
       </button>
@@ -112,15 +113,15 @@ export const ViewPanelsDropdown: React.FC<ViewPanelsDropdownProps> = ({
       <div
         className={`view-panels-menu ${isOpen ? 'open' : ''}`}
         role="menu"
-        aria-label="에디터 보조 패널 목록"
+        aria-label={t('에디터 보조 패널 목록')}
       >
         <div className="view-panels-menu-header">
           <div className="menu-header-title">
-            <span>👁️ 뷰 &amp; 인스펙터 패널</span>
-            <span className="menu-header-count">{activeCount}개 활성</span>
+            <span>{t('👁️ 뷰 & 인스펙터 패널')}</span>
+            <span className="menu-header-count">{t('{n}개 활성', { n: activeCount })}</span>
           </div>
           <p className="menu-header-subtitle">
-            필요한 보조 도구를 자유롭게 켜고 끌 수 있습니다
+            {t('필요한 보조 도구를 자유롭게 켜고 끌 수 있습니다')}
           </p>
         </div>
 
@@ -132,19 +133,19 @@ export const ViewPanelsDropdown: React.FC<ViewPanelsDropdownProps> = ({
               className={`view-panel-item ${showDiffView ? 'active' : ''}`}
               onClick={onToggleDiffView}
               data-testid="toggle-diff-view-btn"
-              title="목표 텍스트 Diff 비교 뷰어 토글"
+              title={t('목표 텍스트 Diff 비교 뷰어 토글')}
               role="menuitemcheckbox"
               aria-checked={showDiffView}
             >
               <div className="panel-item-left">
                 <span className="panel-icon">🎯</span>
                 <div className="panel-text-block">
-                  <span className="panel-title">목표 Diff 뷰</span>
-                  <span className="panel-desc">목표 텍스트와 현재 버퍼의 차이 실시간 비교</span>
+                  <span className="panel-title">{t('목표 Diff 뷰')}</span>
+                  <span className="panel-desc">{t('목표 텍스트와 현재 버퍼의 차이 실시간 비교')}</span>
                 </div>
               </div>
               <span className={`panel-switch-badge ${showDiffView ? 'on' : 'off'}`}>
-                🎯 목표 Diff: {showDiffView ? 'ON' : 'OFF'}
+                {t('🎯 목표 Diff: {state}', { state: showDiffView ? 'ON' : 'OFF' })}
               </span>
             </button>
           )}
@@ -155,19 +156,19 @@ export const ViewPanelsDropdown: React.FC<ViewPanelsDropdownProps> = ({
             className={`view-panel-item ${showRegisterInspector ? 'active' : ''}`}
             onClick={onToggleRegisterInspector}
             data-testid="toggle-register-inspector-btn"
-            title="실시간 레지스터 인스펙터 패널 토글"
+            title={t('실시간 레지스터 인스펙터 패널 토글')}
             role="menuitemcheckbox"
             aria-checked={showRegisterInspector}
           >
             <div className="panel-item-left">
               <span className="panel-icon">📋</span>
               <div className="panel-text-block">
-                <span className="panel-title">레지스터 인스펙터</span>
-                <span className="panel-desc">Vim 레지스터 버퍼(&quot;, &quot;0~9, &quot;a~z) 실시간 모니터링</span>
+                <span className="panel-title">{t('레지스터 인스펙터')}</span>
+                <span className="panel-desc">{t('Vim 레지스터 버퍼(", "0~9, "a~z) 실시간 모니터링')}</span>
               </div>
             </div>
             <span className={`panel-switch-badge ${showRegisterInspector ? 'on' : 'off'}`}>
-              📋 레지스터: {showRegisterInspector ? 'ON' : 'OFF'}
+              {t('📋 레지스터: {state}', { state: showRegisterInspector ? 'ON' : 'OFF' })}
             </span>
           </button>
 
@@ -177,19 +178,19 @@ export const ViewPanelsDropdown: React.FC<ViewPanelsDropdownProps> = ({
             className={`view-panel-item ${showGrammarAST ? 'active' : ''}`}
             onClick={onToggleGrammarAST}
             data-testid="toggle-grammar-ast-btn"
-            title="실시간 Vim 문법 AST 인스펙터 패널 토글"
+            title={t('실시간 Vim 문법 AST 인스펙터 패널 토글')}
             role="menuitemcheckbox"
             aria-checked={showGrammarAST}
           >
             <div className="panel-item-left">
               <span className="panel-icon">🧩</span>
               <div className="panel-text-block">
-                <span className="panel-title">문법 AST 인스펙터</span>
-                <span className="panel-desc">Vim 키 입력 파서 구문 분석 트리 및 설명</span>
+                <span className="panel-title">{t('문법 AST 인스펙터')}</span>
+                <span className="panel-desc">{t('Vim 키 입력 파서 구문 분석 트리 및 설명')}</span>
               </div>
             </div>
             <span className={`panel-switch-badge ${showGrammarAST ? 'on' : 'off'}`}>
-              🧩 문법 AST: {showGrammarAST ? 'ON' : 'OFF'}
+              {t('🧩 문법 AST: {state}', { state: showGrammarAST ? 'ON' : 'OFF' })}
             </span>
           </button>
 
@@ -199,19 +200,19 @@ export const ViewPanelsDropdown: React.FC<ViewPanelsDropdownProps> = ({
             className={`view-panel-item ${showActionTimeline ? 'active' : ''}`}
             onClick={onToggleActionTimeline}
             data-testid="toggle-action-timeline-btn"
-            title="실시간 명령 복기 타임라인 & Vim X-Ray 투시기 패널 토글"
+            title={t('실시간 명령 복기 타임라인 & Vim X-Ray 투시기 패널 토글')}
             role="menuitemcheckbox"
             aria-checked={showActionTimeline}
           >
             <div className="panel-item-left">
               <span className="panel-icon">⏱️</span>
               <div className="panel-text-block">
-                <span className="panel-title">타임라인 &amp; X-Ray</span>
-                <span className="panel-desc">명령어 실행 히스토리 복기 및 엔진 내부 상태 투시</span>
+                <span className="panel-title">{t('타임라인 & X-Ray')}</span>
+                <span className="panel-desc">{t('명령어 실행 히스토리 복기 및 엔진 내부 상태 투시')}</span>
               </div>
             </div>
             <span className={`panel-switch-badge ${showActionTimeline ? 'on' : 'off'}`}>
-              ⏱️ 타임라인 & X-Ray: {showActionTimeline ? 'ON' : 'OFF'}
+              {t('⏱️ 타임라인 & X-Ray: {state}', { state: showActionTimeline ? 'ON' : 'OFF' })}
             </span>
           </button>
 
@@ -221,19 +222,19 @@ export const ViewPanelsDropdown: React.FC<ViewPanelsDropdownProps> = ({
             className={`view-panel-item ${showVirtualKeyboard ? 'active' : ''}`}
             onClick={onToggleVirtualKeyboard}
             data-testid="toggle-virtual-keyboard-btn"
-            title="반응형 인터랙티브 가상 키보드 패널 토글"
+            title={t('반응형 인터랙티브 가상 키보드 패널 토글')}
             role="menuitemcheckbox"
             aria-checked={showVirtualKeyboard}
           >
             <div className="panel-item-left">
               <span className="panel-icon">⌨</span>
               <div className="panel-text-block">
-                <span className="panel-title">가상 키보드</span>
-                <span className="panel-desc">인터랙티브 키 반응 오버레이 및 시각 피드백</span>
+                <span className="panel-title">{t('가상 키보드')}</span>
+                <span className="panel-desc">{t('인터랙티브 키 반응 오버레이 및 시각 피드백')}</span>
               </div>
             </div>
             <span className={`panel-switch-badge ${showVirtualKeyboard ? 'on' : 'off'}`}>
-              ⌨ 가상 키보드: {showVirtualKeyboard ? 'ON' : 'OFF'}
+              {t('⌨ 가상 키보드: {state}', { state: showVirtualKeyboard ? 'ON' : 'OFF' })}
             </span>
           </button>
 
@@ -243,15 +244,15 @@ export const ViewPanelsDropdown: React.FC<ViewPanelsDropdownProps> = ({
             className={`view-panel-item ${relativeLineNumbers ? 'active' : ''}`}
             onClick={onToggleRelativeLineNumbers}
             data-testid="toggle-relativenumber-btn"
-            title="상대 라인 번호 (relativenumber) 토글"
+            title={t('상대 라인 번호 (relativenumber) 토글')}
             role="menuitemcheckbox"
             aria-checked={relativeLineNumbers}
           >
             <div className="panel-item-left">
               <span className="panel-icon">🔢</span>
               <div className="panel-text-block">
-                <span className="panel-title">상대 줄 번호</span>
-                <span className="panel-desc">현재 커서 위치 기준 점프용 상대 라인 번호 표시</span>
+                <span className="panel-title">{t('상대 줄 번호')}</span>
+                <span className="panel-desc">{t('현재 커서 위치 기준 점프용 상대 라인 번호 표시')}</span>
               </div>
             </div>
             <span className={`panel-switch-badge ${relativeLineNumbers ? 'on' : 'off'}`}>
@@ -266,19 +267,19 @@ export const ViewPanelsDropdown: React.FC<ViewPanelsDropdownProps> = ({
               className={`view-panel-item ${showMacroDebugger ? 'active' : ''}`}
               onClick={onToggleMacroDebugger}
               data-testid="toggle-macro-debugger-btn"
-              title="매크로 슬로우모션 디버거 패널 토글"
+              title={t('매크로 슬로우모션 디버거 패널 토글')}
               role="menuitemcheckbox"
               aria-checked={showMacroDebugger}
             >
               <div className="panel-item-left">
                 <span className="panel-icon">🎞️</span>
                 <div className="panel-text-block">
-                  <span className="panel-title">매크로 디버거</span>
-                  <span className="panel-desc">@a 매크로를 슬로우모션·키 단위 스텝으로 재생</span>
+                  <span className="panel-title">{t('매크로 디버거')}</span>
+                  <span className="panel-desc">{t('@a 매크로를 슬로우모션·키 단위 스텝으로 재생')}</span>
                 </div>
               </div>
               <span className={`panel-switch-badge ${showMacroDebugger ? 'on' : 'off'}`}>
-                🎞️ 매크로 디버거: {showMacroDebugger ? 'ON' : 'OFF'}
+                {t('🎞️ 매크로 디버거: {state}', { state: showMacroDebugger ? 'ON' : 'OFF' })}
               </span>
             </button>
           )}

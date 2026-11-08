@@ -7,6 +7,7 @@ import {
   generateVitestReproductionCode,
 } from '../../utils/actionTimeline';
 import './ActionTimelinePanel.css';
+import { t } from '../../i18n';
 
 export interface ActionTimelinePanelProps {
   steps: ActionTimelineStep[];
@@ -64,15 +65,15 @@ export const ActionTimelinePanel: React.FC<ActionTimelinePanelProps> = ({
       navigator.clipboard
         .writeText(testCode)
         .then(() => {
-          setCopyToast('✅ Vitest 재현 코드가 클립보드에 복사되었습니다!');
+          setCopyToast(t('✅ Vitest 재현 코드가 클립보드에 복사되었습니다!'));
           setTimeout(() => setCopyToast(null), 3000);
         })
         .catch(() => {
-          setCopyToast('⚠️ 클립보드 복사 실패 (보안 제한)');
+          setCopyToast(t('⚠️ 클립보드 복사 실패 (보안 제한)'));
           setTimeout(() => setCopyToast(null), 3000);
         });
     } else {
-      setCopyToast('⚠️ 클립보드 API를 지원하지 않는 브라우저입니다.');
+      setCopyToast(t('⚠️ 클립보드 API를 지원하지 않는 브라우저입니다.'));
       setTimeout(() => setCopyToast(null), 3000);
     }
   }, [missionTitle, initialText, initialCursor, allKeysSoFar, editorState]);
@@ -81,16 +82,16 @@ export const ActionTimelinePanel: React.FC<ActionTimelinePanelProps> = ({
   const getPendingGuide = () => {
     if (editorState.insertNormalSession) {
       return {
-        badge: 'INSERT (normal) 모드',
-        guide: '단 1회의 NORMAL 명령 실행 대기 중 (명령 완결 후 즉시 INSERT 모드로 복귀)',
+        badge: t('INSERT (normal) 모드'),
+        guide: t('단 1회의 NORMAL 명령 실행 대기 중 (명령 완결 후 즉시 INSERT 모드로 복귀)'),
         isPending: true,
       };
     }
     if (editorState.completionSession) {
       const { prefix, selectedIndex, candidates } = editorState.completionSession;
       return {
-        badge: `인버퍼 자동완성 [${prefix}]`,
-        guide: `후보 (${selectedIndex + 1}/${candidates.length}): '${candidates[selectedIndex]}' (Ctrl+n: 다음, Ctrl+p: 이전, Esc: 닫기)`,
+        badge: t('인버퍼 자동완성 [{prefix}]', { prefix }),
+        guide: t('후보 ({v}/{candidatesCount}): \'{v2}\' (Ctrl+n: 다음, Ctrl+p: 이전, Esc: 닫기)', { v: selectedIndex + 1, candidatesCount: candidates.length, v2: candidates[selectedIndex] }),
         isPending: true,
       };
     }
@@ -99,21 +100,21 @@ export const ActionTimelinePanel: React.FC<ActionTimelinePanelProps> = ({
     if (!pk) {
       if (editorState.mode === 'NORMAL') {
         return {
-          badge: 'NORMAL 모드',
-          guide: '새로운 Vim 명령 입력 대기 중 (h/j/k/l, w, dw, ciw 등)',
+          badge: t('NORMAL 모드'),
+          guide: t('새로운 Vim 명령 입력 대기 중 (h/j/k/l, w, dw, ciw 등)'),
           isPending: false,
         };
       }
       if (editorState.mode === 'INSERT') {
         return {
-          badge: 'INSERT 모드',
-          guide: '텍스트 입력 중 (Ctrl+w: 단어삭제, Ctrl+u: 줄시작삭제, Ctrl+n: 자동완성, <Esc>: 복귀)',
+          badge: t('INSERT 모드'),
+          guide: t('텍스트 입력 중 (Ctrl+w: 단어삭제, Ctrl+u: 줄시작삭제, Ctrl+n: 자동완성, <Esc>: 복귀)'),
           isPending: false,
         };
       }
       return {
-        badge: `${editorState.mode} 모드`,
-        guide: '모드 동작 진행 중',
+        badge: t('{mode} 모드', { mode: editorState.mode }),
+        guide: t('모드 동작 진행 중'),
         isPending: false,
       };
     }
@@ -121,36 +122,36 @@ export const ActionTimelinePanel: React.FC<ActionTimelinePanelProps> = ({
     // Pending 명령 분석
     if (pk.endsWith('d') || pk.endsWith('c') || pk.endsWith('y')) {
       return {
-        badge: `명령 대기 [${pk}]`,
-        guide: '연산 대상 선택 대기 중 — 이동 키(w, $, e)나 텍스트 객체(iw, i", i()를 누르세요.',
+        badge: t('명령 대기 [{pk}]', { pk }),
+        guide: t('연산 대상 선택 대기 중 — 이동 키(w, $, e)나 텍스트 객체(iw, i", i()를 누르세요.'),
         isPending: true,
       };
     }
     if (pk.endsWith('f') || pk.endsWith('F') || pk.endsWith('t') || pk.endsWith('T')) {
       return {
-        badge: `탐색 대기 [${pk}]`,
-        guide: '찾고자 하는 대상 글자(예: a, ;, ", 괄호 등)를 이어서 누르세요.',
+        badge: t('탐색 대기 [{pk}]', { pk }),
+        guide: t('찾고자 하는 대상 글자(예: a, ;, ", 괄호 등)를 이어서 누르세요.'),
         isPending: true,
       };
     }
     if (pk.startsWith('"')) {
       return {
-        badge: `레지스터 지정 [${pk}]`,
-        guide: `레지스터 ${pk} 지정됨 — 이어서 y, d, c, p 연산자를 누르세요.`,
+        badge: t('레지스터 지정 [{pk}]', { pk }),
+        guide: t('레지스터 {pk} 지정됨 — 이어서 y, d, c, p 연산자를 누르세요.', { pk }),
         isPending: true,
       };
     }
     if (/^\d+$/.test(pk)) {
       return {
-        badge: `반복 카운트 [${pk}]`,
-        guide: `${pk}회 반복 실행할 모션(w, j, l) 또는 연산자(d, c, y)를 누르세요.`,
+        badge: t('반복 카운트 [{pk}]', { pk }),
+        guide: t('{pk}회 반복 실행할 모션(w, j, l) 또는 연산자(d, c, y)를 누르세요.', { pk }),
         isPending: true,
       };
     }
 
     return {
-      badge: `대기 중 [${pk}]`,
-      guide: '이어서 명령 완결 키를 누르세요.',
+      badge: t('대기 중 [{pk}]', { pk }),
+      guide: t('이어서 명령 완결 키를 누르세요.'),
       isPending: true,
     };
   };
@@ -163,13 +164,13 @@ export const ActionTimelinePanel: React.FC<ActionTimelinePanelProps> = ({
     if (!clip || !clip.content) {
       return {
         hasContent: false,
-        preview: '(비어 있음)',
+        preview: t('(비어 있음)'),
         typeStr: 'text',
-        guide: '복사(y)나 잘라내기(d)한 텍스트가 없습니다.',
+        guide: t('복사(y)나 잘라내기(d)한 텍스트가 없습니다.'),
       };
     }
 
-    const typeStr = clip.type === 'line' ? '줄(line) 단위' : '문자(char) 단위';
+    const typeStr = clip.type === 'line' ? t('줄(line) 단위') : t('문자(char) 단위');
     const preview =
       clip.content.length > 25 ? `${clip.content.slice(0, 25)}...` : clip.content;
 
@@ -177,7 +178,7 @@ export const ActionTimelinePanel: React.FC<ActionTimelinePanelProps> = ({
       hasContent: true,
       preview: `"${preview.replace(/\n/g, '↵')}"`,
       typeStr,
-      guide: 'p 키를 누르면 커서 위치에 붙여넣어집니다.',
+      guide: t('p 키를 누르면 커서 위치에 붙여넣어집니다.'),
     };
   };
 
@@ -189,8 +190,8 @@ export const ActionTimelinePanel: React.FC<ActionTimelinePanelProps> = ({
     if (!lastKeys || lastKeys.length === 0) {
       return {
         hasRepeat: false,
-        cmdStr: '(없음)',
-        desc: '재실행할 이전 변경 작업이 없습니다.',
+        cmdStr: t('(없음)'),
+        desc: t('재실행할 이전 변경 작업이 없습니다.'),
       };
     }
 
@@ -201,7 +202,7 @@ export const ActionTimelinePanel: React.FC<ActionTimelinePanelProps> = ({
       hasRepeat: true,
       cmdStr,
       desc,
-      guide: '. 키를 누르면 이 작업이 즉시 재실행됩니다.',
+      guide: t('. 키를 누르면 이 작업이 즉시 재실행됩니다.'),
     };
   };
 
@@ -226,11 +227,11 @@ export const ActionTimelinePanel: React.FC<ActionTimelinePanelProps> = ({
       <div className="timeline-header">
         <div className="timeline-title-area">
           <span className="timeline-icon">⏱️</span>
-          <span className="timeline-title">명령 복기 타임라인 & Vim X-Ray</span>
+          <span className="timeline-title">{t('명령 복기 타임라인 & Vim X-Ray')}</span>
           <span className="step-counter-badge">
             {steps.length <= 1
-              ? '준비됨'
-              : `${activeStepIdx} / ${steps.length - 1} 스텝`}
+              ? t('준비됨')
+              : t('{activeStepIdx} / {v} 스텝', { activeStepIdx, v: steps.length - 1 })}
           </span>
         </div>
 
@@ -241,19 +242,19 @@ export const ActionTimelinePanel: React.FC<ActionTimelinePanelProps> = ({
               className="step-nav-btn"
               onClick={handlePrevStep}
               disabled={activeStepIdx <= 0}
-              title="이전 스텝 미리보기"
+              title={t('이전 스텝 미리보기')}
               data-testid="timeline-prev-step-btn"
             >
-              ◀ 이전
+              {t('◀ 이전')}
             </button>
             <button
               className="step-nav-btn"
               onClick={handleNextStep}
               disabled={activeStepIdx >= steps.length - 1}
-              title="다음 스텝 미리보기"
+              title={t('다음 스텝 미리보기')}
               data-testid="timeline-next-step-btn"
             >
-              다음 ▶
+              {t('다음 ▶')}
             </button>
           </div>
 
@@ -261,17 +262,17 @@ export const ActionTimelinePanel: React.FC<ActionTimelinePanelProps> = ({
           <button
             className="export-test-btn"
             onClick={handleExportFailingTest}
-            title="현재 상태를 Vitest 단위 테스트 it(...) 코드로 클립보드에 복사"
+            title={t('현재 상태를 Vitest 단위 테스트 it(...) 코드로 클립보드에 복사')}
             data-testid="export-test-btn"
           >
-            🐞 Vitest 재현 코드 복사
+            {t('🐞 Vitest 재현 코드 복사')}
           </button>
 
           {onClose && (
             <button
               className="timeline-close-btn"
               onClick={onClose}
-              title="패널 닫기"
+              title={t('패널 닫기')}
               data-testid="timeline-close-btn"
             >
               ✕
@@ -301,7 +302,7 @@ export const ActionTimelinePanel: React.FC<ActionTimelinePanelProps> = ({
           data-testid="xray-clipboard-badge"
         >
           <div className="xray-badge-header">
-            <span className="xray-badge-tag">📋 클립보드</span>
+            <span className="xray-badge-tag">{t('📋 클립보드')}</span>
             <span className="xray-badge-sub">{clipInfo.typeStr}</span>
           </div>
           <div className="xray-badge-desc">
@@ -316,7 +317,7 @@ export const ActionTimelinePanel: React.FC<ActionTimelinePanelProps> = ({
           data-testid="xray-dot-badge"
         >
           <div className="xray-badge-header">
-            <span className="xray-badge-tag">🔄 점(.) 반복</span>
+            <span className="xray-badge-tag">{t('🔄 점(.) 반복')}</span>
             {dotInfo.hasRepeat && (
               <span className="dot-cmd-chip">{dotInfo.cmdStr}</span>
             )}
@@ -334,8 +335,8 @@ export const ActionTimelinePanel: React.FC<ActionTimelinePanelProps> = ({
       {isPreviewing && (
         <div className="timeline-preview-banner" data-testid="timeline-preview-banner">
           <div className="preview-banner-text">
-            <span className="preview-indicator">⏪ 미리보기 중:</span>
-            <strong> 스텝 #{activeStepIdx}</strong> ({currentPreviewStep.command} —{' '}
+            <span className="preview-indicator">{t('⏪ 미리보기 중:')}</span>
+            <strong> {t('스텝 #{n}', { n: activeStepIdx })}</strong> ({currentPreviewStep.command} —{' '}
             {currentPreviewStep.description})
           </div>
           <div className="preview-banner-actions">
@@ -343,17 +344,17 @@ export const ActionTimelinePanel: React.FC<ActionTimelinePanelProps> = ({
               className="branch-resume-btn"
               onClick={() => onBranchFromStep(activeStepIdx)}
               data-testid="branch-resume-btn"
-              title="이 시점의 상태로 되돌리고 이후 타수를 다시 입력합니다"
+              title={t('이 시점의 상태로 되돌리고 이후 타수를 다시 입력합니다')}
             >
-              ⏪ 이 시점부터 이어서 치기
+              {t('⏪ 이 시점부터 이어서 치기')}
             </button>
             <button
               className="cancel-preview-btn"
               onClick={onCancelPreview}
               data-testid="cancel-preview-btn"
-              title="최신 현재 상태로 복귀"
+              title={t('최신 현재 상태로 복귀')}
             >
-              ▶ 최신 시점으로 복귀
+              {t('▶ 최신 시점으로 복귀')}
             </button>
           </div>
         </div>
@@ -377,7 +378,7 @@ export const ActionTimelinePanel: React.FC<ActionTimelinePanelProps> = ({
               }`}
               onClick={() => onSelectStep(idx)}
               data-testid={`timeline-step-${idx}`}
-              title={`스텝 ${idx}: ${step.command} (${step.description})`}
+              title={t('스텝 {idx}: {command} ({description})', { idx, command: step.command, description: step.description })}
             >
               <div className="step-chip-header">
                 <span className="step-num-badge">#{idx}</span>
@@ -386,11 +387,11 @@ export const ActionTimelinePanel: React.FC<ActionTimelinePanelProps> = ({
               <div className="step-chip-desc">{step.description}</div>
               <div className="step-chip-footer">
                 <span className="step-keystrokes">
-                  {step.keystrokesSoFar}타
+                  {t('{n}타', { n: step.keystrokesSoFar })}
                 </span>
                 {isSelected && (
                   <span className="step-active-tag">
-                    {isPreviewing ? '미리보기' : '현재'}
+                    {isPreviewing ? t('미리보기') : t('현재')}
                   </span>
                 )}
               </div>

@@ -1,4 +1,5 @@
 import { DungeonSaveData, DungeonRecord } from '../types/dungeon';
+import { t } from '../i18n';
 
 export const DUNGEON_STORAGE_KEY = 'vim_dungeon_save_v1';
 
@@ -79,7 +80,7 @@ export function recordStageClear(
   if (stageId === 5) {
     const badgeName =
       keystrokes <= par
-        ? '🏆 [Vim Dungeon Master - Par 이하 정복]'
+        ? t('🏆 [Vim Dungeon Master - Par 이하 정복]')
         : '🗡️ [Vim Dungeon Conqueror]';
     if (!data.badges.includes(badgeName)) {
       data.badges.push(badgeName);

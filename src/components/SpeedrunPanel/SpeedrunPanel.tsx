@@ -1,6 +1,7 @@
 import React from 'react';
 import { SpeedrunRecord } from '../../utils/storage';
 import './SpeedrunPanel.css';
+import { t } from '../../i18n';
 
 export interface SpeedrunPanelProps {
   status: 'ready' | 'running' | 'completed';
@@ -41,15 +42,15 @@ export const SpeedrunPanel: React.FC<SpeedrunPanelProps> = ({
         <div className="speedrun-header-left">
           <span className="speedrun-badge">⚡ SPEEDRUN MODE</span>
           <span className="speedrun-desc">
-            무작위 5개 Vim 편집 미션을 최단 시간 &amp; 최소 타수로 연속 격파하세요!
+            {t('무작위 5개 Vim 편집 미션을 최단 시간 & 최소 타수로 연속 격파하세요!')}
           </span>
         </div>
 
         {bestRecord && (
           <div className="speedrun-best-badge" data-testid="speedrun-best-badge">
             <span className="best-icon">🏆</span>
-            <span className="best-label">역대 최고:</span>
-            <span className="best-val">{formatTime(bestRecord.bestTimeSeconds)} ({bestRecord.minKeystrokes}타)</span>
+            <span className="best-label">{t('역대 최고:')}</span>
+            <span className="best-val">{formatTime(bestRecord.bestTimeSeconds)} {t('({n}타)', { n: bestRecord.minKeystrokes })}</span>
           </div>
         )}
       </div>
@@ -57,9 +58,9 @@ export const SpeedrunPanel: React.FC<SpeedrunPanelProps> = ({
       {status === 'ready' && (
         <div className="speedrun-start-view" data-testid="speedrun-ready-view">
           <div className="speedrun-rules">
-            <div className="rule-item">🏁 <strong>5개 스테이지</strong>: 다양한 Vim 리팩토링 미션이 무작위로 출제됩니다.</div>
-            <div className="rule-item">⏱ <strong>타이머 연동</strong>: 시작 버튼을 누르면 시간이 측정되며, 미션 완료 시 즉시 다음 단계로 넘어갑니다.</div>
-            <div className="rule-item">🎯 <strong>Vim Golf 랭킹</strong>: 총 소요 시간과 총 입력 타수가 합산되어 최고 기록이 영구 저장됩니다.</div>
+            <div className="rule-item">🏁 <strong>{t('5개 스테이지')}</strong>{t(': 다양한 Vim 리팩토링 미션이 무작위로 출제됩니다.')}</div>
+            <div className="rule-item">⏱ <strong>{t('타이머 연동')}</strong>{t(': 시작 버튼을 누르면 시간이 측정되며, 미션 완료 시 즉시 다음 단계로 넘어갑니다.')}</div>
+            <div className="rule-item">🎯 <strong>{t('Vim Golf 랭킹')}</strong>{t(': 총 소요 시간과 총 입력 타수가 합산되어 최고 기록이 영구 저장됩니다.')}</div>
           </div>
           <button
             type="button"
@@ -67,7 +68,7 @@ export const SpeedrunPanel: React.FC<SpeedrunPanelProps> = ({
             onClick={onStart}
             data-testid="speedrun-start-btn"
           >
-            🚀 스피드런 챌린지 시작하기
+            {t('🚀 스피드런 챌린지 시작하기')}
           </button>
         </div>
       )}
@@ -90,14 +91,14 @@ export const SpeedrunPanel: React.FC<SpeedrunPanelProps> = ({
             <div className="stat-card keystroke-card">
               <span className="stat-label">KEYSTROKES</span>
               <span className="stat-value" data-testid="speedrun-keystrokes">
-                🎯 {totalKeystrokes}타
+                {t('🎯 {n}타', { n: totalKeystrokes })}
               </span>
             </div>
           </div>
 
           <div className="live-stage-info">
-            <span className="stage-tag">현재 목표</span>
-            <span className="stage-title">{currentMissionTitle ?? '미션 로딩 중...'}</span>
+            <span className="stage-tag">{t('현재 목표')}</span>
+            <span className="stage-title">{currentMissionTitle ?? t('미션 로딩 중...')}</span>
           </div>
         </div>
       )}
@@ -106,25 +107,25 @@ export const SpeedrunPanel: React.FC<SpeedrunPanelProps> = ({
         <div className="speedrun-completed-view" data-testid="speedrun-completed-view">
           <div className="completed-banner">
             <span className="banner-icon">🎉</span>
-            <h2 className="banner-title">스피드런 챌린지 올 클리어!</h2>
+            <h2 className="banner-title">{t('스피드런 챌린지 올 클리어!')}</h2>
             {isNewRecord && (
               <span className="new-record-pill" data-testid="speedrun-new-record">
-                ✨ NEW RECORD! 역대 최고 기록 경신!
+                {t('✨ NEW RECORD! 역대 최고 기록 경신!')}
               </span>
             )}
           </div>
 
           <div className="completed-results">
             <div className="result-metric">
-              <span className="metric-label">총 소요 시간</span>
+              <span className="metric-label">{t('총 소요 시간')}</span>
               <span className="metric-val time" data-testid="final-time">
                 ⏱ {formatTime(elapsedSeconds)}
               </span>
             </div>
             <div className="result-metric">
-              <span className="metric-label">총 입력 타수</span>
+              <span className="metric-label">{t('총 입력 타수')}</span>
               <span className="metric-val keys" data-testid="final-keystrokes">
-                🎯 {totalKeystrokes}타
+                {t('🎯 {n}타', { n: totalKeystrokes })}
               </span>
             </div>
           </div>
@@ -135,7 +136,7 @@ export const SpeedrunPanel: React.FC<SpeedrunPanelProps> = ({
             onClick={onRestart}
             data-testid="speedrun-restart-btn"
           >
-            🔄 새로운 5개 미션 재도전하기
+            {t('🔄 새로운 5개 미션 재도전하기')}
           </button>
         </div>
       )}

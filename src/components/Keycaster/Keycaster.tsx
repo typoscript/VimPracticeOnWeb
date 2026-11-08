@@ -1,5 +1,6 @@
 import React from 'react';
 import './Keycaster.css';
+import { t } from '../../i18n';
 
 export interface KeycasterProps {
   recentKeys: string[];
@@ -39,7 +40,7 @@ export const Keycaster: React.FC<KeycasterProps> = ({ recentKeys }) => {
       <span className="keycaster-label">RECENT KEYS</span>
       <div className="keycaster-keys">
         {recentKeys.length === 0 ? (
-          <span className="keycaster-empty">키를 눌러보세요</span>
+          <span className="keycaster-empty">{t('키를 눌러보세요')}</span>
         ) : (
           recentKeys.map((key, index) => {
             const isLatest = index === recentKeys.length - 1;

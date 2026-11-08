@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { parseVimGrammar } from '../../utils/vimGrammarParser';
 import './VimGrammarASTViewer.css';
+import { t } from '../../i18n';
 
 export interface VimGrammarASTViewerProps {
   currentKeySequence?: string;
@@ -70,7 +71,7 @@ export const VimGrammarASTViewer: React.FC<VimGrammarASTViewerProps> = ({
       <header className="ast-header">
         <div className="ast-title-group">
           <span className="ast-badge">VIM GRAMMAR AST</span>
-          <h3 className="ast-title">실시간 Vim 명령어 문법 분해기</h3>
+          <h3 className="ast-title">{t('실시간 Vim 명령어 문법 분해기')}</h3>
           <span className="ast-formula">
             Command := [Register] [Count] Operator [Count] (Motion | TextObject)
           </span>
@@ -81,7 +82,7 @@ export const VimGrammarASTViewer: React.FC<VimGrammarASTViewerProps> = ({
             className="ast-close-btn"
             onClick={onClose}
             data-testid="close-ast-viewer-btn"
-            aria-label="닫기"
+            aria-label={t('닫기')}
           >
             ✕
           </button>
@@ -90,7 +91,7 @@ export const VimGrammarASTViewer: React.FC<VimGrammarASTViewerProps> = ({
 
       {/* 프리셋 예제 바 */}
       <div className="ast-presets" data-testid="ast-presets-bar">
-        <span className="preset-label">대표 문법 프리셋:</span>
+        <span className="preset-label">{t('대표 문법 프리셋:')}</span>
         {PRESET_EXAMPLES.map((ex) => (
           <button
             key={ex}
@@ -106,14 +107,14 @@ export const VimGrammarASTViewer: React.FC<VimGrammarASTViewerProps> = ({
       {/* 명령어 입력 및 실시간 버퍼 표시줄 */}
       <div className="ast-input-row">
         <label htmlFor="ast-command-input" className="ast-input-label">
-          {isManualMode ? '✏️ 문법 시뮬레이터:' : '⌨️ 에디터 입력 시퀀스:'}
+          {isManualMode ? t('✏️ 문법 시뮬레이터:') : t('⌨️ 에디터 입력 시퀀스:')}
         </label>
         <input
           id="ast-command-input"
           className="ast-command-input"
           value={inputCommand}
           onChange={handleInputChange}
-          placeholder='명령어를 입력하세요 (예: "a2d3aw, 3ci", y$, 5dd)'
+          placeholder={t('명령어를 입력하세요 (예: "a2d3aw, 3ci", y$, 5dd)')}
           data-testid="ast-command-input"
         />
       </div>
@@ -121,7 +122,7 @@ export const VimGrammarASTViewer: React.FC<VimGrammarASTViewerProps> = ({
       {/* 시각적 AST 파이프라인 노드 렌더러 */}
       <div className="ast-pipeline" data-testid="ast-pipeline-container">
         {ast.nodes.length === 0 ? (
-          <div className="ast-empty-node">명령어를 입력하면 AST 노드가 실시간 조립됩니다.</div>
+          <div className="ast-empty-node">{t('명령어를 입력하면 AST 노드가 실시간 조립됩니다.')}</div>
         ) : (
           ast.nodes.map((node, idx) => (
             <React.Fragment key={`${node.raw}-${idx}`}>
@@ -143,7 +144,7 @@ export const VimGrammarASTViewer: React.FC<VimGrammarASTViewerProps> = ({
       <div className="ast-explanation-box" data-testid="ast-explanation-box">
         <span className="exp-icon">💬</span>
         <div className="exp-body">
-          <div className="exp-title">자연어 문법 해석 (Natural Language Explanation)</div>
+          <div className="exp-title">{t('자연어 문법 해석 (Natural Language Explanation)')}</div>
           <p className="exp-text" data-testid="ast-explanation-text">
             {ast.explanation}
           </p>
@@ -154,7 +155,7 @@ export const VimGrammarASTViewer: React.FC<VimGrammarASTViewerProps> = ({
       {ast.isOperatorPending && ast.candidates && (
         <div className="ast-candidates-container" data-testid="ast-candidates-guide">
           <div className="candidates-banner">
-            <span>⚡ 연산자 대기 상태 (Operator-Pending): 다음 문법 요소를 선택하거나 입력하세요</span>
+            <span>{t('⚡ 연산자 대기 상태 (Operator-Pending): 다음 문법 요소를 선택하거나 입력하세요')}</span>
           </div>
           <div className="candidates-grid">
             {ast.candidates.map((cat) => (

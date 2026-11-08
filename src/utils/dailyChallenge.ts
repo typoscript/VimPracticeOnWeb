@@ -1,4 +1,5 @@
 import { DailyChallengePuzzle } from '../types/game';
+import { localized } from '../i18n';
 
 /**
  * 오늘 날짜를 'YYYY-MM-DD' 형식으로 반환합니다.
@@ -33,7 +34,7 @@ const DAILY_TEMPLATES: Array<{
   targetLines: string[];
   initialCursor: { line: number; col: number };
   par: number;
-}> = [
+}> = localized([
   {
     title: 'React Hook 종속성 배열 및 화살표 함수 리팩토링',
     description: 'useEffect의 첫 번째 인자 함수를 간결하게 정리하고, 누락된 종속성 배열을 추가하세요.',
@@ -141,7 +142,7 @@ const DAILY_TEMPLATES: Array<{
     initialCursor: { line: 1, col: 20 },
     par: 15,
   },
-];
+]);
 
 /**
  * 날짜 문자열에 따라 결정론적으로 일일 챌린지 미션을 생성합니다.

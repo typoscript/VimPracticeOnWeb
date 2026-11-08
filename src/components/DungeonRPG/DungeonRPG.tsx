@@ -12,6 +12,7 @@ import {
 } from '../../utils/dungeonStorage';
 import { recordKeyInputStats } from '../../utils/analyticsStorage';
 import './DungeonRPG.css';
+import { t } from '../../i18n';
 
 export interface DungeonRPGProps {
   onPlayKeySound: (key: string, mode: VimMode) => void;
@@ -116,7 +117,7 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
         ['Shift', 'Control', 'Alt', 'Meta'].includes(key);
 
       if (!isAllowed) {
-        showToast(`🔒 이 스테이지에서는 아직 [${key}] 키를 사용할 수 없습니다!`);
+        showToast(t('🔒 이 스테이지에서는 아직 [{key}] 키를 사용할 수 없습니다!', { key }));
         return;
       }
 
@@ -136,22 +137,22 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
         // 벽(#) 충돌
         if (targetTileChar === '#') {
           nextState = { ...nextState, cursor: prevCursor };
-          showToast('🧱 벽에 부딪혔습니다!');
+          showToast(t('🧱 벽에 부딪혔습니다!'));
         }
         // 물(~) 충돌: 보행 불가
         else if (targetTileChar === '~') {
           nextState = { ...nextState, cursor: prevCursor };
-          showToast('🌊 깊은 물은 걸어서 건널 수 없습니다! w/b/e 도약 부츠를 사용하세요.');
+          showToast(t('🌊 깊은 물은 걸어서 건널 수 없습니다! w/b/e 도약 부츠를 사용하세요.'));
         }
         // 심연(_) 충돌: 다리가 없으면 보행 불가
         else if (targetTileChar === '_' && !nextState.lines[nextCursor.line]?.includes('BRIDGE')) {
           nextState = { ...nextState, cursor: prevCursor };
-          showToast('🕳️ 끊어진 심연입니다! 다리 블록을 yiw 복사한 후 p로 건설하세요.');
+          showToast(t('🕳️ 끊어진 심연입니다! 다리 블록을 yiw 복사한 후 p로 건설하세요.'));
         }
         // 잠긴 문(D) 충돌
         else if (targetTileChar === 'D' && !doorOpen) {
           nextState = { ...nextState, cursor: prevCursor };
-          showToast('🚪 굳게 잠긴 문입니다! 황금 열쇠(K)를 획득하세요.');
+          showToast(t('🚪 굳게 잠긴 문입니다! 황금 열쇠(K)를 획득하세요.'));
         }
       }
 
@@ -175,7 +176,7 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
         setHasKey(true);
         setDoorOpen(true);
         onPlaySuccessSound();
-        showToast('🗝️ 황금 열쇠를 획득하여 잠긴 문(D)이 열렸습니다!');
+        showToast(t('🗝️ 황금 열쇠를 획득하여 잠긴 문(D)이 열렸습니다!'));
 
         // 맵에서 K를 빈 공간(.)으로 갱신
         const updatedLines = [...nextState.lines];
@@ -193,7 +194,7 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
           setHasKey(true);
           onPlaySuccessSound();
           setSlashEffect({ line: 2, col: 5, label: 'BOSS CRUSHED! 💥' });
-          showToast('💥 버그 로드가 쓰러져 신전의 거대한 문이 열렸습니다!');
+          showToast(t('💥 버그 로드가 쓰러져 신전의 거대한 문이 열렸습니다!'));
         }
       }
 
@@ -285,7 +286,7 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
 
         <div className="hud-center">
           <div className="hud-metric stroke-metric">
-            <span className="metric-label">타수 (MANA)</span>
+            <span className="metric-label">{t('타수 (MANA)')}</span>
             <span
               className={`metric-val ${keystrokes <= stage.par ? 'good' : 'warning'}`}
               data-testid="dungeon-keystrokes"
@@ -295,16 +296,16 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
           </div>
 
           <div className="hud-metric key-metric">
-            <span className="metric-label">열쇠</span>
+            <span className="metric-label">{t('열쇠')}</span>
             <span className="metric-val" data-testid="dungeon-key-status">
-              {hasKey ? '🗝️ 보유 중' : '❌ 없음'}
+              {hasKey ? t('🗝️ 보유 중') : t('❌ 없음')}
             </span>
           </div>
 
           <div className="hud-metric door-metric">
-            <span className="metric-label">철문</span>
+            <span className="metric-label">{t('철문')}</span>
             <span className="metric-val" data-testid="dungeon-door-status">
-              {doorOpen ? '🔓 개방됨' : '🔒 잠김'}
+              {doorOpen ? t('🔓 개방됨') : t('🔒 잠김')}
             </span>
           </div>
         </div>
@@ -315,7 +316,7 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
             onClick={() => loadStage(currentStageIndex)}
             data-testid="dungeon-restart-btn"
           >
-            🔄 스테이지 재시작
+            {t('🔄 스테이지 재시작')}
           </button>
         </div>
       </header>
@@ -431,19 +432,19 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
         <div className="dungeon-modal-overlay" data-testid="dungeon-clear-modal">
           <div className="dungeon-clear-dialog">
             <span className="dialog-trophy">🎉</span>
-            <h2 className="clear-title">{stage.title} 클리어!</h2>
+            <h2 className="clear-title">{t('{title} 클리어!', { title: stage.title })}</h2>
             <div className="clear-stars">
               {'⭐'.repeat(starsEarned)}{' '}
-              {starsEarned === 3 ? '(마스터 Par 달성!)' : ''}
+              {starsEarned === 3 ? t('(마스터 Par 달성!)') : ''}
             </div>
 
             <p className="clear-stat">
-              소모 마나(타수): <strong>{keystrokes}타</strong> (Par 기준: {stage.par}타)
+              {t('소모 마나(타수):')} <strong>{t('{n}타', { n: keystrokes })}</strong> {t('(Par 기준: {n}타)', { n: stage.par })}
             </p>
 
             {unlockedSkill && (
               <div className="unlocked-skill-card" data-testid="unlocked-skill-card">
-                <span className="scroll-tag">📜 신규 Vim 스킬 스크롤 획득!</span>
+                <span className="scroll-tag">{t('📜 신규 Vim 스킬 스크롤 획득!')}</span>
                 <div className="skill-detail">
                   <span className="detail-icon">{unlockedSkill.icon}</span>
                   <div>
@@ -467,7 +468,7 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
                   onClick={() => loadStage(currentStageIndex + 1)}
                   data-testid="next-stage-btn"
                 >
-                  다음 스테이지로 진입 (Enter) &gt;
+                  {t('다음 스테이지로 진입 (Enter) >')}
                 </button>
               ) : (
                 <button
@@ -475,14 +476,14 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
                   onClick={() => loadStage(0)}
                   data-testid="restart-from-first-btn"
                 >
-                  🏆 전설 달성! 첫 스테이지로 &gt;
+                  {t('🏆 전설 달성! 첫 스테이지로 >')}
                 </button>
               )}
               <button
                 className="retry-stage-btn"
                 onClick={() => loadStage(currentStageIndex)}
               >
-                더 적은 타수로 재도전
+                {t('더 적은 타수로 재도전')}
               </button>
             </div>
           </div>

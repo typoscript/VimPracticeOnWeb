@@ -6,6 +6,7 @@ import {
   getTopCommands,
 } from '../../utils/analyticsStorage';
 import './AnalyticsModal.css';
+import { t } from '../../i18n';
 
 export interface AnalyticsModalProps {
   isOpen: boolean;
@@ -53,11 +54,11 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
 
   // 5축 레이더 차트 SVG 좌표 계산
   const axesMeta = [
-    { key: 'navigation', label: '기본 이동', sub: 'hjkl / wb', value: proficiency.navigation },
-    { key: 'targeting', label: '정밀 타겟팅', sub: 'f / t / % / 점프', value: proficiency.targeting },
-    { key: 'textObjects', label: '텍스트 객체', sub: 'ciw / da"', value: proficiency.textObjects },
-    { key: 'batchEditing', label: '대량 편집', sub: ':s / :g / :norm', value: proficiency.batchEditing },
-    { key: 'efficiency', label: '타수 효율성', sub: 'Golf Par 달성률', value: proficiency.efficiency },
+    { key: 'navigation', label: t('기본 이동'), sub: 'hjkl / wb', value: proficiency.navigation },
+    { key: 'targeting', label: t('정밀 타겟팅'), sub: t('f / t / % / 점프'), value: proficiency.targeting },
+    { key: 'textObjects', label: t('텍스트 객체'), sub: 'ciw / da"', value: proficiency.textObjects },
+    { key: 'batchEditing', label: t('대량 편집'), sub: ':s / :g / :norm', value: proficiency.batchEditing },
+    { key: 'efficiency', label: t('타수 효율성'), sub: t('Golf Par 달성률'), value: proficiency.efficiency },
   ];
 
   const cx = 160;
@@ -103,21 +104,21 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Vim 숙련도 분석 대시보드"
+        aria-label={t('Vim 숙련도 분석 대시보드')}
         data-testid="analytics-modal"
       >
         <header className="analytics-header">
           <div className="analytics-title-group">
             <span className="analytics-icon">📊</span>
             <div>
-              <h2 className="analytics-title">Vim 숙련도 &amp; 학습 대시보드</h2>
-              <p className="analytics-subtitle">실시간 입력 패턴 분석 및 개인화된 능력치 레이더</p>
+              <h2 className="analytics-title">{t('Vim 숙련도 & 학습 대시보드')}</h2>
+              <p className="analytics-subtitle">{t('실시간 입력 패턴 분석 및 개인화된 능력치 레이더')}</p>
             </div>
           </div>
           <button
             className="analytics-close-btn"
             onClick={onClose}
-            aria-label="닫기"
+            aria-label={t('닫기')}
             data-testid="close-analytics-modal-btn"
           >
             ✕
@@ -127,23 +128,23 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
         {/* 상단 핵심 요약 통계 카드 */}
         <section className="analytics-summary-cards">
           <div className="summary-card">
-            <span className="summary-label">총 키스트로크</span>
+            <span className="summary-label">{t('총 키스트로크')}</span>
             <span className="summary-value highlight-cyan">
               {analytics.totalKeystrokes.toLocaleString()}
             </span>
-            <span className="summary-sub">누적 입력 타수</span>
+            <span className="summary-sub">{t('누적 입력 타수')}</span>
           </div>
           <div className="summary-card">
-            <span className="summary-label">튜토리얼 완료</span>
+            <span className="summary-label">{t('튜토리얼 완료')}</span>
             <span className="summary-value highlight-green">
               {completedLessons} <small>/ {totalLessons}</small>
             </span>
-            <span className="summary-sub">⭐ 3스타: {threeStarLessons}개</span>
+            <span className="summary-sub">{t('⭐ 3스타: {n}개', { n: threeStarLessons })}</span>
           </div>
           <div className="summary-card">
-            <span className="summary-label">데일리 챌린지</span>
+            <span className="summary-label">{t('데일리 챌린지')}</span>
             <span className="summary-value highlight-yellow">
-              {analytics.dailyStreak}일 연속
+              {t('{n}일 연속', { n: analytics.dailyStreak })}
             </span>
             <span className="summary-sub">
               {onOpenDailyChallenge && (
@@ -155,17 +156,17 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
                   }}
                   data-testid="analytics-quick-daily-btn"
                 >
-                  오늘 풀기 &gt;
+                  {t('오늘 풀기 >')}
                 </button>
               )}
             </span>
           </div>
           <div className="summary-card">
-            <span className="summary-label">아케이드 서바이벌</span>
+            <span className="summary-label">{t('아케이드 서바이벌')}</span>
             <span className="summary-value highlight-purple">
-              {analytics.arcadeBestScore.toLocaleString()}점
+              {t('{n}점', { n: analytics.arcadeBestScore.toLocaleString() })}
             </span>
-            <span className="summary-sub">최고 {analytics.arcadeHighestWave}W • {analytics.arcadeMaxCombo}콤보</span>
+            <span className="summary-sub">{t('최고 {wave}W • {combo}콤보', { wave: analytics.arcadeHighestWave, combo: analytics.arcadeMaxCombo })}</span>
           </div>
         </section>
 
@@ -173,7 +174,7 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
           {/* 5각형 숙련도 레이더 차트 (순수 SVG) */}
           <section className="radar-section">
             <h3 className="section-title">
-              <span>🎯</span> 5각형 Vim 숙련도 레이더
+              <span>🎯</span> {t('5각형 Vim 숙련도 레이더')}
             </h3>
             <div className="radar-chart-container">
               <svg
@@ -245,7 +246,7 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
                         textAnchor={textAnchor}
                         className="radar-axis-title"
                       >
-                        {axis.label} ({axis.value}점)
+                        {t('{label} ({value}점)', { label: axis.label, value: axis.value })}
                       </text>
                       <text
                         x={lx}
@@ -265,11 +266,11 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
           {/* 내가 가장 많이 쓴 명령어 Top 10 */}
           <section className="top-commands-section">
             <h3 className="section-title">
-              <span>⌨️</span> 최다 사용 명령어 Top 10
+              <span>⌨️</span> {t('최다 사용 명령어 Top 10')}
             </h3>
             {topCommands.length === 0 ? (
               <div className="empty-commands">
-                아직 키 입력 데이터가 없습니다. 에디터에서 연습을 시작해 보세요!
+                {t('아직 키 입력 데이터가 없습니다. 에디터에서 연습을 시작해 보세요!')}
               </div>
             ) : (
               <ul className="top-commands-list" data-testid="top-commands-list">
@@ -286,7 +287,7 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
                           style={{ width: `${percent}%` }}
                         />
                       </div>
-                      <span className="command-count">{item.count.toLocaleString()}회</span>
+                      <span className="command-count">{t('{n}회', { n: item.count.toLocaleString() })}</span>
                     </li>
                   );
                 })}
@@ -298,38 +299,38 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
         {/* 교정된 안티패턴 피드백 섹션 */}
         <section className="antipattern-section">
           <h3 className="section-title">
-            <span>🛡️</span> 비효율 입력 습관(안티패턴) 교정 현황
+            <span>🛡️</span> {t('비효율 입력 습관(안티패턴) 교정 현황')}
           </h3>
           <p className="antipattern-desc">
-            스마트 코칭이 감지한 비효율적인 조작 습관과 추천 명령어 피드백 내역입니다.
+            {t('스마트 코칭이 감지한 비효율적인 조작 습관과 추천 명령어 피드백 내역입니다.')}
           </p>
           {antiPatterns.length === 0 ? (
             <div className="antipattern-clean-card">
               <span className="clean-icon">✨</span>
-              <span>감지된 안티패턴이 없습니다! 아주 훌륭한 Vim 습관을 유지하고 계십니다.</span>
+              <span>{t('감지된 안티패턴이 없습니다! 아주 훌륭한 Vim 습관을 유지하고 계십니다.')}</span>
             </div>
           ) : (
             <div className="antipattern-grid" data-testid="antipattern-grid">
               {antiPatterns.map(([name, count]) => (
                 <div key={name} className="antipattern-card">
                   <div className="antipattern-header">
-                    <span className="antipattern-name">{name}</span>
-                    <span className="antipattern-badge">{count}회 감지</span>
+                    <span className="antipattern-name">{t(name)}</span>
+                    <span className="antipattern-badge">{t('{n}회 감지', { n: count })}</span>
                   </div>
                   <span className="antipattern-tip">
-                    {name.includes('Backspace') && '💡 해결책: Normal 모드에서 x, dw, ciw 로 수정하세요.'}
-                    {name.includes('방향키') && '💡 해결책: w/b 단어 점프나 숫자를 붙인 5j/3k를 활용하세요.'}
-                    {name.includes('$') && '💡 해결책: 대문자 A로 줄 끝 입력 모드에 한 번에 진입하세요.'}
-                    {name.includes('0') && '💡 해결책: 대문자 I로 줄 맨 앞 입력 모드로 바로 들어가세요.'}
-                    {name.includes('c$') && '💡 해결책: 대문자 C를 누르면 한 타수로 해결됩니다.'}
-                    {name.includes('d$') && '💡 해결책: 대문자 D를 누르면 한 타수로 줄 끝까지 삭제됩니다.'}
+                    {name.includes('Backspace') && t('💡 해결책: Normal 모드에서 x, dw, ciw 로 수정하세요.')}
+                    {name.includes('방향키') && t('💡 해결책: w/b 단어 점프나 숫자를 붙인 5j/3k를 활용하세요.')}
+                    {name.includes('$') && t('💡 해결책: 대문자 A로 줄 끝 입력 모드에 한 번에 진입하세요.')}
+                    {name.includes('0') && t('💡 해결책: 대문자 I로 줄 맨 앞 입력 모드로 바로 들어가세요.')}
+                    {name.includes('c$') && t('💡 해결책: 대문자 C를 누르면 한 타수로 해결됩니다.')}
+                    {name.includes('d$') && t('💡 해결책: 대문자 D를 누르면 한 타수로 줄 끝까지 삭제됩니다.')}
                     {!name.includes('Backspace') &&
                       !name.includes('방향키') &&
                       !name.includes('$') &&
                       !name.includes('0') &&
                       !name.includes('c$') &&
                       !name.includes('d$') &&
-                      '💡 해결책: 카운트나 모션 단축키를 결합해 보세요.'}
+                      t('💡 해결책: 카운트나 모션 단축키를 결합해 보세요.')}
                   </span>
                 </div>
               ))}
@@ -343,7 +344,7 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
             onClick={onClose}
             data-testid="analytics-confirm-btn"
           >
-            확인
+            {t('확인')}
           </button>
         </footer>
       </div>

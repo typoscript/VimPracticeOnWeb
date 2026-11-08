@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { Mission } from '../../types/mission';
 import { LessonProgress } from '../../utils/storage';
 import './LessonSelectModal.css';
+import { t } from '../../i18n';
 
 export interface LessonSelectModalProps {
   isOpen: boolean;
@@ -69,12 +70,12 @@ export const LessonSelectModal: React.FC<LessonSelectModalProps> = ({
       >
         <div className="modal-header">
           <h2 id="lesson-modal-title" className="modal-title">
-            📚 Vim 커리큘럼 레슨 목록
+            {t('📚 Vim 커리큘럼 레슨 목록')}
           </h2>
           <button
             className="modal-close-btn"
             onClick={onClose}
-            aria-label="닫기"
+            aria-label={t('닫기')}
             data-testid="modal-close-btn"
           >
             ✕
@@ -83,13 +84,13 @@ export const LessonSelectModal: React.FC<LessonSelectModalProps> = ({
 
         <div className="modal-stats-bar" data-testid="modal-stats-bar">
           <div className="stat-item">
-            <span className="stat-label">진행도:</span>
+            <span className="stat-label">{t('진행도:')}</span>
             <span className="stat-value">
-              {completedCount} / {totalLessons} 완료
+              {t('{done} / {total} 완료', { done: completedCount, total: totalLessons })}
             </span>
           </div>
           <div className="stat-item">
-            <span className="stat-label">획득 별점:</span>
+            <span className="stat-label">{t('획득 별점:')}</span>
             <span className="stat-value stars-value">
               ★ {totalStarsEarned} / {maxPossibleStars}
             </span>
@@ -124,7 +125,7 @@ export const LessonSelectModal: React.FC<LessonSelectModalProps> = ({
                       className="current-badge"
                       data-testid={`current-badge-${mission.id}`}
                     >
-                      현재 학습 중
+                      {t('현재 학습 중')}
                     </span>
                   )}
                 </div>
@@ -141,12 +142,12 @@ export const LessonSelectModal: React.FC<LessonSelectModalProps> = ({
                           {renderStars(record.bestStars)}
                         </div>
                         <span className="record-keystrokes">
-                          최고 {record.minKeystrokes}타 (Par {mission.par ?? '-'})
+                          {t('최고 {n}타 (Par {par})', { n: record.minKeystrokes, par: mission.par ?? '-' })}
                         </span>
                       </>
                     ) : (
                       <span className="not-completed-badge">
-                        도전 전 (목표 {mission.par ?? '-'}타)
+                        {t('도전 전 (목표 {par}타)', { par: mission.par ?? '-' })}
                       </span>
                     )}
                   </div>
@@ -158,7 +159,7 @@ export const LessonSelectModal: React.FC<LessonSelectModalProps> = ({
                       onClose();
                     }}
                   >
-                    {isCurrent ? '진행 중' : '선택'}
+                    {isCurrent ? t('진행 중') : t('선택')}
                   </button>
                 </div>
               </div>

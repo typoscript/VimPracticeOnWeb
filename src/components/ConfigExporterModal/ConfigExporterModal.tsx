@@ -10,6 +10,7 @@ import {
 } from '../../utils/configGenerator';
 import { copyTextToClipboard } from '../../utils/dailyChallenge';
 import './ConfigExporterModal.css';
+import { t } from '../../i18n';
 
 export interface ConfigExporterModalProps {
   isOpen: boolean;
@@ -84,13 +85,13 @@ export const ConfigExporterModal: React.FC<ConfigExporterModalProps> = ({
   const filePathGuide = useMemo(() => {
     switch (activeTab) {
       case 'vimrc':
-        return '경로: ~/.vimrc (Linux/Mac) 또는 ~/_vimrc (Windows)';
+        return t('경로: ~/.vimrc (Linux/Mac) 또는 ~/_vimrc (Windows)');
       case 'initLua':
-        return '경로: ~/.config/nvim/init.lua (Linux/Mac) 또는 ~/AppData/Local/nvim/init.lua (Windows)';
+        return t('경로: ~/.config/nvim/init.lua (Linux/Mac) 또는 ~/AppData/Local/nvim/init.lua (Windows)');
       case 'vscode':
-        return '경로: VS Code 설정 > Open User Settings (JSON)에 추가 붙여넣기';
+        return t('경로: VS Code 설정 > Open User Settings (JSON)에 추가 붙여넣기');
       case 'ideaVim':
-        return '경로: ~/.ideavimrc (홈 디렉터리에 파일 생성 후 IntelliJ 재시작)';
+        return t('경로: ~/.ideavimrc (홈 디렉터리에 파일 생성 후 IntelliJ 재시작)');
       default:
         return '';
     }
@@ -117,23 +118,23 @@ export const ConfigExporterModal: React.FC<ConfigExporterModalProps> = ({
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="커스텀 키매핑 및 설정 파일 익스포터"
+        aria-label={t('커스텀 키매핑 및 설정 파일 익스포터')}
         data-testid="config-modal"
       >
         <header className="config-header">
           <div className="config-title-group">
             <span className="config-icon">⚙️</span>
             <div>
-              <h2 className="config-title">커스텀 키매핑 &amp; 설정 파일 익스포터</h2>
+              <h2 className="config-title">{t('커스텀 키매핑 & 설정 파일 익스포터')}</h2>
               <p className="config-subtitle">
-                웹에서 익힌 키매핑과 옵션을 내 실제 로컬 개발 환경(Vim, Neovim, VS Code, IntelliJ)으로 바로 내보내세요.
+                {t('웹에서 익힌 키매핑과 옵션을 내 실제 로컬 개발 환경(Vim, Neovim, VS Code, IntelliJ)으로 바로 내보내세요.')}
               </p>
             </div>
           </div>
           <button
             className="config-close-btn"
             onClick={onClose}
-            aria-label="닫기"
+            aria-label={t('닫기')}
             data-testid="close-config-modal-btn"
           >
             ✕
@@ -143,16 +144,16 @@ export const ConfigExporterModal: React.FC<ConfigExporterModalProps> = ({
         {/* 상단: 커스텀 키매핑 프리셋 토글 섹션 */}
         <section className="presets-section">
           <div className="presets-header">
-            <h3 className="section-label">⚡ 실무 인기 키매핑 프리셋</h3>
+            <h3 className="section-label">{t('⚡ 실무 인기 키매핑 프리셋')}</h3>
             <div className="leader-picker">
-              <label htmlFor="leader-select">리더 키 (Leader):</label>
+              <label htmlFor="leader-select">{t('리더 키 (Leader):')}</label>
               <select
                 id="leader-select"
                 value={leaderKey}
                 onChange={(e) => onChangeLeaderKey(e.target.value)}
                 data-testid="leader-select"
               >
-                <option value=" ">Space (공백)</option>
+                <option value=" ">{t('Space (공백)')}</option>
                 <option value="\">Backslash (\)</option>
                 <option value=",">Comma (,)</option>
               </select>
@@ -240,7 +241,7 @@ export const ConfigExporterModal: React.FC<ConfigExporterModalProps> = ({
         <footer className="config-modal-footer">
           <div className="footer-left">
             <span className="file-info-badge">
-              파일명: <strong>{configFilename}</strong>
+              {t('파일명:')} <strong>{configFilename}</strong>
             </span>
           </div>
           <div className="footer-right">
@@ -249,21 +250,21 @@ export const ConfigExporterModal: React.FC<ConfigExporterModalProps> = ({
               onClick={handleCopy}
               data-testid="copy-config-btn"
             >
-              {copied ? '✅ 복사 완료!' : '📋 클립보드 복사'}
+              {copied ? t('✅ 복사 완료!') : t('📋 클립보드 복사')}
             </button>
             <button
               className="action-btn download-btn"
               onClick={handleDownload}
               data-testid="download-config-btn"
             >
-              💾 파일 다운로드 ({configFilename})
+              {t('💾 파일 다운로드 ({file})', { file: configFilename })}
             </button>
             <button
               className="action-btn close-action-btn"
               onClick={onClose}
               data-testid="confirm-config-btn"
             >
-              닫기
+              {t('닫기')}
             </button>
           </div>
         </footer>

@@ -17,6 +17,7 @@ import {
   recordKeyInputStats,
 } from '../../utils/analyticsStorage';
 import './DailyChallengeModal.css';
+import { t } from '../../i18n';
 
 export interface DailyChallengeModalProps {
   isOpen: boolean;
@@ -240,7 +241,7 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="오늘의 데일리 챌린지"
+        aria-label={t('오늘의 데일리 챌린지')}
         data-testid="daily-modal"
       >
         <header className="daily-header">
@@ -251,7 +252,7 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
           <button
             className="daily-close-btn"
             onClick={onClose}
-            aria-label="닫기"
+            aria-label={t('닫기')}
             data-testid="close-daily-modal-btn"
           >
             ✕
@@ -264,14 +265,14 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
           <div className="daily-metrics">
             <div className="metric-box">
               <span className="metric-label">PAR</span>
-              <span className="metric-val par-val">{puzzle.par}타</span>
+              <span className="metric-val par-val">{t('{n}타', { n: puzzle.par })}</span>
             </div>
             <div className="metric-box">
-              <span className="metric-label">타수</span>
-              <span className="metric-val stroke-val">{keystrokes}타</span>
+              <span className="metric-label">{t('타수')}</span>
+              <span className="metric-val stroke-val">{t('{n}타', { n: keystrokes })}</span>
             </div>
             <div className="metric-box">
-              <span className="metric-label">시간</span>
+              <span className="metric-label">{t('시간')}</span>
               <span className="metric-val time-val">{elapsedSeconds}s</span>
             </div>
           </div>
@@ -284,21 +285,21 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
             onClick={() => setShowHint((prev) => !prev)}
             data-testid="toggle-daily-hint-btn"
           >
-            {showHint ? '💡 힌트 접기' : '💡 힌트 보기'}
+            {showHint ? t('💡 힌트 접기') : t('💡 힌트 보기')}
           </button>
           <button
             className="daily-text-btn"
             onClick={() => setShowDiff((prev) => !prev)}
             data-testid="toggle-daily-diff-btn"
           >
-            {showDiff ? '🎯 목표 Diff 숨기기' : '🎯 목표 Diff 보기'}
+            {showDiff ? t('🎯 목표 Diff 숨기기') : t('🎯 목표 Diff 보기')}
           </button>
           <button
             className="daily-text-btn"
             onClick={handleReset}
             data-testid="daily-reset-btn"
           >
-            🔄 다시 시도
+            {t('🔄 다시 시도')}
           </button>
         </div>
 
@@ -348,11 +349,11 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
                   ? '⭐⭐'
                   : '⭐'}
               </span>
-              <h3>🎉 오늘의 데일리 챌린지 클리어!</h3>
+              <h3>{t('🎉 오늘의 데일리 챌린지 클리어!')}</h3>
             </div>
             <p className="result-summary">
-              결과: <strong>{completedRecord?.keystrokes ?? keystrokes}타</strong> (Par: {puzzle.par}) •{' '}
-              <strong>{completedRecord?.elapsedSeconds ?? elapsedSeconds}초</strong>
+              {t('결과:')} <strong>{t('{n}타', { n: completedRecord?.keystrokes ?? keystrokes })}</strong> (Par: {puzzle.par}) •{' '}
+              <strong>{t('{n}초', { n: completedRecord?.elapsedSeconds ?? elapsedSeconds })}</strong>
             </p>
             <div className="result-actions">
               <button
@@ -360,14 +361,14 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
                 onClick={handleCopyCard}
                 data-testid="daily-share-btn"
               >
-                {copySuccess ? '✅ 결과가 클립보드에 복사되었습니다!' : '📋 결과 복사 (Wordle 스타일 Share)'}
+                {copySuccess ? t('✅ 결과가 클립보드에 복사되었습니다!') : t('📋 결과 복사 (Wordle 스타일 Share)')}
               </button>
               <button
                 className="retry-btn"
                 onClick={handleReset}
                 data-testid="daily-retry-btn"
               >
-                더 적은 타수로 재도전
+                {t('더 적은 타수로 재도전')}
               </button>
             </div>
           </div>

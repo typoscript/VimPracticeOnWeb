@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 export interface RefactoringRuleInfo {
   id: string;
   title: string;
@@ -42,11 +43,11 @@ export function analyzeAndGenerateBYOC(sourceCode: string): BYOCAnalysisResult {
     const count = varMatches.length;
     detectedRules.push({
       id: 'var_to_const',
-      title: 'Modern JS: var 선언을 모던 const로 일괄 교체',
+      title: t('Modern JS: var 선언을 모던 const로 일괄 교체'),
       category: 'Modern JS',
-      description: `코드 내 레거시 var 키워드 ${count}개를 최신 ES6+ const 선언으로 리팩토링하세요.`,
-      hint: ':%s/var/const/g 명령으로 일괄 치환하거나, ciw로 첫 번째 var를 수정한 후 n. 으로 반복하세요.',
-      recommendedVimCommand: ':%s/var/const/g 또는 ciw + n.',
+      description: t('코드 내 레거시 var 키워드 {count}개를 최신 ES6+ const 선언으로 리팩토링하세요.', { count }),
+      hint: t(':%s/var/const/g 명령으로 일괄 치환하거나, ciw로 첫 번째 var를 수정한 후 n. 으로 반복하세요.'),
+      recommendedVimCommand: t(':%s/var/const/g 또는 ciw + n.'),
       matchCount: count,
       targetText,
       estimatedPar: count <= 2 ? 14 : 16,
@@ -65,11 +66,11 @@ export function analyzeAndGenerateBYOC(sourceCode: string): BYOCAnalysisResult {
     const count = logLines.length;
     detectedRules.push({
       id: 'remove_debug_logs',
-      title: 'Clean Code: 프로덕션 배포 전 디버그 출력 로그 삭제',
+      title: t('Clean Code: 프로덕션 배포 전 디버그 출력 로그 삭제'),
       category: 'Clean Code',
-      description: `남아있는 디버그 로그 ${count}줄을 깨끗하게 삭제하여 클린 코드를 완성하세요.`,
-      hint: ':g/console\\.log/d 로 로그 줄을 한 번에 일괄 삭제하거나, 해당 줄에서 dd 로 빠르게 잘라내세요.',
-      recommendedVimCommand: ':g/console\\.log/d 또는 dd',
+      description: t('남아있는 디버그 로그 {count}줄을 깨끗하게 삭제하여 클린 코드를 완성하세요.', { count }),
+      hint: t(':g/console\\.log/d 로 로그 줄을 한 번에 일괄 삭제하거나, 해당 줄에서 dd 로 빠르게 잘라내세요.'),
+      recommendedVimCommand: t(':g/console\\.log/d 또는 dd'),
       matchCount: count,
       targetText,
       estimatedPar: count === 1 ? 4 : 14,
@@ -83,11 +84,11 @@ export function analyzeAndGenerateBYOC(sourceCode: string): BYOCAnalysisResult {
     const count = singleQuoteMatches.length;
     detectedRules.push({
       id: 'single_to_double_quotes',
-      title: 'Style Guide: 작은따옴표를 큰따옴표로 통일',
+      title: t('Style Guide: 작은따옴표를 큰따옴표로 통일'),
       category: 'Style Guide',
-      description: `문자열 리터럴 ${count}개의 작은따옴표(')를 팀 표준인 큰따옴표(")로 통일하세요.`,
-      hint: 'ci\' 로 문자열 내부를 다시 작성하거나, :%s/\'/\\"/g 명령으로 일괄 치환하세요.',
-      recommendedVimCommand: 'ci\' 또는 :%s/\'/\\"/g',
+      description: t('문자열 리터럴 {count}개의 작은따옴표(\')를 팀 표준인 큰따옴표(")로 통일하세요.', { count }),
+      hint: t('ci\' 로 문자열 내부를 다시 작성하거나, :%s/\'/\\"/g 명령으로 일괄 치환하세요.'),
+      recommendedVimCommand: t('ci\' 또는 :%s/\'/\\"/g'),
       matchCount: count,
       targetText,
       estimatedPar: Math.min(24, Math.max(12, count * 4)),
@@ -101,11 +102,11 @@ export function analyzeAndGenerateBYOC(sourceCode: string): BYOCAnalysisResult {
     const count = snakeMatches.length;
     detectedRules.push({
       id: 'snake_to_camel',
-      title: 'Code Convention: snake_case 식별자를 camelCase로 변환',
+      title: t('Code Convention: snake_case 식별자를 camelCase로 변환'),
       category: 'Code Convention',
-      description: `snake_case 식별자 ${count}개(${snakeMatches.slice(0, 3).join(', ')})를 카멜표기법으로 변경하세요.`,
-      hint: 'f_ 로 밑줄로 즉시 점프한 뒤 x(밑줄 삭제), ~(다음 문자 대문자 토글)을 조합하세요.',
-      recommendedVimCommand: 'f_ + x + ~ 또는 ciw',
+      description: t('snake_case 식별자 {count}개({v})를 카멜표기법으로 변경하세요.', { count, v: snakeMatches.slice(0, 3).join(', ') }),
+      hint: t('f_ 로 밑줄로 즉시 점프한 뒤 x(밑줄 삭제), ~(다음 문자 대문자 토글)을 조합하세요.'),
+      recommendedVimCommand: t('f_ + x + ~ 또는 ciw'),
       matchCount: count,
       targetText,
       estimatedPar: count * 5 + 6,
@@ -141,11 +142,11 @@ export function analyzeAndGenerateBYOC(sourceCode: string): BYOCAnalysisResult {
     const count = missingSemicolons.length;
     detectedRules.push({
       id: 'semicolon_enforce',
-      title: 'Syntax Enforcement: 누락된 세미콜론(;) 일괄 보정',
+      title: t('Syntax Enforcement: 누락된 세미콜론(;) 일괄 보정'),
       category: 'Syntax Enforcement',
-      description: `구문 끝에 세미콜론이 빠진 ${count}개 라인을 찾아 완결하세요.`,
-      hint: 'Shift+A (A;)로 줄 끝에 세미콜론을 넣은 후, j. 로 아래 줄에 연속 적용하거나 :%norm A; 를 사용하세요.',
-      recommendedVimCommand: 'A; <Esc> + j. 또는 :%norm A;',
+      description: t('구문 끝에 세미콜론이 빠진 {count}개 라인을 찾아 완결하세요.', { count }),
+      hint: t('Shift+A (A;)로 줄 끝에 세미콜론을 넣은 후, j. 로 아래 줄에 연속 적용하거나 :%norm A; 를 사용하세요.'),
+      recommendedVimCommand: t('A; <Esc> + j. 또는 :%norm A;'),
       matchCount: count,
       targetText,
       estimatedPar: count <= 2 ? count * 4 : 14,
@@ -161,10 +162,10 @@ export function analyzeAndGenerateBYOC(sourceCode: string): BYOCAnalysisResult {
     );
     detectedRules.push({
       id: 'arrow_function',
-      title: 'Modern JS: 전통 함수 선언문을 화살표 함수로 전환',
+      title: t('Modern JS: 전통 함수 선언문을 화살표 함수로 전환'),
       category: 'Modern JS',
-      description: '전통적인 function 함수 선언문을 최신 화살표 함수(Arrow Function) 표현식으로 리팩토링하세요.',
-      hint: 'ciw const <Esc> 로 키워드를 바꾸고, f) a => <Esc> 로 화살표를 삽입하세요.',
+      description: t('전통적인 function 함수 선언문을 최신 화살표 함수(Arrow Function) 표현식으로 리팩토링하세요.'),
+      hint: t('ciw const <Esc> 로 키워드를 바꾸고, f) a => <Esc> 로 화살표를 삽입하세요.'),
       recommendedVimCommand: 'ciw const + f) + a =>',
       matchCount: 1,
       targetText,
@@ -177,10 +178,10 @@ export function analyzeAndGenerateBYOC(sourceCode: string): BYOCAnalysisResult {
     const targetText = code ? `${code}\n// Refactored with Vim` : '// Refactored with Vim';
     detectedRules.push({
       id: 'generic_refactor',
-      title: 'Vim Golf: 코드 리팩토링 및 주석 완결',
+      title: t('Vim Golf: 코드 리팩토링 및 주석 완결'),
       category: 'Clean Code',
-      description: '코드 파일 끝에 리팩토링 완료 서명을 추가하세요.',
-      hint: 'Shift+G (G) 로 파일 끝으로 이동한 뒤, o 로 새 줄을 열고 텍스트를 입력하세요.',
+      description: t('코드 파일 끝에 리팩토링 완료 서명을 추가하세요.'),
+      hint: t('Shift+G (G) 로 파일 끝으로 이동한 뒤, o 로 새 줄을 열고 텍스트를 입력하세요.'),
       recommendedVimCommand: 'G + o',
       matchCount: 1,
       targetText,

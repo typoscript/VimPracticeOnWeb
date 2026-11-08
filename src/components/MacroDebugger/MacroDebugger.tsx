@@ -9,6 +9,7 @@ import {
   listMacroRegisters,
 } from '../../vim-engine';
 import './MacroDebugger.css';
+import { t } from '../../i18n';
 
 export interface MacroDebuggerProps {
   /** 매크로 추적의 출발점이 되는 실제 에디터 상태 */
@@ -153,12 +154,12 @@ export const MacroDebugger: React.FC<MacroDebuggerProps> = ({
         <div className="macro-debugger-title-area">
           <span className="macro-debugger-icon">🎞️</span>
           <h3 className="macro-debugger-title">Macro Debugger</h3>
-          <span className="macro-debugger-subtitle">매크로 슬로우모션 단계별 실행</span>
+          <span className="macro-debugger-subtitle">{t('매크로 슬로우모션 단계별 실행')}</span>
         </div>
         <button
           className="macro-debugger-close-btn"
           onClick={onToggle}
-          title="매크로 디버거 닫기"
+          title={t('매크로 디버거 닫기')}
           data-testid="close-macro-debugger-btn"
         >
           ✕
@@ -167,14 +168,14 @@ export const MacroDebugger: React.FC<MacroDebuggerProps> = ({
 
       {macroRegisters.length === 0 ? (
         <div className="macro-debugger-empty" data-testid="macro-debugger-empty">
-          녹화된 매크로가 없습니다. <code>qa</code> … <code>q</code> 로 매크로를 먼저 녹화하세요.
+          {t('녹화된 매크로가 없습니다.')} <code>qa</code> … <code>q</code> {t('로 매크로를 먼저 녹화하세요.')}
         </div>
       ) : (
         <>
           <div className="macro-debugger-controls">
             <div className="macro-control">
-              <span>레지스터</span>
-              <div className="macro-register-group" role="radiogroup" aria-label="매크로 레지스터">
+              <span>{t('레지스터')}</span>
+              <div className="macro-register-group" role="radiogroup" aria-label={t('매크로 레지스터')}>
                 {macroRegisters.map((r) => (
                   <button
                     key={r}
@@ -194,13 +195,13 @@ export const MacroDebugger: React.FC<MacroDebuggerProps> = ({
               </div>
             </div>
             <div className="macro-control">
-              <span>반복</span>
+              <span>{t('반복')}</span>
               <button
                 type="button"
                 className="macro-count-btn"
                 onClick={() => changeCount(-1)}
                 data-testid="macro-count-dec"
-                aria-label="반복 횟수 감소"
+                aria-label={t('반복 횟수 감소')}
               >
                 −
               </button>
@@ -212,12 +213,12 @@ export const MacroDebugger: React.FC<MacroDebuggerProps> = ({
                 className="macro-count-btn"
                 onClick={() => changeCount(1)}
                 data-testid="macro-count-inc"
-                aria-label="반복 횟수 증가"
+                aria-label={t('반복 횟수 증가')}
               >
                 +
               </button>
             </div>
-            <div className="macro-speed-group" role="radiogroup" aria-label="재생 속도">
+            <div className="macro-speed-group" role="radiogroup" aria-label={t('재생 속도')}>
               {MACRO_PLAYBACK_SPEEDS.map((sp, i) => (
                 <button
                   key={sp.label}
@@ -235,10 +236,10 @@ export const MacroDebugger: React.FC<MacroDebuggerProps> = ({
           </div>
 
           <div className="macro-debugger-transport">
-            <button type="button" onClick={handleReset} title="처음으로" data-testid="macro-reset-btn">
+            <button type="button" onClick={handleReset} title={t('처음으로')} data-testid="macro-reset-btn">
               ⏮
             </button>
-            <button type="button" onClick={() => handleStep(-1)} title="이전 키" data-testid="macro-prev-btn">
+            <button type="button" onClick={() => handleStep(-1)} title={t('이전 키')} data-testid="macro-prev-btn">
               ◀
             </button>
             <button
@@ -246,12 +247,12 @@ export const MacroDebugger: React.FC<MacroDebuggerProps> = ({
               className="macro-play-btn"
               onClick={handlePlayPause}
               disabled={!canDebug && !trace}
-              title={isPlaying ? '일시정지' : '슬로우모션 재생'}
+              title={isPlaying ? t('일시정지') : t('슬로우모션 재생')}
               data-testid="macro-play-btn"
             >
-              {isPlaying ? '⏸ 일시정지' : '▶ 재생'}
+              {isPlaying ? t('⏸ 일시정지') : t('▶ 재생')}
             </button>
-            <button type="button" onClick={() => handleStep(1)} title="다음 키" data-testid="macro-next-btn">
+            <button type="button" onClick={() => handleStep(1)} title={t('다음 키')} data-testid="macro-next-btn">
               ▶
             </button>
             <button
@@ -259,17 +260,17 @@ export const MacroDebugger: React.FC<MacroDebuggerProps> = ({
               className="macro-run-btn"
               onClick={handleRun}
               disabled={!canDebug}
-              title={`에디터에 ${count > 1 ? count : ''}@${register} 실제 실행`}
+              title={t('에디터에 {v}@{register} 실제 실행', { v: count > 1 ? count : '', register })}
               data-testid="macro-run-btn"
             >
-              ⚡ {count > 1 ? count : ''}@{register} 실행
+              {t('⚡ {count}@{register} 실행', { count: count > 1 ? count : '', register })}
             </button>
           </div>
 
           {!canDebug && (
             <div className="macro-debugger-warning" data-testid="macro-debugger-mode-warning">
-              ⚠ NORMAL 모드에서 대기 중인 키 없이만 매크로를 추적·실행할 수 있습니다. (현재: {baseState.mode}
-              {baseState.pendingKeys ? ` · 대기 키 ${baseState.pendingKeys}` : ''})
+              {t('⚠ NORMAL 모드에서 대기 중인 키 없이만 매크로를 추적·실행할 수 있습니다. (현재: {mode}', { mode: baseState.mode })}
+              {baseState.pendingKeys ? t(' · 대기 키 {pendingKeys}', { pendingKeys: baseState.pendingKeys }) : ''})
             </div>
           )}
 
@@ -302,16 +303,16 @@ export const MacroDebugger: React.FC<MacroDebuggerProps> = ({
             {frame && frameState ? (
               <>
                 <span className="macro-frame-counter">
-                  프레임 {frameIndex} / {totalFrames}
+                  {t('프레임 {frame} / {total}', { frame: frameIndex, total: totalFrames })}
                 </span>
                 <span className={`macro-mode-badge mode-${frameState.mode.toLowerCase()}`}>{frameState.mode}</span>
                 <span className="macro-cursor-pos">
                   {frameState.cursor.line + 1}:{frameState.cursor.col + 1}
                 </span>
-                {frame.changed && <span className="macro-changed-badge">✎ 버퍼 변경</span>}
+                {frame.changed && <span className="macro-changed-badge">{t('✎ 버퍼 변경')}</span>}
                 {frame.failed && (
                   <span className="macro-failed-badge" data-testid="macro-failed-badge">
-                    ⚠ 모션 실패 → 매크로 중단 (남은 키·반복 생략)
+                    {t('⚠ 모션 실패 → 매크로 중단 (남은 키·반복 생략)')}
                   </span>
                 )}
                 <code className="macro-line-preview" data-testid="macro-line-preview">
@@ -322,8 +323,7 @@ export const MacroDebugger: React.FC<MacroDebuggerProps> = ({
               </>
             ) : (
               <span className="macro-frame-hint">
-                총 {totalFrames}개 키 · ▶ 재생 또는 ▶ 다음 키로 한 프레임씩 확인하세요. 미리보기 중 에디터는 변경되지
-                않습니다.
+                {t('총 {n}개 키 · ▶ 재생 또는 ▶ 다음 키로 한 프레임씩 확인하세요. 미리보기 중 에디터는 변경되지 않습니다.', { n: totalFrames })}
               </span>
             )}
           </div>
