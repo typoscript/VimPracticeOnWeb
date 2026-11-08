@@ -1,5 +1,7 @@
 import { useSyncExternalStore } from 'react';
 import { EN } from './en';
+import { EN_CONTENT } from './enContent';
+import { configureVimEngine } from '../vim-engine';
 
 /**
  * 한/영 전환 (i18n)
@@ -9,6 +11,7 @@ import { EN } from './en';
  * 값이 들어가는 문장은 자리 표시를 씁니다: t('{n}개 항목', { n: 3 })
  *
  * 언어는 저장된 선택 → 브라우저 언어(ko 면 한국어, 그 외 영어) 순서로 정합니다.
+ * Vim 엔진의 상태 표시줄 메시지 언어(configureVimEngine 의 locale)도 함께 맞춥니다.
  */
 
 export type Locale = 'ko' | 'en';
@@ -29,10 +32,11 @@ function detectLocale(): Locale {
 let currentLocale: Locale = detectLocale();
 const listeners = new Set<() => void>();
 
-function applyDocumentLang(locale: Locale): void {
+function applyLocale(locale: Locale): void {
   if (typeof document !== 'undefined') document.documentElement.lang = locale;
+  configureVimEngine({ locale });
 }
-applyDocumentLang(currentLocale);
+applyLocale(currentLocale);
 
 export function getLocale(): Locale {
   return currentLocale;
@@ -49,7 +53,7 @@ export function setLocale(locale: Locale, options: { persist?: boolean } = {}): 
   }
   if (locale === currentLocale) return;
   currentLocale = locale;
-  applyDocumentLang(locale);
+  applyLocale(locale);
   listeners.forEach((fn) => fn());
 }
 
@@ -65,7 +69,7 @@ export function useLocale(): Locale {
 
 /** 한국어 원문을 현재 언어로 바꿉니다. {name} 자리 표시는 params 로 채웁니다. */
 export function t(ko: string, params?: Record<string, string | number | boolean | null | undefined>): string {
-  const template = currentLocale === 'en' ? EN[ko] ?? ko : ko;
+  const template = currentLocale === 'en' ? EN[ko] ?? EN_CONTENT[ko] ?? ko : ko;
   if (!params) return template;
   return template.replace(/\{(\w+)\}/g, (whole, key: string) => (key in params ? String(params[key]) : whole));
 }

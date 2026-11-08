@@ -1,4 +1,5 @@
 import { VimEditorState } from './types';
+import { msg } from './messages';
 
 export interface KeymapEntry {
   mode: string;
@@ -249,25 +250,23 @@ export function formatKeymapsList(state: VimEditorState, modeFilter = 'all'): st
   if (entries.length === 0) {
     const modeName =
       modeFilter === 'n'
-        ? '일반 (Normal)'
+        ? msg('일반 (Normal)')
         : modeFilter === 'i'
-        ? '입력 (Insert)'
+        ? msg('입력 (Insert)')
         : modeFilter === 'v'
-        ? '비주얼 (Visual)'
-        : '전체';
-    return `정의된 ${modeName} 키 매핑이 없습니다.`;
+        ? msg('비주얼 (Visual)')
+        : msg('전체');
+    return msg('정의된 {modeName} 키 매핑이 없습니다.', { modeName });
   }
 
   const lines = [
-    `--- 키 매핑 목록 (${
-      modeFilter === 'n'
+    msg('--- 키 매핑 목록 ({v}) ---', { v: modeFilter === 'n'
         ? 'Normal'
         : modeFilter === 'i'
         ? 'Insert'
         : modeFilter === 'v'
         ? 'Visual'
-        : 'All'
-    }) ---`,
+        : 'All' }),
     ...entries.map(
       (e) => `${(e.mode === ' ' ? ' ' : e.mode).padEnd(2)} ${e.lhs.padEnd(12)} ${e.rhs}`
     ),
@@ -322,7 +321,7 @@ export function registerKeymap(
     commandBuffer: undefined,
     commandType: undefined,
     userKeymaps: newKeymaps,
-    commandMessage: `[키매핑 등록] ${cmd}: ${lhs} -> ${rhs}`,
+    commandMessage: msg('[키매핑 등록] {cmd}: {lhs} -> {rhs}', { cmd, lhs, rhs }),
   };
 }
 
@@ -386,7 +385,7 @@ export function unregisterKeymap(
       mode: 'NORMAL',
       commandBuffer: undefined,
       commandType: undefined,
-      commandMessage: `E31: 매핑을 찾을 수 없습니다: ${lhs}`,
+      commandMessage: msg('E31: 매핑을 찾을 수 없습니다: {lhs}', { lhs }),
     };
   }
 
@@ -397,6 +396,6 @@ export function unregisterKeymap(
     commandBuffer: undefined,
     commandType: undefined,
     userKeymaps: newKeymaps,
-    commandMessage: `[키매핑 해제] ${cmd}: ${lhs}`,
+    commandMessage: msg('[키매핑 해제] {cmd}: {lhs}', { cmd, lhs }),
   };
 }

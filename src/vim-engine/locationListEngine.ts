@@ -2,6 +2,7 @@ import { QuickfixItem, QuickfixState, VimEditorState, SplitPaneState } from './t
 import { switchBuffer, syncCurrentBuffer } from './bufferEngine';
 import { parseQuickfixErrorLines } from './quickfixEngine';
 import { compileVimRegex } from './vimRegex';
+import { msg } from './messages';
 
 /**
  * 활성 분할 창이 있을 경우 해당 창의 locationList도 동기화합니다.
@@ -47,7 +48,7 @@ export function setLocationList(
     ...state,
     locationList: nextLoc,
     splitPanes: nextPanes,
-    commandMessage: `(${items.length} of ${items.length}) 로케이션 리스트 로드됨`,
+    commandMessage: msg('({itemsCount} of {itemsCount}) 로케이션 리스트 로드됨', { itemsCount: items.length }),
   };
 
   if (jumpToFirst && items.length > 0) {
@@ -188,7 +189,7 @@ export function openLocationListWindow(
     ...state,
     locationList: updatedLoc,
     splitPanes: updatedPanes,
-    commandMessage: `로케이션 리스트 윈도우 열림 (${loc.items.length}개 항목)`,
+    commandMessage: msg('로케이션 리스트 윈도우 열림 ({itemsCount}개 항목)', { itemsCount: loc.items.length }),
   };
 }
 
@@ -206,7 +207,7 @@ export function closeLocationListWindow(state: VimEditorState): VimEditorState {
     ...state,
     locationList: updatedLoc,
     splitPanes: updatedPanes,
-    commandMessage: '로케이션 리스트 윈도우 닫힘',
+    commandMessage: msg('로케이션 리스트 윈도우 닫힘'),
   };
 }
 
@@ -414,7 +415,7 @@ export function loadLocationListFromFile(
   if (items.length === 0) {
     return {
       ...state,
-      commandMessage: `(${filename}): 파싱 가능한 에러 항목이 없습니다`,
+      commandMessage: msg('({filename}): 파싱 가능한 에러 항목이 없습니다', { filename }),
     };
   }
 

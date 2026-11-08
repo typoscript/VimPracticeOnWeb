@@ -4,6 +4,7 @@ import { getVfsFile } from './vfs';
 import { registerKeymap } from './keymapEngine';
 import { executeUserCommandDefinition } from './userCommandEngine';
 import { defineFunctionFromLines, isEndFunctionLine, isFunctionHeaderLine } from './vimscriptEngine';
+import { msg } from './messages';
 
 /** 소싱 중 let / call / echo 등 Vim script 명령을 실행하기 위한 Ex 실행기 */
 export type SourceExRunner = (state: VimEditorState, command: string) => VimEditorState;
@@ -36,7 +37,7 @@ export function sourceScript(state: VimEditorState, targetFile = '%', runEx?: So
       } else {
         return {
           ...state,
-          commandMessage: `E484: 파일을 열 수 없습니다: "${target}"`,
+          commandMessage: msg('E484: 파일을 열 수 없습니다: "{target}"', { target }),
         };
       }
     }
@@ -116,6 +117,6 @@ export function sourceScript(state: VimEditorState, targetFile = '%', runEx?: So
 
   return {
     ...curState,
-    commandMessage: `"${sourceName}" ${appliedCount}개 설정 적용 완료 (sourced successfully)`,
+    commandMessage: msg('"{sourceName}" {appliedCount}개 설정 적용 완료 (sourced successfully)', { sourceName, appliedCount }),
   };
 }

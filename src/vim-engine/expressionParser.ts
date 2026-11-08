@@ -1,3 +1,4 @@
+import { msg } from './messages';
 /**
  * 순정 Vim 표현식 레지스터(=) 안전한 산술 계산기 파서
  * eval() 또는 Function()을 일체 사용하지 않고 안전한 재귀 하강(Recursive Descent) AST 파서로 수식을 계산합니다.
@@ -60,7 +61,7 @@ class Lexer {
           }
           const hexStr = this.input.slice(hexStart, this.pos);
           if (hexStr.length === 0) {
-            throw new Error(`올바르지 않은 16진수 표기입니다 at pos ${startPos}`);
+            throw new Error(msg('올바르지 않은 16진수 표기입니다 at pos {startPos}', { startPos }));
           }
           return { type: 'NUMBER', value: parseInt(hexStr, 16), pos: startPos };
         } else if (next === 'b') {
@@ -72,7 +73,7 @@ class Lexer {
           }
           const binStr = this.input.slice(binStart, this.pos);
           if (binStr.length === 0) {
-            throw new Error(`올바르지 않은 2진수 표기입니다 at pos ${startPos}`);
+            throw new Error(msg('올바르지 않은 2진수 표기입니다 at pos {startPos}', { startPos }));
           }
           return { type: 'NUMBER', value: parseInt(binStr, 2), pos: startPos };
         } else if (next === 'o') {
@@ -84,7 +85,7 @@ class Lexer {
           }
           const octStr = this.input.slice(octStart, this.pos);
           if (octStr.length === 0) {
-            throw new Error(`올바르지 않은 8진수 표기입니다 at pos ${startPos}`);
+            throw new Error(msg('올바르지 않은 8진수 표기입니다 at pos {startPos}', { startPos }));
           }
           return { type: 'NUMBER', value: parseInt(octStr, 8), pos: startPos };
         }
@@ -123,7 +124,7 @@ class Lexer {
         this.pos++;
       }
       if (this.pos >= this.input.length) {
-        throw new Error(`문자열 따옴표가 닫히지 않았습니다 at pos ${startPos}`);
+        throw new Error(msg('문자열 따옴표가 닫히지 않았습니다 at pos {startPos}', { startPos }));
       }
       this.pos++; // skip closing quote
       return { type: 'STRING', value: str, pos: startPos };
@@ -185,7 +186,7 @@ class Lexer {
       return { type: 'COMMA', value: ',', pos: startPos };
     }
 
-    throw new Error(`알 수 없는 기호입니다: '${ch}' at pos ${startPos}`);
+    throw new Error(msg('알 수 없는 기호입니다: \'{ch}\' at pos {startPos}', { ch, startPos }));
   }
 
   private skipWhitespace() {
@@ -204,7 +205,7 @@ class Parser {
 
   private eat(type: TokenType): Token {
     if (this.current.type !== type) {
-      throw new Error(`기대하지 않은 토큰입니다: ${this.current.type} (기대값: ${type})`);
+      throw new Error(msg('기대하지 않은 토큰입니다: {type} (기대값: {type2})', { type: this.current.type, type2: type }));
     }
     const token = this.current;
     this.current = this.lexer.nextToken();
@@ -214,7 +215,7 @@ class Parser {
   public parse(): any {
     const result = this.parseExpression();
     if (this.current.type !== 'EOF') {
-      throw new Error(`수식 끝에 불필요한 문자가 남아있습니다 at pos ${this.current.pos}`);
+      throw new Error(msg('수식 끝에 불필요한 문자가 남아있습니다 at pos {pos}', { pos: this.current.pos }));
     }
     return result;
   }
@@ -266,12 +267,12 @@ class Parser {
         node = Number(node) * Number(right);
       } else if (op === 'SLASH') {
         if (Number(right) === 0) {
-          throw new Error('0으로 나눌 수 없습니다.');
+          throw new Error(msg('0으로 나눌 수 없습니다.'));
         }
         node = Number(node) / Number(right);
       } else if (op === 'PERCENT') {
         if (Number(right) === 0) {
-          throw new Error('0으로 나눈 나머지를 구할 수 없습니다.');
+          throw new Error(msg('0으로 나눈 나머지를 구할 수 없습니다.'));
         }
         node = Number(node) % Number(right);
       }
@@ -345,10 +346,10 @@ class Parser {
         return this.callFunction(funcName, args);
       }
 
-      throw new Error(`알 수 없는 식별자입니다: '${token.value}'`);
+      throw new Error(msg('알 수 없는 식별자입니다: \'{value}\'', { value: token.value }));
     }
 
-    throw new Error(`올바르지 않은 수식 구문입니다 at pos ${token.pos}`);
+    throw new Error(msg('올바르지 않은 수식 구문입니다 at pos {pos}', { pos: token.pos }));
   }
 
   private callFunction(name: string, args: any[]): any {
@@ -375,7 +376,7 @@ class Parser {
       case 'max':
         return Math.max(...args.map((a) => Number(a)));
       default:
-        throw new Error(`지원하지 않는 내장 함수입니다: ${name}`);
+        throw new Error(msg('지원하지 않는 내장 함수입니다: {name}', { name }));
     }
   }
 }
@@ -386,7 +387,7 @@ class Parser {
 export function evaluateVimExpression(exprStr: string): EvalResult {
   const trimmed = exprStr.trim();
   if (trimmed.length === 0) {
-    return { success: false, result: '', error: '수식이 비어 있습니다.' };
+    return { success: false, result: '', error: msg('수식이 비어 있습니다.') };
   }
 
   try {
@@ -408,6 +409,6 @@ export function evaluateVimExpression(exprStr: string): EvalResult {
 
     return { success: true, result: formatted };
   } catch (err: any) {
-    return { success: false, result: '', error: err.message || '수식 파싱 오류' };
+    return { success: false, result: '', error: err.message || msg('수식 파싱 오류') };
   }
 }

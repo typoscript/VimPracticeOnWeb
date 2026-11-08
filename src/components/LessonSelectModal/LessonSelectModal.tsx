@@ -118,7 +118,7 @@ export const LessonSelectModal: React.FC<LessonSelectModalProps> = ({
                 <div className="lesson-card-header">
                   <div className="lesson-card-title-row">
                     <span className="lesson-number">#{mission.id}</span>
-                    <span className="lesson-name">{mission.title}</span>
+                    <span className="lesson-name">{t(mission.title)}</span>
                   </div>
                   {isCurrent && (
                     <span
@@ -131,7 +131,7 @@ export const LessonSelectModal: React.FC<LessonSelectModalProps> = ({
                 </div>
 
                 <div className="lesson-card-body">
-                  <p className="lesson-description">{mission.description}</p>
+                  <p className="lesson-description">{t(mission.description)}</p>
                 </div>
 
                 <div className="lesson-card-footer">

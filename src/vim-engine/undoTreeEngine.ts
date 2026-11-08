@@ -1,5 +1,6 @@
 import { StateSnapshot, UndoTreeNode, VimEditorState } from './types';
 import { clampCursor } from './cursor';
+import { msg } from './messages';
 
 /**
  * 두 줄 배열이 동일한지 비교합니다.
@@ -105,7 +106,7 @@ export function jumpUndoSeq(state: VimEditorState, targetSeq: number): VimEditor
   if (!targetNode) {
     return {
       ...prepared,
-      commandMessage: `E830: 실행 취소 번호 ${targetSeq}을(를) 찾을 수 없습니다.`,
+      commandMessage: msg('E830: 실행 취소 번호 {targetSeq}을(를) 찾을 수 없습니다.', { targetSeq }),
     };
   }
 
@@ -133,7 +134,7 @@ export function jumpUndoSeq(state: VimEditorState, targetSeq: number): VimEditor
     redoStack: [],
     currentUndoSeq: targetSeq,
     undoTimeIndex: timeIdx >= 0 ? timeIdx : 0,
-    commandMessage: `${targetSeq}번째 변경사항으로 이동했습니다.`,
+    commandMessage: msg('{targetSeq}번째 변경사항으로 이동했습니다.', { targetSeq }),
   };
 }
 
@@ -154,7 +155,7 @@ export function travelUndoTime(
       return {
         ...prepared,
         pendingKeys: undefined,
-        commandMessage: '이미 가장 오래된 변경사항입니다.',
+        commandMessage: msg('이미 가장 오래된 변경사항입니다.'),
       };
     }
     const targetIndex = Math.max(0, currentIndex - count);
@@ -164,7 +165,7 @@ export function travelUndoTime(
       ...jumped,
       pendingKeys: undefined,
       undoTimeIndex: targetIndex,
-      commandMessage: `이전 변경사항으로 이동했습니다 (#${targetSeq})`,
+      commandMessage: msg('이전 변경사항으로 이동했습니다 (#{targetSeq})', { targetSeq }),
     };
   }
 
@@ -173,7 +174,7 @@ export function travelUndoTime(
     return {
       ...prepared,
       pendingKeys: undefined,
-      commandMessage: '이미 가장 최신 변경사항입니다.',
+      commandMessage: msg('이미 가장 최신 변경사항입니다.'),
     };
   }
   const targetIndex = Math.min(history.length - 1, currentIndex + count);
@@ -183,7 +184,7 @@ export function travelUndoTime(
     ...jumped,
     pendingKeys: undefined,
     undoTimeIndex: targetIndex,
-    commandMessage: `이후 변경사항으로 이동했습니다 (#${targetSeq})`,
+    commandMessage: msg('이후 변경사항으로 이동했습니다 (#{targetSeq})', { targetSeq }),
   };
 }
 
@@ -202,7 +203,7 @@ export function travelEarlier(state: VimEditorState, arg?: string): VimEditorSta
     if (!match) {
       return {
         ...prepared,
-        commandMessage: `E474: 잘못된 인수입니다: :earlier ${arg}`,
+        commandMessage: msg('E474: 잘못된 인수입니다: :earlier {arg}', { arg }),
       };
     }
     count = match[1] ? parseInt(match[1], 10) : 1;
@@ -238,14 +239,14 @@ export function travelEarlier(state: VimEditorState, arg?: string): VimEditorSta
       return {
         ...jumped,
         undoTimeIndex: foundIdx,
-        commandMessage: `${count}회 이전 저장 상태로 복귀했습니다 (#${targetSeq})`,
+        commandMessage: msg('{count}회 이전 저장 상태로 복귀했습니다 (#{targetSeq})', { count, targetSeq }),
       };
     }
 
     if (curIdx === 0) {
       return {
         ...prepared,
-        commandMessage: '이미 가장 오래된 저장 상태입니다.',
+        commandMessage: msg('이미 가장 오래된 저장 상태입니다.'),
       };
     }
 
@@ -253,7 +254,7 @@ export function travelEarlier(state: VimEditorState, arg?: string): VimEditorSta
     return {
       ...jumped,
       undoTimeIndex: 0,
-      commandMessage: '가장 처음 상태(Seq 0)로 복귀했습니다.',
+      commandMessage: msg('가장 처음 상태(Seq 0)로 복귀했습니다.'),
     };
   }
 
@@ -281,7 +282,7 @@ export function travelEarlier(state: VimEditorState, arg?: string): VimEditorSta
   return {
     ...jumped,
     undoTimeIndex: targetIdx,
-    commandMessage: `${count}${unit} 이전 상태로 이동했습니다 (#${targetSeq})`,
+    commandMessage: msg('{count}{unit} 이전 상태로 이동했습니다 (#{targetSeq})', { count, unit, targetSeq }),
   };
 }
 
@@ -300,7 +301,7 @@ export function travelLater(state: VimEditorState, arg?: string): VimEditorState
     if (!match) {
       return {
         ...prepared,
-        commandMessage: `E474: 잘못된 인수입니다: :later ${arg}`,
+        commandMessage: msg('E474: 잘못된 인수입니다: :later {arg}', { arg }),
       };
     }
     count = match[1] ? parseInt(match[1], 10) : 1;
@@ -335,13 +336,13 @@ export function travelLater(state: VimEditorState, arg?: string): VimEditorState
       return {
         ...jumped,
         undoTimeIndex: foundIdx,
-        commandMessage: `${count}회 이후 저장 상태로 이동했습니다 (#${targetSeq})`,
+        commandMessage: msg('{count}회 이후 저장 상태로 이동했습니다 (#{targetSeq})', { count, targetSeq }),
       };
     }
 
     return {
       ...prepared,
-      commandMessage: '이미 가장 최신 저장 상태입니다.',
+      commandMessage: msg('이미 가장 최신 저장 상태입니다.'),
     };
   }
 
@@ -370,7 +371,7 @@ export function travelLater(state: VimEditorState, arg?: string): VimEditorState
   return {
     ...jumped,
     undoTimeIndex: targetIdx,
-    commandMessage: `${count}${unit} 이후 상태로 이동했습니다 (#${targetSeq})`,
+    commandMessage: msg('{count}{unit} 이후 상태로 이동했습니다 (#{targetSeq})', { count, unit, targetSeq }),
   };
 }
 
@@ -415,7 +416,7 @@ export function formatUndoList(state: VimEditorState): string {
   const allSeqs = Object.keys(nodes).map(Number);
 
   if (allSeqs.length === 0) {
-    return '실행 취소 목록이 비어 있습니다.';
+    return msg('실행 취소 목록이 비어 있습니다.');
   }
 
   // 자식 노드가 없는 Leaf 노드 탐색

@@ -31,7 +31,7 @@ import { closeQuickfixWindow, jumpToQuickfixItem } from './vim-engine';
 import { closeLocationListWindow, jumpToLocationListItem } from './vim-engine';
 import { computeDiffHunks } from './vim-engine';
 import { MISSIONS } from './data/missions';
-import { SANDBOX_INITIAL_LINES } from './data/sandbox';
+import { sandboxInitialLines } from './data/sandbox';
 import {
   loadProgress,
   saveLessonRecord,
@@ -728,7 +728,7 @@ export function App() {
   const handleResetSandbox = useCallback(() => {
     handleStopGhostReplay();
     const initState = {
-      lines: [...SANDBOX_INITIAL_LINES],
+      lines: sandboxInitialLines(),
       cursor: { line: 0, col: 0 },
       mode: 'NORMAL' as const,
       undoStack: [],
@@ -1644,7 +1644,7 @@ export function App() {
                 status={speedrunStatus}
                 currentStageIndex={speedrunCurrentStage}
                 totalStages={speedrunStages.length}
-                currentMissionTitle={activeSpeedrunMission?.title}
+                currentMissionTitle={activeSpeedrunMission ? t(activeSpeedrunMission.title) : undefined}
                 elapsedSeconds={speedrunElapsedSeconds}
                 totalKeystrokes={speedrunKeystrokes}
                 bestRecord={speedrunBestRecord}
@@ -2097,7 +2097,7 @@ export function App() {
                     ? currentMission.initialLines.join('\n')
                     : currentTab === 'custom' && customMission
                     ? customMission.initialLines.join('\n')
-                    : SANDBOX_INITIAL_LINES.join('\n')
+                    : sandboxInitialLines().join('\n')
                 }
                 initialCursor={
                   currentTab === 'course'

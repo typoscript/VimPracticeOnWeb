@@ -1,6 +1,7 @@
 import { QuickfixItem, QuickfixState, VimEditorState } from './types';
 import { switchBuffer, syncCurrentBuffer } from './bufferEngine';
 import { compileVimRegex } from './vimRegex';
+import { msg } from './messages';
 
 /**
  * 퀵픽스(Quickfix) 목록을 설정합니다.
@@ -21,7 +22,7 @@ export function setQuickfixList(
   const nextState: VimEditorState = {
     ...state,
     quickfix: nextQf,
-    commandMessage: `(${items.length} of ${items.length}) 퀵픽스 목록 로드됨`,
+    commandMessage: msg('({itemsCount} of {itemsCount}) 퀵픽스 목록 로드됨', { itemsCount: items.length }),
   };
 
   if (jumpToFirst && items.length > 0) {
@@ -148,7 +149,7 @@ export function openQuickfixWindow(state: VimEditorState, height?: number): VimE
       isOpen: true,
       height: height ?? qf.height ?? 6,
     },
-    commandMessage: `퀵픽스 윈도우 열림 (${qf.items.length}개 항목)`,
+    commandMessage: msg('퀵픽스 윈도우 열림 ({itemsCount}개 항목)', { itemsCount: qf.items.length }),
   };
 }
 
@@ -163,7 +164,7 @@ export function closeQuickfixWindow(state: VimEditorState): VimEditorState {
       ...state.quickfix,
       isOpen: false,
     },
-    commandMessage: '퀵픽스 윈도우 닫힘',
+    commandMessage: msg('퀵픽스 윈도우 닫힘'),
   };
 }
 
@@ -433,7 +434,7 @@ export function loadQuickfixFromFile(
   if (!targetLines) {
     return {
       ...state,
-      commandMessage: `E484: 파일을 열 수 없습니다: ${cleanName}`,
+      commandMessage: msg('E484: 파일을 열 수 없습니다: {cleanName}', { cleanName }),
     };
   }
 
@@ -441,7 +442,7 @@ export function loadQuickfixFromFile(
   if (items.length === 0) {
     return {
       ...state,
-      commandMessage: `E42: 에러 목록이 비어 있습니다: ${cleanName}`,
+      commandMessage: msg('E42: 에러 목록이 비어 있습니다: {cleanName}', { cleanName }),
     };
   }
 

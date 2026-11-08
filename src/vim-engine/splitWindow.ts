@@ -1,5 +1,6 @@
 import { SplitPaneState, VimEditorState } from './types';
 import { openNewTab } from './tabEngine';
+import { msg } from './messages';
 
 /**
  * 에디터 창을 가로(:sp, :new) 또는 세로(:vsp, :vnew)로 분할합니다.
@@ -17,8 +18,8 @@ export function splitWindow(
       splitDirection: direction,
       commandMessage:
         direction === 'vertical'
-          ? '창을 세로로 분할했습니다 (:vsp)'
-          : '창을 가로로 분할했습니다 (:sp)',
+          ? msg('창을 세로로 분할했습니다 (:vsp)')
+          : msg('창을 가로로 분할했습니다 (:sp)'),
     };
   }
 
@@ -61,8 +62,8 @@ export function splitWindow(
     secondaryFilename: secondaryName,
     commandMessage:
       direction === 'vertical'
-        ? '창을 세로로 분할했습니다 (:vsp)'
-        : '창을 가로로 분할했습니다 (:sp)',
+        ? msg('창을 세로로 분할했습니다 (:vsp)')
+        : msg('창을 가로로 분할했습니다 (:sp)'),
   };
 }
 
@@ -73,7 +74,7 @@ export function closeSplitWindow(state: VimEditorState): VimEditorState {
   if (!state.splitDirection || state.splitDirection === 'none' || !state.splitPanes) {
     return {
       ...state,
-      commandMessage: 'E444: 마지막 창을 닫을 수 없습니다 (:close)',
+      commandMessage: msg('E444: 마지막 창을 닫을 수 없습니다 (:close)'),
     };
   }
 
@@ -97,7 +98,7 @@ export function closeSplitWindow(state: VimEditorState): VimEditorState {
       splitPanes: undefined,
       splitRatio: undefined,
       locationList: p0.locationList,
-      commandMessage: '분할 창을 닫았습니다 (:close)',
+      commandMessage: msg('분할 창을 닫았습니다 (:close)'),
     };
   }
 
@@ -119,7 +120,7 @@ export function closeSplitWindow(state: VimEditorState): VimEditorState {
     splitPanes: undefined,
     splitRatio: undefined,
     locationList: p1.locationList,
-    commandMessage: '분할 창을 닫았습니다 (:close)',
+    commandMessage: msg('분할 창을 닫았습니다 (:close)'),
   };
 }
 
@@ -130,7 +131,7 @@ export function closeOtherPanes(state: VimEditorState): VimEditorState {
   if (!state.splitDirection || state.splitDirection === 'none' || !state.splitPanes) {
     return {
       ...state,
-      commandMessage: '현재 이미 단일 창입니다 (:only)',
+      commandMessage: msg('현재 이미 단일 창입니다 (:only)'),
     };
   }
 
@@ -152,7 +153,7 @@ export function closeOtherPanes(state: VimEditorState): VimEditorState {
     previousPaneIndex: undefined,
     splitPanes: undefined,
     splitRatio: undefined,
-    commandMessage: '현재 창만 유지되었습니다 (:only)',
+    commandMessage: msg('현재 창만 유지되었습니다 (:only)'),
   };
 }
 
@@ -243,7 +244,7 @@ export function exchangePanes(state: VimEditorState): VimEditorState {
     primaryFilename: swappedPanes[0].filename,
     secondaryFilename: swappedPanes[1].filename,
     splitPanes: swappedPanes,
-    commandMessage: '두 창의 위치를 맞바꿨습니다 (Ctrl-w x)',
+    commandMessage: msg('두 창의 위치를 맞바꿨습니다 (Ctrl-w x)'),
   };
 }
 
@@ -281,8 +282,8 @@ export function rotatePanes(
     activePaneIndex: nextActiveIdx,
     splitPanes: rotatedPanes,
     commandMessage: counterClockwise
-      ? '창을 반시계 방향으로 회전했습니다 (Ctrl-w R)'
-      : '창을 시계 방향으로 회전했습니다 (Ctrl-w r)',
+      ? msg('창을 반시계 방향으로 회전했습니다 (Ctrl-w R)')
+      : msg('창을 시계 방향으로 회전했습니다 (Ctrl-w r)'),
   };
 }
 
@@ -323,7 +324,7 @@ export function movePaneToDirection(
     lines: [...activePane.lines],
     cursor: { ...activePane.cursor },
     mode: activePane.mode ?? 'NORMAL',
-    commandMessage: `창 레이아웃을 ${isVertical ? '세로' : '가로'}로 재배치했습니다 (Ctrl-w ${dir})`,
+    commandMessage: msg('창 레이아웃을 {v}로 재배치했습니다 (Ctrl-w {dir})', { v: isVertical ? msg('세로') : msg('가로'), dir }),
   };
 }
 
@@ -342,7 +343,7 @@ export function resizeSplit(
     return {
       ...state,
       splitRatio: 50,
-      commandMessage: '창 크기를 균등하게 맞췄습니다 (Ctrl-w =)',
+      commandMessage: msg('창 크기를 균등하게 맞췄습니다 (Ctrl-w =)'),
     };
   }
 
@@ -353,7 +354,7 @@ export function resizeSplit(
     return {
       ...state,
       splitRatio: maxRatio,
-      commandMessage: '현재 창을 최대화했습니다',
+      commandMessage: msg('현재 창을 최대화했습니다'),
     };
   }
 
@@ -366,7 +367,7 @@ export function resizeSplit(
   return {
     ...state,
     splitRatio: newRatio,
-    commandMessage: `창 크기 조절: ${newRatio}% / ${100 - newRatio}%`,
+    commandMessage: msg('창 크기 조절: {newRatio}% / {v}%', { newRatio, v: 100 - newRatio }),
   };
 }
 
@@ -377,7 +378,7 @@ export function moveWindowToNewTab(state: VimEditorState): VimEditorState {
   if (!state.splitDirection || state.splitDirection === 'none' || !state.splitPanes) {
     return {
       ...state,
-      commandMessage: 'E444: 이미 단일 창입니다 (Ctrl-w T)',
+      commandMessage: msg('E444: 이미 단일 창입니다 (Ctrl-w T)'),
     };
   }
 
@@ -415,7 +416,7 @@ export function moveWindowToNewTab(state: VimEditorState): VimEditorState {
     viewport: activePane.viewport,
     undoStack: activePane.undoStack ? [...activePane.undoStack] : [],
     redoStack: activePane.redoStack ? [...activePane.redoStack] : [],
-    commandMessage: `"${activePane.filename}" 창을 새 탭으로 분리했습니다 (Ctrl-w T)`,
+    commandMessage: msg('"{filename}" 창을 새 탭으로 분리했습니다 (Ctrl-w T)', { filename: activePane.filename }),
   };
 }
 

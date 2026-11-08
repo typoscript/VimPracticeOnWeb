@@ -46,6 +46,7 @@ configureVimEngine({
     'src/main.ts': ['console.log("hi");'],
   },
   vimrc: ['set number', 'inoremap jk <Esc>'],  // :e ~/.vimrc 로 열리는 내용
+  locale: 'en',                      // 상태 표시줄 메시지·에러 언어: 'ko'(기본) 또는 'en'(실제 Vim 영어 문구)
 });
 ```
 

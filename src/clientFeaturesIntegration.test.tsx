@@ -3,6 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { App } from './App';
 import { encodeCustomMission, CustomMissionData } from './utils/customMission';
 import { setLocale, LOCALE_STORAGE_KEY } from './i18n';
+import { getVimEngineConfig } from './vim-engine';
 
 describe('Gamification & UX Client Features Integration', () => {
   beforeEach(() => {
@@ -52,13 +53,16 @@ describe('Gamification & UX Client Features Integration', () => {
     fireEvent.click(localeBtn);
     expect(localeBtn.textContent).toContain('English');
     expect(soundBtn.textContent).toContain('🔊 Sound: ON');
+    expect(screen.getByTestId('mission-title').textContent).toContain('Lesson 1: Basic Movement');
     expect(screen.getByRole('combobox', { name: /Choose editor color theme/i })).toBeDefined();
     expect(document.documentElement.lang).toBe('en');
+    expect(getVimEngineConfig().locale).toBe('en');
     expect(localStorage.getItem(LOCALE_STORAGE_KEY)).toBe('en');
 
     fireEvent.click(localeBtn);
     expect(soundBtn.textContent).toContain('🔊 소리: ON');
     expect(document.documentElement.lang).toBe('ko');
+    expect(getVimEngineConfig().locale).toBe('ko');
     expect(localStorage.getItem(LOCALE_STORAGE_KEY)).toBe('ko');
   });
 

@@ -1,4 +1,5 @@
 import { CommandLineWindowSession, VimEditorState } from './types';
+import { msg } from './messages';
 
 /**
  * 실행된 명령어 또는 검색어를 히스토리에 기록합니다. (연속된 중복 항목은 방지)
@@ -146,7 +147,7 @@ export function openCommandLineWindow(
     commandBuffer: undefined,
     commandType: undefined,
     cmdlineWindow: session,
-    commandMessage: `[커맨드라인 윈도우 ${type}] Enter: 실행, Esc: 취소`,
+    commandMessage: msg('[커맨드라인 윈도우 {type}] Enter: 실행, Esc: 취소', { type }),
   };
 }
 
@@ -158,7 +159,7 @@ export function closeCommandLineWindow(state: VimEditorState): VimEditorState {
   return {
     ...state,
     cmdlineWindow: null,
-    commandMessage: '커맨드라인 윈도우 닫힘',
+    commandMessage: msg('커맨드라인 윈도우 닫힘'),
   };
 }
 

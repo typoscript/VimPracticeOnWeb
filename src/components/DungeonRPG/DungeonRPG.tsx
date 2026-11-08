@@ -276,7 +276,7 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
                 const stars = rec ? '⭐'.repeat(rec.stars) : '';
                 return (
                   <option key={s.id} value={idx} disabled={!isUnlocked}>
-                    {s.title} {stars} {!isUnlocked ? '🔒' : ''}
+                    {t(s.title)} {stars} {!isUnlocked ? '🔒' : ''}
                   </option>
                 );
               })}
@@ -325,10 +325,10 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
       <div className="dungeon-objective-bar">
         <span className="objective-icon">🎯</span>
         <span className="objective-text" data-testid="dungeon-objective">
-          {stage.objective}
+          {t(stage.objective)}
         </span>
-        <span className="objective-hint" title={stage.hint}>
-          💡 {stage.hint}
+        <span className="objective-hint" title={t(stage.hint)}>
+          💡 {t(stage.hint)}
         </span>
       </div>
 
@@ -415,12 +415,12 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
               <div
                 key={skill.id}
                 className={`skill-slot ${isUnlocked ? 'unlocked' : 'locked'}`}
-                title={`${skill.name}: ${skill.description}`}
+                title={`${t(skill.name)}: ${t(skill.description)}`}
                 data-testid={`skill-slot-${skill.id}`}
               >
                 <span className="skill-icon">{isUnlocked ? skill.icon : '🔒'}</span>
                 <span className="skill-keys">[{skill.keys[0]}]</span>
-                <span className="skill-name">{skill.name}</span>
+                <span className="skill-name">{t(skill.name)}</span>
               </div>
             );
           })}
@@ -432,7 +432,7 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
         <div className="dungeon-modal-overlay" data-testid="dungeon-clear-modal">
           <div className="dungeon-clear-dialog">
             <span className="dialog-trophy">🎉</span>
-            <h2 className="clear-title">{t('{title} 클리어!', { title: stage.title })}</h2>
+            <h2 className="clear-title">{t('{title} 클리어!', { title: t(stage.title) })}</h2>
             <div className="clear-stars">
               {'⭐'.repeat(starsEarned)}{' '}
               {starsEarned === 3 ? t('(마스터 Par 달성!)') : ''}
@@ -448,8 +448,8 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
                 <div className="skill-detail">
                   <span className="detail-icon">{unlockedSkill.icon}</span>
                   <div>
-                    <h4>{unlockedSkill.name}</h4>
-                    <p>{unlockedSkill.description}</p>
+                    <h4>{t(unlockedSkill.name)}</h4>
+                    <p>{t(unlockedSkill.description)}</p>
                   </div>
                 </div>
               </div>

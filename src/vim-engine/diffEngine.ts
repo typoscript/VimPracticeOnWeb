@@ -1,5 +1,6 @@
 import { DiffHunk, SplitPaneState, VimEditorState } from './types';
 import { splitWindow } from './splitWindow';
+import { msg } from './messages';
 
 export type { DiffHunk };
 
@@ -257,7 +258,7 @@ export function startDiffSplit(
   const hunkCount = withDiff.diffHunks?.length ?? 0;
   return {
     ...withDiff,
-    commandMessage: `${targetName} 파일과 diff 모드를 시작했습니다 (${hunkCount}개 변경점 발견)`,
+    commandMessage: msg('{targetName} 파일과 diff 모드를 시작했습니다 ({hunkCount}개 변경점 발견)', { targetName, hunkCount }),
   };
 }
 
@@ -273,7 +274,7 @@ export function diffThis(state: VimEditorState): VimEditorState {
   ) {
     return {
       ...state,
-      commandMessage: 'E97: diff를 비교할 분할 창이 없습니다. :vsp 또는 :sp 후 실행하세요',
+      commandMessage: msg('E97: diff를 비교할 분할 창이 없습니다. :vsp 또는 :sp 후 실행하세요'),
     };
   }
 
@@ -294,13 +295,13 @@ export function diffThis(state: VimEditorState): VimEditorState {
     const res = updateDiffState({ ...nextState, diffMode: true });
     return {
       ...res,
-      commandMessage: `두 창의 diff 비교 모드가 활성화되었습니다 (${res.diffHunks?.length ?? 0}개 차이)`,
+      commandMessage: msg('두 창의 diff 비교 모드가 활성화되었습니다 ({v}개 차이)', { v: res.diffHunks?.length ?? 0 }),
     };
   }
 
   return {
     ...nextState,
-    commandMessage: '현재 창을 diff 대상으로 설정했습니다. 다른 창에서 :diffthis를 실행하세요',
+    commandMessage: msg('현재 창을 diff 대상으로 설정했습니다. 다른 창에서 :diffthis를 실행하세요'),
   };
 }
 
@@ -313,7 +314,7 @@ export function diffOff(state: VimEditorState, all = false): VimEditorState {
       ...state,
       diffMode: false,
       diffHunks: undefined,
-      commandMessage: 'diff 모드가 해제되었습니다 (:diffoff)',
+      commandMessage: msg('diff 모드가 해제되었습니다 (:diffoff)'),
     };
   }
 
@@ -329,8 +330,8 @@ export function diffOff(state: VimEditorState, all = false): VimEditorState {
     diffHunks: undefined,
     splitPanes: updatedPanes,
     commandMessage: all
-      ? '모든 창의 diff 모드를 해제했습니다 (:diffoff!)'
-      : '현재 창의 diff 모드를 해제했습니다 (:diffoff)',
+      ? msg('모든 창의 diff 모드를 해제했습니다 (:diffoff!)')
+      : msg('현재 창의 diff 모드를 해제했습니다 (:diffoff)'),
   };
 }
 
@@ -341,14 +342,14 @@ export function diffUpdate(state: VimEditorState): VimEditorState {
   if (!state.diffMode || !state.splitPanes) {
     return {
       ...state,
-      commandMessage: 'E97: 현재 diff 모드가 활성화되어 있지 않습니다',
+      commandMessage: msg('E97: 현재 diff 모드가 활성화되어 있지 않습니다'),
     };
   }
 
   const updated = updateDiffState(state);
   return {
     ...updated,
-    commandMessage: `diff 차이점을 재계산했습니다 (${updated.diffHunks?.length ?? 0}개 발견)`,
+    commandMessage: msg('diff 차이점을 재계산했습니다 ({v}개 발견)', { v: updated.diffHunks?.length ?? 0 }),
   };
 }
 
@@ -364,7 +365,7 @@ export function jumpDiffHunk(
   if (!state.diffMode || !hunks || hunks.length === 0) {
     return {
       ...state,
-      commandMessage: '차이점(Diff)이 없습니다',
+      commandMessage: msg('차이점(Diff)이 없습니다'),
     };
   }
 
@@ -381,7 +382,7 @@ export function jumpDiffHunk(
     if (forwardHunks.length === 0) {
       return {
         ...state,
-        commandMessage: '마지막 변경점입니다',
+        commandMessage: msg('마지막 변경점입니다'),
       };
     }
     const pickIdx = Math.min(count - 1, forwardHunks.length - 1);
@@ -391,7 +392,7 @@ export function jumpDiffHunk(
     if (backwardHunks.length === 0) {
       return {
         ...state,
-        commandMessage: '첫 번째 변경점입니다',
+        commandMessage: msg('첫 번째 변경점입니다'),
       };
     }
     const pickIdx = Math.max(0, backwardHunks.length - count);
@@ -450,7 +451,7 @@ export function diffObtain(state: VimEditorState): VimEditorState {
   if (!state.diffMode || !state.splitPanes || state.splitPanes.length < 2) {
     return {
       ...state,
-      commandMessage: 'E97: diff 모드가 아닙니다 (:diffget / do)',
+      commandMessage: msg('E97: diff 모드가 아닙니다 (:diffget / do)'),
     };
   }
 
@@ -458,7 +459,7 @@ export function diffObtain(state: VimEditorState): VimEditorState {
   if (!hunk) {
     return {
       ...state,
-      commandMessage: '가져올 변경점(Diff Hunk)이 없습니다',
+      commandMessage: msg('가져올 변경점(Diff Hunk)이 없습니다'),
     };
   }
 
@@ -506,7 +507,7 @@ export function diffObtain(state: VimEditorState): VimEditorState {
     lines: newLines,
     undoStack,
     splitPanes: updatedPanes,
-    commandMessage: '1개의 변경점을 가져왔습니다 (do / :diffget)',
+    commandMessage: msg('1개의 변경점을 가져왔습니다 (do / :diffget)'),
   };
 
   return updateDiffState(nextState);
@@ -519,7 +520,7 @@ export function diffPut(state: VimEditorState): VimEditorState {
   if (!state.diffMode || !state.splitPanes || state.splitPanes.length < 2) {
     return {
       ...state,
-      commandMessage: 'E97: diff 모드가 아닙니다 (:diffput / dp)',
+      commandMessage: msg('E97: diff 모드가 아닙니다 (:diffput / dp)'),
     };
   }
 
@@ -527,7 +528,7 @@ export function diffPut(state: VimEditorState): VimEditorState {
   if (!hunk) {
     return {
       ...state,
-      commandMessage: '밀어넣을 변경점(Diff Hunk)이 없습니다',
+      commandMessage: msg('밀어넣을 변경점(Diff Hunk)이 없습니다'),
     };
   }
 
@@ -574,7 +575,7 @@ export function diffPut(state: VimEditorState): VimEditorState {
   const nextState: VimEditorState = {
     ...state,
     splitPanes: updatedPanes,
-    commandMessage: '1개의 변경점을 상대 창에 밀어넣었습니다 (dp / :diffput)',
+    commandMessage: msg('1개의 변경점을 상대 창에 밀어넣었습니다 (dp / :diffput)'),
   };
 
   return updateDiffState(nextState);

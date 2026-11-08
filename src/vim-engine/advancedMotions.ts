@@ -3,6 +3,7 @@ import { clampCursor } from './cursor';
 import { recordJump } from './marks';
 import { getWordAtCursor, escapeRegExp } from './search';
 import { pushUndoSnapshot } from './operators';
+import { msg } from './messages';
 
 /**
  * 줄이 비어있거나 공백 문자만으로 구성되었는지 검사합니다. (Vim 문단 구분 기준)
@@ -366,7 +367,7 @@ export function goToDeclaration(state: VimEditorState): VimEditorState {
       return {
         ...stateWithJump,
         cursor: clampCursor(state.lines, { line: l, col: Math.max(0, col) }, 'NORMAL'),
-        commandMessage: `선언부로 이동: ${word} (${l + 1}번째 줄)`,
+        commandMessage: msg('선언부로 이동: {word} ({v}번째 줄)', { word, v: l + 1 }),
         pendingKeys: undefined,
       };
     }
@@ -382,7 +383,7 @@ export function goToDeclaration(state: VimEditorState): VimEditorState {
       return {
         ...stateWithJump,
         cursor: clampCursor(state.lines, { line: l, col: Math.max(0, col) }, 'NORMAL'),
-        commandMessage: `선언부로 이동: ${word} (${l + 1}번째 줄)`,
+        commandMessage: msg('선언부로 이동: {word} ({v}번째 줄)', { word, v: l + 1 }),
         pendingKeys: undefined,
       };
     }
@@ -397,7 +398,7 @@ export function goToDeclaration(state: VimEditorState): VimEditorState {
       return {
         ...stateWithJump,
         cursor: clampCursor(state.lines, { line: l, col: match.index }, 'NORMAL'),
-        commandMessage: `선언부(첫 등장)로 이동: ${word} (${l + 1}번째 줄)`,
+        commandMessage: msg('선언부(첫 등장)로 이동: {word} ({v}번째 줄)', { word, v: l + 1 }),
         pendingKeys: undefined,
       };
     }
@@ -405,7 +406,7 @@ export function goToDeclaration(state: VimEditorState): VimEditorState {
 
   return {
     ...state,
-    commandMessage: `E486: 선언부를 찾을 수 없습니다: ${word}`,
+    commandMessage: msg('E486: 선언부를 찾을 수 없습니다: {word}', { word }),
     pendingKeys: undefined,
   };
 }
@@ -465,7 +466,7 @@ export function traverseChangeList(
   if (list.length === 0) {
     return {
       ...state,
-      commandMessage: 'E662: 변경 목록이 비어 있습니다 (Empty changelist)',
+      commandMessage: msg('E662: 변경 목록이 비어 있습니다 (Empty changelist)'),
       pendingKeys: undefined,
     };
   }
@@ -490,7 +491,7 @@ export function traverseChangeList(
         ...state,
         cursor: clamped,
         changeIndex: 0,
-        commandMessage: 'E662: 변경 목록의 시작입니다 (At start of changelist)',
+        commandMessage: msg('E662: 변경 목록의 시작입니다 (At start of changelist)'),
         pendingKeys: undefined,
       };
     }
@@ -502,7 +503,7 @@ export function traverseChangeList(
       ...stateWithJump,
       cursor: clamped,
       changeIndex: newIdx,
-      commandMessage: `변경 목록 이전 위치 (${newIdx + 1}/${list.length})`,
+      commandMessage: msg('변경 목록 이전 위치 ({v}/{listCount})', { v: newIdx + 1, listCount: list.length }),
       pendingKeys: undefined,
     };
   } else {
@@ -514,7 +515,7 @@ export function traverseChangeList(
         ...state,
         cursor: clamped,
         changeIndex: list.length - 1,
-        commandMessage: 'E663: 변경 목록의 끝입니다 (At end of changelist)',
+        commandMessage: msg('E663: 변경 목록의 끝입니다 (At end of changelist)'),
         pendingKeys: undefined,
       };
     }
@@ -526,7 +527,7 @@ export function traverseChangeList(
       ...stateWithJump,
       cursor: clamped,
       changeIndex: newIdx,
-      commandMessage: `변경 목록 다음 위치 (${newIdx + 1}/${list.length})`,
+      commandMessage: msg('변경 목록 다음 위치 ({v}/{listCount})', { v: newIdx + 1, listCount: list.length }),
       pendingKeys: undefined,
     };
   }
@@ -564,7 +565,7 @@ export function recordChangePosition(
 export function formatChangeList(state: VimEditorState): string {
   const list = state.changeList ?? [];
   if (list.length === 0) {
-    return 'E664: 변경 목록이 비어 있습니다 (changelist is empty)';
+    return msg('E664: 변경 목록이 비어 있습니다 (changelist is empty)');
   }
 
   const header = 'change line  col text';

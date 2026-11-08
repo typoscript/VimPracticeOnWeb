@@ -5,6 +5,7 @@ import { pushUndoSnapshot } from './operators';
 import { deleteVisualSelection, yankVisualSelection } from './visual';
 import { switchBuffer, ensureBuffers } from './bufferEngine';
 import { switchPaneFocus } from './splitWindow';
+import { msg } from './messages';
 
 /**
  * 점프 리스트에 현재(또는 지정된) 커서 위치를 기록합니다.
@@ -149,7 +150,7 @@ export function setMark(state: VimEditorState, markChar: string): VimEditorState
     marks,
     pendingKeys: undefined,
     commandMessage: isGlobal
-      ? `전역 마크 '${markChar}' 설정됨 (${currentFilename}:${baseState.cursor.line + 1})`
+      ? msg('전역 마크 \'{markChar}\' 설정됨 ({currentFilename}:{v})', { markChar, currentFilename, v: baseState.cursor.line + 1 })
       : undefined,
   };
 }

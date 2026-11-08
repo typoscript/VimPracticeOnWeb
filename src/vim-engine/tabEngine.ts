@@ -1,4 +1,5 @@
 import { VimEditorState, VimTabPage, SplitPaneState } from './types';
+import { msg } from './messages';
 
 /**
  * 탭 페이지 목록이 초기화되어 있지 않은 경우, 현재 작업 화면을 기반으로 1번 탭을 생성합니다.
@@ -112,7 +113,7 @@ export function switchTab(state: VimEditorState, targetId: number): VimEditorSta
   if (!targetTab) {
     return {
       ...syncedState,
-      commandMessage: `E94: 일치하는 탭을 찾을 수 없습니다: ${targetId}`,
+      commandMessage: msg('E94: 일치하는 탭을 찾을 수 없습니다: {targetId}', { targetId }),
     };
   }
 
@@ -152,7 +153,7 @@ export function switchTab(state: VimEditorState, targetId: number): VimEditorSta
     currentBufferId: targetTab.currentBufferId,
     alternateBufferId: targetTab.alternateBufferId,
     currentTabId: targetTab.id,
-    commandMessage: `탭 ${targetTab.id}: ${targetTab.filename}`,
+    commandMessage: msg('탭 {id}: {filename}', { id: targetTab.id, filename: targetTab.filename }),
   };
 }
 
@@ -212,7 +213,7 @@ export function openNewTab(state: VimEditorState, filename?: string): VimEditorS
     splitPanes: undefined,
     primaryFilename: tabName,
     secondaryFilename: undefined,
-    commandMessage: `"${tabName}" [새 탭 ${nextId}]`,
+    commandMessage: msg('"{tabName}" [새 탭 {nextId}]', { tabName, nextId }),
   };
 }
 
@@ -227,7 +228,7 @@ export function closeTab(state: VimEditorState, targetIdx?: number): VimEditorSt
   if (tabPages.length <= 1) {
     return {
       ...syncedState,
-      commandMessage: 'E784: 마지막 탭 페이지를 닫을 수 없습니다',
+      commandMessage: msg('E784: 마지막 탭 페이지를 닫을 수 없습니다'),
     };
   }
 
@@ -249,7 +250,7 @@ export function closeTab(state: VimEditorState, targetIdx?: number): VimEditorSt
     return {
       ...syncedState,
       tabPages: nextTabPages,
-      commandMessage: `탭 ${closingTab.id} 닫힘`,
+      commandMessage: msg('탭 {id} 닫힘', { id: closingTab.id }),
     };
   }
 
@@ -287,7 +288,7 @@ export function closeTab(state: VimEditorState, targetIdx?: number): VimEditorSt
     secondaryFilename: fallbackTab.secondaryFilename,
     currentBufferId: fallbackTab.currentBufferId,
     alternateBufferId: fallbackTab.alternateBufferId,
-    commandMessage: `탭 ${closingTab.id} 닫힘 -> 탭 ${fallbackTab.id}: ${fallbackTab.filename}`,
+    commandMessage: msg('탭 {id} 닫힘 -> 탭 {id2}: {filename}', { id: closingTab.id, id2: fallbackTab.id, filename: fallbackTab.filename }),
   };
 }
 
@@ -304,7 +305,7 @@ export function closeOtherTabs(state: VimEditorState): VimEditorState {
   return {
     ...syncedState,
     tabPages: [curTab],
-    commandMessage: '현재 탭만 유지됨',
+    commandMessage: msg('현재 탭만 유지됨'),
   };
 }
 
@@ -406,6 +407,6 @@ export function moveTab(state: VimEditorState, targetPos?: string | number): Vim
   return {
     ...syncedState,
     tabPages: nextTabPages,
-    commandMessage: `탭 ${removed.id}을(를) ${destIdx + 1}번째 위치로 이동`,
+    commandMessage: msg('탭 {id}을(를) {v}번째 위치로 이동', { id: removed.id, v: destIdx + 1 }),
   };
 }

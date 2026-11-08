@@ -1,5 +1,6 @@
 import { VimEditorState, VimScriptDict, VimScriptValue } from './types';
 import { compileVimRegex } from './vimRegex';
+import { msg } from './messages';
 
 /**
  * Vim script 표현식 평가기 (eval / Function 미사용, 재귀 하강 파서)
@@ -60,8 +61,8 @@ export function makeDict(items: Record<string, VimScriptValue> = {}): VimScriptD
 /** 문자열 → 숫자: 앞부분의 정수만 해석하고 나머지는 무시 ("12abc" → 12, "abc" → 0) */
 export function toNumber(value: VimScriptValue): number {
   if (typeof value === 'number') return value;
-  if (isList(value)) throw new VimScriptError('E745: 리스트를 숫자로 사용할 수 없습니다');
-  if (isDict(value)) throw new VimScriptError('E728: 딕셔너리를 숫자로 사용할 수 없습니다');
+  if (isList(value)) throw new VimScriptError(msg('E745: 리스트를 숫자로 사용할 수 없습니다'));
+  if (isDict(value)) throw new VimScriptError(msg('E728: 딕셔너리를 숫자로 사용할 수 없습니다'));
   const m = value.match(/^\s*([-+]?)(0[xX][0-9a-fA-F]+|\d+)/);
   if (!m) return 0;
   const n = m[2].toLowerCase().startsWith('0x') ? parseInt(m[2], 16) : parseInt(m[2], 10);
@@ -70,8 +71,8 @@ export function toNumber(value: VimScriptValue): number {
 
 export function toVimString(value: VimScriptValue): string {
   if (typeof value === 'number') return String(value);
-  if (isList(value)) throw new VimScriptError('E730: 리스트를 문자열로 사용할 수 없습니다');
-  if (isDict(value)) throw new VimScriptError('E731: 딕셔너리를 문자열로 사용할 수 없습니다');
+  if (isList(value)) throw new VimScriptError(msg('E730: 리스트를 문자열로 사용할 수 없습니다'));
+  if (isDict(value)) throw new VimScriptError(msg('E731: 딕셔너리를 문자열로 사용할 수 없습니다'));
   return value;
 }
 
@@ -108,11 +109,11 @@ function typeCode(v: VimScriptValue): number {
 /** == 비교 (리스트·딕셔너리는 내용 비교) */
 function valuesEqual(a: VimScriptValue, b: VimScriptValue, ignoreCase: boolean): boolean {
   if (isList(a) || isList(b)) {
-    if (!isList(a) || !isList(b)) throw new VimScriptError('E691: 리스트는 리스트와만 비교할 수 있습니다');
+    if (!isList(a) || !isList(b)) throw new VimScriptError(msg('E691: 리스트는 리스트와만 비교할 수 있습니다'));
     return a.length === b.length && a.every((v, i) => valuesEqual(v, b[i], ignoreCase));
   }
   if (isDict(a) || isDict(b)) {
-    if (!isDict(a) || !isDict(b)) throw new VimScriptError('E735: 딕셔너리는 딕셔너리와만 비교할 수 있습니다');
+    if (!isDict(a) || !isDict(b)) throw new VimScriptError(msg('E735: 딕셔너리는 딕셔너리와만 비교할 수 있습니다'));
     const ka = Object.keys(a.items);
     return ka.length === Object.keys(b.items).length && ka.every((k) => k in b.items && valuesEqual(a.items[k], b.items[k], ignoreCase));
   }
@@ -127,7 +128,7 @@ export function compileVimPattern(pattern: string, ignoreCase: boolean, flags = 
   try {
     return compileVimRegex(pattern, { ignorecase: ignoreCase, flags });
   } catch {
-    throw new VimScriptError(`E383: 잘못된 검색 패턴입니다: ${pattern}`);
+    throw new VimScriptError(msg('E383: 잘못된 검색 패턴입니다: {pattern}', { pattern }));
   }
 }
 
@@ -186,7 +187,7 @@ function tokenize(src: string): Token[] {
           out += src[j++];
         }
       }
-      if (j >= src.length) throw new VimScriptError(`E114: 큰따옴표가 닫히지 않았습니다: ${src.slice(i)}`);
+      if (j >= src.length) throw new VimScriptError(msg('E114: 큰따옴표가 닫히지 않았습니다: {v}', { v: src.slice(i) }));
       push({ type: 'str', value: out });
       i = j + 1;
       continue;
@@ -206,7 +207,7 @@ function tokenize(src: string): Token[] {
         }
         out += src[j++];
       }
-      if (j >= src.length) throw new VimScriptError(`E115: 작은따옴표가 닫히지 않았습니다: ${src.slice(i)}`);
+      if (j >= src.length) throw new VimScriptError(msg('E115: 작은따옴표가 닫히지 않았습니다: {v}', { v: src.slice(i) }));
       push({ type: 'str', value: out });
       i = j + 1;
       continue;
@@ -237,7 +238,7 @@ function tokenize(src: string): Token[] {
       i += op.length;
       continue;
     }
-    throw new VimScriptError(`E15: 잘못된 표현식입니다: "${src}"`);
+    throw new VimScriptError(msg('E15: 잘못된 표현식입니다: "{src}"', { src }));
   }
   push({ type: 'eof' });
   return tokens;
@@ -255,7 +256,7 @@ export interface LValue {
 }
 
 function indexError(index: number): VimScriptError {
-  return new VimScriptError(`E684: 리스트 인덱스가 범위를 벗어났습니다: ${index}`);
+  return new VimScriptError(msg('E684: 리스트 인덱스가 범위를 벗어났습니다: {index}', { index }));
 }
 
 function getIn(container: VimScriptValue, key: number | string): VimScriptValue {
@@ -267,10 +268,10 @@ function getIn(container: VimScriptValue, key: number | string): VimScriptValue 
   }
   if (isDict(container)) {
     const k = toVimString(key);
-    if (!(k in container.items)) throw new VimScriptError(`E716: 딕셔너리에 키가 없습니다: "${k}"`);
+    if (!(k in container.items)) throw new VimScriptError(msg('E716: 딕셔너리에 키가 없습니다: "{k}"', { k }));
     return container.items[k];
   }
-  throw new VimScriptError('E689: 리스트나 딕셔너리만 인덱스로 접근할 수 있습니다');
+  throw new VimScriptError(msg('E689: 리스트나 딕셔너리만 인덱스로 접근할 수 있습니다'));
 }
 
 function setIn(container: VimScriptValue, path: (number | string)[], value: VimScriptValue): VimScriptValue {
@@ -286,10 +287,10 @@ function setIn(container: VimScriptValue, path: (number | string)[], value: VimS
   }
   if (isDict(container)) {
     const k = toVimString(key);
-    if (rest.length > 0 && !(k in container.items)) throw new VimScriptError(`E716: 딕셔너리에 키가 없습니다: "${k}"`);
+    if (rest.length > 0 && !(k in container.items)) throw new VimScriptError(msg('E716: 딕셔너리에 키가 없습니다: "{k}"', { k }));
     return makeDict({ ...container.items, [k]: setIn(container.items[k], rest, value) });
   }
-  throw new VimScriptError('E689: 리스트나 딕셔너리만 인덱스로 접근할 수 있습니다');
+  throw new VimScriptError(msg('E689: 리스트나 딕셔너리만 인덱스로 접근할 수 있습니다'));
 }
 
 function removeIn(container: VimScriptValue, path: (number | string)[]): VimScriptValue {
@@ -305,12 +306,12 @@ function removeIn(container: VimScriptValue, path: (number | string)[]): VimScri
   }
   if (isDict(container)) {
     const k = toVimString(key);
-    if (!(k in container.items)) throw new VimScriptError(`E716: 딕셔너리에 키가 없습니다: "${k}"`);
+    if (!(k in container.items)) throw new VimScriptError(msg('E716: 딕셔너리에 키가 없습니다: "{k}"', { k }));
     const items = { ...container.items };
     delete items[k];
     return makeDict(items);
   }
-  throw new VimScriptError('E689: 리스트나 딕셔너리만 인덱스로 접근할 수 있습니다');
+  throw new VimScriptError(msg('E689: 리스트나 딕셔너리만 인덱스로 접근할 수 있습니다'));
 }
 
 /** 이름의 스코프를 판별합니다. 함수 안에서는 접두어 없는 이름이 l:, 밖에서는 g: 입니다. */
@@ -346,13 +347,13 @@ export function readVariable(ctx: EvalContext, name: string): VimScriptValue {
     const globals = ctx.state.globalVars ?? {};
     if (key in globals) return globals[key];
   }
-  throw new VimScriptError(`E121: 정의되지 않은 변수입니다: ${name}`);
+  throw new VimScriptError(msg('E121: 정의되지 않은 변수입니다: {name}', { name }));
 }
 
 /** 변수에 값을 씁니다. (a: / v: 는 읽기 전용) */
 export function writeVariable(ctx: EvalContext, name: string, value: VimScriptValue): void {
   const { scope, key } = resolveVariableName(ctx, name);
-  if (scope === 'a' || scope === 'v') throw new VimScriptError(`E46: 읽기 전용 변수는 바꿀 수 없습니다: ${name}`);
+  if (scope === 'a' || scope === 'v') throw new VimScriptError(msg('E46: 읽기 전용 변수는 바꿀 수 없습니다: {name}', { name }));
   if (scope === 'l') {
     ctx.locals![key] = value;
   } else {
@@ -365,7 +366,7 @@ function deleteVariable(ctx: EvalContext, name: string, force: boolean): void {
   const store = scope === 'l' ? ctx.locals : scope === 'g' ? ctx.state.globalVars : undefined;
   if (!store || !(key in store)) {
     if (force) return;
-    throw new VimScriptError(`E108: 해당 변수가 없습니다: ${name}`);
+    throw new VimScriptError(msg('E108: 해당 변수가 없습니다: {name}', { name }));
   }
   if (scope === 'l') {
     delete ctx.locals![key];
@@ -386,7 +387,7 @@ export function readLValue(ctx: EvalContext, lv: LValue): VimScriptValue {
 /** 대입 대상에 값을 씁니다. (l[0] = x, d.key = x 는 리스트·딕셔너리를 복사해 바꾼 뒤 변수에 다시 저장) */
 export function writeLValue(ctx: EvalContext, lv: LValue, value: VimScriptValue): void {
   if (lv.base.startsWith('@')) {
-    if (lv.path.length > 0) throw new VimScriptError(`E15: 레지스터에는 인덱스를 쓸 수 없습니다: ${lv.base}`);
+    if (lv.path.length > 0) throw new VimScriptError(msg('E15: 레지스터에는 인덱스를 쓸 수 없습니다: {base}', { base: lv.base }));
     const reg = lv.base[1] === '"' ? '"' : lv.base[1].toLowerCase();
     ctx.state = {
       ...ctx.state,
@@ -432,7 +433,7 @@ class Evaluator {
   }
 
   private invalid(): VimScriptError {
-    return new VimScriptError(`E15: 잘못된 표현식입니다: "${this.source}"`);
+    return new VimScriptError(msg('E15: 잘못된 표현식입니다: "{source}"', { source: this.source }));
   }
 
   private expectOp(value: string, error?: () => VimScriptError): void {
@@ -460,7 +461,7 @@ class Evaluator {
     let base: string;
     if (t.type === 'reg') base = `@${t.value}`;
     else if (t.type === 'name') base = t.value;
-    else throw new VimScriptError(`E475: 잘못된 대입 대상입니다: ${this.source}`);
+    else throw new VimScriptError(msg('E475: 잘못된 대입 대상입니다: {source}', { source: this.source }));
     this.pos++;
     const path: (number | string)[] = [];
     for (;;) {
@@ -477,7 +478,7 @@ class Evaluator {
         break;
       }
     }
-    if (this.peek().type !== 'eof') throw new VimScriptError(`E475: 잘못된 대입 대상입니다: ${this.source}`);
+    if (this.peek().type !== 'eof') throw new VimScriptError(msg('E475: 잘못된 대입 대상입니다: {source}', { source: this.source }));
     return { base, path };
   }
 
@@ -539,7 +540,7 @@ class Evaluator {
     }
 
     if (isList(left) || isList(right) || isDict(left) || isDict(right)) {
-      throw new VimScriptError('E692: 리스트·딕셔너리에는 크기 비교를 쓸 수 없습니다');
+      throw new VimScriptError(msg('E692: 리스트·딕셔너리에는 크기 비교를 쓸 수 없습니다'));
     }
     let cmp: number;
     if (typeof left === 'string' && typeof right === 'string') {
@@ -676,7 +677,7 @@ class Evaluator {
         if (!this.isOp(',')) break;
         this.pos++;
       }
-      this.expectOp(']', () => new VimScriptError(`E697: 리스트 끝에 ] 가 없습니다: ${this.source}`));
+      this.expectOp(']', () => new VimScriptError(msg('E697: 리스트 끝에 ] 가 없습니다: {source}', { source: this.source })));
       return items;
     }
     if (t.type === 'op' && (t.value === '{' || t.value === '#{')) {
@@ -692,12 +693,12 @@ class Evaluator {
         } else {
           key = toVimString(this.or());
         }
-        this.expectOp(':', () => new VimScriptError(`E720: 딕셔너리 키 뒤에 : 가 없습니다: ${this.source}`));
+        this.expectOp(':', () => new VimScriptError(msg('E720: 딕셔너리 키 뒤에 : 가 없습니다: {source}', { source: this.source })));
         items[key] = this.ternary();
         if (!this.isOp(',')) break;
         this.pos++;
       }
-      this.expectOp('}', () => new VimScriptError(`E723: 딕셔너리 끝에 } 가 없습니다: ${this.source}`));
+      this.expectOp('}', () => new VimScriptError(msg('E723: 딕셔너리 끝에 } 가 없습니다: {source}', { source: this.source })));
       return makeDict(items);
     }
     if (t.type === 'name') {
@@ -730,9 +731,9 @@ class Evaluator {
       return this.ctx.callUserFunction(this.ctx, name.replace(/^g:/, ''), args);
     }
     const builtin = BUILTINS[name];
-    if (!builtin) throw new VimScriptError(`E117: 알 수 없는 함수입니다: ${name}`);
-    if (args.length < builtin.min) throw new VimScriptError(`E119: 함수의 인자가 부족합니다: ${name}`);
-    if (args.length > builtin.max) throw new VimScriptError(`E118: 함수의 인자가 너무 많습니다: ${name}`);
+    if (!builtin) throw new VimScriptError(msg('E117: 알 수 없는 함수입니다: {name}', { name }));
+    if (args.length < builtin.min) throw new VimScriptError(msg('E119: 함수의 인자가 부족합니다: {name}', { name }));
+    if (args.length > builtin.max) throw new VimScriptError(msg('E118: 함수의 인자가 너무 많습니다: {name}', { name }));
     const result = builtin.fn(this.ctx, args);
     if (builtin.mutates) {
       const { value, updated } = result as MutationResult;
@@ -744,7 +745,7 @@ class Evaluator {
 }
 
 function slice(value: VimScriptValue, start: VimScriptValue | undefined, end: VimScriptValue | undefined): VimScriptValue {
-  if (isDict(value)) throw new VimScriptError('E719: 딕셔너리에는 [:] 슬라이스를 쓸 수 없습니다');
+  if (isDict(value)) throw new VimScriptError(msg('E719: 딕셔너리에는 [:] 슬라이스를 쓸 수 없습니다'));
   const seq = isList(value) ? value : toVimString(value);
   const len = seq.length;
   const norm = (v: VimScriptValue | undefined, fallback: number) => {
@@ -776,12 +777,12 @@ interface Builtin {
 }
 
 function asList(value: VimScriptValue, fn: string): VimScriptValue[] {
-  if (!isList(value)) throw new VimScriptError(`E714: ${fn}() 의 인자는 리스트여야 합니다`);
+  if (!isList(value)) throw new VimScriptError(msg('E714: {fn}() 의 인자는 리스트여야 합니다', { fn }));
   return value;
 }
 
 function asDict(value: VimScriptValue, fn: string): VimScriptDict {
-  if (!isDict(value)) throw new VimScriptError(`E715: ${fn}() 의 인자는 딕셔너리여야 합니다`);
+  if (!isDict(value)) throw new VimScriptError(msg('E715: {fn}() 의 인자는 딕셔너리여야 합니다', { fn }));
   return value;
 }
 
@@ -840,7 +841,7 @@ function expandReplacement(rep: string, groups: string[]): string {
 function formatPrintf(fmt: string, args: VimScriptValue[]): string {
   let argIdx = 0;
   const next = (): VimScriptValue => {
-    if (argIdx >= args.length) throw new VimScriptError(`E766: printf() 의 인자가 부족합니다: ${fmt}`);
+    if (argIdx >= args.length) throw new VimScriptError(msg('E766: printf() 의 인자가 부족합니다: {fmt}', { fmt }));
     return args[argIdx++];
   };
   const out = fmt.replace(/%([-0]*)(\d*)(?:\.(\d+))?([dsxXocS%])/g, (_m, flags: string, width: string, prec: string | undefined, conv: string) => {
@@ -866,7 +867,7 @@ function formatPrintf(fmt: string, args: VimScriptValue[]): string {
     }
     return body.padStart(w);
   });
-  if (argIdx < args.length) throw new VimScriptError(`E767: printf() 의 인자가 너무 많습니다: ${fmt}`);
+  if (argIdx < args.length) throw new VimScriptError(msg('E767: printf() 의 인자가 너무 많습니다: {fmt}', { fmt }));
   return out;
 }
 
@@ -934,7 +935,7 @@ const BUILTINS: Record<string, Builtin> = {
     min: 1,
     max: 1,
     fn: (ctx, [n]) => {
-      if (!ctx.submatches) throw new VimScriptError('E935: submatch() 는 :s 의 \\= 치환식 안에서만 쓸 수 있습니다');
+      if (!ctx.submatches) throw new VimScriptError(msg('E935: submatch() 는 :s 의 \\= 치환식 안에서만 쓸 수 있습니다'));
       return ctx.submatches[toNumber(n)] ?? '';
     },
   },
@@ -1075,7 +1076,7 @@ const BUILTINS: Record<string, Builtin> = {
       const start = b === undefined ? 0 : toNumber(a);
       const end = b === undefined ? toNumber(a) - 1 : toNumber(b);
       const step = c === undefined ? 1 : toNumber(c);
-      if (step === 0) throw new VimScriptError('E726: range() 의 간격은 0 일 수 없습니다');
+      if (step === 0) throw new VimScriptError(msg('E726: range() 의 간격은 0 일 수 없습니다'));
       const out: number[] = [];
       for (let i = start; step > 0 ? i <= end : i >= end; i += step) {
         out.push(i);
@@ -1211,7 +1212,7 @@ const BUILTINS: Record<string, Builtin> = {
 /** 표현식 문자열을 평가합니다. 실패하면 VimScriptError를 던집니다. ctx.state 는 setline 등으로 갱신될 수 있습니다. */
 export function evaluateVimScript(source: string, ctx: EvalContext): VimScriptValue {
   const trimmed = source.trim();
-  if (trimmed.length === 0) throw new VimScriptError('E15: 표현식이 비어 있습니다');
+  if (trimmed.length === 0) throw new VimScriptError(msg('E15: 표현식이 비어 있습니다'));
   return new Evaluator(tokenize(trimmed), trimmed, ctx).evaluateAll();
 }
 

@@ -2,6 +2,7 @@ import { TagEntry, TagStackItem, VimEditorState } from './types';
 import { getWorkspaceFiles } from './vfs';
 import { editBuffer } from './bufferEngine';
 import { recordJump } from './marks';
+import { msg } from './messages';
 
 /**
  * 텍스트 라인들에서 함수, 클래스, 변수 등 심볼(Tag) 정의를 추출합니다.
@@ -135,7 +136,7 @@ export function jumpToTag(state: VimEditorState, tagName: string): VimEditorStat
   if (!clean) {
     return {
       ...state,
-      commandMessage: 'E431: 태그를 지정하지 않았습니다 (tag name required)',
+      commandMessage: msg('E431: 태그를 지정하지 않았습니다 (tag name required)'),
     };
   }
 
@@ -143,7 +144,7 @@ export function jumpToTag(state: VimEditorState, tagName: string): VimEditorStat
   if (!target) {
     return {
       ...state,
-      commandMessage: `E426: 태그를 찾을 수 없습니다: "${clean}"`,
+      commandMessage: msg('E426: 태그를 찾을 수 없습니다: "{clean}"', { clean }),
     };
   }
 
@@ -196,7 +197,7 @@ export function popTagStack(state: VimEditorState, count = 1): VimEditorState {
   if (stack.length === 0) {
     return {
       ...state,
-      commandMessage: 'E73: 태그 스택이 비어 있습니다 (tag stack empty)',
+      commandMessage: msg('E73: 태그 스택이 비어 있습니다 (tag stack empty)'),
     };
   }
 

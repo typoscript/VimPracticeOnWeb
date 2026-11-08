@@ -6,6 +6,7 @@ import { openNewTab } from './tabEngine';
 export const BANNER_LINES_COUNT = 5;
 
 import { buildVfsMap, getDirectoryListing } from './vfs';
+import { msg } from './messages';
 export { getWorkspaceFiles, buildVfsMap, getDirectoryListing } from './vfs';
 
 /**
@@ -91,7 +92,7 @@ export function openNetrw(
     cursor: { line: BANNER_LINES_COUNT, col: 0 }, // '../' 위치에 커서 시작
     mode: 'NORMAL',
     netrw: netrwSession,
-    commandMessage: `[Netrw] /workspace/${targetDir} (Enter: 열기, -: 상위, q: 닫기)`,
+    commandMessage: msg('[Netrw] /workspace/{targetDir} (Enter: 열기, -: 상위, q: 닫기)', { targetDir }),
   };
 }
 
@@ -123,7 +124,7 @@ export function closeNetrw(state: VimEditorState): VimEditorState {
       undoStack: targetBuf.undoStack ? [...targetBuf.undoStack] : [],
       redoStack: targetBuf.redoStack ? [...targetBuf.redoStack] : [],
       netrw: null,
-      commandMessage: 'Netrw 닫힘',
+      commandMessage: msg('Netrw 닫힘'),
     };
   }
 
@@ -136,7 +137,7 @@ export function closeNetrw(state: VimEditorState): VimEditorState {
       lines: [...fileLines],
       cursor: { line: 0, col: 0 },
       netrw: null,
-      commandMessage: 'Netrw 닫힘',
+      commandMessage: msg('Netrw 닫힘'),
     };
   }
 
@@ -144,7 +145,7 @@ export function closeNetrw(state: VimEditorState): VimEditorState {
     ...state,
     buffers: remainingBuffers,
     netrw: null,
-    commandMessage: 'Netrw 닫힘',
+    commandMessage: msg('Netrw 닫힘'),
   };
 }
 
@@ -214,7 +215,7 @@ export function handleNetrwKey(
       return {
         ...state,
         lines: newLines,
-        commandMessage: `[Netrw] 새로고침 완료`,
+        commandMessage: msg('[Netrw] 새로고침 완료'),
       };
     }
 
@@ -254,7 +255,7 @@ export function handleNetrwKey(
       ...opened,
       lines: [...fileLines],
       cursor: { line: 0, col: 0 },
-      commandMessage: `"${filePath}" 열림`,
+      commandMessage: msg('"{filePath}" 열림', { filePath }),
     };
     return syncCurrentBuffer(opened);
   }
@@ -268,7 +269,7 @@ export function handleNetrwKey(
     return {
       ...splitted,
       netrw: null,
-      commandMessage: `"${filePath}" 세로 분할 창에서 열림`,
+      commandMessage: msg('"{filePath}" 세로 분할 창에서 열림', { filePath }),
     };
   }
 
@@ -281,7 +282,7 @@ export function handleNetrwKey(
     return {
       ...splitted,
       netrw: null,
-      commandMessage: `"${filePath}" 가로 분할 창에서 열림`,
+      commandMessage: msg('"{filePath}" 가로 분할 창에서 열림', { filePath }),
     };
   }
 
@@ -296,7 +297,7 @@ export function handleNetrwKey(
       lines: [...fileLines],
       cursor: { line: 0, col: 0 },
       netrw: null,
-      commandMessage: `"${filePath}" 새 탭에서 열림`,
+      commandMessage: msg('"{filePath}" 새 탭에서 열림', { filePath }),
     };
   }
 
@@ -313,7 +314,7 @@ export function handleNetrwKey(
         ...netrw,
         files: updatedFiles,
       },
-      commandMessage: `디렉터리 생성됨: ${newDirName}/`,
+      commandMessage: msg('디렉터리 생성됨: {newDirName}/', { newDirName }),
     };
   }
 
@@ -330,7 +331,7 @@ export function handleNetrwKey(
         ...netrw,
         files: updatedFiles,
       },
-      commandMessage: `파일 생성됨: ${newFileName}`,
+      commandMessage: msg('파일 생성됨: {newFileName}', { newFileName }),
     };
   }
 
@@ -347,7 +348,7 @@ export function handleNetrwKey(
         ...netrw,
         files: updatedFiles,
       },
-      commandMessage: `파일 삭제됨: ${lineText}`,
+      commandMessage: msg('파일 삭제됨: {lineText}', { lineText }),
     };
   }
 

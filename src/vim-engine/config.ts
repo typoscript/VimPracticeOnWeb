@@ -8,11 +8,13 @@
  *   개발·테스트용이며 느리므로 배포 환경에서는 끄세요. 기본값은 Node 의 NODE_ENV 가 development / test 일 때만 true.
  * - workspaceFiles: :e, :Explore, ctags, 파일 이름 자동완성이 보여줄 가상 파일들 { '경로': ['줄', ...] }
  * - vimrc: :e ~/.vimrc 로 열리는 기본 .vimrc 내용
+ * - locale: 상태 표시줄 메시지·에러 언어. 'ko'(기본) 또는 'en'(실제 Vim 의 영어 문구)
  */
 export interface VimEngineConfig {
   devChecks: boolean;
   workspaceFiles: Record<string, string[]>;
   vimrc: string[];
+  locale: 'ko' | 'en';
 }
 
 /** process 가 없는 환경(브라우저)에서도 에러 없이 NODE_ENV 를 읽습니다. */
@@ -25,6 +27,7 @@ let config: VimEngineConfig = {
   devChecks: detectDevChecks(),
   workspaceFiles: {},
   vimrc: [],
+  locale: 'ko',
 };
 
 /** 엔진 설정을 바꿉니다. 지정한 항목만 덮어씁니다. */

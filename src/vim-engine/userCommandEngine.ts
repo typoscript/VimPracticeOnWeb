@@ -1,4 +1,5 @@
 import { UserCommand, VimEditorState } from './types';
+import { msg } from './messages';
 
 /**
  * 사용자 정의 Ex 명령 엔진 (:command!, :delcommand, :comclear)
@@ -42,18 +43,18 @@ export function executeUserCommandDefinition(state: VimEditorState, exLine: stri
   const line = exLine.replace(/^:\s*/, '').trim();
 
   if (/^comc(?:l(?:e(?:a(?:r)?)?)?)?$/.test(line)) {
-    return finish({ ...state, userCommands: {} }, '[사용자 명령] 모든 사용자 정의 명령을 삭제했습니다.');
+    return finish({ ...state, userCommands: {} }, msg('[사용자 명령] 모든 사용자 정의 명령을 삭제했습니다.'));
   }
 
   const delMatch = line.match(/^delc(?:o(?:m(?:m(?:a(?:n(?:d)?)?)?)?)?)?\s+(\S+)$/);
   if (delMatch) {
     const name = delMatch[1];
     if (!state.userCommands?.[name]) {
-      return fail(state, `E184: 해당 사용자 정의 명령이 없습니다: ${name}`);
+      return fail(state, msg('E184: 해당 사용자 정의 명령이 없습니다: {name}', { name }));
     }
     const next = { ...state.userCommands };
     delete next[name];
-    return finish({ ...state, userCommands: next }, `[사용자 명령 삭제] :${name}`);
+    return finish({ ...state, userCommands: next }, msg('[사용자 명령 삭제] :{name}', { name }));
   }
 
   const comMatch = line.match(/^com(?:m(?:a(?:n(?:d)?)?)?)?(!?)(?:\s+(.*))?$/);
@@ -69,15 +70,15 @@ export function executeUserCommandDefinition(state: VimEditorState, exLine: stri
   while ((attr = rest.match(/^-(\S+)\s*/))) {
     const [name, value] = attr[1].split('=', 2);
     if (name === 'nargs') {
-      if (!value || !VALID_NARGS.has(value)) return fail(state, `E176: 잘못된 인자 개수 지정입니다: -nargs=${value ?? ''}`);
+      if (!value || !VALID_NARGS.has(value)) return fail(state, msg('E176: 잘못된 인자 개수 지정입니다: -nargs={v}', { v: value ?? '' }));
       nargs = value as UserCommand['nargs'];
     } else if (name === 'range') {
-      if (value !== undefined && value !== '%') return fail(state, `E178: 잘못된 범위 기본값입니다: -range=${value}`);
+      if (value !== undefined && value !== '%') return fail(state, msg('E178: 잘못된 범위 기본값입니다: -range={value}', { value }));
       range = value === '%' ? 'file' : 'line';
     } else if (name === 'bang') {
       bang = true;
     } else if (name !== 'bar' && name !== 'complete') {
-      return fail(state, `E181: 잘못된 속성입니다: -${attr[1]}`);
+      return fail(state, msg('E181: 잘못된 속성입니다: -{v}', { v: attr[1] }));
     }
     rest = rest.slice(attr[0].length);
   }
@@ -91,16 +92,16 @@ export function executeUserCommandDefinition(state: VimEditorState, exLine: stri
   const name = nameMatch[1];
   const replacement = nameMatch[2].trim();
   if (!/^[A-Z][A-Za-z0-9]*$/.test(name)) {
-    return fail(state, `E183: 사용자 정의 명령은 대문자로 시작하고 영문자·숫자만 쓸 수 있습니다: ${name}`);
+    return fail(state, msg('E183: 사용자 정의 명령은 대문자로 시작하고 영문자·숫자만 쓸 수 있습니다: {name}', { name }));
   }
   if (state.userCommands?.[name] && !overwrite) {
-    return fail(state, `E174: 이미 존재하는 명령입니다. 덮어쓰려면 ! 를 붙이세요: ${name}`);
+    return fail(state, msg('E174: 이미 존재하는 명령입니다. 덮어쓰려면 ! 를 붙이세요: {name}', { name }));
   }
 
   const command: UserCommand = { name, nargs, range, bang, replacement };
   return finish(
     { ...state, userCommands: { ...(state.userCommands ?? {}), [name]: command } },
-    `[사용자 명령 등록] :${name} -> ${replacement}`
+    msg('[사용자 명령 등록] :{name} -> {replacement}', { name, replacement })
   );
 }
 
@@ -110,11 +111,11 @@ export function formatUserCommandList(state: VimEditorState, prefix = ''): strin
     .filter((c) => c.name.startsWith(prefix))
     .sort((a, b) => a.name.localeCompare(b.name));
   if (commands.length === 0) {
-    return '사용자 정의 명령이 없습니다.';
+    return msg('사용자 정의 명령이 없습니다.');
   }
   const rangeLabel = (c: UserCommand) => (c.range === 'file' ? '%' : c.range === 'line' ? '.' : '');
   return [
-    '--- 사용자 정의 명령 (:command) ---',
+    msg('--- 사용자 정의 명령 (:command) ---'),
     '    Name        Args Range Definition',
     ...commands.map(
       (c) => `${c.bang ? '!' : ' '}   ${c.name.padEnd(12)}${c.nargs.padEnd(5)}${rangeLabel(c).padEnd(6)}${c.replacement}`
@@ -202,19 +203,19 @@ export function executeUserCommand(
   const { args, bang, range } = invocation;
 
   if (depth >= MAX_USER_COMMAND_DEPTH) {
-    return fail(state, `E169: 명령이 너무 깊게 재귀 호출되었습니다: ${command.name}`);
+    return fail(state, msg('E169: 명령이 너무 깊게 재귀 호출되었습니다: {name}', { name: command.name }));
   }
   if (bang && !command.bang) {
-    return fail(state, `E477: ! 를 사용할 수 없는 명령입니다: ${command.name}`);
+    return fail(state, msg('E477: ! 를 사용할 수 없는 명령입니다: {name}', { name: command.name }));
   }
   if (range && command.range === 'none') {
-    return fail(state, `E481: 범위를 지정할 수 없는 명령입니다: ${command.name}`);
+    return fail(state, msg('E481: 범위를 지정할 수 없는 명령입니다: {name}', { name: command.name }));
   }
   if (command.nargs === '0' && args.length > 0) {
-    return fail(state, `E488: 불필요한 인자가 있습니다: ${args}`);
+    return fail(state, msg('E488: 불필요한 인자가 있습니다: {args}', { args }));
   }
   if ((command.nargs === '1' || command.nargs === '+') && args.length === 0) {
-    return fail(state, `E471: 인자가 필요합니다: ${command.name}`);
+    return fail(state, msg('E471: 인자가 필요합니다: {name}', { name: command.name }));
   }
 
   const lastLine = Math.max(1, state.lines.length);

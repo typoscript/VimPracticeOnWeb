@@ -1,4 +1,5 @@
 import { VimEditorState, VimOptions } from './types';
+import { msg } from './messages';
 
 export const DEFAULT_VIM_OPTIONS: VimOptions = {
   number: true,
@@ -88,7 +89,7 @@ export function formatOptionsList(options: VimOptions, showAll = false): string 
 
   const header = showAll ? '--- All Options ---' : '--- Modified Options ---';
   if (displayedItems.length === 0) {
-    return `${header}\n(기본값과 다른 설정이 없습니다)`;
+    return msg('{header}\\n(기본값과 다른 설정이 없습니다)', { header });
   }
 
   return `${header}\n  ${displayedItems.join('  ')}`;
@@ -132,7 +133,7 @@ export function executeSetCommand(state: VimEditorState, rawArgs: string): VimEd
       if (!optKey) {
         return {
           ...state,
-          commandMessage: `E518: 알 수 없는 옵션: ${queryName}`,
+          commandMessage: msg('E518: 알 수 없는 옵션: {queryName}', { queryName }),
         };
       }
       const val = nextOptions[optKey];
@@ -151,14 +152,14 @@ export function executeSetCommand(state: VimEditorState, rawArgs: string): VimEd
       if (!optKey || (optKey !== 'tabstop' && optKey !== 'shiftwidth')) {
         return {
           ...state,
-          commandMessage: `E518: 알 수 없는 옵션: ${rawKey}`,
+          commandMessage: msg('E518: 알 수 없는 옵션: {rawKey}', { rawKey }),
         };
       }
       const numVal = parseInt(rawVal, 10);
       if (isNaN(numVal) || numVal < 1) {
         return {
           ...state,
-          commandMessage: `E521: 잘못된 숫자 인수: ${token}`,
+          commandMessage: msg('E521: 잘못된 숫자 인수: {token}', { token }),
         };
       }
       nextOptions = { ...nextOptions, [optKey]: numVal };
@@ -173,7 +174,7 @@ export function executeSetCommand(state: VimEditorState, rawArgs: string): VimEd
       if (!optKey) {
         return {
           ...state,
-          commandMessage: `E518: 알 수 없는 옵션: ${rawKey}`,
+          commandMessage: msg('E518: 알 수 없는 옵션: {rawKey}', { rawKey }),
         };
       }
       const curVal = nextOptions[optKey];
@@ -192,7 +193,7 @@ export function executeSetCommand(state: VimEditorState, rawArgs: string): VimEd
       if (!optKey) {
         return {
           ...state,
-          commandMessage: `E518: 알 수 없는 옵션: ${token}`,
+          commandMessage: msg('E518: 알 수 없는 옵션: {token}', { token }),
         };
       }
       if (typeof nextOptions[optKey] === 'boolean') {
@@ -207,7 +208,7 @@ export function executeSetCommand(state: VimEditorState, rawArgs: string): VimEd
     if (!optKey) {
       return {
         ...state,
-        commandMessage: `E518: 알 수 없는 옵션: ${token}`,
+        commandMessage: msg('E518: 알 수 없는 옵션: {token}', { token }),
       };
     }
     if (typeof nextOptions[optKey] === 'boolean') {

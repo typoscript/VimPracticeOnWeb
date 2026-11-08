@@ -16,6 +16,7 @@ import {
   writeLValue,
 } from './vimscriptEval';
 import { pushUndoSnapshot } from './operators';
+import { msg } from './messages';
 
 /**
  * Vim script 함수 엔진 (:function, :endfunction, :delfunction, :call, :let, :unlet, :echo, :execute)
@@ -75,11 +76,11 @@ type Header = Omit<UserFunction, 'body'>;
 /** `Name(a, b, ...) range abort` 를 해석합니다. 실패하면 에러 메시지 문자열을 반환합니다. */
 function parseFunctionHeader(rest: string): Header | string {
   const m = rest.match(/^([A-Za-z_:][\w:#]*)\s*\(([^)]*)\)\s*(.*)$/);
-  if (!m) return `E124: 함수 정의 뒤에 ( 가 필요합니다: ${rest}`;
+  if (!m) return msg('E124: 함수 정의 뒤에 ( 가 필요합니다: {rest}', { rest });
 
   const name = m[1].replace(/^g:/, '');
   if (!/^[A-Z][A-Za-z0-9_]*$/.test(name) && !/^s:\w+$/.test(name)) {
-    return `E128: 함수 이름은 대문자 또는 "s:" 로 시작해야 합니다: ${m[1]}`;
+    return msg('E128: 함수 이름은 대문자 또는 "s:" 로 시작해야 합니다: {v}', { v: m[1] });
   }
 
   const rawParams = m[2].split(',').map((p) => p.trim()).filter((p) => p.length > 0);
@@ -88,12 +89,12 @@ function parseFunctionHeader(rest: string): Header | string {
   for (let i = 0; i < rawParams.length; i++) {
     const p = rawParams[i];
     if (p === '...') {
-      if (i !== rawParams.length - 1) return `E125: 잘못된 인자입니다: ...`;
+      if (i !== rawParams.length - 1) return msg('E125: 잘못된 인자입니다: ...');
       varargs = true;
     } else if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(p)) {
-      return `E125: 잘못된 인자입니다: ${p}`;
+      return msg('E125: 잘못된 인자입니다: {p}', { p });
     } else if (params.includes(p)) {
-      return `E853: 중복된 인자 이름입니다: ${p}`;
+      return msg('E853: 중복된 인자 이름입니다: {p}', { p });
     } else {
       params.push(p);
     }
@@ -104,7 +105,7 @@ function parseFunctionHeader(rest: string): Header | string {
   for (const word of m[3].split(/\s+/).filter((w) => w.length > 0)) {
     if (word === 'range') range = true;
     else if (word === 'abort') abort = true;
-    else if (word !== 'dict' && word !== 'closure') return `E488: 불필요한 문자가 있습니다: ${word}`;
+    else if (word !== 'dict' && word !== 'closure') return msg('E488: 불필요한 문자가 있습니다: {word}', { word });
   }
 
   return { name, params, varargs, range, abort };
@@ -112,7 +113,7 @@ function parseFunctionHeader(rest: string): Header | string {
 
 function formatFunctionList(state: VimEditorState): string {
   const fns = Object.values(state.userFunctions ?? {}).sort((a, b) => a.name.localeCompare(b.name));
-  if (fns.length === 0) return '사용자 정의 함수가 없습니다.';
+  if (fns.length === 0) return msg('사용자 정의 함수가 없습니다.');
   return fns.map(signature).join('\n');
 }
 
@@ -127,7 +128,7 @@ function formatFunctionBody(fn: UserFunction): string {
 /** 함수를 등록합니다. (기존 함수가 있고 overwrite가 아니면 E122) */
 function registerFunction(state: VimEditorState, fn: UserFunction, overwrite: boolean): VimEditorState | string {
   if (state.userFunctions?.[fn.name] && !overwrite) {
-    return `E122: 함수 ${fn.name} 이(가) 이미 있습니다. 덮어쓰려면 ! 를 붙이세요`;
+    return msg('E122: 함수 {name} 이(가) 이미 있습니다. 덮어쓰려면 ! 를 붙이세요', { name: fn.name });
   }
   return { ...state, userFunctions: { ...(state.userFunctions ?? {}), [fn.name]: fn } };
 }
@@ -141,7 +142,7 @@ export function appendFunctionDraftLine(state: VimEditorState, line: string): Vi
     const { overwrite, ...fn } = draft;
     const registered = registerFunction({ ...state, functionDraft: undefined }, fn, overwrite);
     if (typeof registered === 'string') return finish({ ...state, functionDraft: undefined }, registered, true);
-    return finish(registered, `[함수 정의] ${signature(fn)} (${fn.body.length}줄)`);
+    return finish(registered, msg('[함수 정의] {v} ({bodyCount}줄)', { v: signature(fn), bodyCount: fn.body.length }));
   }
 
   const nextDraft: FunctionDraft = { ...draft, body: [...draft.body, line.replace(/^\s*:?/, '')] };
@@ -156,18 +157,18 @@ export function appendFunctionDraftLine(state: VimEditorState, line: string): Vi
 }
 
 function draftMessage(draft: FunctionDraft): string {
-  return `함수 ${draft.name} 본문 입력 중 (${draft.body.length}줄) · endfunction 으로 끝내기, Esc 취소`;
+  return msg('함수 {name} 본문 입력 중 ({bodyCount}줄) · endfunction 으로 끝내기, Esc 취소', { name: draft.name, bodyCount: draft.body.length });
 }
 
 /** 본문 입력을 취소합니다. (Esc) */
 export function cancelFunctionDraft(state: VimEditorState): VimEditorState {
-  return finish({ ...state, functionDraft: undefined }, `함수 ${state.functionDraft?.name ?? ''} 정의를 취소했습니다.`);
+  return finish({ ...state, functionDraft: undefined }, msg('함수 {v} 정의를 취소했습니다.', { v: state.functionDraft?.name ?? '' }));
 }
 
 /** .vimrc 소싱처럼 헤더와 본문을 한 번에 받아 함수를 정의합니다. */
 export function defineFunctionFromLines(state: VimEditorState, headerLine: string, body: string[]): VimEditorState {
   const m = headerLine.trim().match(FUNC_HEADER);
-  const header = m?.[2] ? parseFunctionHeader(m[2].trim()) : `E124: 함수 정의가 올바르지 않습니다: ${headerLine}`;
+  const header = m?.[2] ? parseFunctionHeader(m[2].trim()) : msg('E124: 함수 정의가 올바르지 않습니다: {headerLine}', { headerLine });
   if (typeof header === 'string') return finish(state, header, true);
   const registered = registerFunction(state, { ...header, body }, m?.[1] === '!');
   return typeof registered === 'string' ? finish(state, registered, true) : registered;
@@ -203,13 +204,13 @@ export function callUserFunction(
   lastline = state.cursor.line + 1
 ): CallResult {
   const fn = state.userFunctions?.[name];
-  if (!fn) return { state, value: 0, error: `E117: 알 수 없는 함수입니다: ${name}` };
+  if (!fn) return { state, value: 0, error: msg('E117: 알 수 없는 함수입니다: {name}', { name }) };
   if (depth >= MAX_FUNC_DEPTH) {
-    return { state, value: 0, error: `E132: 함수 호출 깊이가 'maxfuncdepth'(${MAX_FUNC_DEPTH})를 넘었습니다` };
+    return { state, value: 0, error: msg('E132: 함수 호출 깊이가 \'maxfuncdepth\'({MAX_FUNC_DEPTH})를 넘었습니다', { MAX_FUNC_DEPTH }) };
   }
-  if (args.length < fn.params.length) return { state, value: 0, error: `E119: 함수의 인자가 부족합니다: ${name}` };
+  if (args.length < fn.params.length) return { state, value: 0, error: msg('E119: 함수의 인자가 부족합니다: {name}', { name }) };
   if (args.length > fn.params.length && !fn.varargs) {
-    return { state, value: 0, error: `E118: 함수의 인자가 너무 많습니다: ${name}` };
+    return { state, value: 0, error: msg('E118: 함수의 인자가 너무 많습니다: {name}', { name }) };
   }
 
   const extra = args.slice(fn.params.length);
@@ -260,7 +261,7 @@ function runFunctionBody(fn: UserFunction, ctx: EvalContext, runEx: ExRunner): C
       }
       if (word === 'elseif' || word === 'elsei') {
         const top = stack[stack.length - 1];
-        if (top?.type !== 'if') throw new VimScriptError('E582: :if 없이 :elseif 가 사용되었습니다');
+        if (top?.type !== 'if') throw new VimScriptError(msg('E582: :if 없이 :elseif 가 사용되었습니다'));
         const parentActive = stack.slice(0, -1).every((f) => f.active);
         if (parentActive && !top.taken) {
           top.active = isTruthy(evaluateVimScript(rest, ctx));
@@ -272,14 +273,14 @@ function runFunctionBody(fn: UserFunction, ctx: EvalContext, runEx: ExRunner): C
       }
       if (word === 'else' || word === 'el') {
         const top = stack[stack.length - 1];
-        if (top?.type !== 'if') throw new VimScriptError('E581: :if 없이 :else 가 사용되었습니다');
+        if (top?.type !== 'if') throw new VimScriptError(msg('E581: :if 없이 :else 가 사용되었습니다'));
         const parentActive = stack.slice(0, -1).every((f) => f.active);
         top.active = parentActive && !top.taken;
         top.taken = true;
         continue;
       }
       if (word === 'endif' || word === 'en') {
-        if (stack[stack.length - 1]?.type !== 'if') throw new VimScriptError('E580: :if 없이 :endif 가 사용되었습니다');
+        if (stack[stack.length - 1]?.type !== 'if') throw new VimScriptError(msg('E580: :if 없이 :endif 가 사용되었습니다'));
         stack.pop();
         continue;
       }
@@ -290,20 +291,20 @@ function runFunctionBody(fn: UserFunction, ctx: EvalContext, runEx: ExRunner): C
       }
       if (word === 'endwhile' || word === 'endw') {
         const top = stack.pop();
-        if (top?.type !== 'while') throw new VimScriptError('E588: :while 없이 :endwhile 이 사용되었습니다');
+        if (top?.type !== 'while') throw new VimScriptError(msg('E588: :while 없이 :endwhile 이 사용되었습니다'));
         if (top.active || top.continued) {
-          if (++iterations > MAX_LOOP_ITERATIONS) throw new VimScriptError('E169: while 반복이 너무 많습니다');
+          if (++iterations > MAX_LOOP_ITERATIONS) throw new VimScriptError(msg('E169: while 반복이 너무 많습니다'));
           pc = top.start - 1; // while 줄을 다시 평가
         }
         continue;
       }
       if (word === 'for') {
         const m = rest.match(/^(.+?)\s+in\s+(.+)$/);
-        if (!m) throw new VimScriptError(`E690: :for 뒤에 "in" 이 없습니다: ${line}`);
+        if (!m) throw new VimScriptError(msg('E690: :for 뒤에 "in" 이 없습니다: {line}', { line }));
         let items: VimScriptValue[] = [];
         if (executing()) {
           const value = evaluateVimScript(m[2], ctx);
-          if (!isList(value)) throw new VimScriptError('E714: :for 에는 리스트가 필요합니다');
+          if (!isList(value)) throw new VimScriptError(msg('E714: :for 에는 리스트가 필요합니다'));
           items = value;
         }
         const frame: BlockFrame = { type: 'for', start: pc, active: items.length > 0, continued: false, items, index: 0, target: m[1].trim() };
@@ -313,11 +314,11 @@ function runFunctionBody(fn: UserFunction, ctx: EvalContext, runEx: ExRunner): C
       }
       if (word === 'endfor' || word === 'endfo') {
         const top = stack[stack.length - 1];
-        if (top?.type !== 'for') throw new VimScriptError('E588: :for 없이 :endfor 가 사용되었습니다');
+        if (top?.type !== 'for') throw new VimScriptError(msg('E588: :for 없이 :endfor 가 사용되었습니다'));
         const parentActive = stack.slice(0, -1).every((f) => f.active);
         // 본문을 끝까지 실행했거나 continue 로 왔으면 다음 항목으로, break 로 왔으면 종료
         if (parentActive && (top.active || top.continued) && top.index + 1 < top.items.length) {
-          if (++iterations > MAX_LOOP_ITERATIONS) throw new VimScriptError('E169: for 반복이 너무 많습니다');
+          if (++iterations > MAX_LOOP_ITERATIONS) throw new VimScriptError(msg('E169: for 반복이 너무 많습니다'));
           top.index++;
           top.active = true;
           top.continued = false;
@@ -331,7 +332,7 @@ function runFunctionBody(fn: UserFunction, ctx: EvalContext, runEx: ExRunner): C
       if (word === 'break' || word === 'brea' || word === 'continue' || word === 'con') {
         if (!executing()) continue;
         const idx = stack.map((f) => f.type !== 'if').lastIndexOf(true);
-        if (idx < 0) throw new VimScriptError(`E587: :while/:for 없이 :${word} 가 사용되었습니다`);
+        if (idx < 0) throw new VimScriptError(msg('E587: :while/:for 없이 :{word} 가 사용되었습니다', { word }));
         const loop = stack[idx] as LoopFrame;
         loop.active = false;
         loop.continued = word.startsWith('con');
@@ -351,7 +352,7 @@ function runFunctionBody(fn: UserFunction, ctx: EvalContext, runEx: ExRunner): C
       if (!runScriptCommand(ctx, line, runEx)) {
         const next = runEx(withoutBell(ctx.state), line);
         ctx.state = next;
-        if (next.bell) throw new VimScriptError(next.commandMessage ?? `E492: 명령 실행에 실패했습니다: ${line}`);
+        if (next.bell) throw new VimScriptError(next.commandMessage ?? msg('E492: 명령 실행에 실패했습니다: {line}', { line }));
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -362,7 +363,7 @@ function runFunctionBody(fn: UserFunction, ctx: EvalContext, runEx: ExRunner): C
   }
 
   if (stack.length > 0) {
-    const missing = stack[stack.length - 1].type === 'if' ? 'E171: :endif 가 없습니다' : 'E170: :endwhile 이 없습니다';
+    const missing = stack[stack.length - 1].type === 'if' ? msg('E171: :endif 가 없습니다') : msg('E170: :endwhile 이 없습니다');
     return { state: ctx.state, value: 0, error: firstError ?? missing };
   }
   return { state: ctx.state, value: 0, error: firstError };
@@ -380,10 +381,10 @@ function runScriptCommand(ctx: EvalContext, line: string, runEx: ExRunner): bool
 
   if (cmd === 'let') {
     const parts = splitLet(rest);
-    if (!parts) throw new VimScriptError(`E15: 잘못된 :let 구문입니다: ${line}`);
+    if (!parts) throw new VimScriptError(msg('E15: 잘못된 :let 구문입니다: {line}', { line }));
     const value = evaluateVimScript(parts.expr, ctx);
     if (parts.target.startsWith('[')) {
-      if (parts.op !== '=') throw new VimScriptError(`E15: 리스트 풀기에는 = 만 쓸 수 있습니다: ${line}`);
+      if (parts.op !== '=') throw new VimScriptError(msg('E15: 리스트 풀기에는 = 만 쓸 수 있습니다: {line}', { line }));
       assignTargets(ctx, parts.target, value);
     } else {
       const lv = parseLValue(parts.target, ctx);
@@ -409,12 +410,12 @@ function runScriptCommand(ctx: EvalContext, line: string, runEx: ExRunner): bool
     const command = evaluateVimScriptList(rest, ctx).map(toVimString).join(' ');
     const next = runEx(withoutBell(ctx.state), command.replace(/^\s*:/, ''));
     ctx.state = next;
-    if (next.bell) throw new VimScriptError(next.commandMessage ?? `E492: 명령 실행에 실패했습니다: ${command}`);
+    if (next.bell) throw new VimScriptError(next.commandMessage ?? msg('E492: 명령 실행에 실패했습니다: {command}', { command }));
     return true;
   }
 
   if (cmd === 'cal' || cmd === 'call') {
-    if (!/^[\w:#]+\s*\(.*\)$/.test(rest)) throw new VimScriptError(`E129: 함수 이름이 필요합니다: ${rest}`);
+    if (!/^[\w:#]+\s*\(.*\)$/.test(rest)) throw new VimScriptError(msg('E129: 함수 이름이 필요합니다: {rest}', { rest }));
     evaluateVimScript(rest, ctx);
     return true;
   }
@@ -480,12 +481,12 @@ function assignTargets(ctx: EvalContext, target: string, value: VimScriptValue):
     writeLValue(ctx, parseLValue(t, ctx), value);
     return;
   }
-  if (!t.endsWith(']')) throw new VimScriptError(`E475: 잘못된 대입 대상입니다: ${target}`);
-  if (!isList(value)) throw new VimScriptError('E714: 리스트 풀기에는 리스트가 필요합니다');
+  if (!t.endsWith(']')) throw new VimScriptError(msg('E475: 잘못된 대입 대상입니다: {target}', { target }));
+  if (!isList(value)) throw new VimScriptError(msg('E714: 리스트 풀기에는 리스트가 필요합니다'));
   const [namesPart, restName] = t.slice(1, -1).split(';').map((x) => x.trim());
   const names = namesPart.split(',').map((n) => n.trim()).filter((n) => n.length > 0);
-  if (value.length < names.length) throw new VimScriptError('E688: 리스트 항목보다 대상이 더 많습니다');
-  if (value.length > names.length && !restName) throw new VimScriptError('E687: 리스트 항목보다 대상이 더 적습니다');
+  if (value.length < names.length) throw new VimScriptError(msg('E688: 리스트 항목보다 대상이 더 많습니다'));
+  if (value.length > names.length && !restName) throw new VimScriptError(msg('E687: 리스트 항목보다 대상이 더 적습니다'));
   names.forEach((n, i) => writeLValue(ctx, parseLValue(n, ctx), value[i]));
   if (restName) writeLValue(ctx, parseLValue(restName, ctx), value.slice(names.length));
 }
@@ -511,18 +512,18 @@ export function executeScriptCommandLine(state: VimEditorState, commandLine: str
   const line = commandLine.replace(/^:\s*/, '').trim();
 
   if (END_FUNC.test(line)) {
-    return finish(state, 'E193: :endfunction 이 함수 안에 있지 않습니다', true);
+    return finish(state, msg('E193: :endfunction 이 함수 안에 있지 않습니다'), true);
   }
 
   const del = line.match(DEL_FUNC);
   if (del) {
     const name = del[2].replace(/^g:/, '').replace(/\(\)$/, '');
     if (!state.userFunctions?.[name]) {
-      return del[1] === '!' ? finish(state) : finish(state, `E130: 알 수 없는 함수입니다: ${name}`, true);
+      return del[1] === '!' ? finish(state) : finish(state, msg('E130: 알 수 없는 함수입니다: {name}', { name }), true);
     }
     const next = { ...state.userFunctions };
     delete next[name];
-    return finish({ ...state, userFunctions: next }, `[함수 삭제] ${name}`);
+    return finish({ ...state, userFunctions: next }, msg('[함수 삭제] {name}', { name }));
   }
 
   const fu = line.match(FUNC_HEADER);
@@ -531,13 +532,13 @@ export function executeScriptCommandLine(state: VimEditorState, commandLine: str
     if (rest.length === 0) return finish(state, formatFunctionList(state));
     if (!rest.includes('(')) {
       const fn = state.userFunctions?.[rest.replace(/^g:/, '')];
-      return fn ? finish(state, formatFunctionBody(fn)) : finish(state, `E123: 정의되지 않은 함수입니다: ${rest}`, true);
+      return fn ? finish(state, formatFunctionBody(fn)) : finish(state, msg('E123: 정의되지 않은 함수입니다: {rest}', { rest }), true);
     }
     const header = parseFunctionHeader(rest);
     if (typeof header === 'string') return finish(state, header, true);
     const overwrite = fu[1] === '!';
     if (state.userFunctions?.[header.name] && !overwrite) {
-      return finish(state, `E122: 함수 ${header.name} 이(가) 이미 있습니다. 덮어쓰려면 ! 를 붙이세요`, true);
+      return finish(state, msg('E122: 함수 {name} 이(가) 이미 있습니다. 덮어쓰려면 ! 를 붙이세요', { name: header.name }), true);
     }
     const draft: FunctionDraft = { ...header, body: [], overwrite };
     return {
@@ -575,7 +576,7 @@ export function executeCallCommand(
   runEx: ExRunner
 ): VimEditorState {
   const m = expression.trim().match(/^(?:g:)?([\w:#]+)\s*\((.*)\)$/);
-  if (!m) return finish(state, `E129: 함수 이름이 필요합니다: ${expression}`, true);
+  if (!m) return finish(state, msg('E129: 함수 이름이 필요합니다: {expression}', { expression }), true);
   const name = m[1];
 
   const fn = state.userFunctions?.[name];

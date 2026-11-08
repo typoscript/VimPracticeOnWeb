@@ -1,5 +1,6 @@
 import { ArgListState, VimEditorState } from './types';
 import { editBuffer, switchBuffer, syncCurrentBuffer, ensureBuffers } from './bufferEngine';
+import { msg } from './messages';
 
 /**
  * 아규먼트 파일로 에디터 화면을 전환합니다.
@@ -105,7 +106,7 @@ export function deleteArgs(state: VimEditorState, pattern: string): VimEditorSta
     return {
       ...state,
       argList: null,
-      commandMessage: '아규먼트 리스트가 비워졌습니다',
+      commandMessage: msg('아규먼트 리스트가 비워졌습니다'),
     };
   }
 
@@ -345,6 +346,6 @@ export function argdo(
 
   return {
     ...currState,
-    commandMessage: `(${files.length}개 파일에 대해 :argdo '${cleanCmd}' 실행 완료)`,
+    commandMessage: msg('({filesCount}개 파일에 대해 :argdo \'{cleanCmd}\' 실행 완료)', { filesCount: files.length, cleanCmd }),
   };
 }

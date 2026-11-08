@@ -1,5 +1,6 @@
 import { VimBuffer, VimEditorState } from './types';
 import { getVfsFile } from './vfs';
+import { msg } from './messages';
 
 /**
  * 버퍼 목록이 초기화되어 있지 않은 경우, 기본 1번 버퍼(및 2번 보조 버퍼)를 구성합니다.
@@ -89,7 +90,7 @@ export function switchBuffer(state: VimEditorState, target: number | string): Vi
     if (!syncedState.alternateBufferId) {
       return {
         ...syncedState,
-        commandMessage: 'E23: 다른 버퍼가 없습니다',
+        commandMessage: msg('E23: 다른 버퍼가 없습니다'),
       };
     }
     targetBuf = buffers.find((b) => b.id === syncedState.alternateBufferId);
@@ -107,14 +108,14 @@ export function switchBuffer(state: VimEditorState, target: number | string): Vi
   if (!targetBuf) {
     return {
       ...syncedState,
-      commandMessage: `E94: 일치하는 버퍼를 찾을 수 없습니다: ${target}`,
+      commandMessage: msg('E94: 일치하는 버퍼를 찾을 수 없습니다: {target}', { target }),
     };
   }
 
   if (targetBuf.id === curId) {
     return {
       ...syncedState,
-      commandMessage: `"${targetBuf.name}" [버퍼 ${targetBuf.id}] 현재 활성`,
+      commandMessage: msg('"{name}" [버퍼 {id}] 현재 활성', { name: targetBuf.name, id: targetBuf.id }),
     };
   }
 
@@ -127,7 +128,7 @@ export function switchBuffer(state: VimEditorState, target: number | string): Vi
     primaryFilename: targetBuf.name,
     alternateBufferId: curId,
     currentBufferId: targetBuf.id,
-    commandMessage: `"${targetBuf.name}" [버퍼 ${targetBuf.id}]`,
+    commandMessage: msg('"{name}" [버퍼 {id}]', { name: targetBuf.name, id: targetBuf.id }),
   };
 }
 
@@ -202,7 +203,7 @@ export function editBuffer(state: VimEditorState, filename: string): VimEditorSt
   if (!cleanName) {
     return {
       ...state,
-      commandMessage: 'E471: 인수가 필요합니다 (:e {filename})',
+      commandMessage: msg('E471: 인수가 필요합니다 (:e {filename})'),
     };
   }
 
@@ -243,7 +244,7 @@ export function editBuffer(state: VimEditorState, filename: string): VimEditorSt
     primaryFilename: cleanName,
     alternateBufferId: curId,
     currentBufferId: newId,
-    commandMessage: `"${cleanName}" [${vfsLines ? '파일 로드됨' : '새 파일'} 버퍼 ${newId}]`,
+    commandMessage: msg('"{cleanName}" [{v} 버퍼 {newId}]', { cleanName, v: vfsLines ? msg('파일 로드됨') : msg('새 파일'), newId }),
   };
 }
 
@@ -272,7 +273,7 @@ export function deleteBuffer(state: VimEditorState, target?: number | string): V
   if (!targetBuf) {
     return {
       ...syncedState,
-      commandMessage: `E94: 버퍼를 찾을 수 없습니다: ${target}`,
+      commandMessage: msg('E94: 버퍼를 찾을 수 없습니다: {target}', { target }),
     };
   }
 
@@ -297,7 +298,7 @@ export function deleteBuffer(state: VimEditorState, target?: number | string): V
       primaryFilename: '[No Name]',
       currentBufferId: 1,
       alternateBufferId: undefined,
-      commandMessage: '버퍼 1개를 초기화했습니다',
+      commandMessage: msg('버퍼 1개를 초기화했습니다'),
     };
   }
 
@@ -310,7 +311,7 @@ export function deleteBuffer(state: VimEditorState, target?: number | string): V
       ...syncedState,
       buffers: nextBuffers,
       alternateBufferId: nextAlt,
-      commandMessage: `버퍼 ${targetBuf.id} ("${targetBuf.name}")를 삭제했습니다`,
+      commandMessage: msg('버퍼 {id} ("{name}")를 삭제했습니다', { id: targetBuf.id, name: targetBuf.name }),
     };
   }
 
@@ -335,7 +336,7 @@ export function deleteBuffer(state: VimEditorState, target?: number | string): V
     primaryFilename: fallbackBuf.name,
     currentBufferId: fallbackBuf.id,
     alternateBufferId: undefined,
-    commandMessage: `버퍼 ${targetBuf.id} ("${targetBuf.name}")를 삭제했습니다`,
+    commandMessage: msg('버퍼 {id} ("{name}")를 삭제했습니다', { id: targetBuf.id, name: targetBuf.name }),
   };
 }
 

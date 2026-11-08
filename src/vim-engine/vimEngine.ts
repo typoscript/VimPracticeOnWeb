@@ -189,6 +189,7 @@ import {
   deleteFoldOrLine,
   yankFoldOrLine,
 } from './folding';
+import { msg } from './messages';
 export {
   foldClose,
   foldOpen,
@@ -537,7 +538,7 @@ function executeGn(
   if (!state.lastSearchQuery) {
     return {
       ...state,
-      commandMessage: 'E35: 이전 정규식이 없습니다',
+      commandMessage: msg('E35: 이전 정규식이 없습니다'),
       pendingKeys: undefined,
     };
   }
@@ -546,7 +547,7 @@ function executeGn(
   if (matches.length === 0) {
     return {
       ...state,
-      commandMessage: `E486: 패턴을 찾을 수 없습니다: ${state.lastSearchQuery}`,
+      commandMessage: msg('E486: 패턴을 찾을 수 없습니다: {lastSearchQuery}', { lastSearchQuery: state.lastSearchQuery }),
       pendingKeys: undefined,
       bell: true,
     };
@@ -671,7 +672,7 @@ export function executeSearchQuery(
       lastSearchOffset: offset,
       commandBuffer: undefined,
       commandType: undefined,
-      commandMessage: `E486: 패턴을 찾을 수 없습니다: ${pattern}`,
+      commandMessage: msg('E486: 패턴을 찾을 수 없습니다: {pattern}', { pattern }),
       searchOperator: undefined,
       bell: true,
     };
@@ -732,7 +733,7 @@ export function executeSearchQuery(
     lastSearchOffset: offset,
     commandBuffer: undefined,
     commandType: undefined,
-    commandMessage: `검색 일치 (${matchIdx + 1}/${matches.length}): ${pattern}`,
+    commandMessage: msg('검색 일치 ({v}/{matchesCount}): {pattern}', { v: matchIdx + 1, matchesCount: matches.length, pattern }),
   };
 }
 
@@ -905,7 +906,7 @@ function handleCommandLineModeKey(state: VimEditorState, key: string): VimEditor
           commandBuffer: undefined,
           commandType: undefined,
           expressionReturnContext: undefined,
-          commandMessage: `E15: ${evalRes.error ?? '잘못된 수식입니다'}`,
+          commandMessage: msg('E15: {v}', { v: evalRes.error ?? msg('잘못된 수식입니다') }),
         };
       }
 
@@ -2489,7 +2490,7 @@ function isEmptyPut(before: VimEditorState, after: VimEditorState): boolean {
 /** E353: 레지스터가 비어 있을 때의 실패 */
 function emptyRegisterBell(state: VimEditorState): VimEditorState {
   const reg = state.activeRegister ?? '"';
-  return { ...ringBell(state), activeRegister: undefined, commandMessage: `E353: 레지스터 ${reg} 가 비어 있습니다` };
+  return { ...ringBell(state), activeRegister: undefined, commandMessage: msg('E353: 레지스터 {reg} 가 비어 있습니다', { reg }) };
 }
 
 /** 연산자 + 일반 모션을 실행하고 레지스터 동기화와 `.` 반복 키를 기록합니다. */
@@ -2778,7 +2779,7 @@ function handleNormalModeKey(
     if (!word) {
       return {
         ...state,
-        commandMessage: 'E431: 커서 위치에 식별자가 없습니다 (no identifier under cursor)',
+        commandMessage: msg('E349: 커서 위치에 식별자가 없습니다 (no identifier under cursor)'),
         pendingKeys: undefined,
       };
     }
@@ -4097,7 +4098,7 @@ function handleNormalModeKey(
       if (matches.length === 0) {
         return {
           ...state,
-          commandMessage: `E486: 패턴을 찾을 수 없습니다: ${state.lastSearchQuery}`,
+          commandMessage: msg('E486: 패턴을 찾을 수 없습니다: {lastSearchQuery}', { lastSearchQuery: state.lastSearchQuery }),
           pendingKeys: undefined,
           bell: true,
         };
@@ -4109,7 +4110,7 @@ function handleNormalModeKey(
       return {
         ...stateWithJump,
         cursor: targetPos,
-        commandMessage: `다음 검색 결과 (${matchIdx + 1}/${matches.length}): ${state.lastSearchQuery}`,
+        commandMessage: msg('다음 검색 결과 ({v}/{matchesCount}): {lastSearchQuery}', { v: matchIdx + 1, matchesCount: matches.length, lastSearchQuery: state.lastSearchQuery }),
         pendingKeys: undefined,
       };
     }
@@ -4123,7 +4124,7 @@ function handleNormalModeKey(
       if (matches.length === 0) {
         return {
           ...state,
-          commandMessage: `E486: 패턴을 찾을 수 없습니다: ${state.lastSearchQuery}`,
+          commandMessage: msg('E486: 패턴을 찾을 수 없습니다: {lastSearchQuery}', { lastSearchQuery: state.lastSearchQuery }),
           pendingKeys: undefined,
           bell: true,
         };
@@ -4135,7 +4136,7 @@ function handleNormalModeKey(
       return {
         ...stateWithJump,
         cursor: targetPos,
-        commandMessage: `이전 검색 결과 (${matchIdx + 1}/${matches.length}): ${state.lastSearchQuery}`,
+        commandMessage: msg('이전 검색 결과 ({v}/{matchesCount}): {lastSearchQuery}', { v: matchIdx + 1, matchesCount: matches.length, lastSearchQuery: state.lastSearchQuery }),
         pendingKeys: undefined,
       };
     }
@@ -4157,11 +4158,11 @@ function handleNormalModeKey(
         ...stateWithJump,
         cursor: nextMatch ? { line: nextMatch.line, col: nextMatch.col } : state.cursor,
         lastSearchQuery: query,
-        commandMessage: `단어 '${word}' 검색 (${matchIdx + 1}/${matches.length})`,
+        commandMessage: msg('단어 \'{word}\' 검색 ({v}/{matchesCount})', { word, v: matchIdx + 1, matchesCount: matches.length }),
         pendingKeys: undefined,
       };
     }
-    return { ...ringBell(state), commandMessage: 'E348: 커서 아래에 단어가 없습니다' };
+    return { ...ringBell(state), commandMessage: msg('E348: 커서 아래에 단어가 없습니다') };
   }
 
   // #: 커서 아래 단어로 검색어 설정 후 이전 결과로 점프
@@ -4179,11 +4180,11 @@ function handleNormalModeKey(
         ...stateWithJump,
         cursor: prevMatch ? { line: prevMatch.line, col: prevMatch.col } : state.cursor,
         lastSearchQuery: query,
-        commandMessage: `단어 '${word}' 역방향 검색 (${matchIdx + 1}/${matches.length})`,
+        commandMessage: msg('단어 \'{word}\' 역방향 검색 ({v}/{matchesCount})', { word, v: matchIdx + 1, matchesCount: matches.length }),
         pendingKeys: undefined,
       };
     }
-    return { ...ringBell(state), commandMessage: 'E348: 커서 아래에 단어가 없습니다' };
+    return { ...ringBell(state), commandMessage: msg('E348: 커서 아래에 단어가 없습니다') };
   }
 
 
@@ -4590,7 +4591,7 @@ function describeCharAt(line: string, col: number): string {
   if (ch === undefined) return 'NUL';
   const code = ch.codePointAt(0) ?? 0;
   const label = ch === ' ' ? '<Space>' : ch === '\t' ? '<Tab>' : `<${ch}>`;
-  return `${label} ${code}, 16진수 ${code.toString(16)}, 8진수 ${code.toString(8)}`;
+  return msg('{label} {code}, 16진수 {v}, 8진수 {v2}', { label, code, v: code.toString(16), v2: code.toString(8) });
 }
 
 /** 모션이 커서를 전혀 움직이지 못했는지 (세로 모션은 줄 기준) */

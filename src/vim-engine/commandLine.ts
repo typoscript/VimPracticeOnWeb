@@ -97,6 +97,7 @@ import { appendFunctionDraftLine, executeCallCommand, executeScriptCommandLine }
 import { compileVimRegex, translateVimPattern, vimRegexToJsRegex } from './vimRegex';
 import { callUserFunction } from './vimscriptEngine';
 import { EvalContext, VimScriptError, evaluateVimScript, isList, toVimString } from './vimscriptEval';
+import { msg } from './messages';
 
 export { vimRegexToJsRegex };
 
@@ -382,7 +383,7 @@ export function parseSingleAddress(
       const searchStart = isSecondAddr ? (baseFromLine + 1) % totalLines : baseFromLine;
       const matchedLine = searchPatternLine(pat, state, searchStart, true);
       if (matchedLine === null) {
-        return { line: -1, consumed, error: `E486: 패턴을 찾을 수 없습니다: ${pat}` };
+        return { line: -1, consumed, error: msg('E486: 패턴을 찾을 수 없습니다: {pat}', { pat }) };
       }
       baseLine = matchedLine;
     } else {
@@ -415,7 +416,7 @@ export function parseSingleAddress(
       const searchStart = isSecondAddr ? (baseFromLine - 1 + totalLines) % totalLines : baseFromLine;
       const matchedLine = searchPatternLine(pat, state, searchStart, false);
       if (matchedLine === null) {
-        return { line: -1, consumed, error: `E486: 패턴을 찾을 수 없습니다: ${pat}` };
+        return { line: -1, consumed, error: msg('E486: 패턴을 찾을 수 없습니다: {pat}', { pat }) };
       }
       baseLine = matchedLine;
     } else {
@@ -440,7 +441,7 @@ export function parseSingleAddress(
     } else if (state.marks && state.marks[m] !== undefined) {
       baseLine = state.marks[m].row;
     } else {
-      return { line: -1, consumed, error: `E20: 마크가 설정되지 않았습니다: '${m}` };
+      return { line: -1, consumed, error: msg('E20: 마크가 설정되지 않았습니다: \'{m}', { m }) };
     }
   }
   // 4. 현재 줄: .
@@ -559,7 +560,7 @@ export function extractRangeAndCommand(
         command: cmd,
       };
     } else {
-      return { range: null, hasRange: true, command: '', error: 'E16: 유효하지 않은 범위입니다' };
+      return { range: null, hasRange: true, command: '', error: msg('E16: 유효하지 않은 범위입니다') };
     }
   } else {
     // 단일 주소 범위
@@ -1229,7 +1230,7 @@ export function executeCommandLine(
         visualAnchor: undefined,
         commandBuffer: undefined,
         commandType: undefined,
-        commandMessage: '퀵픽스 목록 초기화됨',
+        commandMessage: msg('퀵픽스 목록 초기화됨'),
       };
     }
   }
@@ -1408,7 +1409,7 @@ export function executeCommandLine(
         visualAnchor: undefined,
         commandBuffer: undefined,
         commandType: undefined,
-        commandMessage: '로케이션 리스트 초기화됨',
+        commandMessage: msg('로케이션 리스트 초기화됨'),
       };
     }
   }
@@ -1448,7 +1449,7 @@ export function executeCommandLine(
       visualAnchor: undefined,
       commandBuffer: undefined,
       commandType: undefined,
-      commandMessage: '레지스터 뷰어 닫힘',
+      commandMessage: msg('레지스터 뷰어 닫힘'),
     };
   }
 
@@ -1491,7 +1492,7 @@ export function executeCommandLine(
       visualAnchor: undefined,
       commandBuffer: undefined,
       commandType: undefined,
-      commandMessage: '설정 및 .vimrc 내보내기/다운로드 창 열림',
+      commandMessage: msg('설정 및 .vimrc 내보내기/다운로드 창 열림'),
     };
   }
 
@@ -1682,7 +1683,7 @@ export function executeCommandLine(
       visualAnchor: undefined,
       commandBuffer: undefined,
       commandType: undefined,
-      commandMessage: '[가상 저장 완료] 변경사항이 안전하게 메모리에 저장되었습니다.',
+      commandMessage: msg('[가상 저장 완료] 변경사항이 안전하게 메모리에 저장되었습니다.'),
     };
   }
 
@@ -1778,7 +1779,7 @@ export function executeCommandLine(
       visualAnchor: undefined,
       commandBuffer: undefined,
       commandType: undefined,
-      commandMessage: '단일 창 상태입니다 (:q)',
+      commandMessage: msg('단일 창 상태입니다 (:q)'),
     };
   }
 
@@ -1789,7 +1790,7 @@ export function executeCommandLine(
       visualAnchor: undefined,
       commandBuffer: undefined,
       commandType: undefined,
-      commandMessage: '지원 명령어: :[범위]d (삭제), :[범위]y (복사), :[범위]norm [명령], :g/패턴/d (글로벌), :s/이전/새문자/g',
+      commandMessage: msg('지원 명령어: :[범위]d (삭제), :[범위]y (복사), :[범위]norm [명령], :g/패턴/d (글로벌), :s/이전/새문자/g'),
     };
   }
 
@@ -1805,7 +1806,7 @@ export function executeCommandLine(
       commandBuffer: undefined,
       commandType: undefined,
       leaderKey: newLeader,
-      commandMessage: `[리더 키 설정] mapleader = "${newLeader === ' ' ? '<Space>' : newLeader}"`,
+      commandMessage: msg('[리더 키 설정] mapleader = "{v}"', { v: newLeader === ' ' ? '<Space>' : newLeader }),
     };
   }
 
@@ -1883,7 +1884,7 @@ export function executeCommandLine(
         visualAnchor: undefined,
         commandBuffer: undefined,
         commandType: undefined,
-        commandMessage: `E464: 사용자 정의 명령 이름이 모호합니다: ${userCmdCall[1]} (${lookup.candidates.join(', ')})`,
+        commandMessage: msg('E464: 사용자 정의 명령 이름이 모호합니다: {v} ({v2})', { v: userCmdCall[1], v2: lookup.candidates.join(', ') }),
         bell: true,
       };
     }
@@ -1913,7 +1914,7 @@ export function executeCommandLine(
       cursor: nextCursor,
       commandBuffer: undefined,
       commandType: undefined,
-      commandMessage: `${targetLine + 1}번째 줄로 이동했습니다.`,
+      commandMessage: msg('{v}번째 줄로 이동했습니다.', { v: targetLine + 1 }),
     };
   }
 
@@ -1951,7 +1952,7 @@ export function executeCommandLine(
         visualAnchor: undefined,
         commandBuffer: undefined,
         commandType: undefined,
-        commandMessage: 'E35: 이전에 사용한 치환 명령이 없습니다',
+        commandMessage: msg('E35: 이전에 사용한 치환 명령이 없습니다'),
         bell: true,
       };
     }
@@ -2010,7 +2011,7 @@ export function executeCommandLine(
     visualAnchor: undefined,
     commandBuffer: undefined,
     commandType: undefined,
-    commandMessage: `E492: 지원하지 않는 에디터 명령어입니다: ${trimmed}`,
+    commandMessage: msg('E492: 지원하지 않는 에디터 명령어입니다: {trimmed}', { trimmed }),
     bell: true,
   };
 }
@@ -2108,7 +2109,7 @@ export function executeSort(
     visualAnchor: undefined,
     commandBuffer: undefined,
     commandType: undefined,
-    commandMessage: `${finalLines.length}개 줄 정렬 완료`,
+    commandMessage: msg('{finalLinesCount}개 줄 정렬 완료', { finalLinesCount: finalLines.length }),
   };
 }
 
@@ -2128,7 +2129,7 @@ export function executeMove(
       visualAnchor: undefined,
       commandBuffer: undefined,
       commandType: undefined,
-      commandMessage: `E14: 잘못된 주소입니다: ${destStr}`,
+      commandMessage: msg('E14: 잘못된 주소입니다: {destStr}', { destStr }),
     };
   }
 
@@ -2184,7 +2185,7 @@ export function executeMove(
     visualAnchor: undefined,
     commandBuffer: undefined,
     commandType: undefined,
-    commandMessage: `${linesToMove.length}개 줄 이동 완료`,
+    commandMessage: msg('{linesToMoveCount}개 줄 이동 완료', { linesToMoveCount: linesToMove.length }),
   };
 }
 
@@ -2204,7 +2205,7 @@ export function executeCopy(
       visualAnchor: undefined,
       commandBuffer: undefined,
       commandType: undefined,
-      commandMessage: `E14: 잘못된 주소입니다: ${destStr}`,
+      commandMessage: msg('E14: 잘못된 주소입니다: {destStr}', { destStr }),
     };
   }
 
@@ -2236,7 +2237,7 @@ export function executeCopy(
     visualAnchor: undefined,
     commandBuffer: undefined,
     commandType: undefined,
-    commandMessage: `${linesToCopy.length}개 줄 복제 완료`,
+    commandMessage: msg('{linesToCopyCount}개 줄 복제 완료', { linesToCopyCount: linesToCopy.length }),
   };
 }
 
@@ -2269,7 +2270,7 @@ function executeGlobalCommand(
       visualAnchor: undefined,
       commandBuffer: undefined,
       commandType: undefined,
-      commandMessage: `E486: 잘못된 정규식 패턴입니다: ${pattern}`,
+      commandMessage: msg('E486: 잘못된 정규식 패턴입니다: {pattern}', { pattern }),
     };
   }
 
@@ -2288,7 +2289,7 @@ function executeGlobalCommand(
       visualAnchor: undefined,
       commandBuffer: undefined,
       commandType: undefined,
-      commandMessage: `E486: 패턴을 찾을 수 없습니다: ${pattern}`,
+      commandMessage: msg('E486: 패턴을 찾을 수 없습니다: {pattern}', { pattern }),
       bell: true,
     };
   }
@@ -2318,7 +2319,7 @@ function executeGlobalCommand(
       },
       commandBuffer: undefined,
       commandType: undefined,
-      commandMessage: `${matchedIndices.length}개 줄이 일괄 삭제되었습니다.`,
+      commandMessage: msg('{matchedIndicesCount}개 줄이 일괄 삭제되었습니다.', { matchedIndicesCount: matchedIndices.length }),
       lastChangeKeys: [':', commandStr, 'Enter'],
     };
   }
@@ -2343,7 +2344,7 @@ function executeGlobalCommand(
       visualAnchor: undefined,
       commandBuffer: undefined,
       commandType: undefined,
-      commandMessage: `${matchedIndices.length}개 줄에 normal 명령을 실행했습니다.`,
+      commandMessage: msg('{matchedIndicesCount}개 줄에 normal 명령을 실행했습니다.', { matchedIndicesCount: matchedIndices.length }),
       lastChangeKeys: [':', commandStr, 'Enter'],
     };
   }
@@ -2354,7 +2355,7 @@ function executeGlobalCommand(
     visualAnchor: undefined,
     commandBuffer: undefined,
     commandType: undefined,
-    commandMessage: `지원하지 않는 글로벌 작업입니다: ${action}`,
+    commandMessage: msg('지원하지 않는 글로벌 작업입니다: {action}', { action }),
   };
 }
 
@@ -2391,7 +2392,7 @@ function executeRangeDelete(
     },
     commandBuffer: undefined,
     commandType: undefined,
-    commandMessage: `${range.endLine - range.startLine + 1}개 줄이 삭제되었습니다.`,
+    commandMessage: msg('{v}개 줄이 삭제되었습니다.', { v: range.endLine - range.startLine + 1 }),
     lastChangeKeys: [':', commandStr, 'Enter'],
   };
 }
@@ -2414,7 +2415,7 @@ function executeRangeYank(
     },
     commandBuffer: undefined,
     commandType: undefined,
-    commandMessage: `${range.endLine - range.startLine + 1}개 줄이 복사되었습니다.`,
+    commandMessage: msg('{v}개 줄이 복사되었습니다.', { v: range.endLine - range.startLine + 1 }),
   };
 }
 
@@ -2441,7 +2442,7 @@ function executeRangeNorm(
     visualAnchor: undefined,
     commandBuffer: undefined,
     commandType: undefined,
-    commandMessage: `${count}개 줄에 normal 명령을 실행했습니다.`,
+    commandMessage: msg('{count}개 줄에 normal 명령을 실행했습니다.', { count }),
     lastChangeKeys: [':', commandStr, 'Enter'],
   };
 }
@@ -2616,7 +2617,7 @@ export function executeSubstitution(
 ): VimEditorState {
   const pattern = oldText.length > 0 ? oldText : state.lastSubstitute?.pattern ?? state.lastSearchQuery ?? '';
   if (pattern.length === 0) {
-    return substituteError(state, 'E35: 이전에 사용한 정규식이 없습니다');
+    return substituteError(state, msg('E35: 이전에 사용한 정규식이 없습니다'));
   }
 
   const isGlobal = flags.includes('g');
@@ -2630,7 +2631,7 @@ export function executeSubstitution(
     regex = compileVimRegex(pattern, { ignorecase: isIgnoreCase, flags: isGlobal ? 'g' : '', lastSubstitute: tildeText });
     testRegex = compileVimRegex(pattern, { ignorecase: isIgnoreCase, lastSubstitute: tildeText });
   } catch {
-    return substituteError(state, `E486: 잘못된 정규식 패턴입니다: ${pattern}`);
+    return substituteError(state, msg('E486: 잘못된 정규식 패턴입니다: {pattern}', { pattern }));
   }
 
   // 직전 치환·검색 패턴 기록 (Vim 처럼 :s 의 패턴으로 n 을 이어서 쓸 수 있음)
@@ -2657,7 +2658,7 @@ export function executeSubstitution(
     }
 
     if (!firstMatch) {
-      return substituteError({ ...state, ...remembered }, `E486: 패턴을 찾을 수 없습니다: ${pattern}`);
+      return substituteError({ ...state, ...remembered }, msg('E486: 패턴을 찾을 수 없습니다: {pattern}', { pattern }));
     }
 
     const stateWithSnapshot = pushUndoSnapshot(state);
@@ -2714,7 +2715,7 @@ export function executeSubstitution(
   }
 
   if (totalSubCount === 0) {
-    return substituteError({ ...state, ...remembered }, `E486: 패턴을 찾을 수 없습니다: ${pattern}`);
+    return substituteError({ ...state, ...remembered }, msg('E486: 패턴을 찾을 수 없습니다: {pattern}', { pattern }));
   }
 
   nextLines = splitReplacedLines(nextLines);
@@ -2730,7 +2731,7 @@ export function executeSubstitution(
     visualAnchor: undefined,
     commandBuffer: undefined,
     commandType: undefined,
-    commandMessage: `${totalSubCount}개 항목을 치환했습니다.`,
+    commandMessage: msg('{totalSubCount}개 항목을 치환했습니다.', { totalSubCount }),
     lastChangeKeys: [':', commandStr, 'Enter'],
   };
 }
@@ -2862,7 +2863,7 @@ export function handleConfirmSubstituteKey(
         lines: finalLines,
         cursor: clampCursor(finalLines, { line: currentMatch.line, col: currentMatch.col }, 'NORMAL'),
         confirmSubstitute: null,
-        commandMessage: `${newCount}개 항목을 치환했습니다.`,
+        commandMessage: msg('{newCount}개 항목을 치환했습니다.', { newCount }),
         lastChangeKeys: [':', commandStr, 'Enter'],
       };
     }
@@ -2891,8 +2892,8 @@ export function handleConfirmSubstituteKey(
         lines: splitReplacedLines(state.lines),
         confirmSubstitute: null,
         commandMessage: substitutedCount > 0
-          ? `${substitutedCount}개 항목을 치환했습니다.`
-          : '치환을 완료했습니다.',
+          ? msg('{substitutedCount}개 항목을 치환했습니다.', { substitutedCount })
+          : msg('치환을 완료했습니다.'),
       };
     }
   }
@@ -2920,7 +2921,7 @@ export function handleConfirmSubstituteKey(
       lines: finalLines,
       cursor: clampCursor(finalLines, { line: currentMatch.line, col: currentMatch.col }, 'NORMAL'),
       confirmSubstitute: null,
-      commandMessage: `${newCount}개 항목을 치환했습니다.`,
+      commandMessage: msg('{newCount}개 항목을 치환했습니다.', { newCount }),
       lastChangeKeys: [':', commandStr, 'Enter'],
     };
   }
@@ -2932,8 +2933,8 @@ export function handleConfirmSubstituteKey(
       lines: splitReplacedLines(state.lines),
       confirmSubstitute: null,
       commandMessage: substitutedCount > 0
-        ? `${substitutedCount}개 항목을 치환했습니다.`
-        : '치환이 취소되었습니다.',
+        ? msg('{substitutedCount}개 항목을 치환했습니다.', { substitutedCount })
+        : msg('치환이 취소되었습니다.'),
     };
   }
 
@@ -2975,7 +2976,7 @@ export function substituteAllRemaining(
     lines: finalLines,
     cursor: clampCursor(finalLines, lastPos, 'NORMAL'),
     confirmSubstitute: null,
-    commandMessage: `${totalCount}개 항목을 치환했습니다.`,
+    commandMessage: msg('{totalCount}개 항목을 치환했습니다.', { totalCount }),
     lastChangeKeys: [':', session.commandStr, 'Enter'],
   };
 }

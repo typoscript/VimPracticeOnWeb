@@ -102,11 +102,11 @@ export const MissionPanel: React.FC<MissionPanelProps> = ({
       </div>
 
       <h2 className="mission-title" data-testid="mission-title">
-        {mission.title}
+        {t(mission.title)}
       </h2>
 
       <p className="mission-desc" data-testid="mission-desc">
-        {mission.description}
+        {t(mission.description)}
       </p>
 
       {isGhostReplaying && ghostReplayProgress && onStopGhostReplay && (
@@ -186,7 +186,7 @@ export const MissionPanel: React.FC<MissionPanelProps> = ({
 
       {showHint && (
         <div className="mission-hint-box" data-testid="mission-hint">
-          {mission.hint}
+          {t(mission.hint)}
         </div>
       )}
     </aside>
