@@ -16,7 +16,7 @@ export type { VimEngineConfig } from './config';
 // ---- 핵심: 키 입력 → 새 상태 ----
 export { handleKey, parsePending } from './vimEngine';
 export { createVimState, sendKeys, runExCommand, evalVimExpression } from './api';
-export { executeCommandLine } from './commandLine';
+export { executeCommandLine, splitPipedCommands } from './commandLine';
 
 // ---- 상태 타입 ----
 export * from './types';
@@ -46,7 +46,7 @@ export {
   makeFuncref,
   invokeFuncref,
 } from './vimscriptEval';
-export { runScriptLines } from './vimscriptEngine';
+export { runScriptLines, executeScriptBlock } from './vimscriptEngine';
 export type { EvalContext } from './vimscriptEval';
 export type { VimScriptFuncref } from './types';
 

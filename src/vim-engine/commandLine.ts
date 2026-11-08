@@ -93,9 +93,14 @@ import {
   formatKeymapsList,
 } from './keymapEngine';
 import { executeUserCommandDefinition, executeUserCommand, lookupUserCommand } from './userCommandEngine';
-import { appendFunctionDraftLine, executeCallCommand, executeScriptCommandLine } from './vimscriptEngine';
+import {
+  appendFunctionDraftLine,
+  callUserFunction,
+  executeCallCommand,
+  executeScriptBlock,
+  executeScriptCommandLine,
+} from './vimscriptEngine';
 import { compileVimRegex, translateVimPattern, vimRegexToJsRegex } from './vimRegex';
-import { callUserFunction } from './vimscriptEngine';
 import { EvalContext, VimScriptError, evaluateVimScript, isList, toVimString } from './vimscriptEval';
 import { msg } from './messages';
 
@@ -620,6 +625,217 @@ export function parseRange(
 }
 
 /**
+ * Ex 커맨드라인에서 파이프(|)로 구분된 다중 명령어를 분할합니다 (:help :bar).
+ * 따옴표('...', "..."), 람다/블록({ ... }), 괄호, 정규식 치환(:s/.../.../), 역슬래시 이스케이프(\|) 및 || 연산자 내부의 | 는 구분자로 처리하지 않습니다.
+ * 단, 글로벌 명령(:g, :v)은 행마다 실행할 명령 자체에 | 를 포함하므로 최상위에서 분할하지 않습니다.
+ */
+export function splitPipedCommands(input: string): string[] {
+  const trimmed = input.trimStart().replace(/^:\s*/, '');
+  if (!trimmed) return [];
+
+  // :g 또는 :v 글로벌 명령은 줄 단위 명령으로 전체를 넘김
+  if (/^(g|global|v|vglobal)(!?)\s*[\/|\W]/.test(trimmed)) {
+    return [trimmed];
+  }
+
+  const commands: string[] = [];
+  let cur = '';
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let braceDepth = 0;
+  let parenDepth = 0;
+  let bracketDepth = 0;
+
+  let regexDelimiter: string | null = null;
+  let regexDelimCount = 0;
+
+  let i = 0;
+  while (i < trimmed.length) {
+    const ch = trimmed[i];
+
+    // 역슬래시 이스케이프 (\| 등)
+    if (ch === '\\' && i + 1 < trimmed.length) {
+      cur += ch + trimmed[i + 1];
+      i += 2;
+      continue;
+    }
+
+    // 작은따옴표 내부
+    if (inSingleQuote) {
+      if (ch === "'") {
+        if (i + 1 < trimmed.length && trimmed[i + 1] === "'") {
+          cur += "''";
+          i += 2;
+          continue;
+        }
+        inSingleQuote = false;
+      }
+      cur += ch;
+      i++;
+      continue;
+    }
+
+    // 큰따옴표 내부
+    if (inDoubleQuote) {
+      if (ch === '"') {
+        inDoubleQuote = false;
+      }
+      cur += ch;
+      i++;
+      continue;
+    }
+
+    // 치환 정규식 구분자 추적 (s/pat/repl/flags)
+    if (regexDelimiter !== null) {
+      if (ch === regexDelimiter) {
+        regexDelimCount++;
+        if (regexDelimCount >= 3) {
+          regexDelimiter = null;
+          regexDelimCount = 0;
+        }
+      }
+      cur += ch;
+      i++;
+      continue;
+    }
+
+    // 따옴표 진입
+    if (ch === "'") {
+      inSingleQuote = true;
+      cur += ch;
+      i++;
+      continue;
+    }
+    if (ch === '"') {
+      inDoubleQuote = true;
+      cur += ch;
+      i++;
+      continue;
+    }
+
+    // 괄호 깊이 추적
+    if (ch === '{') {
+      braceDepth++;
+      cur += ch;
+      i++;
+      continue;
+    }
+    if (ch === '}') {
+      if (braceDepth > 0) braceDepth--;
+      cur += ch;
+      i++;
+      continue;
+    }
+    if (ch === '(') {
+      parenDepth++;
+      cur += ch;
+      i++;
+      continue;
+    }
+    if (ch === ')') {
+      if (parenDepth > 0) parenDepth--;
+      cur += ch;
+      i++;
+      continue;
+    }
+    if (ch === '[') {
+      bracketDepth++;
+      cur += ch;
+      i++;
+      continue;
+    }
+    if (ch === ']') {
+      if (bracketDepth > 0) bracketDepth--;
+      cur += ch;
+      i++;
+      continue;
+    }
+
+    // :s 치환 명령의 구분자 시작 감지 (예: %s/, s/, 1,5s/)
+    if (
+      braceDepth === 0 &&
+      parenDepth === 0 &&
+      bracketDepth === 0 &&
+      regexDelimiter === null
+    ) {
+      const matchSub = cur.match(/(?:^|\s)(?:%|\d+(?:,\d+)?)?\s*s(?:ubstitute)?$/);
+      if (matchSub && !/[A-Za-z0-9_\s]/.test(ch)) {
+        regexDelimiter = ch;
+        regexDelimCount = 1;
+        cur += ch;
+        i++;
+        continue;
+      }
+    }
+
+    // 논리 연산자 || (logical OR) 건너뛰기
+    if (ch === '|' && i + 1 < trimmed.length && trimmed[i + 1] === '|') {
+      cur += '||';
+      i += 2;
+      continue;
+    }
+
+    // 최상위 파이프 명령 구분자
+    if (
+      ch === '|' &&
+      braceDepth === 0 &&
+      parenDepth === 0 &&
+      bracketDepth === 0 &&
+      regexDelimiter === null
+    ) {
+      const cmd = cur.trim();
+      if (cmd.length > 0) {
+        commands.push(cmd);
+      }
+      cur = '';
+      i++;
+      continue;
+    }
+
+    cur += ch;
+    i++;
+  }
+
+  const finalCmd = cur.trim();
+  if (finalCmd.length > 0) {
+    commands.push(finalCmd);
+  }
+
+  return commands;
+}
+
+/** 파이프로 연결된 다중 명령어 실행 */
+function executePipedCommands(
+  state: VimEditorState,
+  commands: string[],
+  keyRunner?: KeyRunner,
+  userCommandDepth = 0
+): VimEditorState {
+  const isControlFlow = (cmd: string) => {
+    const word = cmd.trim().replace(/^:\s*/, '').match(/^(\w+)/)?.[1] ?? '';
+    return /^(if|elseif|elsei|else|el|endif|en|while|wh|endwhile|endw|for|endfor|endfo|try|catch|cat|finally|fin|endtry|endt|throw|th|return|retu)$/.test(word);
+  };
+
+  const hasControlFlow = commands.some(isControlFlow);
+  const runEx = (s: VimEditorState, c: string) => executeCommandLine(s, c, keyRunner, userCommandDepth);
+
+  if (hasControlFlow) {
+    return executeScriptBlock(state, commands, runEx);
+  }
+
+  let cur = state;
+  for (const cmd of commands) {
+    const cleaned = cmd.trim();
+    if (cleaned.length === 0) continue;
+    cur = executeCommandLine(cur, cleaned, keyRunner, userCommandDepth);
+    if (cur.bell) {
+      break;
+    }
+  }
+  return cur;
+}
+
+/**
  * COMMAND 모드(:)에서 입력된 명령어를 파싱하고 실행합니다.
  */
 export function executeCommandLine(
@@ -645,6 +861,12 @@ export function executeCommandLine(
       commandType: undefined,
       commandMessage: undefined,
     };
+  }
+
+  // 1-0. 다중 파이프(|) 명령어 분할 및 순차/스크립트 실행 (:help :bar)
+  const pipedCommands = splitPipedCommands(trimmed);
+  if (pipedCommands.length > 1) {
+    return executePipedCommands(state, pipedCommands, keyRunner, userCommandDepth);
   }
 
   // 1-1. Vim script: :function, :endfunction, :delfunction, :let, :unlet, :echo, :execute, :[range]call

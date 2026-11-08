@@ -477,6 +477,8 @@ export function runScriptLines(
         ? msg('E171: :endif 가 없습니다')
         : last.type === 'try'
         ? msg('E171: :endtry 가 없습니다')
+        : last.type === 'for'
+        ? msg('E170: :endfor 가 없습니다')
         : msg('E170: :endwhile 이 없습니다');
     return { state: ctx.state, value: 0, error: firstError ?? missing };
   }
@@ -689,6 +691,34 @@ export function executeScriptCommandLine(state: VimEditorState, commandLine: str
   if (/^try(\s|$)/.test(line)) {
     return finish(state, msg('E171: :endtry 가 없습니다'), true);
   }
+  if (/^(else|el)(\s|$)/.test(line)) {
+    return finish(state, msg('E581: :if 없이 :else 가 사용되었습니다'), true);
+  }
+  if (/^(elseif|elsei)(\s|$)/.test(line)) {
+    return finish(state, msg('E582: :if 없이 :elseif 가 사용되었습니다'), true);
+  }
+  if (/^(endif|en)(\s|$)/.test(line)) {
+    return finish(state, msg('E580: :if 없이 :endif 가 사용되었습니다'), true);
+  }
+  if (/^if(\s|$)/.test(line)) {
+    return finish(state, msg('E171: :endif 가 없습니다'), true);
+  }
+  if (/^(endwhile|endw)(\s|$)/.test(line)) {
+    return finish(state, msg('E588: :while 없이 :endwhile 이 사용되었습니다'), true);
+  }
+  if (/^(endfor|endfo)(\s|$)/.test(line)) {
+    return finish(state, msg('E588: :for 없이 :endfor 가 사용되었습니다'), true);
+  }
+  if (/^while(\s|$)/.test(line)) {
+    return finish(state, msg('E170: :endwhile 이 없습니다'), true);
+  }
+  if (/^for(\s|$)/.test(line)) {
+    return finish(state, msg('E170: :endfor 가 없습니다'), true);
+  }
+  if (/^(break|brea|continue|con)(\s|$)/.test(line)) {
+    const word = line.match(/^(\w+)/)?.[1] ?? '';
+    return finish(state, msg('E587: :while/:for 없이 :{word} 가 사용되었습니다', { word }), true);
+  }
 
   // let mapleader 는 기존 리더 키 설정 경로에서 처리
   if (/^let\s+(g:)?mapleader\b/.test(line)) return null;
@@ -743,6 +773,26 @@ export function executeCallCommand(
     cur = overlayChanges(pushUndoSnapshot(state), state, cur);
   }
   return finish(cur, cur.commandMessage !== state.commandMessage ? cur.commandMessage : undefined);
+}
+
+/**
+ * 다중 제어문 줄(또는 파이프로 연결된 복합 스크립트 블록)을 최상위에서 실행합니다.
+ */
+export function executeScriptBlock(
+  state: VimEditorState,
+  lines: string[],
+  runEx: ExRunner
+): VimEditorState {
+  const ctx = topLevelContext(state, runEx);
+  const res = runScriptLines(lines, ctx, runEx);
+  if (res.error) {
+    return finish(res.state, res.error, true);
+  }
+  let finalState = res.state;
+  if (finalState.lines.join('\n') !== state.lines.join('\n')) {
+    finalState = overlayChanges(pushUndoSnapshot(state), state, finalState);
+  }
+  return finish(finalState, finalState.commandMessage);
 }
 
 /** 실행 취소·변경 이력 필드 (:call 의 한 번의 실행 취소 단위를 만들 때 base 의 값을 유지) */

@@ -231,6 +231,7 @@ export const EN_MESSAGES: Record<string, string> = {
   "E492: 명령 실행에 실패했습니다: {line}": "E492: Command failed: {line}",
   "E171: :endif 가 없습니다": "E171: Missing :endif",
   "E170: :endwhile 이 없습니다": "E170: Missing :endwhile",
+  "E170: :endfor 가 없습니다": "E170: Missing :endfor",
   "E15: 잘못된 :let 구문입니다: {line}": "E15: Invalid :let syntax: {line}",
   "E15: 리스트 풀기에는 = 만 쓸 수 있습니다: {line}": "E15: Only = can be used for list unpacking: {line}",
   "E492: 명령 실행에 실패했습니다: {command}": "E492: Command failed: {command}",
