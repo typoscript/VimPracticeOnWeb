@@ -10,6 +10,9 @@ export interface ViewPanelsDropdownProps {
   showRegisterInspector: boolean;
   onToggleRegisterInspector: () => void;
 
+  showMarksVisualizer?: boolean;
+  onToggleMarksVisualizer?: () => void;
+
   showGrammarAST: boolean;
   onToggleGrammarAST: () => void;
 
@@ -32,6 +35,8 @@ export const ViewPanelsDropdown: React.FC<ViewPanelsDropdownProps> = ({
   isSandbox,
   showRegisterInspector,
   onToggleRegisterInspector,
+  showMarksVisualizer = false,
+  onToggleMarksVisualizer,
   showGrammarAST,
   onToggleGrammarAST,
   showActionTimeline,
@@ -50,6 +55,7 @@ export const ViewPanelsDropdown: React.FC<ViewPanelsDropdownProps> = ({
   const activeCount = [
     !isSandbox && showDiffView,
     showRegisterInspector,
+    !!onToggleMarksVisualizer && showMarksVisualizer,
     showGrammarAST,
     showActionTimeline,
     showVirtualKeyboard,
@@ -171,6 +177,30 @@ export const ViewPanelsDropdown: React.FC<ViewPanelsDropdownProps> = ({
               {t('📋 레지스터: {state}', { state: showRegisterInspector ? 'ON' : 'OFF' })}
             </span>
           </button>
+
+          {/* 2-1. 마크 & 점프 리스트 비주얼 맵 */}
+          {onToggleMarksVisualizer && (
+            <button
+              type="button"
+              className={`view-panel-item ${showMarksVisualizer ? 'active' : ''}`}
+              onClick={onToggleMarksVisualizer}
+              data-testid="toggle-marks-visualizer-btn"
+              title={t('마크 및 점프 리스트 비주얼 맵 패널 토글')}
+              role="menuitemcheckbox"
+              aria-checked={showMarksVisualizer}
+            >
+              <div className="panel-item-left">
+                <span className="panel-icon">📍</span>
+                <div className="panel-text-block">
+                  <span className="panel-title">{t('마크 & 점프 리스트')}</span>
+                  <span className="panel-desc">{t('마크(\'a~\'z, \'A~\'Z) 및 점프 리스트(Ctrl+o/i) 비주얼 네비게이터')}</span>
+                </div>
+              </div>
+              <span className={`panel-switch-badge ${showMarksVisualizer ? 'on' : 'off'}`}>
+                {t('📍 마크 & 점프: {state}', { state: showMarksVisualizer ? 'ON' : 'OFF' })}
+              </span>
+            </button>
+          )}
 
           {/* 3. 실시간 Vim 문법 AST 인스펙터 */}
           <button

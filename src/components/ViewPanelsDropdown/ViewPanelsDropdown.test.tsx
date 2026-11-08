@@ -129,4 +129,19 @@ describe('ViewPanelsDropdown Component', () => {
     fireEvent.click(screen.getByTestId('toggle-macro-debugger-btn'));
     expect(onToggleMacroDebugger).toHaveBeenCalledTimes(1);
   });
+
+  it('마크 & 점프 리스트 토글 핸들러가 주어지면 토글 버튼을 표시하고 활성 개수에 반영한다', () => {
+    const onToggleMarksVisualizer = vi.fn();
+    render(
+      <ViewPanelsDropdown
+        {...defaultProps}
+        showMarksVisualizer={true}
+        onToggleMarksVisualizer={onToggleMarksVisualizer}
+      />
+    );
+
+    expect(screen.getByTestId('toggle-view-panels-menu-btn')).toHaveTextContent('4');
+    fireEvent.click(screen.getByTestId('toggle-marks-visualizer-btn'));
+    expect(onToggleMarksVisualizer).toHaveBeenCalledTimes(1);
+  });
 });

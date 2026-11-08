@@ -30,7 +30,13 @@ export interface EditorProps {
   /** 에디터 클릭 시 포커스 활성화 콜백 */
   onFocus?: () => void;
   /** 마크 위치 목록 (m{a-z}) */
-  marks?: Record<string, { row: number; col: number }>;
+  marks?: Record<string, { row: number; col: number; filename?: string }>;
+  /** 점프 리스트 (Ctrl+o, Ctrl+i) */
+  jumpList?: Array<{ row: number; col: number }>;
+  /** 점프 리스트 현재 인덱스 */
+  jumpIndex?: number;
+  /** 거터 마크 클릭 시 점프 콜백 */
+  onJumpToMark?: (markChar: string) => void;
   /** 화면 뷰포트 상태 */
   viewport?: ViewportState;
   /** 코드 폴딩 상태 (zc, zo, za, zR, zM) */
@@ -69,6 +75,9 @@ export const Editor: React.FC<EditorProps> = ({
   isFocused = true,
   onFocus,
   marks,
+  jumpList,
+  jumpIndex,
+  onJumpToMark,
   viewport,
   folds,
   completionSession,
@@ -176,8 +185,19 @@ export const Editor: React.FC<EditorProps> = ({
             const marksOnLine = marks
               ? Object.entries(marks)
                   .filter(([_, pos]) => pos.row === lineIdx)
-                  .map(([name]) => name)
+                  .map(([name]) => ({
+                    name,
+                    isGlobal: /^[A-Z]$/.test(name),
+                  }))
               : [];
+
+            const jumpsOnLine = jumpList
+              ? jumpList.filter((j) => j.row === lineIdx)
+              : [];
+            const hasCurrentJumpPointer =
+              jumpList &&
+              jumpIndex !== undefined &&
+              jumpList[jumpIndex]?.row === lineIdx;
 
             let diffLineType: 'change' | 'add' | 'delete' | null = null;
             if (diffHunks && diffHunks.length > 0) {
@@ -204,15 +224,31 @@ export const Editor: React.FC<EditorProps> = ({
                 >
                   {marksOnLine.length > 0 && (
                     <span className="gutter-marks">
-                      {marksOnLine.map((m) => (
+                      {marksOnLine.map(({ name, isGlobal }) => (
                         <span
-                          key={m}
-                          className="gutter-mark-badge"
-                          data-testid={`mark-badge-${m}`}
+                          key={name}
+                          className={`gutter-mark-badge ${isGlobal ? 'gutter-mark-global' : 'gutter-mark-local'}`}
+                          data-testid={`mark-badge-${name}`}
+                          onClick={(e) => {
+                            if (onJumpToMark) {
+                              e.stopPropagation();
+                              onJumpToMark(name);
+                            }
+                          }}
+                          title={`'${name}`}
                         >
-                          [{m}]
+                          [{name}]
                         </span>
                       ))}
+                    </span>
+                  )}
+                  {jumpsOnLine.length > 0 && (
+                    <span
+                      className={`gutter-jump-indicator ${hasCurrentJumpPointer ? 'active-jump' : ''}`}
+                      data-testid={`gutter-jump-${lineIdx + 1}`}
+                      title={hasCurrentJumpPointer ? '▶ 현재 점프 포인터 (v:jump)' : '📍 점프 위치'}
+                    >
+                      {hasCurrentJumpPointer ? '▶' : '•'}
                     </span>
                   )}
                   <span className="line-num-text">{lineNumberDisplay}</span>

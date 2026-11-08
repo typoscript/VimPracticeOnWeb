@@ -154,4 +154,47 @@ describe('Split Windows & Register Inspector Integration', () => {
     typeCommand('lclose');
     expect(screen.queryByTestId('locationlist-window')).not.toBeInTheDocument();
   });
+
+  it('마크 & 점프 리스트 비주얼 맵 패널이 토글 및 Ex 명령(:marks, :jumps)으로 동작한다', () => {
+    render(<App />);
+
+    // 1. 드롭다운 토글 버튼 클릭 시 패널 열림
+    const toggleBtn = screen.getByTestId('toggle-marks-visualizer-btn');
+    expect(toggleBtn).toBeInTheDocument();
+
+    fireEvent.click(toggleBtn);
+    expect(screen.getByTestId('marks-jump-visualizer')).toBeInTheDocument();
+
+    // 2. 패널 닫기 버튼 클릭 시 패널 닫힘
+    fireEvent.click(screen.getByTestId('close-marks-visualizer-btn'));
+    expect(screen.queryByTestId('marks-jump-visualizer')).not.toBeInTheDocument();
+
+    // 3. ma 로 마크 a 생성 후 :marks 실행 시 패널이 열린다
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'm' }));
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'a' }));
+    });
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: ':' }));
+      for (const ch of 'marks') {
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: ch }));
+      }
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    });
+
+    expect(screen.getByTestId('marks-jump-visualizer')).toBeInTheDocument();
+    expect(screen.getByTestId('mark-item-a')).toBeInTheDocument();
+
+    // 4. :jumps 실행 시 패널이 열린 상태를 유지하고 점프 리스트 확인 가능
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: ':' }));
+      for (const ch of 'jumps') {
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: ch }));
+      }
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    });
+
+    expect(screen.getByTestId('marks-jump-visualizer')).toBeInTheDocument();
+  });
 });

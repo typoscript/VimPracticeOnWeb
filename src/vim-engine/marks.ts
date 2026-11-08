@@ -262,6 +262,143 @@ export function formatMarksList(state: VimEditorState, filter?: string): string 
 }
 
 /**
+ * 점프 리스트 목록을 표 형태로 포맷팅합니다 (:jumps).
+ */
+export function formatJumpsList(state: VimEditorState): string {
+  const list = state.jumpList ?? [];
+  if (list.length === 0) {
+    return ' jump line  col file/text';
+  }
+
+  const lines: string[] = [' jump line  col file/text'];
+  const curIdx = Math.min(state.jumpIndex ?? list.length, list.length - 1);
+
+  for (let i = 0; i < list.length; i++) {
+    const item = list[i];
+    const diff = Math.abs(i - curIdx);
+    const pointer = i === curIdx ? '>' : ' ';
+    const jumpNum = String(diff).padStart(4, ' ');
+    const lineNum = String(item.row + 1).padStart(5, ' ');
+    const colNum = String(item.col).padStart(4, ' ');
+    const text = (state.lines[item.row] ?? '').trim().slice(0, 40);
+    lines.push(`${pointer}${jumpNum} ${lineNum} ${colNum} ${text}`);
+  }
+
+  return lines.join('\n');
+}
+
+/**
+ * 점프 리스트를 모두 초기화합니다 (:clearjumps).
+ */
+export function clearJumps(state: VimEditorState): VimEditorState {
+  return {
+    ...state,
+    jumpList: [],
+    jumpIndex: 0,
+    commandMessage: msg('점프 리스트가 초기화되었습니다'),
+  };
+}
+
+/**
+ * 마크를 삭제합니다 (:delmarks a b c, :delmarks a-z, :delmarks!).
+ * bang(!)이 true이거나 인자가 '!'이면 현재 버퍼의 모든 소문자 마크(a-z)를 삭제합니다.
+ */
+export function deleteMarks(
+  state: VimEditorState,
+  args = '',
+  bang = false
+): VimEditorState {
+  const currentMarks = { ...(state.marks ?? {}) };
+
+  if (bang || args.trim() === '!') {
+    for (const k of Object.keys(currentMarks)) {
+      if (/^[a-z]$/.test(k)) {
+        delete currentMarks[k];
+      }
+    }
+    return {
+      ...state,
+      marks: currentMarks,
+      commandMessage: msg('소문자 마크가 모두 삭제되었습니다 (:delmarks!)'),
+    };
+  }
+
+  const tokens = args.trim().split(/\s+/).filter(Boolean);
+  let deletedCount = 0;
+
+  for (const token of tokens) {
+    const rangeMatch = token.match(/^([a-zA-Z])-([a-zA-Z])$/);
+    if (rangeMatch) {
+      const c1 = rangeMatch[1].charCodeAt(0);
+      const c2 = rangeMatch[2].charCodeAt(0);
+      const [from, to] = c1 <= c2 ? [c1, c2] : [c2, c1];
+      for (let code = from; code <= to; code++) {
+        const ch = String.fromCharCode(code);
+        if (currentMarks[ch]) {
+          delete currentMarks[ch];
+          deletedCount++;
+        }
+      }
+    } else {
+      for (const ch of token) {
+        if (currentMarks[ch]) {
+          delete currentMarks[ch];
+          deletedCount++;
+        }
+      }
+    }
+  }
+
+  return {
+    ...state,
+    marks: currentMarks,
+    commandMessage: msg('{count}개의 마크가 삭제되었습니다', { count: deletedCount }),
+  };
+}
+
+/**
+ * 단일 마크를 삭제합니다.
+ */
+export function deleteSingleMark(
+  state: VimEditorState,
+  markChar: string
+): VimEditorState {
+  if (!state.marks || !state.marks[markChar]) {
+    return state;
+  }
+  const nextMarks = { ...state.marks };
+  delete nextMarks[markChar];
+  return {
+    ...state,
+    marks: nextMarks,
+  };
+}
+
+/**
+ * 점프 리스트의 특정 인덱스로 직접 이동합니다.
+ */
+export function jumpToIndex(
+  state: VimEditorState,
+  targetIndex: number
+): VimEditorState {
+  const list = state.jumpList ?? [];
+  if (targetIndex < 0 || targetIndex >= list.length) {
+    return state;
+  }
+
+  const target = list[targetIndex];
+  const targetLine = Math.max(0, Math.min(target.row, state.lines.length - 1));
+  const lineLen = (state.lines[targetLine] ?? '').length;
+  const targetCol = Math.max(0, Math.min(target.col, Math.max(0, lineLen - 1)));
+
+  return {
+    ...state,
+    cursor: { line: targetLine, col: targetCol },
+    jumpIndex: targetIndex,
+  };
+}
+
+/**
  * 마크와 결합된 연산자(d'a, d`a, c'a, c`a, y'a, y`a, v'a, v`a)를 실행합니다.
  */
 export function executeMarkOperator(

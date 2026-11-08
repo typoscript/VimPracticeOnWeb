@@ -377,4 +377,67 @@ describe('Line and Character Operators (J, ~, >>, <<, ==, Ctrl-a, Ctrl-x)', () =
     state = handleKey(state, '.'); // 12
     expect(state.lines[0]).toBe('val = 12;');
   });
+
+  it(':jumps, :clearjumps, :delmarks 커맨드 및 헬퍼 함수가 정상 동작한다', () => {
+    let state: VimEditorState = {
+      lines: ['line 0', 'line 1', 'line 2', 'line 3', 'line 4'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+      marks: {
+        a: { row: 0, col: 0 },
+        b: { row: 1, col: 2 },
+        c: { row: 2, col: 4 },
+        A: { row: 3, col: 0, filename: 'source.ts' },
+      },
+      jumpList: [
+        { row: 0, col: 0 },
+        { row: 2, col: 4 },
+      ],
+      jumpIndex: 1,
+    };
+
+    // 1. :jumps 명령 실행 시 점프 목록 포맷팅 및 showMarksVisualizer 플래그 활성화
+    state = handleKey(state, ':');
+    for (const ch of 'jumps') state = handleKey(state, ch);
+    state = handleKey(state, 'Enter');
+
+    expect(state.showMarksVisualizer).toBe(true);
+    expect(state.commandMessage).toContain('jump line  col file/text');
+    expect(state.commandMessage).toContain('line 0');
+    expect(state.commandMessage).toContain('line 2');
+
+    // 2. :clearjumps 명령 실행 시 점프 리스트 초기화
+    state = handleKey(state, ':');
+    for (const ch of 'clearjumps') state = handleKey(state, ch);
+    state = handleKey(state, 'Enter');
+
+    expect(state.jumpList).toEqual([]);
+    expect(state.jumpIndex).toBe(0);
+    expect(state.commandMessage).toContain('점프 리스트가 초기화되었습니다');
+
+    // 3. :delmarks a c 실행 시 지정된 마크 삭제
+    state = handleKey(state, ':');
+    for (const ch of 'delmarks a c') state = handleKey(state, ch);
+    state = handleKey(state, 'Enter');
+
+    expect(state.marks?.a).toBeUndefined();
+    expect(state.marks?.c).toBeUndefined();
+    expect(state.marks?.b).toBeDefined();
+    expect(state.marks?.A).toBeDefined();
+
+    // 4. :delmarks! 실행 시 모든 소문자 마크 삭제 (전역 마크 A는 유지)
+    state = handleKey(state, ':');
+    for (const ch of 'delmarks!') state = handleKey(state, ch);
+    state = handleKey(state, 'Enter');
+
+    expect(state.marks?.b).toBeUndefined();
+    expect(state.marks?.A).toBeDefined();
+
+    // 5. :marks close 실행 시 showMarksVisualizer 비활성화
+    state = handleKey(state, ':');
+    for (const ch of 'marks close') state = handleKey(state, ch);
+    state = handleKey(state, 'Enter');
+
+    expect(state.showMarksVisualizer).toBe(false);
+  });
 });

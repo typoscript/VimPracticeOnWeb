@@ -495,6 +495,8 @@ export interface VimEditorState {
   virtualFiles?: Record<string, string[]>;
   /** 레지스터 인스펙터 패널 표시 여부 (:reg, :registers) */
   showRegisterInspector?: boolean;
+  /** 마크 & 점프 리스트 비주얼 맵 패널 표시 여부 (:marks, :jumps) */
+  showMarksVisualizer?: boolean;
   /** 커스텀 설정 및 .vimrc 내보내기/다운로드 모달 표시 여부 (:vimrc, :export, :config) */
   showConfigModal?: boolean;
   /** 순정 Vim 환경 옵션 설정 (:set nu, :set rnu, :set ic 등) */

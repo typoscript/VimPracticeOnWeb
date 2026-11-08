@@ -85,6 +85,22 @@ export {
 } from './spellEngine';
 export { DEFAULT_SPELL_WORDS } from './spellData';
 
+// ---- 순정 Vim 마크 및 점프 리스트 엔진 (Marks & Jumps) ----
+export {
+  setMark,
+  jumpToMark,
+  formatMarksList,
+  formatJumpsList,
+  clearJumps,
+  deleteMarks,
+  deleteSingleMark,
+  jumpToIndex,
+  jumpOlder,
+  jumpNewer,
+  recordJump,
+  executeMarkOperator,
+} from './marks';
+
 // ---- 순정 Vim 세션 관리자 (:mksession, :source Session.vim) ----
 export {
   executeMakeSession,

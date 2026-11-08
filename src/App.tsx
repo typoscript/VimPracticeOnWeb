@@ -11,6 +11,7 @@ import { SpeedrunPanel } from './components/SpeedrunPanel/SpeedrunPanel';
 import { ThemeSwitcher } from './components/ThemeSwitcher/ThemeSwitcher';
 import { ViewPanelsDropdown } from './components/ViewPanelsDropdown/ViewPanelsDropdown';
 import { RegisterInspector } from './components/RegisterInspector/RegisterInspector';
+import { MarksJumpVisualizer } from './components/MarksJumpVisualizer/MarksJumpVisualizer';
 import { MacroDebugger } from './components/MacroDebugger/MacroDebugger';
 import { VimGrammarASTViewer } from './components/VimGrammarASTViewer/VimGrammarASTViewer';
 import { QuickfixPanel } from './components/QuickfixPanel';
@@ -32,6 +33,16 @@ import { closeQuickfixWindow, jumpToQuickfixItem } from './vim-engine';
 import { closeLocationListWindow, jumpToLocationListItem } from './vim-engine';
 import { computeDiffHunks } from './vim-engine';
 import { selectCompletionCandidate } from './vim-engine';
+import {
+  setMark,
+  jumpToMark,
+  clearJumps,
+  deleteMarks,
+  deleteSingleMark,
+  jumpToIndex,
+  jumpOlder,
+  jumpNewer,
+} from './vim-engine';
 import { MISSIONS } from './data/missions';
 import { sandboxInitialLines } from './data/sandbox';
 import {
@@ -45,6 +56,8 @@ import {
   saveDiffViewSetting,
   loadRegisterInspectorSetting,
   saveRegisterInspectorSetting,
+  loadMarksVisualizerSetting,
+  saveMarksVisualizerSetting,
   loadGrammarASTSetting,
   saveGrammarASTSetting,
   loadActionTimelineSetting,
@@ -243,12 +256,21 @@ export function App() {
   const [showVirtualKeyboard, setShowVirtualKeyboard] = useState<boolean>(() => loadVirtualKeyboardSetting());
   const [showDiffView, setShowDiffView] = useState<boolean>(() => loadDiffViewSetting());
   const [showRegisterInspector, setShowRegisterInspector] = useState<boolean>(() => loadRegisterInspectorSetting());
+  const [showMarksVisualizer, setShowMarksVisualizer] = useState<boolean>(() => loadMarksVisualizerSetting());
   const [isEditorFocused, setIsEditorFocused] = useState<boolean>(true);
 
   const handleToggleRegisterInspector = useCallback(() => {
     setShowRegisterInspector((prev) => {
       const next = !prev;
       saveRegisterInspectorSetting(next);
+      return next;
+    });
+  }, []);
+
+  const handleToggleMarksVisualizer = useCallback(() => {
+    setShowMarksVisualizer((prev) => {
+      const next = !prev;
+      saveMarksVisualizerSetting(next);
       return next;
     });
   }, []);
@@ -571,6 +593,56 @@ export function App() {
       setShowRegisterInspector(editorState.showRegisterInspector);
     }
   }, [editorState.showRegisterInspector]);
+
+  // :marks / :jumps Ex 명령 실행 시 마크 & 점프 리스트 비주얼 맵 패널 자동 열림/닫힘 연동
+  useEffect(() => {
+    if (editorState.showMarksVisualizer !== undefined) {
+      setShowMarksVisualizer(editorState.showMarksVisualizer);
+    }
+  }, [editorState.showMarksVisualizer]);
+
+  // 마크 및 점프 리스트 HUD 인터랙션 핸들러
+  const handleJumpToMark = useCallback((markChar: string) => {
+    setEditorState((prev) => jumpToMark(prev, markChar, false));
+  }, []);
+
+  const handleDeleteMark = useCallback((markChar: string) => {
+    setEditorState((prev) => deleteSingleMark(prev, markChar));
+  }, []);
+
+  const handleDeleteAllLocalMarks = useCallback(() => {
+    setEditorState((prev) => deleteMarks(prev, '', true));
+  }, []);
+
+  const handleJumpToIndex = useCallback((index: number) => {
+    setEditorState((prev) => jumpToIndex(prev, index));
+  }, []);
+
+  const handleJumpOlder = useCallback(() => {
+    setEditorState((prev) => jumpOlder(prev));
+  }, []);
+
+  const handleJumpNewer = useCallback(() => {
+    setEditorState((prev) => jumpNewer(prev));
+  }, []);
+
+  const handleClearJumps = useCallback(() => {
+    setEditorState((prev) => clearJumps(prev));
+  }, []);
+
+  const handleSetMark = useCallback((markChar: string) => {
+    setEditorState((prev) => setMark(prev, markChar));
+  }, []);
+
+  const handleJumpToLine = useCallback((line: number) => {
+    setEditorState((prev) => ({
+      ...prev,
+      cursor: {
+        line: Math.max(0, Math.min(line, prev.lines.length - 1)),
+        col: 0,
+      },
+    }));
+  }, []);
 
   // :set rnu / :set nornu Ex 명령 실행 시 상대 라인 번호 상태 연동
   useEffect(() => {
@@ -1510,6 +1582,8 @@ export function App() {
               isSandbox={currentTab === 'sandbox'}
               showRegisterInspector={showRegisterInspector}
               onToggleRegisterInspector={handleToggleRegisterInspector}
+              showMarksVisualizer={showMarksVisualizer}
+              onToggleMarksVisualizer={handleToggleMarksVisualizer}
               showGrammarAST={showGrammarAST}
               onToggleGrammarAST={handleToggleGrammarAST}
               showActionTimeline={showActionTimeline}
@@ -1827,6 +1901,9 @@ export function App() {
                       isFocused={isEditorFocused && editorState.activePaneIndex === 0}
                       onFocus={() => handleSwitchPane(0)}
                       marks={editorState.marks}
+                      jumpList={editorState.jumpList}
+                      jumpIndex={editorState.jumpIndex}
+                      onJumpToMark={handleJumpToMark}
                       viewport={editorState.activePaneIndex === 0 ? editorState.viewport : editorState.splitPanes[0].viewport}
                       folds={editorState.folds}
                       completionSession={editorState.activePaneIndex === 0 ? editorState.completionSession : undefined}
@@ -1874,6 +1951,9 @@ export function App() {
                       isFocused={isEditorFocused && editorState.activePaneIndex === 1}
                       onFocus={() => handleSwitchPane(1)}
                       marks={editorState.marks}
+                      jumpList={editorState.jumpList}
+                      jumpIndex={editorState.jumpIndex}
+                      onJumpToMark={handleJumpToMark}
                       viewport={editorState.activePaneIndex === 1 ? editorState.viewport : editorState.splitPanes[1].viewport}
                       folds={editorState.folds}
                       completionSession={editorState.activePaneIndex === 1 ? editorState.completionSession : undefined}
@@ -1908,6 +1988,9 @@ export function App() {
                   isFocused={isEditorFocused}
                   onFocus={() => setIsEditorFocused(true)}
                   marks={displayEditorState.marks}
+                  jumpList={displayEditorState.jumpList}
+                  jumpIndex={displayEditorState.jumpIndex}
+                  onJumpToMark={handleJumpToMark}
                   viewport={displayEditorState.viewport}
                   folds={displayEditorState.folds}
                   completionSession={displayEditorState.completionSession}
@@ -2045,6 +2128,27 @@ export function App() {
               onOpenMacroDebugger={handleOpenMacroDebugger}
               onUpdateRegister={handleUpdateRegister}
               onDeleteRegister={handleDeleteRegister}
+            />
+
+            {/* 마크 & 점프 리스트 비주얼 맵 패널 */}
+            <MarksJumpVisualizer
+              isOpen={showMarksVisualizer}
+              onClose={handleToggleMarksVisualizer}
+              marks={displayEditorState.marks}
+              jumpList={displayEditorState.jumpList}
+              jumpIndex={displayEditorState.jumpIndex}
+              lines={displayEditorState.lines}
+              currentCursor={displayEditorState.cursor}
+              primaryFilename={displayEditorState.primaryFilename}
+              onJumpToMark={handleJumpToMark}
+              onDeleteMark={handleDeleteMark}
+              onDeleteAllLocalMarks={handleDeleteAllLocalMarks}
+              onJumpToIndex={handleJumpToIndex}
+              onJumpOlder={handleJumpOlder}
+              onJumpNewer={handleJumpNewer}
+              onClearJumps={handleClearJumps}
+              onSetMark={handleSetMark}
+              onJumpToLine={handleJumpToLine}
             />
 
             {/* 매크로 슬로우모션 디버거 패널 */}

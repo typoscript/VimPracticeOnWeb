@@ -69,7 +69,12 @@ import {
   lfdo,
 } from './locationListEngine';
 import { formatChangeList } from './advancedMotions';
-import { formatMarksList } from './marks';
+import {
+  formatMarksList,
+  formatJumpsList,
+  clearJumps,
+  deleteMarks,
+} from './marks';
 import {
   startDiffSplit,
   diffThis,
@@ -1694,17 +1699,75 @@ export function executeCommandLine(
     };
   }
 
+  // 마크/점프 뷰어 닫기: :marks close, :jumps close, :marksclose, :jumpsclose
+  if (
+    /^(?:marks|jumps)\s+close$/i.test(cleanCmdRaw) ||
+    cleanCmdRaw === 'marksclose' ||
+    cleanCmdRaw === 'jumpsclose'
+  ) {
+    return {
+      ...state,
+      showMarksVisualizer: false,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: msg('마크/점프 뷰어 닫힘'),
+    };
+  }
+
   // 마크 목록 조회: :marks [filter]
   const marksMatch = cleanCmdRaw.match(/^(?:marks)(?:\s+(.*))?$/i);
   if (marksMatch) {
     const filter = marksMatch[1]?.trim();
     return {
       ...state,
+      showMarksVisualizer: true,
       mode: 'NORMAL',
       visualAnchor: undefined,
       commandBuffer: undefined,
       commandType: undefined,
       commandMessage: formatMarksList(state, filter),
+    };
+  }
+
+  // 점프 목록 조회: :jumps
+  if (/^jumps$/i.test(cleanCmdRaw)) {
+    return {
+      ...state,
+      showMarksVisualizer: true,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: formatJumpsList(state),
+    };
+  }
+
+  // 점프 목록 초기화: :clearjumps, :cle
+  if (/^(?:clearjumps|cle)$/i.test(cleanCmdRaw)) {
+    const res = clearJumps(state);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 마크 삭제: :delmarks[!] [args], :delm[!] [args]
+  const delmarksMatch = cleanCmdRaw.match(/^(?:delmarks|delm)(!?)(?:\s+(.*))?$/i);
+  if (delmarksMatch) {
+    const bang = delmarksMatch[1] === '!';
+    const args = delmarksMatch[2]?.trim() ?? '';
+    const res = deleteMarks(state, args, bang);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
     };
   }
 
