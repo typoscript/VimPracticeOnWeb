@@ -14,6 +14,7 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   expandtab: true,
   list: false,
   wildmenu: true,
+  spell: false,
 };
 
 export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
@@ -39,6 +40,7 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   list: 'list',
   wmenu: 'wildmenu',
   wildmenu: 'wildmenu',
+  spell: 'spell',
 };
 
 /**
@@ -65,6 +67,7 @@ export function formatOptionsList(options: VimOptions, showAll = false): string 
     'cursorline',
     'list',
     'expandtab',
+    'spell',
   ];
 
   const numericKeys: (keyof VimOptions)[] = ['tabstop', 'shiftwidth'];

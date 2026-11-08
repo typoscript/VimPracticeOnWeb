@@ -9,9 +9,9 @@ import {
   ConfirmSubstituteSession,
   VimOptions,
   DiffHunk,
+  SpellError,
 } from '../../vim-engine';
-import { isPositionSelected } from '../../vim-engine';
-import { findMatches } from '../../vim-engine';
+import { isPositionSelected, findMatches, findSpellErrorsInLine } from '../../vim-engine';
 import './Editor.css';
 import { t } from '../../i18n';
 
@@ -51,6 +51,9 @@ export interface EditorProps {
   diffPaneIndex?: number;
   /** 키 실패(bell) 횟수 카운터. 값이 바뀔 때마다 에디터 테두리를 잠깐 깜빡입니다 (visualbell) */
   bellSignal?: number;
+  /** 맞춤법 사용자 사전 (zg/zw) */
+  spellGoodWords?: string[];
+  spellWrongWords?: string[];
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -74,6 +77,8 @@ export const Editor: React.FC<EditorProps> = ({
   diffHunks,
   diffPaneIndex = 0,
   bellSignal = 0,
+  spellGoodWords,
+  spellWrongWords,
 }) => {
   const scrollerRef = React.useRef<HTMLDivElement>(null);
   const [isBellFlashing, setIsBellFlashing] = React.useState(false);
@@ -223,6 +228,9 @@ export const Editor: React.FC<EditorProps> = ({
                         insertNormalSession,
                         insertRegisterPending,
                         confirmSubstitute,
+                        spellErrors: options?.spell
+                          ? findSpellErrorsInLine(lineText, lineIdx, { spellGoodWords, spellWrongWords } as any)
+                          : undefined,
                       })}
                       {isCursorLine &&
                         completionSession &&
@@ -306,6 +314,7 @@ interface RenderLineOptions {
   insertNormalSession?: boolean;
   insertRegisterPending?: boolean;
   confirmSubstitute?: ConfirmSubstituteSession | null;
+  spellErrors?: SpellError[];
 }
 
 function renderLineContent(opts: RenderLineOptions): React.ReactNode {
@@ -321,11 +330,12 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     insertNormalSession,
     insertRegisterPending,
     confirmSubstitute,
+    spellErrors,
   } = opts;
   const isCursorLine = cursor.line === lineIdx;
   const cursorCol = isCursorLine ? cursor.col : null;
 
-  // 빈 줄이면서 커서와 타겟, 비주얼 선택, 검색 매칭이 모두 없는 경우
+  // 빈 줄이면서 커서와 타겟, 비주얼 선택, 검색 매칭, 맞춤법 오류가 모두 없는 경우
   const hasVisual =
     (mode === 'VISUAL' || mode === 'VISUAL_LINE' || mode === 'VISUAL_BLOCK') && !!visualAnchor;
   const isLineInVisualRange =
@@ -334,23 +344,26 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     lineIdx <= Math.max(visualAnchor.line, cursor.line);
 
   const hasSearchMatches = lineMatches.length > 0;
+  const hasSpellErrors = (spellErrors?.length ?? 0) > 0;
 
   if (
     text.length === 0 &&
     cursorCol === null &&
     targetCol === null &&
     !isLineInVisualRange &&
-    !hasSearchMatches
+    !hasSearchMatches &&
+    !hasSpellErrors
   ) {
     return <span className="empty-char">&nbsp;</span>;
   }
 
-  // 커서, 타겟, 비주얼 선택, 검색 매칭이 모두 없는 일반 줄은 원본 텍스트 그대로 반환
+  // 커서, 타겟, 비주얼 선택, 검색 매칭, 맞춤법 오류가 모두 없는 일반 줄은 원본 텍스트 그대로 반환
   if (
     cursorCol === null &&
     targetCol === null &&
     !isLineInVisualRange &&
-    !hasSearchMatches
+    !hasSearchMatches &&
+    !hasSpellErrors
   ) {
     return text;
   }
@@ -412,6 +425,11 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
 
     if (isConfirmMatch) {
       classNames += ' char-confirm-substitute';
+    }
+
+    const isSpell = spellErrors?.some((e) => i >= e.startCol && i < e.endCol);
+    if (isSpell) {
+      classNames += ' spell-error';
     }
 
     if (isTarget) {

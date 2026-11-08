@@ -50,5 +50,16 @@ export {
 } from './macroDebugger';
 export type { MacroTrace, MacroFrame } from './macroDebugger';
 
+// ---- 순정 맞춤법 검사기 (:set spell, ]s, [s, z=, zg, zw) ----
+export {
+  isWordMisspelled,
+  findSpellErrorsInLine,
+  findNextSpellError,
+  findPrevSpellError,
+  getSpellSuggestions,
+  damerauLevenshtein,
+} from './spellEngine';
+export { DEFAULT_SPELL_WORDS } from './spellData';
+
 // ---- 개발용 불변성 검사 ----
 export { withInvariantCheck, assertValidVimState, deepFreeze } from './invariants';

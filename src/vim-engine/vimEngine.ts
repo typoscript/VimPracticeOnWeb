@@ -54,6 +54,14 @@ import {
 } from './cmdlineWindow';
 import { handleNetrwKey } from './netrwEngine';
 import { jumpDiffHunk, diffObtain, diffPut } from './diffEngine';
+import {
+  jumpToNextSpellError,
+  jumpToPrevSpellError,
+  startSpellSuggest,
+  handleSpellSuggestKey,
+  addSpellGoodWord,
+  addSpellWrongWord,
+} from './spellEngine';
 import { travelUndoTime, recordUndoTreeChange } from './undoTreeEngine';
 import {
   handleTabCompletion,
@@ -253,6 +261,11 @@ export function rawHandleKey(
   isReplayingDot = false,
   macroDepth = 0
 ): VimEditorState {
+  // z= 맞춤법 교체 추천 세션 처리
+  if (state.spellSuggest) {
+    return handleSpellSuggestKey(state, key);
+  }
+
   // 대화형 치환 확인 프롬프트 (:s/.../.../gc) 처리
   if (state.confirmSubstitute) {
     return handleConfirmSubstituteKey(state, key);
@@ -3002,6 +3015,9 @@ function handleNormalModeKey(
     if (key === 'a') return foldToggle(state);
     if (key === 'M') return foldCloseAll(state);
     if (key === 'R') return foldOpenAll(state);
+    if (key === '=') return { ...startSpellSuggest(state), pendingKeys: undefined };
+    if (key === 'g') return { ...addSpellGoodWord(state), pendingKeys: undefined };
+    if (key === 'w') return { ...addSpellWrongWord(state), pendingKeys: undefined };
     return { ...state, pendingKeys: undefined };
   }
 
@@ -3240,6 +3256,14 @@ function handleNormalModeKey(
     // [( [{ ]) ]}: 감싸고 있는 짝 없는 괄호로 이동
     if ((bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'))) {
       return moveByExtraMotion(state, `${bracket}${key}`, bCount);
+    }
+    // ]s, [s, ]S, [S: 맞춤법 오류 점프
+    if (key === 's' || key === 'S') {
+      const res = bracket === ']' ? jumpToNextSpellError(state) : jumpToPrevSpellError(state);
+      return {
+        ...res,
+        pendingKeys: undefined,
+      };
     }
     state = { ...state, pendingKeys: undefined };
   }

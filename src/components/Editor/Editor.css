@@ -408,3 +408,9 @@
   opacity: 0.8;
 }
 
+/* 순정 Vim 맞춤법 검사기 오탈자 물결 밑줄 */
+.spell-error {
+  text-decoration: underline wavy #f7768e 2px;
+  text-underline-offset: 3px;
+}
+

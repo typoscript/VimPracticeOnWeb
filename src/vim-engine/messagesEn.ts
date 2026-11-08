@@ -275,4 +275,9 @@ export const EN_MESSAGES: Record<string, string> = {
   "E935: submatch() 는 :s 의 \\= 치환식 안에서만 쓸 수 있습니다": "E935: submatch() can only be used in a :s \\= expression",
   "E726: range() 의 간격은 0 일 수 없습니다": "E726: Stride is zero in range()",
   "E15: 표현식이 비어 있습니다": "E15: Empty expression",
+  "E752: 철자 오류를 찾을 수 없습니다": "E752: No more spell errors",
+  "철자 오류가 아닙니다": "Spell is OK",
+  "\"{word}\"에 대한 추천 단어가 없습니다": "No suggestions for \"{word}\"",
+  "\"{word}\" 단어가 사전에 추가되었습니다": "Word \"{word}\" added to spellfile",
+  "\"{word}\" 단어가 오탈자로 등록되었습니다": "Word \"{word}\" added as bad word",
 };

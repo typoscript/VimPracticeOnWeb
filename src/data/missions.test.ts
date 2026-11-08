@@ -686,6 +686,7 @@ describe('MISSIONS 10 ~ 12 validation', () => {
         expandtab: true,
         list: false,
         wildmenu: true,
+        spell: false,
       },
       buffers: [
         {

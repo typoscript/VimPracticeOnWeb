@@ -30,6 +30,8 @@ export interface StatusBarProps {
   showWildmenuBar?: boolean;
   /** :function 본문 입력 중인 함수 이름과 지금까지 입력한 줄 수 */
   functionDraft?: { name: string; lines: number } | null;
+  /** 맞춤법 검사기 활성화 여부 (:set spell) */
+  spellActive?: boolean;
 }
 
 export const StatusBar: React.FC<StatusBarProps> = ({
@@ -48,6 +50,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   wildmenu,
   functionDraft,
   showWildmenuBar = true,
+  spellActive,
 }) => {
   const displayMode =
     insertCtrlXMode
@@ -152,6 +155,11 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       </div>
 
       <div className="status-bar-right">
+        {spellActive && (
+          <span className="status-spell-badge" data-testid="status-spell-badge">
+            [SPELL]
+          </span>
+        )}
         {pendingKeys && (
           <span className="status-pending-keys" data-testid="status-pending-keys">
             {pendingKeys}

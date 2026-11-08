@@ -192,6 +192,25 @@ export interface VimOptions {
   list: boolean;
   /** 명령행 완성 와일드메뉴 표시 여부 (:set wildmenu / nowildmenu) */
   wildmenu: boolean;
+  /** 맞춤법 검사기 활성화 여부 (:set spell / nospell) */
+  spell?: boolean;
+}
+
+/** 맞춤법 검사기 오탈자 정보 */
+export interface SpellError {
+  word: string;
+  line: number;
+  startCol: number;
+  endCol: number;
+}
+
+/** z= 맞춤법 교체 추천 세션 */
+export interface SpellSuggestSession {
+  word: string;
+  line: number;
+  col: number;
+  suggestions: string[];
+  input: string;
 }
 
 export interface TagEntry {
@@ -477,6 +496,12 @@ export interface VimEditorState {
   undoTimeIndex?: number;
   /** 파일 저장(:w) 횟수 카운터 */
   saveCounter?: number;
+  /** 맞춤법 검사기 세션 (z= 추천/교체 대화형 세션) */
+  spellSuggest?: SpellSuggestSession | null;
+  /** 사용자 추가 양호 단어 (zg) */
+  spellGoodWords?: string[];
+  /** 사용자 추가 오탈자 단어 (zw) */
+  spellWrongWords?: string[];
 }
 
 

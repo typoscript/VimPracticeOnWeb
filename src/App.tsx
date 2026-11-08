@@ -888,6 +888,7 @@ export function App() {
           expandtab: st.options?.expandtab ?? true,
           list: st.options?.list ?? false,
           wildmenu: st.options?.wildmenu ?? true,
+          spell: st.options?.spell ?? false,
         },
       }));
       return next;
@@ -1796,6 +1797,8 @@ export function App() {
                       insertRegisterPending={editorState.activePaneIndex === 0 ? editorState.insertRegisterPending : undefined}
                       confirmSubstitute={editorState.activePaneIndex === 0 ? editorState.confirmSubstitute : undefined}
                       options={displayEditorState.options}
+                      spellGoodWords={displayEditorState.spellGoodWords}
+                      spellWrongWords={displayEditorState.spellWrongWords}
                       diffHunks={displayEditorState.diffMode ? displayEditorState.diffHunks : undefined}
                       diffPaneIndex={0}
                       bellSignal={editorState.activePaneIndex === 0 ? bellCount : undefined}
@@ -1840,6 +1843,8 @@ export function App() {
                       insertRegisterPending={editorState.activePaneIndex === 1 ? editorState.insertRegisterPending : undefined}
                       confirmSubstitute={editorState.activePaneIndex === 1 ? editorState.confirmSubstitute : undefined}
                       options={displayEditorState.options}
+                      spellGoodWords={displayEditorState.spellGoodWords}
+                      spellWrongWords={displayEditorState.spellWrongWords}
                       diffHunks={displayEditorState.diffMode ? displayEditorState.diffHunks : undefined}
                       diffPaneIndex={1}
                       bellSignal={editorState.activePaneIndex === 1 ? bellCount : undefined}
@@ -1871,6 +1876,8 @@ export function App() {
                   insertRegisterPending={displayEditorState.insertRegisterPending}
                   confirmSubstitute={displayEditorState.confirmSubstitute}
                   options={displayEditorState.options}
+                  spellGoodWords={displayEditorState.spellGoodWords}
+                  spellWrongWords={displayEditorState.spellWrongWords}
                   bellSignal={bellCount}
                 />
               )}
@@ -2036,6 +2043,7 @@ export function App() {
               commandMessage={displayEditorState.commandMessage}
               wildmenu={displayEditorState.wildmenu}
               showWildmenuBar={displayEditorState.options?.wildmenu ?? true}
+              spellActive={displayEditorState.options?.spell}
               functionDraft={
                 displayEditorState.functionDraft
                   ? { name: displayEditorState.functionDraft.name, lines: displayEditorState.functionDraft.body.length }
