@@ -922,6 +922,35 @@ export function App() {
     setShowMacroDebugger((prev) => !prev);
   }, []);
 
+  const handleUpdateRegister = useCallback(
+    (register: string, content: string | string[], type: 'char' | 'line' | 'macro') => {
+      setEditorState((prev) => {
+        const nextRegisters = { ...(prev.registers ?? {}) };
+        nextRegisters[register] = { type, content };
+        return { ...prev, registers: nextRegisters };
+      });
+    },
+    []
+  );
+
+  const handleDeleteRegister = useCallback(
+    (register: string) => {
+      setEditorState((prev) => {
+        const nextRegisters = { ...(prev.registers ?? {}) };
+        delete nextRegisters[register];
+        return { ...prev, registers: nextRegisters };
+      });
+    },
+    []
+  );
+
+  const handleOpenMacroDebugger = useCallback(
+    (_register: string) => {
+      setShowMacroDebugger(true);
+    },
+    []
+  );
+
   // 실제 키 입력 또는 가상 키보드 클릭 시 공통 실행 함수
   const processKeyInput = useCallback(
     (key: string) => {
@@ -1033,7 +1062,7 @@ export function App() {
 
   // 매크로 디버거의 실행 버튼: 실제 키 입력과 동일하게 [count]@{reg}를 전달하여 타수·타임라인에 반영합니다.
   const handleRunMacroFromDebugger = useCallback(
-    (register: string, count: number) => {
+    (register: string, count: number = 1) => {
       const keys = [...(count > 1 ? String(count).split('') : []), '@', register];
       keys.forEach((k) => processKeyInput(k));
     },
@@ -2003,13 +2032,18 @@ export function App() {
               }
             />
 
-            {/* 실시간 레지스터 인스펙터 패널 */}
+            {/* 실시간 레지스터 및 매크로 인스펙터 패널 */}
             <RegisterInspector
               isOpen={showRegisterInspector}
               onToggle={handleToggleRegisterInspector}
               registers={editorState.registers}
               activeRegister={editorState.activeRegister}
               clipboard={editorState.clipboard}
+              recordingMacro={editorState.recordingMacro}
+              onRunMacro={handleRunMacroFromDebugger}
+              onOpenMacroDebugger={handleOpenMacroDebugger}
+              onUpdateRegister={handleUpdateRegister}
+              onDeleteRegister={handleDeleteRegister}
             />
 
             {/* 매크로 슬로우모션 디버거 패널 */}
