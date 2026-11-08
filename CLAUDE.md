@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 112개 테스트 파일, 1,434개 테스트 100% 통과 필수)*
+  *(현재 112개 테스트 파일, 1,435개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 62)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 63)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -91,7 +91,7 @@
 - **Vim script 리스트·딕셔너리 (레슨 57)**: `[1, 'a']`, `{'k': v}`, `#{k: v}`, 인덱스·슬라이스(`l[1:]`, `s[-3:]`), `d.key`, `=~`/`!~`, `is`, `:for x in list` / `:for [k, v] in items(d)`, `:let l[0] = x` / `:let [a, b; rest] = list`, `:unlet d.k`, `a:000`, 내장 함수(`substitute`, `printf`, `map`, `filter`, `sort`, `split`, `join`, `range`, `keys`, `items` 등). Vim 정규식 변환은 `src/vim-engine/vimRegex.ts`(아래 '순정 Vim 정규식' 참고). ⚠ 불변 상태 규약 때문에 리스트·딕셔너리는 값 의미론이며, `add()`·`sort()` 등 제자리 변경 함수는 첫 인자가 변수이면 결과를 다시 저장합니다 (별칭은 함께 바뀌지 않음).
 - **순정 Vim 맞춤법 검사기 (레슨 61, `src/vim-engine/spellEngine.ts`, `spellData.ts`)**: `:set spell`, `:set nospell`, `]s`, `]S`, `[s`, `[S`, `z=`, `zg`, `zw`. 표준 Vim 영단어 사전(2,000+ 단어) 기반 오류 감지 및 Damerau-Levenshtein 거리 기반 맞춤법 추천(`z=`), 번호 선택 및 교체 실행 취소(undo) 지원. `Editor.tsx` 오탈자 빨간 물결 밑줄 렌더링, `StatusBar.tsx`의 `[SPELL]` 활성 배지 표시.
 - **고급 Vim script 엔진 및 람다 정렬 (레슨 62, `src/vim-engine/vimscriptEval.ts`, `vimscriptEngine.ts`)**: 람다 표현식 `{ [args] -> expr }` (`{x -> x * 2}`, `{a, b -> a + b}`, `{-> 42}`), 클로저 변수 캡처(상위 함수 `a:`, `l:` 스코프 접근), 딕셔너리 메서드 호출 및 `self` 바인딩 (`d.method()`). 함수 참조 `function('fn' [, args [, dict]])`, `funcref(...)`, `call(fn, args [, dict])`, `type(fn) == 2` (`v:t_func`), 부분 적용(partial application), 고차 함수 (`map()`, `filter()`, `sort()`에 람다 전달, 레슨 62의 길이순 라인 정렬 `{a, b -> len(a) - len(b)}`). 예외 처리 `:try`, `:catch [ /pattern/ ]`, `:finally`, `:endtry`, `:throw expr`, 내장 런타임 에러(E-number) 포착, `v:exception` 변수 지원, `:try` 블록 내 조기 `:return` 시에도 `:finally` 실행 보장.
-- **커맨드라인 파이프(`|`) 및 최상위 제어문 (`src/vim-engine/commandLine.ts`, `vimscriptEngine.ts`)**: `:bar` (`|`) 다중 Ex 커맨드 연속 실행. 따옴표(`"`, `'`), 역슬래시 이스케이프(`\|`), 논리 OR(`||`), 치환 패턴(`:%s/.../.../`), `:global`/`:vglobal` 인라인 패턴 보존. 실패 시(`bell: true`) 후속 명령 중단. 최상위 파이프 제어문(`:if/:else/:endif`, `:for/:endfor`, `:while/:endwhile`, `:try/:catch/:finally/:endtry`) 자동 라인 분기 및 스크립트 블록 실행, 고립된 제어문 키워드에 대한 표준 Vim 에러(`E171`, `E170`, `E580` 등) 처리.
+- **커맨드라인 파이프(`|`) 및 최상위 제어문 (레슨 63, `src/vim-engine/commandLine.ts`, `vimscriptEngine.ts`)**: `:bar` (`|`) 다중 Ex 커맨드 연속 실행. 따옴표(`"`, `'`), 역슬래시 이스케이프(`\|`), 논리 OR(`||`), 치환 패턴(`:%s/.../.../`), `:global`/`:vglobal` 인라인 패턴 보존. 실패 시(`bell: true`) 후속 명령 중단. 최상위 파이프 제어문(`:if/:else/:endif`, `:for/:endfor`, `:while/:endwhile`, `:try/:catch/:finally/:endtry`) 자동 라인 분기 및 스크립트 블록 실행, 고립된 제어문 키워드에 대한 표준 Vim 에러(`E171`, `E170`, `E580` 등) 처리. 레슨 63에서 `:%s` 치환과 한 줄 `:for` 루프 파이프 연결 자동화 실전 훈련 제공.
 
 ---
 
@@ -108,4 +108,5 @@
 9. **Neovim/Vim 순정 단어 자동완성 (`Ctrl+n` / `Ctrl+p`) 및 팝업 메뉴 UI**: 현재 버퍼 단어 기반 순정 완성 및 팝업 메뉴 선택 인터랙션.
 10. ~~**커맨드라인 최상위 블록 (`:if`/`:for`/`:while`) 지원**~~ — 파이프(`|`) 다중 명령 실행 및 제어 흐름 스크립트 블록 구현 완료.
 11. **퀵픽스/로케이션 리스트 전용 분할 창(Split Window) 시각 렌더링**: `:copen`/`:lopen` 시 실제 분할 패널을 띄우고 목록 선택 점프.
-12. **신규 레슨 63 추가 (커맨드라인 파이프 및 제어 흐름 한 줄 자동화)**: `:bar` (`|`) 파이프 체이닝과 한 줄 제어문(`:for ... | ... | :endfor`) 실전 훈련.
+12. ~~**신규 레슨 63 추가 (커맨드라인 파이프 및 제어 흐름 한 줄 자동화)**~~ — 구현 완료.
+13. **던전 RPG (DungeonRPG) 스테이지 6 신규 보스 및 메카닉 확장**: 복합 키 시퀀스 또는 타임어택 기믹을 결합한 신규 보스 스테이지.

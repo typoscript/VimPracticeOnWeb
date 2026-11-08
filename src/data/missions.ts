@@ -2024,4 +2024,38 @@ export const MISSIONS: Mission[] = [
       return state.lines.length === target.length && target.every((t, i) => state.lines[i] === t);
     },
   },
+  {
+    id: 63,
+    title: '레슨 63: 커맨드라인 파이프(|)와 한 줄 제어문(:for, :if)으로 다중 명령 일괄 자동화하기',
+    description:
+      'Vim에서는 여러 Ex 명령어를 파이프 기호(`|`)로 연결해 한 번의 명령행 실행으로 연속 처리할 수 있습니다 (`:help :bar`). 또한 별도의 `:function` 선언 없이도 `:for` / `:if` 제어문을 파이프로 엮어 강력한 한 줄 스크립트 블록을 즉시 실행할 수 있습니다.\n\n1) 다중 명령 파이프 체이닝:\n   - `:cmd1 | cmd2 | cmd3` 형식으로 여러 명령을 한 줄에 나열하여 순차 실행합니다.\n   - 예: `:%s/dev/prod/g | %s/http:/https:/g` (여러 치환을 한 번에 실행)\n   - 파이프 체인 실행 도중 하나의 명령이라도 실패(`bell: true`)하면 후속 명령은 안전하게 중단됩니다.\n   - 따옴표 내부(`"..."`, \'...\'), 역슬래시 이스케이프(`\\|`), 치환 패턴 내부의 `|`, 논리 OR(`||`)는 구분자로 분할되지 않고 본래 문자로 보존됩니다.\n\n2) 최상위 제어문 스크립트 블록:\n   - `:for i in range(1, 3) | ... | :endfor` 처럼 한 줄로 반복 제어문을 구성할 수 있습니다.\n   - 버퍼의 라인을 동적으로 조회(`getline()`), 가공(`toupper()`, 문자열 결합 `.`), 저장(`setline()`)하는 복합 자동화를 즉각 수행합니다.\n\n미션:\n:%s/task_// | for i in range(1, 3) | call setline(i, i . \'. \' . toupper(getline(i))) | endfor\n명령을 실행하여 불필요한 접두어를 제거하고, 각 줄 앞에 번호를 매기며 대문자로 일괄 변환하세요.',
+    hint: ':%s/task_// | for i in range(1, 3) | call setline(i, i . \'. \' . toupper(getline(i))) | endfor 를 입력하고 Enter',
+    par: 94,
+    optimalKeys: [
+      ':', '%', 's', '/', 't', 'a', 's', 'k', '_', '/', '/', ' ',
+      '|', ' ',
+      'f', 'o', 'r', ' ', 'i', ' ', 'i', 'n', ' ', 'r', 'a', 'n', 'g', 'e', '(', '1', ',', ' ', '3', ')', ' ',
+      '|', ' ',
+      'c', 'a', 'l', 'l', ' ', 's', 'e', 't', 'l', 'i', 'n', 'e', '(', 'i', ',', ' ', 'i', ' ', '.', ' ', "'", '.', ' ', "'", ' ', '.', ' ', 't', 'o', 'u', 'p', 'p', 'e', 'r', '(', 'g', 'e', 't', 'l', 'i', 'n', 'e', '(', 'i', ')', ')', ')', ' ',
+      '|', ' ',
+      'e', 'n', 'd', 'f', 'o', 'r',
+      'Enter',
+    ],
+    initialLines: [
+      'task_deploy',
+      'task_build',
+      'task_test',
+    ],
+    targetLines: [
+      '1. DEPLOY',
+      '2. BUILD',
+      '3. TEST',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const target = ['1. DEPLOY', '2. BUILD', '3. TEST'];
+      return state.lines.length === target.length && target.every((t, i) => state.lines[i] === t);
+    },
+  },
 ];

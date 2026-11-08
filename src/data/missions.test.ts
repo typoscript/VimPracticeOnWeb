@@ -1260,8 +1260,27 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson62!.checkComplete(incompleteState)).toBe(false);
   });
 
-  it('모든 62개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(62);
+  it('레슨 63: 커맨드라인 파이프 | 및 한 줄 제어문 checkComplete 판정 검증', () => {
+    const lesson63 = MISSIONS.find((m) => m.id === 63);
+    expect(lesson63).toBeDefined();
+
+    const completeState: VimEditorState = {
+      lines: ['1. DEPLOY', '2. BUILD', '3. TEST'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson63!.checkComplete(completeState)).toBe(true);
+
+    const incompleteState: VimEditorState = {
+      lines: ['task_deploy', 'task_build', 'task_test'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+    };
+    expect(lesson63!.checkComplete(incompleteState)).toBe(false);
+  });
+
+  it('모든 63개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(63);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();
