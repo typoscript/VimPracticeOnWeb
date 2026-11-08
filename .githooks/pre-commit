@@ -1,0 +1,4 @@
+#!/bin/sh
+# CLAUDE.md 와 AGENTS.md 를 같은 내용으로 맞춘 뒤 커밋에 포함합니다.
+node scripts/syncAgentDocs.mjs || exit 1
+git add CLAUDE.md AGENTS.md

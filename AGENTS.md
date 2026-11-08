@@ -1,7 +1,7 @@
-# AGENTS.md - VimPracticeOnWeb 개발 가이드 & 프로젝트 규약
+# VimPracticeOnWeb 개발 가이드 & 프로젝트 규약 (AGENTS.md = CLAUDE.md)
 
-> 모든 AI 코딩 에이전트(Claude Code, Gemini CLI, Codex 등)가 공통으로 따르는 단일 규약 문서입니다.
-> `CLAUDE.md` 와 `GEMINI.md` 는 이 파일을 `@AGENTS.md` 로 가져오기만 하므로, 규약은 **이 파일만 수정**하세요.
+> 모든 AI 코딩 에이전트(Claude Code, Gemini·Antigravity, Codex 등)가 공통으로 따르는 규약입니다.
+> `AGENTS.md` 와 `CLAUDE.md` 는 **항상 같은 내용**이어야 합니다. 어느 쪽을 고쳐도 되며, `scripts/syncAgentDocs.mjs` 가 바뀐 쪽을 다른 쪽에 복사합니다 (git pre-commit 훅, `npm run sync:docs`). 두 파일이 다르면 `test/agentDocs.test.ts` 가 실패합니다.
 
 ## 1. 프로젝트 개요 & 아키텍처 원칙
 - **프로젝트 명칭**: VimPracticeOnWeb
@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 108개 테스트 파일, 1,380개 테스트 100% 통과 필수)*
+  *(현재 109개 테스트 파일, 1,381개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -31,7 +31,7 @@
 - **번들 분할**: 아케이드·던전·도장 탭과 커스텀 미션·분석·데일리·설정 내보내기·BYOC 모달은 `App.tsx`에서 `React.lazy`로 지연 로딩되고, React는 `react-vendor`, Vim 엔진은 `vim-engine` 청크로 분리됩니다(`vite.config.ts`). 모달은 `useOpenedOnce`로 처음 열 때 불러온 뒤 마운트를 유지합니다. 이 화면들을 테스트할 때는 처음 나타나는 요소를 `await screen.findBy...`로 기다리세요.
 - **한/영 화면 언어 (`src/i18n/`)**: 화면 문구는 한국어 원문을 키로 쓰는 `t('한국어', { name })` 로 출력하고, 영어는 `src/i18n/en.ts` 의 `{ 한국어: English }` 사전에서 찾습니다(자리표시자 `{name}` 은 원문과 같아야 함). 모듈 최상위 상수는 `localized({...})` 로 감싸 읽을 때 번역되게 하고, localStorage 에 남기는 값은 번역하지 말고 `i18nKey('한국어')` 로 원문을 저장한 뒤 화면에서 `t(key)` 로 번역하세요. 언어는 `useLocale()`/`setLocale()` (저장 키 `vim_locale_v1`, 없으면 브라우저 언어), 헤더의 `toggle-locale-btn` 으로 바꿉니다. 테스트는 `setup.ts` 에서 한국어로 고정됩니다. 레슨·던전·자유 연습장 본문은 `src/data` 에 한국어 원문 그대로 두고 화면에서 `t(mission.title)` 처럼 번역하며, 영어는 `src/i18n/enContent.ts`(`EN_CONTENT`)에 있습니다. 레슨 에디터 버퍼(`initialLines`/`targetLines`)는 `checkComplete` 가 그대로 비교하므로 번역하지 말고 영어로 작성하세요. ⚠ 새 문구나 레슨을 추가하면 `en.ts`/`enContent.ts` 에도 넣어야 `src/i18n/i18nCoverage.test.ts` 가 통과합니다. 엔진 메시지(`commandMessage`, Vim script 에러)는 엔진 안의 `msg('한국어', { name })`(`src/vim-engine/messages.ts`)로 만들고, `configureVimEngine({ locale: 'en' })` 이면 `src/vim-engine/messagesEn.ts` 의 실제 Vim 영어 문구(`E492: Not an editor command: foo`, `3 fewer lines`)를 씁니다. 앱의 `setLocale()` 이 엔진 locale 도 함께 맞춥니다. ⚠ 엔진에 새 메시지를 추가하면 `messagesEn.ts` 에도 넣어야 `src/vim-engine/messages.test.ts` 가 통과합니다(E번호·자리표시자 일치 검사).
 
-- **작업 완료 체크리스트 (모든 에이전트 공통)**: 변경 후 `npm test -- --run`, `npm run build`, `npm run check:vim-engine` 가 모두 통과해야 합니다. 화면 문구·레슨·엔진 메시지를 추가했다면 영어 사전(`src/i18n/en.ts`, `src/i18n/enContent.ts`, `src/vim-engine/messagesEn.ts`)도 함께 채우세요. 규약이 바뀌면 이 `AGENTS.md` 의 현황·테스트 개수를 갱신하세요.
+- **작업 완료 체크리스트 (모든 에이전트 공통)**: 변경 후 `npm test -- --run`, `npm run build`, `npm run check:vim-engine` 가 모두 통과해야 합니다. 화면 문구·레슨·엔진 메시지를 추가했다면 영어 사전(`src/i18n/en.ts`, `src/i18n/enContent.ts`, `src/vim-engine/messagesEn.ts`)도 함께 채우세요. 규약이 바뀌면 이 문서의 현황·테스트 개수를 갱신하세요. (`CLAUDE.md`/`AGENTS.md` 중 하나만 고쳐도 커밋할 때 자동으로 맞춰집니다)
 
 ---
 
