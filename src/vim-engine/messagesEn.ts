@@ -299,4 +299,7 @@ export const EN_MESSAGES: Record<string, string> = {
   "E607: :try 없이 :endtry 가 사용되었습니다": "E607: :endtry without :try",
   "E605: 예외가 처리되지 않았습니다: {v}": "E605: Exception not caught: {v}",
   "E171: :endtry 가 없습니다": "E171: Missing :endtry",
+  "E139: 파일이 이미 존재합니다 (!를 붙여 덮어쓰기: :mksession! {filename})": "E139: File exists (add ! to override: :mksession! {filename})",
+  "\"{filename}\" 세션이 저장되었습니다": "Session saved to \"{filename}\"",
+  "\"{filename}\" 세션이 복원되었습니다": "Session restored from \"{filename}\"",
 };

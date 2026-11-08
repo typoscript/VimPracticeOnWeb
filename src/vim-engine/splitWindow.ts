@@ -453,3 +453,36 @@ export function syncActivePane(state: VimEditorState): VimEditorState {
     splitPanes: newPanes,
   };
 }
+
+/**
+ * :wincmd {arg} 명령을 실행합니다. (예: :wincmd w, :1wincmd w, :wincmd v, :wincmd s, :wincmd c, :wincmd o)
+ */
+export function executeWincmd(state: VimEditorState, arg: string, count?: number): VimEditorState {
+  if (count !== undefined && count >= 1) {
+    return switchPaneFocus(state, count - 1);
+  }
+  switch (arg.toLowerCase()) {
+    case 'w':
+      return switchPaneFocus(state, (state.activePaneIndex ?? 0) === 0 ? 1 : 0);
+    case 'h':
+    case 'k':
+    case 't':
+      return switchPaneFocus(state, 0);
+    case 'l':
+    case 'j':
+    case 'b':
+      return switchPaneFocus(state, 1);
+    case 'p':
+      return switchPaneFocus(state, state.previousPaneIndex ?? 0);
+    case 'c':
+      return closeSplitWindow(state);
+    case 'o':
+      return closeOtherPanes(state);
+    case 's':
+      return splitWindow(state, 'horizontal');
+    case 'v':
+      return splitWindow(state, 'vertical');
+    default:
+      return state;
+  }
+}

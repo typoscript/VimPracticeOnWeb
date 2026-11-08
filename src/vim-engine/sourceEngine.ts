@@ -4,6 +4,7 @@ import { getVfsFile } from './vfs';
 import { registerKeymap } from './keymapEngine';
 import { executeUserCommandDefinition } from './userCommandEngine';
 import { defineFunctionFromLines, isEndFunctionLine, isFunctionHeaderLine } from './vimscriptEngine';
+import { isSessionScript, restoreSession } from './sessionEngine';
 import { msg } from './messages';
 
 /** 소싱 중 let / call / echo 등 Vim script 명령을 실행하기 위한 Ex 실행기 */
@@ -29,7 +30,7 @@ export function sourceScript(state: VimEditorState, targetFile = '%', runEx?: So
       sourceName = foundBuf.name;
     } else {
       // 2. VFS(가상 파일 시스템) 또는 시스템 파일에서 탐색
-      const vfsLines = getVfsFile(state.netrw?.files, target);
+      const vfsLines = getVfsFile(state.netrw?.files, target, state.virtualFiles);
 
       if (vfsLines) {
         linesToRun = [...vfsLines];
@@ -41,6 +42,11 @@ export function sourceScript(state: VimEditorState, targetFile = '%', runEx?: So
         };
       }
     }
+  }
+
+  // 세션 스크립트 파일인 경우 세션 복원 전용 엔진으로 위임
+  if (isSessionScript(linesToRun)) {
+    return restoreSession(state, linesToRun, sourceName, runEx);
   }
 
   let curState = state;
@@ -107,8 +113,8 @@ export function sourceScript(state: VimEditorState, targetFile = '%', runEx?: So
       continue;
     }
 
-    // 5. Vim script 명령 (let, unlet, call, echo, execute)
-    if (runEx && /^(let|unl|unlet|cal|call|ec|echo|echom|exe|execute)(!?)\s/.test(line)) {
+    // 5. Vim script 및 기타 Ex 명령 실행
+    if (runEx) {
       curState = runEx(curState, line);
       appliedCount++;
       continue;

@@ -25,8 +25,8 @@ export * from './types';
 export { isPositionSelected } from './visual';
 export { findMatches } from './search';
 export { computeDiffHunks } from './diffEngine';
-export { switchPaneFocus } from './splitWindow';
-export { switchBuffer, ensureBuffers, syncCurrentBuffer } from './bufferEngine';
+export { switchPaneFocus, executeWincmd } from './splitWindow';
+export { switchBuffer, ensureBuffers, syncCurrentBuffer, addBuffer, editBuffer, deleteBuffer } from './bufferEngine';
 export { switchTab, openNewTab, closeTab, ensureTabPages, tabdo } from './tabEngine';
 export { bufdo } from './bufferEngine';
 export { closeCommandLineWindow } from './cmdlineWindow';
@@ -84,6 +84,15 @@ export {
   damerauLevenshtein,
 } from './spellEngine';
 export { DEFAULT_SPELL_WORDS } from './spellData';
+
+// ---- 순정 Vim 세션 관리자 (:mksession, :source Session.vim) ----
+export {
+  executeMakeSession,
+  generateSessionScript,
+  restoreSession,
+  isSessionScript,
+} from './sessionEngine';
+export type { SessionMetadata } from './sessionEngine';
 
 // ---- 개발용 불변성 검사 ----
 export { withInvariantCheck, assertValidVimState, deepFreeze } from './invariants';

@@ -12,7 +12,7 @@ import {
   travelEarlier,
   travelLater,
 } from './undoTreeEngine';
-import { splitWindow, closeSplitWindow, closeOtherPanes, resizeSplit } from './splitWindow';
+import { splitWindow, closeSplitWindow, closeOtherPanes, resizeSplit, executeWincmd } from './splitWindow';
 import {
   formatBufferList,
   switchBuffer,
@@ -22,6 +22,7 @@ import {
   lastBuffer,
   deleteBuffer,
   editBuffer,
+  addBuffer,
   bufdo,
 } from './bufferEngine';
 import {
@@ -92,6 +93,7 @@ import { openNetrw } from './netrwEngine';
 import { formatRegisters } from './registers';
 import { executeSetCommand } from './setEngine';
 import { sourceScript } from './sourceEngine';
+import { executeMakeSession } from './sessionEngine';
 import { jumpToTag, popTagStack, formatTagStack } from './tagEngine';
 import {
   registerKeymap,
@@ -899,7 +901,10 @@ export function executeCommandLine(
   }
 
   // 3. 창 분할 및 종료, 설정, 키매핑 명령어
-  const cleanCmdRaw = trimmed.replace(/^:/, '').trim();
+  let cleanCmdRaw = trimmed.replace(/^:/, '').trim();
+  if (/^silent!?\s+/i.test(cleanCmdRaw)) {
+    cleanCmdRaw = cleanCmdRaw.replace(/^silent!?\s+/i, '');
+  }
   const splitMatch = cleanCmdRaw.match(/^(sp|split|vsp|vsplit)(?:\s+(.+))?$/i);
   if (splitMatch) {
     const isVertical = splitMatch[1].toLowerCase().startsWith('v');
@@ -1042,6 +1047,21 @@ export function executeCommandLine(
     };
   }
 
+  // 창 제어 Ex 명령: :wincmd {arg}, :1wincmd w, :2wincmd w 등
+  const wincmdMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?wincmd\s+(\S+)$/i);
+  if (wincmdMatch) {
+    const count = wincmdMatch[1] ? parseInt(wincmdMatch[1], 10) : undefined;
+    const arg = wincmdMatch[2];
+    const res = executeWincmd(state, arg, count);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
   // 창 크기 조절: :res, :resize, :vertical res
   const resizeMatch = cleanCmdRaw.match(/^(?:(vertical|vert)\s+)?(?:res|resize)(?:\s+([+-]?\d+|=))?$/i);
   if (resizeMatch) {
@@ -1170,6 +1190,21 @@ export function executeCommandLine(
   if (bMatch && !cleanCmdRaw.match(/^(?:bn|bnext|bp|bprev|bprevious|bf|bfirst|bl|blast|bd|bdelete|bdel)/i)) {
     const target = bMatch[1]?.trim();
     const res = target ? switchBuffer(state, target) : nextBuffer(state, 1);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 버퍼 추가: :badd, :bad [+line] {file}
+  const baddMatch = cleanCmdRaw.match(/^(?:badd|bad)(?:\s+\+(\d+))?\s+(\S+)$/i);
+  if (baddMatch) {
+    const lineNum = baddMatch[1] ? parseInt(baddMatch[1], 10) : undefined;
+    const file = baddMatch[2];
+    const res = addBuffer(state, file, lineNum);
     return {
       ...res,
       mode: 'NORMAL',
@@ -1734,6 +1769,21 @@ export function executeCommandLine(
   if (sourceMatch) {
     const targetFile = sourceMatch[1]?.trim() || '%';
     const res = sourceScript(state, targetFile, (s, cmd) => executeCommandLine(s, cmd, keyRunner));
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 세션 파일 저장: :mksession, :mks [file]
+  const mksessionMatch = cleanCmdRaw.match(/^(?:mksession|mks)(!?)(?:\s+(.*))?$/i);
+  if (mksessionMatch) {
+    const bang = Boolean(mksessionMatch[1]);
+    const filename = mksessionMatch[2]?.trim() || 'Session.vim';
+    const res = executeMakeSession(state, filename, bang);
     return {
       ...res,
       mode: 'NORMAL',

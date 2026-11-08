@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 114개 테스트 파일, 1,493개 테스트 100% 통과 필수)*
+  *(현재 115개 테스트 파일, 1,499개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -102,6 +102,7 @@
 - **하드코어 도장 서든데스 10연타 챌린지 & 실시간 랭킹 시스템 (`src/components/HardcoreDojo/`, `storage.ts`)**: 단 1회의 실수(방향키·연타·마우스 클릭·타수 초과)도 허용되지 않는 10연속 노미스 스피드런 모드(`sudden-death`). 3대 핵심 모션(상대 라인 점프, f/t 스나이퍼, WORD 점프) 교차 출제, 10연타 완주 시 속도별 칭호(👑 GODSPEED / ⚔️ ONE-STRIKE / 🥋 DOJO-MASTER / 📜 DISCIPLE) 부여, 명예의 전당 Top 10 실시간 리더보드 모달 및 로컬스토리지 영구 보존.
 - **Vim 매크로 & 레지스터 실시간 인스펙터 (`src/components/RegisterInspector/`)**: `@a`~`@z` 및 특수 레지스터(`""`, `"0`) 실시간 시각화, 모션(청록)·연산자(주황)·모드(보라)·특수키(빨강)·입력(초록) 5대 카테고리 컬러 구문 하이라이트 토큰 뱃지, 실시간 매크로 녹화(`REC @reg`) 스트림 배너, 인스펙터 내 실시간 인라인 편집기(토큰 실시간 미리보기 및 `<Esc>`, `<CR>`, `<Space>`, `<Tab>` 퀵 칩), 매크로 즉시 실행(`onRunMacro`), 매크로 디버거(`MacroDebugger`) 즉시 연동, 탭 필터링(`전체`, `매크로`, `클립보드`), 클립보드 복사 및 레지스터 비우기 지원.
 - **고급 매크로 레지스터 조작 & 버퍼 실전 편집 엔진 (`"ap`, `"ay$`, `@a`, `2@@`) (레슨 66)**: 매크로 녹화 오류 시 처음부터 재녹화하지 않고 버퍼에 붙여넣어(`"ap`) 텍스트로 시각화, 오타 수정 후 다시 레지스터로 덮어쓰기(`"ay$`), 그리고 수정된 매크로를 즉시 실행(`@a`) 및 일괄 반복(`2@@`)하는 Vim 고수 테크닉 완벽 지원. `formatMacroKeysToString` 및 `parseMacroStringToKeys`로 특수키(`<Esc>`, `<CR>`, `<Tab>`, `<BS>`, `<C-x>`) 양방향 파싱 및 포맷팅 처리.
+- **Vim 순정 세션 저장 및 복원 엔진 (`:mksession [file]`, `:source Session.vim`) (`src/vim-engine/sessionEngine.ts`)**: 현재 편집 중인 모든 상태(가로/세로 분할 창 구조 및 활성 포커스, 열려 있는 버퍼 목록, 탭페이지, 마크, 레지스터, 옵션 설정값)를 순정 Vim 스크립트로 직렬화하여 가상 파일 시스템에 저장하고, `:source {sessionFile}` 또는 `:so {sessionFile}` 로 이전 작업 환경을 100% 무손실로 완벽히 복원. 외부 Vim 스크립트 Ex 명령어 순차 실행 폴백 및 `:wincmd` (`w`, `h`, `l`, `c`, `o`, `s`, `v`, `[count]wincmd w`), `:badd [+line] {file}`, `silent!` 접두사 파싱 지원.
 
 ---
 
@@ -129,5 +130,6 @@
 20. **커스텀 테마 & 신규 구문 하이라이트 확장**: Neovim 유명 테마(Tokyo Night, Gruvbox, Catppuccin) 및 신규 언어(Rust, Go) 프리셋 지원.
 21. ~~**Vim 매크로 레지스터 시각화 인스펙터 (Macro Register Inspector)**: @a~@z 버퍼 내용 실시간 파싱 및 시각적 재생/수정 도구.~~ — 구현 완료.
 22. ~~**신규 레슨 66 추가**: 고급 매크로 레지스터 조작 및 `"ap` 붙여넣기/편집 후 `"ay` 재저장 테크닉 실전 마스터.~~ — 구현 완료.
-23. **Vim 내장 세션 저장 및 복원 (`:mksession`, `:source Session.vim`)**: 윈도우 분할, 버퍼, 탭 상태 전체를 저장하고 다시 로드하는 영구 세션 관리자.
+23. ~~**Vim 내장 세션 저장 및 복원 (`:mksession`, `:source Session.vim`)**: 윈도우 분할, 버퍼, 탭 상태 전체를 저장하고 다시 로드하는 영구 세션 관리자.~~ — 구현 완료.
 24. **마크 점프 리스트 비주얼 맵 (Marks & Jump Visualizer)**: 현재 버퍼/전역 마크(`'a`~`'z`, `'A`~`'Z`) 및 점프 리스트(`Ctrl-o` / `Ctrl-i`) 위치를 에디터 거터/미니맵에 시각적으로 표시하고 상호작용하는 HUD 네비게이터.
+25. **신규 레슨 67 추가 (Vim 세션 관리와 :mksession / :source 마스터)**: 다중 분할 창 및 버퍼 상태를 세션 파일로 영구 저장하고 복원하는 실전 워크플로우 훈련.

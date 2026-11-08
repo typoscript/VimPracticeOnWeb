@@ -249,6 +249,40 @@ export function editBuffer(state: VimEditorState, filename: string): VimEditorSt
 }
 
 /**
+ * 버퍼 목록에 새 파일을 추가합니다 (:badd, :bad [+line] {filename}). 현재 열려 있는 버퍼를 전환하지 않습니다.
+ */
+export function addBuffer(state: VimEditorState, filename: string, lineNum?: number): VimEditorState {
+  const cleanName = filename.trim();
+  if (!cleanName) return state;
+  const syncedState = ensureBuffers(state);
+  const buffers = syncedState.buffers!;
+  const existing = buffers.find((b) => b.name === cleanName);
+  if (existing) {
+    if (lineNum !== undefined) {
+      existing.cursor = { line: Math.max(0, lineNum - 1), col: 0 };
+    }
+    return syncedState;
+  }
+  const maxId = buffers.reduce((max, b) => Math.max(max, b.id), 0);
+  const newId = maxId + 1;
+  const vfsLines = getVfsFile(state.netrw?.files, cleanName, state.virtualFiles);
+  const initialLines = vfsLines ? [...vfsLines] : [''];
+  const newBuf: VimBuffer = {
+    id: newId,
+    name: cleanName,
+    lines: [...initialLines],
+    cursor: { line: lineNum !== undefined ? Math.max(0, lineNum - 1) : 0, col: 0 },
+    undoStack: [],
+    redoStack: [],
+    isModified: false,
+  };
+  return {
+    ...syncedState,
+    buffers: [...buffers, newBuf],
+  };
+}
+
+/**
  * 버퍼를 삭제하고 다른 버퍼로 복귀합니다 (:bd, :bdelete).
  */
 export function deleteBuffer(state: VimEditorState, target?: number | string): VimEditorState {
