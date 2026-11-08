@@ -198,6 +198,30 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
         }
       }
 
+      // 최종 보스전(Stage 6) 특수 판정: CHAOS_DRAGON 핵 파괴 시 궁극의 차원문 개방
+      if (stage.id === 6) {
+        const hasDragonAlive = nextState.lines.some((l) => l.includes('CHAOS_DRAGON'));
+        if (!hasDragonAlive && !doorOpen) {
+          setDoorOpen(true);
+          setHasKey(true);
+          onPlaySuccessSound();
+          setSlashEffect({ line: 2, col: 7, label: 'DRAGON VANQUISHED! 🐉💥' });
+          showToast(t('🐉 카오스 드래곤이 쓰러져 궁극의 차원 포탈이 열렸습니다!'));
+        }
+
+        // Stage 6 마력 코어 파괴 감지
+        const hasCoreAlive = nextState.lines.some((l) => l.includes('CORE'));
+        if (!hasCoreAlive && editorState.lines.some((l) => l.includes('CORE'))) {
+          setSlashEffect({ line: 1, col: 10, label: 'CORE SHATTERED! ⚡' });
+          showToast(t('⚡ 마력 코어가 파괴되어 드래곤의 방어막이 약화되었습니다!'));
+        }
+
+        // Par 초과 시 드래곤 분노 알림
+        if (keystrokes === stage.par) {
+          showToast(t('⚠️ 카오스 드래곤이 폭주(Enrage) 상태에 돌입했습니다! (Par 초과)'));
+        }
+      }
+
       // 출구(E) 도달 클리어 검사
       if (
         (origCharInMap === 'E' || curCharInLine === 'E') &&
@@ -356,7 +380,10 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
                   const isDoor = mapTile === 'D';
                   const isExit = mapTile === 'E';
                   const isKey = mapTile === 'K' || charOnBoard === 'K';
-                  const isBoss = stage.id === 5 && rIdx === 2 && cIdx >= 3 && cIdx <= 13;
+                  const isBoss =
+                    (stage.id === 5 && rIdx === 2 && cIdx >= 3 && cIdx <= 13) ||
+                    (stage.id === 6 && rIdx === 2 && cIdx >= 4 && cIdx <= 21);
+                  const isDragon = stage.id === 6 && isBoss;
 
                   let tileClass = 'tile-floor';
                   if (isWall) tileClass = 'tile-wall';
@@ -385,7 +412,13 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
                       ) : isWater ? (
                         <span className="water-wave">{charOnBoard !== '~' ? charOnBoard : '≋'}</span>
                       ) : isBoss && charOnBoard !== ' ' ? (
-                        <span className="entity-boss">{charOnBoard}</span>
+                        <span
+                          className={`entity-boss ${isDragon ? 'entity-dragon' : ''} ${
+                            stage.id === 6 && keystrokes > stage.par ? 'boss-enraged' : ''
+                          }`}
+                        >
+                          {charOnBoard}
+                        </span>
                       ) : (
                         <span className="tile-char">{charOnBoard}</span>
                       )}

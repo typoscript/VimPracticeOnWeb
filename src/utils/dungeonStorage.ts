@@ -66,7 +66,7 @@ export function recordStageClear(
   data.stageRecords[stageId] = updatedRecord;
 
   // 다음 스테이지 해금
-  if (data.highestUnlockedStage < stageId + 1 && stageId < 5) {
+  if (data.highestUnlockedStage < stageId + 1 && stageId < 6) {
     data.highestUnlockedStage = stageId + 1;
   }
 
@@ -75,13 +75,22 @@ export function recordStageClear(
     data.unlockedSkillIds.push(newSkillId);
   }
 
-  // 보스 스테이지 5 클리어 시 특별 마스터 칭호 부여
+  // 보스 스테이지 클리어 시 특별 마스터 칭호 부여
   let newBadgeEarned: string | undefined = undefined;
   if (stageId === 5) {
     const badgeName =
       keystrokes <= par
         ? t('🏆 [Vim Dungeon Master - Par 이하 정복]')
         : '🗡️ [Vim Dungeon Conqueror]';
+    if (!data.badges.includes(badgeName)) {
+      data.badges.push(badgeName);
+      newBadgeEarned = badgeName;
+    }
+  } else if (stageId === 6) {
+    const badgeName =
+      keystrokes <= par
+        ? t('👑 [Grandmaster of Vim - 전설의 용살자]')
+        : t('🐉 [Dragon Slayer - 카오스 드래곤 토벌]');
     if (!data.badges.includes(badgeName)) {
       data.badges.push(badgeName);
       newBadgeEarned = badgeName;

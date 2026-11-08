@@ -37,7 +37,7 @@ export interface DungeonStage {
     line: number;
     col: number;
     text: string;
-    shieldType: 'quote' | 'bracket' | 'double';
+    shieldType: 'quote' | 'bracket' | 'double' | 'triple';
   };
 }
 

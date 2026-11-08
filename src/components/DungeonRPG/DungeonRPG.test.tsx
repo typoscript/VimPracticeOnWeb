@@ -270,4 +270,96 @@ describe('DungeonRPG Component', () => {
     expect(screen.getByTestId('dungeon-clear-modal')).toBeInTheDocument();
     expect(screen.getByTestId('new-badge-banner')).toBeInTheDocument();
   });
+
+  it('Stage 6 final boss fight: destroying CHAOS_DRAGON and reaching exit awards Grandmaster badge', () => {
+    // Unlock all 6 stages
+    const save = getDefaultDungeonSave();
+    save.highestUnlockedStage = 6;
+    save.unlockedSkillIds = [
+      'basic_move',
+      'basic_slash',
+      'word_boots',
+      'find_hook',
+      'bracket_portal',
+      'alchemy_bridge',
+      'wand_textobj',
+      'dragon_slayer',
+    ];
+    saveDungeonSave(save);
+
+    render(
+      <DungeonRPG
+        onPlayKeySound={onPlayKeySound}
+        onPlaySuccessSound={onPlaySuccessSound}
+        isMuted={false}
+      />
+    );
+
+    // Switch to Stage 6 (value '5')
+    const dropdown = screen.getByTestId('stage-select-dropdown');
+    fireEvent.change(dropdown, { target: { value: '5' } });
+
+    expect(screen.getByTestId('dungeon-objective')).toHaveTextContent(
+      '카오스 드래곤(CHAOS_DRAGON)을 격파하고'
+    );
+
+    // Move down to line 2: j
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }));
+    });
+
+    // Jump to quotes: f, "
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'f' }));
+    });
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '"' }));
+    });
+
+    // Destroy dragon: d, i, "
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'd' }));
+    });
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'i' }));
+    });
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '"' }));
+    });
+
+    // Dragon defeated! Door should be opened
+    expect(screen.getByTestId('dungeon-door-status')).toHaveTextContent('🔓 개방됨');
+
+    // Move left to col 4 (safe ground): h, h, h
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' }));
+    });
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' }));
+    });
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' }));
+    });
+
+    // Move down: j, j to line 4
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }));
+    });
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'j' }));
+    });
+
+    // Jump to Exit E: f, E
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'f' }));
+    });
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'E' }));
+    });
+
+    // Modal appears with Grandmaster badge!
+    expect(screen.getByTestId('dungeon-clear-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('unlocked-skill-card')).toHaveTextContent('Vim 그랜드마스터');
+    expect(screen.getByTestId('new-badge-banner')).toHaveTextContent('Grandmaster of Vim');
+  });
 });

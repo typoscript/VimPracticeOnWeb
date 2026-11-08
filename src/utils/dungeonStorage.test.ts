@@ -65,4 +65,17 @@ describe('dungeonStorage', () => {
     expect(normalClear.newBadgeEarned).toBe('🗡️ [Vim Dungeon Conqueror]');
     expect(normalClear.data.badges).toContain('🗡️ [Vim Dungeon Conqueror]');
   });
+
+  it('recordStageClear for stage 6 awards Grandmaster and Dragon Slayer badges', () => {
+    // Par 이하 클리어 시
+    const parClear = recordStageClear(6, 12, 14);
+    expect(parClear.newBadgeEarned).toBe('👑 [Grandmaster of Vim - 전설의 용살자]');
+    expect(parClear.data.badges).toContain('👑 [Grandmaster of Vim - 전설의 용살자]');
+
+    // Par 초과 클리어 시
+    localStorage.clear();
+    const normalClear = recordStageClear(6, 20, 14);
+    expect(normalClear.newBadgeEarned).toBe('🐉 [Dragon Slayer - 카오스 드래곤 토벌]');
+    expect(normalClear.data.badges).toContain('🐉 [Dragon Slayer - 카오스 드래곤 토벌]');
+  });
 });
