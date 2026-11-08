@@ -3,8 +3,8 @@ import { Editor } from '../Editor/Editor';
 import { StatusBar } from '../StatusBar/StatusBar';
 import { Keycaster } from '../Keycaster/Keycaster';
 import { ArcadeBugMission } from '../../types/game';
-import { VimEditorState, VimMode } from '../../types/vim';
-import { handleKey } from '../../engine/vimEngine';
+import { VimEditorState, VimMode } from '../../vim-engine';
+import { handleKey } from '../../vim-engine';
 import { saveArcadeRecord, loadUserAnalytics, recordKeyInputStats } from '../../utils/analyticsStorage';
 import './ArcadeSurvival.css';
 

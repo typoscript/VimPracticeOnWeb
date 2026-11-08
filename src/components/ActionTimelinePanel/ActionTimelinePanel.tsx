@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { VimEditorState } from '../../types/vim';
+import { VimEditorState } from '../../vim-engine';
 import {
   ActionTimelineStep,
   formatCommandLabel,

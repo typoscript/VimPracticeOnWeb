@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Editor } from '../Editor/Editor';
 import { StatusBar } from '../StatusBar/StatusBar';
 import { DiffViewer } from '../DiffViewer/DiffViewer';
-import { handleKey } from '../../engine/vimEngine';
-import { VimEditorState, VimMode } from '../../types/vim';
+import { handleKey } from '../../vim-engine';
+import { VimEditorState, VimMode } from '../../vim-engine';
 import { DailyChallengePuzzle, DailyRecord } from '../../types/game';
 import {
   getTodayDateString,

@@ -21,7 +21,7 @@ export interface ConfigExporterModalProps {
   onTogglePreset: (presetId: string) => void;
   onChangeLeaderKey: (newLeader: string) => void;
   customKeymaps?: Array<{ mode: string; from: string; to: string }>;
-  options?: Partial<import('../../types/vim').VimOptions>;
+  options?: Partial<import('../../vim-engine').VimOptions>;
 }
 
 export const ConfigExporterModal: React.FC<ConfigExporterModalProps> = ({

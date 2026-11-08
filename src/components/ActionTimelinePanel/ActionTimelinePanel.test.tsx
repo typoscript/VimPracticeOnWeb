@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ActionTimelinePanel } from './ActionTimelinePanel';
-import { VimEditorState } from '../../types/vim';
+import { VimEditorState } from '../../vim-engine';
 import { ActionTimelineStep } from '../../utils/actionTimeline';
 
 describe('ActionTimelinePanel Component', () => {

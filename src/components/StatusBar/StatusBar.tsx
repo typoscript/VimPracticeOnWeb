@@ -1,5 +1,5 @@
 import React from 'react';
-import { CursorPosition, VimMode, ConfirmSubstituteSession } from '../../types/vim';
+import { CursorPosition, VimMode, ConfirmSubstituteSession } from '../../vim-engine';
 import './StatusBar.css';
 
 export interface StatusBarProps {
@@ -24,7 +24,7 @@ export interface StatusBarProps {
   /** :s/.../.../gc 대화형 치환 확인 세션 */
   confirmSubstitute?: ConfirmSubstituteSession | null;
   /** 와일드메뉴 자동완성 세션 상태 */
-  wildmenu?: import('../../types/vim').WildmenuState | null;
+  wildmenu?: import('../../vim-engine').WildmenuState | null;
   /** 와일드메뉴 비주얼 바 표시 여부 (:set wildmenu) */
   showWildmenuBar?: boolean;
   /** :function 본문 입력 중인 함수 이름과 지금까지 입력한 줄 수 */

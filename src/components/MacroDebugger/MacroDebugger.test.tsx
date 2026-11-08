@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MacroDebugger, formatMacroKey } from './MacroDebugger';
-import type { VimEditorState } from '../../types/vim';
+import type { VimEditorState } from '../../vim-engine';
 
 function createRecordedState(): VimEditorState {
   return {

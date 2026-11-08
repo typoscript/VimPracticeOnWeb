@@ -1,4 +1,4 @@
-import { VimMode } from '../types/vim';
+import { VimMode } from '../vim-engine';
 
 export interface ImeNormalizationResult {
   /** 정규화된 키 문자 (또는 원본 키) */

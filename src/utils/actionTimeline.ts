@@ -1,4 +1,4 @@
-import { VimEditorState } from '../types/vim';
+import { VimEditorState } from '../vim-engine';
 
 export interface ActionTimelineStep {
   stepIndex: number;

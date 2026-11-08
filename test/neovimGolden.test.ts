@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
-import { handleKey } from '../src/engine/vimEngine';
-import { withInvariantCheck } from '../src/engine/invariants';
-import { VimEditorState } from '../src/types/vim';
+import { handleKey } from '../src/vim-engine';
+import { withInvariantCheck } from '../src/vim-engine';
+import { VimEditorState } from '../src/vim-engine';
 import { GoldenTestCase } from '../scripts/generateGoldenTests';
 
 /**

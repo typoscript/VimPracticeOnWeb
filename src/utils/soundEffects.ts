@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { VimMode } from '../types/vim';
+import { VimMode } from '../vim-engine';
 
 export type SoundEffectType = 'click' | 'thock' | 'mode' | 'success';
 

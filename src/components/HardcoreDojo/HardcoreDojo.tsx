@@ -13,8 +13,8 @@ import {
   generateWordJumpProblem,
 } from './drillGenerators';
 import { HardcoreGuard } from '../../utils/hardcoreGuard';
-import { handleKey } from '../../engine/vimEngine';
-import { VimEditorState, VimMode } from '../../types/vim';
+import { handleKey } from '../../vim-engine';
+import { VimEditorState, VimMode } from '../../vim-engine';
 import {
   loadDojoHighScores,
   saveDojoHighScore,

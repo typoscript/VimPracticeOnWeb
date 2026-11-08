@@ -6,7 +6,7 @@ import {
   CustomMissionData,
   buildChallengeUrl,
 } from './customMission';
-import { VimEditorState } from '../types/vim';
+import { VimEditorState } from '../vim-engine';
 
 describe('customMission utility', () => {
   const sampleMission: CustomMissionData = {

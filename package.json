@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "test:fuzz": "vitest run test/vimDifferential.fuzz.test.ts",
     "test:golden": "vitest run test/neovimGolden.test.ts",
-    "generate:golden": "tsx scripts/generateGoldenTests.ts"
+    "generate:golden": "tsx scripts/generateGoldenTests.ts",
+    "check:vim-engine": "tsc -p src/vim-engine/tsconfig.json"
   },
   "dependencies": {
     "react": "^19.0.0",

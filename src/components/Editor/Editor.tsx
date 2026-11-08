@@ -9,9 +9,9 @@ import {
   ConfirmSubstituteSession,
   VimOptions,
   DiffHunk,
-} from '../../types/vim';
-import { isPositionSelected } from '../../engine/visual';
-import { findMatches } from '../../engine/search';
+} from '../../vim-engine';
+import { isPositionSelected } from '../../vim-engine';
+import { findMatches } from '../../vim-engine';
 import './Editor.css';
 
 export interface EditorProps {

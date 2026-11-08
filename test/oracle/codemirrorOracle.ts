@@ -2,8 +2,8 @@ import { EditorState } from '@codemirror/state';
 import { EditorView } from '@codemirror/view';
 import { history } from '@codemirror/commands';
 import { vim, Vim, getCM } from '@replit/codemirror-vim';
-import { VimEditorState } from '../../src/types/vim';
-import { handleKey } from '../../src/engine/vimEngine';
+import { VimEditorState } from '../../src/vim-engine';
+import { handleKey } from '../../src/vim-engine';
 
 export interface NormalizedVimState {
   lines: string[];

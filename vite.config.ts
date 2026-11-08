@@ -13,6 +13,8 @@ export default defineConfig(({ mode }) => ({
         // React 는 앱 코드와 따로 묶어 배포마다 바뀌지 않는 장기 캐시 청크로 둡니다
         manualChunks(id) {
           if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'react-vendor';
+          // 독립 모듈인 Vim 엔진은 앱 코드와 따로 묶어 청크 크기를 나누고 캐시를 분리합니다
+          if (id.includes('/src/vim-engine/')) return 'vim-engine';
         },
       },
     },

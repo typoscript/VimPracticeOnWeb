@@ -1,5 +1,5 @@
 import React from 'react';
-import { VimMode } from '../../types/vim';
+import { VimMode } from '../../vim-engine';
 import './VirtualKeyboard.css';
 
 export interface VirtualKeyboardProps {

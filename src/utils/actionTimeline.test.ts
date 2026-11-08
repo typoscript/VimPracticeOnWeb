@@ -5,7 +5,7 @@ import {
   createInitialTimelineStep,
   generateVitestReproductionCode,
 } from './actionTimeline';
-import { VimEditorState } from '../types/vim';
+import { VimEditorState } from '../vim-engine';
 
 describe('actionTimeline utilities', () => {
   it('formats command keys with readable representations', () => {

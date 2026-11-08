@@ -1,4 +1,4 @@
-import { CursorPosition } from './vim';
+import { CursorPosition } from '../vim-engine';
 
 export type DungeonTileType =
   | 'wall'     // '#' 벽 (보행/점프 불가)

@@ -20,16 +20,16 @@ import {
   formatCommandLabel,
   getActionDescription,
 } from './utils/actionTimeline';
-import { VimEditorState, SplitPaneState } from './types/vim';
+import { VimEditorState, SplitPaneState } from './vim-engine';
 import { Mission } from './types/mission';
-import { handleKey } from './engine/vimEngine';
-import { switchPaneFocus } from './engine/splitWindow';
-import { switchBuffer, ensureBuffers } from './engine/bufferEngine';
-import { switchTab, openNewTab, closeTab, ensureTabPages } from './engine/tabEngine';
-import { closeCommandLineWindow } from './engine/cmdlineWindow';
-import { closeQuickfixWindow, jumpToQuickfixItem } from './engine/quickfixEngine';
-import { closeLocationListWindow, jumpToLocationListItem } from './engine/locationListEngine';
-import { computeDiffHunks } from './engine/diffEngine';
+import { handleKey } from './vim-engine';
+import { switchPaneFocus } from './vim-engine';
+import { switchBuffer, ensureBuffers } from './vim-engine';
+import { switchTab, openNewTab, closeTab, ensureTabPages } from './vim-engine';
+import { closeCommandLineWindow } from './vim-engine';
+import { closeQuickfixWindow, jumpToQuickfixItem } from './vim-engine';
+import { closeLocationListWindow, jumpToLocationListItem } from './vim-engine';
+import { computeDiffHunks } from './vim-engine';
 import { MISSIONS } from './data/missions';
 import { SANDBOX_INITIAL_LINES } from './data/sandbox';
 import {

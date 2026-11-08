@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ClipboardRegister, RegisterEntry } from '../../types/vim';
+import { ClipboardRegister, RegisterEntry } from '../../vim-engine';
 import './RegisterInspector.css';
 
 export interface RegisterInspectorProps {

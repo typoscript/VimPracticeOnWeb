@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { VimEditorState } from '../../types/vim';
+import { VimEditorState } from '../../vim-engine';
 import {
   MacroTrace,
   MACRO_PLAYBACK_SPEEDS,
@@ -7,7 +7,7 @@ import {
   clampFrameIndex,
   getMacroKeys,
   listMacroRegisters,
-} from '../../engine/macroDebugger';
+} from '../../vim-engine';
 import './MacroDebugger.css';
 
 export interface MacroDebuggerProps {

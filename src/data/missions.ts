@@ -1,6 +1,6 @@
 import { Mission } from '../types/mission';
-import { ensureBuffers, syncCurrentBuffer } from '../engine/bufferEngine';
-import { ensureTabPages } from '../engine/tabEngine';
+import { ensureBuffers, syncCurrentBuffer } from '../vim-engine';
+import { ensureTabPages } from '../vim-engine';
 
 export const MISSIONS: Mission[] = [
   {

@@ -4,8 +4,8 @@ import {
   DUNGEON_SKILLS,
 } from '../../data/dungeonStages';
 import { DungeonStage, DungeonSkill } from '../../types/dungeon';
-import { VimEditorState, VimMode } from '../../types/vim';
-import { handleKey } from '../../engine/vimEngine';
+import { VimEditorState, VimMode } from '../../vim-engine';
+import { handleKey } from '../../vim-engine';
 import {
   loadDungeonSave,
   recordStageClear,

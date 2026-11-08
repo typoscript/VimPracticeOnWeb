@@ -1,4 +1,4 @@
-import { VimMode } from '../types/vim';
+import { VimMode } from '../vim-engine';
 
 export const REPEATED_MOTION_KEYS = [
   'h', 'j', 'k', 'l',

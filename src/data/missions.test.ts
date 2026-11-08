@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { MISSIONS } from './missions';
-import { VimEditorState, SplitPaneState } from '../types/vim';
-import { handleKey } from '../engine/vimEngine';
-import { computeDiffHunks } from '../engine/diffEngine';
+import { VimEditorState, SplitPaneState } from '../vim-engine';
+import { handleKey } from '../vim-engine';
+import { computeDiffHunks } from '../vim-engine';
 
 describe('MISSIONS 10 ~ 12 validation', () => {
   it('레슨 10 (숫자 반복 카운트) 설정 및 완료 조건이 정상 동작한다', () => {

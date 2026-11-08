@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { runDifferentialCheck } from './oracle/codemirrorOracle';
-import { handleKey } from '../src/engine/vimEngine';
-import type { VimEditorState } from '../src/types/vim';
+import { handleKey } from '../src/vim-engine';
+import type { VimEditorState } from '../src/vim-engine';
 
 /**
  * CodeMirror Vim 오라클이 실제 Vim 과 다르게 동작하는 경우에는 실제 Neovim 으로 확인한 결과와 비교합니다.

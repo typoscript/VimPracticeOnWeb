@@ -1,4 +1,4 @@
-import { VimOptions } from '../types/vim';
+import { VimOptions } from '../vim-engine';
 
 export type ConfigPlatform = 'vimrc' | 'initLua' | 'vscode' | 'ideaVim';
 

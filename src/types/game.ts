@@ -1,4 +1,4 @@
-import { CursorPosition, VimEditorState } from './vim';
+import { CursorPosition, VimEditorState } from '../vim-engine';
 
 export interface ProficiencyAxes {
   navigation: number;   // ① 기본 이동 (hjkl, w, b, e, 0, $, ^, gg, G)
