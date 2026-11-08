@@ -95,4 +95,63 @@ describe('HardcoreDojo Component', () => {
 
     vi.useRealTimers();
   });
+
+  it('서든데스 10연타 챌린지 탭 선택 및 시작 안내/버튼을 정상 렌더링한다', () => {
+    render(<HardcoreDojo />);
+
+    const suddenDeathTab = screen.getByText('서든데스 10연타 챌린지');
+    fireEvent.click(suddenDeathTab);
+
+    expect(screen.getByText('⚡ 10연타 노미스 서든데스')).toBeInTheDocument();
+    expect(screen.getByText('⚡ 서든데스 도전 시작 (10연타)')).toBeInTheDocument();
+  });
+
+  it('서든데스 진행 중 방향키 입력 시 즉시 탈락(sudden-death-failed) 오버레이와 사유가 표시된다', () => {
+    render(<HardcoreDojo />);
+
+    // 서든데스 탭 선택 및 시작
+    fireEvent.click(screen.getByText('서든데스 10연타 챌린지'));
+    fireEvent.click(screen.getByText('⚡ 서든데스 도전 시작 (10연타)'));
+
+    const arena = screen.getByLabelText('Dojo Editor Arena');
+
+    // 방향키 입력 시 즉시 탈락
+    fireEvent.keyDown(arena, { key: 'ArrowLeft' });
+
+    expect(screen.getByText('서든데스 탈락!')).toBeInTheDocument();
+    expect(screen.getByText(/탈락 사유:/)).toBeInTheDocument();
+    expect(screen.getByText('🔄 다시 도전하기')).toBeInTheDocument();
+    expect(screen.getByText('🏆 랭킹 보드 보기')).toBeInTheDocument();
+  });
+
+  it('서든데스 진행 중 마우스 클릭 시 즉시 탈락한다', () => {
+    render(<HardcoreDojo />);
+
+    fireEvent.click(screen.getByText('서든데스 10연타 챌린지'));
+    fireEvent.click(screen.getByText('⚡ 서든데스 도전 시작 (10연타)'));
+
+    const arena = screen.getByLabelText('Dojo Editor Arena');
+    fireEvent.click(arena);
+
+    expect(screen.getByText('서든데스 탈락!')).toBeInTheDocument();
+    expect(screen.getByText(/마우스 대신 Vim 모션/)).toBeInTheDocument();
+  });
+
+  it('실시간 랭킹 모달 열기 및 닫기가 정상 동작한다', () => {
+    render(<HardcoreDojo />);
+
+    // 헤더의 명예의 전당 버튼 클릭
+    const hallOfFameBtn = screen.getByText('🏆 명예의 전당');
+    fireEvent.click(hallOfFameBtn);
+
+    expect(screen.getByText('🏆 하드코어 도장 서든데스 명예의 전당')).toBeInTheDocument();
+    expect(screen.getByText('VimValkyrie')).toBeInTheDocument();
+    expect(screen.getByText('NeoMaster')).toBeInTheDocument();
+
+    // 닫기 버튼 클릭
+    const closeBtn = screen.getByRole('button', { name: 'Close' });
+    fireEvent.click(closeBtn);
+
+    expect(screen.queryByText('🏆 하드코어 도장 서든데스 명예의 전당')).not.toBeInTheDocument();
+  });
 });

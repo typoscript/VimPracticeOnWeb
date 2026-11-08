@@ -3,6 +3,7 @@ import {
   FTSniperProblem,
   WordJumpProblem,
   DojoDrillMeta,
+  DojoProblem,
 } from './HardcoreDojo.types';
 import { localized } from '../../i18n';
 
@@ -28,7 +29,25 @@ export const DOJO_DRILL_METAS: Record<string, DojoDrillMeta> = localized({
     description: '특수문자가 섞인 긴 심볼 덩어리를 작은 단어(w) 대신 대문자 WORD(W)로 단숨에 건너뛰세요!',
     keyInstructions: 'W, E, B를 활용해 기호가 많은 표현식을 최소 타수로 건너뛰세요.',
   },
+  'sudden-death': {
+    id: 'sudden-death',
+    title: '서든데스 10연타 챌린지',
+    badge: '⚡ Sudden Death',
+    description: '단 1회의 실수도 허용되지 않는 서든데스! 3개 드릴이 교차 출제되며 10연속 노미스로 과녁을 격파하세요.',
+    keyInstructions: '노미스 10연타 스피드런! 방향키·연타·실수 즉시 탈락!',
+  },
 });
+
+export function generateSuddenDeathProblem(combo = 0): DojoProblem {
+  const typeIndex = combo % 3;
+  if (typeIndex === 0) {
+    return generateRelativeJumpProblem();
+  } else if (typeIndex === 1) {
+    return generateFTSniperProblem();
+  } else {
+    return generateWordJumpProblem();
+  }
+}
 
 const CODE_LINES_TEMPLATE = [
   'import { useState, useEffect, useCallback } from "react";',

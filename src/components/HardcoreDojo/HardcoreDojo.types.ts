@@ -1,4 +1,13 @@
-export type DojoDrillType = 'relative-jump' | 'ft-sniper' | 'word-jump';
+export type DojoDrillType = 'relative-jump' | 'ft-sniper' | 'word-jump' | 'sudden-death';
+
+export interface DojoLeaderboardEntry {
+  id: string;
+  playerName: string;
+  clearTime: number; // seconds (e.g. 8.42)
+  completedAt: string;
+  tier: string;
+  combo: number;
+}
 
 export interface DojoHighScore {
   score: number;

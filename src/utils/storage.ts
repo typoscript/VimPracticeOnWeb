@@ -260,6 +260,24 @@ export function saveSpeedrunRecord(
 
 export const HARDCORE_MODE_STORAGE_KEY = 'vim_hardcore_mode_v1';
 export const DOJO_HIGH_SCORES_STORAGE_KEY = 'vim_dojo_high_scores_v1';
+export const DOJO_LEADERBOARD_STORAGE_KEY = 'vim_dojo_leaderboard_v1';
+
+export interface DojoLeaderboardEntry {
+  id: string;
+  playerName: string;
+  clearTime: number;
+  completedAt: string;
+  tier: string;
+  combo: number;
+}
+
+export const DEFAULT_DOJO_LEADERBOARD: DojoLeaderboardEntry[] = [
+  { id: 'lb-1', playerName: 'VimValkyrie', clearTime: 8.92, completedAt: '2026-11-01T12:00:00Z', tier: '👑 GODSPEED', combo: 10 },
+  { id: 'lb-2', playerName: 'NeoMaster', clearTime: 11.45, completedAt: '2026-11-02T15:30:00Z', tier: '👑 GODSPEED', combo: 10 },
+  { id: 'lb-3', playerName: 'MotionSniper', clearTime: 14.20, completedAt: '2026-11-03T09:15:00Z', tier: '🥇 ONE-STRIKE', combo: 10 },
+  { id: 'lb-4', playerName: 'HjklHater', clearTime: 17.80, completedAt: '2026-11-04T18:40:00Z', tier: '🥇 ONE-STRIKE', combo: 10 },
+  { id: 'lb-5', playerName: 'BufferNinja', clearTime: 22.35, completedAt: '2026-11-05T21:10:00Z', tier: '🥈 DOJO-MASTER', combo: 10 },
+];
 
 export interface DojoHighScore {
   score: number;
@@ -340,4 +358,46 @@ export function saveDojoHighScore(
 
   return { isNewRecord, currentBest: updatedRecord };
 }
+
+/**
+ * 도장 서든데스 명예의 전당 (Leaderboard) 랭킹 목록을 불러옵니다.
+ */
+export function loadDojoLeaderboard(): DojoLeaderboardEntry[] {
+  try {
+    const raw = localStorage.getItem(DOJO_LEADERBOARD_STORAGE_KEY);
+    if (!raw) return DEFAULT_DOJO_LEADERBOARD;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_DOJO_LEADERBOARD;
+    return parsed;
+  } catch {
+    return DEFAULT_DOJO_LEADERBOARD;
+  }
+}
+
+/**
+ * 서든데스 클리어 기록을 랭킹에 저장하고 순위를 반환합니다.
+ */
+export function saveDojoLeaderboardEntry(entry: Omit<DojoLeaderboardEntry, 'id' | 'completedAt'>): {
+  leaderboard: DojoLeaderboardEntry[];
+  rank: number;
+} {
+  const current = loadDojoLeaderboard();
+  const newEntry: DojoLeaderboardEntry = {
+    ...entry,
+    id: `lb-${Date.now()}`,
+    completedAt: new Date().toISOString(),
+  };
+
+  const updated = [...current, newEntry].sort((a, b) => a.clearTime - b.clearTime).slice(0, 10);
+  const rank = updated.findIndex((e) => e.id === newEntry.id) + 1;
+
+  try {
+    localStorage.setItem(DOJO_LEADERBOARD_STORAGE_KEY, JSON.stringify(updated));
+  } catch {
+    // 무시
+  }
+
+  return { leaderboard: updated, rank: rank > 0 ? rank : updated.length + 1 };
+}
+
 

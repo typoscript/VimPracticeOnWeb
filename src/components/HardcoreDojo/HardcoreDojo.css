@@ -435,3 +435,244 @@
   display: flex;
   gap: 1rem;
 }
+
+.dojo-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.dojo-leaderboard-toggle-btn {
+  background: rgba(224, 175, 104, 0.12);
+  border: 1px solid #e0af68;
+  color: #e0af68;
+  padding: 0.4rem 0.85rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.dojo-leaderboard-toggle-btn:hover {
+  background: rgba(224, 175, 104, 0.25);
+  transform: translateY(-1px);
+}
+
+.dojo-drill-tab.sudden-death {
+  border-color: #f7768e;
+  background: rgba(247, 118, 142, 0.05);
+}
+
+.dojo-drill-tab.sudden-death:hover {
+  border-color: #ff9e64;
+  box-shadow: 0 0 10px rgba(247, 118, 142, 0.3);
+}
+
+.dojo-drill-tab.sudden-death.active {
+  background: #281e28;
+  border-color: #f7768e;
+  box-shadow: 0 0 16px rgba(247, 118, 142, 0.4);
+}
+
+.dojo-progress-track.sudden-death {
+  height: 10px;
+  background: #24283b;
+  border: 1px solid #f7768e;
+}
+
+.dojo-progress-fill.sudden-death {
+  background: linear-gradient(90deg, #ff9e64, #f7768e);
+  box-shadow: 0 0 8px rgba(247, 118, 142, 0.6);
+  transition: width 0.25s ease-out;
+}
+
+.dojo-rule-badge.sudden-death {
+  background: #f7768e;
+  color: #1a1b26;
+  font-weight: 800;
+}
+
+.dojo-arena-wrapper.sudden-death-arena {
+  border-color: rgba(247, 118, 142, 0.4);
+}
+
+.dojo-start-btn.sudden-death {
+  background: #f7768e;
+  color: #1a1b26;
+  box-shadow: 0 4px 12px rgba(247, 118, 142, 0.4);
+}
+
+.dojo-start-btn.sudden-death:hover {
+  background: #ff9e64;
+  box-shadow: 0 6px 16px rgba(255, 158, 100, 0.5);
+}
+
+.dojo-failure-reason {
+  color: #f7768e;
+  font-size: 0.95rem;
+  margin-bottom: 1rem;
+}
+
+.dojo-leaderboard-btn {
+  background: rgba(224, 175, 104, 0.15);
+  border: 1px solid #e0af68;
+  color: #e0af68;
+  font-weight: 700;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dojo-leaderboard-btn:hover {
+  background: rgba(224, 175, 104, 0.3);
+  transform: translateY(-2px);
+}
+
+/* Modal styles */
+.dojo-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 10, 16, 0.85);
+  backdrop-filter: blur(6px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: dojo-fade-in 0.2s ease;
+}
+
+.dojo-leaderboard-modal {
+  background: #1f2335;
+  border: 1px solid #414868;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 650px;
+  max-height: 85vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7), 0 0 20px rgba(224, 175, 104, 0.2);
+  padding: 1.5rem;
+  color: #c0caf5;
+}
+
+.dojo-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #292e42;
+  padding-bottom: 0.75rem;
+}
+
+.dojo-modal-header h3 {
+  margin: 0;
+  color: #e0af68;
+  font-size: 1.25rem;
+}
+
+.dojo-modal-close-btn {
+  background: transparent;
+  border: none;
+  color: #7aa2f7;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.dojo-modal-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #f7768e;
+}
+
+.dojo-modal-subtitle {
+  font-size: 0.85rem;
+  color: #9aa5ce;
+  margin: 0.5rem 0 1rem 0;
+}
+
+.dojo-table-container {
+  overflow-x: auto;
+  margin-bottom: 1.25rem;
+}
+
+.dojo-leaderboard-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  text-align: left;
+}
+
+.dojo-leaderboard-table th {
+  background: #1a1b26;
+  color: #7aa2f7;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid #3b4261;
+}
+
+.dojo-leaderboard-table td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid #24283b;
+}
+
+.dojo-leaderboard-table tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.rank-gold td {
+  color: #e0af68;
+  font-weight: 700;
+}
+
+.rank-silver td {
+  color: #c0caf5;
+  font-weight: 600;
+}
+
+.rank-bronze td {
+  color: #ff9e64;
+  font-weight: 600;
+}
+
+.rank-col {
+  width: 60px;
+}
+
+.time-col {
+  font-weight: 700;
+  color: #73daca;
+}
+
+.tier-col {
+  font-size: 0.8rem;
+}
+
+.dojo-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.75rem;
+  border-top: 1px solid #292e42;
+}
+
+.dojo-modal-btn {
+  background: #3b4261;
+  color: #c0caf5;
+  border: none;
+  padding: 0.5rem 1.25rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+
+.dojo-modal-btn:hover {
+  background: #7aa2f7;
+  color: #1a1b26;
+}
+
+@keyframes dojo-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
