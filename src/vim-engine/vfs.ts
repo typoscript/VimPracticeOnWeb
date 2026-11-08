@@ -12,10 +12,14 @@ export function getWorkspaceFiles(): Record<string, string[]> {
  */
 export function getVfsFile(
   customFiles: Record<string, string[]> | undefined,
-  filename: string
+  filename: string,
+  stateVirtualFiles?: Record<string, string[]>
 ): string[] | undefined {
   if (customFiles && customFiles[filename]) {
     return customFiles[filename];
+  }
+  if (stateVirtualFiles && stateVirtualFiles[filename]) {
+    return stateVirtualFiles[filename];
   }
   const workspace = getWorkspaceFiles();
   if (workspace[filename]) {
@@ -31,7 +35,10 @@ export function getVfsFile(
  * 현재 버퍼 및 기본 파일들로부터 VFS 파일 맵을 구성합니다.
  */
 export function buildVfsMap(state: VimEditorState): Record<string, string[]> {
-  const map: Record<string, string[]> = { ...getWorkspaceFiles() };
+  const map: Record<string, string[]> = {
+    ...getWorkspaceFiles(),
+    ...(state.virtualFiles ?? {}),
+  };
 
   if (state.buffers && state.buffers.length > 0) {
     for (const b of state.buffers) {

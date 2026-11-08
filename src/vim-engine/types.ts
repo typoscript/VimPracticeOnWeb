@@ -491,6 +491,8 @@ export interface VimEditorState {
   argList?: ArgListState | null;
   /** Netrw 순정 파일 탐색기 상태 (:Explore, :edit ., :E) */
   netrw?: NetrwState | null;
+  /** 가상 파일 시스템 맵 (Netrw % 파일 생성, d 디렉터리 생성 반영) */
+  virtualFiles?: Record<string, string[]>;
   /** 레지스터 인스펙터 패널 표시 여부 (:reg, :registers) */
   showRegisterInspector?: boolean;
   /** 커스텀 설정 및 .vimrc 내보내기/다운로드 모달 표시 여부 (:vimrc, :export, :config) */

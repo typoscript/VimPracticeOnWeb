@@ -1279,8 +1279,25 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson63!.checkComplete(incompleteState)).toBe(false);
   });
 
-  it('모든 63개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(63);
+  it('레슨 64: Netrw 프로젝트 탐색기 & 디렉터리/파일 제어 checkComplete 판정 검증', () => {
+    const lesson64 = MISSIONS.find((m) => m.id === 64);
+    expect(lesson64).toBeDefined();
+
+    let state: VimEditorState = {
+      lines: [...lesson64!.initialLines],
+      cursor: { ...lesson64!.initialCursor },
+      mode: 'NORMAL',
+      primaryFilename: lesson64!.primaryFilename,
+    };
+
+    for (const key of lesson64!.optimalKeys!) {
+      state = handleKey(state, key);
+    }
+    expect(lesson64!.checkComplete(state)).toBe(true);
+  });
+
+  it('모든 64개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(64);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();

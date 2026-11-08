@@ -1107,15 +1107,15 @@ export function executeCommandLine(
     };
   }
 
-  // 순정 파일 탐색기 Netrw 열기: :Explore, :E, :Vexplore, :Ve, :Sexplore, :Se, :Texplore, :Te
-  const netrwMatch = cleanCmdRaw.match(/^(?:Explore|E|Vexplore|Ve|Sexplore|Se|Texplore|Te)(?:\s+(.*))?$/);
+  // 순정 파일 탐색기 Netrw 열기: :Explore, :E, :Vexplore, :Ve, :Sexplore, :Se, :Hexplore, :He, :Texplore, :Te
+  const netrwMatch = cleanCmdRaw.match(/^(?:Explore|E|Vexplore|Ve|Sexplore|Se|Hexplore|He|Texplore|Te)(?:\s+(.*))?$/);
   if (netrwMatch) {
     const cmdName = netrwMatch[0].split(/\s+/)[0];
     const targetDir = netrwMatch[1]?.trim() || '';
     let mode: 'current' | 'vsplit' | 'split' | 'tab' = 'current';
     if (cmdName === 'Vexplore' || cmdName === 'Ve') {
       mode = 'vsplit';
-    } else if (cmdName === 'Sexplore' || cmdName === 'Se') {
+    } else if (cmdName === 'Sexplore' || cmdName === 'Se' || cmdName === 'Hexplore' || cmdName === 'He') {
       mode = 'split';
     } else if (cmdName === 'Texplore' || cmdName === 'Te') {
       mode = 'tab';

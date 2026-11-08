@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 113개 테스트 파일, 1,448개 테스트 100% 통과 필수)*
+  *(현재 113개 테스트 파일, 1,451개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 63)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 64)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -95,6 +95,7 @@
 - **인버퍼 및 파일/라인 자동완성 팝업 메뉴 (레슨 26, 43, `completion.ts`, `Editor.tsx`)**: `Ctrl+n`, `Ctrl+p`, `Ctrl+x Ctrl+f`, `Ctrl+x Ctrl+l`. 1자 이상 접두사 지원, 커서 주변 순환 근접 탐색(proximity scanning), 분할 창 및 타 버퍼 단어 수집, 마우스 클릭 선택(`selectCompletionCandidate`), 활성 항목 자동 스크롤(scrollIntoView), 뷰포트 하단 공간 부족 시 상향 팝업(open-upward).
 - **퀵픽스/로케이션 리스트 전용 분할 창(Split Window) 시각 렌더링 (`src/components/QuickfixPanel/`)**: `:copen [height]` 및 `:lopen [height]` 실행 시 에디터 하단에 도킹되는 순정 Vim 수평 분할 창 시각화. split statusline 헤더(`[Quickfix List] {file} ({curr} of {total})`), `[height]` 높이 제약 동적 반영, 구문 하이라이트(라인:컬럼, `[E]`/`[W]`/`[I]` 배지, 에러 메시지), 활성 항목 커서 표시(`▶ `) 및 `:cn`/`:cp`/`:lne`/`:lp` 이동 시 활성 항목 자동 스크롤(`scrollIntoView`), 항목 클릭 즉시 커서 점프, `:cclose`/`:lclose`/`✕` 닫기 지원.
 - **던전 RPG (DungeonRPG) 스테이지 6 카오스 드래곤 최종 결전 (`src/components/DungeonRPG/`, `src/data/dungeonStages.ts`)**: 3중 중첩 쉴드(`[<"CHAOS_DRAGON">]`)와 마력 코어(`{CORE}`)를 가진 최종 보스 스테이지. 신규 스킬 `dragon_slayer`(용살검 오의 `ci"/da</da[`) 및 `grand_master`(신화의 경지) 해금, Par 초과 시 드래곤 분노(Enrage) 화염 이펙트 및 경고, 처치 후 궁극의 차원문(`E`) 탈출 및 특별 칭호(`👑 [Grandmaster of Vim - 전설의 용살자]`) 수여.
+- **순정 Netrw 프로젝트 탐색기 & 버퍼/파일 제어 (레슨 39, 64, `src/vim-engine/netrwEngine.ts`, `vfs.ts`)**: `:Explore`, `:Hexplore` (`:He`), `:Sexplore` (`:Se`), `:Vexplore` (`:Ve`), `:Texplore` (`:Te`). 디렉터리 브라우징(`j/k`, `Enter`, `-`), 신규 파일 생성(`%`), 신규 폴더 생성(`d`), 파일 삭제(`D`), 분할 창/새 탭 열기(`v`/`o`/`t`), `virtualFiles` 가상 파일 시스템 맵 영구 보존 및 버퍼 상호 전환(`Ctrl-^`). 레슨 64에서 Netrw 탐색기 분할 실행, 하위 폴더 진입, `%` 신규 파일 생성 및 대상 파일 수정 후 원래 버퍼로의 복귀 실전 통합 마스터.
 
 ---
 
@@ -113,6 +114,7 @@
 11. ~~**퀵픽스/로케이션 리스트 전용 분할 창(Split Window) 시각 렌더링**~~ — 구현 완료 (`src/components/QuickfixPanel/`).
 12. ~~**신규 레슨 63 추가 (커맨드라인 파이프 및 제어 흐름 한 줄 자동화)**~~ — 구현 완료.
 13. ~~**던전 RPG (DungeonRPG) 스테이지 6 신규 보스 및 메카닉 확장**~~ — 구현 완료.
-14. **신규 레슨 64 추가 (Netrw 프로젝트 탐색기 & 버퍼/파일 제어)**: `:Explore`, `:Hexplore`, 파일 생성 및 버퍼 간 이동 실전 마스터.
+14. ~~**신규 레슨 64 추가 (Netrw 프로젝트 탐색기 & 버퍼/파일 제어)**~~ — 레슨 64와 함께 구현 완료.
 15. **미션 검색 및 필터링 기능 (Mission Search & Tags)**: 커리큘럼 모달 내 키워드/태그(기초/모션/텍스트객체/Ex/Vimscript) 실시간 검색.
 16. **아케이드 서바이벌 신규 보스 & 파워업 아이템 확장**: 버그 웨이브 방어 시 시간 정지, 폭탄 치환 등 스킬 아이템 기믹.
+17. **글로벌 프로젝트 텍스트 치환 & 퀵픽스/아규먼트 리스트 연계**: `:vimgrep` / `:cdo` / `:cfdo` 및 `:argdo` 대규모 리팩토링 실무 마스터.

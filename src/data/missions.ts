@@ -2058,4 +2058,63 @@ export const MISSIONS: Mission[] = [
       return state.lines.length === target.length && target.every((t, i) => state.lines[i] === t);
     },
   },
+  {
+    id: 64,
+    title: '레슨 64: 순정 Netrw 고급 탐색(:Hexplore) 및 디렉터리 탐색, 신규 파일 생성(%)과 버퍼 제어',
+    description:
+      'Vim의 강력한 내장 파일 탐색기 Netrw는 단순히 파일을 확인하는 것뿐만 아니라 프로젝트 디렉터리를 실시간 탐색하고, 신규 파일을 즉각 생성하며, 여러 버퍼 간의 작업 흐름을 제어하는 완전한 프로젝트 매니저 역할을 수행합니다.\n\n1) 창 분할 탐색기 열기:\n   - :Explore(:E) : 현재 윈도우에서 Netrw 열기\n   - :Hexplore(:He) / :Sexplore(:Se) : 가로 분할(horizontal split) 창으로 Netrw 열기\n   - :Vexplore(:Ve) : 세로 분할(vertical split) 창으로 Netrw 열기\n\n2) 인터랙티브 디렉터리 탐색:\n   - j / k 모션으로 탐색 커서를 이동합니다.\n   - 디렉터리(예: src/) 위에서 Enter(<CR>)를 누르면 해당 폴더 내부로 진입합니다.\n   - - (하이픈) 또는 ../ 위에서 Enter를 누르면 상위 디렉터리로 복귀합니다.\n\n3) 파일 및 폴더 생성/삭제:\n   - % : 현재 디렉터리에 신규 파일 생성 (new_file.txt)\n   - d : 현재 디렉터리에 신규 하위 폴더 생성 (new_dir/)\n   - D : 커서 위치의 파일 삭제\n\n4) 파일 열기 및 버퍼 복귀:\n   - 파일 위에서 Enter를 누르면 해당 파일이 현재 창에 로드됩니다.\n   - 작업 후 직전 대안 버퍼 토글 단축키인 Ctrl+^(또는 Ctrl+6)을 누르면 원래 편집하던 기본 파일(index.ts)로 즉시 복귀할 수 있습니다!\n\n미션:\n1. :E (또는 :He) 명령으로 Netrw 파일 탐색기를 여세요.\n2. j j 로 src/ 디렉터리로 이동한 뒤 Enter를 눌러 폴더에 진입하세요.\n3. % 키를 눌러 신규 파일(new_file.txt)을 생성하세요.\n4. utils.ts 파일로 이동한 뒤 Enter를 눌러 파일을 여세요.\n5. add 함수의 덧셈(+)을 곱셈(*)으로 수정한 뒤 (jf+r*),\n6. Ctrl-^ 를 눌러 원래 작업 파일(index.ts)로 복귀하세요!',
+    hint: ':E 입력 후 Enter → j j Enter로 src/ 진입 → % 키로 new_file.txt 생성 → 4j(또는 jjjj) Enter로 utils.ts 열기 → j f + r * 로 곱셈 수정 → Ctrl-^ 로 원래 버퍼(index.ts) 복귀',
+    par: 20,
+    optimalKeys: [
+      ':', 'E', 'Enter',
+      'j', 'j', 'Enter',
+      '%',
+      '4', 'j', 'Enter',
+      'j', 'f', '+', 'r', '*',
+      'Ctrl-^',
+    ],
+    primaryFilename: 'index.ts',
+    initialLines: [
+      '// Lesson 64: Pure Netrw Project Explorer & Buffer Control',
+      "import { add } from './src/utils';",
+      'console.log(add(10, 20));',
+    ],
+    targetLines: [
+      '// Lesson 64: Pure Netrw Project Explorer & Buffer Control',
+      "import { add } from './src/utils';",
+      'console.log(add(10, 20));',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const isNetrwClosed = !state.netrw || !state.netrw.isOpen;
+      if (!isNetrwClosed) return false;
+
+      // 1. 신규 파일(new_file.txt) 생성 여부
+      const isFileCreated = Boolean(
+        state.virtualFiles?.['src/new_file.txt'] ||
+        state.virtualFiles?.['new_file.txt'] ||
+        state.netrw?.files?.['src/new_file.txt'] ||
+        state.netrw?.files?.['new_file.txt']
+      );
+      if (!isFileCreated) return false;
+
+      // 2. src/utils.ts 의 add 함수 덧셈(+)이 곱셈(*)으로 수정되었는지 검증
+      const utilsBuf = state.buffers?.find(
+        (b) => b.name === 'src/utils.ts' || b.name === 'utils.ts'
+      );
+      const isUtilsModified = Boolean(
+        utilsBuf?.lines.some((l) => l.includes('return a * b;')) ||
+        (state.primaryFilename?.includes('utils.ts') && state.lines.some((l) => l.includes('return a * b;')))
+      );
+      if (!isUtilsModified) return false;
+
+      // 3. 원래 버퍼(index.ts)로 복귀했는지 검증 (Ctrl-^ 또는 :b)
+      const isReturnedToIndex =
+        state.primaryFilename === 'index.ts' ||
+        (state.buffers?.find((b) => b.id === state.currentBufferId)?.name === 'index.ts');
+
+      return isReturnedToIndex;
+    },
+  },
 ];

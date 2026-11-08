@@ -47,7 +47,9 @@ export function openNetrw(
   mode: 'current' | 'vsplit' | 'split' | 'tab' = 'current'
 ): VimEditorState {
   const synced = syncCurrentBuffer(ensureBuffers(state));
-  const vfs = state.netrw?.files ? { ...state.netrw.files } : buildVfsMap(synced);
+  const vfs = state.virtualFiles
+    ? { ...state.virtualFiles }
+    : (state.netrw?.files ? { ...state.netrw.files } : buildVfsMap(synced));
 
   let targetState = synced;
   if (mode === 'vsplit') {
@@ -92,6 +94,7 @@ export function openNetrw(
     cursor: { line: BANNER_LINES_COUNT, col: 0 }, // '../' 위치에 커서 시작
     mode: 'NORMAL',
     netrw: netrwSession,
+    virtualFiles: vfs,
     commandMessage: msg('[Netrw] /workspace/{targetDir} (Enter: 열기, -: 상위, q: 닫기)', { targetDir }),
   };
 }
@@ -105,6 +108,7 @@ export function closeNetrw(state: VimEditorState): VimEditorState {
   const returnBufId = state.netrw.returnBufferId;
   const returnFile = state.netrw.returnFilename;
   const curBufId = state.currentBufferId;
+  const vfs = state.netrw.files ?? state.virtualFiles;
 
   const remainingBuffers =
     state.buffers?.filter((b) => b.id !== curBufId && !b.name.startsWith('Netrw')) ?? [];
@@ -124,6 +128,7 @@ export function closeNetrw(state: VimEditorState): VimEditorState {
       undoStack: targetBuf.undoStack ? [...targetBuf.undoStack] : [],
       redoStack: targetBuf.redoStack ? [...targetBuf.redoStack] : [],
       netrw: null,
+      virtualFiles: vfs,
       commandMessage: msg('Netrw 닫힘'),
     };
   }
@@ -137,6 +142,7 @@ export function closeNetrw(state: VimEditorState): VimEditorState {
       lines: [...fileLines],
       cursor: { line: 0, col: 0 },
       netrw: null,
+      virtualFiles: vfs,
       commandMessage: msg('Netrw 닫힘'),
     };
   }
@@ -145,6 +151,7 @@ export function closeNetrw(state: VimEditorState): VimEditorState {
     ...state,
     buffers: remainingBuffers,
     netrw: null,
+    virtualFiles: vfs,
     commandMessage: msg('Netrw 닫힘'),
   };
 }
@@ -240,12 +247,18 @@ export function handleNetrwKey(
     const filePath = netrw.currentPath ? `${netrw.currentPath}/${lineText}` : lineText;
     const fileLines = netrw.files[filePath] ?? [''];
     const cleanBuffers = state.buffers?.filter((b) => !b.name.startsWith('Netrw')) ?? [];
+    const returnBuf = cleanBuffers.find((b) => b.id === netrw.returnBufferId) ?? cleanBuffers[0];
+
     let opened = editBuffer(
       {
         ...state,
         buffers: cleanBuffers,
-        currentBufferId: netrw.returnBufferId ?? (cleanBuffers[0]?.id ?? 1),
+        currentBufferId: returnBuf?.id ?? 1,
+        primaryFilename: returnBuf?.name ?? netrw.returnFilename ?? 'source.ts',
+        lines: returnBuf ? [...returnBuf.lines] : [''],
+        cursor: returnBuf ? { ...returnBuf.cursor } : { line: 0, col: 0 },
         netrw: null,
+        virtualFiles: netrw.files,
       },
       filePath
     );
@@ -255,6 +268,7 @@ export function handleNetrwKey(
       ...opened,
       lines: [...fileLines],
       cursor: { line: 0, col: 0 },
+      virtualFiles: netrw.files,
       commandMessage: msg('"{filePath}" 열림', { filePath }),
     };
     return syncCurrentBuffer(opened);
@@ -269,6 +283,7 @@ export function handleNetrwKey(
     return {
       ...splitted,
       netrw: null,
+      virtualFiles: netrw.files,
       commandMessage: msg('"{filePath}" 세로 분할 창에서 열림', { filePath }),
     };
   }
@@ -282,6 +297,7 @@ export function handleNetrwKey(
     return {
       ...splitted,
       netrw: null,
+      virtualFiles: netrw.files,
       commandMessage: msg('"{filePath}" 가로 분할 창에서 열림', { filePath }),
     };
   }
@@ -297,6 +313,7 @@ export function handleNetrwKey(
       lines: [...fileLines],
       cursor: { line: 0, col: 0 },
       netrw: null,
+      virtualFiles: netrw.files,
       commandMessage: msg('"{filePath}" 새 탭에서 열림', { filePath }),
     };
   }
@@ -314,6 +331,7 @@ export function handleNetrwKey(
         ...netrw,
         files: updatedFiles,
       },
+      virtualFiles: updatedFiles,
       commandMessage: msg('디렉터리 생성됨: {newDirName}/', { newDirName }),
     };
   }
@@ -331,6 +349,7 @@ export function handleNetrwKey(
         ...netrw,
         files: updatedFiles,
       },
+      virtualFiles: updatedFiles,
       commandMessage: msg('파일 생성됨: {newFileName}', { newFileName }),
     };
   }
@@ -348,6 +367,7 @@ export function handleNetrwKey(
         ...netrw,
         files: updatedFiles,
       },
+      virtualFiles: updatedFiles,
       commandMessage: msg('파일 삭제됨: {lineText}', { lineText }),
     };
   }

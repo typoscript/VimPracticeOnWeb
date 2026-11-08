@@ -187,5 +187,29 @@ describe('netrwEngine module (Pure Vim Netrw File Explorer)', () => {
       expect(state.splitPanes).toBeDefined();
       expect(state.splitDirection).toBe('vertical');
     });
+
+    it(':He 및 :Hexplore 명령어로 가로 분할과 함께 Netrw를 연다', () => {
+      let state = createBaseState();
+
+      const cmd = ':He\n';
+      for (const char of cmd) {
+        state = handleKey(state, char === '\n' ? 'Enter' : char);
+      }
+      expect(state.splitPanes).toBeDefined();
+      expect(state.splitDirection).toBe('horizontal');
+      expect(state.netrw?.isOpen).toBe(true);
+    });
+
+    it('% 파일 생성 시 virtualFiles 에 영구 반영되고 Netrw 닫힌 후에도 보존된다', () => {
+      let state = createBaseState();
+      state = openNetrw(state, 'src');
+
+      state = handleKey(state, '%');
+      expect(state.virtualFiles?.['src/new_file.txt']).toBeDefined();
+
+      state = handleKey(state, 'q');
+      expect(state.netrw).toBeNull();
+      expect(state.virtualFiles?.['src/new_file.txt']).toBeDefined();
+    });
   });
 });
