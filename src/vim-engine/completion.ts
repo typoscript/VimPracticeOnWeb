@@ -3,15 +3,16 @@ import { buildVfsMap } from './vfs';
 
 /**
  * 커서 바로 앞의 접두사(Prefix)를 검출합니다.
- * 접두사는 영문자, 숫자, 언더스코어로 구성되며 최소 2자 이상이어야 합니다.
+ * 접두사는 영문자, 숫자, 언더스코어로 구성되며 기본 최소 길이는 2자 이상입니다 (1자 완성은 minLength=1 지정).
  */
 export function findCompletionPrefix(
   lineText: string,
-  col: number
+  col: number,
+  minLength = 2
 ): { prefix: string; startCol: number } | null {
   const textBeforeCursor = lineText.slice(0, col);
   const match = textBeforeCursor.match(/([a-zA-Z_0-9]+)$/);
-  if (!match || match[1].length < 2) {
+  if (!match || match[1].length < minLength) {
     return null;
   }
   const prefix = match[1];
@@ -23,23 +24,62 @@ export function findCompletionPrefix(
 
 /**
  * 에디터 버퍼의 모든 줄에서 접두사로 시작하는 고유 단어 목록을 추출합니다.
+ * cursorLine이 지정되면 커서 위치부터 순환 탐색하며, 다른 분할 창(splitPanes)과 버퍼(buffers)의 단어도 수집합니다.
  */
 export function scanBufferWords(
   lines: string[],
   prefix: string,
-  _cursorLine?: number,
-  _currentCol?: number
+  cursorLine?: number,
+  _currentCol?: number,
+  buffers?: Array<{ lines: string[] }>,
+  splitPanes?: Array<{ lines: string[] }>
 ): string[] {
   const seen = new Set<string>();
   const candidates: string[] = [];
 
-  for (let l = 0; l < lines.length; l++) {
-    const line = lines[l];
-    const words = line.match(/[a-zA-Z_0-9]+/g) || [];
+  const addWord = (word: string) => {
+    if (word.startsWith(prefix) && word !== prefix && !seen.has(word)) {
+      seen.add(word);
+      candidates.push(word);
+    }
+  };
+
+  const scanLine = (lineText: string | undefined) => {
+    if (!lineText) return;
+    const words = lineText.match(/[a-zA-Z_0-9]+/g) || [];
     for (const word of words) {
-      if (word.startsWith(prefix) && word !== prefix && !seen.has(word)) {
-        seen.add(word);
-        candidates.push(word);
+      addWord(word);
+    }
+  };
+
+  // 1. 현재 버퍼 순회 (cursorLine부터 아래로 순회 후 0번 줄부터 cursorLine 직전까지 순환)
+  if (cursorLine !== undefined && cursorLine >= 0 && cursorLine < lines.length) {
+    for (let l = cursorLine; l < lines.length; l++) {
+      scanLine(lines[l]);
+    }
+    for (let l = 0; l < cursorLine; l++) {
+      scanLine(lines[l]);
+    }
+  } else {
+    for (let l = 0; l < lines.length; l++) {
+      scanLine(lines[l]);
+    }
+  }
+
+  // 2. 다른 분할 창(splitPanes) 순회
+  if (splitPanes) {
+    for (const pane of splitPanes) {
+      for (const l of pane.lines) {
+        scanLine(l);
+      }
+    }
+  }
+
+  // 3. 다른 버퍼(buffers) 순회
+  if (buffers) {
+    for (const buf of buffers) {
+      for (const l of buf.lines) {
+        scanLine(l);
       }
     }
   }
@@ -298,13 +338,20 @@ export function startOrCycleCompletion(
     };
   }
 
-  // 아직 세션이 없으면 접두사 검출 후 세션 시작
-  const found = findCompletionPrefix(currentLine, col);
+  // 아직 세션이 없으면 접두사 검출 후 세션 시작 (1자 이상 접두사 지원)
+  const found = findCompletionPrefix(currentLine, col, 1);
   if (!found) {
     return state;
   }
 
-  const candidates = scanBufferWords(state.lines, found.prefix, line, col);
+  const candidates = scanBufferWords(
+    state.lines,
+    found.prefix,
+    line,
+    col,
+    state.buffers,
+    state.splitPanes
+  );
   if (candidates.length === 0) {
     return state;
   }
@@ -380,6 +427,51 @@ export function acceptCompletion(state: VimEditorState): VimEditorState {
   }
   return {
     ...state,
+    completionSession: null,
+    insertCtrlXMode: false,
+  };
+}
+
+/**
+ * 자동완성 세션에서 특정 인덱스의 후보를 선택하고 세션을 확정(accept)합니다.
+ * 마우스 클릭 또는 API 호출 시 사용됩니다.
+ */
+export function selectCompletionCandidate(
+  state: VimEditorState,
+  index: number
+): VimEditorState {
+  if (!state.completionSession) {
+    return state;
+  }
+
+  const { candidates, prefixStartCol, type: sessionType } = state.completionSession;
+  if (index < 0 || index >= candidates.length) {
+    return state;
+  }
+
+  const chosen = candidates[index];
+  const { line, col } = state.cursor;
+  const currentLine = state.lines[line] ?? '';
+
+  let newLine: string;
+  let nextCol: number;
+
+  if (sessionType === 'line') {
+    newLine = chosen;
+    nextCol = chosen.length;
+  } else {
+    newLine =
+      currentLine.slice(0, prefixStartCol) + chosen + currentLine.slice(col);
+    nextCol = prefixStartCol + chosen.length;
+  }
+
+  const nextLines = [...state.lines];
+  nextLines[line] = newLine;
+
+  return {
+    ...state,
+    lines: nextLines,
+    cursor: { line, col: nextCol },
     completionSession: null,
     insertCtrlXMode: false,
   };

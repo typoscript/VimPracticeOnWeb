@@ -31,6 +31,14 @@ export { switchTab, openNewTab, closeTab, ensureTabPages } from './tabEngine';
 export { closeCommandLineWindow } from './cmdlineWindow';
 export { closeQuickfixWindow, jumpToQuickfixItem } from './quickfixEngine';
 export { closeLocationListWindow, jumpToLocationListItem } from './locationListEngine';
+export {
+  startOrCycleCompletion,
+  cancelCompletion,
+  acceptCompletion,
+  selectCompletionCandidate,
+  findCompletionPrefix,
+  scanBufferWords,
+} from './completion';
 
 // ---- 순정 Vim 정규식 → JavaScript RegExp ----
 export { compileVimRegex, translateVimPattern, escapeVimPattern } from './vimRegex';

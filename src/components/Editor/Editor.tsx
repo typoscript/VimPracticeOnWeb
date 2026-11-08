@@ -54,6 +54,8 @@ export interface EditorProps {
   /** 맞춤법 사용자 사전 (zg/zw) */
   spellGoodWords?: string[];
   spellWrongWords?: string[];
+  /** 자동완성 팝업 메뉴 항목 선택 콜백 */
+  onSelectCompletionItem?: (index: number) => void;
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -79,9 +81,18 @@ export const Editor: React.FC<EditorProps> = ({
   bellSignal = 0,
   spellGoodWords,
   spellWrongWords,
+  onSelectCompletionItem,
 }) => {
   const scrollerRef = React.useRef<HTMLDivElement>(null);
+  const selectedItemRef = React.useRef<HTMLDivElement>(null);
   const [isBellFlashing, setIsBellFlashing] = React.useState(false);
+
+  // 완성 팝업 메뉴에서 선택 항목이 변경될 때 스크롤 뷰 내로 자동 정렬
+  React.useEffect(() => {
+    if (selectedItemRef.current && typeof selectedItemRef.current.scrollIntoView === 'function') {
+      selectedItemRef.current.scrollIntoView({ block: 'nearest' });
+    }
+  }, [completionSession?.selectedIndex]);
 
   // visualbell: 키가 실패할 때마다 짧게 깜빡임 (연속 실패 시 애니메이션 재시작)
   React.useEffect(() => {
@@ -236,7 +247,7 @@ export const Editor: React.FC<EditorProps> = ({
                         completionSession &&
                         completionSession.candidates.length > 0 && (
                           <div
-                            className="vim-completion-menu"
+                            className={`vim-completion-menu ${lines.length - 1 - lineIdx < 6 && lineIdx >= 5 ? 'open-upward' : ''}`}
                             data-testid="vim-completion-menu"
                             style={{ left: `calc(${cursor.col} * 1ch)` }}
                           >
@@ -246,7 +257,7 @@ export const Editor: React.FC<EditorProps> = ({
                                   ? `📁 [FILE] ${completionSession.prefix || '/'}`
                                   : completionSession.type === 'line'
                                   ? `📄 [LINE] ${completionSession.prefix.trim().slice(0, 16)}`
-                                  : completionSession.prefix}
+                                  : `🔤 [ID] ${completionSession.prefix}`}
                               </span>
                               <span className="completion-count-tag">
                                 {completionSession.selectedIndex + 1}/
@@ -259,10 +270,15 @@ export const Editor: React.FC<EditorProps> = ({
                                 return (
                                   <div
                                     key={`${cand}-${idx}`}
+                                    ref={idx === completionSession.selectedIndex ? selectedItemRef : undefined}
                                     className={`completion-item ${
                                       idx === completionSession.selectedIndex ? 'selected' : ''
                                     }`}
                                     data-testid={`completion-item-${idx}`}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onSelectCompletionItem?.(idx);
+                                    }}
                                   >
                                     {isLineType ? (
                                       <span className="cand-remainder">

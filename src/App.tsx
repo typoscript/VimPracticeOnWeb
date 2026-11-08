@@ -30,6 +30,7 @@ import { closeCommandLineWindow } from './vim-engine';
 import { closeQuickfixWindow, jumpToQuickfixItem } from './vim-engine';
 import { closeLocationListWindow, jumpToLocationListItem } from './vim-engine';
 import { computeDiffHunks } from './vim-engine';
+import { selectCompletionCandidate } from './vim-engine';
 import { MISSIONS } from './data/missions';
 import { sandboxInitialLines } from './data/sandbox';
 import {
@@ -261,6 +262,11 @@ export function App() {
 
   const handleSwitchPane = useCallback((targetIndex: number) => {
     setEditorState((prevState) => switchPaneFocus(prevState, targetIndex));
+    setIsEditorFocused(true);
+  }, []);
+
+  const handleSelectCompletionCandidate = useCallback((index: number) => {
+    setEditorState((prevState) => selectCompletionCandidate(prevState, index));
     setIsEditorFocused(true);
   }, []);
 
@@ -1802,6 +1808,7 @@ export function App() {
                       diffHunks={displayEditorState.diffMode ? displayEditorState.diffHunks : undefined}
                       diffPaneIndex={0}
                       bellSignal={editorState.activePaneIndex === 0 ? bellCount : undefined}
+                      onSelectCompletionItem={handleSelectCompletionCandidate}
                     />
                   </div>
 
@@ -1848,6 +1855,7 @@ export function App() {
                       diffHunks={displayEditorState.diffMode ? displayEditorState.diffHunks : undefined}
                       diffPaneIndex={1}
                       bellSignal={editorState.activePaneIndex === 1 ? bellCount : undefined}
+                      onSelectCompletionItem={handleSelectCompletionCandidate}
                     />
                   </div>
                 </div>
@@ -1879,6 +1887,7 @@ export function App() {
                   spellGoodWords={displayEditorState.spellGoodWords}
                   spellWrongWords={displayEditorState.spellWrongWords}
                   bellSignal={bellCount}
+                  onSelectCompletionItem={handleSelectCompletionCandidate}
                 />
               )}
             </div>

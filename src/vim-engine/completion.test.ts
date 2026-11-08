@@ -5,6 +5,7 @@ import {
   startOrCycleCompletion,
   cancelCompletion,
   acceptCompletion,
+  selectCompletionCandidate,
   findFilePrefix,
   scanWorkspaceFiles,
   startFilenameCompletion,
@@ -123,6 +124,53 @@ describe('Vim In-Buffer Completion (Ctrl+n / Ctrl+p)', () => {
 
     state = acceptCompletion(state);
     expect(state.lines[1]).toBe('fooBar');
+    expect(state.completionSession).toBeNull();
+  });
+
+  it('supports 1-character prefix completion when minLength is 1 or in startOrCycleCompletion', () => {
+    expect(findCompletionPrefix('const c', 7, 1)).toEqual({
+      prefix: 'c',
+      startCol: 6,
+    });
+
+    const state: VimEditorState = {
+      lines: ['const count = 10;', 'c'],
+      cursor: { line: 1, col: 1 },
+      mode: 'INSERT',
+    };
+    const next = startOrCycleCompletion(state, 'next');
+    expect(next.lines[1]).toBe('const');
+    expect(next.completionSession?.candidates).toEqual(['const', 'count']);
+  });
+
+  it('scans words in proximity order around cursorLine and across split panes/buffers', () => {
+    const lines = [
+      'first_item',
+      'target_item',
+      'third_item',
+      'target_word',
+    ];
+    // cursor at line 2: lines 2..3 scanned first, then 0..1
+    const words = scanBufferWords(lines, 'target', 2, 0);
+    expect(words).toEqual(['target_word', 'target_item']);
+
+    // across splitPanes
+    const splitWords = scanBufferWords(['main_target'], 'pane', 0, 0, undefined, [{ lines: ['pane_target'] }]);
+    expect(splitWords).toEqual(['pane_target']);
+  });
+
+  it('selects and accepts specific candidate via selectCompletionCandidate', () => {
+    const initialState: VimEditorState = {
+      lines: ['function alpha() {}', 'function beta() {}', 'b'],
+      cursor: { line: 2, col: 1 },
+      mode: 'INSERT',
+    };
+    let state = startOrCycleCompletion(initialState, 'next');
+    expect(state.completionSession).toBeDefined();
+
+    // Select candidate directly
+    state = selectCompletionCandidate(state, 0);
+    expect(state.lines[2]).toBe('beta');
     expect(state.completionSession).toBeNull();
   });
 

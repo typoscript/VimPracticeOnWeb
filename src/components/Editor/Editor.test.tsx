@@ -150,4 +150,41 @@ describe('Editor Component', () => {
     await waitFor(() => expect(container).toHaveClass('editor-bell'));
     await waitFor(() => expect(container).not.toHaveClass('editor-bell'));
   });
+
+  it('단어 자동완성(completionSession) 활성화 시 팝업 메뉴를 렌더링하고 클릭 시 항목을 선택한다', () => {
+    let selectedIdx: number | null = null;
+    const lines = ['const res = calc'];
+    render(
+      <Editor
+        lines={lines}
+        cursor={{ line: 0, col: 16 }}
+        mode="INSERT"
+        completionSession={{
+          prefix: 'calc',
+          prefixStartCol: 12,
+          candidates: ['calculateTotal', 'calcTax'],
+          selectedIndex: 0,
+          originalWord: 'calc',
+          type: 'keyword',
+        }}
+        onSelectCompletionItem={(idx) => {
+          selectedIdx = idx;
+        }}
+      />
+    );
+
+    const menu = screen.getByTestId('vim-completion-menu');
+    expect(menu).toBeInTheDocument();
+    expect(screen.getByText('🔤 [ID] calc')).toBeInTheDocument();
+    expect(screen.getByText('1/2')).toBeInTheDocument();
+
+    const item0 = screen.getByTestId('completion-item-0');
+    expect(item0).toHaveClass('selected');
+    const item1 = screen.getByTestId('completion-item-1');
+    expect(item1).not.toHaveClass('selected');
+
+    // 클릭 상호작용 검증
+    item1.click();
+    expect(selectedIdx).toBe(1);
+  });
 });
