@@ -59,6 +59,17 @@
   animation: blinkTimer 0.3s infinite alternate;
 }
 
+.hud-timer .hud-value.frozen {
+  color: #7dcfff;
+  text-shadow: 0 0 10px rgba(125, 207, 255, 0.7);
+  animation: freezePulse 0.5s infinite alternate;
+}
+
+@keyframes freezePulse {
+  from { opacity: 0.8; }
+  to { opacity: 1; text-shadow: 0 0 14px #7dcfff; }
+}
+
 @keyframes blinkTimer {
   from { opacity: 0.5; }
   to { opacity: 1; }
@@ -76,6 +87,89 @@
   transition: width 0.1s linear, background-color 0.2s ease;
 }
 
+.time-bar-fill.frozen {
+  background-color: #7dcfff !important;
+  box-shadow: 0 0 8px rgba(125, 207, 255, 0.8);
+}
+
+.hud-powerups-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #1a1b26;
+  padding: 6px 16px;
+  border-bottom: 1px solid #24283b;
+}
+
+.powerup-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #24283b;
+  border: 1px solid #3b4261;
+  color: #c0caf5;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.powerup-btn:not(:disabled):hover {
+  background: #2f354f;
+  border-color: #7aa2f7;
+  transform: translateY(-1px);
+}
+
+.powerup-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.powerup-freeze.active {
+  background: rgba(125, 207, 255, 0.2);
+  border-color: #7dcfff;
+  box-shadow: 0 0 8px rgba(125, 207, 255, 0.4);
+}
+
+.powerup-hotkey {
+  font-size: 0.68rem;
+  color: #7aa2f7;
+  font-family: monospace;
+}
+
+.powerup-count {
+  font-weight: 800;
+  background: #16161e;
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: #e0af68;
+  font-family: monospace;
+}
+
+.powerup-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #1f2335;
+  border: 1px solid #292e42;
+  color: #9aa5ce;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  user-select: none;
+}
+
+.powerup-shield.active {
+  border-color: #9ece6a;
+  color: #9ece6a;
+  background: rgba(158, 206, 106, 0.15);
+  box-shadow: 0 0 8px rgba(158, 206, 106, 0.3);
+}
+
 .arcade-instruction-card {
   display: flex;
   align-items: center;
@@ -86,10 +180,22 @@
   font-size: 0.88rem;
 }
 
+.arcade-instruction-card.boss-card {
+  background: linear-gradient(90deg, rgba(247, 118, 142, 0.18) 0%, #1f2335 100%);
+  border-bottom: 2px solid #f7768e;
+  box-shadow: inset 0 0 16px rgba(247, 118, 142, 0.12);
+}
+
 .instruction-badge {
   font-weight: 700;
   color: #7dcfff;
   margin-right: 8px;
+}
+
+.instruction-badge.boss-badge {
+  color: #f7768e;
+  text-shadow: 0 0 8px rgba(247, 118, 142, 0.6);
+  animation: pulseCombo 0.6s infinite alternate;
 }
 
 .instruction-text {
@@ -136,6 +242,33 @@
 .penalty-banner {
   background: #f7768e;
   color: #fff;
+}
+
+.skill-banner {
+  background: #7dcfff;
+  color: #1a1b26;
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.6);
+}
+
+.boss-alert-banner {
+  background: #f7768e;
+  color: #fff;
+  border: 2px solid #ff9eaf;
+  box-shadow: 0 0 20px rgba(247, 118, 142, 0.8);
+  animation: bossAlert 0.35s infinite alternate;
+}
+
+@keyframes bossAlert {
+  from { transform: translateX(-50%) scale(0.96); }
+  to { transform: translateX(-50%) scale(1.04); }
+}
+
+.boss-defeated-banner {
+  background: linear-gradient(135deg, #bb9af7 0%, #e0af68 100%);
+  color: #1a1b26;
+  border: 2px solid #ffc777;
+  box-shadow: 0 0 24px rgba(224, 175, 104, 0.7);
+  animation: popIn 0.3s ease;
 }
 
 @keyframes popIn {

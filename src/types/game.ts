@@ -43,7 +43,9 @@ export interface ArcadeBugMission {
   initialCursor: CursorPosition;
   par: number;
   timeLimit: number; // 초 단위 제한 시간
-  bugType: 'typo' | 'tag' | 'quote' | 'line' | 'block';
+  bugType: 'typo' | 'tag' | 'quote' | 'line' | 'block' | 'boss';
+  isBoss?: boolean;
+  bossName?: string;
   checkComplete?: (state: VimEditorState) => boolean;
 }
 
