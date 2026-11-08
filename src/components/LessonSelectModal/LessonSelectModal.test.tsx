@@ -104,7 +104,7 @@ describe('LessonSelectModal Component', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
-  it('레슨 카드를 클릭하면 해당 레슨이 선택되고 모달이 닫힌다', () => {
+  it('레슨 카드를 클릭하면 해당 레슨이 선택되고 모달이 받힌다', () => {
     const onSelectLesson = vi.fn();
     const onClose = vi.fn();
 
@@ -124,5 +124,104 @@ describe('LessonSelectModal Component', () => {
 
     expect(onSelectLesson).toHaveBeenCalledWith(3);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('검색어 입력 시 일치하는 레슨만 실시간 필터링된다', () => {
+    render(
+      <LessonSelectModal
+        isOpen={true}
+        onClose={vi.fn()}
+        missions={MISSIONS}
+        currentMissionId={1}
+        progress={mockProgress}
+        onSelectLesson={vi.fn()}
+      />
+    );
+
+    const searchInput = screen.getByTestId('lesson-search-input');
+    fireEvent.change(searchInput, { target: { value: 'Netrw' } });
+
+    // 레슨 39와 64는 렌더링되어야 함
+    expect(screen.getByTestId('lesson-card-39')).toBeInTheDocument();
+    expect(screen.getByTestId('lesson-card-64')).toBeInTheDocument();
+    // 레슨 1은 필터링되어 없어야 함
+    expect(screen.queryByTestId('lesson-card-1')).toBeNull();
+
+    // 초기화 버튼 클릭 시 검색어 제거되고 전체 레슨 복원
+    const clearBtn = screen.getByTestId('search-clear-btn');
+    fireEvent.click(clearBtn);
+    expect(screen.getByTestId('lesson-card-1')).toBeInTheDocument();
+  });
+
+  it('카테고리 태그 버튼 클릭 시 해당 카테고리 레슨만 필터링된다', () => {
+    render(
+      <LessonSelectModal
+        isOpen={true}
+        onClose={vi.fn()}
+        missions={MISSIONS}
+        currentMissionId={1}
+        progress={mockProgress}
+        onSelectLesson={vi.fn()}
+      />
+    );
+
+    const textObjectTagBtn = screen.getByTestId('tag-btn-textobject');
+    fireEvent.click(textObjectTagBtn);
+
+    expect(screen.getByTestId('lesson-card-14')).toBeInTheDocument();
+    expect(screen.getByTestId('lesson-card-54')).toBeInTheDocument();
+    expect(screen.queryByTestId('lesson-card-1')).toBeNull();
+
+    // '전체' 태그 클릭 시 복원
+    const allTagBtn = screen.getByTestId('tag-btn-all');
+    fireEvent.click(allTagBtn);
+    expect(screen.getByTestId('lesson-card-1')).toBeInTheDocument();
+  });
+
+  it('미완료만 보기 토글 시 완료되지 않은 레슨만 필터링된다', () => {
+    render(
+      <LessonSelectModal
+        isOpen={true}
+        onClose={vi.fn()}
+        missions={MISSIONS}
+        currentMissionId={1}
+        progress={mockProgress}
+        onSelectLesson={vi.fn()}
+      />
+    );
+
+    const toggleBtn = screen.getByTestId('status-toggle-btn');
+    fireEvent.click(toggleBtn);
+
+    // mockProgress 에서 1과 2는 완료됨 -> 표시되지 않아야 함
+    expect(screen.queryByTestId('lesson-card-1')).toBeNull();
+    expect(screen.queryByTestId('lesson-card-2')).toBeNull();
+    // 3은 미완료 -> 표시되어야 함
+    expect(screen.getByTestId('lesson-card-3')).toBeInTheDocument();
+  });
+
+  it('일치하는 레슨이 없을 때 빈 화면과 필터 초기화 버튼이 작동한다', () => {
+    render(
+      <LessonSelectModal
+        isOpen={true}
+        onClose={vi.fn()}
+        missions={MISSIONS}
+        currentMissionId={1}
+        progress={mockProgress}
+        onSelectLesson={vi.fn()}
+      />
+    );
+
+    const searchInput = screen.getByTestId('lesson-search-input');
+    fireEvent.change(searchInput, { target: { value: '존재하지않는키워드xyz999' } });
+
+    expect(screen.getByTestId('empty-search-state')).toBeInTheDocument();
+    expect(screen.getByText('일치하는 레슨이 없습니다.')).toBeInTheDocument();
+
+    const resetBtn = screen.getByTestId('reset-filter-btn');
+    fireEvent.click(resetBtn);
+
+    expect(screen.queryByTestId('empty-search-state')).toBeNull();
+    expect(screen.getByTestId('lesson-card-1')).toBeInTheDocument();
   });
 });
