@@ -51,6 +51,7 @@ export interface DailyChallengePuzzle {
   date: string;
   id: number;
   title: string;
+  templateTitle?: string;
   description: string;
   hint: string;
   initialLines: string[];

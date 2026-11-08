@@ -15,6 +15,28 @@ export interface AnalyticsModalProps {
   onOpenDailyChallenge?: () => void;
 }
 
+function getAntiPatternTip(name: string): string {
+  if (name === 'Backspace 연타 (x/ciw 권장)' || name.includes('Backspace')) {
+    return t('💡 해결책: Normal 모드에서 x, dw, ciw 로 수정하세요.');
+  }
+  if (name === '방향키/hjkl 연타 (w/b/숫자 이동 권장)' || name.includes('방향키') || name.includes('hjkl')) {
+    return t('💡 해결책: w/b 단어 점프나 숫자를 붙인 5j/3k를 활용하세요.');
+  }
+  if (name === '$ 후 a (대문자 A 권장)' || (name.includes('$') && name.includes('a'))) {
+    return t('💡 해결책: 대문자 A로 줄 끝 입력 모드에 한 번에 진입하세요.');
+  }
+  if (name === '0 후 i (대문자 I 권장)' || (name.includes('0') && name.includes('i'))) {
+    return t('💡 해결책: 대문자 I로 줄 맨 앞 입력 모드로 바로 들어가세요.');
+  }
+  if (name === 'c$ 입력 (대문자 C 권장)' || name.includes('c$')) {
+    return t('💡 해결책: 대문자 C를 누르면 한 타수로 해결됩니다.');
+  }
+  if (name === 'd$ 입력 (대문자 D 권장)' || name.includes('d$')) {
+    return t('💡 해결책: 대문자 D를 누르면 한 타수로 줄 끝까지 삭제됩니다.');
+  }
+  return t('💡 해결책: 카운트나 모션 단축키를 결합해 보세요.');
+}
+
 export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
   isOpen,
   onClose,
@@ -317,21 +339,7 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
                     <span className="antipattern-name">{t(name)}</span>
                     <span className="antipattern-badge">{t('{n}회 감지', { n: count })}</span>
                   </div>
-                  <span className="antipattern-tip">
-                    {name.includes('Backspace') && t('💡 해결책: Normal 모드에서 x, dw, ciw 로 수정하세요.')}
-                    {name.includes('방향키') && t('💡 해결책: w/b 단어 점프나 숫자를 붙인 5j/3k를 활용하세요.')}
-                    {name.includes('$') && t('💡 해결책: 대문자 A로 줄 끝 입력 모드에 한 번에 진입하세요.')}
-                    {name.includes('0') && t('💡 해결책: 대문자 I로 줄 맨 앞 입력 모드로 바로 들어가세요.')}
-                    {name.includes('c$') && t('💡 해결책: 대문자 C를 누르면 한 타수로 해결됩니다.')}
-                    {name.includes('d$') && t('💡 해결책: 대문자 D를 누르면 한 타수로 줄 끝까지 삭제됩니다.')}
-                    {!name.includes('Backspace') &&
-                      !name.includes('방향키') &&
-                      !name.includes('$') &&
-                      !name.includes('0') &&
-                      !name.includes('c$') &&
-                      !name.includes('d$') &&
-                      t('💡 해결책: 카운트나 모션 단축키를 결합해 보세요.')}
-                  </span>
+                  <span className="antipattern-tip">{getAntiPatternTip(name)}</span>
                 </div>
               ))}
             </div>

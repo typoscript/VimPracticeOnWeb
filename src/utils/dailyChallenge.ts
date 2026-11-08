@@ -156,6 +156,7 @@ export function generateDailyChallenge(dateStr = getTodayDateString()): DailyCha
     date: dateStr,
     id: 9000 + (hash % 1000),
     title: `[Daily ${dateStr}] ${template.title}`,
+    templateTitle: template.title,
     description: template.description,
     hint: template.hint,
     initialLines: [...template.initialLines],

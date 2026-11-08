@@ -33,7 +33,13 @@ let currentLocale: Locale = detectLocale();
 const listeners = new Set<() => void>();
 
 function applyLocale(locale: Locale): void {
-  if (typeof document !== 'undefined') document.documentElement.lang = locale;
+  if (typeof document !== 'undefined') {
+    document.documentElement.lang = locale;
+    document.title =
+      locale === 'ko'
+        ? 'VimPracticeOnWeb - 인터랙티브 Vim 튜토리얼 & 연습'
+        : 'VimPracticeOnWeb - Interactive Vim Tutorial & Practice';
+  }
   configureVimEngine({ locale });
 }
 applyLocale(currentLocale);

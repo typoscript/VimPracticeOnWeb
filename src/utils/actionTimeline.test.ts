@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import {
   getActionDescription,
   formatCommandLabel,
@@ -6,8 +6,12 @@ import {
   generateVitestReproductionCode,
 } from './actionTimeline';
 import { VimEditorState } from '../vim-engine';
+import { setLocale } from '../i18n';
 
 describe('actionTimeline utilities', () => {
+  afterEach(() => {
+    setLocale('ko', { persist: false });
+  });
   it('formats command keys with readable representations', () => {
     expect(formatCommandLabel(['c', 'w', 'f', 'o', 'o', 'Escape'])).toBe('cwfoo<Esc>');
     expect(formatCommandLabel([':', 'w', 'Enter'])).toBe(':w<CR>');
@@ -64,5 +68,31 @@ describe('actionTimeline utilities', () => {
     expect(code).toContain('expect(state.lines).toEqual([\n  "foo world"\n]);');
     expect(code).toContain('expect(state.cursor).toEqual({ line: 0, col: 2 });');
     expect(code).toContain("expect(state.mode).toBe('NORMAL');");
+    expect(code).toContain('// 1. 초기 텍스트 및 커서 설정');
+  });
+
+  it('generates English comments in Vitest snippet when locale is en', () => {
+    setLocale('en', { persist: false });
+    const currentState: VimEditorState = {
+      lines: ['foo'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+      undoStack: [],
+      redoStack: [],
+    };
+
+    const code = generateVitestReproductionCode({
+      missionTitle: 'Word Change',
+      initialText: 'bar',
+      initialCursor: { line: 0, col: 0 },
+      allKeys: ['x'],
+      currentState,
+    });
+
+    expect(code).toContain('// 1. Initial text and cursor setup');
+    expect(code).toContain('// 2. User keystroke sequence (1 keys)');
+    expect(code).toContain('// 3. Initial engine state');
+    expect(code).toContain('// 4. Execute keys sequentially');
+    expect(code).toContain('// 5. Final verification (current editor state)');
   });
 });

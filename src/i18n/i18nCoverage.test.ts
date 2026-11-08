@@ -134,9 +134,13 @@ describe('i18n coverage', () => {
   it('switches t() and localized() with the locale', () => {
     const labels = localized({ close: '닫기', nested: { list: ['취소'] }, count: 3 });
     expect(getLocale()).toBe('ko');
+    expect(document.documentElement.lang).toBe('ko');
+    expect(document.title).toContain('튜토리얼');
     expect(t('닫기')).toBe('닫기');
     expect(labels.close).toBe('닫기');
     setLocale('en', { persist: false });
+    expect(document.documentElement.lang).toBe('en');
+    expect(document.title).toContain('Interactive Vim');
     expect(t('닫기')).toBe('Close');
     expect(labels.close).toBe('Close');
     expect(labels.nested.list[0]).toBe('Cancel');

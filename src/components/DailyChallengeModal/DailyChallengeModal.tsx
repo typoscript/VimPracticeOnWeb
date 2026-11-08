@@ -247,7 +247,9 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
         <header className="daily-header">
           <div className="daily-title-group">
             <span className="daily-badge">📅 DAILY VIM GOLF #{puzzle.date}</span>
-            <h2 className="daily-title">{puzzle.title}</h2>
+            <h2 className="daily-title">
+              [Daily {puzzle.date}] {t(puzzle.templateTitle ?? puzzle.title.replace(/^\[Daily [^\]]+\] /, ''))}
+            </h2>
           </div>
           <button
             className="daily-close-btn"
@@ -261,7 +263,7 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
 
         {/* 챌린지 정보 바 */}
         <div className="daily-info-bar">
-          <p className="daily-desc">{puzzle.description}</p>
+          <p className="daily-desc">{t(puzzle.description)}</p>
           <div className="daily-metrics">
             <div className="metric-box">
               <span className="metric-label">PAR</span>
@@ -305,7 +307,7 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
 
         {showHint && (
           <div className="daily-hint-banner" data-testid="daily-hint-banner">
-            <strong>Hint:</strong> {puzzle.hint}
+            <strong>Hint:</strong> {t(puzzle.hint)}
           </div>
         )}
 

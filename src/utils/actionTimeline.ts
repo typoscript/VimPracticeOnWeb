@@ -1,5 +1,5 @@
 import { VimEditorState } from '../vim-engine';
-import { t } from '../i18n';
+import { t, getLocale } from '../i18n';
 
 export interface ActionTimelineStep {
   stepIndex: number;
@@ -169,17 +169,25 @@ export function generateVitestReproductionCode(options: {
     : 'reproduce vim engine issue';
 
   const initialLines = initialText.split('\n');
+  const isEn = getLocale() === 'en';
 
-  // 개발자용 재현 테스트 코드이므로 번역하지 않습니다
+  const c1 = isEn ? '// 1. Initial text and cursor setup' : '// 1. 초기 텍스트 및 커서 설정';
+  const c2 = isEn
+    ? `// 2. User keystroke sequence (${allKeys.length} keys)`
+    : `// 2. 사용자가 입력한 키 시퀀스 (${allKeys.length}타)`;
+  const c3 = isEn ? '// 3. Initial engine state' : '// 3. 엔진 초기 상태';
+  const c4 = isEn ? '// 4. Execute keys sequentially' : '// 4. 키 순차 실행';
+  const c5 = isEn ? '// 5. Final verification (current editor state)' : '// 5. 최종 검증 (현재 에디터 결과값)';
+
   return `it('${testTitle}', () => {
-  // 1. 초기 텍스트 및 커서 설정
+  ${c1}
   const initialLines = ${JSON.stringify(initialLines, null, 2)};
   const initialCursor = { line: ${initialCursor.line}, col: ${initialCursor.col} };
 
-  // 2. 사용자가 입력한 키 시퀀스 (${allKeys.length}타)
+  ${c2}
   const keys = ${JSON.stringify(allKeys)};
 
-  // 3. 엔진 초기 상태
+  ${c3}
   let state: VimEditorState = {
     lines: [...initialLines],
     cursor: { ...initialCursor },
@@ -189,12 +197,12 @@ export function generateVitestReproductionCode(options: {
     registers: {},
   };
 
-  // 4. 키 순차 실행
+  ${c4}
   for (const key of keys) {
     state = handleKey(state, key);
   }
 
-  // 5. 최종 검증 (현재 에디터 결과값)
+  ${c5}
   expect(state.lines).toEqual(${JSON.stringify(currentState.lines, null, 2)});
   expect(state.cursor).toEqual({ line: ${currentState.cursor.line}, col: ${currentState.cursor.col} });
   expect(state.mode).toBe('${currentState.mode}');

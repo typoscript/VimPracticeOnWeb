@@ -33,7 +33,7 @@ export const DEMO_WORKSPACE_FILES: Record<string, string[]> = {
  */
 export const DEMO_VIMRC: string[] = [
   '" =============================================================================',
-  '" VimPracticeOnWeb .vimrc 설정 파일',
+  '" VimPracticeOnWeb .vimrc configuration file',
   '" =============================================================================',
   'set number',
   'set relativenumber',
