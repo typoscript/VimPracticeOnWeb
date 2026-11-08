@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 112개 테스트 파일, 1,439개 테스트 100% 통과 필수)*
+  *(현재 113개 테스트 파일, 1,446개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -93,6 +93,7 @@
 - **고급 Vim script 엔진 및 람다 정렬 (레슨 62, `src/vim-engine/vimscriptEval.ts`, `vimscriptEngine.ts`)**: 람다 표현식 `{ [args] -> expr }` (`{x -> x * 2}`, `{a, b -> a + b}`, `{-> 42}`), 클로저 변수 캡처(상위 함수 `a:`, `l:` 스코프 접근), 딕셔너리 메서드 호출 및 `self` 바인딩 (`d.method()`). 함수 참조 `function('fn' [, args [, dict]])`, `funcref(...)`, `call(fn, args [, dict])`, `type(fn) == 2` (`v:t_func`), 부분 적용(partial application), 고차 함수 (`map()`, `filter()`, `sort()`에 람다 전달, 레슨 62의 길이순 라인 정렬 `{a, b -> len(a) - len(b)}`). 예외 처리 `:try`, `:catch [ /pattern/ ]`, `:finally`, `:endtry`, `:throw expr`, 내장 런타임 에러(E-number) 포착, `v:exception` 변수 지원, `:try` 블록 내 조기 `:return` 시에도 `:finally` 실행 보장.
 - **커맨드라인 파이프(`|`) 및 최상위 제어문 (레슨 63, `src/vim-engine/commandLine.ts`, `vimscriptEngine.ts`)**: `:bar` (`|`) 다중 Ex 커맨드 연속 실행. 따옴표(`"`, `'`), 역슬래시 이스케이프(`\|`), 논리 OR(`||`), 치환 패턴(`:%s/.../.../`), `:global`/`:vglobal` 인라인 패턴 보존. 실패 시(`bell: true`) 후속 명령 중단. 최상위 파이프 제어문(`:if/:else/:endif`, `:for/:endfor`, `:while/:endwhile`, `:try/:catch/:finally/:endtry`) 자동 라인 분기 및 스크립트 블록 실행, 고립된 제어문 키워드에 대한 표준 Vim 에러(`E171`, `E170`, `E580` 등) 처리. 레슨 63에서 `:%s` 치환과 한 줄 `:for` 루프 파이프 연결 자동화 실전 훈련 제공.
 - **인버퍼 및 파일/라인 자동완성 팝업 메뉴 (레슨 26, 43, `completion.ts`, `Editor.tsx`)**: `Ctrl+n`, `Ctrl+p`, `Ctrl+x Ctrl+f`, `Ctrl+x Ctrl+l`. 1자 이상 접두사 지원, 커서 주변 순환 근접 탐색(proximity scanning), 분할 창 및 타 버퍼 단어 수집, 마우스 클릭 선택(`selectCompletionCandidate`), 활성 항목 자동 스크롤(scrollIntoView), 뷰포트 하단 공간 부족 시 상향 팝업(open-upward).
+- **퀵픽스/로케이션 리스트 전용 분할 창(Split Window) 시각 렌더링 (`src/components/QuickfixPanel/`)**: `:copen [height]` 및 `:lopen [height]` 실행 시 에디터 하단에 도킹되는 순정 Vim 수평 분할 창 시각화. split statusline 헤더(`[Quickfix List] {file} ({curr} of {total})`), `[height]` 높이 제약 동적 반영, 구문 하이라이트(라인:컬럼, `[E]`/`[W]`/`[I]` 배지, 에러 메시지), 활성 항목 커서 표시(`▶ `) 및 `:cn`/`:cp`/`:lne`/`:lp` 이동 시 활성 항목 자동 스크롤(`scrollIntoView`), 항목 클릭 즉시 커서 점프, `:cclose`/`:lclose`/`✕` 닫기 지원.
 
 ---
 
@@ -108,6 +109,8 @@
 8. ~~**신규 레슨 62 추가 (고급 Vim script 람다 정렬)**~~ — 구현 완료.
 9. ~~**Neovim/Vim 순정 단어 자동완성 (`Ctrl+n` / `Ctrl+p`) 및 팝업 메뉴 UI**~~ — 구현 완료.
 10. ~~**커맨드라인 최상위 블록 (`:if`/`:for`/`:while`) 지원**~~ — 파이프(`|`) 다중 명령 실행 및 제어 흐름 스크립트 블록 구현 완료.
-11. **퀵픽스/로케이션 리스트 전용 분할 창(Split Window) 시각 렌더링**: `:copen`/`:lopen` 시 실제 분할 패널을 띄우고 목록 선택 점프.
+11. ~~**퀵픽스/로케이션 리스트 전용 분할 창(Split Window) 시각 렌더링**~~ — 구현 완료 (`src/components/QuickfixPanel/`).
 12. ~~**신규 레슨 63 추가 (커맨드라인 파이프 및 제어 흐름 한 줄 자동화)**~~ — 구현 완료.
 13. **던전 RPG (DungeonRPG) 스테이지 6 신규 보스 및 메카닉 확장**: 복합 키 시퀀스 또는 타임어택 기믹을 결합한 신규 보스 스테이지.
+14. **신규 레슨 64 추가 (Netrw 프로젝트 탐색기 & 버퍼/파일 제어)**: `:Explore`, `:Hexplore`, 파일 생성 및 버퍼 간 이동 실전 마스터.
+15. **미션 검색 및 필터링 기능 (Mission Search & Tags)**: 커리큘럼 모달 내 키워드/태그(기초/모션/텍스트객체/Ex/Vimscript) 실시간 검색.

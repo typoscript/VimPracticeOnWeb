@@ -80,4 +80,78 @@ describe('Split Windows & Register Inspector Integration', () => {
 
     expect(screen.queryByTestId('active-register-banner')).not.toBeInTheDocument();
   });
+
+  it(':copen 실행 시 퀵픽스 분할 창이 열리고 항목 클릭 점프 및 :cclose로 닫을 수 있다', () => {
+    render(<App />);
+
+    // 1. 자유 연습장(Sandbox)으로 전환
+    const sandboxTabBtn = screen.getByTestId('tab-sandbox-btn');
+    fireEvent.click(sandboxTabBtn);
+
+    const typeCommand = (cmd: string) => {
+      act(() => {
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: ':' }));
+        for (const ch of cmd) {
+          window.dispatchEvent(new KeyboardEvent('keydown', { key: ch }));
+        }
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+      });
+    };
+
+    // 2. :vimgrep /function/ % 실행으로 퀵픽스 목록 생성
+    typeCommand('vimgrep /function/ %');
+
+    // 3. :copen 4 실행으로 퀵픽스 전용 분할 창 열기
+    typeCommand('copen 4');
+
+    const qfWindow = screen.getByTestId('quickfix-window');
+    expect(qfWindow).toBeInTheDocument();
+    expect(qfWindow).toHaveClass('quickfix-window-container');
+    expect(screen.getByText(/\[Quickfix List\]/)).toBeInTheDocument();
+
+    // 퀵픽스 항목들이 렌더링되어 있는지 확인
+    const qfItems = screen.getAllByTestId(/^quickfix-item-/);
+    expect(qfItems.length).toBeGreaterThan(0);
+
+    // 항목 클릭 시 점프 확인
+    fireEvent.click(qfItems[0]);
+    expect(screen.getByTestId('editor-container')).toHaveClass('editor-container');
+
+    // 4. :cclose 로 퀵픽스 창 닫기
+    typeCommand('cclose');
+    expect(screen.queryByTestId('quickfix-window')).not.toBeInTheDocument();
+  });
+
+  it(':lopen 실행 시 로케이션 리스트 분할 창이 열리고 :lclose로 닫을 수 있다', () => {
+    render(<App />);
+
+    // 1. 자유 연습장(Sandbox)으로 전환
+    const sandboxTabBtn = screen.getByTestId('tab-sandbox-btn');
+    fireEvent.click(sandboxTabBtn);
+
+    const typeCommand = (cmd: string) => {
+      act(() => {
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: ':' }));
+        for (const ch of cmd) {
+          window.dispatchEvent(new KeyboardEvent('keydown', { key: ch }));
+        }
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+      });
+    };
+
+    // 2. :lvimgrep /function/ % 실행으로 로케이션 리스트 생성
+    typeCommand('lvimgrep /function/ %');
+
+    // 3. :lopen 실행으로 로케이션 리스트 분할 창 열기
+    typeCommand('lopen');
+
+    const locWindow = screen.getByTestId('locationlist-window');
+    expect(locWindow).toBeInTheDocument();
+    expect(locWindow).toHaveClass('location-list-container');
+    expect(screen.getByText(/\[Location List\]/)).toBeInTheDocument();
+
+    // 4. :lclose 로 로케이션 리스트 창 닫기
+    typeCommand('lclose');
+    expect(screen.queryByTestId('locationlist-window')).not.toBeInTheDocument();
+  });
 });

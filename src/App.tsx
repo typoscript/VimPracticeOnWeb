@@ -13,6 +13,7 @@ import { ViewPanelsDropdown } from './components/ViewPanelsDropdown/ViewPanelsDr
 import { RegisterInspector } from './components/RegisterInspector/RegisterInspector';
 import { MacroDebugger } from './components/MacroDebugger/MacroDebugger';
 import { VimGrammarASTViewer } from './components/VimGrammarASTViewer/VimGrammarASTViewer';
+import { QuickfixPanel } from './components/QuickfixPanel';
 import { ActionTimelinePanel } from './components/ActionTimelinePanel/ActionTimelinePanel';
 import {
   ActionTimelineStep,
@@ -1890,6 +1891,26 @@ export function App() {
                   onSelectCompletionItem={handleSelectCompletionCandidate}
                 />
               )}
+
+              {/* 퀵픽스 분할 창 (Quickfix List: :copen, :cclose, :cn, :cp, :vimgrep) */}
+              {displayEditorState.quickfix?.isOpen && (
+                <QuickfixPanel
+                  type="quickfix"
+                  state={displayEditorState.quickfix}
+                  onJump={handleJumpQuickfixItem}
+                  onClose={handleCloseQuickfixWindow}
+                />
+              )}
+
+              {/* 로케이션 리스트 분할 창 (Location List: :lopen, :lclose, :lne, :lp, :lvimgrep) */}
+              {displayEditorState.locationList?.isOpen && (
+                <QuickfixPanel
+                  type="locationList"
+                  state={displayEditorState.locationList}
+                  onJump={handleJumpLocationListItem}
+                  onClose={handleCloseLocationListWindow}
+                />
+              )}
             </div>
 
             {/* 커맨드라인 윈도우 (Command-line Window: q:, q/, q?, Ctrl-f) */}
@@ -1945,84 +1966,6 @@ export function App() {
               </div>
             )}
 
-            {/* 퀵픽스 윈도우 (Quickfix List: :copen, :cclose, :cn, :cp, :vimgrep) */}
-            {displayEditorState.quickfix?.isOpen && displayEditorState.quickfix.items.length > 0 && (
-              <div className="quickfix-window-container" data-testid="quickfix-window">
-                <div className="quickfix-window-header">
-                  <span className="quickfix-window-title">
-                    [Quickfix List] ({displayEditorState.quickfix.currentIndex + 1} of {displayEditorState.quickfix.items.length})
-                  </span>
-                  <span className="quickfix-window-hint">
-                    {t(':cn / :cp 이동 | 항목 클릭 시 점프 | :cclose 닫기')}
-                  </span>
-                  <button
-                    className="quickfix-window-close"
-                    onClick={handleCloseQuickfixWindow}
-                    title={t('퀵픽스 닫기 (:cclose)')}
-                  >
-                    ✕
-                  </button>
-                </div>
-                <div className="quickfix-window-body">
-                  {displayEditorState.quickfix.items.map((item, idx) => {
-                    const isActive = idx === displayEditorState.quickfix!.currentIndex;
-                    return (
-                      <div
-                        key={idx}
-                        className={`quickfix-item ${isActive ? 'active' : ''}`}
-                        onClick={() => handleJumpQuickfixItem(idx)}
-                      >
-                        <span className="quickfix-item-num">{idx + 1}</span>
-                        <span className="quickfix-item-loc">
-                          {item.filename}:{item.line}:{item.col}
-                        </span>
-                        <span className="quickfix-item-text">{item.text}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            {/* 로케이션 리스트 윈도우 (Location List: :lopen, :lclose, :lne, :lp, :lvimgrep) */}
-            {displayEditorState.locationList?.isOpen && displayEditorState.locationList.items.length > 0 && (
-              <div className="quickfix-window-container location-list-container" data-testid="locationlist-window">
-                <div className="quickfix-window-header">
-                  <span className="quickfix-window-title">
-                    [Location List] ({displayEditorState.locationList.currentIndex + 1} of {displayEditorState.locationList.items.length})
-                  </span>
-                  <span className="quickfix-window-hint">
-                    {t(':lne / :lp 이동 | 항목 클릭 시 점프 | :lclose 닫기')}
-                  </span>
-                  <button
-                    type="button"
-                    className="quickfix-window-close"
-                    onClick={handleCloseLocationListWindow}
-                    title={t('로케이션 리스트 닫기 (:lclose)')}
-                  >
-                    ✕
-                  </button>
-                </div>
-                <div className="quickfix-window-body">
-                  {displayEditorState.locationList.items.map((item, idx) => {
-                    const isActive = idx === displayEditorState.locationList!.currentIndex;
-                    return (
-                      <div
-                        key={idx}
-                        className={`quickfix-item ${isActive ? 'active' : ''}`}
-                        onClick={() => handleJumpLocationListItem(idx)}
-                      >
-                        <span className="quickfix-item-num">{idx + 1}</span>
-                        <span className="quickfix-item-loc">
-                          {item.filename}:{item.line}:{item.col}
-                        </span>
-                        <span className="quickfix-item-text">{item.text}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
 
             <Keycaster recentKeys={recentKeys} />
             <StatusBar

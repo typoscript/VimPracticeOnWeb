@@ -58,6 +58,8 @@ export const EN: Record<string, string> = {
   "퀵픽스 닫기 (:cclose)": "Close quickfix (:cclose)",
   ":lne / :lp 이동 | 항목 클릭 시 점프 | :lclose 닫기": ":lne / :lp to move | click an item to jump | :lclose to close",
   "로케이션 리스트 닫기 (:lclose)": "Close location list (:lclose)",
+  "에러 목록이 비어 있습니다. (:cfile 또는 :vimgrep으로 추가)": "Error list is empty. (Add items with :cfile or :vimgrep)",
+  "로케이션 목록이 비어 있습니다. (:lvimgrep으로 추가)": "Location list is empty. (Add items with :lvimgrep)",
   "VimPracticeOnWeb • 키보드로 미션을 완료하며 자연스럽게 Vim을 마스터하세요": "VimPracticeOnWeb • Master Vim naturally by completing missions with your keyboard",
   "복사 전용 레지스터 0 (삭제 연산에 의해 덮어쓰이지 않음)": "Yank register 0 (not overwritten by deletes)",
   "블랙홀 레지스터 (삭제 내용 폐기)": "Black hole register (discards deleted text)",
