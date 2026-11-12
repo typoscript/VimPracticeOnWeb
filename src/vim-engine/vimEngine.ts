@@ -94,6 +94,7 @@ import {
   startFilenameCompletion,
   startWholeLineCompletion,
 } from './completion';
+import { getOptions } from './setEngine';
 import {
   findMatchingBracket,
 } from './bracketMatch';
@@ -1530,10 +1531,13 @@ function handleInsertModeKey(
     };
   }
 
-  // Tab: 2칸 공백 들여쓰기 삽입
+  // Tab: 들여쓰기 삽입 (tabstop / shiftwidth / expandtab 설정 반영)
   if (key === 'Tab') {
     const nextChangeKeys = appendCurrentChange('Tab');
-    const indent = '  ';
+    const opts = getOptions(state);
+    const ts = opts.tabstop || opts.shiftwidth || 2;
+    const et = opts.expandtab !== false;
+    const indent = et ? ' '.repeat(ts) : '\t';
     const newLine = currentLine.slice(0, col) + indent + currentLine.slice(col);
     const nextLines = [...state.lines];
     nextLines[line] = newLine;

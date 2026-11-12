@@ -1,5 +1,6 @@
 import { VimEditorState, VimOptions } from './types';
 import { msg } from './messages';
+import { applyFiletypeIndent } from './ftpluginEngine';
 
 export const DEFAULT_VIM_OPTIONS: VimOptions = {
   number: true,
@@ -49,19 +50,44 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
 };
 
 /**
- * 상태 객체에서 유효한 VimOptions를 조회합니다. (미지정 시 기본값 반환)
+ * 전역 설정 옵션을 조회합니다. (:setglobal)
  */
-export function getOptions(state: VimEditorState): VimOptions {
+export function getGlobalOptions(state: VimEditorState): VimOptions {
   return {
     ...DEFAULT_VIM_OPTIONS,
-    ...(state.options ?? {}),
+    ...(state.globalOptions ?? state.options ?? {}),
   };
 }
 
 /**
- * 옵션 상태를 순정 Vim 포맷으로 출력합니다 (:set, :set all).
+ * 특정 버퍼(기본값: 현재 버퍼)의 로컬 옵션 오버라이드를 조회합니다. (:setlocal)
  */
-export function formatOptionsList(options: VimOptions, showAll = false): string {
+export function getLocalOptions(state: VimEditorState, bufferId?: number): Partial<VimOptions> {
+  const bId = bufferId ?? state.currentBufferId ?? 1;
+  return state.bufferLocalOptions?.[bId] ?? {};
+}
+
+/**
+ * 상태 객체에서 현재 버퍼의 유효한(Effective) VimOptions를 조회합니다. (전역 + 로컬 합성)
+ */
+export function getOptions(state: VimEditorState): VimOptions {
+  const global = getGlobalOptions(state);
+  const local = getLocalOptions(state);
+  return {
+    ...global,
+    ...(state.options ?? {}),
+    ...local,
+  };
+}
+
+/**
+ * 옵션 상태를 순정 Vim 포맷으로 출력합니다 (:set, :set all, :setlocal, :setglobal).
+ */
+export function formatOptionsList(
+  options: VimOptions,
+  showAll = false,
+  customHeader?: string
+): string {
   const booleanKeys: (keyof VimOptions)[] = [
     'number',
     'relativenumber',
@@ -100,7 +126,13 @@ export function formatOptionsList(options: VimOptions, showAll = false): string 
     }
   }
 
-  const header = showAll ? '--- All Options ---' : '--- Modified Options ---';
+  if (options.filetype && (showAll || options.filetype !== DEFAULT_VIM_OPTIONS.filetype)) {
+    displayedItems.push(`filetype=${options.filetype}`);
+  }
+
+  const defaultHeader = showAll ? '--- All Options ---' : '--- Modified Options ---';
+  const header = customHeader ?? defaultHeader;
+
   if (displayedItems.length === 0) {
     return msg('{header}\\n(기본값과 다른 설정이 없습니다)', { header });
   }
@@ -109,37 +141,72 @@ export function formatOptionsList(options: VimOptions, showAll = false): string 
 }
 
 /**
- * :set 커맨드를 파싱하여 상태의 options를 갱신합니다.
- * (:set nu, :set nonu, :set rnu!, :set ts=4, :set nu?, :set all 등)
+ * :set, :setlocal, :setglobal 커맨드를 파싱하여 상태의 옵션을 갱신합니다.
+ * scope:
+ *  - 'both': :set / :se (전역 및 현재 버퍼 로컬 모두 갱신)
+ *  - 'local': :setlocal / :setl (현재 버퍼 전용 로컬 오버라이드 갱신)
+ *  - 'global': :setglobal / :setg (전역 기본값만 갱신)
  */
-export function executeSetCommand(state: VimEditorState, rawArgs: string): VimEditorState {
+export function executeSetCommand(
+  state: VimEditorState,
+  rawArgs: string,
+  scope: 'both' | 'local' | 'global' = 'both'
+): VimEditorState {
   const trimmed = rawArgs.trim();
+  const curId = state.currentBufferId ?? 1;
+  const curGlobal = getGlobalOptions(state);
+  const curLocal = getLocalOptions(state, curId);
+  const effective = getOptions(state);
 
   // 1. :set all
   if (trimmed === 'all') {
-    const curOpts = getOptions(state);
     return {
       ...state,
-      commandMessage: formatOptionsList(curOpts, true),
+      commandMessage: formatOptionsList(effective, true),
     };
   }
 
-  // 2. :set (인자 없음) -> 변경된 옵션 목록 표시
+  // 2. 인자 없음 (:set, :setlocal, :setglobal)
   if (trimmed === '') {
-    const curOpts = getOptions(state);
+    if (scope === 'local') {
+      const header = '--- Local Options ---';
+      const modifiedKeys = Object.keys(curLocal);
+      if (modifiedKeys.length === 0) {
+        return {
+          ...state,
+          commandMessage: msg('{header}\\n(기본값과 다른 설정이 없습니다)', { header }),
+        };
+      }
+      return {
+        ...state,
+        commandMessage: formatOptionsList(
+          { ...DEFAULT_VIM_OPTIONS, ...curLocal },
+          false,
+          header
+        ),
+      };
+    }
+    if (scope === 'global') {
+      return {
+        ...state,
+        commandMessage: formatOptionsList(curGlobal, false, '--- Global Options ---'),
+      };
+    }
     return {
       ...state,
-      commandMessage: formatOptionsList(curOpts, false),
+      commandMessage: formatOptionsList(effective, false),
     };
   }
 
   const tokens = trimmed.split(/\s+/).filter(Boolean);
-  let nextOptions = { ...getOptions(state) };
+  const nextGlobal: VimOptions = { ...curGlobal };
+  const nextLocal: Partial<VimOptions> = { ...curLocal };
   const queryMessages: string[] = [];
   const appliedList: string[] = [];
+  let updatedFiletype: string | undefined = undefined;
 
   for (const token of tokens) {
-    // 3. 옵션 상태 조회 (:set opt?)
+    // 3. 옵션 상태 조회 (:set opt?, :setlocal opt?, :setglobal opt?)
     if (token.endsWith('?')) {
       const queryName = token.slice(0, -1);
       const optKey = OPTION_ALIASES[queryName];
@@ -149,7 +216,14 @@ export function executeSetCommand(state: VimEditorState, rawArgs: string): VimEd
           commandMessage: msg('E518: 알 수 없는 옵션: {queryName}', { queryName }),
         };
       }
-      const val = nextOptions[optKey];
+      let val: any;
+      if (scope === 'local') {
+        val = nextLocal[optKey] ?? nextGlobal[optKey];
+      } else if (scope === 'global') {
+        val = nextGlobal[optKey];
+      } else {
+        val = nextLocal[optKey] ?? nextGlobal[optKey];
+      }
       if (typeof val === 'boolean') {
         queryMessages.push(val ? (optKey as string) : `no${optKey}`);
       } else {
@@ -163,12 +237,23 @@ export function executeSetCommand(state: VimEditorState, rawArgs: string): VimEd
       const [rawKey, rawVal] = token.split('=');
       const optKey = OPTION_ALIASES[rawKey];
       if (optKey === 'filetype') {
-        nextOptions = { ...nextOptions, filetype: rawVal };
+        if (scope === 'local' || scope === 'both') {
+          nextLocal.filetype = rawVal;
+        }
+        if (scope === 'global' || scope === 'both') {
+          nextGlobal.filetype = rawVal;
+        }
         appliedList.push(`filetype=${rawVal}`);
+        updatedFiletype = rawVal;
         continue;
       }
       if (optKey === 'syntax') {
-        nextOptions = { ...nextOptions, syntax: rawVal };
+        if (scope === 'local' || scope === 'both') {
+          nextLocal.syntax = rawVal;
+        }
+        if (scope === 'global' || scope === 'both') {
+          nextGlobal.syntax = rawVal;
+        }
         appliedList.push(`syntax=${rawVal}`);
         continue;
       }
@@ -185,7 +270,12 @@ export function executeSetCommand(state: VimEditorState, rawArgs: string): VimEd
           commandMessage: msg('E521: 잘못된 숫자 인수: {token}', { token }),
         };
       }
-      nextOptions = { ...nextOptions, [optKey]: numVal };
+      if (scope === 'local' || scope === 'both') {
+        nextLocal[optKey] = numVal;
+      }
+      if (scope === 'global' || scope === 'both') {
+        nextGlobal[optKey] = numVal;
+      }
       appliedList.push(`${optKey}=${numVal}`);
       continue;
     }
@@ -200,10 +290,15 @@ export function executeSetCommand(state: VimEditorState, rawArgs: string): VimEd
           commandMessage: msg('E518: 알 수 없는 옵션: {rawKey}', { rawKey }),
         };
       }
-      const curVal = nextOptions[optKey];
+      const curVal = nextLocal[optKey] ?? nextGlobal[optKey];
       if (typeof curVal === 'boolean' || optKey === 'syntax') {
         const nextVal = !curVal;
-        nextOptions = { ...nextOptions, [optKey]: nextVal };
+        if (scope === 'local' || scope === 'both') {
+          (nextLocal as any)[optKey] = nextVal;
+        }
+        if (scope === 'global' || scope === 'both') {
+          (nextGlobal as any)[optKey] = nextVal;
+        }
         appliedList.push(nextVal ? (optKey as string) : `no${optKey}`);
         continue;
       }
@@ -219,8 +314,14 @@ export function executeSetCommand(state: VimEditorState, rawArgs: string): VimEd
           commandMessage: msg('E518: 알 수 없는 옵션: {token}', { token }),
         };
       }
-      if (typeof nextOptions[optKey] === 'boolean' || optKey === 'syntax') {
-        nextOptions = { ...nextOptions, [optKey]: false };
+      const curVal = nextLocal[optKey] ?? nextGlobal[optKey];
+      if (typeof curVal === 'boolean' || optKey === 'syntax') {
+        if (scope === 'local' || scope === 'both') {
+          (nextLocal as any)[optKey] = false;
+        }
+        if (scope === 'global' || scope === 'both') {
+          (nextGlobal as any)[optKey] = false;
+        }
         appliedList.push(`no${optKey}`);
         continue;
       }
@@ -234,24 +335,67 @@ export function executeSetCommand(state: VimEditorState, rawArgs: string): VimEd
         commandMessage: msg('E518: 알 수 없는 옵션: {token}', { token }),
       };
     }
-    if (typeof nextOptions[optKey] === 'boolean' || optKey === 'syntax') {
-      nextOptions = { ...nextOptions, [optKey]: true };
+    const curVal = nextLocal[optKey] ?? nextGlobal[optKey];
+    if (typeof curVal === 'boolean' || optKey === 'syntax') {
+      if (scope === 'local' || scope === 'both') {
+        (nextLocal as any)[optKey] = true;
+      }
+      if (scope === 'global' || scope === 'both') {
+        (nextGlobal as any)[optKey] = true;
+      }
       appliedList.push(optKey as string);
       continue;
     }
   }
 
-  // 메시지 결정
+  const nextEffective: VimOptions = {
+    ...DEFAULT_VIM_OPTIONS,
+    ...nextGlobal,
+    ...nextLocal,
+  };
+
+  const nextBufferLocalOptions = {
+    ...(state.bufferLocalOptions ?? {}),
+    [curId]: nextLocal,
+  };
+
+  const nextBuffers = state.buffers
+    ? state.buffers.map((b) =>
+        b.id === curId
+          ? {
+              ...b,
+              localOptions: nextLocal,
+              filetype: nextLocal.filetype ?? b.filetype,
+            }
+          : b
+      )
+    : undefined;
+
   let message: string | undefined = undefined;
   if (queryMessages.length > 0) {
     message = queryMessages.join('  ');
   } else if (appliedList.length > 0) {
-    message = `[Option] ${appliedList.join(' ')}`;
+    const scopePrefix =
+      scope === 'local'
+        ? '[Local Option]'
+        : scope === 'global'
+        ? '[Global Option]'
+        : '[Option]';
+    message = `${scopePrefix} ${appliedList.join(' ')}`;
   }
 
-  return {
+  let finalState: VimEditorState = {
     ...state,
-    options: nextOptions,
+    options: nextEffective,
+    globalOptions: nextGlobal,
+    bufferLocalOptions: nextBufferLocalOptions,
+    buffers: nextBuffers,
     commandMessage: message,
   };
+
+  if (updatedFiletype) {
+    finalState = applyFiletypeIndent(finalState, updatedFiletype);
+  }
+
+  return finalState;
 }

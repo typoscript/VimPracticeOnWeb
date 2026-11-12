@@ -1,6 +1,7 @@
 import { VimBuffer, VimEditorState } from './types';
 import { getVfsFile } from './vfs';
 import { msg } from './messages';
+import { getGlobalOptions } from './setEngine';
 
 /**
  * 버퍼 목록이 초기화되어 있지 않은 경우, 기본 1번 버퍼(및 2번 보조 버퍼)를 구성합니다.
@@ -55,6 +56,7 @@ export function ensureBuffers(state: VimEditorState): VimEditorState {
 export function syncCurrentBuffer(state: VimEditorState): VimEditorState {
   const s = ensureBuffers(state);
   const curId = s.currentBufferId ?? 1;
+  const curLocal = s.bufferLocalOptions?.[curId];
 
   const nextBuffers = s.buffers!.map((b) => {
     if (b.id === curId) {
@@ -65,6 +67,8 @@ export function syncCurrentBuffer(state: VimEditorState): VimEditorState {
         cursor: { ...s.cursor },
         undoStack: s.undoStack ? [...s.undoStack] : [],
         redoStack: s.redoStack ? [...s.redoStack] : [],
+        localOptions: curLocal ? { ...curLocal } : b.localOptions,
+        filetype: s.options?.filetype || b.filetype,
       };
     }
     return b;
@@ -119,6 +123,14 @@ export function switchBuffer(state: VimEditorState, target: number | string): Vi
     };
   }
 
+  const targetLocal =
+    targetBuf.localOptions || syncedState.bufferLocalOptions?.[targetBuf.id] || {};
+  const globalOpts = getGlobalOptions(syncedState);
+  const effectiveOpts = {
+    ...globalOpts,
+    ...targetLocal,
+  };
+
   return {
     ...syncedState,
     lines: [...targetBuf.lines],
@@ -128,6 +140,7 @@ export function switchBuffer(state: VimEditorState, target: number | string): Vi
     primaryFilename: targetBuf.name,
     alternateBufferId: curId,
     currentBufferId: targetBuf.id,
+    options: effectiveOpts,
     commandMessage: msg('"{name}" [버퍼 {id}]', { name: targetBuf.name, id: targetBuf.id }),
   };
 }

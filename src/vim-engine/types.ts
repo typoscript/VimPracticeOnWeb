@@ -141,6 +141,10 @@ export interface VimBuffer {
   undoStack?: StateSnapshot[];
   redoStack?: StateSnapshot[];
   isModified?: boolean;
+  /** 버퍼 로컬 옵션 (:setlocal) */
+  localOptions?: Partial<VimOptions>;
+  /** 버퍼 파일타입 */
+  filetype?: string;
 }
 
 export interface VimTabPage {
@@ -516,6 +520,16 @@ export interface VimEditorState {
   showConfigModal?: boolean;
   /** 순정 Vim 환경 옵션 설정 (:set nu, :set rnu, :set ic 등) */
   options?: VimOptions;
+  /** 전역 기본 옵션 설정 (:setglobal, :set) */
+  globalOptions?: VimOptions;
+  /** 버퍼별 로컬 옵션 맵 (bufferId -> localOptions) */
+  bufferLocalOptions?: Record<number, Partial<VimOptions>>;
+  /** 파일타입 감지 및 플러그인/인덴트 활성화 설정 (:filetype on, :filetype plugin indent on) */
+  filetypeSettings?: {
+    detect?: boolean;
+    plugin?: boolean;
+    indent?: boolean;
+  };
   /** 명령행 와일드메뉴 자동완성 세션 상태 */
   wildmenu?: WildmenuState | null;
   /** ctags 태그 스택 (Ctrl+], Ctrl+t, :tag, :pop) */

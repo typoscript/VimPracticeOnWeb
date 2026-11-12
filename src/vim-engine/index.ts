@@ -136,5 +136,25 @@ export type {
   SupportedLanguage,
 } from './syntaxEngine';
 
+// ---- 순정 Vim 환경 옵션 & 버퍼 로컬 시스템 (:set, :setlocal, :setglobal) ----
+export {
+  executeSetCommand,
+  getOptions,
+  getGlobalOptions,
+  getLocalOptions,
+  formatOptionsList,
+  DEFAULT_VIM_OPTIONS,
+  OPTION_ALIASES,
+} from './setEngine';
+
+// ---- 파일타입 플러그인 & 들여쓰기 시스템 (:filetype, ftplugin) ----
+export {
+  executeFiletypeCommand,
+  applyFiletypeIndent,
+  getFiletypeIndentPreset,
+  FILETYPE_INDENT_PRESETS,
+} from './ftpluginEngine';
+export type { FiletypeIndentConfig } from './ftpluginEngine';
+
 // ---- 개발용 불변성 검사 ----
 export { withInvariantCheck, assertValidVimState, deepFreeze } from './invariants';

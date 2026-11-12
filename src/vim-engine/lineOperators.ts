@@ -1,5 +1,6 @@
 import { VimEditorState } from './types';
 import { pushUndoSnapshot } from './operators';
+import { getOptions } from './setEngine';
 import {
   moveToFirstNonBlank,
   moveToNextWord,
@@ -283,7 +284,7 @@ export function executeCaseMotion(
 }
 
 /**
- * >> / <<: 현재 줄 및 count개 줄 들여쓰기 / 내어쓰기 (공백 2칸 기준)
+ * >> / <<: 현재 줄 및 count개 줄 들여쓰기 / 내어쓰기 (shiftwidth / expandtab 설정 반영)
  */
 export function indentLines(
   state: VimEditorState,
@@ -294,17 +295,28 @@ export function indentLines(
   const startLine = state.cursor.line;
   const endLine = Math.min(state.lines.length - 1, startLine + Math.max(1, count) - 1);
 
+  const opts = getOptions(state);
+  const sw = opts.shiftwidth || 2;
+  const et = opts.expandtab !== false;
+  const indentStr = et ? ' '.repeat(sw) : '\t';
+
   const newLines = [...state.lines];
   for (let i = startLine; i <= endLine; i++) {
     const line = newLines[i];
     if (direction === 'in') {
       // Vim 은 빈 줄을 들여쓰지 않습니다
-      if (line.length > 0) newLines[i] = '  ' + line;
+      if (line.length > 0) newLines[i] = indentStr + line;
     } else {
-      if (line.startsWith('  ')) {
-        newLines[i] = line.slice(2);
-      } else if (line.startsWith(' ') || line.startsWith('\t')) {
+      if (line.startsWith(indentStr)) {
+        newLines[i] = line.slice(indentStr.length);
+      } else if (line.startsWith('\t')) {
         newLines[i] = line.slice(1);
+      } else if (line.startsWith(' ')) {
+        let spaces = 0;
+        while (spaces < sw && line[spaces] === ' ') {
+          spaces++;
+        }
+        newLines[i] = line.slice(spaces);
       }
     }
   }
@@ -334,16 +346,27 @@ export function indentVisual(
   const minLine = Math.min(state.visualAnchor.line, state.cursor.line);
   const maxLine = Math.max(state.visualAnchor.line, state.cursor.line);
 
+  const opts = getOptions(state);
+  const sw = opts.shiftwidth || 2;
+  const et = opts.expandtab !== false;
+  const indentStr = et ? ' '.repeat(sw) : '\t';
+
   const newLines = [...state.lines];
   for (let i = minLine; i <= maxLine; i++) {
     const line = newLines[i];
     if (direction === 'in') {
-      newLines[i] = '  ' + line;
+      newLines[i] = indentStr + line;
     } else {
-      if (line.startsWith('  ')) {
-        newLines[i] = line.slice(2);
-      } else if (line.startsWith(' ') || line.startsWith('\t')) {
+      if (line.startsWith(indentStr)) {
+        newLines[i] = line.slice(indentStr.length);
+      } else if (line.startsWith('\t')) {
         newLines[i] = line.slice(1);
+      } else if (line.startsWith(' ')) {
+        let spaces = 0;
+        while (spaces < sw && line[spaces] === ' ') {
+          spaces++;
+        }
+        newLines[i] = line.slice(spaces);
       }
     }
   }

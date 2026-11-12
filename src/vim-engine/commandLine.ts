@@ -107,6 +107,7 @@ import {
   triggerAutocmd,
 } from './autocmdEngine';
 import { executeSyntaxCommand } from './syntaxEngine';
+import { executeFiletypeCommand } from './ftpluginEngine';
 import { jumpToTag, popTagStack, formatTagStack } from './tagEngine';
 import {
   registerKeymap,
@@ -1812,11 +1813,11 @@ export function executeCommandLine(
     };
   }
 
-  // 순정 Vim 환경 옵션 설정: :set [args]
-  const setMatch = cleanCmdRaw.match(/^set(?:\s+(.*))?$/i);
-  if (setMatch) {
-    const rawArgs = setMatch[1] ?? '';
-    const res = executeSetCommand(state, rawArgs);
+  // 순정 Vim 버퍼 로컬 옵션 설정: :setlocal, :setl [args]
+  const setlocalMatch = cleanCmdRaw.match(/^(?:setlocal|setl)(?:\s+(.*))?$/i);
+  if (setlocalMatch) {
+    const rawArgs = setlocalMatch[1] ?? '';
+    const res = executeSetCommand(state, rawArgs, 'local');
     let finalRes = res;
     if (res.options?.filetype && res.options.filetype !== state.options?.filetype) {
       finalRes = triggerAutocmd(
@@ -1828,6 +1829,66 @@ export function executeCommandLine(
     }
     return {
       ...finalRes,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 순정 Vim 전역 옵션 설정: :setglobal, :setg [args]
+  const setglobalMap = cleanCmdRaw.match(/^(?:setglobal|setg)(?:\s+(.*))?$/i);
+  if (setglobalMap) {
+    const rawArgs = setglobalMap[1] ?? '';
+    const res = executeSetCommand(state, rawArgs, 'global');
+    let finalRes = res;
+    if (res.options?.filetype && res.options.filetype !== state.options?.filetype) {
+      finalRes = triggerAutocmd(
+        res,
+        'FileType',
+        { filetype: res.options.filetype },
+        (s, cmd) => executeCommandLine(s, cmd, keyRunner)
+      );
+    }
+    return {
+      ...finalRes,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 순정 Vim 환경 옵션 설정: :set, :se [args]
+  const setMatch = cleanCmdRaw.match(/^(?:set|se)(?:\s+(.*))?$/i);
+  if (setMatch) {
+    const rawArgs = setMatch[1] ?? '';
+    const res = executeSetCommand(state, rawArgs, 'both');
+    let finalRes = res;
+    if (res.options?.filetype && res.options.filetype !== state.options?.filetype) {
+      finalRes = triggerAutocmd(
+        res,
+        'FileType',
+        { filetype: res.options.filetype },
+        (s, cmd) => executeCommandLine(s, cmd, keyRunner)
+      );
+    }
+    return {
+      ...finalRes,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 순정 Vim 파일타입 플러그인/인덴트 제어: :filetype [args]
+  const filetypeMatch = cleanCmdRaw.match(/^filetype(?:\s+(.*))?$/i);
+  if (filetypeMatch) {
+    const rawArgs = filetypeMatch[1] ?? '';
+    const res = executeFiletypeCommand(state, rawArgs);
+    return {
+      ...res,
       mode: 'NORMAL',
       visualAnchor: undefined,
       commandBuffer: undefined,

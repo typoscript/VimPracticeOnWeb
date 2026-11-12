@@ -203,4 +203,110 @@ describe('setEngine (:set Option System)', () => {
       expect(state.cursor.line).toBe(0);
     });
   });
+
+  describe(':setlocal, :setglobal and buffer options isolation', () => {
+    it(':setlocal 은 현재 버퍼의 로컬 옵션만 변경한다', () => {
+      let state = createBaseState();
+      state = executeSetCommand(state, 'ts=4 sw=4 nonu', 'local');
+
+      expect(state.bufferLocalOptions?.[1]?.tabstop).toBe(4);
+      expect(state.bufferLocalOptions?.[1]?.shiftwidth).toBe(4);
+      expect(state.bufferLocalOptions?.[1]?.number).toBe(false);
+
+      // 전역 옵션은 변경되지 않고 기본값 유지
+      expect(state.globalOptions?.tabstop).toBe(2);
+      expect(state.globalOptions?.number).toBe(true);
+
+      // 현재 유효 옵션(getOptions)에는 반영됨
+      const eff = getOptions(state);
+      expect(eff.tabstop).toBe(4);
+      expect(eff.shiftwidth).toBe(4);
+      expect(eff.number).toBe(false);
+    });
+
+    it(':setglobal 은 전역 옵션만 변경하고 로컬 오버라이드에는 영향을 주지 않는다', () => {
+      let state = createBaseState();
+      // 먼저 버퍼 1에 로컬 오버라이드 설정
+      state = executeSetCommand(state, 'ts=4', 'local');
+      expect(getOptions(state).tabstop).toBe(4);
+
+      // 전역 옵션을 8로 변경
+      state = executeSetCommand(state, 'ts=8 sw=8', 'global');
+      expect(state.globalOptions?.tabstop).toBe(8);
+      expect(state.globalOptions?.shiftwidth).toBe(8);
+
+      // 버퍼 1은 ts=4 로컬 오버라이드가 있으므로 여전히 ts=4, sw는 오버라이드가 없으므로 전역 8 적용
+      const eff = getOptions(state);
+      expect(eff.tabstop).toBe(4);
+      expect(eff.shiftwidth).toBe(8);
+    });
+
+    it(':setlocal 과 :setglobal 조회 (:setlocal, :setglobal 인자 없음)', () => {
+      let state = createBaseState();
+      state = executeSetCommand(state, 'ts=4', 'local');
+
+      const localList = executeSetCommand(state, '', 'local');
+      expect(localList.commandMessage).toContain('--- Local Options ---');
+      expect(localList.commandMessage).toContain('tabstop=4');
+
+      const globalList = executeSetCommand(state, '', 'global');
+      expect(globalList.commandMessage).toContain('--- Global Options ---');
+    });
+
+    it(':setlocal opt? 및 :setglobal opt? 로 개별 조회', () => {
+      let state = createBaseState();
+      state = executeSetCommand(state, 'ts=4', 'local');
+      state = executeSetCommand(state, 'ts=8', 'global');
+
+      const localQuery = executeSetCommand(state, 'ts?', 'local');
+      expect(localQuery.commandMessage).toBe('tabstop=4');
+
+      const globalQuery = executeSetCommand(state, 'ts?', 'global');
+      expect(globalQuery.commandMessage).toBe('tabstop=8');
+    });
+
+    it('버퍼 전환 시 버퍼별 로컬 옵션이 격리 및 보존된다', () => {
+      let state: VimEditorState = {
+        lines: ['Buffer 1 line'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+        currentBufferId: 1,
+        buffers: [
+          { id: 1, name: 'buf1.txt', lines: ['Buffer 1 line'], cursor: { line: 0, col: 0 } },
+          { id: 2, name: 'buf2.txt', lines: ['Buffer 2 line'], cursor: { line: 0, col: 0 } },
+        ],
+      };
+
+      // 버퍼 1에서 :setlocal ts=4
+      state = executeSetCommand(state, 'ts=4', 'local');
+      expect(getOptions(state).tabstop).toBe(4);
+
+      // :b 2 로 전환
+      state = handleKey(state, ':');
+      for (const ch of 'b 2') {
+        state = handleKey(state, ch);
+      }
+      state = handleKey(state, 'Enter');
+
+      // 버퍼 2는 기본값인 ts=2
+      expect(state.currentBufferId).toBe(2);
+      expect(getOptions(state).tabstop).toBe(2);
+
+      // 버퍼 2에서 :setlocal sw=8
+      state = executeSetCommand(state, 'sw=8', 'local');
+      expect(getOptions(state).shiftwidth).toBe(8);
+
+      // :b 1 로 복귀
+      state = handleKey(state, ':');
+      for (const ch of 'b 1') {
+        state = handleKey(state, ch);
+      }
+      state = handleKey(state, 'Enter');
+
+      // 버퍼 1은 이전 설정인 ts=4, sw는 기본 2
+      expect(state.currentBufferId).toBe(1);
+      expect(getOptions(state).tabstop).toBe(4);
+      expect(getOptions(state).shiftwidth).toBe(2);
+    });
+  });
 });
