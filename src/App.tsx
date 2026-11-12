@@ -1917,6 +1917,7 @@ export function App() {
                       diffPaneIndex={0}
                       bellSignal={editorState.activePaneIndex === 0 ? bellCount : undefined}
                       onSelectCompletionItem={handleSelectCompletionCandidate}
+                      primaryFilename={editorState.primaryFilename || editorState.splitPanes[0].filename || (currentTab === 'course' ? currentMission.primaryFilename : undefined)}
                     />
                   </div>
 
@@ -1967,6 +1968,7 @@ export function App() {
                       diffPaneIndex={1}
                       bellSignal={editorState.activePaneIndex === 1 ? bellCount : undefined}
                       onSelectCompletionItem={handleSelectCompletionCandidate}
+                      primaryFilename={editorState.secondaryFilename || editorState.splitPanes[1].filename || 'target.ts'}
                     />
                   </div>
                 </div>
@@ -2002,6 +2004,7 @@ export function App() {
                   spellWrongWords={displayEditorState.spellWrongWords}
                   bellSignal={bellCount}
                   onSelectCompletionItem={handleSelectCompletionCandidate}
+                  primaryFilename={displayEditorState.primaryFilename || (currentTab === 'course' ? currentMission.primaryFilename : undefined)}
                 />
               )}
 

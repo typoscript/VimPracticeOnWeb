@@ -186,6 +186,50 @@
   tab-size: 4;
 }
 
+/* 순정 Vim 구문 강조 (Syntax Highlighting) */
+.syn-keyword {
+  color: var(--accent-purple, #cba6f7);
+  font-weight: 600;
+}
+
+.syn-type {
+  color: var(--accent-cyan, #89dceb);
+}
+
+.syn-string {
+  color: var(--accent-green, #a6e3a1);
+}
+
+.syn-number {
+  color: var(--accent-orange, #fab387);
+}
+
+.syn-comment {
+  color: var(--text-muted, #6c7086);
+  font-style: italic;
+}
+
+.syn-boolean {
+  color: var(--accent-orange, #fab387);
+  font-weight: 600;
+}
+
+.syn-function {
+  color: var(--accent-blue, #89b4fa);
+}
+
+.syn-operator {
+  color: var(--text-secondary, #a6adc8);
+}
+
+.syn-tag {
+  color: var(--accent-red, #f38ba8);
+}
+
+.syn-special {
+  color: var(--accent-orange, #fab387);
+}
+
 /* 커서 스타일 */
 .vim-cursor {
   display: inline-block;

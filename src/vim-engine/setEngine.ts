@@ -15,6 +15,7 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   list: false,
   wildmenu: true,
   spell: false,
+  syntax: true,
 };
 
 export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
@@ -43,6 +44,8 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   spell: 'spell',
   ft: 'filetype',
   filetype: 'filetype',
+  syn: 'syntax',
+  syntax: 'syntax',
 };
 
 /**
@@ -70,6 +73,7 @@ export function formatOptionsList(options: VimOptions, showAll = false): string 
     'list',
     'expandtab',
     'spell',
+    'syntax',
   ];
 
   const numericKeys: (keyof VimOptions)[] = ['tabstop', 'shiftwidth'];
@@ -77,9 +81,13 @@ export function formatOptionsList(options: VimOptions, showAll = false): string 
   const displayedItems: string[] = [];
 
   for (const k of booleanKeys) {
-    const val = options[k] as boolean;
-    const def = DEFAULT_VIM_OPTIONS[k] as boolean;
-    if (showAll || val !== def) {
+    const val = options[k];
+    const def = DEFAULT_VIM_OPTIONS[k];
+    if (typeof val === 'string') {
+      if (showAll || val !== def) {
+        displayedItems.push(`${k}=${val}`);
+      }
+    } else if (showAll || val !== def) {
       displayedItems.push(val ? (k as string) : `no${k}`);
     }
   }
@@ -159,6 +167,11 @@ export function executeSetCommand(state: VimEditorState, rawArgs: string): VimEd
         appliedList.push(`filetype=${rawVal}`);
         continue;
       }
+      if (optKey === 'syntax') {
+        nextOptions = { ...nextOptions, syntax: rawVal };
+        appliedList.push(`syntax=${rawVal}`);
+        continue;
+      }
       if (!optKey || (optKey !== 'tabstop' && optKey !== 'shiftwidth')) {
         return {
           ...state,
@@ -188,7 +201,7 @@ export function executeSetCommand(state: VimEditorState, rawArgs: string): VimEd
         };
       }
       const curVal = nextOptions[optKey];
-      if (typeof curVal === 'boolean') {
+      if (typeof curVal === 'boolean' || optKey === 'syntax') {
         const nextVal = !curVal;
         nextOptions = { ...nextOptions, [optKey]: nextVal };
         appliedList.push(nextVal ? (optKey as string) : `no${optKey}`);
@@ -206,7 +219,7 @@ export function executeSetCommand(state: VimEditorState, rawArgs: string): VimEd
           commandMessage: msg('E518: 알 수 없는 옵션: {token}', { token }),
         };
       }
-      if (typeof nextOptions[optKey] === 'boolean') {
+      if (typeof nextOptions[optKey] === 'boolean' || optKey === 'syntax') {
         nextOptions = { ...nextOptions, [optKey]: false };
         appliedList.push(`no${optKey}`);
         continue;
@@ -221,7 +234,7 @@ export function executeSetCommand(state: VimEditorState, rawArgs: string): VimEd
         commandMessage: msg('E518: 알 수 없는 옵션: {token}', { token }),
       };
     }
-    if (typeof nextOptions[optKey] === 'boolean') {
+    if (typeof nextOptions[optKey] === 'boolean' || optKey === 'syntax') {
       nextOptions = { ...nextOptions, [optKey]: true };
       appliedList.push(optKey as string);
       continue;

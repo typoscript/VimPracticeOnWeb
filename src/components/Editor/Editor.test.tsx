@@ -187,4 +187,49 @@ describe('Editor Component', () => {
     item1.click();
     expect(selectedIdx).toBe(1);
   });
+
+  it('renders syntax highlighting tokens when primaryFilename or filetype matches a code language', () => {
+    const lines = ['// comment', 'const count: number = 42;'];
+    const { container } = render(
+      <Editor
+        lines={lines}
+        cursor={{ line: 0, col: 0 }}
+        mode="NORMAL"
+        primaryFilename="main.ts"
+      />
+    );
+
+    // Line 1 (non-cursor line) has full token span
+    const keywordSpan = container.querySelector('.syn-keyword');
+    expect(keywordSpan).toBeInTheDocument();
+    expect(keywordSpan?.textContent).toBe('const');
+
+    const typeSpan = container.querySelector('.syn-type');
+    expect(typeSpan).toBeInTheDocument();
+    expect(typeSpan?.textContent).toBe('number');
+
+    const numberSpan = container.querySelector('.syn-number');
+    expect(numberSpan).toBeInTheDocument();
+    expect(numberSpan?.textContent).toBe('42');
+
+    // Line 0 (cursor line) has character-level syntax class on cursor
+    const cursorEl = container.querySelector('.vim-cursor');
+    expect(cursorEl).toHaveClass('syn-comment');
+  });
+
+  it('disables syntax highlighting when options.syntax is false', () => {
+    const lines = ['const count: number = 42;'];
+    const { container } = render(
+      <Editor
+        lines={lines}
+        cursor={{ line: 0, col: 0 }}
+        mode="NORMAL"
+        primaryFilename="main.ts"
+        options={{ syntax: false } as any}
+      />
+    );
+
+    const keywordSpan = container.querySelector('.syn-keyword');
+    expect(keywordSpan).toBeNull();
+  });
 });

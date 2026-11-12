@@ -10,8 +10,17 @@ import {
   VimOptions,
   DiffHunk,
   SpellError,
+  SyntaxToken,
+  SupportedLanguage,
 } from '../../vim-engine';
-import { isPositionSelected, findMatches, findSpellErrorsInLine } from '../../vim-engine';
+import {
+  isPositionSelected,
+  findMatches,
+  findSpellErrorsInLine,
+  detectFiletype,
+  tokenizeLine,
+  getSyntaxTokensMap,
+} from '../../vim-engine';
 import './Editor.css';
 import { t } from '../../i18n';
 
@@ -62,6 +71,10 @@ export interface EditorProps {
   spellWrongWords?: string[];
   /** 자동완성 팝업 메뉴 항목 선택 콜백 */
   onSelectCompletionItem?: (index: number) => void;
+  /** 현재 버퍼 파일명 (구문 강조 및 표시용) */
+  primaryFilename?: string;
+  /** 명시적 파일타입 (:set ft=... / :set syntax=...) */
+  filetype?: string;
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -87,11 +100,19 @@ export const Editor: React.FC<EditorProps> = ({
   options,
   diffHunks,
   diffPaneIndex = 0,
-  bellSignal = 0,
+  bellSignal,
   spellGoodWords,
   spellWrongWords,
   onSelectCompletionItem,
+  primaryFilename,
+  filetype,
 }) => {
+  const explicitFt =
+    options?.filetype ||
+    (typeof options?.syntax === 'string' ? options.syntax : undefined) ||
+    filetype;
+  const detectedLanguage = detectFiletype(primaryFilename, explicitFt);
+  const isSyntaxEnabled = options?.syntax !== false;
   const scrollerRef = React.useRef<HTMLDivElement>(null);
   const selectedItemRef = React.useRef<HTMLDivElement>(null);
   const [isBellFlashing, setIsBellFlashing] = React.useState(false);
@@ -278,6 +299,8 @@ export const Editor: React.FC<EditorProps> = ({
                         spellErrors: options?.spell
                           ? findSpellErrorsInLine(lineText, lineIdx, { spellGoodWords, spellWrongWords } as any)
                           : undefined,
+                        syntaxLanguage: detectedLanguage,
+                        isSyntaxEnabled,
                       })}
                       {isCursorLine &&
                         completionSession &&
@@ -367,6 +390,29 @@ interface RenderLineOptions {
   insertRegisterPending?: boolean;
   confirmSubstitute?: ConfirmSubstituteSession | null;
   spellErrors?: SpellError[];
+  syntaxLanguage?: SupportedLanguage;
+  isSyntaxEnabled?: boolean;
+}
+
+function renderSyntaxSpans(text: string, tokens: SyntaxToken[]): React.ReactNode {
+  const parts: React.ReactNode[] = [];
+  let lastIdx = 0;
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i];
+    if (t.startCol > lastIdx) {
+      parts.push(text.slice(lastIdx, t.startCol));
+    }
+    parts.push(
+      <span key={i} className={`vim-char syn-${t.type}`}>
+        {t.text}
+      </span>
+    );
+    lastIdx = t.endCol;
+  }
+  if (lastIdx < text.length) {
+    parts.push(text.slice(lastIdx));
+  }
+  return <>{parts}</>;
 }
 
 function renderLineContent(opts: RenderLineOptions): React.ReactNode {
@@ -383,6 +429,8 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     insertRegisterPending,
     confirmSubstitute,
     spellErrors,
+    syntaxLanguage,
+    isSyntaxEnabled,
   } = opts;
   const isCursorLine = cursor.line === lineIdx;
   const cursorCol = isCursorLine ? cursor.col : null;
@@ -409,7 +457,7 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     return <span className="empty-char">&nbsp;</span>;
   }
 
-  // 커서, 타겟, 비주얼 선택, 검색 매칭, 맞춤법 오류가 모두 없는 일반 줄은 원본 텍스트 그대로 반환
+  // 커서, 타겟, 비주얼 선택, 검색 매칭, 맞춤법 오류가 모두 없는 일반 줄
   if (
     cursorCol === null &&
     targetCol === null &&
@@ -417,8 +465,20 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     !hasSearchMatches &&
     !hasSpellErrors
   ) {
-    return text;
+    if (!isSyntaxEnabled || !syntaxLanguage || syntaxLanguage === 'text' || text.length === 0) {
+      return text;
+    }
+    const tokens = tokenizeLine(text, syntaxLanguage);
+    if (tokens.length === 0) {
+      return text;
+    }
+    return renderSyntaxSpans(text, tokens);
   }
+
+  const tokenMap =
+    isSyntaxEnabled && syntaxLanguage && syntaxLanguage !== 'text'
+      ? getSyntaxTokensMap(text, syntaxLanguage)
+      : null;
 
   // 커서 또는 타겟, 비주얼 선택, 검색 매치가 있는 줄 처리
   const chars = text.length === 0 ? [' '] : text.split('');
@@ -455,6 +515,8 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
         ? '\u00A0'
         : char;
 
+    const tokenType = tokenMap ? tokenMap[i] : null;
+
     let classNames = isCursor
       ? `vim-cursor ${
           isFocused
@@ -466,6 +528,10 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
             : 'cursor-unfocused'
         }`
       : 'vim-char';
+
+    if (tokenType) {
+      classNames += ` syn-${tokenType}`;
+    }
 
     if (isSelected) {
       classNames += ' visual-selected';

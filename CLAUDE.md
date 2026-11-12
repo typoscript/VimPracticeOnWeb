@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 117개 테스트 파일, 1,522개 테스트 100% 통과 필수)*
+  *(현재 118개 테스트 파일, 1,540개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -107,6 +107,7 @@
 - **순정 Vim 마크 & 점프 리스트 비주얼 맵 및 Ex 커맨드 (`:marks`, `:jumps`, `:clearjumps`, `:delmarks`) (`src/vim-engine/marks.ts`, `src/components/MarksJumpVisualizer/`)**: 현재 버퍼의 로컬 마크(`m{a-z}`), 전역 마크(`m{A-Z}`), 특수 마크(`'`, `.`, `^`) 및 커서 점프 이력(`Ctrl-o` / `Ctrl-i`)을 실시간 시각화하고 상호작용하는 통합 HUD 네비게이터. 마크 탭(로컬/전역 필터, 위치 및 라인 미리보기, 즉시 점프/삭제, `:delmarks!` 일괄 삭제), 점프 리스트 탭(현재 점프 포인터 `▶` 표시, 상대 거리 `>0`/`-1`/`+1`, 클릭 점프, `:clearjumps` 비우기), 시각 분포도(Minimap, 에디터 행별 마크/점프/커서 분포 시각화 및 라인 점프), 거터 마크 뱃지(로컬 보라, 전역 파랑) 및 점프 인디케이터 클릭 연동 지원.
 - **점프 리스트(Ctrl-o / Ctrl-i)와 마크 정리(:delmarks!) 실전 마스터 (레슨 68, `src/vim-engine/marks.ts`)**: 대규모 코드베이스에서 마크(`ma`, `'a`)와 점프 리스트 히스토리(`Ctrl-o`, `Ctrl-i`)를 양방향 순회하고, 사용이 끝난 임시 마크를 일괄 삭제(`:delmarks!`)하는 실무 고속 탐색 워크플로우 훈련 제공.
 - **순정 Vim 자동 명령(Autocommand) 이벤트 시스템 (`:autocmd`, `:augroup`, `:doautocmd`) (`src/vim-engine/autocmdEngine.ts`)**: 순정 Vim 이벤트 후크 시스템 완벽 지원. 이벤트 등록 (`:autocmd [group] {event} {pat} [nested] {cmd}`), 그룹 관리 (`:augroup {name}` / `:augroup END`, `:augroup! {name}`), 자동 명령 삭제 (`:autocmd! [group] [event] [pat]`), 목록 출력 (`:autocmd`), 수동 이벤트 발생 (`:doautocmd {event} [fname]`). 주요 이벤트 트리거 (`BufWritePre`, `BufWritePost`, `BufReadPost`, `BufEnter`, `BufLeave`, `FileType`, `InsertEnter`, `InsertLeave`, `CursorMoved`, `User`) 및 파일명 와일드카드(`*.ts`, `*`) 패턴 매칭, 재귀 호출 방지(최대 깊이 5단계 제약), `:set ft=...` / `:set filetype=...` 변경 시 `FileType` 자동 트리거 연동.
+- **순정 Vim 구문 강조 엔진 (Syntax Engine) & `:syntax on/off` (`src/vim-engine/syntaxEngine.ts`, `Editor.tsx`, `Editor.css`)**: 10대 핵심 프로그래밍 언어(TypeScript, JavaScript, Python, Rust, Go, HTML, JSON, Bash, Vim script, Markdown) 지원 순정 구문 하이라이팅. 키워드, 내장/사용자 정의 타입, 문자열, 숫자, 주석, 불리언, 함수 호출, 연산자, 태그, 데코레이터/매크로/변수 스코프 등 어휘 분석 토큰화 및 Tokyo Night, Catppuccin, Gruvbox, One Dark 등 에디터 테마별 컬러 실시간 연동. `:syntax on`, `:syntax off`, `:syntax enable`, `:syntax manual`, `:syntax reset`, `:syntax` 상태 조회 및 `:set syntax=...`, `:set nosyntax` 완전 지원.
 
 ---
 
@@ -131,7 +132,7 @@
 17. ~~**글로벌 프로젝트 텍스트 치환 & 퀵픽스/아규먼트 리스트 연계**: `:vimgrep` / `:cdo` / `:cfdo` 및 `:argdo` 대규모 리팩토링 실무 마스터.~~ — 구현 완료.
 18. ~~**신규 레슨 65 추가 (글로벌 프로젝트 리팩토링과 :cdo / :cfdo 마스터)**~~ — 레슨 65와 함께 구현 완료.
 19. ~~**하드코어 도장 (HardcoreDojo) 연속 서든데스 챌린지**: 노미스 10연타 스피드런 및 실시간 랭킹 시스템.~~ — 구현 완료.
-20. **커스텀 테마 & 신규 구문 하이라이트 확장**: Neovim 유명 테마(Tokyo Night, Gruvbox, Catppuccin) 및 신규 언어(Rust, Go) 프리셋 지원.
+20. ~~**커스텀 테마 & 신규 구문 하이라이트 확장**: Neovim 유명 테마 및 10대 프로그래밍 언어 순정 구문 하이라이터 탑재.~~ — 구현 완료.
 21. ~~**Vim 매크로 레지스터 시각화 인스펙터 (Macro Register Inspector)**: @a~@z 버퍼 내용 실시간 파싱 및 시각적 재생/수정 도구.~~ — 구현 완료.
 22. ~~**신규 레슨 66 추가**: 고급 매크로 레지스터 조작 및 `"ap` 붙여넣기/편집 후 `"ay` 재저장 테크닉 실전 마스터.~~ — 구현 완료.
 23. ~~**Vim 내장 세션 저장 및 복원 (`:mksession`, `:source Session.vim`)**: 윈도우 분할, 버퍼, 탭 상태 전체를 저장하고 다시 로드하는 영구 세션 관리자.~~ — 구현 완료.
@@ -139,3 +140,4 @@
 25. ~~**신규 레슨 67 추가 (Vim 세션 관리와 :mksession / :source 마스터)**~~ — 레슨 67과 함께 구현 완료.
 26. ~~**신규 레슨 68 추가 (마크 점프 마스터와 고급 위치 탐색)**~~ — 레슨 68과 함께 구현 완료.
 27. ~~**순정 Vim 자동 명령(Autocommand) 이벤트 시스템 (`:autocmd`, `:augroup`, `:doautocmd`)**~~ — 구현 완료.
+28. ~~**순정 Vim 구문 강조 엔진 (Syntax Engine) & :syntax on/off**~~ — 구현 완료.

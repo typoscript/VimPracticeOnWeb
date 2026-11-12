@@ -123,5 +123,18 @@ export {
 } from './autocmdEngine';
 export type { AutocmdEntry } from './types';
 
+// ---- 순정 Vim 구문 강조 엔진 (:syntax, :syn) ----
+export {
+  executeSyntaxCommand,
+  detectFiletype,
+  tokenizeLine,
+  getSyntaxTokensMap,
+} from './syntaxEngine';
+export type {
+  SyntaxTokenType,
+  SyntaxToken,
+  SupportedLanguage,
+} from './syntaxEngine';
+
 // ---- 개발용 불변성 검사 ----
 export { withInvariantCheck, assertValidVimState, deepFreeze } from './invariants';

@@ -309,4 +309,9 @@ export const EN_MESSAGES: Record<string, string> = {
   "\"{name}\" 자동 명령 그룹이 삭제되었습니다": "Autocmd group \"{name}\" deleted",
   "자동 명령이 삭제되었습니다": "Autocommands deleted",
   "E216: 그러한 그룹 또는 이벤트가 없습니다: {name}": "E216: No such group or event: {name}",
+  "구문 강조가 켜졌습니다": "Syntax highlighting is on",
+  "구문 강조가 꺼졌습니다": "Syntax highlighting is off",
+  "구문 강조 설정이 초기화되었습니다": "Syntax highlighting reset",
+  "구문 강조: {status} (파일타입: {filetype})": "Syntax: {status} (filetype: {filetype})",
+  "E28: 그러한 구문 하위 명령이 없습니다: {cmd}": "E28: No such syntax subcommand: {cmd}",
 };

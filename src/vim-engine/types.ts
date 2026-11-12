@@ -230,6 +230,8 @@ export interface VimOptions {
   spell?: boolean;
   /** 현재 버퍼 파일타입 (:set ft=... / :set filetype=...) */
   filetype?: string;
+  /** 구문 강조 활성화 여부 또는 지정 언어 (:syntax on / off, :set syntax=...) */
+  syntax?: boolean | string;
 }
 
 /** 맞춤법 검사기 오탈자 정보 */

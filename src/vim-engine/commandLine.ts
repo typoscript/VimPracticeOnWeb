@@ -106,6 +106,7 @@ import {
   executeDoAutocmd,
   triggerAutocmd,
 } from './autocmdEngine';
+import { executeSyntaxCommand } from './syntaxEngine';
 import { jumpToTag, popTagStack, formatTagStack } from './tagEngine';
 import {
   registerKeymap,
@@ -1924,6 +1925,20 @@ export function executeCommandLine(
   if (autocmdMatch) {
     const args = autocmdMatch[1] ?? '';
     const res = executeAutocmdCommand(state, args);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 순정 Vim 구문 강조 제어: :syntax, :syn [on|off|enable|manual|reset]
+  const syntaxMatch = cleanCmdRaw.match(/^(?:syntax|syn)(?:\s+(.*))?$/i);
+  if (syntaxMatch) {
+    const args = syntaxMatch[1] ?? '';
+    const res = executeSyntaxCommand(state, args);
     return {
       ...res,
       mode: 'NORMAL',
