@@ -41,6 +41,8 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   wmenu: 'wildmenu',
   wildmenu: 'wildmenu',
   spell: 'spell',
+  ft: 'filetype',
+  filetype: 'filetype',
 };
 
 /**
@@ -148,10 +150,15 @@ export function executeSetCommand(state: VimEditorState, rawArgs: string): VimEd
       continue;
     }
 
-    // 4. 숫자/값 할당 옵션 (:set ts=4, :set sw=2)
+    // 4. 숫자/값 할당 옵션 (:set ts=4, :set sw=2, :set ft=typescript)
     if (token.includes('=')) {
       const [rawKey, rawVal] = token.split('=');
       const optKey = OPTION_ALIASES[rawKey];
+      if (optKey === 'filetype') {
+        nextOptions = { ...nextOptions, filetype: rawVal };
+        appliedList.push(`filetype=${rawVal}`);
+        continue;
+      }
       if (!optKey || (optKey !== 'tabstop' && optKey !== 'shiftwidth')) {
         return {
           ...state,

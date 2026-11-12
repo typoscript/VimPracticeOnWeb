@@ -110,5 +110,18 @@ export {
 } from './sessionEngine';
 export type { SessionMetadata } from './sessionEngine';
 
+// ---- 순정 Vim 자동 명령 시스템 (:autocmd, :augroup, :doautocmd) ----
+export {
+  executeAutocmdCommand,
+  executeAugroupCommand,
+  executeDeleteAutocmd,
+  executeDoAutocmd,
+  triggerAutocmd,
+  formatAutocmdList,
+  normalizeEvent,
+  matchAutocmdPattern,
+} from './autocmdEngine';
+export type { AutocmdEntry } from './types';
+
 // ---- 개발용 불변성 검사 ----
 export { withInvariantCheck, assertValidVimState, deepFreeze } from './invariants';

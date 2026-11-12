@@ -99,6 +99,13 @@ import { formatRegisters } from './registers';
 import { executeSetCommand } from './setEngine';
 import { sourceScript } from './sourceEngine';
 import { executeMakeSession } from './sessionEngine';
+import {
+  executeAutocmdCommand,
+  executeAugroupCommand,
+  executeDeleteAutocmd,
+  executeDoAutocmd,
+  triggerAutocmd,
+} from './autocmdEngine';
 import { jumpToTag, popTagStack, formatTagStack } from './tagEngine';
 import {
   registerKeymap,
@@ -1181,8 +1188,10 @@ export function executeCommandLine(
       };
     }
     const res = editBuffer(state, filename);
+    const postRead = triggerAutocmd(res, 'BufReadPost', { filename }, (s, cmd) => executeCommandLine(s, cmd, keyRunner));
+    const entered = triggerAutocmd(postRead, 'BufEnter', { filename }, (s, cmd) => executeCommandLine(s, cmd, keyRunner));
     return {
-      ...res,
+      ...entered,
       mode: 'NORMAL',
       visualAnchor: undefined,
       commandBuffer: undefined,
@@ -1194,9 +1203,11 @@ export function executeCommandLine(
   const bMatch = cleanCmdRaw.match(/^(?:b|buffer)(?:\s+(.+))?$/i);
   if (bMatch && !cleanCmdRaw.match(/^(?:bn|bnext|bp|bprev|bprevious|bf|bfirst|bl|blast|bd|bdelete|bdel)/i)) {
     const target = bMatch[1]?.trim();
-    const res = target ? switchBuffer(state, target) : nextBuffer(state, 1);
+    const leftState = triggerAutocmd(state, 'BufLeave', undefined, (s, cmd) => executeCommandLine(s, cmd, keyRunner));
+    const res = target ? switchBuffer(leftState, target) : nextBuffer(leftState, 1);
+    const entered = triggerAutocmd(res, 'BufEnter', undefined, (s, cmd) => executeCommandLine(s, cmd, keyRunner));
     return {
-      ...res,
+      ...entered,
       mode: 'NORMAL',
       visualAnchor: undefined,
       commandBuffer: undefined,
@@ -1805,8 +1816,17 @@ export function executeCommandLine(
   if (setMatch) {
     const rawArgs = setMatch[1] ?? '';
     const res = executeSetCommand(state, rawArgs);
+    let finalRes = res;
+    if (res.options?.filetype && res.options.filetype !== state.options?.filetype) {
+      finalRes = triggerAutocmd(
+        res,
+        'FileType',
+        { filetype: res.options.filetype },
+        (s, cmd) => executeCommandLine(s, cmd, keyRunner)
+      );
+    }
     return {
-      ...res,
+      ...finalRes,
       mode: 'NORMAL',
       visualAnchor: undefined,
       commandBuffer: undefined,
@@ -1847,6 +1867,63 @@ export function executeCommandLine(
     const bang = Boolean(mksessionMatch[1]);
     const filename = mksessionMatch[2]?.trim() || 'Session.vim';
     const res = executeMakeSession(state, filename, bang);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 자동 명령 그룹: :augroup[!], :aug[!] [name]
+  const augroupMatch = cleanCmdRaw.match(/^(?:augroup|aug)(!?)(?:\s+(.*))?$/i);
+  if (augroupMatch) {
+    const bang = Boolean(augroupMatch[1]);
+    const args = augroupMatch[2] ?? '';
+    const res = executeAugroupCommand(state, args, bang);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 자동 명령 삭제: :autocmd!, :au! [group] [{event} [{pat}]]
+  const autocmdBangMatch = cleanCmdRaw.match(/^(?:autocmd|au)!\s*(.*)$/i);
+  if (autocmdBangMatch) {
+    const args = autocmdBangMatch[1] ?? '';
+    const res = executeDeleteAutocmd(state, args);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 자동 명령 수동 실행: :doautocmd, :doau [group] {event} [fname]
+  const doautocmdMatch = cleanCmdRaw.match(/^(?:doautocmd|doau)(?:\s+(.*))?$/i);
+  if (doautocmdMatch) {
+    const args = doautocmdMatch[1] ?? '';
+    const res = executeDoAutocmd(state, args, (s, cmd) => executeCommandLine(s, cmd, keyRunner));
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 자동 명령 등록 및 조회: :autocmd, :au [group] {event} {pat} [cmd]
+  const autocmdMatch = cleanCmdRaw.match(/^(?:autocmd|au)(?:\s+(.*))?$/i);
+  if (autocmdMatch) {
+    const args = autocmdMatch[1] ?? '';
+    const res = executeAutocmdCommand(state, args);
     return {
       ...res,
       mode: 'NORMAL',
@@ -2094,14 +2171,16 @@ export function executeCommandLine(
     (cleanCmd === 'w' || cleanCmd === 'write' || cleanCmd === 'update' || cleanCmdRaw === 'up') &&
     !(state.userCommands && lookupUserCommand(state, cleanCmdRaw).kind === 'found')
   ) {
-    const savedState = recordFileSave(state);
+    const preSaved = triggerAutocmd(state, 'BufWritePre', undefined, (s, cmd) => executeCommandLine(s, cmd, keyRunner));
+    const savedState = recordFileSave(preSaved);
+    const postSaved = triggerAutocmd(savedState, 'BufWritePost', undefined, (s, cmd) => executeCommandLine(s, cmd, keyRunner));
     return {
-      ...savedState,
+      ...postSaved,
       mode: 'NORMAL',
       visualAnchor: undefined,
       commandBuffer: undefined,
       commandType: undefined,
-      commandMessage: msg('[가상 저장 완료] 변경사항이 안전하게 메모리에 저장되었습니다.'),
+      commandMessage: postSaved.commandMessage || msg('[가상 저장 완료] 변경사항이 안전하게 메모리에 저장되었습니다.'),
     };
   }
 

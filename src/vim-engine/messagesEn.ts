@@ -306,4 +306,7 @@ export const EN_MESSAGES: Record<string, string> = {
   "E139: 파일이 이미 존재합니다 (!를 붙여 덮어쓰기: :mksession! {filename})": "E139: File exists (add ! to override: :mksession! {filename})",
   "\"{filename}\" 세션이 저장되었습니다": "Session saved to \"{filename}\"",
   "\"{filename}\" 세션이 복원되었습니다": "Session restored from \"{filename}\"",
+  "\"{name}\" 자동 명령 그룹이 삭제되었습니다": "Autocmd group \"{name}\" deleted",
+  "자동 명령이 삭제되었습니다": "Autocommands deleted",
+  "E216: 그러한 그룹 또는 이벤트가 없습니다: {name}": "E216: No such group or event: {name}",
 };

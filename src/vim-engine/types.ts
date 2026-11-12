@@ -50,6 +50,17 @@ export interface UserFunction {
   body: string[];
 }
 
+/** 자동 명령 엔트리 (:autocmd [group] {event} {pat} [nested] {cmd}) */
+export interface AutocmdEntry {
+  id: number;
+  group?: string;
+  event: string;
+  pattern: string;
+  command: string;
+  nested?: boolean;
+  bufferId?: number;
+}
+
 /** 커맨드라인에서 :function 본문을 입력 중인 상태 (:endfunction 으로 확정) */
 export interface FunctionDraft extends UserFunction {
   overwrite: boolean;
@@ -217,6 +228,8 @@ export interface VimOptions {
   wildmenu: boolean;
   /** 맞춤법 검사기 활성화 여부 (:set spell / nospell) */
   spell?: boolean;
+  /** 현재 버퍼 파일타입 (:set ft=... / :set filetype=...) */
+  filetype?: string;
 }
 
 /** 맞춤법 검사기 오탈자 정보 */
@@ -529,6 +542,12 @@ export interface VimEditorState {
   spellGoodWords?: string[];
   /** 사용자 추가 오탈자 단어 (zw) */
   spellWrongWords?: string[];
+  /** 자동 명령 목록 (:autocmd, :au) */
+  autocmds?: AutocmdEntry[];
+  /** 현재 활성화된 augroup (:augroup {name}) */
+  activeAugroup?: string;
+  /** autocmd 재귀 실행 깊이 (무한 루프 방지) */
+  autocmdDepth?: number;
 }
 
 

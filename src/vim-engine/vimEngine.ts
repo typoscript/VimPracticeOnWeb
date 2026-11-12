@@ -146,6 +146,7 @@ import {
   findCurrentOrNextMatch,
 } from './search';
 import { executeCommandLine, handleConfirmSubstituteKey } from './commandLine';
+import { triggerAutocmd } from './autocmdEngine';
 import { parseKeySequence } from './keymapEngine';
 import {
   executeDeleteSurround,
@@ -4528,7 +4529,37 @@ export function handleKey(
   } else {
     nextState = rawHandleKey(input, key, isReplayingDot, macroDepth);
   }
-  return releaseHlsearchSuppression(input, nextState, key);
+  const withHl = releaseHlsearchSuppression(input, nextState, key);
+  return processKeyAutocmds(input, withHl);
+}
+
+function processKeyAutocmds(prev: VimEditorState, curr: VimEditorState): VimEditorState {
+  if (!curr.autocmds || curr.autocmds.length === 0) return curr;
+  let res = curr;
+  const originalMode = curr.mode;
+  const originalCursor = { ...curr.cursor };
+
+  // 1. InsertEnter (인서트 모드 진입)
+  if (prev.mode !== 'INSERT' && curr.mode === 'INSERT') {
+    res = triggerAutocmd(res, 'InsertEnter', undefined, (s, cmd) => executeCommandLine(s, cmd, handleKey));
+    res = { ...res, mode: originalMode, cursor: originalCursor };
+  }
+  // 2. InsertLeave (인서트 모드 탈출)
+  else if (prev.mode === 'INSERT' && curr.mode !== 'INSERT') {
+    res = triggerAutocmd(res, 'InsertLeave', undefined, (s, cmd) => executeCommandLine(s, cmd, handleKey));
+    res = { ...res, mode: originalMode };
+  }
+
+  // 3. CursorMoved (커서 이동 감지)
+  if (
+    (prev.cursor.line !== curr.cursor.line || prev.cursor.col !== curr.cursor.col) &&
+    (curr.mode === 'NORMAL' || curr.mode.startsWith('VISUAL'))
+  ) {
+    res = triggerAutocmd(res, 'CursorMoved', undefined, (s, cmd) => executeCommandLine(s, cmd, handleKey));
+    res = { ...res, mode: originalMode, cursor: originalCursor };
+  }
+
+  return res;
 }
 
 /** :noh 로 끈 하이라이트는 다음 검색(/ ? Enter, n, N, *, #, 새 검색 패턴)에서 다시 켜집니다. */

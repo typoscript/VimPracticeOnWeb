@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 116개 테스트 파일, 1,511개 테스트 100% 통과 필수)*
+  *(현재 117개 테스트 파일, 1,522개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -106,6 +106,7 @@
 - **Vim 세션 관리와 :mksession / :source 실전 마스터 (레슨 67)**: 다중 분할 창(Split Window)과 버퍼 작업 환경을 세션 스크립트로 영구 저장(`:mksession` / `:mks`)하고, 창 리셋(`:only`) 후 이전 환경으로 즉시 복원(`:source` / `:so`)하는 실무 세션 관리 워크플로우 훈련 제공.
 - **순정 Vim 마크 & 점프 리스트 비주얼 맵 및 Ex 커맨드 (`:marks`, `:jumps`, `:clearjumps`, `:delmarks`) (`src/vim-engine/marks.ts`, `src/components/MarksJumpVisualizer/`)**: 현재 버퍼의 로컬 마크(`m{a-z}`), 전역 마크(`m{A-Z}`), 특수 마크(`'`, `.`, `^`) 및 커서 점프 이력(`Ctrl-o` / `Ctrl-i`)을 실시간 시각화하고 상호작용하는 통합 HUD 네비게이터. 마크 탭(로컬/전역 필터, 위치 및 라인 미리보기, 즉시 점프/삭제, `:delmarks!` 일괄 삭제), 점프 리스트 탭(현재 점프 포인터 `▶` 표시, 상대 거리 `>0`/`-1`/`+1`, 클릭 점프, `:clearjumps` 비우기), 시각 분포도(Minimap, 에디터 행별 마크/점프/커서 분포 시각화 및 라인 점프), 거터 마크 뱃지(로컬 보라, 전역 파랑) 및 점프 인디케이터 클릭 연동 지원.
 - **점프 리스트(Ctrl-o / Ctrl-i)와 마크 정리(:delmarks!) 실전 마스터 (레슨 68, `src/vim-engine/marks.ts`)**: 대규모 코드베이스에서 마크(`ma`, `'a`)와 점프 리스트 히스토리(`Ctrl-o`, `Ctrl-i`)를 양방향 순회하고, 사용이 끝난 임시 마크를 일괄 삭제(`:delmarks!`)하는 실무 고속 탐색 워크플로우 훈련 제공.
+- **순정 Vim 자동 명령(Autocommand) 이벤트 시스템 (`:autocmd`, `:augroup`, `:doautocmd`) (`src/vim-engine/autocmdEngine.ts`)**: 순정 Vim 이벤트 후크 시스템 완벽 지원. 이벤트 등록 (`:autocmd [group] {event} {pat} [nested] {cmd}`), 그룹 관리 (`:augroup {name}` / `:augroup END`, `:augroup! {name}`), 자동 명령 삭제 (`:autocmd! [group] [event] [pat]`), 목록 출력 (`:autocmd`), 수동 이벤트 발생 (`:doautocmd {event} [fname]`). 주요 이벤트 트리거 (`BufWritePre`, `BufWritePost`, `BufReadPost`, `BufEnter`, `BufLeave`, `FileType`, `InsertEnter`, `InsertLeave`, `CursorMoved`, `User`) 및 파일명 와일드카드(`*.ts`, `*`) 패턴 매칭, 재귀 호출 방지(최대 깊이 5단계 제약), `:set ft=...` / `:set filetype=...` 변경 시 `FileType` 자동 트리거 연동.
 
 ---
 
@@ -137,3 +138,4 @@
 24. ~~**마크 점프 리스트 비주얼 맵 (Marks & Jump Visualizer)**: 현재 버퍼/전역 마크(`'a`~`'z`, `'A`~`'Z`) 및 점프 리스트(`Ctrl-o` / `Ctrl-i`) 위치를 에디터 거터/미니맵에 시각적으로 표시하고 상호작용하는 HUD 네비게이터.~~ — 구현 완료.
 25. ~~**신규 레슨 67 추가 (Vim 세션 관리와 :mksession / :source 마스터)**~~ — 레슨 67과 함께 구현 완료.
 26. ~~**신규 레슨 68 추가 (마크 점프 마스터와 고급 위치 탐색)**~~ — 레슨 68과 함께 구현 완료.
+27. ~~**순정 Vim 자동 명령(Autocommand) 이벤트 시스템 (`:autocmd`, `:augroup`, `:doautocmd`)**~~ — 구현 완료.
