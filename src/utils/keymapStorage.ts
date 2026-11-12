@@ -2,6 +2,16 @@ import { DEFAULT_KEYMAP_PRESETS } from './configGenerator';
 
 export const KEYMAP_PRESETS_STORAGE_KEY = 'vim_keymap_presets_v1';
 export const LEADER_KEY_STORAGE_KEY = 'vim_leader_key_v1';
+export const CUSTOM_KEYMAPS_STORAGE_KEY = 'vim_custom_keymaps_v1';
+
+export interface CustomKeymapItem {
+  id: string;
+  mode: 'normal' | 'insert' | 'visual';
+  from: string;
+  to: string;
+  description?: string;
+  noremap?: boolean;
+}
 
 export function getDefaultActivePresets(): Record<string, boolean> {
   const result: Record<string, boolean> = {};
@@ -48,13 +58,32 @@ export function saveLeaderKey(key: string): void {
   }
 }
 
+export function loadCustomKeymaps(): CustomKeymapItem[] {
+  try {
+    const raw = localStorage.getItem(CUSTOM_KEYMAPS_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveCustomKeymaps(keymaps: CustomKeymapItem[]): void {
+  try {
+    localStorage.setItem(CUSTOM_KEYMAPS_STORAGE_KEY, JSON.stringify(keymaps));
+  } catch {
+    // 예외 무시
+  }
+}
+
 /**
  * 활성화된 프리셋과 리더 키, 커스텀 매핑을 Vim 엔진용 테이블로 컴파일합니다.
  */
 export function compileUserKeymaps(
   activePresets: Record<string, boolean>,
   leaderKey = ' ',
-  customMappings?: Record<string, string>
+  customMappings?: Record<string, string> | CustomKeymapItem[]
 ): Record<string, string> {
   const keymaps: Record<string, string> = {};
 
@@ -87,9 +116,27 @@ export function compileUserKeymaps(
     keymaps[`n:${leaderKey}d`] = '"_d';
   }
 
-  if (customMappings) {
+  if (Array.isArray(customMappings)) {
+    for (const item of customMappings) {
+      if (!item.from || !item.to) continue;
+      const prefix = item.mode === 'insert' ? 'i' : item.mode === 'visual' ? 'v' : 'n';
+      keymaps[`${prefix}:${item.from}`] = item.to;
+      keymaps[item.from] = item.to;
+
+      if (item.from.includes('<leader>')) {
+        const expanded = item.from.replace(/<leader>/gi, leaderKey);
+        keymaps[`${prefix}:${expanded}`] = item.to;
+        keymaps[expanded] = item.to;
+      } else if (item.from.startsWith(leaderKey)) {
+        const withLeader = '<leader>' + item.from.slice(leaderKey.length);
+        keymaps[`${prefix}:${withLeader}`] = item.to;
+        keymaps[withLeader] = item.to;
+      }
+    }
+  } else if (customMappings) {
     Object.assign(keymaps, customMappings);
   }
 
   return keymaps;
 }
+

@@ -93,7 +93,10 @@ import {
   saveActivePresets,
   loadLeaderKey,
   saveLeaderKey,
+  loadCustomKeymaps,
+  saveCustomKeymaps,
   compileUserKeymaps,
+  CustomKeymapItem,
 } from './utils/keymapStorage';
 import './App.css';
 import { t, useLocale, setLocale } from './i18n';
@@ -208,6 +211,7 @@ export function App() {
   // 커스텀 키매핑 프리셋 및 리더 키 상태
   const [activePresets, setActivePresets] = useState<Record<string, boolean>>(() => loadActivePresets());
   const [leaderKey, setLeaderKey] = useState<string>(() => loadLeaderKey());
+  const [customKeymaps, setCustomKeymaps] = useState<CustomKeymapItem[]>(() => loadCustomKeymaps());
 
   const handleTogglePreset = useCallback((presetId: string) => {
     setActivePresets((prev) => {
@@ -215,11 +219,11 @@ export function App() {
       saveActivePresets(updated);
       setEditorState((st) => ({
         ...st,
-        userKeymaps: compileUserKeymaps(updated, leaderKey, st.userKeymaps),
+        userKeymaps: compileUserKeymaps(updated, leaderKey, customKeymaps),
       }));
       return updated;
     });
-  }, [leaderKey]);
+  }, [leaderKey, customKeymaps]);
 
   const handleChangeLeaderKey = useCallback((newLeader: string) => {
     setLeaderKey(newLeader);
@@ -227,9 +231,46 @@ export function App() {
     setEditorState((st) => ({
       ...st,
       leaderKey: newLeader,
-      userKeymaps: compileUserKeymaps(activePresets, newLeader, st.userKeymaps),
+      userKeymaps: compileUserKeymaps(activePresets, newLeader, customKeymaps),
     }));
-  }, [activePresets]);
+  }, [activePresets, customKeymaps]);
+
+  const handleAddCustomKeymap = useCallback((item: Omit<CustomKeymapItem, 'id'>) => {
+    const newItem: CustomKeymapItem = {
+      ...item,
+      id: `map_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+    };
+    setCustomKeymaps((prev) => {
+      const updated = [...prev, newItem];
+      saveCustomKeymaps(updated);
+      setEditorState((st) => ({
+        ...st,
+        userKeymaps: compileUserKeymaps(activePresets, leaderKey, updated),
+        commandMessage: t('[키매핑 등록] {mode}: {from} -> {to}', {
+          mode: item.mode,
+          from: item.from,
+          to: item.to,
+        }),
+      }));
+      return updated;
+    });
+  }, [activePresets, leaderKey]);
+
+  const handleDeleteCustomKeymap = useCallback((id: string) => {
+    setCustomKeymaps((prev) => {
+      const target = prev.find((m) => m.id === id);
+      const updated = prev.filter((m) => m.id !== id);
+      saveCustomKeymaps(updated);
+      setEditorState((st) => ({
+        ...st,
+        userKeymaps: compileUserKeymaps(activePresets, leaderKey, updated),
+        commandMessage: target
+          ? t('[키매핑 삭제] {mode}: {from}', { mode: target.mode, from: target.from })
+          : undefined,
+      }));
+      return updated;
+    });
+  }, [activePresets, leaderKey]);
 
   // 테마 관리
   const [currentTheme, setCurrentTheme] = useState<VimTheme>(() => loadThemeSetting());
@@ -423,10 +464,10 @@ export function App() {
         ? { files: [...m.initialArgs], currentIndex: 0 }
         : undefined,
       folds: m.initialFolds ? [...m.initialFolds] : undefined,
-      userKeymaps: compileUserKeymaps(activePresets, leaderKey),
+      userKeymaps: compileUserKeymaps(activePresets, leaderKey, customKeymaps),
       leaderKey,
     };
-  }, [activePresets, leaderKey]);
+  }, [activePresets, leaderKey, customKeymaps]);
 
   const [editorState, setEditorState] = useState<VimEditorState>(() => {
     if (initialCustomMission) {
@@ -436,7 +477,7 @@ export function App() {
         mode: 'NORMAL',
         undoStack: [],
         redoStack: [],
-        userKeymaps: compileUserKeymaps(activePresets, leaderKey),
+        userKeymaps: compileUserKeymaps(activePresets, leaderKey, customKeymaps),
         leaderKey,
       };
     }
@@ -454,7 +495,7 @@ export function App() {
             mode: 'NORMAL',
             undoStack: [],
             redoStack: [],
-            userKeymaps: compileUserKeymaps(activePresets, leaderKey),
+            userKeymaps: compileUserKeymaps(activePresets, leaderKey, customKeymaps),
             leaderKey,
           }
         : getMissionInitialState(currentMission)
@@ -813,7 +854,7 @@ export function App() {
       mode: 'NORMAL' as const,
       undoStack: [],
       redoStack: [],
-      userKeymaps: compileUserKeymaps(activePresets, leaderKey),
+      userKeymaps: compileUserKeymaps(activePresets, leaderKey, customKeymaps),
       leaderKey,
     };
     setEditorState(initState);
@@ -823,7 +864,7 @@ export function App() {
     setLastPressedKey(undefined);
     setCoachingMessage(null);
     antiPatternDetectorRef.current.reset();
-  }, [handleStopGhostReplay, resetActionTimeline, activePresets, leaderKey]);
+  }, [handleStopGhostReplay, resetActionTimeline, activePresets, leaderKey, customKeymaps]);
 
   const handleStartSpeedrun = useCallback(() => {
     handleStopGhostReplay();
@@ -2268,13 +2309,19 @@ export function App() {
         {configModalLoaded && (
           <ConfigExporterModal
             isOpen={isConfigModalOpen}
-            onClose={() => setIsConfigModalOpen(false)}
+            onClose={() => {
+              setIsConfigModalOpen(false);
+              setEditorState((prev) => ({ ...prev, showConfigModal: false }));
+            }}
             relativenumber={relativeLineNumbers}
             theme={currentTheme}
             leaderKey={leaderKey}
             activePresets={activePresets}
             onTogglePreset={handleTogglePreset}
             onChangeLeaderKey={handleChangeLeaderKey}
+            customKeymaps={customKeymaps}
+            onAddCustomKeymap={handleAddCustomKeymap}
+            onDeleteCustomKeymap={handleDeleteCustomKeymap}
             options={editorState.options}
           />
         )}

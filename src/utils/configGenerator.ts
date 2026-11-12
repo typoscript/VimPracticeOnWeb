@@ -161,7 +161,8 @@ export function generateVimrc(options: ConfigExportOptions): string {
   if (options.customKeymaps && options.customKeymaps.length > 0) {
     lines.push(``, t('" [런타임 추가 커스텀 매핑]'));
     options.customKeymaps.forEach((m) => {
-      const cmd = m.mode === 'insert' ? 'inoremap' : 'nnoremap';
+      const cmd =
+        m.mode === 'insert' ? 'inoremap' : m.mode === 'visual' ? 'vnoremap' : 'nnoremap';
       lines.push(`${cmd} ${m.from} ${m.to}`);
     });
   }
@@ -235,7 +236,7 @@ export function generateInitLua(options: ConfigExportOptions): string {
   if (options.customKeymaps && options.customKeymaps.length > 0) {
     lines.push(``, t('-- [런타임 추가 커스텀 매핑]'));
     options.customKeymaps.forEach((m) => {
-      const modeKey = m.mode === 'insert' ? 'i' : 'n';
+      const modeKey = m.mode === 'insert' ? 'i' : m.mode === 'visual' ? 'v' : 'n';
       lines.push(`map('${modeKey}', '${m.from}', '${m.to}')`);
     });
   }
@@ -275,6 +276,19 @@ export function generateVSCodeSettings(options: ConfigExportOptions): string {
   }
   if (options.activePresets['leaderBlackhole']) {
     normalBindings.push({ before: ['<leader>', 'd'], after: ['"', '_', 'd'] });
+  }
+
+  if (options.customKeymaps && options.customKeymaps.length > 0) {
+    options.customKeymaps.forEach((m) => {
+      const beforeTokens = m.from.includes('<leader>')
+        ? ['<leader>', ...m.from.replace('<leader>', '').split('')]
+        : m.from.split('');
+      if (m.mode === 'insert') {
+        insertBindings.push({ before: beforeTokens, after: [m.to] });
+      } else {
+        normalBindings.push({ before: beforeTokens, after: [m.to] });
+      }
+    });
   }
 
   const leaderSetting =
@@ -358,6 +372,15 @@ export function generateIdeaVimrc(options: ConfigExportOptions): string {
   }
   if (options.activePresets['leaderBlackhole']) {
     lines.push(`nnoremap <leader>d "_d`);
+  }
+
+  if (options.customKeymaps && options.customKeymaps.length > 0) {
+    lines.push(``, t('" [런타임 추가 커스텀 매핑]'));
+    options.customKeymaps.forEach((m) => {
+      const cmd =
+        m.mode === 'insert' ? 'inoremap' : m.mode === 'visual' ? 'vnoremap' : 'nnoremap';
+      lines.push(`${cmd} ${m.from} ${m.to}`);
+    });
   }
 
   return lines.join('\n');

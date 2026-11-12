@@ -1896,8 +1896,8 @@ export function executeCommandLine(
     };
   }
 
-  // .vimrc / 설정 내보내기 및 다운로드 모달 열기: :vimrc, :config, :export
-  if (/^(?:vimrc|config|export)$/i.test(cleanCmdRaw)) {
+  // .vimrc / 설정 내보내기 및 키바인딩 모달 열기: :vimrc, :config, :export, :keymap, :keymaps
+  if (/^(?:vimrc|config|export|keymap|keymaps|mapconfig)$/i.test(cleanCmdRaw)) {
     return {
       ...state,
       showConfigModal: true,

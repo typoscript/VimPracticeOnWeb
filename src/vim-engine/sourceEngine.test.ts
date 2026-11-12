@@ -113,6 +113,16 @@ describe('sourceEngine (:source, :so, :e ~/.vimrc, :vimrc modal)', () => {
       state = handleKey(state, 'Enter');
 
       expect(state.showConfigModal).toBe(true);
+
+      // :keymap Enter
+      state = { ...state, showConfigModal: false };
+      state = handleKey(state, ':');
+      for (const ch of 'keymap') {
+        state = handleKey(state, ch);
+      }
+      state = handleKey(state, 'Enter');
+
+      expect(state.showConfigModal).toBe(true);
     });
 
     it(':so ~/.vimrc Enter 입력 시 명령행에서 바로 소싱이 실행된다', () => {

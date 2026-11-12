@@ -322,3 +322,443 @@
   background: var(--bg-hover, #313244);
   color: #fff;
 }
+
+/* 대분류 탭 네비게이션 */
+.config-nav-tabs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: #11111b;
+  border-bottom: 1px solid var(--border-color, #313244);
+}
+
+.config-nav-tab {
+  background: transparent;
+  border: 1px solid var(--border-color, #313244);
+  color: var(--text-muted, #9399b2);
+  font-size: 0.9rem;
+  font-weight: 700;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.config-nav-tab:hover {
+  background: rgba(137, 180, 250, 0.08);
+  color: #cdd6f4;
+  border-color: #45475a;
+}
+
+.config-nav-tab.active {
+  background: #89b4fa;
+  color: #11111b;
+  border-color: #89b4fa;
+  box-shadow: 0 2px 8px rgba(137, 180, 250, 0.25);
+}
+
+.is-hidden {
+  display: none !important;
+}
+
+/* 커스텀 키매핑 관리기 섹션 */
+.custom-keymaps-section {
+  padding: 1.2rem 1.5rem;
+  background: var(--bg-card, #181825);
+  border-bottom: 1px solid var(--border-color, #313244);
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+}
+
+.custom-keymaps-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.custom-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.count-badge {
+  background: rgba(137, 180, 250, 0.15);
+  color: #89b4fa;
+  border: 1px solid rgba(137, 180, 250, 0.3);
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 12px;
+}
+
+/* 커스텀 키매핑 추가 폼 */
+.custom-keymap-form {
+  background: #11111b;
+  border: 1px solid var(--border-color, #313244);
+  border-radius: 10px;
+  padding: 1rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.form-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.form-group label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-secondary, #bac2de);
+}
+
+.form-group select,
+.form-group input {
+  background: #181825;
+  border: 1px solid var(--border-color, #313244);
+  color: #fff;
+  border-radius: 6px;
+  padding: 0.45rem 0.7rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  transition: border-color 0.15s;
+}
+
+.form-group select:focus,
+.form-group input:focus {
+  border-color: #89b4fa;
+  outline: none;
+}
+
+.mode-select-group select {
+  min-width: 140px;
+  cursor: pointer;
+}
+
+.lhs-group input {
+  width: 110px;
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
+}
+
+.rhs-group input {
+  width: 140px;
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
+}
+
+.desc-group {
+  flex: 1;
+  min-width: 150px;
+}
+
+.form-arrow {
+  color: #89b4fa;
+  font-weight: 700;
+  font-size: 1.1rem;
+  padding-bottom: 0.45rem;
+}
+
+.add-keymap-btn {
+  background: #a6e3a1;
+  color: #11111b;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+
+.add-keymap-btn:hover {
+  background: #b5e8b0;
+  transform: translateY(-1px);
+}
+
+.form-error-msg {
+  color: #f38ba8;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+/* 빠른 칩 & 추천 템플릿 바 */
+.chips-and-templates-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+}
+
+.quick-chips-group,
+.templates-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.chips-label {
+  font-size: 0.74rem;
+  color: var(--text-muted, #9399b2);
+  white-space: nowrap;
+}
+
+.chips-container,
+.templates-container {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.quick-chip {
+  background: #181825;
+  border: 1px solid #313244;
+  color: #fab387;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.75rem;
+  padding: 0.18rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.quick-chip:hover {
+  background: #313244;
+  color: #fff;
+  border-color: #fab387;
+}
+
+.template-chip {
+  background: rgba(137, 180, 250, 0.08);
+  border: 1px solid rgba(137, 180, 250, 0.2);
+  color: #cdd6f4;
+  font-size: 0.74rem;
+  padding: 0.18rem 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.15s;
+}
+
+.template-chip:hover {
+  background: rgba(137, 180, 250, 0.18);
+  border-color: #89b4fa;
+}
+
+.tmpl-mode {
+  background: #313244;
+  color: #89b4fa;
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 0.05rem 0.25rem;
+  border-radius: 3px;
+}
+
+.tmpl-keys {
+  font-family: var(--font-mono, monospace);
+  font-weight: 600;
+}
+
+/* 등록된 커스텀 키매핑 목록 */
+.registered-keymaps-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.filter-and-count-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sub-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #cdd6f4;
+}
+
+.filter-pills {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.filter-pill {
+  background: transparent;
+  border: 1px solid #313244;
+  color: var(--text-muted, #9399b2);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.filter-pill:hover {
+  border-color: #45475a;
+  color: #fff;
+}
+
+.filter-pill.active {
+  background: #313244;
+  border-color: #89b4fa;
+  color: #89b4fa;
+}
+
+.empty-keymaps-notice {
+  background: #11111b;
+  border: 1px dashed #313244;
+  border-radius: 8px;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  color: var(--text-muted, #9399b2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.empty-icon {
+  font-size: 2rem;
+  opacity: 0.6;
+}
+
+.empty-keymaps-notice p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.keymaps-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 0.65rem;
+}
+
+.custom-keymap-card {
+  background: #11111b;
+  border: 1px solid var(--border-color, #313244);
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: border-color 0.15s;
+}
+
+.custom-keymap-card:hover {
+  border-color: #45475a;
+}
+
+.card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.keymap-mode-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+
+.keymap-mode-badge.normal {
+  background: rgba(137, 180, 250, 0.15);
+  color: #89b4fa;
+  border: 1px solid rgba(137, 180, 250, 0.3);
+}
+
+.keymap-mode-badge.insert {
+  background: rgba(166, 227, 161, 0.15);
+  color: #a6e3a1;
+  border: 1px solid rgba(166, 227, 161, 0.3);
+}
+
+.keymap-mode-badge.visual {
+  background: rgba(203, 166, 247, 0.15);
+  color: #cba6f7;
+  border: 1px solid rgba(203, 166, 247, 0.3);
+}
+
+.delete-keymap-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-muted, #9399b2);
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 0.2rem 0.35rem;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+
+.delete-keymap-btn:hover {
+  background: rgba(243, 139, 168, 0.15);
+  color: #f38ba8;
+}
+
+.keymap-mapping-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.key-code {
+  background: #181825;
+  border: 1px solid #313244;
+  padding: 0.2rem 0.5rem;
+  border-radius: 5px;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.key-code.lhs {
+  color: #f9e2af;
+}
+
+.key-code.rhs {
+  color: #a6e3a1;
+}
+
+.key-arrow {
+  color: var(--text-muted, #9399b2);
+  font-size: 0.8rem;
+}
+
+.keymap-desc-text {
+  font-size: 0.76rem;
+  color: var(--text-secondary, #bac2de);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 0.35rem;
+}
+
+.goto-export-btn {
+  background: #89b4fa;
+  color: #11111b;
+}
+
+.goto-export-btn:hover {
+  background: #b4befe;
+}
+

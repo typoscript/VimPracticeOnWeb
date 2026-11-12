@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 119개 테스트 파일, 1,562개 테스트 100% 통과 필수)*
+  *(현재 120개 테스트 파일, 1,579개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -109,6 +109,7 @@
 - **순정 Vim 자동 명령(Autocommand) 이벤트 시스템 (`:autocmd`, `:augroup`, `:doautocmd`) (`src/vim-engine/autocmdEngine.ts`)**: 순정 Vim 이벤트 후크 시스템 완벽 지원. 이벤트 등록 (`:autocmd [group] {event} {pat} [nested] {cmd}`), 그룹 관리 (`:augroup {name}` / `:augroup END`, `:augroup! {name}`), 자동 명령 삭제 (`:autocmd! [group] [event] [pat]`), 목록 출력 (`:autocmd`), 수동 이벤트 발생 (`:doautocmd {event} [fname]`). 주요 이벤트 트리거 (`BufWritePre`, `BufWritePost`, `BufReadPost`, `BufEnter`, `BufLeave`, `FileType`, `InsertEnter`, `InsertLeave`, `CursorMoved`, `User`) 및 파일명 와일드카드(`*.ts`, `*`) 패턴 매칭, 재귀 호출 방지(최대 깊이 5단계 제약), `:set ft=...` / `:set filetype=...` 변경 시 `FileType` 자동 트리거 연동.
 - **순정 Vim 구문 강조 엔진 (Syntax Engine) & `:syntax on/off` (`src/vim-engine/syntaxEngine.ts`, `Editor.tsx`, `Editor.css`)**: 10대 핵심 프로그래밍 언어(TypeScript, JavaScript, Python, Rust, Go, HTML, JSON, Bash, Vim script, Markdown) 지원 순정 구문 하이라이팅. 키워드, 내장/사용자 정의 타입, 문자열, 숫자, 주석, 불리언, 함수 호출, 연산자, 태그, 데코레이터/매크로/변수 스코프 등 어휘 분석 토큰화 및 Tokyo Night, Catppuccin, Gruvbox, One Dark 등 에디터 테마별 컬러 실시간 연동. `:syntax on`, `:syntax off`, `:syntax enable`, `:syntax manual`, `:syntax reset`, `:syntax` 상태 조회 및 `:set syntax=...`, `:set nosyntax` 완전 지원.
 - **순정 Vim 버퍼 로컬 옵션 (:setlocal, :setglobal, :set) & 파일타입 들여쓰기 (ftplugin) (`src/vim-engine/setEngine.ts`, `ftpluginEngine.ts`, `lineOperators.ts`)**: 버퍼별 옵션 격리 및 상속 시스템 완벽 지원. 현재 버퍼 전용 로컬 오버라이드(`:setlocal` / `:setl`), 전역 기본값 설정(`:setglobal` / `:setg`), 전역+로컬 동시 적용(`:set` / `:se`), 옵션 조회(`:setlocal?`, `:setglobal?`, `:setlocal`, `:setglobal`). 버퍼 전환(`switchBuffer`) 시 버퍼별 로컬 옵션 자동 보존 및 복원. 순정 파일타입 제어(`:filetype [on|off|plugin on/off|indent on/off|plugin indent on/off|detect]`), 20+ 프로그래밍 언어 표준 들여쓰기 프리셋(`FILETYPE_INDENT_PRESETS` - Python `sw=4, ts=4, et=true`, Go `sw=8, ts=8, et=false`, JS/TS `sw=2, ts=2, et=true` 등), 파일타입 변경 시 자동 들여쓰기 갱신, 동적 들여쓰기/내어쓰기(`>>`, `<<`) 및 Insert 모드 `<Tab>`의 `shiftwidth`/`tabstop`/`expandtab` 동적 반영 지원.
+- **사용자 지정 키바인딩 인터페이스 (GUI Keymap Configurator) & 커스텀 키매핑 영구 보존 (`src/components/ConfigExporterModal/`, `keymapStorage.ts`, `configGenerator.ts`)**: 모드별(Normal, Insert, Visual) 커스텀 단축키 등록, 실시간 테이블 목록 렌더링, 모드 필터링, 개별 삭제, 특수키 칩(`<leader>`, `<Esc>`, `<CR>`, `<Space>`, `<Tab>`, `<C-w>`, `"+`, `"_`, `Ctrl-`) 및 원클릭 추천 템플릿(Y -> y$, <leader>p -> "+p 등) 지원. 등록된 커스텀 키매핑은 `localStorage`(`vim_custom_keymaps_v1`)에 영구 저장되며 에디터 엔진의 `userKeymaps`와 즉시 양방향 동기화. 커맨드라인 `:keymap` / `:keymaps` / `:config` 실행 지원 및 `.vimrc`, `init.lua`, `settings.json`, `.ideavimrc` 내보내기에 커스텀 단축키 자동 포함 지원.
 
 ---
 
@@ -143,3 +144,4 @@
 27. ~~**순정 Vim 자동 명령(Autocommand) 이벤트 시스템 (`:autocmd`, `:augroup`, `:doautocmd`)**~~ — 구현 완료.
 28. ~~**순정 Vim 구문 강조 엔진 (Syntax Engine) & :syntax on/off**~~ — 구현 완료.
 29. ~~**순정 Vim 버퍼 로컬 옵션 (:setlocal, :setglobal) & 파일타입 들여쓰기 (ftplugin)**~~ — 구현 완료.
+30. ~~**사용자 지정 키바인딩 인터페이스 (GUI Keymap Configurator) & 커스텀 키매핑 영구 보존**~~ — 구현 완료.
