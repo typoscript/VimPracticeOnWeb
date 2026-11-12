@@ -164,6 +164,73 @@ export function closeCommandLineWindow(state: VimEditorState): VimEditorState {
 }
 
 /**
+ * 커맨드라인 윈도우의 특정 줄을 클릭 등으로 선택합니다.
+ */
+export function selectCommandLineWindowLine(
+  state: VimEditorState,
+  lineIndex: number
+): VimEditorState {
+  if (!state.cmdlineWindow) return state;
+  const lines = state.cmdlineWindow.lines;
+  const clampedLine = Math.max(0, Math.min(lineIndex, lines.length - 1));
+  const lineLen = (lines[clampedLine] ?? '').length;
+  return {
+    ...state,
+    cmdlineWindow: {
+      ...state.cmdlineWindow,
+      cursor: {
+        line: clampedLine,
+        col: Math.max(0, lineLen > 0 ? lineLen - 1 : 0),
+      },
+    },
+  };
+}
+
+/**
+ * 커맨드라인 윈도우의 모드를 명령어(:)와 검색(/) 간에 상호 전환합니다.
+ */
+export function switchCommandLineWindowType(
+  state: VimEditorState,
+  targetType: ':' | '/' | '?'
+): VimEditorState {
+  if (!state.cmdlineWindow) return state;
+  return openCommandLineWindow(
+    { ...state, cmdlineWindow: null },
+    targetType
+  );
+}
+
+/**
+ * 커맨드라인 윈도우의 히스토리를 비웁니다.
+ */
+export function clearCommandLineHistory(
+  state: VimEditorState,
+  type?: ':' | '/' | '?'
+): VimEditorState {
+  const targetType = type || state.cmdlineWindow?.type || ':';
+  const next =
+    targetType === ':'
+      ? { ...state, commandHistory: [] }
+      : { ...state, searchHistory: [] };
+
+  if (state.cmdlineWindow && state.cmdlineWindow.type === targetType) {
+    return {
+      ...next,
+      cmdlineWindow: {
+        ...state.cmdlineWindow,
+        lines: [''],
+        cursor: { line: 0, col: 0 },
+      },
+      commandMessage: msg('커맨드라인 히스토리 초기화됨'),
+    };
+  }
+  return {
+    ...next,
+    commandMessage: msg('커맨드라인 히스토리 초기화됨'),
+  };
+}
+
+/**
  * 커맨드라인 윈도우의 현재 줄(Cursor) 내용을 실행합니다.
  */
 export function executeCommandLineWindow(

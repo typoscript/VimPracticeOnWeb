@@ -7,6 +7,9 @@ import {
   openCommandLineWindow,
   closeCommandLineWindow,
   executeCommandLineWindow,
+  selectCommandLineWindowLine,
+  switchCommandLineWindowType,
+  clearCommandLineHistory,
 } from './cmdlineWindow';
 
 describe('cmdlineWindow & command line history module', () => {
@@ -282,6 +285,26 @@ describe('cmdlineWindow & command line history module', () => {
       expect(state.cmdlineWindow).toBeDefined();
       state = closeCommandLineWindow(state);
       expect(state.cmdlineWindow).toBeNull();
+    });
+
+    it('selectCommandLineWindowLine, switchCommandLineWindowType, clearCommandLineHistory 동작 검증', () => {
+      let state = createBaseState();
+      state = openCommandLineWindow(state, ':');
+      expect(state.cmdlineWindow?.lines.length).toBeGreaterThanOrEqual(3);
+
+      // selectCommandLineWindowLine으로 1번 줄 선택
+      state = selectCommandLineWindowLine(state, 1);
+      expect(state.cmdlineWindow?.cursor.line).toBe(1);
+
+      // switchCommandLineWindowType으로 검색 창(/)으로 전환
+      state = switchCommandLineWindowType(state, '/');
+      expect(state.cmdlineWindow?.type).toBe('/');
+
+      // clearCommandLineHistory로 검색 히스토리 초기화
+      state = clearCommandLineHistory(state, '/');
+      expect(state.searchHistory).toEqual([]);
+      expect(state.cmdlineWindow?.lines).toEqual(['']);
+      expect(state.commandMessage).toContain('커맨드라인 히스토리 초기화됨');
     });
   });
 });

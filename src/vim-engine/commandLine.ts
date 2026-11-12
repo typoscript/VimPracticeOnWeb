@@ -108,7 +108,14 @@ import {
 } from './autocmdEngine';
 import { executeSyntaxCommand } from './syntaxEngine';
 import { executeFiletypeCommand } from './ftpluginEngine';
-import { jumpToTag, popTagStack, formatTagStack } from './tagEngine';
+import {
+  jumpToTag,
+  popTagStack,
+  formatTagStack,
+  tselectTag,
+  tjumpTag,
+  cycleTagMatch,
+} from './tagEngine';
 import {
   registerKeymap,
   unregisterKeymap,
@@ -2040,6 +2047,84 @@ export function executeCommandLine(
   if (tagMatch) {
     const tagName = tagMatch[1]?.trim() || '';
     const res = jumpToTag(state, tagName);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 태그 선택 및 조회: :tselect [name|num], :ts [name|num]
+  const tselectMatch = cleanCmdRaw.match(/^(?:tselect|ts)(?:\s+(.*))?$/i);
+  if (tselectMatch) {
+    const target = tselectMatch[1]?.trim() || '';
+    const res = tselectTag(state, target);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 태그 조건부 점프: :tjump [name], :tj [name]
+  const tjumpMatch = cleanCmdRaw.match(/^(?:tjump|tj)(?:\s+(.*))?$/i);
+  if (tjumpMatch) {
+    const tagName = tjumpMatch[1]?.trim() || '';
+    const res = tjumpTag(state, tagName);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 태그 목록 순회: :tnext, :tn, :[count]tnext
+  const tnextMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?(?:tnext|tn)$/i);
+  if (tnextMatch) {
+    const count = tnextMatch[1] ? parseInt(tnextMatch[1], 10) : 1;
+    const res = cycleTagMatch(state, 'next', count);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 태그 목록 역순회: :tprev, :tp, :[count]tprev, :tprevious
+  const tprevMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?(?:tprev|tprevious|tp)$/i);
+  if (tprevMatch) {
+    const count = tprevMatch[1] ? parseInt(tprevMatch[1], 10) : 1;
+    const res = cycleTagMatch(state, 'prev', count);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 첫 번째 / 마지막 태그 점프: :tfirst, :tf, :trewind, :tr / :tlast, :tl
+  if (/^(?:tfirst|tf|trewind|tr)$/i.test(cleanCmdRaw)) {
+    const res = cycleTagMatch(state, 'first');
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+  if (/^(?:tlast|tl)$/i.test(cleanCmdRaw)) {
+    const res = cycleTagMatch(state, 'last');
     return {
       ...res,
       mode: 'NORMAL',

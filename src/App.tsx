@@ -28,7 +28,12 @@ import { handleKey } from './vim-engine';
 import { switchPaneFocus } from './vim-engine';
 import { switchBuffer, ensureBuffers } from './vim-engine';
 import { switchTab, openNewTab, closeTab, ensureTabPages } from './vim-engine';
-import { closeCommandLineWindow } from './vim-engine';
+import {
+  closeCommandLineWindow,
+  selectCommandLineWindowLine,
+  switchCommandLineWindowType,
+  clearCommandLineHistory,
+} from './vim-engine';
 import { closeQuickfixWindow, jumpToQuickfixItem } from './vim-engine';
 import { closeLocationListWindow, jumpToLocationListItem } from './vim-engine';
 import { computeDiffHunks } from './vim-engine';
@@ -131,7 +136,7 @@ const TAB_LOADING_FALLBACK = (
 /** 스피드런 챌린지 후보 미션 ID 목록 (리팩토링/편집 미션) */
 export const SPEEDRUN_CANDIDATE_IDS = [
   4, 6, 7, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 21, 23, 25, 26, 28, 29, 30, 31, 32, 43, 44,
-  47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70,
+  47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71,
 ];
 
 export function generateSpeedrunStages(): Mission[] {
@@ -356,6 +361,29 @@ export function App() {
 
   const handleCloseCommandLineWindow = useCallback(() => {
     setEditorState((prevState) => closeCommandLineWindow(prevState));
+    setIsEditorFocused(true);
+  }, []);
+
+  const handleSelectCommandLineWindowLine = useCallback((lineIdx: number) => {
+    setEditorState((prevState) => selectCommandLineWindowLine(prevState, lineIdx));
+    setIsEditorFocused(true);
+  }, []);
+
+  const handleSwitchCommandLineWindowType = useCallback((type: ':' | '/' | '?') => {
+    setEditorState((prevState) => switchCommandLineWindowType(prevState, type));
+    setIsEditorFocused(true);
+  }, []);
+
+  const handleClearCommandLineHistory = useCallback((type: ':' | '/' | '?') => {
+    setEditorState((prevState) => clearCommandLineHistory(prevState, type));
+    setIsEditorFocused(true);
+  }, []);
+
+  const handleExecuteCommandLineWindowLine = useCallback((lineIdx: number) => {
+    setEditorState((prevState) => {
+      const selected = selectCommandLineWindowLine(prevState, lineIdx);
+      return handleKey(selected, 'Enter');
+    });
     setIsEditorFocused(true);
   }, []);
 
@@ -2074,17 +2102,58 @@ export function App() {
             {displayEditorState.cmdlineWindow && (
               <div className="cmdline-window-container" data-testid="cmdline-window">
                 <div className="cmdline-window-header">
-                  <span className="cmdline-window-title">
-                    Command-line Window ({displayEditorState.cmdlineWindow.type === ':' ? 'Commands' : 'Search'}) [{displayEditorState.cmdlineWindow.mode}]
+                  <div className="cmdline-window-header-left">
+                    <span className="cmdline-window-title">
+                      Command-line Window
+                    </span>
+                    <div className="cmdline-type-tabs">
+                      <button
+                        className={`cmdline-type-tab ${displayEditorState.cmdlineWindow.type === ':' ? 'active' : ''}`}
+                        onClick={() => handleSwitchCommandLineWindowType(':')}
+                        title={t('명령어 히스토리 보기 (q:)')}
+                        data-testid="cmdline-tab-commands"
+                      >
+                        : {t('Ex 명령')}
+                      </button>
+                      <button
+                        className={`cmdline-type-tab ${displayEditorState.cmdlineWindow.type === '/' ? 'active' : ''}`}
+                        onClick={() => handleSwitchCommandLineWindowType('/')}
+                        title={t('검색어 히스토리 보기 (q/)')}
+                        data-testid="cmdline-tab-search"
+                      >
+                        / {t('검색어')}
+                      </button>
+                    </div>
+                    <span
+                      className={`cmdline-mode-badge ${
+                        displayEditorState.cmdlineWindow.mode === 'INSERT' ? 'insert' : 'normal'
+                      }`}
+                    >
+                      {displayEditorState.cmdlineWindow.mode}
+                    </span>
+                  </div>
+
+                  <span className="cmdline-window-hint">
+                    {t('Enter/더블클릭: 실행 | Esc: 닫기 | k/j: 탐색 | i/cw/dd: 편집')}
                   </span>
-                  <span className="cmdline-window-hint">{t('Enter: 실행 | Esc: 닫기 | k/j: 탐색 | i/cw/dd: 편집')}</span>
-                  <button
-                    className="cmdline-window-close"
-                    onClick={handleCloseCommandLineWindow}
-                    title={t('커맨드라인 윈도우 닫기 (Esc)')}
-                  >
-                    ✕
-                  </button>
+
+                  <div className="cmdline-header-actions">
+                    <button
+                      className="cmdline-clear-btn"
+                      onClick={() => handleClearCommandLineHistory(displayEditorState.cmdlineWindow!.type)}
+                      title={t('현재 히스토리 비우기')}
+                      data-testid="cmdline-clear-btn"
+                    >
+                      🗑️ {t('비우기')}
+                    </button>
+                    <button
+                      className="cmdline-window-close"
+                      onClick={handleCloseCommandLineWindow}
+                      title={t('커맨드라인 윈도우 닫기 (Esc)')}
+                    >
+                      ✕
+                    </button>
+                  </div>
                 </div>
                 <div className="cmdline-window-body">
                   {displayEditorState.cmdlineWindow.lines.map((line, lineIdx) => {
@@ -2096,6 +2165,10 @@ export function App() {
                       <div
                         key={lineIdx}
                         className={`cmdline-line ${isCurrentLine ? 'active' : ''}`}
+                        onClick={() => handleSelectCommandLineWindowLine(lineIdx)}
+                        onDoubleClick={() => handleExecuteCommandLineWindowLine(lineIdx)}
+                        title={t('클릭: 이동 | 더블클릭: 즉시 실행')}
+                        data-testid={`cmdline-line-${lineIdx}`}
                       >
                         <span className="cmdline-prompt">{displayEditorState.cmdlineWindow!.type}</span>
                         <span className="cmdline-num">{lineIdx + 1}</span>
@@ -2116,6 +2189,17 @@ export function App() {
                             line || ' '
                           )}
                         </div>
+                        <button
+                          className="cmdline-run-chip"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleExecuteCommandLineWindowLine(lineIdx);
+                          }}
+                          title={t('이 명령어 즉시 실행')}
+                          tabIndex={-1}
+                        >
+                          ▶ {t('실행')}
+                        </button>
                       </div>
                     );
                   })}

@@ -69,7 +69,7 @@ import {
   cancelWildmenu,
   acceptWildmenu,
 } from './wildmenu';
-import { jumpToTag, popTagStack } from './tagEngine';
+import { jumpToTag, popTagStack, tjumpTag } from './tagEngine';
 import {
   splitWindow,
   closeSplitWindow,
@@ -4046,6 +4046,18 @@ function handleNormalModeKey(
         ...prevTab(state, parsed.count1 ?? 1),
         pendingKeys: undefined,
       };
+    }
+    if (key === ']' || key === 'Ctrl-]' || key === 'Ctrl+]') {
+      const curLine = state.lines[state.cursor.line] ?? '';
+      const word = getWordAtCursor(curLine, state.cursor.col);
+      if (!word) {
+        return {
+          ...state,
+          commandMessage: msg('E349: 커서 위치에 식별자가 없습니다 (no identifier under cursor)'),
+          pendingKeys: undefined,
+        };
+      }
+      return { ...tjumpTag(state, word), pendingKeys: undefined };
     }
     if (key === '~' || key === 'u' || key === 'U' || key === '?') {
 

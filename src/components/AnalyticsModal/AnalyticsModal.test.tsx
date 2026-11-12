@@ -58,4 +58,31 @@ describe('AnalyticsModal 컴포넌트', () => {
     fireEvent.click(closeBtn);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
+
+  it('타건 키보드 히트맵 탭 전환 시 키보드 격자와 상세 분석 카드가 렌더링된다', () => {
+    recordKeyInputStats('j');
+    recordKeyInputStats('j');
+    recordKeyInputStats('k');
+    recordKeyInputStats('w');
+
+    render(
+      <AnalyticsModal
+        isOpen={true}
+        onClose={vi.fn()}
+        progress={{}}
+      />
+    );
+
+    const heatmapTabBtn = screen.getByTestId('analytics-tab-heatmap');
+    fireEvent.click(heatmapTabBtn);
+
+    expect(screen.getByTestId('keystroke-heatmap')).toBeDefined();
+    expect(screen.getByTestId('heatmap-keyboard')).toBeDefined();
+    expect(screen.getByTestId('heatmap-detail-card')).toBeDefined();
+
+    // j 키 클릭 시 상세 카드 정보 확인
+    const keyJ = screen.getByTestId('heatmap-key-j');
+    fireEvent.click(keyJ);
+    expect(screen.getByText(/2회 타건/i)).toBeDefined();
+  });
 });

@@ -29,7 +29,13 @@ export { switchPaneFocus, executeWincmd } from './splitWindow';
 export { switchBuffer, ensureBuffers, syncCurrentBuffer, addBuffer, editBuffer, deleteBuffer } from './bufferEngine';
 export { switchTab, openNewTab, closeTab, ensureTabPages, tabdo } from './tabEngine';
 export { bufdo } from './bufferEngine';
-export { closeCommandLineWindow } from './cmdlineWindow';
+export {
+  openCommandLineWindow,
+  closeCommandLineWindow,
+  selectCommandLineWindowLine,
+  switchCommandLineWindowType,
+  clearCommandLineHistory,
+} from './cmdlineWindow';
 export { closeQuickfixWindow, jumpToQuickfixItem, cdo, cfdo } from './quickfixEngine';
 export { closeLocationListWindow, jumpToLocationListItem, ldo, lfdo } from './locationListEngine';
 export {
@@ -155,6 +161,19 @@ export {
   FILETYPE_INDENT_PRESETS,
 } from './ftpluginEngine';
 export type { FiletypeIndentConfig } from './ftpluginEngine';
+
+// ---- 순정 Vim ctags 심볼 탐색 및 태그 스택 (:tag, :pop, :tags, :tselect, :tjump, :tnext, :tprev) ----
+export {
+  findTags,
+  findTag,
+  jumpToTag,
+  popTagStack,
+  formatTagStack,
+  tselectTag,
+  tjumpTag,
+  cycleTagMatch,
+  formatTagMatches,
+} from './tagEngine';
 
 // ---- 개발용 불변성 검사 ----
 export { withInvariantCheck, assertValidVimState, deepFreeze } from './invariants';

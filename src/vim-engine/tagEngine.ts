@@ -1,7 +1,8 @@
 import { TagEntry, TagStackItem, VimEditorState } from './types';
 import { getWorkspaceFiles } from './vfs';
-import { editBuffer } from './bufferEngine';
+import { editBuffer, ensureBuffers } from './bufferEngine';
 import { recordJump } from './marks';
+import { clampCursor } from './cursor';
 import { msg } from './messages';
 
 /**
@@ -76,9 +77,10 @@ export function buildProjectTags(state: VimEditorState): TagEntry[] {
     processedFiles.add(curName);
   }
 
-  // 3. 열려 있는 버퍼 목록
-  if (state.buffers) {
-    for (const b of state.buffers) {
+  // 3. 열려 있는 버퍼 목록 (또는 secondaryFilename/secondaryLines)
+  const activeBuffers = state.buffers ?? ensureBuffers(state).buffers;
+  if (activeBuffers) {
+    for (const b of activeBuffers) {
       if (b.name && !processedFiles.has(b.name) && !b.name.startsWith('Netrw')) {
         tags.push(...extractTagsFromLines(b.name, b.lines));
         processedFiles.add(b.name);
@@ -108,24 +110,110 @@ export function buildProjectTags(state: VimEditorState): TagEntry[] {
 }
 
 /**
- * 프로젝트 태그 목록에서 주어진 이름에 부합하는 태그를 검색합니다.
+ * 프로젝트 태그 목록에서 주어진 이름에 부합하는 모든 태그를 검색합니다.
+ */
+export function findTags(state: VimEditorState, tagName: string): TagEntry[] {
+  const clean = tagName.trim();
+  if (!clean) return [];
+
+  const allTags = buildProjectTags(state);
+  return allTags.filter((t) => t.name === clean);
+}
+
+/**
+ * 프로젝트 태그 목록에서 주어진 이름에 부합하는 태그를 단일 검색합니다.
  */
 export function findTag(state: VimEditorState, tagName: string): TagEntry | null {
   const clean = tagName.trim();
   if (!clean) return null;
 
-  const allTags = buildProjectTags(state);
+  const matches = findTags(state, clean);
+  if (matches.length === 0) return null;
+
   const curFile = state.primaryFilename;
   const curLine = state.cursor.line;
 
   // 1순위: 현재 커서 위치가 아닌 다른 위치의 정확 일치 정의부
-  const otherMatch = allTags.find(
-    (t) => t.name === clean && (t.filename !== curFile || t.line !== curLine)
+  const otherMatch = matches.find(
+    (t) => t.filename !== curFile || t.line !== curLine
   );
   if (otherMatch) return otherMatch;
 
   // 2순위: 현재 라인을 포함한 동일 정의부
-  return allTags.find((t) => t.name === clean) ?? null;
+  return matches[0] ?? null;
+}
+
+/**
+ * 다중 태그 일치 목록을 Vim 표준 테이블 형식으로 포맷팅합니다 (:tselect, :tjump).
+ */
+export function formatTagMatches(matches: TagEntry[], activeIndex = 0): string {
+  if (matches.length === 0) return 'tag not found';
+  const lines = ['  # pri kind tag               file'];
+  for (let i = 0; i < matches.length; i++) {
+    const m = matches[i];
+    const isCurrent = i === activeIndex ? '>' : ' ';
+    const num = (i + 1).toString().padStart(2, ' ');
+    const name = m.name.padEnd(17, ' ');
+    lines.push(`${isCurrent} ${num} F   f    ${name} ${m.filename}:${m.line + 1}`);
+  }
+  return lines.join('\n');
+}
+
+/**
+ * 특정 TagEntry 정의 위치로 점프합니다.
+ */
+export function jumpToTagEntry(
+  state: VimEditorState,
+  target: TagEntry,
+  matches?: TagEntry[],
+  matchIndex?: number,
+  pushStack = true
+): VimEditorState {
+  let nextTagStack = state.tagStack ?? [];
+  if (pushStack) {
+    const currentStackItem: TagStackItem = {
+      tag: target.name,
+      filename: state.primaryFilename || 'source.ts',
+      cursor: { ...state.cursor },
+    };
+    nextTagStack = [...nextTagStack, currentStackItem];
+  }
+  const stateWithJump = recordJump(state);
+
+  const totalMatches = matches?.length ?? 1;
+  const currMatch = (matchIndex ?? 0) + 1;
+  const msgText = `tag ${currMatch} of ${totalMatches} "${target.name}" (${target.filename}:${target.line + 1})`;
+
+  let nextState: VimEditorState;
+  if (target.filename === state.primaryFilename) {
+    nextState = {
+      ...stateWithJump,
+      tagStack: nextTagStack,
+      tagMatches: matches ?? state.tagMatches,
+      tagMatchIndex: matchIndex ?? state.tagMatchIndex,
+      cursor: clampCursor(stateWithJump.lines, { line: target.line, col: target.col }, 'NORMAL'),
+      commandMessage: msgText,
+    };
+  } else {
+    const bufferSwitchedState = editBuffer(
+      {
+        ...stateWithJump,
+        tagStack: nextTagStack,
+      },
+      target.filename
+    );
+
+    nextState = {
+      ...bufferSwitchedState,
+      tagStack: nextTagStack,
+      tagMatches: matches ?? state.tagMatches,
+      tagMatchIndex: matchIndex ?? state.tagMatchIndex,
+      cursor: clampCursor(bufferSwitchedState.lines, { line: target.line, col: target.col }, 'NORMAL'),
+      commandMessage: msgText,
+    };
+  }
+
+  return nextState;
 }
 
 /**
@@ -140,6 +228,7 @@ export function jumpToTag(state: VimEditorState, tagName: string): VimEditorStat
     };
   }
 
+  const matches = findTags(state, clean);
   const target = findTag(state, clean);
   if (!target) {
     return {
@@ -148,45 +237,128 @@ export function jumpToTag(state: VimEditorState, tagName: string): VimEditorStat
     };
   }
 
-  // 1. 현재 커서 위치를 태그 스택(tagStack)에 푸시
-  const currentStackItem: TagStackItem = {
-    tag: clean,
-    filename: state.primaryFilename || 'source.ts',
-    cursor: { ...state.cursor },
-  };
-  const nextTagStack = [...(state.tagStack ?? []), currentStackItem];
+  return jumpToTagEntry(state, target, matches.length > 0 ? matches : [target], 0);
+}
 
-  // 2. 점프 전 위치를 Vim 점프 리스트(Ctrl+o용)에도 기록
-  const stateWithJump = recordJump(state);
+/**
+ * 다중 정의 태그 목록을 조회하거나 특정 번호의 태그로 점프합니다 (:tselect [name|num], :ts).
+ */
+export function tselectTag(state: VimEditorState, target: string): VimEditorState {
+  const clean = target.trim();
+  // 1. 숫자 인덱스 지정인 경우 (예: :tselect 2)
+  if (/^\d+$/.test(clean)) {
+    const idx = parseInt(clean, 10) - 1;
+    const matches = state.tagMatches ?? [];
+    if (matches.length === 0) {
+      return {
+        ...state,
+        commandMessage: msg('E428: 이전 태그 목록이 없습니다 (no previous tag list)'),
+      };
+    }
+    if (idx < 0 || idx >= matches.length) {
+      return {
+        ...state,
+        commandMessage: msg('E426: 유효하지 않은 태그 번호입니다'),
+      };
+    }
+    return jumpToTagEntry(state, matches[idx], matches, idx, false);
+  }
 
-  // 3. 파일/버퍼 전환 처리
-  let nextState: VimEditorState;
-  if (target.filename === state.primaryFilename) {
-    nextState = {
-      ...stateWithJump,
-      tagStack: nextTagStack,
-      cursor: { line: target.line, col: target.col },
-      commandMessage: `tag 1 of 1 "${target.name}" (${target.filename}:${target.line + 1})`,
-    };
-  } else {
-    // 다른 파일인 경우 해당 버퍼 열기/전환
-    const bufferSwitchedState = editBuffer(
-      {
-        ...stateWithJump,
-        tagStack: nextTagStack,
-      },
-      target.filename
-    );
-
-    nextState = {
-      ...bufferSwitchedState,
-      tagStack: nextTagStack,
-      cursor: { line: target.line, col: target.col },
-      commandMessage: `tag 1 of 1 "${target.name}" (${target.filename}:${target.line + 1})`,
+  // 2. 심볼 이름 지정인 경우 (예: :tselect save)
+  const matches = findTags(state, clean);
+  if (matches.length === 0) {
+    return {
+      ...state,
+      commandMessage: msg('E426: 태그를 찾을 수 없습니다: "{clean}"', { clean }),
     };
   }
 
-  return nextState;
+  // 첫 번째 항목으로 점프 후 전체 목록 메시지 출력
+  const next = jumpToTagEntry(state, matches[0], matches, 0);
+  return {
+    ...next,
+    commandMessage: formatTagMatches(matches, 0),
+  };
+}
+
+/**
+ * 1개 일치 시 즉시 점프하고, 2개 이상 일치 시 목록을 표시합니다 (:tjump [name], :tj, g]).
+ */
+export function tjumpTag(state: VimEditorState, tagName: string): VimEditorState {
+  const clean = tagName.trim();
+  if (!clean) {
+    return {
+      ...state,
+      commandMessage: msg('E431: 태그를 지정하지 않았습니다 (tag name required)'),
+    };
+  }
+
+  const matches = findTags(state, clean);
+  if (matches.length === 0) {
+    return {
+      ...state,
+      commandMessage: msg('E426: 태그를 찾을 수 없습니다: "{clean}"', { clean }),
+    };
+  }
+
+  // 1개뿐이면 :tag 처럼 즉시 점프
+  if (matches.length === 1) {
+    return jumpToTagEntry(state, matches[0], matches, 0);
+  }
+
+  // 2개 이상이면 :tselect 처럼 목록을 표시하고 첫 번째 항목으로 이동
+  const next = jumpToTagEntry(state, matches[0], matches, 0);
+  return {
+    ...next,
+    commandMessage: formatTagMatches(matches, 0),
+  };
+}
+
+/**
+ * 활성 태그 일치 목록 내에서 이전/다음 태그로 순회 이동합니다 (:tnext, :tprev, :tfirst, :tlast).
+ */
+export function cycleTagMatch(
+  state: VimEditorState,
+  direction: 'next' | 'prev' | 'first' | 'last',
+  count = 1
+): VimEditorState {
+  const matches = state.tagMatches ?? [];
+  if (matches.length === 0) {
+    return {
+      ...state,
+      commandMessage: msg('E428: 이전 태그 목록이 없습니다 (no previous tag list)'),
+    };
+  }
+
+  let nextIdx = state.tagMatchIndex ?? 0;
+  if (direction === 'next') {
+    if (nextIdx >= matches.length - 1) {
+      return {
+        ...state,
+        commandMessage: msg('E427: 태그 목록의 끝입니다 (tag {curr} of {total})', {
+          curr: matches.length,
+          total: matches.length,
+        }),
+      };
+    }
+    nextIdx = Math.min(matches.length - 1, nextIdx + count);
+  } else if (direction === 'prev') {
+    if (nextIdx <= 0) {
+      return {
+        ...state,
+        commandMessage: msg('E427: 태그 목록의 처음입니다 (tag 1 of {total})', {
+          total: matches.length,
+        }),
+      };
+    }
+    nextIdx = Math.max(0, nextIdx - count);
+  } else if (direction === 'first') {
+    nextIdx = 0;
+  } else if (direction === 'last') {
+    nextIdx = matches.length - 1;
+  }
+
+  return jumpToTagEntry(state, matches[nextIdx], matches, nextIdx, false);
 }
 
 /**

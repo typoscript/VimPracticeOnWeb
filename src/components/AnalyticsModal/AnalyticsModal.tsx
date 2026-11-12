@@ -1,10 +1,11 @@
-import React, { useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { LessonProgress } from '../../utils/storage';
 import {
   loadUserAnalytics,
   calculateProficiency,
   getTopCommands,
 } from '../../utils/analyticsStorage';
+import { KeystrokeHeatmap } from './KeystrokeHeatmap';
 import './AnalyticsModal.css';
 import { t } from '../../i18n';
 
@@ -43,6 +44,8 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
   progress,
   onOpenDailyChallenge,
 }) => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'heatmap'>('overview');
+
   const analytics = useMemo(() => {
     if (!isOpen) return null;
     return loadUserAnalytics();
@@ -147,8 +150,32 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
           </button>
         </header>
 
-        {/* 상단 핵심 요약 통계 카드 */}
-        <section className="analytics-summary-cards">
+        {/* 탭 네비게이션: 종합 분석 vs 타건 히트맵 */}
+        <nav className="analytics-tabs-nav" aria-label={t('분석 탭')}>
+          <button
+            className={`analytics-tab-btn ${activeTab === 'overview' ? 'active' : ''}`}
+            onClick={() => setActiveTab('overview')}
+            data-testid="analytics-tab-overview"
+          >
+            📊 {t('종합 숙련도 분석')}
+          </button>
+          <button
+            className={`analytics-tab-btn ${activeTab === 'heatmap' ? 'active' : ''}`}
+            onClick={() => setActiveTab('heatmap')}
+            data-testid="analytics-tab-heatmap"
+          >
+            ⌨️ {t('타건 키보드 히트맵')}
+          </button>
+        </nav>
+
+        {activeTab === 'heatmap' ? (
+          <div style={{ padding: '1.25rem 1.5rem' }}>
+            <KeystrokeHeatmap analytics={analytics} />
+          </div>
+        ) : (
+          <>
+            {/* 상단 핵심 요약 통계 카드 */}
+            <section className="analytics-summary-cards">
           <div className="summary-card">
             <span className="summary-label">{t('총 키스트로크')}</span>
             <span className="summary-value highlight-cyan">
@@ -345,6 +372,8 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
             </div>
           )}
         </section>
+        </>
+        )}
 
         <footer className="analytics-modal-footer">
           <button

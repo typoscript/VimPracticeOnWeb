@@ -7,8 +7,15 @@ import { getGlobalOptions } from './setEngine';
  * 버퍼 목록이 초기화되어 있지 않은 경우, 기본 1번 버퍼(및 2번 보조 버퍼)를 구성합니다.
  */
 export function ensureBuffers(state: VimEditorState): VimEditorState {
-  if (state.buffers && state.buffers.length > 0 && state.currentBufferId !== undefined) {
-    return state;
+  if (state.buffers && state.buffers.length > 0) {
+    if (state.currentBufferId !== undefined) {
+      return state;
+    }
+    return {
+      ...state,
+      currentBufferId: state.buffers[0].id,
+      alternateBufferId: state.buffers[1]?.id,
+    };
   }
 
   const primaryName = state.primaryFilename || 'source.ts';

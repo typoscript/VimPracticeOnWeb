@@ -1408,8 +1408,28 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson70!.checkComplete(state)).toBe(true);
   });
 
-  it('모든 70개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(70);
+  it('레슨 71: 순정 ctags 멀티 정의 심볼 탐색과 태그 선택기(:tselect, :tjump, g]) 마스터 검증', () => {
+    const lesson71 = MISSIONS.find((m) => m.id === 71);
+    expect(lesson71).toBeDefined();
+
+    let state: VimEditorState = {
+      lines: [...lesson71!.initialLines],
+      cursor: { ...lesson71!.initialCursor },
+      mode: 'NORMAL',
+      primaryFilename: lesson71!.primaryFilename,
+      secondaryFilename: lesson71!.secondaryFilename,
+      secondaryLines: lesson71!.secondaryLines,
+    };
+    expect(lesson71!.checkComplete(state)).toBe(false);
+
+    for (const key of lesson71!.optimalKeys!) {
+      state = handleKey(state, key);
+    }
+    expect(lesson71!.checkComplete(state)).toBe(true);
+  });
+
+  it('모든 71개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(71);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();

@@ -2417,4 +2417,57 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 71,
+    title: '레슨 71: 순정 ctags 멀티 정의 심볼 탐색과 태그 선택기(:tselect, :tjump, g]) 마스터',
+    description:
+      'Vim의 순정 ctags는 서로 다른 파일에 동일한 이름의 함수나 메서드가 여러 개 정의되어 있을 때도 손쉽게 탐색할 수 있는 강력한 태그 선택기(Tag Selector) 기능을 제공합니다.\n\n1) 단일 정의 vs 다중 정의 심볼 점프 (Ctrl+] vs g]):\n   - 기본 Ctrl+](또는 :tag)는 일치하는 심볼이 여러 개라도 무조건 첫 번째 정의부로 점프합니다.\n   - g](또는 g Ctrl-] / :tjump / :tj)는 정의부가 1개면 즉시 점프하고, 2개 이상이면 일치하는 모든 파일과 라인 번호 목록을 표시하며 첫 번째 위치로 점프합니다.\n\n2) 태그 일치 목록 순회 (:tnext / :tprev / :tselect):\n   - :tnext (축약 :tn): 현재 검색된 태그 목록의 다음 정의부 파일로 버퍼를 즉시 전환합니다.\n   - :tprev (축약 :tp): 이전 정의부 파일로 되돌아갑니다.\n   - :tfirst (:tf) / :tlast (:tl): 첫 번째 / 마지막 정의부로 한 번에 이동합니다.\n   - :tselect <이름> (축약 :ts): 해당 심볼의 모든 정의 목록을 표로 조회하고 특정 번호로 즉시 점프합니다 (예: :ts 2).\n\n3) 태그 스택 복귀 (Ctrl-t / :pop):\n   - 다중 정의부를 모두 확인한 뒤 Ctrl-t(또는 :pop)를 누르면 태그 스택을 거슬러 올라가 탐색을 시작했던 원래 파일로 정확하게 복귀합니다.\n\n미션:\n1. 3번 줄의 add 함수 호출부 위에서 g] 단축키를 눌러 다중 정의 태그 목록을 확인하고 첫 번째 정의부로 점프하세요.\n2. :tn<Enter> 명령으로 다음 정의부 파일로 이동하세요.\n3. Ctrl-t 키를 눌러 원래 파일(app.ts)의 호출 위치로 복귀하여 미션을 완료하세요!',
+    hint: 'g] 로 add 다중 정의 확인 및 첫 정의부 점프 → :tn 입력 후 Enter 로 다음 정의부 이동 → Ctrl-t 로 app.ts 복귀',
+    par: 10,
+    optimalKeys: ['g', ']', ':', 't', 'n', 'Enter', 'Ctrl-t'],
+    primaryFilename: 'app.ts',
+    secondaryFilename: 'src/math.ts',
+    initialLines: [
+      'import { add } from "./utils";',
+      '',
+      'function calculate() {',
+      '  const sum = add(10, 20);',
+      '  return sum;',
+      '}',
+    ],
+    secondaryLines: [
+      'export function add(vectorA: number[], vectorB: number[]) {',
+      '  return vectorA.map((v, i) => v + vectorB[i]);',
+      '}',
+    ],
+    targetLines: [
+      'import { add } from "./utils";',
+      '',
+      'function calculate() {',
+      '  const sum = add(10, 20);',
+      '  return sum;',
+      '}',
+    ],
+    initialCursor: { line: 3, col: 14 },
+    checkComplete: (state) => {
+      const isReturnedToApp = state.primaryFilename === 'app.ts';
+      const hasVisitedUtils = Boolean(
+        state.buffers?.some((b) => b.name === 'src/utils.ts')
+      );
+      const hasVisitedMath = Boolean(
+        state.buffers?.some((b) => b.name === 'src/math.ts')
+      );
+      const isTagStackCleared = (state.tagStack?.length ?? 0) === 0;
+      const hasMatchedTags = (state.tagMatches?.length ?? 0) >= 2;
+
+      return (
+        state.mode === 'NORMAL' &&
+        isReturnedToApp &&
+        hasVisitedUtils &&
+        hasVisitedMath &&
+        isTagStackCleared &&
+        hasMatchedTags
+      );
+    },
+  },
 ];

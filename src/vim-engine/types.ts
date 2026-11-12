@@ -536,6 +536,10 @@ export interface VimEditorState {
   tagStack?: TagStackItem[];
   /** 수동 또는 외부 정의 태그 목록 */
   tags?: TagEntry[];
+  /** 다중 태그 일치 목록 (:tselect, :tjump, :tnext, :tprev) */
+  tagMatches?: TagEntry[];
+  /** 현재 활성 태그 일치 인덱스 */
+  tagMatchIndex?: number;
   /** 순정 Vim Diff 모드 활성화 여부 (:diffsplit, :diffthis, :diffoff) */
   diffMode?: boolean;
   /** 현재 계산된 Diff Hunk 목록 */

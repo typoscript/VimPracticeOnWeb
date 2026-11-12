@@ -3,9 +3,14 @@ import {
   extractTagsFromLines,
   buildProjectTags,
   findTag,
+  findTags,
   jumpToTag,
   popTagStack,
   formatTagStack,
+  tselectTag,
+  tjumpTag,
+  cycleTagMatch,
+  formatTagMatches,
 } from './tagEngine';
 import { handleKey } from './vimEngine';
 import { VimEditorState } from './types';
@@ -271,6 +276,96 @@ describe('tagEngine (ctags, Ctrl+], Ctrl+t, :tag, :pop, :tags)', () => {
 
       expect(state.commandBuffer).toBe('tag add');
       expect(state.wildmenu?.active).toBe(true);
+    });
+
+    it('다중 정의 심볼 탐색: :tselect, :tjump, g], :tnext, :tprev, :tfirst, :tlast 동작 검증', () => {
+      // 2개 이상의 파일에 'save' 함수가 정의된 멀티 파일 프로젝트 구성
+      let state: VimEditorState = {
+        lines: [
+          'import { save } from "./models";',
+          'save(payload);',
+        ],
+        cursor: { line: 1, col: 0 }, // 'save' 단어 위
+        mode: 'NORMAL',
+        primaryFilename: 'client.ts',
+        buffers: [
+          {
+            id: 1,
+            name: 'client.ts',
+            lines: ['import { save } from "./models";', 'save(payload);'],
+            cursor: { line: 1, col: 0 },
+          },
+          {
+            id: 2,
+            name: 'src/models/user.ts',
+            lines: ['export function save(user: User) {', '  return user.id;', '}'],
+            cursor: { line: 0, col: 0 },
+          },
+          {
+            id: 3,
+            name: 'src/models/order.ts',
+            lines: ['export function save(order: Order) {', '  return order.id;', '}'],
+            cursor: { line: 0, col: 0 },
+          },
+        ],
+      };
+
+      // 1. findTags 로 2개의 정의 발견 확인 및 formatTagMatches 출력 검증
+      const tags = findTags(state, 'save');
+      expect(tags).toHaveLength(2);
+      expect(tags[0].filename).toBe('src/models/user.ts');
+      expect(tags[1].filename).toBe('src/models/order.ts');
+      expect(formatTagMatches(tags, 0)).toContain('src/models/user.ts');
+
+      // 1-1. tjumpTag, cycleTagMatch, tselectTag 함수 직접 호출 단위 검증
+      const directJump = tjumpTag(state, 'save');
+      expect(directJump.tagMatches).toHaveLength(2);
+      const directCycle = cycleTagMatch(directJump, 'next');
+      expect(directCycle.tagMatchIndex).toBe(1);
+      const directSelect = tselectTag(directCycle, '1');
+      expect(directSelect.tagMatchIndex).toBe(0);
+
+      // 2. g] 단축키로 tjump 실행 -> 2개 일치하므로 목록이 표시되고 1번 매치로 이동
+      state = handleKey(state, 'g');
+      state = handleKey(state, ']');
+      expect(state.primaryFilename).toBe('src/models/user.ts');
+      expect(state.tagMatches).toHaveLength(2);
+      expect(state.tagMatchIndex).toBe(0);
+      expect(state.commandMessage).toContain('src/models/user.ts');
+      expect(state.commandMessage).toContain('src/models/order.ts');
+
+      // 3. :tnext 로 2번 매치(order.ts)로 이동
+      state = handleKey(state, ':');
+      for (const ch of 'tnext') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+      expect(state.primaryFilename).toBe('src/models/order.ts');
+      expect(state.tagMatchIndex).toBe(1);
+
+      // 4. 마지막에서 다시 :tnext 시도 시 경고 메시지 출력
+      state = handleKey(state, ':');
+      for (const ch of 'tn') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+      expect(state.commandMessage).toContain('E427: 태그 목록의 끝입니다');
+      expect(state.primaryFilename).toBe('src/models/order.ts');
+
+      // 5. :tprev 로 1번 매치(user.ts)로 복귀
+      state = handleKey(state, ':');
+      for (const ch of 'tp') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+      expect(state.primaryFilename).toBe('src/models/user.ts');
+      expect(state.tagMatchIndex).toBe(0);
+
+      // 6. :tselect 2 로 직접 2번 매치로 순간이동
+      state = handleKey(state, ':');
+      for (const ch of 'ts 2') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+      expect(state.primaryFilename).toBe('src/models/order.ts');
+      expect(state.tagMatchIndex).toBe(1);
+
+      // 7. Ctrl-t 로 원래 시작 지점(client.ts)으로 태그 스택 복귀
+      state = handleKey(state, 'Ctrl-t');
+      expect(state.primaryFilename).toBe('client.ts');
+      expect(state.cursor).toEqual({ line: 1, col: 0 });
     });
   });
 });

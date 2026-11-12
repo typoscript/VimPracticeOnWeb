@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 120개 테스트 파일, 1,581개 테스트 100% 통과 필수)*
+  *(현재 120개 테스트 파일, 1,585개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 70)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 71)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -112,6 +112,9 @@
 - **사용자 지정 키바인딩 인터페이스 (GUI Keymap Configurator) & 커스텀 키매핑 영구 보존 (`src/components/ConfigExporterModal/`, `keymapStorage.ts`, `configGenerator.ts`)**: 모드별(Normal, Insert, Visual) 커스텀 단축키 등록, 실시간 테이블 목록 렌더링, 모드 필터링, 개별 삭제, 특수키 칩(`<leader>`, `<Esc>`, `<CR>`, `<Space>`, `<Tab>`, `<C-w>`, `"+`, `"_`, `Ctrl-`) 및 원클릭 추천 템플릿(Y -> y$, <leader>p -> "+p 등) 지원. 등록된 커스텀 키매핑은 `localStorage`(`vim_custom_keymaps_v1`)에 영구 저장되며 에디터 엔진의 `userKeymaps`와 즉시 양방향 동기화. 커맨드라인 `:keymap` / `:keymaps` / `:config` 실행 지원 및 `.vimrc`, `init.lua`, `settings.json`, `.ideavimrc` 내보내기에 커스텀 단축키 자동 포함 지원.
 - **버퍼 로컬 옵션과 언어별 들여쓰기 실전 마스터 (레슨 69)**: 다중 언어 모노레포 프로젝트에서 1번 버퍼(`main.py`)에 `:setl ft=python`을 적용하여 4칸 공백 들여쓰기(`>>`)를 수행하고, `:bn`으로 2번 버퍼(`server.go`)로 이동하여 `:setl ft=go`로 탭 들여쓰기(`>>`)를 적용한 뒤 `Ctrl-^`로 원래 버퍼로 복귀하여 버퍼별 격리 및 동적 들여쓰기 실무 워크플로우를 완벽하게 체득하는 실전 훈련 제공.
 - **입력 모드 고속 탈출 및 리더키 실무 키매핑 (:imap jk <Esc>, :nmap <leader>d "_d) (레슨 70)**: 홈 로우를 벗어나지 않고 입력 모드를 빠져나오는 `:imap jk <Esc>`(연속 jk 입력 시 직전 j 삭제 및 노멀 모드 복귀)와, 클립보드(무명 레지스터 `"`) 훼손 없이 불필요한 줄을 지우는 리더키 블랙홀 삭제(`:nmap <leader>d "_d` → `<Space>dd`) 실무 마스터.
+- **커맨드라인 윈도우(`q:`, `q/`, `q?`) 히스토리 탐색 및 편집 실행 UX 강화 (`src/vim-engine/cmdlineWindow.ts`, `App.tsx`, `App.css`)**: `: Ex 명령` 및 `/ 검색어` 탭 전환(`switchCommandLineWindowType`), 라인 클릭 선택(`selectCommandLineWindowLine`), 더블 클릭 및 실행 칩(`handleExecuteCommandLineWindowLine`)을 통한 즉시 실행, 히스토리 전체 비우기(`clearCommandLineHistory`), 라인 수 뱃지 및 모드 뱃지 렌더링.
+- **Vim 키스트로크 히트맵 & 타건 통계 대시보드 (`src/components/AnalyticsModal/KeystrokeHeatmap.tsx`, `KeystrokeHeatmap.css`)**: 5단계 열기 컬러(쿨 블루 -> 웜 골드 -> 블레이징 레드) 실시간 QWERTY 키보드 시각화, 카테고리 필터 칩(전체, 모션, 연산자, 입력), 키별 세부 분석 카드(타수, 점유율, Vim 인체공학적 코칭 조언), 종합 분석 모달 내 탭 전환(`[ 📊 종합 숙련도 분석 ]` vs `[ ⌨️ 타건 키보드 히트맵 ]`) 연동.
+- **순정 ctags 심볼 태그 선택기 및 멀티 정의 탐색 (레슨 71, `src/vim-engine/tagEngine.ts`, `commandLine.ts`, `missions.ts`)**: 다중 일치 태그 탐색(`findTags`), 태그 점프 및 매치 목록 표시(`:tjump`, `:tj`, `g]`), 태그 목록 대화형 선택(`:tselect [name|num]`, `:ts`), 태그 매치 순환(`:tnext [count]`, `:tn`, `:tprev [count]`, `:tp`, `:tfirst`, `:tf`, `:tlast`, `:tl`), 태그 목록 순회 시 태그 스택 비오염 보존(`pushStack = false`), `Ctrl-t`(`:pop`) 완벽 복귀 지원. 레슨 71에서 `g]`로 다중 정의 확인, `:tn`으로 주문 모델로 전환, `Ctrl-t`로 원본 호출 위치 복귀 실전 통합 마스터.
 
 ---
 
@@ -149,5 +152,9 @@
 30. ~~**사용자 지정 키바인딩 인터페이스 (GUI Keymap Configurator) & 커스텀 키매핑 영구 보존**~~ — 구현 완료.
 31. ~~**신규 레슨 69 추가 (버퍼 로컬 옵션과 파일타입별 들여쓰기 마스터)**~~ — 레슨 69와 함께 구현 완료.
 32. ~~**신규 레슨 70 추가 (입력 모드 고속 탈출과 리더키 실무 키매핑 마스터)**~~ — 레슨 70과 함께 구현 완료.
-33. **커맨드라인 윈도우(q:, q/, q?) 히스토리 탐색 및 인터랙션 고도화**: 이전 실행된 커맨드 히스토리 목록 탐색 및 편집 실행 UX 강화.
-34. **Vim 키스트로크 히트맵 & 통계 대시보드 (Keystroke Heatmap)**: 사용자 연습 중 키 빈도 시각적 히트맵 렌더링.
+33. ~~**커맨드라인 윈도우(q:, q/, q?) 히스토리 탐색 및 인터랙션 고도화**: 이전 실행된 커맨드 히스토리 목록 탐색 및 편집 실행 UX 강화.~~ — 구현 완료.
+34. ~~**Vim 키스트로크 히트맵 & 통계 대시보드 (Keystroke Heatmap)**: 사용자 연습 중 키 빈도 시각적 히트맵 렌더링.~~ — 구현 완료.
+35. ~~**순정 ctags 심볼 태그 선택기 (`:tselect`, `:tjump`, `g]`, `:tn`, `:tp`) 및 신규 레슨 71**~~ — 레슨 71과 함께 구현 완료.
+36. **대화형 매크로 튜터 & 단계별 실행 비주얼라이저**: 레슨 53/66 심화 연계 매크로 실행 흐름 시각화 및 키별 인터랙티브 학습 도구.
+37. **Netrw 북마크 & 즐겨찾기 시스템 (`mb`, `gb`, `:Bookmark`)**: 프로젝트 내 자주 찾는 폴더 북마크 저장 및 점프.
+38. **신규 레슨 72 추가**: 실무 모노레포 심볼 ctags 다중 점프 및 태그 스택 심화 응용 훈련.
