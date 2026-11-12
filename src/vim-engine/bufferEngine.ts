@@ -20,6 +20,8 @@ export function ensureBuffers(state: VimEditorState): VimEditorState {
     undoStack: state.undoStack ? [...state.undoStack] : [],
     redoStack: state.redoStack ? [...state.redoStack] : [],
     isModified: false,
+    localOptions: state.bufferLocalOptions?.[1],
+    filetype: state.options?.filetype,
   };
 
   const buffers: VimBuffer[] = [buf1];
@@ -36,6 +38,7 @@ export function ensureBuffers(state: VimEditorState): VimEditorState {
       undoStack: [],
       redoStack: [],
       isModified: false,
+      localOptions: state.bufferLocalOptions?.[2],
     };
     buffers.push(buf2);
     alternateBufferId = 2;

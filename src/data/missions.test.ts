@@ -1371,8 +1371,28 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson68!.checkComplete(state)).toBe(true);
   });
 
-  it('모든 68개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(68);
+  it('레슨 69: 버퍼 로컬 옵션(:setlocal)과 파일타입 들여쓰기(ftplugin) checkComplete 판정 검증', () => {
+    const lesson69 = MISSIONS.find((m) => m.id === 69);
+    expect(lesson69).toBeDefined();
+
+    let state: VimEditorState = {
+      lines: [...lesson69!.initialLines],
+      cursor: { ...lesson69!.initialCursor },
+      mode: 'NORMAL',
+      primaryFilename: lesson69!.primaryFilename,
+      secondaryFilename: lesson69!.secondaryFilename,
+      secondaryLines: lesson69!.secondaryLines,
+    };
+    expect(lesson69!.checkComplete(state)).toBe(false);
+
+    for (const key of lesson69!.optimalKeys!) {
+      state = handleKey(state, key);
+    }
+    expect(lesson69!.checkComplete(state)).toBe(true);
+  });
+
+  it('모든 69개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(69);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();

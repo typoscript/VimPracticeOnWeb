@@ -2315,4 +2315,57 @@ export const MISSIONS: Mission[] = [
       return isPortUpdated && isBackOnTop && hasUsedJumps && isMarkCleaned;
     },
   },
+  {
+    id: 69,
+    title: '레슨 69: 버퍼 로컬 옵션(:setlocal)과 파일타입 들여쓰기(ftplugin) 실무 마스터',
+    description:
+      '실무의 다중 언어 프로젝트는 Python(4칸 들여쓰기), Go(탭 들여쓰기), TypeScript(2칸 들여쓰기) 등 파일마다 다른 서식 규칙을 요구합니다. 전역 설정(:set)을 바꾸면 다른 파일의 서식이 망가질 수 있으므로, 현재 버퍼에만 독립적으로 적용되는 :setlocal(:setl)을 사용하는 것이 필수적입니다.\n\n1) 버퍼 로컬 옵션 제어 (:setlocal / :setl):\n   - :setlocal ft=python : 현재 버퍼의 파일타입을 python으로 설정하고, 표준 4칸 공백 들여쓰기(shiftwidth=4, tabstop=4, expandtab)를 적용합니다.\n   - :setlocal ft=go : 현재 버퍼의 파일타입을 go로 설정하고, 순정 탭 들여쓰기(shiftwidth=8, tabstop=8, noexpandtab)를 적용합니다.\n   - :setlocal? : 현재 버퍼에 적용된 로컬 오버라이드 설정을 확인합니다.\n\n2) 언어별 동적 들여쓰기 (>> / <<):\n   - 들여쓰기 연산자(>>)는 하드코딩된 공백이 아닌 현재 버퍼의 shiftwidth와 expandtab 설정을 동적으로 반영합니다. Python 버퍼에서는 4칸 공백이 삽입되고, Go 버퍼에서는 탭(\\t) 문자로 정확하게 들여쓰기됩니다.\n\n3) 버퍼 간 설정 격리:\n   - :bn(또는 :b 2)으로 2번 버퍼로 전환하거나 Ctrl-^로 이전 버퍼로 복귀할 때 각 버퍼 고유의 로컬 옵션이 완벽하게 보존됩니다.\n\n미션:\n1. 1번 버퍼(main.py)에서 :setl ft=python<Enter> 명령으로 Python 파일타입 및 4칸 들여쓰기를 활성화하세요.\n2. j 키로 1번 줄로 이동한 뒤, >> 연산자로 4칸 들여쓰기를 적용하세요.\n3. :bn<Enter> 명령으로 2번 버퍼(server.go)로 전환하세요.\n4. :setl ft=go<Enter> 명령으로 Go 파일타입 및 탭 들여쓰기를 활성화하세요.\n5. j 키로 1번 줄로 이동한 뒤, >> 연산자로 탭(\\t) 들여쓰기를 적용하세요.\n6. Ctrl-^ 키를 눌러 원래의 1번 버퍼(main.py)로 복귀하여 미션을 완료하세요!',
+    hint: ':setl ft=python 입력 후 Enter → j >> 로 4칸 들여쓰기 → :bn 입력 후 Enter 로 server.go 이동 → :setl ft=go 입력 후 Enter → j >> 로 탭 들여쓰기 → Ctrl-^ 로 main.py 복귀',
+    par: 42,
+    optimalKeys: [
+      ':', 's', 'e', 't', 'l', ' ', 'f', 't', '=', 'p', 'y', 't', 'h', 'o', 'n', 'Enter',
+      'j',
+      '>', '>',
+      ':', 'b', 'n', 'Enter',
+      ':', 's', 'e', 't', 'l', ' ', 'f', 't', '=', 'g', 'o', 'Enter',
+      'j',
+      '>', '>',
+      'Ctrl-^',
+    ],
+    primaryFilename: 'main.py',
+    secondaryFilename: 'server.go',
+    initialLines: [
+      'def process_job():',
+      'return True',
+    ],
+    secondaryLines: [
+      'func Handle() {',
+      'return',
+      '}',
+    ],
+    targetLines: [
+      'def process_job():',
+      '    return True',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    targetCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const s = ensureBuffers(state);
+      const buf1 = s.buffers?.find((b) => b.name === 'main.py' || b.id === 1);
+      const buf2 = s.buffers?.find((b) => b.name === 'server.go' || b.id === 2);
+
+      const isCurrentBuf1 = s.currentBufferId === 1 || s.primaryFilename === 'main.py';
+
+      const buf1Correct =
+        buf1?.lines[1] === '    return True' &&
+        (buf1.localOptions?.shiftwidth === 4 || s.bufferLocalOptions?.[1]?.shiftwidth === 4);
+
+      const buf2Correct =
+        buf2?.lines[1] === '\treturn' &&
+        (buf2.localOptions?.expandtab === false || s.bufferLocalOptions?.[2]?.expandtab === false);
+
+      return isCurrentBuf1 && Boolean(buf1Correct) && Boolean(buf2Correct);
+    },
+  },
 ];
