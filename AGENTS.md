@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 120개 테스트 파일, 1,580개 테스트 100% 통과 필수)*
+  *(현재 120개 테스트 파일, 1,581개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 69)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 70)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -111,6 +111,7 @@
 - **순정 Vim 버퍼 로컬 옵션 (:setlocal, :setglobal, :set) & 파일타입 들여쓰기 (ftplugin) (`src/vim-engine/setEngine.ts`, `ftpluginEngine.ts`, `lineOperators.ts`)**: 버퍼별 옵션 격리 및 상속 시스템 완벽 지원. 현재 버퍼 전용 로컬 오버라이드(`:setlocal` / `:setl`), 전역 기본값 설정(`:setglobal` / `:setg`), 전역+로컬 동시 적용(`:set` / `:se`), 옵션 조회(`:setlocal?`, `:setglobal?`, `:setlocal`, `:setglobal`). 버퍼 전환(`switchBuffer`) 시 버퍼별 로컬 옵션 자동 보존 및 복원. 순정 파일타입 제어(`:filetype [on|off|plugin on/off|indent on/off|plugin indent on/off|detect]`), 20+ 프로그래밍 언어 표준 들여쓰기 프리셋(`FILETYPE_INDENT_PRESETS` - Python `sw=4, ts=4, et=true`, Go `sw=8, ts=8, et=false`, JS/TS `sw=2, ts=2, et=true` 등), 파일타입 변경 시 자동 들여쓰기 갱신, 동적 들여쓰기/내어쓰기(`>>`, `<<`) 및 Insert 모드 `<Tab>`의 `shiftwidth`/`tabstop`/`expandtab` 동적 반영 지원.
 - **사용자 지정 키바인딩 인터페이스 (GUI Keymap Configurator) & 커스텀 키매핑 영구 보존 (`src/components/ConfigExporterModal/`, `keymapStorage.ts`, `configGenerator.ts`)**: 모드별(Normal, Insert, Visual) 커스텀 단축키 등록, 실시간 테이블 목록 렌더링, 모드 필터링, 개별 삭제, 특수키 칩(`<leader>`, `<Esc>`, `<CR>`, `<Space>`, `<Tab>`, `<C-w>`, `"+`, `"_`, `Ctrl-`) 및 원클릭 추천 템플릿(Y -> y$, <leader>p -> "+p 등) 지원. 등록된 커스텀 키매핑은 `localStorage`(`vim_custom_keymaps_v1`)에 영구 저장되며 에디터 엔진의 `userKeymaps`와 즉시 양방향 동기화. 커맨드라인 `:keymap` / `:keymaps` / `:config` 실행 지원 및 `.vimrc`, `init.lua`, `settings.json`, `.ideavimrc` 내보내기에 커스텀 단축키 자동 포함 지원.
 - **버퍼 로컬 옵션과 언어별 들여쓰기 실전 마스터 (레슨 69)**: 다중 언어 모노레포 프로젝트에서 1번 버퍼(`main.py`)에 `:setl ft=python`을 적용하여 4칸 공백 들여쓰기(`>>`)를 수행하고, `:bn`으로 2번 버퍼(`server.go`)로 이동하여 `:setl ft=go`로 탭 들여쓰기(`>>`)를 적용한 뒤 `Ctrl-^`로 원래 버퍼로 복귀하여 버퍼별 격리 및 동적 들여쓰기 실무 워크플로우를 완벽하게 체득하는 실전 훈련 제공.
+- **입력 모드 고속 탈출 및 리더키 실무 키매핑 (:imap jk <Esc>, :nmap <leader>d "_d) (레슨 70)**: 홈 로우를 벗어나지 않고 입력 모드를 빠져나오는 `:imap jk <Esc>`(연속 jk 입력 시 직전 j 삭제 및 노멀 모드 복귀)와, 클립보드(무명 레지스터 `"`) 훼손 없이 불필요한 줄을 지우는 리더키 블랙홀 삭제(`:nmap <leader>d "_d` → `<Space>dd`) 실무 마스터.
 
 ---
 
@@ -147,3 +148,6 @@
 29. ~~**순정 Vim 버퍼 로컬 옵션 (:setlocal, :setglobal) & 파일타입 들여쓰기 (ftplugin)**~~ — 구현 완료.
 30. ~~**사용자 지정 키바인딩 인터페이스 (GUI Keymap Configurator) & 커스텀 키매핑 영구 보존**~~ — 구현 완료.
 31. ~~**신규 레슨 69 추가 (버퍼 로컬 옵션과 파일타입별 들여쓰기 마스터)**~~ — 레슨 69와 함께 구현 완료.
+32. ~~**신규 레슨 70 추가 (입력 모드 고속 탈출과 리더키 실무 키매핑 마스터)**~~ — 레슨 70과 함께 구현 완료.
+33. **커맨드라인 윈도우(q:, q/, q?) 히스토리 탐색 및 인터랙션 고도화**: 이전 실행된 커맨드 히스토리 목록 탐색 및 편집 실행 UX 강화.
+34. **Vim 키스트로크 히트맵 & 통계 대시보드 (Keystroke Heatmap)**: 사용자 연습 중 키 빈도 시각적 히트맵 렌더링.

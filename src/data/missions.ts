@@ -2368,4 +2368,53 @@ export const MISSIONS: Mission[] = [
       return isCurrentBuf1 && Boolean(buf1Correct) && Boolean(buf2Correct);
     },
   },
+  {
+    id: 70,
+    title: '레슨 70: 입력 모드 고속 탈출(:imap jk <Esc>)과 리더키(<leader>) 실무 키매핑 마스터',
+    description:
+      'Vim의 가장 큰 강점 중 하나는 나만의 손가락 타건 리듬에 맞춰 키를 재정의하는 커스텀 키매핑입니다. 특히 실무 Vim 고수들이 가장 먼저 설정하는 두 가지 필수 키매핑이 있습니다.\n\n1) 입력 모드 고속 탈출 (:imap jk <Esc>):\n   - 일반 키보드에서 <Esc>는 좌측 최상단에 있어, 입력 모드를 빠져나올 때마다 홈 로우(Home Row) 타건 자세가 무너집니다.\n   - :imap jk <Esc> 를 등록해 두면 입력 모드에서 j와 k를 빠르게 연속 입력했을 때 직전 j가 자동으로 지워지면서 즉시 노멀 모드로 탈출합니다! 손가락을 홈 로우에서 단 1mm도 뗄 필요가 없습니다.\n\n2) 리더 키(Leader Key)와 레지스터 보호 (:nmap <leader>d "_d):\n   - Vim의 기본 단축키와 충돌하지 않는 나만의 안전한 단축키 네임스페이스를 만들 때 <leader>를 사용합니다 (기본 리더 키: <Space> 공백).\n   - 코드를 정리할 때 이전에 복사(Yank)해 둔 중요한 텍스트를 유지하면서 불필요한 줄을 지우고 싶을 때, 기본 dd는 클립보드(무명 레지스터 ")를 덮어써 버립니다.\n   - :nmap <leader>d "_d 를 등록하면 <Space>dd 입력 한 번으로 클립보드 손실 없이 블랙홀 레지스터(_)로 깔끔하게 삭제할 수 있습니다.\n\n미션:\n1. :imap jk <Esc><Enter> 명령으로 입력 모드 탈출 매핑을 등록하세요.\n2. :nmap <leader>d "_d<Enter> 명령으로 리더키 블랙홀 삭제 매핑을 등록하세요.\n3. 1번 줄에서 ya" 키로 "AUTH_BEARER_SECRET" 토큰을 복사하세요.\n4. j 키로 2번 줄(console.log)로 이동한 뒤, <Space>dd 키로 토큰을 보존한 채 디버그 줄을 블랙홀 삭제하세요.\n5. $ 키로 backup 라인 끝으로 이동한 뒤, p 키로 복사한 토큰을 붙여넣으세요.\n6. A 키로 줄 끝 입력 모드로 진입하고, ; 문자를 타이핑한 뒤, jk 키를 연속으로 입력하여 노멀 모드로 초고속 복귀하세요!',
+    hint: ':imap jk <Esc> 입력 후 Enter → :nmap <leader>d "_d 입력 후 Enter → ya" 로 토큰 복사 → j 후 <Space>dd 로 디버그 줄 삭제 → $ 후 p 로 토큰 붙여넣기 → A;jk 로 세미콜론 추가 및 노멀 모드 복귀',
+    par: 52,
+    optimalKeys: [
+      ':', 'i', 'm', 'a', 'p', ' ', 'j', 'k', ' ', '<', 'E', 's', 'c', '>', 'Enter',
+      ':', 'n', 'm', 'a', 'p', ' ', '<', 'l', 'e', 'a', 'd', 'e', 'r', '>', 'd', ' ', '"', '_', 'd', 'Enter',
+      'y', 'a', '"',
+      'j',
+      ' ', 'd', 'd',
+      '$', 'p',
+      'A', ';', 'j', 'k',
+    ],
+    initialLines: [
+      'const token = "AUTH_BEARER_SECRET";',
+      'console.log("DEBUG_LEAK");',
+      'const backup = ',
+    ],
+    targetLines: [
+      'const token = "AUTH_BEARER_SECRET";',
+      'const backup = "AUTH_BEARER_SECRET";',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    targetCursor: { line: 1, col: 34 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const isImapRegistered =
+        state.userKeymaps?.['i:jk'] === '<Esc>' ||
+        state.userKeymaps?.['i:jk'] === 'Escape';
+      const isNmapRegistered =
+        state.userKeymaps?.['n:<leader>d'] === '"_d' ||
+        state.userKeymaps?.['n: d'] === '"_d' ||
+        state.userKeymaps?.['<leader>d'] === '"_d' ||
+        state.userKeymaps?.[' d'] === '"_d';
+
+      const target0 = 'const token = "AUTH_BEARER_SECRET";';
+      const target1 = 'const backup = "AUTH_BEARER_SECRET";';
+      return (
+        isImapRegistered &&
+        isNmapRegistered &&
+        state.lines.length === 2 &&
+        state.lines[0] === target0 &&
+        state.lines[1] === target1
+      );
+    },
+  },
 ];
