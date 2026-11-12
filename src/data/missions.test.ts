@@ -1334,8 +1334,28 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson66!.checkComplete(state)).toBe(true);
   });
 
-  it('모든 66개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(66);
+  it('레슨 67: Vim 세션 관리(:mksession, :source)로 분할 창과 버퍼 환경 영구 보존 checkComplete 판정 검증', () => {
+    const lesson67 = MISSIONS.find((m) => m.id === 67);
+    expect(lesson67).toBeDefined();
+
+    let state: VimEditorState = {
+      lines: [...lesson67!.initialLines],
+      cursor: { ...lesson67!.initialCursor },
+      mode: 'NORMAL',
+      primaryFilename: lesson67!.primaryFilename,
+      secondaryFilename: lesson67!.secondaryFilename,
+      secondaryLines: lesson67!.secondaryLines,
+    };
+    expect(lesson67!.checkComplete(state)).toBe(false);
+
+    for (const key of lesson67!.optimalKeys!) {
+      state = handleKey(state, key);
+    }
+    expect(lesson67!.checkComplete(state)).toBe(true);
+  });
+
+  it('모든 67개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(67);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();

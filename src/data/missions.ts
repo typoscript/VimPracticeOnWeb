@@ -2211,4 +2211,60 @@ export const MISSIONS: Mission[] = [
       return hasLines && isMacroFixed;
     },
   },
+  {
+    id: 67,
+    title: '레슨 67: Vim 세션 관리(:mksession, :source)로 분할 창과 버퍼 환경 영구 보존하기',
+    description:
+      'Vim/Neovim에서 복잡한 프로젝트를 작업할 때 여러 개의 분할 창(Split Window)과 버퍼(Buffer), 커서 위치, 옵션 설정을 세팅해 두고 개발을 진행합니다. 작업 중인 환경 전체를 영구 보존하고 나중에 한 번에 복원할 때 순정 Vim의 세션 기능(:mksession 및 :source)을 사용합니다.\n\n1) 세션 저장 (:mksession [파일명]):\n   - :mksession (또는 축약 :mks) : 기본 세션 파일(Session.vim)로 현재 분할 창 구조, 열려 있는 버퍼 목록, 커서 위치, 옵션을 저장합니다.\n   - :mksession [파일명] : 지정한 이름(예: :mks dev.vim)으로 세션 파일을 저장합니다.\n   - 이미 존재하는 세션 파일에 덮어쓸 때는 !를 붙여 :mks! dev.vim 처럼 실행합니다.\n\n2) 작업 환경 리셋 / 단일 창 정리 (:only):\n   - :only (또는 :on, Ctrl-w o) : 현재 활성 창만 남기고 나머지 분할 창을 모두 닫습니다. 다른 작업을 하거나 창을 닫아버린 상황을 시뮬레이션할 수 있습니다.\n\n3) 세션 복원 (:source [파일명]):\n   - :source dev.vim (또는 축약 :so dev.vim) : 저장해 둔 세션 스크립트를 로드하여 이전의 가로/세로 분할 창 구조, 보조 파일 내용, 커서 위치를 100% 무손실로 완벽히 복원합니다!\n\n미션:\n1. :vsp config.ts 명령으로 오른쪽에 config.ts 보조 설정 창을 수직 분할로 여세요.\n2. :mks dev.vim 명령으로 현재 분할 창과 버퍼 작업 환경을 dev.vim 세션 파일로 저장하세요.\n3. :only 명령을 실행하여 분할 창을 닫고 app.ts 단일 창으로 초기화하세요.\n4. :so dev.vim 명령을 실행하여 저장해 둔 세션을 불러와 이전의 분할 창 작업 환경을 완벽하게 복원하세요!',
+    hint: ':vsp config.ts 입력 후 Enter → :mks dev.vim 입력 후 Enter → :only 입력 후 Enter → :so dev.vim 입력 후 Enter',
+    par: 55,
+    optimalKeys: [
+      ':', 'v', 's', 'p', ' ', 'c', 'o', 'n', 'f', 'i', 'g', '.', 't', 's', 'Enter',
+      ':', 'm', 'k', 's', ' ', 'd', 'e', 'v', '.', 'v', 'i', 'm', 'Enter',
+      ':', 'o', 'n', 'l', 'y', 'Enter',
+      ':', 's', 'o', ' ', 'd', 'e', 'v', '.', 'v', 'i', 'm', 'Enter',
+    ],
+    primaryFilename: 'app.ts',
+    secondaryFilename: 'config.ts',
+    initialLines: [
+      '// app.ts - Core Application Entry',
+      'import { API_KEY, PORT } from "./config";',
+      'export function bootstrap() {',
+      '  console.log(`Server starting on port ${PORT}...`);',
+      '}',
+    ],
+    secondaryLines: [
+      '// config.ts - Application Configuration',
+      'export const PORT = 8080;',
+      'export const API_KEY = "secret_jwt_token";',
+    ],
+    targetLines: [
+      '// app.ts - Core Application Entry',
+      'import { API_KEY, PORT } from "./config";',
+      'export function bootstrap() {',
+      '  console.log(`Server starting on port ${PORT}...`);',
+      '}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const hasSessionFile = Boolean(
+        state.virtualFiles?.['dev.vim'] ||
+        state.globalVars?.['v:this_session'] === 'dev.vim'
+      );
+      if (!hasSessionFile) return false;
+
+      const isSplitRestored =
+        state.splitDirection === 'vertical' &&
+        Boolean(state.splitPanes && state.splitPanes.length === 2);
+      if (!isSplitRestored) return false;
+
+      const pane0 = state.splitPanes![0];
+      const pane1 = state.splitPanes![1];
+      const hasApp = pane0.filename === 'app.ts' || pane1.filename === 'app.ts';
+      const hasConfig = pane0.filename === 'config.ts' || pane1.filename === 'config.ts';
+
+      return hasApp && hasConfig;
+    },
+  },
 ];
