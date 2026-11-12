@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 116개 테스트 파일, 1,510개 테스트 100% 통과 필수)*
+  *(현재 116개 테스트 파일, 1,511개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 67)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 68)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -105,6 +105,7 @@
 - **Vim 순정 세션 저장 및 복원 엔진 (`:mksession [file]`, `:source Session.vim`) (`src/vim-engine/sessionEngine.ts`)**: 현재 편집 중인 모든 상태(가로/세로 분할 창 구조 및 활성 포커스, 열려 있는 버퍼 목록, 탭페이지, 마크, 레지스터, 옵션 설정값)를 순정 Vim 스크립트로 직렬화하여 가상 파일 시스템에 저장하고, `:source {sessionFile}` 또는 `:so {sessionFile}` 로 이전 작업 환경을 100% 무손실로 완벽히 복원. 외부 Vim 스크립트 Ex 명령어 순차 실행 폴백 및 `:wincmd` (`w`, `h`, `l`, `c`, `o`, `s`, `v`, `[count]wincmd w`), `:badd [+line] {file}`, `silent!` 접두사 파싱 지원.
 - **Vim 세션 관리와 :mksession / :source 실전 마스터 (레슨 67)**: 다중 분할 창(Split Window)과 버퍼 작업 환경을 세션 스크립트로 영구 저장(`:mksession` / `:mks`)하고, 창 리셋(`:only`) 후 이전 환경으로 즉시 복원(`:source` / `:so`)하는 실무 세션 관리 워크플로우 훈련 제공.
 - **순정 Vim 마크 & 점프 리스트 비주얼 맵 및 Ex 커맨드 (`:marks`, `:jumps`, `:clearjumps`, `:delmarks`) (`src/vim-engine/marks.ts`, `src/components/MarksJumpVisualizer/`)**: 현재 버퍼의 로컬 마크(`m{a-z}`), 전역 마크(`m{A-Z}`), 특수 마크(`'`, `.`, `^`) 및 커서 점프 이력(`Ctrl-o` / `Ctrl-i`)을 실시간 시각화하고 상호작용하는 통합 HUD 네비게이터. 마크 탭(로컬/전역 필터, 위치 및 라인 미리보기, 즉시 점프/삭제, `:delmarks!` 일괄 삭제), 점프 리스트 탭(현재 점프 포인터 `▶` 표시, 상대 거리 `>0`/`-1`/`+1`, 클릭 점프, `:clearjumps` 비우기), 시각 분포도(Minimap, 에디터 행별 마크/점프/커서 분포 시각화 및 라인 점프), 거터 마크 뱃지(로컬 보라, 전역 파랑) 및 점프 인디케이터 클릭 연동 지원.
+- **점프 리스트(Ctrl-o / Ctrl-i)와 마크 정리(:delmarks!) 실전 마스터 (레슨 68, `src/vim-engine/marks.ts`)**: 대규모 코드베이스에서 마크(`ma`, `'a`)와 점프 리스트 히스토리(`Ctrl-o`, `Ctrl-i`)를 양방향 순회하고, 사용이 끝난 임시 마크를 일괄 삭제(`:delmarks!`)하는 실무 고속 탐색 워크플로우 훈련 제공.
 
 ---
 
@@ -135,4 +136,4 @@
 23. ~~**Vim 내장 세션 저장 및 복원 (`:mksession`, `:source Session.vim`)**: 윈도우 분할, 버퍼, 탭 상태 전체를 저장하고 다시 로드하는 영구 세션 관리자.~~ — 구현 완료.
 24. ~~**마크 점프 리스트 비주얼 맵 (Marks & Jump Visualizer)**: 현재 버퍼/전역 마크(`'a`~`'z`, `'A`~`'Z`) 및 점프 리스트(`Ctrl-o` / `Ctrl-i`) 위치를 에디터 거터/미니맵에 시각적으로 표시하고 상호작용하는 HUD 네비게이터.~~ — 구현 완료.
 25. ~~**신규 레슨 67 추가 (Vim 세션 관리와 :mksession / :source 마스터)**~~ — 레슨 67과 함께 구현 완료.
-26. **신규 레슨 68 추가 (마크 점프 마스터와 고급 위치 탐색)**: 로컬/전역 마크(`ma`, `'a`, `mA`, `'A`) 및 점프 리스트(`Ctrl-o`, `Ctrl-i`)를 활용한 대규모 코드베이스 고속 이동 실전 훈련.
+26. ~~**신규 레슨 68 추가 (마크 점프 마스터와 고급 위치 탐색)**~~ — 레슨 68과 함께 구현 완료.

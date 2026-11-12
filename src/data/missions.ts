@@ -2267,4 +2267,52 @@ export const MISSIONS: Mission[] = [
       return hasApp && hasConfig;
     },
   },
+  {
+    id: 68,
+    title: '레슨 68: 점프 리스트(Ctrl-o / Ctrl-i)와 마크 정리(:delmarks!)로 대규모 코드 정밀 탐색하기',
+    description:
+      'Vim은 커서가 큰 폭으로 점프(G, gg, /검색, 마크 점프 \' 등)할 때마다 그 이전 위치를 내부 점프 리스트(Jump List)에 자동으로 기록합니다. 웹 브라우저의 \'뒤로 가기\'와 \'앞으로 가기\'처럼 코드베이스 어디로 이동했든 손쉽게 이전 작업 위치로 순간이동할 수 있습니다.\n\n1) 점프 리스트 양방향 이동 (Ctrl-o / Ctrl-i):\n   - Ctrl-o (Older): 점프 리스트의 이전(과거) 위치로 뒤로 가기 점프합니다.\n   - Ctrl-i (Newer): 점프 리스트의 다음(최신) 위치로 앞으로 가기 점프합니다.\n   - :jumps : 현재 점프 리스트 목록과 포인터(>)를 표 형태로 확인합니다.\n   - :clearjumps : 점프 리스트 히스토리를 초기화합니다.\n\n2) 마크 설정과 삭제 (:delmarks):\n   - ma : 현재 커서 위치를 마크 a로 저장합니다.\n   - \'a : 마크 a가 위치한 행의 첫 글자로 즉시 점프합니다.\n   - :marks : 등록된 모든 마크 목록을 조회합니다.\n   - :delmarks! (또는 축약 :delm!) : 현재 버퍼의 모든 소문자 마크(a-z)를 한 번에 일괄 삭제하여 버퍼를 깨끗하게 정리합니다.\n\n미션:\n1. 1번 줄에서 ma 키를 눌러 현재 위치를 마크 a로 북마크하세요.\n2. G 키로 맨 마지막 줄로 점프한 뒤, k f 3 c w 8 0 8 0 <Esc> 로 port 값을 3000에서 8080으로 수정하세요.\n3. Ctrl-o 키를 눌러 점프 리스트 이전 위치(1번 줄)로 뒤로 가기 복귀하세요.\n4. Ctrl-i 키를 눌러 다시 최신 점프 위치(마지막 줄)로 앞으로 가기 전진하세요.\n5. \'a 키를 눌러 마크 a가 있는 1번 줄로 순간이동하세요.\n6. :delmarks! 명령으로 임시 마크 a를 삭제하여 미션을 완료하세요!',
+    hint: 'ma 로 마크 a 설정 → G 로 마지막 줄 점프 → k f 3 c w 8 0 8 0 Escape 로 포트 수정 → Ctrl-o 로 1번 줄 복귀 → Ctrl-i 로 점프 위치 전진 → \'a 로 마크 점프 → :delmarks! 입력 후 Enter',
+    par: 30,
+    optimalKeys: [
+      'm', 'a',
+      'G',
+      'k',
+      'f', '3',
+      'c', 'w', '8', '0', '8', '0', 'Escape',
+      'Ctrl-o',
+      'Ctrl-i',
+      "'", 'a',
+      ':', 'd', 'e', 'l', 'm', 'a', 'r', 'k', 's', '!', 'Enter',
+    ],
+    initialLines: [
+      '// User Settings Module',
+      'export const config = {',
+      '  theme: "dark",',
+      '  debug: false,',
+      '  timeout: 5000,',
+      '  port: 3000,',
+      '};',
+    ],
+    targetLines: [
+      '// User Settings Module',
+      'export const config = {',
+      '  theme: "dark",',
+      '  debug: false,',
+      '  timeout: 5000,',
+      '  port: 8080,',
+      '};',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    targetCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const isPortUpdated = state.lines.some((l) => l.includes('port: 8080'));
+      const isBackOnTop = state.cursor.line === 0;
+      const hasUsedJumps = (state.jumpList?.length ?? 0) >= 1;
+      const isMarkCleaned = !state.marks?.a;
+
+      return isPortUpdated && isBackOnTop && hasUsedJumps && isMarkCleaned;
+    },
+  },
 ];
