@@ -674,6 +674,20 @@ export function App() {
     wasCompletedRef.current = isCompleted;
   }, [isCompleted, playSuccessSound]);
 
+  // 시스템 클립보드 ("+, "*) 변경 시 실제 웹 브라우저 클립보드에 동기화
+  const prevSystemClipboardRef = useRef<string | undefined>(editorState.systemClipboard);
+  useEffect(() => {
+    if (
+      editorState.systemClipboard &&
+      editorState.systemClipboard !== prevSystemClipboardRef.current
+    ) {
+      prevSystemClipboardRef.current = editorState.systemClipboard;
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(editorState.systemClipboard).catch(() => {});
+      }
+    }
+  }, [editorState.systemClipboard]);
+
   // URL에서 커스텀 미션을 감지한 경우 안내 코칭 메시지 표시
   useEffect(() => {
     if (initialCustomMission) {

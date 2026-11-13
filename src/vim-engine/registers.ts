@@ -72,6 +72,12 @@ export function syncRegisters(
     content: clip.content,
   };
 
+  // 시스템 클립보드 ("+, "*) 연동 동기화
+  if (reg === '+' || reg === '*') {
+    newRegisters['+'] = { type: regType, content: clip.content };
+    newRegisters['*'] = { type: regType, content: clip.content };
+  }
+
   // 복사(Yank) 연산인 경우 전용 "0 레지스터에도 저장
   if (isYank) {
     newRegisters['0'] = {
@@ -83,6 +89,7 @@ export function syncRegisters(
   return {
     ...nextState,
     registers: newRegisters,
+    systemClipboard: (reg === '+' || reg === '*') ? clip.content : nextState.systemClipboard,
     activeRegister: undefined,
   };
 }
@@ -206,6 +213,31 @@ export function getRegisterContent(
       type: 'text',
       content: state.lastSearchQuery ?? '',
     };
+  }
+
+  // 시스템 클립보드 ("+, "*) 조회
+  if (targetReg === '+' || targetReg === '*') {
+    const content = state.systemClipboard ?? state.registers?.[targetReg]?.content;
+    if (content !== undefined && content !== null) {
+      const str = Array.isArray(content) ? content.join('') : content;
+      const type = state.registers?.[targetReg]?.type === 'line' ? 'line' : 'text';
+      return {
+        type,
+        content: str,
+      };
+    }
+  }
+
+  // 표현식 레지스터 ("=) 조회
+  if (targetReg === '=') {
+    const entry = state.registers?.['='];
+    if (entry) {
+      const content = Array.isArray(entry.content) ? entry.content.join('') : entry.content;
+      return {
+        type: 'text',
+        content,
+      };
+    }
   }
 
   // 특정 명명된 레지스터 지정 시 ("a~"z 및 "A~"Z 동일 참조)
@@ -484,4 +516,23 @@ export function formatRegisters(state: VimEditorState, filterArg?: string): stri
   });
 
   return [header, ...lines].join('\n');
+}
+
+/**
+ * 외부 시스템/OS 클립보드 텍스트를 "+ 및 "* 레지스터에 동기화합니다.
+ */
+export function setSystemClipboard(
+  state: VimEditorState,
+  text: string
+): VimEditorState {
+  const newRegisters = {
+    ...(state.registers ?? {}),
+    '+': { type: 'char' as const, content: text },
+    '*': { type: 'char' as const, content: text },
+  };
+  return {
+    ...state,
+    systemClipboard: text,
+    registers: newRegisters,
+  };
 }

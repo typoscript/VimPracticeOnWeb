@@ -79,6 +79,7 @@ export {
   formatMacroKeysToString,
   parseMacroStringToKeys,
   getRegisterContent,
+  setSystemClipboard,
 } from './registers';
 export type { MacroTrace, MacroFrame } from './macroDebugger';
 

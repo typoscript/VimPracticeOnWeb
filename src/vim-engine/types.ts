@@ -384,6 +384,8 @@ export interface VimEditorState {
   visualAnchor?: CursorPosition; // VISUAL 모드 선택 시작점
   pendingKeys?: string; // gg, dd, dw 등 다중 키 입력을 위한 버퍼
   clipboard?: ClipboardRegister;
+  /** 실제 시스템/OS 클립보드 연동용 문자열 버퍼 ("+, "* 레지스터) */
+  systemClipboard?: string;
   undoStack?: StateSnapshot[];
   redoStack?: StateSnapshot[];
   /** 마지막으로 완료된 버퍼 변경 명령어 키 시퀀스 ('.' 반복용) */
@@ -460,9 +462,9 @@ export interface VimEditorState {
   insertNormalSession?: boolean;
   /** Insert 모드 및 Command 모드 Ctrl+r 레지스터 입력 대기 상태 */
   insertRegisterPending?: boolean;
-  /** Ctrl+r = 표현식 레지스터 계산 완료 후 복귀할 컨텍스트 */
+  /** Ctrl+r = 또는 "= 표현식 레지스터 계산 완료 후 복귀할 컨텍스트 */
   expressionReturnContext?: {
-    mode: 'INSERT' | 'COMMAND';
+    mode: 'INSERT' | 'COMMAND' | 'NORMAL';
     cursor?: CursorPosition;
     commandBuffer?: string;
   } | null;

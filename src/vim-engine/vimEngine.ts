@@ -951,6 +951,18 @@ function handleCommandLineModeKey(state: VimEditorState, key: string): VimEditor
           registers: newRegisters,
           expressionReturnContext: undefined,
         };
+      } else if (returnMode === 'NORMAL') {
+        // NORMAL 모드 복귀: '=' 레지스터 저장 및 activeRegister 를 '=' 로 설정 (바로 p 로 붙여넣기 가능)
+        return {
+          ...state,
+          mode: 'NORMAL',
+          registers: newRegisters,
+          activeRegister: '=',
+          commandBuffer: undefined,
+          commandType: undefined,
+          expressionReturnContext: undefined,
+          cursor: returnCtx?.cursor ?? state.cursor,
+        };
       } else {
         // INSERT 모드 복귀 및 계산 결과 즉시 삽입
         const stateWithRegisters: VimEditorState = {
@@ -1905,7 +1917,7 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
 
   // 명명된 레지스터 지정 ("{register})
   if (state.pendingKeys === '"') {
-    if (/^[a-zA-Z0-9"+_]$/.test(key)) {
+    if (/^[a-zA-Z0-9"+*_\-:.%#\/]$/.test(key)) {
       const reg = key === '""' ? '"' : key;
       return {
         ...state,
@@ -2694,7 +2706,20 @@ function handleNormalModeKey(
 
   // 1-0-a. 명명된 레지스터 지정 ("{register})
   if (state.pendingKeys === '"') {
-    if (/^[a-zA-Z0-9"+_]$/.test(key)) {
+    if (key === '=') {
+      return {
+        ...state,
+        mode: 'COMMAND',
+        commandType: '=',
+        commandBuffer: '',
+        expressionReturnContext: {
+          mode: 'NORMAL',
+          cursor: { ...state.cursor },
+        },
+        pendingKeys: undefined,
+      };
+    }
+    if (/^[a-zA-Z0-9"+*_\-:.%#\/]$/.test(key)) {
       const reg = key === '""' ? '"' : key;
       return {
         ...state,
