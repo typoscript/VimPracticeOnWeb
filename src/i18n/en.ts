@@ -1153,4 +1153,16 @@ export const EN: Record<string, string> = {
   "클릭하여 이 키 시점으로 점프": "Click to jump to this key frame",
   "스마트 튜터 해설": "Smart Tutor Explanation",
   "실행 전 초기 상태": "Initial state before execution",
+
+  // Fuzzy Finder (:find, :Files, :Buffers)
+  "검색어를 입력하세요...": "Type to search...",
+  "개": "items",
+  "일치하는 항목이 없습니다.": "No matching items found.",
+  "세로 분할": "Vertical split",
+  "가로 분할": "Horizontal split",
+  "열기": "Open",
+  "세로분할": "V-split",
+  "가로분할": "H-split",
+  "새탭": "New tab",
+  "선택이동": "Navigate",
 };

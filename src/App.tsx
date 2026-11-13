@@ -15,6 +15,7 @@ import { MarksJumpVisualizer } from './components/MarksJumpVisualizer/MarksJumpV
 import { MacroDebugger } from './components/MacroDebugger/MacroDebugger';
 import { VimGrammarASTViewer } from './components/VimGrammarASTViewer/VimGrammarASTViewer';
 import { QuickfixPanel } from './components/QuickfixPanel';
+import { FuzzyFinder } from './components/FuzzyFinder/FuzzyFinder';
 import { ActionTimelinePanel } from './components/ActionTimelinePanel/ActionTimelinePanel';
 import {
   ActionTimelineStep,
@@ -35,6 +36,7 @@ import {
   clearCommandLineHistory,
 } from './vim-engine';
 import { closeQuickfixWindow, jumpToQuickfixItem } from './vim-engine';
+import { selectFuzzyFinderItem, closeFuzzyFinder } from './vim-engine';
 import { closeLocationListWindow, jumpToLocationListItem } from './vim-engine';
 import { computeDiffHunks } from './vim-engine';
 import { selectCompletionCandidate } from './vim-engine';
@@ -405,6 +407,29 @@ export function App() {
   const handleCloseLocationListWindow = useCallback(() => {
     setEditorState((prevState) => closeLocationListWindow(prevState));
     setIsEditorFocused(true);
+  }, []);
+
+  const handleSelectFuzzyFinderAction = useCallback((action: 'open' | 'vsplit' | 'split' | 'tab') => {
+    setEditorState((prevState) => selectFuzzyFinderItem(prevState, action));
+    setIsEditorFocused(true);
+  }, []);
+
+  const handleCloseFuzzyFinder = useCallback(() => {
+    setEditorState((prevState) => closeFuzzyFinder(prevState));
+    setIsEditorFocused(true);
+  }, []);
+
+  const handleSelectFuzzyItemIndex = useCallback((index: number) => {
+    setEditorState((prevState) => {
+      if (!prevState.fuzzyFinder) return prevState;
+      return {
+        ...prevState,
+        fuzzyFinder: {
+          ...prevState.fuzzyFinder,
+          selectedIndex: index,
+        },
+      };
+    });
   }, []);
 
   const currentMission = MISSIONS[currentMissionIndex];
@@ -2419,6 +2444,15 @@ export function App() {
           />
         )}
       </Suspense>
+
+      {editorState.fuzzyFinder?.isOpen && (
+        <FuzzyFinder
+          state={editorState}
+          onSelectAction={handleSelectFuzzyFinderAction}
+          onSelectItemIndex={handleSelectFuzzyItemIndex}
+          onClose={handleCloseFuzzyFinder}
+        />
+      )}
     </div>
   );
 }

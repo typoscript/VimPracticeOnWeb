@@ -202,6 +202,9 @@ flowchart TD
 - **⚡ 타임어택 스피드런 모드 (Speedrun Mode)**:
   - 5개의 무작위 코드 리팩토링 미션을 연속 격파하는 챌린지 모드입니다.
   - 실시간 스톱워치 타이머와 누적 타수를 기록하며, 개인 최고 기록(최단 시간 & 최소 타수)을 `localStorage`에 영구 보존합니다.
+- **🔍 순정 파일 & 버퍼 퍼지 파인더 (Pure Fuzzy Finder - `:find`, `:Files`, `:Buffers`)**:
+  - 가상 파일 시스템(VFS) 및 버퍼 목록 대상 고속 퍼지 매칭 알고리즘(`fuzzyMatch`) 기반 대화형 팝업 UI를 제공합니다.
+  - 키보드 네비게이션(`<C-j>/<C-k>`, `<Down>/<Up>`), Enter 즉시 열기, `Ctrl-v` 세로 분할(`:vsp`), `Ctrl-s` 가로 분할(`:sp`), `Ctrl-t` 새 탭 열기 완벽 연동.
 - **🛡️ 한/영 입력기(IME) 자동 감지 & 물리 코드 보정**:
   - 한글(두벌식) 상태에서 `ㅗㅓㅏㅣ`(h,j,k,l) 등을 입력해도 물리 키(`e.code`)를 기반으로 영문 Vim 명령어로 즉시 자동 변환합니다.
 - **🖱️ 에디터 포커스 이탈(Blur) 보호**:
@@ -214,7 +217,7 @@ flowchart TD
 ## 🛠️ 기술 스택 (Tech Stack)
 
 - **Core**: React 19, TypeScript, Vite
-- **Testing**: Vitest, React Testing Library (281개 단위/통합 테스트 100% 통과)
+- **Testing**: Vitest, React Testing Library (123개 파일, 1,609개 단위/통합 테스트 100% 통과)
 - **Styling**: Modern Pure CSS (Catppuccin Macchiato 테마)
 - **Zero Dependencies**: 외부 에디터(CodeMirror, Monaco 등) 및 무거운 UI 프레임워크 없는 순수 TypeScript 아키텍처
 

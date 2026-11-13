@@ -206,6 +206,13 @@ export interface NetrwState {
   pendingKey?: string; // 대기 중인 접두어 키 ('m', 'g' 등)
 }
 
+export interface FuzzyFinderState {
+  isOpen: boolean;
+  mode: 'files' | 'buffers';
+  query: string;
+  selectedIndex: number;
+}
+
 export interface VimOptions {
   /** 줄 번호 표시 여부 (:set nu / nonu) */
   number: boolean;
@@ -523,6 +530,8 @@ export interface VimEditorState {
   showMarksVisualizer?: boolean;
   /** 커스텀 설정 및 .vimrc 내보내기/다운로드 모달 표시 여부 (:vimrc, :export, :config) */
   showConfigModal?: boolean;
+  /** 퍼지 파일 & 버퍼 검색 팝업 상태 (:find, :Files, :Buffers) */
+  fuzzyFinder?: FuzzyFinderState | null;
   /** 순정 Vim 환경 옵션 설정 (:set nu, :set rnu, :set ic 등) */
   options?: VimOptions;
   /** 전역 기본 옵션 설정 (:setglobal, :set) */

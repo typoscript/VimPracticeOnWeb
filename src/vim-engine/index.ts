@@ -189,5 +189,24 @@ export {
   formatNetrwBookmarks,
 } from './netrwEngine';
 
+// ---- 순정 파일 & 버퍼 퍼지 파인더 (:find, :Files, :Buffers) ----
+export {
+  fuzzyMatch,
+  searchFilesFuzzy,
+  searchBuffersFuzzy,
+  openFuzzyFinder,
+  closeFuzzyFinder,
+  updateFuzzyFinderQuery,
+  moveFuzzyFinderSelection,
+  selectFuzzyFinderItem,
+  executeFindFileCommand,
+  handleFuzzyFinderKey,
+} from './fuzzyFinder';
+export type {
+  FuzzyMatchResult,
+  FuzzyFileItem,
+  FuzzyBufferItem,
+} from './fuzzyFinder';
+
 // ---- 개발용 불변성 검사 ----
 export { withInvariantCheck, assertValidVimState, deepFreeze } from './invariants';

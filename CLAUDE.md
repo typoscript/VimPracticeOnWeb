@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 120개 테스트 파일, 1,585개 테스트 100% 통과 필수)*
+  *(현재 123개 테스트 파일, 1,609개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -118,6 +118,7 @@
 - **Vim 키스트로크 히트맵 & 타건 통계 대시보드 (`src/components/AnalyticsModal/KeystrokeHeatmap.tsx`, `KeystrokeHeatmap.css`)**: 5단계 열기 컬러(쿨 블루 -> 웜 골드 -> 블레이징 레드) 실시간 QWERTY 키보드 시각화, 카테고리 필터 칩(전체, 모션, 연산자, 입력), 키별 세부 분석 카드(타수, 점유율, Vim 인체공학적 코칭 조언), 종합 분석 모달 내 탭 전환(`[ 📊 종합 숙련도 분석 ]` vs `[ ⌨️ 타건 키보드 히트맵 ]`) 연동.
 - **순정 ctags 심볼 태그 선택기 및 멀티 정의 탐색 (레슨 71, `src/vim-engine/tagEngine.ts`, `commandLine.ts`, `missions.ts`)**: 다중 일치 태그 탐색(`findTags`), 태그 점프 및 매치 목록 표시(`:tjump`, `:tj`, `g]`), 태그 목록 대화형 선택(`:tselect [name|num]`, `:ts`), 태그 매치 순환(`:tnext [count]`, `:tn`, `:tprev [count]`, `:tp`, `:tfirst`, `:tf`, `:tlast`, `:tl`), 태그 목록 순회 시 태그 스택 비오염 보존(`pushStack = false`), `Ctrl-t`(`:pop`) 완벽 복귀 지원. 레슨 71에서 `g]`로 다중 정의 확인, `:tn`으로 주문 모델로 전환, `Ctrl-t`로 원본 호출 위치 복귀 실전 통합 마스터.
 - **순정 Vim 자동 명령(Autocommand)과 저장 시 공백 자동 정리 마스터 (레슨 72, `src/vim-engine/autocmdEngine.ts`, `missions.ts`)**: 파일 저장 직전(`BufWritePre`) 끝 공백을 자동 치환(`:%s/\s\+$//e`)하는 순정 자동 명령 등록(`:autocmd`, `:au`), 파일 저장(`:w`) 연동 자동 후크 실행 및 라인 정리 실전 마스터.
+- **순정 Vim 파일 & 버퍼 퍼지 파인더 (`:find`, `:Files`, `:Buffers`, `src/vim-engine/fuzzyFinder.ts`, `src/components/FuzzyFinder/`)**: 순수 Vim 퍼지 매칭 알고리즘(`fuzzyMatch`), 가상 파일 시스템 및 버퍼 대상 고속 점수 기반 검색(`searchFilesFuzzy`, `searchBuffersFuzzy`), 순정 Ex 커맨드 `:find [file]` 및 대화형 퍼지 팝업 모달(`:Files`, `:Buffers`, `:FZF`), 키보드 네비게이션(`<C-j>/<C-k>`, `<Down>/<Up>`, Enter 열기, `Ctrl-v` 세로 분할, `Ctrl-s` 가로 분할, `Ctrl-t` 새 탭, `Esc` 닫기) 지원.
 - **순정 Netrw 디렉터리 북마크(mb, gb)와 프로젝트 고속 탐색 마스터 (레슨 73, `src/vim-engine/netrwEngine.ts`, `missions.ts`)**: 모노레포 프로젝트에서 자주 찾는 디렉터리(`services/`)를 탐색기 내에서 북마크 등록(`mb`), 북마크 즉시 점프(`gb`), 파일 열기(`Enter`), 원래 버퍼 복귀(`Ctrl-^`) 실무 탐색 워크플로우 마스터.
 
 ---
@@ -163,4 +164,4 @@
 37. ~~**Netrw 북마크 & 즐겨찾기 시스템 (`mb`, `gb`, `:Bookmark`)**~~ — 구현 완료.
 38. ~~**대화형 매크로 튜터 & 단계별 실행 비주얼라이저**~~ — 구현 완료.
 39. **하드코어 도장 실무 프로 10연타 챌린지**: ctags 점프, Netrw 조작, 버퍼 스위칭 혼합 고난도 코스.
-40. **순정 Vim 파일/버퍼 퍼지 파인더 (`:find`, `:b [filter]`)**: VFS 파일 고속 검색 팝업.
+40. ~~**순정 Vim 파일/버퍼 퍼지 파인더 (`:find`, `:b [filter]`, `:Files`, `:Buffers`)**~~ — 순수 퍼지 매칭 엔진 및 모달 팝업 UI 구현 완료.

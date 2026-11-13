@@ -100,6 +100,7 @@ import {
   goToNetrwBookmark,
   formatNetrwBookmarks,
 } from './netrwEngine';
+import { executeFindFileCommand, openFuzzyFinder } from './fuzzyFinder';
 import { formatRegisters } from './registers';
 import { executeSetCommand } from './setEngine';
 import { sourceScript } from './sourceEngine';
@@ -1103,8 +1104,32 @@ export function executeCommandLine(
     };
   }
 
-  // 버퍼 목록 조회: :ls, :buffers, :files
-  if (cleanCmd === 'ls' || cleanCmd === 'buffers' || cleanCmd === 'files') {
+  // 퍼지 파일 파인더 팝업: :Files, :FZF
+  if (/^(?:Files|FZF|fzf)$/.test(cleanCmdRaw)) {
+    const res = openFuzzyFinder(state, 'files');
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 퍼지 버퍼 파인더 팝업: :Buffers
+  if (/^(?:Buffers)$/.test(cleanCmdRaw)) {
+    const res = openFuzzyFinder(state, 'buffers');
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 버퍼 목록 조회: :ls, :buffers, :files (순정 소문자 명령)
+  if (cleanCmd === 'ls' || cleanCmdRaw === 'buffers' || cleanCmdRaw === 'files') {
     return {
       ...state,
       mode: 'NORMAL',
@@ -1230,6 +1255,20 @@ export function executeCommandLine(
   if (gbMatch) {
     const idx = gbMatch[1] ? parseInt(gbMatch[1], 10) - 1 : undefined;
     const res = goToNetrwBookmark(state, idx);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 퍼지 파일 탐색: :find [filename], :fin [filename]
+  const findMatch = cleanCmdRaw.match(/^(?:find|fin)(?:\s+(.*))?$/i);
+  if (findMatch) {
+    const arg = (findMatch[1] ?? '').trim();
+    const res = executeFindFileCommand(state, arg);
     return {
       ...res,
       mode: 'NORMAL',

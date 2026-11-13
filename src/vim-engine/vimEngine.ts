@@ -54,6 +54,7 @@ import {
   handleCommandLineWindowKey,
 } from './cmdlineWindow';
 import { handleNetrwKey } from './netrwEngine';
+import { handleFuzzyFinderKey } from './fuzzyFinder';
 import { jumpDiffHunk, diffObtain, diffPut } from './diffEngine';
 import {
   jumpToNextSpellError,
@@ -291,6 +292,11 @@ export function rawHandleKey(
     if (netrwHandled !== null) {
       return netrwHandled;
     }
+  }
+
+  // 퍼지 파인더 팝업 (:find, :Files, :Buffers) 활성화 시 전용 키 처리
+  if (state.fuzzyFinder?.isOpen) {
+    return handleFuzzyFinderKey(state, key);
   }
 
   // 매크로 기록 중인 상태 처리
