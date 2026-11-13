@@ -2633,4 +2633,59 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 75,
+    title: '레슨 75: 순정 Vim 내장 도움말(:help, K)과 태그 링크 점프 마스터',
+    description:
+      'Vim 내장 매뉴얼 시스템은 인터넷 검색 없이도 터미널 안에서 모든 모션, 연산자, 텍스트 객체를 찾아볼 수 있는 가장 강력한 순정 레퍼런스입니다.\n\n1) 커서 아래 단어로 도움말 열기 (K 키 또는 :help {topic}):\n   - 노멀 모드에서 알고 싶은 단어(예: motion) 위에 커서를 두고 대문자 K 를 누르면, 커서 위치의 단어를 추출하여 즉시 해당 토픽의 도움말 창(:help motion)을 열어줍니다.\n   - 명령행에서 :h {topic} 또는 :help {topic} 을 직접 입력해도 동일합니다.\n\n2) 도움말 내 |tag| 하이퍼링크 점프 (<CR> 또는 Ctrl-]):\n   - 도움말 본문에서 |motion|, |change|, |text-objects| 와 같이 세로 막대(|)로 감싸진 태그 링크 위에 커서를 두고 Enter (<CR>) 또는 Ctrl-] 를 누르면 해당 세부 도움말로 즉시 점프합니다.\n   - 점프할 때마다 이전 도움말 문서와 커서 위치가 내부 태그 스택(tagStack)에 차곡차곡 쌓입니다.\n\n3) 이전 도움말 위치로 복귀 (Ctrl-t) 및 닫기 (q 또는 :q):\n   - Ctrl-t 키를 누르면 브라우저의 뒤로 가기처럼 직전 태그 위치로 완벽하게 되돌아갑니다.\n   - q 키 또는 :q 를 입력하면 도움말 창이 닫히고 원래 작업 중이던 코드로 복귀합니다.\n\n미션:\n1. 두 번째 줄의 "motion" 단어 위로 이동(j 3w)한 뒤 K 키를 눌러 도움말(:help motion)을 여세요.\n2. 도움말 하단 관련 항목의 |change| 링크 위로 이동(G k f|)한 뒤 Enter 키를 눌러 change.txt 로 점프하세요.\n3. Ctrl-t 키를 눌러 이전 도움말(motion.txt)로 복귀하세요.\n4. q 키를 눌러 도움말을 닫으세요.\n5. 원래 코드에서 ci"verified<Esc> 로 문자열을 "verified" 로 수정하여 미션을 완료하세요!',
+    hint: 'j 3w 로 motion 이동 → K 로 도움말 열기 → G k f| 로 |change| 이동 후 Enter → Ctrl-t 로 복귀 → q 로 닫기 → ci"verified<Esc>',
+    par: 28,
+    optimalKeys: [
+      'j',
+      '3', 'w',
+      'K',
+      'G',
+      'k',
+      'f', '|',
+      'Enter',
+      'Ctrl-t',
+      'q',
+      'c', 'i', '"', 'v', 'e', 'r', 'i', 'f', 'i', 'e', 'd', 'Escape',
+    ],
+    primaryFilename: 'manual.ts',
+    initialLines: [
+      '// 순정 Vim 내장 도움말(:help, K)로 기능을 확인하고 코드를 검증하세요.',
+      'const status = "motion";',
+      'function check() {',
+      '  return status === "verified";',
+      '}',
+    ],
+    targetLines: [
+      '// 순정 Vim 내장 도움말(:help, K)로 기능을 확인하고 코드를 검증하세요.',
+      'const status = "verified";',
+      'function check() {',
+      '  return status === "verified";',
+      '}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const target = [
+        '// 순정 Vim 내장 도움말(:help, K)로 기능을 확인하고 코드를 검증하세요.',
+        'const status = "verified";',
+        'function check() {',
+        '  return status === "verified";',
+        '}',
+      ];
+      const isTargetMatched =
+        state.lines.length === target.length &&
+        state.lines.every((line, idx) => line === target[idx]);
+      const isHelpClosed = !state.helpSession || !state.helpSession.isOpen;
+
+      return (
+        state.mode === 'NORMAL' &&
+        isTargetMatched &&
+        isHelpClosed
+      );
+    },
+  },
 ];
