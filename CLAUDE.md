@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 123개 테스트 파일, 1,609개 테스트 100% 통과 필수)*
+  *(현재 123개 테스트 파일, 1,610개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -120,6 +120,7 @@
 - **순정 Vim 자동 명령(Autocommand)과 저장 시 공백 자동 정리 마스터 (레슨 72, `src/vim-engine/autocmdEngine.ts`, `missions.ts`)**: 파일 저장 직전(`BufWritePre`) 끝 공백을 자동 치환(`:%s/\s\+$//e`)하는 순정 자동 명령 등록(`:autocmd`, `:au`), 파일 저장(`:w`) 연동 자동 후크 실행 및 라인 정리 실전 마스터.
 - **순정 Vim 파일 & 버퍼 퍼지 파인더 (`:find`, `:Files`, `:Buffers`, `src/vim-engine/fuzzyFinder.ts`, `src/components/FuzzyFinder/`)**: 순수 Vim 퍼지 매칭 알고리즘(`fuzzyMatch`), 가상 파일 시스템 및 버퍼 대상 고속 점수 기반 검색(`searchFilesFuzzy`, `searchBuffersFuzzy`), 순정 Ex 커맨드 `:find [file]` 및 대화형 퍼지 팝업 모달(`:Files`, `:Buffers`, `:FZF`), 키보드 네비게이션(`<C-j>/<C-k>`, `<Down>/<Up>`, Enter 열기, `Ctrl-v` 세로 분할, `Ctrl-s` 가로 분할, `Ctrl-t` 새 탭, `Esc` 닫기) 지원.
 - **순정 Netrw 디렉터리 북마크(mb, gb)와 프로젝트 고속 탐색 마스터 (레슨 73, `src/vim-engine/netrwEngine.ts`, `missions.ts`)**: 모노레포 프로젝트에서 자주 찾는 디렉터리(`services/`)를 탐색기 내에서 북마크 등록(`mb`), 북마크 즉시 점프(`gb`), 파일 열기(`Enter`), 원래 버퍼 복귀(`Ctrl-^`) 실무 탐색 워크플로우 마스터.
+- **하드코어 도장 실무 프로 10연타 챌린지 (`pro-master`, `src/components/HardcoreDojo/drillGenerators.ts`, `HardcoreDojo.tsx`)**: 텍스트 객체(`ci"`, `di(`, `cit`, `di{`), 대소문자 변환(`gUiw`), 숫자 증감(`Ctrl-a`), 들여쓰기(`>>`), 라인 결합(`J`), 줄 끝 삭제(`D`), 단어 치환(`cw`) 등 실무 핵심 10문제를 노미스로 연속 격파하는 스피드런 코스. 콤보 게이지, 실시간 타이머, 클리어 시간별 4단계 칭호(👑 GRANDMASTER / ⚔️ SENIOR ARCHITECT / 💼 TECH-LEAD / 📜 PRO-DEV) 및 랭킹 시스템 연동.
 
 ---
 
@@ -163,5 +164,5 @@
 36. ~~**신규 레슨 72 추가 (순정 Vim 자동 명령과 BufWritePre 공백 정리 마스터)**~~ — 레슨 72와 함께 구현 완료.
 37. ~~**Netrw 북마크 & 즐겨찾기 시스템 (`mb`, `gb`, `:Bookmark`)**~~ — 구현 완료.
 38. ~~**대화형 매크로 튜터 & 단계별 실행 비주얼라이저**~~ — 구현 완료.
-39. **하드코어 도장 실무 프로 10연타 챌린지**: ctags 점프, Netrw 조작, 버퍼 스위칭 혼합 고난도 코스.
+39. ~~**하드코어 도장 실무 프로 10연타 챌린지 (`pro-master`)**~~ — 텍스트 객체/연산자 10종 노미스 연속 스피드런 코스 구현 완료.
 40. ~~**순정 Vim 파일/버퍼 퍼지 파인더 (`:find`, `:b [filter]`, `:Files`, `:Buffers`)**~~ — 순수 퍼지 매칭 엔진 및 모달 팝업 UI 구현 완료.

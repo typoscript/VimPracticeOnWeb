@@ -154,4 +154,29 @@ describe('HardcoreDojo Component', () => {
 
     expect(screen.queryByText('🏆 하드코어 도장 서든데스 명예의 전당')).not.toBeInTheDocument();
   });
+
+  it('실무 프로 10연타 챌린지 탭 선택 및 시작 안내와 첫 문제 성공 판정이 정상 동작한다', () => {
+    render(<HardcoreDojo />);
+
+    // 실무 프로 10연타 탭 선택
+    const proTab = screen.getByText('실무 프로 10연타 챌린지');
+    fireEvent.click(proTab);
+
+    expect(screen.getByText('👑 실무 프로 10연타')).toBeInTheDocument();
+    expect(screen.getByText('👑 프로 마스터 도전 시작 (10연타)')).toBeInTheDocument();
+
+    // 시작
+    fireEvent.click(screen.getByText('👑 프로 마스터 도전 시작 (10연타)'));
+
+    const arena = screen.getByLabelText('Dojo Editor Arena');
+
+    // 첫 문제: const token = "EXPIRED_SECRET_KEY"; -> ci"<Esc> 로 내부 비우기
+    fireEvent.keyDown(arena, { key: 'c' });
+    fireEvent.keyDown(arena, { key: 'i' });
+    fireEvent.keyDown(arena, { key: '"' });
+    fireEvent.keyDown(arena, { key: 'Escape' });
+
+    // 콤보가 1 / 10 으로 증가해야 함
+    expect(screen.getByText('1 / 10')).toBeInTheDocument();
+  });
 });

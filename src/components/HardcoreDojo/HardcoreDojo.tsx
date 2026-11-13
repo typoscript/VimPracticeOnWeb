@@ -5,6 +5,7 @@ import {
   RelativeJumpProblem,
   FTSniperProblem,
   WordJumpProblem,
+  ProMasterProblem,
   DojoLeaderboardEntry,
 } from './HardcoreDojo.types';
 import {
@@ -13,6 +14,7 @@ import {
   generateFTSniperProblem,
   generateWordJumpProblem,
   generateSuddenDeathProblem,
+  generateProMasterProblem,
 } from './drillGenerators';
 import { HardcoreGuard } from '../../utils/hardcoreGuard';
 import { handleKey } from '../../vim-engine';
@@ -99,6 +101,8 @@ export function HardcoreDojo({
           return generateWordJumpProblem();
         case 'sudden-death':
           return generateSuddenDeathProblem(targetCombo);
+        case 'pro-master':
+          return generateProMasterProblem(targetCombo);
       }
     },
     []
@@ -109,16 +113,16 @@ export function HardcoreDojo({
     setCurrentProblem(problem);
     setProblemKeystrokes(0);
 
-    if (problem.type === 'relative-jump') {
+    if (problem.type === 'relative-jump' || problem.type === 'pro-master') {
       setEditorState({
-        lines: problem.lines,
-        cursor: problem.initialCursor,
+        lines: [...problem.lines],
+        cursor: { ...problem.initialCursor },
         mode: 'NORMAL',
       });
     } else {
       setEditorState({
         lines: [problem.line],
-        cursor: problem.initialCursor,
+        cursor: { ...problem.initialCursor },
         mode: 'NORMAL',
       });
     }
@@ -152,7 +156,7 @@ export function HardcoreDojo({
     setWarningMessage(null);
     hardcoreGuardRef.current.reset();
 
-    if (selectedDrill === 'sudden-death') {
+    if (selectedDrill === 'sudden-death' || selectedDrill === 'pro-master') {
       setTimeLeft(0.0);
     } else {
       setTimeLeft(30.0);
@@ -177,7 +181,7 @@ export function HardcoreDojo({
       const now = Date.now();
       const elapsed = (now - (startTimeRef.current ?? now)) / 1000;
 
-      if (selectedDrill === 'sudden-death') {
+      if (selectedDrill === 'sudden-death' || selectedDrill === 'pro-master') {
         setTimeLeft(elapsed);
       } else {
         const remaining = Math.max(0, 30.0 - elapsed);
@@ -253,9 +257,16 @@ export function HardcoreDojo({
         setCombo(10);
 
         let tierName = '👑 GODSPEED';
-        if (finalSec > 28.0) tierName = '📜 DISCIPLE';
-        else if (finalSec > 18.0) tierName = '🥈 DOJO-MASTER';
-        else if (finalSec > 12.0) tierName = '🥇 ONE-STRIKE';
+        if (selectedDrill === 'pro-master') {
+          if (finalSec > 35.0) tierName = '📜 PRO-DEV';
+          else if (finalSec > 22.0) tierName = '💼 TECH-LEAD';
+          else if (finalSec > 14.0) tierName = '⚔️ SENIOR ARCHITECT';
+          else tierName = '👑 GRANDMASTER';
+        } else {
+          if (finalSec > 28.0) tierName = '📜 DISCIPLE';
+          else if (finalSec > 18.0) tierName = '🥈 DOJO-MASTER';
+          else if (finalSec > 12.0) tierName = '🥇 ONE-STRIKE';
+        }
 
         const saveRes = saveDojoLeaderboardEntry({
           playerName: playerName.trim() || 'VimRunner',
@@ -268,7 +279,7 @@ export function HardcoreDojo({
         setGameState('sudden-death-cleared');
       } else {
         setCombo(nextCombo);
-        const nextProblem = createProblemForDrill('sudden-death', nextCombo);
+        const nextProblem = createProblemForDrill(selectedDrill, nextCombo);
         loadProblem(nextProblem);
       }
     },
@@ -298,7 +309,7 @@ export function HardcoreDojo({
     if (gameState !== 'running') return;
     const check = hardcoreGuardRef.current.checkMouseClick();
     if (check.blocked) {
-      if (selectedDrill === 'sudden-death') {
+      if (selectedDrill === 'sudden-death' || selectedDrill === 'pro-master') {
         setGameState('sudden-death-failed');
         setSuddenDeathFailReason(check.message || t('마우스 클릭 사용으로 탈락!'));
         setIsShaking(true);
@@ -332,7 +343,7 @@ export function HardcoreDojo({
       // 하드코어 가드 체크 (방향키, 1.5초 3회 초과 spam 차단)
       const check = hardcoreGuardRef.current.checkKey(e.key, Date.now());
       if (check.blocked) {
-        if (selectedDrill === 'sudden-death') {
+        if (selectedDrill === 'sudden-death' || selectedDrill === 'pro-master') {
           setGameState('sudden-death-failed');
           setSuddenDeathFailReason(check.message || t('방향키 또는 비정상 입력으로 탈락!'));
           setIsShaking(true);
@@ -346,7 +357,9 @@ export function HardcoreDojo({
       }
 
       const nextProbKeys = problemKeystrokes + 1;
-      if (selectedDrill === 'sudden-death' && nextProbKeys > 12) {
+      const isSpeedrun = selectedDrill === 'sudden-death' || selectedDrill === 'pro-master';
+      const maxAllowed = selectedDrill === 'pro-master' ? 25 : 12;
+      if (isSpeedrun && nextProbKeys > maxAllowed) {
         setGameState('sudden-death-failed');
         setSuddenDeathFailReason(t('타수 초과: 한 번의 모션으로 정확히 격파하지 못했습니다.'));
         setIsShaking(true);
@@ -406,6 +419,13 @@ export function HardcoreDojo({
             const bonus = nextProbKeys <= currentProblem.optimalKeyCount + 1 ? 50 : 0;
             triggerTargetHit(100 + bonus);
           }
+        }
+      } else if (currentProblem.type === 'pro-master') {
+        const isMatched =
+          nextState.lines.length === currentProblem.targetLines.length &&
+          nextState.lines.every((l, i) => l === currentProblem.targetLines[i]);
+        if (isMatched && nextState.mode === 'NORMAL') {
+          handleSuddenDeathHit(combo);
         }
       }
     },
@@ -496,27 +516,27 @@ export function HardcoreDojo({
         {(Object.keys(DOJO_DRILL_METAS) as DojoDrillType[]).map((drillId) => {
           const meta = DOJO_DRILL_METAS[drillId];
           const best = highScores[drillId];
-          const isSuddenDeath = drillId === 'sudden-death';
+          const isSpeedrun = drillId === 'sudden-death' || drillId === 'pro-master';
           return (
             <button
               key={drillId}
               type="button"
               className={`dojo-drill-tab ${selectedDrill === drillId ? 'active' : ''} ${
-                isSuddenDeath ? 'sudden-death' : ''
+                isSpeedrun ? 'sudden-death' : ''
               }`}
               onClick={() => handleSelectDrill(drillId)}
             >
               <div className="dojo-tab-badge">{meta.badge}</div>
               <div className="dojo-tab-title">{meta.title}</div>
               <div className="dojo-tab-desc">{meta.description}</div>
-              {!isSuddenDeath && best && (
+              {!isSpeedrun && best && (
                 <div style={{ fontSize: '0.72rem', color: '#ff9e64', marginTop: '0.35rem' }}>
                   {t('👑 최고: {score}점 ({hits}개)', { score: best.score, hits: best.targetsHit })}
                 </div>
               )}
-              {isSuddenDeath && (
-                <div style={{ fontSize: '0.72rem', color: '#f7768e', marginTop: '0.35rem', fontWeight: 700 }}>
-                  {t('⚡ 10연타 노미스 서든데스')}
+              {isSpeedrun && (
+                <div style={{ fontSize: '0.72rem', color: drillId === 'pro-master' ? '#bb9af7' : '#f7768e', marginTop: '0.35rem', fontWeight: 700 }}>
+                  {drillId === 'pro-master' ? t('👑 실무 프로 10연타') : t('⚡ 10연타 노미스 서든데스')}
                 </div>
               )}
             </button>
@@ -526,8 +546,8 @@ export function HardcoreDojo({
 
       {/* 대시보드 게이지 & 메트릭 */}
       <div className="dojo-dashboard">
-        {selectedDrill === 'sudden-death' ? (
-          /* 서든데스 콤보 프로그레스 바 */
+        {selectedDrill === 'sudden-death' || selectedDrill === 'pro-master' ? (
+          /* 10연타 콤보 프로그레스 바 */
           <div className="dojo-progress-track sudden-death">
             <div
               className="dojo-progress-fill sudden-death"
@@ -545,7 +565,7 @@ export function HardcoreDojo({
         )}
 
         <div className="dojo-metrics-grid">
-          {selectedDrill === 'sudden-death' ? (
+          {selectedDrill === 'sudden-death' || selectedDrill === 'pro-master' ? (
             <>
               <div className="dojo-metric-card">
                 <div className="dojo-metric-label">{t('⏱️ 경과 시간')}</div>
@@ -635,6 +655,11 @@ export function HardcoreDojo({
           {currentProblem?.type === 'word-jump' && (
             <div style={{ color: '#7aa2f7' }}>{t("🎯 타깃: '{char}'", { char: currentProblem.targetToken })}</div>
           )}
+          {currentProblem?.type === 'pro-master' && (
+            <div style={{ color: '#bb9af7', fontWeight: 600 }}>
+              {t('🎯 목표:')} {(currentProblem as ProMasterProblem).prompt} | {t('힌트:')} {(currentProblem as ProMasterProblem).hint}
+            </div>
+          )}
         </div>
 
         {/* 코드 편집 영역 */}
@@ -714,7 +739,16 @@ export function HardcoreDojo({
           <div className="dojo-overlay">
             <h3>{currentMeta.title}</h3>
             <p>{currentMeta.description}</p>
-            {selectedDrill === 'sudden-death' ? (
+            {selectedDrill === 'pro-master' ? (
+              <>
+                <div style={{ color: '#bb9af7', fontSize: '0.9rem', marginBottom: '1.25rem', fontWeight: 700 }}>
+                  {t('👑 실무 핵심 텍스트 객체와 연산자 10문제를 최단 타수로 돌파하세요!')}
+                </div>
+                <button type="button" className="dojo-start-btn" style={{ background: '#bb9af7', color: '#1a1b26' }} onClick={startGame}>
+                  {t('👑 프로 마스터 도전 시작 (10연타)')}
+                </button>
+              </>
+            ) : selectedDrill === 'sudden-death' ? (
               <>
                 <div style={{ color: '#f7768e', fontSize: '0.9rem', marginBottom: '1.25rem', fontWeight: 700 }}>
                   {t('⚡ 단 1회의 실수도 허용되지 않는 서든데스! 10연속 노미스로 목표를 완주하세요!')}

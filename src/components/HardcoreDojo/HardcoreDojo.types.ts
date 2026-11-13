@@ -1,4 +1,4 @@
-export type DojoDrillType = 'relative-jump' | 'ft-sniper' | 'word-jump' | 'sudden-death';
+export type DojoDrillType = 'relative-jump' | 'ft-sniper' | 'word-jump' | 'sudden-death' | 'pro-master';
 
 export interface DojoLeaderboardEntry {
   id: string;
@@ -44,7 +44,22 @@ export interface WordJumpProblem {
   optimalKeyCount: number; // e.g. 2 for 2W
 }
 
-export type DojoProblem = RelativeJumpProblem | FTSniperProblem | WordJumpProblem;
+export interface ProMasterProblem {
+  type: 'pro-master';
+  index: number;
+  prompt: string;
+  lines: string[];
+  initialCursor: { line: number; col: number };
+  targetLines: string[];
+  hint: string;
+  optimalKeys: string;
+}
+
+export type DojoProblem =
+  | RelativeJumpProblem
+  | FTSniperProblem
+  | WordJumpProblem
+  | ProMasterProblem;
 
 export interface DojoDrillMeta {
   id: DojoDrillType;

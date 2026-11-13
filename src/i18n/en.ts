@@ -1165,4 +1165,14 @@ export const EN: Record<string, string> = {
   "가로분할": "H-split",
   "새탭": "New tab",
   "선택이동": "Navigate",
+
+  // Hardcore Dojo Pro Master 10-Strike
+  "👑 실무 프로 10연타": "👑 Pro Master 10-Strike",
+  "🎯 목표:": "🎯 Target:",
+  "힌트:": "Hint:",
+  "👑 실무 핵심 텍스트 객체와 연산자 10문제를 최단 타수로 돌파하세요!": "Conquer 10 practical text object and operator problems with minimum keystrokes!",
+  "👑 프로 마스터 도전 시작 (10연타)": "👑 Start Pro Master Challenge (10-Strike)",
+  "실무 프로 10연타 챌린지": "Pro Master 10-Strike Challenge",
+  "텍스트 객체(ci\", di(), cit), 단어 대소문자(gU), 인덴트(>>), 라인 합치기(J) 등 실무 핵심 10문제를 최단 키로 격파하세요!": "Conquer 10 core practical problems including text objects (ci\", di(), cit), casing (gU), indent (>>), and joining (J)!",
+  "실무 프로 10연타! 최적의 Vim 텍스트 객체와 연산자로 목표 코드를 완성하세요.": "Pro Master 10-Strike! Complete the target code with optimal Vim text objects and operators.",
 };

@@ -217,7 +217,7 @@ flowchart TD
 ## 🛠️ 기술 스택 (Tech Stack)
 
 - **Core**: React 19, TypeScript, Vite
-- **Testing**: Vitest, React Testing Library (123개 파일, 1,609개 단위/통합 테스트 100% 통과)
+- **Testing**: Vitest, React Testing Library (123개 파일, 1,610개 단위/통합 테스트 100% 통과)
 - **Styling**: Modern Pure CSS (Catppuccin Macchiato 테마)
 - **Zero Dependencies**: 외부 에디터(CodeMirror, Monaco 등) 및 무거운 UI 프레임워크 없는 순수 TypeScript 아키텍처
 

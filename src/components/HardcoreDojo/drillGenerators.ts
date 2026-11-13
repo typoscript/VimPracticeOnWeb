@@ -2,6 +2,7 @@ import {
   RelativeJumpProblem,
   FTSniperProblem,
   WordJumpProblem,
+  ProMasterProblem,
   DojoDrillMeta,
   DojoProblem,
 } from './HardcoreDojo.types';
@@ -35,6 +36,13 @@ export const DOJO_DRILL_METAS: Record<string, DojoDrillMeta> = localized({
     badge: '⚡ Sudden Death',
     description: '단 1회의 실수도 허용되지 않는 서든데스! 3개 드릴이 교차 출제되며 10연속 노미스로 과녁을 격파하세요.',
     keyInstructions: '노미스 10연타 스피드런! 방향키·연타·실수 즉시 탈락!',
+  },
+  'pro-master': {
+    id: 'pro-master',
+    title: '실무 프로 10연타 챌린지',
+    badge: '👑 Pro Master',
+    description: '텍스트 객체(ci", di(), cit), 단어 대소문자(gU), 인덴트(>>), 라인 합치기(J) 등 실무 핵심 10문제를 최단 키로 격파하세요!',
+    keyInstructions: '실무 프로 10연타! 최적의 Vim 텍스트 객체와 연산자로 목표 코드를 완성하세요.',
   },
 });
 
@@ -228,5 +236,103 @@ export function generateWordJumpProblem(prevIndex?: number): WordJumpProblem {
     targetEndCol: sample.targetEndCol,
     targetToken: sample.targetToken,
     optimalKeyCount: sample.optimalKeyCount,
+  };
+}
+
+export const PRO_MASTER_PROBLEMS: Array<Omit<ProMasterProblem, 'type' | 'index'>> = [
+  {
+    prompt: '문자열 따옴표 내부를 비우세요!',
+    lines: ['const token = "EXPIRED_SECRET_KEY";'],
+    initialCursor: { line: 0, col: 18 },
+    targetLines: ['const token = "";'],
+    hint: 'ci" 후 Esc',
+    optimalKeys: 'ci"<Esc>',
+  },
+  {
+    prompt: '함수 인자 전체를 한 번에 삭제하세요!',
+    lines: ['const result = calculate(arg1, arg2, arg3);'],
+    initialCursor: { line: 0, col: 26 },
+    targetLines: ['const result = calculate();'],
+    hint: 'di(',
+    optimalKeys: 'di(',
+  },
+  {
+    prompt: '태그 내부의 텍스트를 비우세요!',
+    lines: ['<h1 className="title">Old Title</h1>'],
+    initialCursor: { line: 0, col: 25 },
+    targetLines: ['<h1 className="title"></h1>'],
+    hint: 'cit 후 Esc',
+    optimalKeys: 'cit<Esc>',
+  },
+  {
+    prompt: '변수명을 대문자로 변환하세요!',
+    lines: ['const api_endpoint = "/v1/users";'],
+    initialCursor: { line: 0, col: 6 },
+    targetLines: ['const API_ENDPOINT = "/v1/users";'],
+    hint: 'gUiw',
+    optimalKeys: 'gUiw',
+  },
+  {
+    prompt: '버전 번호 9를 10으로 올리세요!',
+    lines: ['export const API_VERSION = 9;'],
+    initialCursor: { line: 0, col: 27 },
+    targetLines: ['export const API_VERSION = 10;'],
+    hint: 'Ctrl-a (<C-a>)',
+    optimalKeys: '<C-a>',
+  },
+  {
+    prompt: '라인을 들여쓰기하세요!',
+    lines: ['return isValid ? data : null;'],
+    initialCursor: { line: 0, col: 0 },
+    targetLines: ['  return isValid ? data : null;'],
+    hint: '>>',
+    optimalKeys: '>>',
+  },
+  {
+    prompt: '두 줄을 한 줄로 합치세요!',
+    lines: ['const message =', '  "Hello World!";'],
+    initialCursor: { line: 0, col: 0 },
+    targetLines: ['const message = "Hello World!";'],
+    hint: 'J',
+    optimalKeys: 'J',
+  },
+  {
+    prompt: '주석 시작점부터 줄 끝까지 삭제하세요!',
+    lines: ['const debugLog = true; // REMOVE DEBUG COMMENT'],
+    initialCursor: { line: 0, col: 23 },
+    targetLines: ['const debugLog = true; '],
+    hint: 'D',
+    optimalKeys: 'D',
+  },
+  {
+    prompt: '함수 본문(중괄호 안)을 비우세요!',
+    lines: ['function process() {', '  cleanData();', '  return true;', '}'],
+    initialCursor: { line: 1, col: 4 },
+    targetLines: ['function process() {', '}'],
+    hint: 'di{',
+    optimalKeys: 'di{',
+  },
+  {
+    prompt: '첫 번째 bad 변수를 good으로 바꾸세요!',
+    lines: ['const bad = 1;', 'const bad = 2;'],
+    initialCursor: { line: 0, col: 6 },
+    targetLines: ['const good = 1;', 'const bad = 2;'],
+    hint: 'cwgood 후 Esc',
+    optimalKeys: 'cwgood<Esc>',
+  },
+];
+
+export function generateProMasterProblem(combo = 0): ProMasterProblem {
+  const index = Math.max(0, Math.min(PRO_MASTER_PROBLEMS.length - 1, combo % PRO_MASTER_PROBLEMS.length));
+  const sample = PRO_MASTER_PROBLEMS[index];
+  return {
+    type: 'pro-master',
+    index,
+    prompt: sample.prompt,
+    lines: [...sample.lines],
+    initialCursor: { ...sample.initialCursor },
+    targetLines: [...sample.targetLines],
+    hint: sample.hint,
+    optimalKeys: sample.optimalKeys,
   };
 }
