@@ -1446,8 +1446,27 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson72!.checkComplete(state)).toBe(true);
   });
 
-  it('모든 72개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(72);
+  it('레슨 73: 순정 Netrw 디렉터리 북마크(mb, gb)와 프로젝트 고속 탐색 마스터 검증', () => {
+    const lesson73 = MISSIONS.find((m) => m.id === 73);
+    expect(lesson73).toBeDefined();
+
+    let state: VimEditorState = {
+      lines: [...lesson73!.initialLines],
+      cursor: { ...lesson73!.initialCursor },
+      mode: 'NORMAL',
+      primaryFilename: lesson73!.primaryFilename,
+      virtualFiles: lesson73!.initialVirtualFiles ? { ...lesson73!.initialVirtualFiles } : undefined,
+    };
+    expect(lesson73!.checkComplete(state)).toBe(false);
+
+    for (const key of lesson73!.optimalKeys!) {
+      state = handleKey(state, key);
+    }
+    expect(lesson73!.checkComplete(state)).toBe(true);
+  });
+
+  it('모든 73개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(73);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();
@@ -1508,6 +1527,7 @@ describe('MISSIONS 10 ~ 12 validation', () => {
           : undefined,
         folds: m.initialFolds ? [...m.initialFolds] : undefined,
         registers: m.initialRegisters ? { ...m.initialRegisters } : undefined,
+        virtualFiles: m.initialVirtualFiles ? { ...m.initialVirtualFiles } : undefined,
       };
 
       for (const key of m.optimalKeys!) {

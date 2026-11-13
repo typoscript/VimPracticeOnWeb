@@ -46,5 +46,7 @@ export interface Mission {
   initialArgs?: string[];
   /** 초기 폴드 목록 (코드 폴딩 미션용) */
   initialFolds?: FoldRange[];
+  /** 초기 가상 파일 시스템 맵 (Netrw / 프로젝트 탐색 미션용) */
+  initialVirtualFiles?: Record<string, string[]>;
   checkComplete: (state: VimEditorState) => boolean;
 }

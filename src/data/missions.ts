@@ -2526,4 +2526,56 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 73,
+    title: '레슨 73: 순정 Netrw 디렉터리 북마크(mb, gb)와 프로젝트 고속 탐색 마스터',
+    description:
+      '대규모 모노레포 프로젝트에서는 깊은 폴더 트리를 매번 오르내리는 대신, 자주 찾는 디렉터리를 Netrw 북마크로 등록해 두면 gb 키 하나로 즉시 워프할 수 있습니다.\n\n1) Netrw 디렉터리 북마크 등록 (mb):\n   - :Explore (또는 :E) 로 Netrw 탐색기를 연 뒤, 북마크하고 싶은 디렉터리(예: services/) 줄 위에 커서를 두고 mb 를 누르면 북마크 목록에 등록됩니다.\n\n2) 북마크 디렉터리 고속 점프 (gb):\n   - Netrw 내에서 gb 키를 누르면 등록된 북마크 디렉터리들 사이를 순환하며 즉시 점프합니다.\n\n3) 파일 열기 및 버퍼 복귀 (<CR>, Ctrl-^):\n   - 이동한 디렉터리에서 원하는 파일(auth.ts) 위에서 Enter 를 눌러 파일을 열고 작업한 뒤, Ctrl-^ 키를 누르면 원래의 시작 파일(app.ts)로 완벽하게 복귀합니다.\n\n미션:\n1. :E<Enter> 명령으로 순정 Netrw 탐색기를 여세요.\n2. j 키를 2번 눌러 services/ 디렉터리로 이동한 뒤 mb 키로 북마크를 등록하세요.\n3. gb 키를 눌러 등록된 services/ 디렉터리로 즉시 점프하세요.\n4. j 키를 2번 눌러 auth.ts 파일로 이동한 뒤 Enter 키를 눌러 파일을 여세요.\n5. Ctrl-^ 키를 눌러 원래 버퍼(app.ts)로 복귀하여 미션을 완료하세요!',
+    hint: ':E 입력 후 Enter → jj 후 mb 로 services/ 북마크 → gb 로 점프 → jj 후 Enter 로 auth.ts 열기 → Ctrl-^ 로 app.ts 복귀',
+    par: 20,
+    optimalKeys: [
+      ':', 'E', 'Enter',
+      'j', 'j',
+      'm', 'b',
+      'g', 'b',
+      'j', 'j',
+      'Enter',
+      'Ctrl-^',
+    ],
+    primaryFilename: 'app.ts',
+    initialLines: [
+      'import { verifyToken } from "./services/auth";',
+      '',
+      'function main() {',
+      '  return verifyToken();',
+      '}',
+    ],
+    targetLines: [
+      'import { verifyToken } from "./services/auth";',
+      '',
+      'function main() {',
+      '  return verifyToken();',
+      '}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    initialVirtualFiles: {
+      'services/auth.ts': ['export const verifyToken = () => true;'],
+      'services/user.ts': ['export const getUser = () => null;'],
+      'utils/logger.ts': ['export const log = console.log;'],
+    },
+    checkComplete: (state) => {
+      const hasBookmark = Boolean(state.netrwBookmarks?.includes('services'));
+      const isReturnedToApp = state.primaryFilename === 'app.ts';
+      const hasOpenedAuth = Boolean(
+        state.buffers?.some((b) => b.name === 'services/auth.ts')
+      );
+
+      return (
+        state.mode === 'NORMAL' &&
+        hasBookmark &&
+        isReturnedToApp &&
+        hasOpenedAuth
+      );
+    },
+  },
 ];

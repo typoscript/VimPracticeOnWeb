@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 72)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 73)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -118,6 +118,7 @@
 - **Vim 키스트로크 히트맵 & 타건 통계 대시보드 (`src/components/AnalyticsModal/KeystrokeHeatmap.tsx`, `KeystrokeHeatmap.css`)**: 5단계 열기 컬러(쿨 블루 -> 웜 골드 -> 블레이징 레드) 실시간 QWERTY 키보드 시각화, 카테고리 필터 칩(전체, 모션, 연산자, 입력), 키별 세부 분석 카드(타수, 점유율, Vim 인체공학적 코칭 조언), 종합 분석 모달 내 탭 전환(`[ 📊 종합 숙련도 분석 ]` vs `[ ⌨️ 타건 키보드 히트맵 ]`) 연동.
 - **순정 ctags 심볼 태그 선택기 및 멀티 정의 탐색 (레슨 71, `src/vim-engine/tagEngine.ts`, `commandLine.ts`, `missions.ts`)**: 다중 일치 태그 탐색(`findTags`), 태그 점프 및 매치 목록 표시(`:tjump`, `:tj`, `g]`), 태그 목록 대화형 선택(`:tselect [name|num]`, `:ts`), 태그 매치 순환(`:tnext [count]`, `:tn`, `:tprev [count]`, `:tp`, `:tfirst`, `:tf`, `:tlast`, `:tl`), 태그 목록 순회 시 태그 스택 비오염 보존(`pushStack = false`), `Ctrl-t`(`:pop`) 완벽 복귀 지원. 레슨 71에서 `g]`로 다중 정의 확인, `:tn`으로 주문 모델로 전환, `Ctrl-t`로 원본 호출 위치 복귀 실전 통합 마스터.
 - **순정 Vim 자동 명령(Autocommand)과 저장 시 공백 자동 정리 마스터 (레슨 72, `src/vim-engine/autocmdEngine.ts`, `missions.ts`)**: 파일 저장 직전(`BufWritePre`) 끝 공백을 자동 치환(`:%s/\s\+$//e`)하는 순정 자동 명령 등록(`:autocmd`, `:au`), 파일 저장(`:w`) 연동 자동 후크 실행 및 라인 정리 실전 마스터.
+- **순정 Netrw 디렉터리 북마크(mb, gb)와 프로젝트 고속 탐색 마스터 (레슨 73, `src/vim-engine/netrwEngine.ts`, `missions.ts`)**: 모노레포 프로젝트에서 자주 찾는 디렉터리(`services/`)를 탐색기 내에서 북마크 등록(`mb`), 북마크 즉시 점프(`gb`), 파일 열기(`Enter`), 원래 버퍼 복귀(`Ctrl-^`) 실무 탐색 워크플로우 마스터.
 
 ---
 
