@@ -175,5 +175,17 @@ export {
   formatTagMatches,
 } from './tagEngine';
 
+// ---- 순정 Netrw 파일 탐색기 & 북마크 시스템 (:Explore, :Bookmark, mb, gb) ----
+export {
+  openNetrw,
+  closeNetrw,
+  handleNetrwKey,
+  generateNetrwLines,
+  addNetrwBookmark,
+  removeNetrwBookmark,
+  goToNetrwBookmark,
+  formatNetrwBookmarks,
+} from './netrwEngine';
+
 // ---- 개발용 불변성 검사 ----
 export { withInvariantCheck, assertValidVimState, deepFreeze } from './invariants';

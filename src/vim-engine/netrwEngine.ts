@@ -21,7 +21,7 @@ export function generateNetrwLines(
     '" ==============================================================================',
     '" Netrw Directory Listing                                   (netrw v173)',
     `"   /workspace${displayPath === '/' ? '' : displayPath}`,
-    '"   Quick Help: <CR>:open  -:up-dir  v:vsplit  o:split  t:tab  q:close',
+    '"   Quick Help: <CR>:open  -:up-dir  mb:bookmark  gb:jump  v:vsplit  o:split  t:tab  q:close',
     '" ==============================================================================',
     '../',
     './',
@@ -157,7 +157,120 @@ export function closeNetrw(state: VimEditorState): VimEditorState {
 }
 
 /**
- * Netrw 버퍼에서 키 입력을 처리합니다 (<CR>, -, v, o, t, q, %, d, D, R 등).
+ * Netrw 북마크에 디렉터리 경로를 추가합니다 (:Bookmark, mb).
+ */
+export function addNetrwBookmark(
+  state: VimEditorState,
+  targetPath: string
+): VimEditorState {
+  const cleanPath = targetPath.replace(/^\/+|\/+$/g, '');
+  const existing = state.netrwBookmarks ? [...state.netrwBookmarks] : [];
+  if (!existing.includes(cleanPath)) {
+    existing.push(cleanPath);
+  }
+  const display = cleanPath ? `/${cleanPath}` : '/';
+  const updatedNetrw = state.netrw ? { ...state.netrw, pendingKey: undefined } : state.netrw;
+
+  return {
+    ...state,
+    netrw: updatedNetrw,
+    netrwBookmarks: existing,
+    commandMessage: msg('[Netrw 북마크 추가] {path}', { path: display }),
+  };
+}
+
+/**
+ * Netrw 북마크에서 디렉터리 경로를 삭제합니다 (mB).
+ */
+export function removeNetrwBookmark(
+  state: VimEditorState,
+  targetPath: string
+): VimEditorState {
+  const cleanPath = targetPath.replace(/^\/+|\/+$/g, '');
+  const existing = (state.netrwBookmarks ?? []).filter((b) => b !== cleanPath);
+  const display = cleanPath ? `/${cleanPath}` : '/';
+  const updatedNetrw = state.netrw ? { ...state.netrw, pendingKey: undefined } : state.netrw;
+
+  return {
+    ...state,
+    netrw: updatedNetrw,
+    netrwBookmarks: existing,
+    commandMessage: msg('[Netrw 북마크 삭제] {path}', { path: display }),
+  };
+}
+
+/**
+ * Netrw 북마크 목록으로 이동합니다 (gb 순환 이동 또는 특정 인덱스).
+ */
+export function goToNetrwBookmark(
+  state: VimEditorState,
+  targetIndex?: number
+): VimEditorState {
+  const bookmarks = state.netrwBookmarks ?? [];
+  if (bookmarks.length === 0) {
+    const updatedNetrw = state.netrw ? { ...state.netrw, pendingKey: undefined } : state.netrw;
+    return {
+      ...state,
+      netrw: updatedNetrw,
+      bell: true,
+      commandMessage: msg('등록된 Netrw 북마크가 없습니다.'),
+    };
+  }
+
+  let nextIdx: number;
+  if (targetIndex !== undefined) {
+    nextIdx = Math.max(0, Math.min(targetIndex, bookmarks.length - 1));
+  } else {
+    const curIdx = state.netrwBookmarkIndex ?? -1;
+    nextIdx = (curIdx + 1) % bookmarks.length;
+  }
+
+  const targetPath = bookmarks[nextIdx];
+  const display = targetPath || '';
+
+  if (state.netrw && state.netrw.isOpen) {
+    const newLines = generateNetrwLines(state.netrw.files, targetPath);
+    return {
+      ...state,
+      lines: newLines,
+      cursor: { line: BANNER_LINES_COUNT, col: 0 },
+      netrw: {
+        ...state.netrw,
+        currentPath: targetPath,
+        pendingKey: undefined,
+      },
+      netrwBookmarkIndex: nextIdx,
+      commandMessage: msg('[Netrw 북마크 이동] /workspace/{path}', { path: display }),
+    };
+  }
+
+  const opened = openNetrw(state, targetPath);
+  return {
+    ...opened,
+    netrwBookmarkIndex: nextIdx,
+    commandMessage: msg('[Netrw 북마크 이동] /workspace/{path}', { path: display }),
+  };
+}
+
+/**
+ * Netrw 북마크 목록을 서식화합니다 (:Bookmarks).
+ */
+export function formatNetrwBookmarks(state: VimEditorState): string {
+  const bookmarks = state.netrwBookmarks ?? [];
+  if (bookmarks.length === 0) {
+    return msg('등록된 Netrw 북마크가 없습니다.');
+  }
+
+  const lines = [msg('--- Netrw Bookmarks ---')];
+  bookmarks.forEach((bm, idx) => {
+    const pathStr = bm ? `/${bm}` : '/';
+    lines.push(`  ${idx + 1}: /workspace${pathStr === '/' ? '' : pathStr}`);
+  });
+  return lines.join('\n');
+}
+
+/**
+ * Netrw 버퍼에서 키 입력을 처리합니다 (<CR>, -, v, o, t, q, %, d, D, mb, gb 등).
  */
 export function handleNetrwKey(
   state: VimEditorState,
@@ -174,12 +287,75 @@ export function handleNetrwKey(
   const curLineIdx = state.cursor.line;
   const lineText = (state.lines[curLineIdx] ?? '').trim();
 
-  // 배너 영역 내 키 입력은 기본 Vim 모션(j, k 등)에 위임
+  // 2. 접두어 키 상태 처리 ('m', 'g')
+  if (netrw.pendingKey === 'm') {
+    if (key === 'b') {
+      let targetPath = netrw.currentPath;
+      if (curLineIdx >= BANNER_LINES_COUNT) {
+        if (lineText === '../') {
+          const parts = netrw.currentPath.split('/').filter(Boolean);
+          parts.pop();
+          targetPath = parts.join('/');
+        } else if (lineText !== './' && lineText.endsWith('/')) {
+          const dir = lineText.slice(0, -1);
+          targetPath = netrw.currentPath ? `${netrw.currentPath}/${dir}` : dir;
+        }
+      }
+      return addNetrwBookmark(state, targetPath);
+    }
+    if (key === 'B') {
+      let targetPath = netrw.currentPath;
+      if (curLineIdx >= BANNER_LINES_COUNT) {
+        if (lineText !== '../' && lineText !== './' && lineText.endsWith('/')) {
+          const dir = lineText.slice(0, -1);
+          targetPath = netrw.currentPath ? `${netrw.currentPath}/${dir}` : dir;
+        }
+      }
+      return removeNetrwBookmark(state, targetPath);
+    }
+    return {
+      ...state,
+      netrw: { ...netrw, pendingKey: undefined },
+    };
+  }
+
+  if (netrw.pendingKey === 'g') {
+    if (key === 'b') {
+      return goToNetrwBookmark(state);
+    }
+    if (key === 'g') {
+      return {
+        ...state,
+        cursor: { line: BANNER_LINES_COUNT, col: 0 },
+        netrw: { ...netrw, pendingKey: undefined },
+      };
+    }
+    return {
+      ...state,
+      netrw: { ...netrw, pendingKey: undefined },
+    };
+  }
+
+  // 접두어 키 감지
+  if (key === 'm') {
+    return {
+      ...state,
+      netrw: { ...netrw, pendingKey: 'm' },
+    };
+  }
+  if (key === 'g') {
+    return {
+      ...state,
+      netrw: { ...netrw, pendingKey: 'g' },
+    };
+  }
+
+  // 배너 영역 내 일반 키 입력은 기본 Vim 모션(j, k 등)에 위임
   if (curLineIdx < BANNER_LINES_COUNT) {
     return null;
   }
 
-  // 2. '-' : 상위 디렉터리로 이동 (cd ..)
+  // 3. '-' : 상위 디렉터리로 이동 (cd ..)
   if (key === '-') {
     const parts = netrw.currentPath.split('/').filter(Boolean);
     parts.pop();

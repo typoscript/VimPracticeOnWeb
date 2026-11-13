@@ -94,7 +94,12 @@ import {
   formatArgs,
   argdo,
 } from './argEngine';
-import { openNetrw } from './netrwEngine';
+import {
+  openNetrw,
+  addNetrwBookmark,
+  goToNetrwBookmark,
+  formatNetrwBookmarks,
+} from './netrwEngine';
 import { formatRegisters } from './registers';
 import { executeSetCommand } from './setEngine';
 import { sourceScript } from './sourceEngine';
@@ -1173,6 +1178,58 @@ export function executeCommandLine(
       mode = 'tab';
     }
     const res = openNetrw(state, targetDir, mode);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // Netrw 북마크 목록 조회: :Bookmarks, :BookmarkList
+  if (/^(?:Bookmarks|BookmarkList|bmlist)$/i.test(cleanCmdRaw)) {
+    const listMsg = formatNetrwBookmarks(state);
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: listMsg,
+    };
+  }
+
+  // Netrw 북마크 추가: :Bookmark [path]
+  const bmMatch = cleanCmdRaw.match(/^(?:Bookmark|bookmark)(?:\s+(.*))?$/);
+  if (bmMatch) {
+    const rawPath = (bmMatch[1] ?? '').trim();
+    let targetPath = rawPath;
+    if (!targetPath) {
+      if (state.netrw?.isOpen) {
+        targetPath = state.netrw.currentPath;
+      } else {
+        const curFile = state.primaryFilename ?? '';
+        const parts = curFile.split('/');
+        parts.pop();
+        targetPath = parts.join('/');
+      }
+    }
+    const res = addNetrwBookmark(state, targetPath);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // Netrw 북마크 이동: :gb [index]
+  const gbMatch = cleanCmdRaw.match(/^gb(?:\s+(\d+))?$/i);
+  if (gbMatch) {
+    const idx = gbMatch[1] ? parseInt(gbMatch[1], 10) - 1 : undefined;
+    const res = goToNetrwBookmark(state, idx);
     return {
       ...res,
       mode: 'NORMAL',

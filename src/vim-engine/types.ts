@@ -203,6 +203,7 @@ export interface NetrwState {
   returnBufferId?: number;
   returnFilename?: string;
   files: Record<string, string[]>; // 가상 파일 맵: 경로 -> 줄 목록
+  pendingKey?: string; // 대기 중인 접두어 키 ('m', 'g' 등)
 }
 
 export interface VimOptions {
@@ -510,6 +511,10 @@ export interface VimEditorState {
   argList?: ArgListState | null;
   /** Netrw 순정 파일 탐색기 상태 (:Explore, :edit ., :E) */
   netrw?: NetrwState | null;
+  /** Netrw 디렉터리 북마크 목록 (mb, gb, :Bookmark) */
+  netrwBookmarks?: string[];
+  /** 현재 활성 Netrw 북마크 인덱스 (gb 순환 이동용) */
+  netrwBookmarkIndex?: number;
   /** 가상 파일 시스템 맵 (Netrw % 파일 생성, d 디렉터리 생성 반영) */
   virtualFiles?: Record<string, string[]>;
   /** 레지스터 인스펙터 패널 표시 여부 (:reg, :registers) */
