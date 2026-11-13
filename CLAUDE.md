@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 71)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 72)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -115,6 +115,7 @@
 - **커맨드라인 윈도우(`q:`, `q/`, `q?`) 히스토리 탐색 및 편집 실행 UX 강화 (`src/vim-engine/cmdlineWindow.ts`, `App.tsx`, `App.css`)**: `: Ex 명령` 및 `/ 검색어` 탭 전환(`switchCommandLineWindowType`), 라인 클릭 선택(`selectCommandLineWindowLine`), 더블 클릭 및 실행 칩(`handleExecuteCommandLineWindowLine`)을 통한 즉시 실행, 히스토리 전체 비우기(`clearCommandLineHistory`), 라인 수 뱃지 및 모드 뱃지 렌더링.
 - **Vim 키스트로크 히트맵 & 타건 통계 대시보드 (`src/components/AnalyticsModal/KeystrokeHeatmap.tsx`, `KeystrokeHeatmap.css`)**: 5단계 열기 컬러(쿨 블루 -> 웜 골드 -> 블레이징 레드) 실시간 QWERTY 키보드 시각화, 카테고리 필터 칩(전체, 모션, 연산자, 입력), 키별 세부 분석 카드(타수, 점유율, Vim 인체공학적 코칭 조언), 종합 분석 모달 내 탭 전환(`[ 📊 종합 숙련도 분석 ]` vs `[ ⌨️ 타건 키보드 히트맵 ]`) 연동.
 - **순정 ctags 심볼 태그 선택기 및 멀티 정의 탐색 (레슨 71, `src/vim-engine/tagEngine.ts`, `commandLine.ts`, `missions.ts`)**: 다중 일치 태그 탐색(`findTags`), 태그 점프 및 매치 목록 표시(`:tjump`, `:tj`, `g]`), 태그 목록 대화형 선택(`:tselect [name|num]`, `:ts`), 태그 매치 순환(`:tnext [count]`, `:tn`, `:tprev [count]`, `:tp`, `:tfirst`, `:tf`, `:tlast`, `:tl`), 태그 목록 순회 시 태그 스택 비오염 보존(`pushStack = false`), `Ctrl-t`(`:pop`) 완벽 복귀 지원. 레슨 71에서 `g]`로 다중 정의 확인, `:tn`으로 주문 모델로 전환, `Ctrl-t`로 원본 호출 위치 복귀 실전 통합 마스터.
+- **순정 Vim 자동 명령(Autocommand)과 저장 시 공백 자동 정리 마스터 (레슨 72, `src/vim-engine/autocmdEngine.ts`, `missions.ts`)**: 파일 저장 직전(`BufWritePre`) 끝 공백을 자동 치환(`:%s/\s\+$//e`)하는 순정 자동 명령 등록(`:autocmd`, `:au`), 파일 저장(`:w`) 연동 자동 후크 실행 및 라인 정리 실전 마스터.
 
 ---
 
@@ -155,6 +156,6 @@
 33. ~~**커맨드라인 윈도우(q:, q/, q?) 히스토리 탐색 및 인터랙션 고도화**: 이전 실행된 커맨드 히스토리 목록 탐색 및 편집 실행 UX 강화.~~ — 구현 완료.
 34. ~~**Vim 키스트로크 히트맵 & 통계 대시보드 (Keystroke Heatmap)**: 사용자 연습 중 키 빈도 시각적 히트맵 렌더링.~~ — 구현 완료.
 35. ~~**순정 ctags 심볼 태그 선택기 (`:tselect`, `:tjump`, `g]`, `:tn`, `:tp`) 및 신규 레슨 71**~~ — 레슨 71과 함께 구현 완료.
-36. **대화형 매크로 튜터 & 단계별 실행 비주얼라이저**: 레슨 53/66 심화 연계 매크로 실행 흐름 시각화 및 키별 인터랙티브 학습 도구.
+36. ~~**신규 레슨 72 추가 (순정 Vim 자동 명령과 BufWritePre 공백 정리 마스터)**~~ — 레슨 72와 함께 구현 완료.
 37. **Netrw 북마크 & 즐겨찾기 시스템 (`mb`, `gb`, `:Bookmark`)**: 프로젝트 내 자주 찾는 폴더 북마크 저장 및 점프.
-38. **신규 레슨 72 추가**: 실무 모노레포 심볼 ctags 다중 점프 및 태그 스택 심화 응용 훈련.
+38. **대화형 매크로 튜터 & 단계별 실행 비주얼라이저**: 레슨 53/66 심화 연계 매크로 실행 흐름 시각화 및 키별 인터랙티브 학습 도구.

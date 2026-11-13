@@ -36,6 +36,16 @@ describe('Vim Pure Autocommand Engine (:autocmd, :augroup, :doautocmd)', () => {
     expect(state.globalVars?.['saved_file']).toBe(1);
   });
 
+  it('파일 저장(:w) 직전 BufWritePre 이벤트로 끝 공백을 자동 치환할 수 있다', () => {
+    let state = createVimState(['const a = 1;   ', 'const b = 2;  ']);
+    state = { ...state, primaryFilename: 'app.ts' };
+
+    state = execEx(state, 'autocmd BufWritePre * :%s/\\s\\+$//e');
+    state = execEx(state, 'w');
+
+    expect(state.lines).toEqual(['const a = 1;', 'const b = 2;']);
+  });
+
   it('파일명 패턴 불일치 시 실행되지 않는다 (*.js vs app.ts)', () => {
     let state = createVimState(['const a = 1;']);
     state = { ...state, primaryFilename: 'app.ts' };

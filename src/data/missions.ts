@@ -2470,4 +2470,60 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 72,
+    title: '레슨 72: 순정 Vim 자동 명령(Autocommand)과 저장 시 공백 자동 정리 마스터',
+    description:
+      'Vim의 순정 자동 명령(Autocommand)은 특정 이벤트(파일 저장, 버퍼 진입, 파일타입 설정 등)가 발생할 때 미리 등록해 둔 명령어를 자동으로 실행해 주는 강력한 자동화 기능입니다.\n\n1) 자동 명령 기본 문법 (:autocmd 또는 :au):\n   - :autocmd [group] {event} {pat} {cmd}\n   - {event}: BufWritePre(저장 직전), BufWritePost(저장 직후), BufEnter(버퍼 진입), FileType(파일타입 감지) 등\n   - {pat}: 대상 파일 패턴 (*, *.ts, *.py 등)\n   - {cmd}: 실행할 Vim Ex 명령어\n\n2) 파일 저장 전 끝 공백 자동 제거 (BufWritePre):\n   - 실무에서 코드 저장 시 줄 끝에 남은 불필요한 공백(trailing whitespace)을 자동으로 정리할 때 가장 많이 사용되는 설정입니다:\n     :autocmd BufWritePre * :%s/\\s\\+$//e\n   - %s/\\s\\+$//e: 전체 줄(%)에서 줄 끝의 공백 1개 이상(\\s\\+$)을 빈 문자열로 치환하며, 일치하지 않는 줄이 있어도 에러를 무시(e 플래그)합니다.\n\n3) 실행 및 저장 연동 (:w):\n   - 자동 명령을 등록한 뒤 :w 로 파일을 저장하면 저장 직전에 BufWritePre 훅이 발동하여 줄 끝의 지저분한 공백들이 자동으로 말끔하게 정리됩니다!\n\n미션:\n1. :autocmd BufWritePre * :%s/\\s\\+$//e (또는 줄여서 :au BufWritePre * %s/\\s\\+$//e)<Enter> 를 입력하여 파일 저장 직전 끝 공백 자동 제거 훅을 등록하세요.\n2. :w<Enter> 를 입력하여 파일을 저장하세요. BufWritePre 자동 명령이 발동하여 끝 공백이 모두 정리되고 파일이 저장되면 미션이 완료됩니다!',
+    hint: ':au BufWritePre * %s/\\s\\+$//e 입력 후 Enter → :w 입력 후 Enter 로 공백 자동 제거 및 저장',
+    par: 36,
+    optimalKeys: [
+      ':', 'a', 'u', ' ', 'B', 'u', 'f', 'W', 'r', 'i', 't', 'e', 'P', 'r', 'e', ' ', '*', ' ',
+      '%', 's', '/', '\\', 's', '\\', '+', '$', '/', '/', 'e', 'Enter',
+      ':', 'w', 'Enter',
+    ],
+    primaryFilename: 'service.ts',
+    initialLines: [
+      'const serviceName = "auth-service";   ',
+      'const retryLimit = 3;  ',
+      'function authenticate(token: string) {    ',
+      '  return Boolean(token);',
+      '}',
+    ],
+    targetLines: [
+      'const serviceName = "auth-service";',
+      'const retryLimit = 3;',
+      'function authenticate(token: string) {',
+      '  return Boolean(token);',
+      '}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const hasAutocmd = Boolean(
+        state.autocmds?.some(
+          (a) =>
+            a.event.toLowerCase() === 'bufwritepre' &&
+            a.command.includes('%s')
+        )
+      );
+      const targetClean = [
+        'const serviceName = "auth-service";',
+        'const retryLimit = 3;',
+        'function authenticate(token: string) {',
+        '  return Boolean(token);',
+        '}',
+      ];
+      const isLinesClean =
+        state.lines.length === targetClean.length &&
+        state.lines.every((line, idx) => line === targetClean[idx]);
+      const isSaved = (state.saveCounter ?? 0) > 0;
+
+      return (
+        state.mode === 'NORMAL' &&
+        hasAutocmd &&
+        isLinesClean &&
+        isSaved
+      );
+    },
+  },
 ];
