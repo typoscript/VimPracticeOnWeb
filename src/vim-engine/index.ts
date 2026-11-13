@@ -72,6 +72,8 @@ export {
   listMacroRegisters,
   clampFrameIndex,
   MACRO_PLAYBACK_SPEEDS,
+  explainMacroKeyAction,
+  getMacroFailureReason,
 } from './macroDebugger';
 export {
   formatMacroKeysToString,

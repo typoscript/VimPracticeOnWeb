@@ -78,6 +78,7 @@
   - `:nmap, :nnoremap, :imap, :vmap, :unmap` (키매핑 인터프리터)
   - `cs, ds, ysiw, yss, S` (순정 vim-surround 괄호/따옴표 감싸기 엔진)
 - **매크로 심화 & 디버깅 (레슨 53)**: `@a, @@, [count]@@` + 매크로 슬로우모션 디버거 (`src/vim-engine/macroDebugger.ts`, `src/components/MacroDebugger/`: 1x/0.5x/0.2x 재생, 키 단위 스텝, 프레임 미리보기).
+- **대화형 매크로 튜터 & 단계별 실행 비주얼라이저 (`src/vim-engine/macroDebugger.ts`, `src/components/MacroDebugger/`)**: 매크로 초보자를 위한 인체공학적 학습 도구. 키별 Vim 의미와 문법적 해설 자동 생성(`explainMacroKeyAction`), 실행 전후 라인 Diff 시각화(`- ` / `+ `), 키스트로크 칩 직접 클릭을 통한 즉시 타임워프 점프(`handleJumpToKey`), 모션 실패(bell) 원인 및 방지 팁 진단(`getMacroFailureReason`), 스마트 튜터 모드 On/Off 토글 지원.
 - **실패 신호(bell) & 연산자+모션**: 실패한 키는 상태에 일시적 `bell: true`를 남기며(매 키 입력 시작 시 제거), `@` 매크로·`.` 반복·`:normal`·키매핑 재생은 bell에서 중단됩니다. `src/vim-engine/operatorMotion.ts`가 `d/c/y` + `j k G gg`(줄 단위), `h l b B ^`(배타적 문자 단위)를 처리하며 실패 시 bell을 울립니다. UI는 bell마다 에디터 테두리를 깜빡입니다(visualbell, `Editor`의 `bellSignal`). VISUAL 모드 모션, `%`, `*`/`#`(E348), 미설정 마크(E20), 빈 레지스터 `p`(E353), 마지막 줄 `J`, 숫자 없는 `Ctrl-a`, 줄보다 긴 `[count]r`, 알 수 없는 Ex 명령(E492)도 bell을 울립니다. ⚠ Vim `nv_wordcmd`처럼 연산자와 함께 쓴 `e`는 버퍼 끝에서도 실패하지 않습니다(`de`는 마지막 문자 삭제) — 판정 기준은 Vim 소스와 `test/vimDifferential.fuzz.test.ts`.
 - **순정 Vim 정규식 (`src/vim-engine/vimRegex.ts`의 `compileVimRegex`)**: `/` `?` `n` `N` `*` `#` `gn` 하이라이트, `:s`, `:g`, `:/pat/` 범위, `:vimgrep`, `:lvimgrep`, `=~`, `substitute()`/`split()`/`match()` 가 모두 같은 변환기를 씁니다. magic 기본 모드에서 `+ ? = | ( ) { } < >`는 리터럴이며 `\` 를 붙여야 특수 문자입니다(`\+`, `\(…\)`). `\v`/`\m`/`\M`/`\V`, `\zs`/`\ze`, `\{-}`, `\%(`, `\@=` 류, `\a \l \u \x \h \k`, `[[:alpha:]]`, `\c`/`\C`, smartcase(`\` 뒤 대문자 제외)를 지원합니다. `*`/`#`은 `\<word\>` 로 단어 전체를 찾습니다. ⚠ 새 코드에서 Vim 패턴을 다룰 때 `new RegExp(pattern)` 을 직접 쓰지 말고 반드시 `compileVimRegex` 를 사용하세요.
 - **`:s` 고급 기능 (레슨 59)**: `\=expr` 계산식 치환(`submatch(n)`, 치환 중인 줄이 `line('.')`, 리스트 결과는 여러 줄), `\r` 줄 나누기, 치환 문자열·패턴의 `~`(직전 치환 문자열), 빈 패턴 `:s//new/`, `:&` / `:&&` / 인자 없는 `:s`, 노멀 `&` / `g&`. 대소문자는 `I`(구분) > `i`(무시) > `ignorecase`+`smartcase` 순이며 `gc` 확인 모드도 같은 값을 씁니다. 직전 치환은 `state.lastSubstitute`, 성공한 `:s` 패턴은 `lastSearchQuery` 가 됩니다.
@@ -159,4 +160,6 @@
 35. ~~**순정 ctags 심볼 태그 선택기 (`:tselect`, `:tjump`, `g]`, `:tn`, `:tp`) 및 신규 레슨 71**~~ — 레슨 71과 함께 구현 완료.
 36. ~~**신규 레슨 72 추가 (순정 Vim 자동 명령과 BufWritePre 공백 정리 마스터)**~~ — 레슨 72와 함께 구현 완료.
 37. ~~**Netrw 북마크 & 즐겨찾기 시스템 (`mb`, `gb`, `:Bookmark`)**~~ — 구현 완료.
-38. **대화형 매크로 튜터 & 단계별 실행 비주얼라이저**: 레슨 53/66 심화 연계 매크로 실행 흐름 시각화 및 키별 인터랙티브 학습 도구.
+38. ~~**대화형 매크로 튜터 & 단계별 실행 비주얼라이저**~~ — 구현 완료.
+39. **하드코어 도장 실무 프로 10연타 챌린지**: ctags 점프, Netrw 조작, 버퍼 스위칭 혼합 고난도 코스.
+40. **순정 Vim 파일/버퍼 퍼지 파인더 (`:find`, `:b [filter]`)**: VFS 파일 고속 검색 팝업.

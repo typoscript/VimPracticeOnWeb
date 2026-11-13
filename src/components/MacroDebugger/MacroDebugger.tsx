@@ -7,6 +7,8 @@ import {
   clampFrameIndex,
   getMacroKeys,
   listMacroRegisters,
+  explainMacroKeyAction,
+  getMacroFailureReason,
 } from '../../vim-engine';
 import './MacroDebugger.css';
 import { t } from '../../i18n';
@@ -47,6 +49,7 @@ export const MacroDebugger: React.FC<MacroDebuggerProps> = ({
   const [trace, setTrace] = useState<MacroTrace | null>(null);
   const [frameIndex, setFrameIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isTutorMode, setIsTutorMode] = useState(true);
 
   const register = macroRegisters.includes(selectedRegister) ? selectedRegister : macroRegisters[0] ?? '';
   // @{reg}는 NORMAL 모드의 새 명령으로만 실행되므로, 다른 모드나 대기 키가 있을 때는 추적·실행을 막습니다.
@@ -118,6 +121,18 @@ export const MacroDebugger: React.FC<MacroDebuggerProps> = ({
     setFrameIndex(clampFrameIndex(t, base + delta));
   };
 
+  const handleJumpToKey = (iteration: number, keyIndex: number) => {
+    setIsPlaying(false);
+    const t = ensureTrace();
+    if (!t) return;
+    const targetIdx = t.frames.findIndex(
+      (f) => f.iteration === iteration && f.keyIndex === keyIndex
+    );
+    if (targetIdx >= 0) {
+      setFrameIndex(targetIdx);
+    }
+  };
+
   const handleReset = () => {
     setIsPlaying(false);
     setTrace(null);
@@ -138,9 +153,14 @@ export const MacroDebugger: React.FC<MacroDebuggerProps> = ({
 
   const keys = trace ? trace.keys : getMacroKeys(baseState, register);
   const frame = trace ? trace.frames[frameIndex] : null;
+  const prevFrame = trace && frameIndex > 0 ? trace.frames[frameIndex - 1] : null;
+  const prevFrameState = prevFrame?.state;
   const totalFrames = trace ? trace.frames.length - 1 : keys.length * count;
   const frameState = frame?.state;
   const cursorLine = frameState ? frameState.lines[frameState.cursor.line] ?? '' : '';
+  const prevLine = prevFrameState
+    ? (frameState ? prevFrameState.lines[frameState.cursor.line] ?? prevFrameState.lines[prevFrameState.cursor.line] ?? '' : '')
+    : '';
   const cursorCol = frameState?.cursor.col ?? 0;
 
   return (
@@ -155,6 +175,15 @@ export const MacroDebugger: React.FC<MacroDebuggerProps> = ({
           <span className="macro-debugger-icon">🎞️</span>
           <h3 className="macro-debugger-title">Macro Debugger</h3>
           <span className="macro-debugger-subtitle">{t('매크로 슬로우모션 단계별 실행')}</span>
+          <button
+            type="button"
+            className={`macro-tutor-toggle-btn ${isTutorMode ? 'active' : ''}`}
+            onClick={() => setIsTutorMode(!isTutorMode)}
+            title={t('단계별 Vim 의미와 변경사항을 해설하는 튜터 모드 토글')}
+            data-testid="macro-tutor-toggle-btn"
+          >
+            🎓 {t('스마트 튜터')}
+          </button>
         </div>
         <button
           className="macro-debugger-close-btn"
@@ -290,6 +319,8 @@ export const MacroDebugger: React.FC<MacroDebuggerProps> = ({
                         isCurrent && frame?.failed ? 'failed' : ''
                       } ${isSkipped ? 'skipped' : ''}`}
                       data-testid={isCurrent ? 'macro-current-key' : undefined}
+                      onClick={() => handleJumpToKey(it, ki)}
+                      title={t('클릭하여 이 키 시점으로 점프')}
                     >
                       {formatMacroKey(k)}
                     </span>
@@ -327,6 +358,43 @@ export const MacroDebugger: React.FC<MacroDebuggerProps> = ({
               </span>
             )}
           </div>
+
+          {isTutorMode && frame && (
+            <div className="macro-tutor-card" data-testid="macro-tutor-card">
+              <div className="macro-tutor-header">
+                <span className="macro-tutor-badge">💡 {t('스마트 튜터 해설')}</span>
+                <span className="macro-tutor-key-label">
+                  {frame.key ? (
+                    <>
+                      <code>{formatMacroKey(frame.key)}</code> : {explainMacroKeyAction(frame.key, prevFrame?.state, frameState)}
+                    </>
+                  ) : (
+                    t('실행 전 초기 상태')
+                  )}
+                </span>
+              </div>
+              {frame.changed && prevFrameState && (
+                <div className="macro-tutor-diff" data-testid="macro-tutor-diff">
+                  <div className="macro-tutor-diff-line diff-del">
+                    <span className="diff-marker">−</span>
+                    <code>{prevLine}</code>
+                  </div>
+                  <div className="macro-tutor-diff-line diff-add">
+                    <span className="diff-marker">+</span>
+                    <code>{cursorLine}</code>
+                  </div>
+                </div>
+              )}
+              {frame.failed && (
+                <div className="macro-tutor-failure" data-testid="macro-tutor-failure">
+                  <span className="macro-tutor-failure-icon">🚨</span>
+                  <span className="macro-tutor-failure-text">
+                    {getMacroFailureReason(frame, prevFrame)}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
     </aside>

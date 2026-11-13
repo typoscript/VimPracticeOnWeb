@@ -1148,4 +1148,9 @@ export const EN: Record<string, string> = {
   "마크 & 점프 리스트": "Marks & Jump List",
   "마크('a~'z, 'A~'Z) 및 점프 리스트(Ctrl+o/i) 비주얼 네비게이터": "Visual navigator for marks ('a~'z, 'A~'Z) and jump list (Ctrl+o/i)",
   "📍 마크 & 점프: {state}": "📍 Marks & Jumps: {state}",
+  "스마트 튜터": "Smart Tutor",
+  "단계별 Vim 의미와 변경사항을 해설하는 튜터 모드 토글": "Toggle Tutor Mode to explain step-by-step Vim semantics and changes",
+  "클릭하여 이 키 시점으로 점프": "Click to jump to this key frame",
+  "스마트 튜터 해설": "Smart Tutor Explanation",
+  "실행 전 초기 상태": "Initial state before execution",
 };

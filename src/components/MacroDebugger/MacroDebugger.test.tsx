@@ -165,4 +165,84 @@ describe('MacroDebugger Component', () => {
     expect(onRunMacro).toHaveBeenCalledWith('a', 2);
     expect(onPreviewFrame).toHaveBeenLastCalledWith(null);
   });
+
+  it('스마트 튜터 모드 토글 및 튜터 해설 카드가 정상 동작한다', () => {
+    render(
+      <MacroDebugger
+        baseState={createRecordedState()}
+        isOpen={true}
+        onToggle={vi.fn()}
+        onPreviewFrame={vi.fn()}
+        onRunMacro={vi.fn()}
+      />
+    );
+
+    // 다음 키 진행 (I)
+    fireEvent.click(screen.getByTestId('macro-next-btn'));
+    expect(screen.getByTestId('macro-tutor-card')).toBeInTheDocument();
+    expect(screen.getByTestId('macro-tutor-card')).toHaveTextContent('I');
+
+    // 튜터 모드 끄기
+    const toggleBtn = screen.getByTestId('macro-tutor-toggle-btn');
+    fireEvent.click(toggleBtn);
+    expect(screen.queryByTestId('macro-tutor-card')).not.toBeInTheDocument();
+
+    // 튜터 모드 다시 켜기
+    fireEvent.click(toggleBtn);
+    expect(screen.getByTestId('macro-tutor-card')).toBeInTheDocument();
+  });
+
+  it('키스트로크 칩을 클릭하여 특정 키 시점으로 즉시 점프한다', () => {
+    render(
+      <MacroDebugger
+        baseState={createRecordedState()}
+        isOpen={true}
+        onToggle={vi.fn()}
+        onPreviewFrame={vi.fn()}
+        onRunMacro={vi.fn()}
+      />
+    );
+
+    // 4번째 키(Escape) 칩 클릭
+    const chips = screen.getAllByText('Esc');
+    expect(chips.length).toBeGreaterThan(0);
+    fireEvent.click(chips[0]);
+
+    expect(screen.getByTestId('macro-current-key')).toHaveTextContent('Esc');
+    expect(screen.getByTestId('macro-tutor-card')).toHaveTextContent('노멀(Normal) 모드로 복귀');
+  });
+
+  it('버퍼가 변경되는 프레임에서 튜터 diff 라인이 표시된다', () => {
+    render(
+      <MacroDebugger
+        baseState={createRecordedState()}
+        isOpen={true}
+        onToggle={vi.fn()}
+        onPreviewFrame={vi.fn()}
+        onRunMacro={vi.fn()}
+      />
+    );
+
+    // I 누르고 '-' 누르면 '-apple' 로 변경됨
+    fireEvent.click(screen.getByTestId('macro-next-btn')); // I
+    fireEvent.click(screen.getByTestId('macro-next-btn')); // -
+    expect(screen.getByTestId('macro-tutor-diff')).toBeInTheDocument();
+    expect(screen.getByTestId('macro-tutor-diff')).toHaveTextContent('-apple');
+  });
+
+  it('모션 실패 프레임에서 튜터 실패 원인 코칭 박스가 표시된다', () => {
+    render(
+      <MacroDebugger
+        baseState={{ ...createRecordedState(), cursor: { line: 2, col: 0 } }}
+        isOpen={true}
+        onToggle={vi.fn()}
+        onPreviewFrame={vi.fn()}
+        onRunMacro={vi.fn()}
+      />
+    );
+
+    for (let i = 0; i < 5; i++) fireEvent.click(screen.getByTestId('macro-next-btn'));
+    expect(screen.getByTestId('macro-tutor-failure')).toBeInTheDocument();
+    expect(screen.getByTestId('macro-tutor-failure')).toHaveTextContent('마지막 줄에서 j 모션');
+  });
 });

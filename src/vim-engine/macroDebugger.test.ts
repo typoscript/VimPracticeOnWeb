@@ -6,6 +6,8 @@ import {
   listMacroRegisters,
   normalizeMacroRegister,
   clampFrameIndex,
+  explainMacroKeyAction,
+  getMacroFailureReason,
 } from './macroDebugger';
 import type { VimEditorState } from './types';
 
@@ -114,5 +116,42 @@ describe('MacroDebugger Engine: 매크로 프레임 분해', () => {
     expect(state.lines[1]).toBe('- banana');
     state = press(state, ['3', '@', '@']);
     expect(state.lines).toEqual(['- apple', '- banana', '- cherry', '- grape', '- melon']);
+  });
+
+  it('대화형 매크로 튜터 해설 및 실패 원인 진단이 정확하게 동작한다', () => {
+    const s0 = createState(['apple', 'banana'], { line: 0, col: 0 });
+    const s1 = createState(['apple', 'banana'], { line: 1, col: 0 });
+    expect(explainMacroKeyAction('j', s0, s1)).toBe('한 줄 아래로 이동');
+
+    // 버퍼 끝에서 j 실행 시 해설
+    expect(explainMacroKeyAction('j', s1, s1)).toContain('버퍼 끝 도달');
+
+    // Insert 모드에서 글자 입력 해설
+    const ins0 = { ...s0, mode: 'INSERT' as const };
+    const ins1 = { ...s0, lines: ['aapple', 'banana'], mode: 'INSERT' as const };
+    expect(explainMacroKeyAction('a', ins0, ins1)).toBe('문자 "a" 타이핑 입력');
+
+    // 실패 원인 분석
+    const lastLineState = createState(['single line'], { line: 0, col: 0 });
+    const failedFrame = {
+      index: 1,
+      key: 'j',
+      iteration: 0,
+      keyIndex: 0,
+      state: { ...lastLineState, bell: true },
+      changed: false,
+      failed: true,
+    };
+    const prevFrame = {
+      index: 0,
+      key: null,
+      iteration: -1,
+      keyIndex: -1,
+      state: lastLineState,
+      changed: false,
+      failed: false,
+    };
+    const reason = getMacroFailureReason(failedFrame, prevFrame);
+    expect(reason).toContain('마지막 줄에서 j 모션을 실행하여');
   });
 });
