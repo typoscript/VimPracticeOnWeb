@@ -2578,4 +2578,59 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 74,
+    title: '레슨 74: 순정 퍼지 파인더(:find, :Files)와 프로젝트 파일 고속 분할 탐색 마스터',
+    description:
+      '규모가 큰 프로젝트에서는 파일 트리를 하나하나 뒤지는 대신, 순정 Ex 명령 :find 또는 대화형 퍼지 파인더 :Files 를 사용하면 수백 개의 파일 중에서도 원하는 파일을 1초 만에 찾아낼 수 있습니다.\n\n1) 순정 Ex 파일 탐색 (:find {name}):\n   - :find payment.ts 를 실행하면 가상 파일시스템(VFS) 전체에서 일치하는 경로(services/payment.ts)를 찾아 즉시 버퍼로 열어줍니다.\n\n2) 대화형 퍼지 팝업 파인더 (:Files 또는 :find):\n   - 인자 없이 :find 를 실행하거나 :Files 를 입력하면 화면 상단에 실시간 검색 팝업이 나타나며, 검색어 입력 및 <C-j>/<C-k>로 선택 후 Enter(열기) 또는 Ctrl-v(세로 분할)로 열 수 있습니다.\n\n3) 파일 수정, 저장 및 대안 버퍼 복귀 (:w, Ctrl-^):\n   - 이동한 payment.ts 파일의 포트 번호를 수정한 뒤, :w 로 저장하고 Ctrl-^ 키를 누르면 원래의 메인 버퍼(main.ts)로 즉시 복귀합니다.\n\n미션:\n1. :find payment.ts<Enter> 명령으로 services/payment.ts 파일을 즉시 찾아 여세요.\n2. 첫 번째 줄의 8080 포트를 9000 으로 수정하세요 (2w cw9000<Esc>).\n3. :w<Enter> 명령으로 파일을 저장하세요.\n4. Ctrl-^ 키를 눌러 원래 버퍼(main.ts)로 복귀하여 미션을 완료하세요!',
+    hint: ':find payment.ts 입력 후 Enter → 2w cw9000<Esc> 로 포트 수정 → :w 로 저장 → Ctrl-^ 로 main.ts 복귀',
+    par: 32,
+    optimalKeys: [
+      ':', 'f', 'i', 'n', 'd', ' ', 'p', 'a', 'y', 'm', 'e', 'n', 't', '.', 't', 's', 'Enter',
+      '2', 'w',
+      'c', 'w', '9', '0', '0', '0', 'Escape',
+      ':', 'w', 'Enter',
+      'Ctrl-^',
+    ],
+    primaryFilename: 'main.ts',
+    initialLines: [
+      'import { processPayment } from "./services/payment";',
+      '',
+      'export function checkout() {',
+      '  return processPayment();',
+      '}',
+    ],
+    targetLines: [
+      'import { processPayment } from "./services/payment";',
+      '',
+      'export function checkout() {',
+      '  return processPayment();',
+      '}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    initialVirtualFiles: {
+      'services/payment.ts': [
+        'PORT = 8080;',
+        'export const processPayment = () => true;',
+      ],
+      'services/auth.ts': ['export const verify = () => true;'],
+      'utils/helper.ts': ['export const noop = () => {};'],
+    },
+    checkComplete: (state) => {
+      const isBackToMain = state.primaryFilename === 'main.ts';
+      const isPaymentUpdated =
+        state.virtualFiles?.['services/payment.ts']?.[0] === 'PORT = 9000;' ||
+        Boolean(
+          state.buffers?.some(
+            (b) => b.name === 'services/payment.ts' && b.lines[0] === 'PORT = 9000;'
+          )
+        );
+
+      return (
+        state.mode === 'NORMAL' &&
+        isBackToMain &&
+        isPaymentUpdated
+      );
+    },
+  },
 ];

@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 124개 테스트 파일, 1,618개 테스트 100% 통과 필수)*
+  *(현재 124개 테스트 파일, 1,619개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 73)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 74)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -120,6 +120,7 @@
 - **순정 Vim 자동 명령(Autocommand)과 저장 시 공백 자동 정리 마스터 (레슨 72, `src/vim-engine/autocmdEngine.ts`, `missions.ts`)**: 파일 저장 직전(`BufWritePre`) 끝 공백을 자동 치환(`:%s/\s\+$//e`)하는 순정 자동 명령 등록(`:autocmd`, `:au`), 파일 저장(`:w`) 연동 자동 후크 실행 및 라인 정리 실전 마스터.
 - **순정 Vim 파일 & 버퍼 퍼지 파인더 (`:find`, `:Files`, `:Buffers`, `src/vim-engine/fuzzyFinder.ts`, `src/components/FuzzyFinder/`)**: 순수 Vim 퍼지 매칭 알고리즘(`fuzzyMatch`), 가상 파일 시스템 및 버퍼 대상 고속 점수 기반 검색(`searchFilesFuzzy`, `searchBuffersFuzzy`), 순정 Ex 커맨드 `:find [file]` 및 대화형 퍼지 팝업 모달(`:Files`, `:Buffers`, `:FZF`), 키보드 네비게이션(`<C-j>/<C-k>`, `<Down>/<Up>`, Enter 열기, `Ctrl-v` 세로 분할, `Ctrl-s` 가로 분할, `Ctrl-t` 새 탭, `Esc` 닫기) 지원.
 - **순정 Netrw 디렉터리 북마크(mb, gb)와 프로젝트 고속 탐색 마스터 (레슨 73, `src/vim-engine/netrwEngine.ts`, `missions.ts`)**: 모노레포 프로젝트에서 자주 찾는 디렉터리(`services/`)를 탐색기 내에서 북마크 등록(`mb`), 북마크 즉시 점프(`gb`), 파일 열기(`Enter`), 원래 버퍼 복귀(`Ctrl-^`) 실무 탐색 워크플로우 마스터.
+- **순정 퍼지 파인더(:find, :Files)와 프로젝트 파일 고속 분할 탐색 마스터 (레슨 74, `src/vim-engine/fuzzyFinder.ts`, `missions.ts`)**: 대규모 모노레포 프로젝트에서 순정 Ex 명령 `:find payment.ts`로 `services/payment.ts` 파일을 1초 만에 찾아 버퍼로 로드하고, 인라인 포트 수정(`cw9000<Esc>`) 및 저장(`:w`) 후 `Ctrl-^` 대안 버퍼 복귀 실무 워크플로우 마스터.
 - **하드코어 도장 실무 프로 10연타 챌린지 (`pro-master`, `src/components/HardcoreDojo/drillGenerators.ts`, `HardcoreDojo.tsx`)**: 텍스트 객체(`ci"`, `di(`, `cit`, `di{`), 대소문자 변환(`gUiw`), 숫자 증감(`Ctrl-a`), 들여쓰기(`>>`), 라인 결합(`J`), 줄 끝 삭제(`D`), 단어 치환(`cw`) 등 실무 핵심 10문제를 노미스로 연속 격파하는 스피드런 코스. 콤보 게이지, 실시간 타이머, 클리어 시간별 4단계 칭호(👑 GRANDMASTER / ⚔️ SENIOR ARCHITECT / 💼 TECH-LEAD / 📜 PRO-DEV) 및 랭킹 시스템 연동.
 - **표현식 레지스터(`"=`) 및 시스템 클립보드(`"+`, `"*"`) 완전 연동 (`src/vim-engine/registers.ts`, `types.ts`, `App.tsx`)**: Normal 모드 `"=수식<CR>p` 및 Insert/Command 모드 `Ctrl-r =` 계산 결과 즉시 삽입, OS 클립보드 레지스터(`"+`, `"*"`)의 동시 동기화, `setSystemClipboard` 외부 주입 API, 웹 브라우저 Clipboard API(`navigator.clipboard.writeText`)와의 실시간 양방향 연동.
 
