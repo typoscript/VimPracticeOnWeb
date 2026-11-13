@@ -1,0 +1,338 @@
+export interface HelpDocTopic {
+  id: string;
+  filename: string;
+  title: string;
+  tags: string[];
+  content: string[];
+}
+
+export const HELP_TOPICS: Record<string, HelpDocTopic> = {
+  'help.txt': {
+    id: 'help',
+    filename: 'help.txt',
+    title: 'Vim 메인 도움말 색인 (Main Help Index)',
+    tags: ['help', 'index', 'start', 'manual'],
+    content: [
+      '*help.txt*   Vim 고성능 인터랙티브 웹 도움말 매뉴얼',
+      '==============================================================================',
+      'VIM - 빠른 참조 및 도움말 목차                                  *quickref*',
+      '',
+      '도움말 탐색 팁:',
+      '  - |motion|       : 기본 및 고급 커서 이동 모션 (h, j, k, l, w, b, e, f, t, $)',
+      '  - |change|       : 텍스트 변경, 삭제, 복사 및 연산자 (d, c, y, p, r, J, >>)',
+      '  - |text-objects| : 단어, 따옴표, 괄호, 태그 텍스트 객체 (iw, i", i(, cit)',
+      '  - |pattern|      : 검색, 정규식 및 치환 명령 (/, ?, n, N, *, :s)',
+      '  - |windows|      : 윈도우 창 분할 및 포커스 이동 (:sp, :vsp, Ctrl-w)',
+      '  - |buffers|      : 버퍼 목록 조회 및 고속 전환 (:ls, :bnext, Ctrl-^)',
+      '  - |registers|    : 무명, 복사, 명명, 시스템, 표현식 레지스터 ("", "0, "+, "=)',
+      '  - |surround|     : 괄호/따옴표 감싸기 엔진 (cs, ds, ysiw, S)',
+      '  - |netrw|        : 순정 프로젝트 파일 탐색기 (:Explore, mb, gb, %)',
+      '  - |fuzzy|        : 순정 퍼지 파일/버퍼 탐색기 (:find, :Files, :Buffers)',
+      '',
+      '단축키 안내:',
+      '  - |tag| 링크 위에서 <Ctrl-]> (또는 클릭)를 누르면 해당 도움말로 점프합니다.',
+      '  - <Ctrl-t> 를 누르면 이전 도움말 위치로 복귀합니다.',
+      '  - <q> 또는 <:q> 를 누르면 도움말 창이 닫힙니다.',
+      '==============================================================================',
+    ],
+  },
+  'motion.txt': {
+    id: 'motion',
+    filename: 'motion.txt',
+    title: '커서 이동 모션 (Cursor Motions)',
+    tags: ['motion', 'move', 'h', 'j', 'k', 'l', 'w', 'b', 'e', 'f', 't', 'ge', 'gg', 'G'],
+    content: [
+      '*motion.txt*   Vim 커서 이동 모션 레퍼런스',
+      '==============================================================================',
+      '1. 기본 문자 단위 이동                                          *left-right*',
+      '  h               왼쪽으로 한 칸 이동',
+      '  l               오른쪽으로 한 칸 이동',
+      '  0               줄의 가장 첫 번째 열(col 0)로 이동',
+      '  ^               줄의 첫 번째 공백이 아닌 문자(first non-blank)로 이동',
+      '  $               줄의 가장 끝 문자로 이동',
+      '',
+      '2. 줄 단위 수직 이동                                            *up-down*',
+      '  k               위로 한 줄 이동',
+      '  j               아래로 한 줄 이동',
+      '  gg              문서의 첫 번째 줄 첫 칸으로 이동',
+      '  G               문서의 마지막 줄로 이동 ([count]G 로 특정 줄 점프)',
+      '  [count]+        [count] 줄 아래 첫 비공백 문자로 이동',
+      '  [count]-        [count] 줄 위 첫 비공백 문자로 이동',
+      '',
+      '3. 단어 단위 이동                                               *word-motions*',
+      '  w               다음 단어(word)의 시작점으로 전진',
+      '  b               이전 단어(word)의 시작점으로 후진',
+      '  e               현재/다음 단어(word)의 끝 글자로 전진',
+      '  ge              이전 단어(word)의 끝 글자로 후진',
+      '  W, B, E         공백으로만 구분되는 큰 단어(WORD) 단위 이동',
+      '',
+      '4. 인라인 문자 탐색                                             *character-search*',
+      '  f{char}         현재 줄에서 오른쪽으로 {char} 문자를 찾아 착지',
+      '  F{char}         현재 줄에서 왼쪽으로 {char} 문자를 찾아 착지',
+      '  t{char}         오른쪽 {char} 문자 바로 직전 열에 착지 (till)',
+      '  T{char}         왼쪽 {char} 문자 바로 직후 열에 착지',
+      '  ;               직전 f/t 문자 탐색을 같은 방향으로 반복',
+      '  ,               직전 f/t 문자 탐색을 반대 방향으로 반복',
+      '',
+      '관련 항목: |change| |text-objects|',
+      '==============================================================================',
+    ],
+  },
+  'change.txt': {
+    id: 'change',
+    filename: 'change.txt',
+    title: '텍스트 변경 및 연산자 (Operators & Changes)',
+    tags: ['change', 'operator', 'delete', 'yank', 'put', 'd', 'c', 'y', 'p', 'J', 'indent'],
+    content: [
+      '*change.txt*   텍스트 변경 및 연산자 레퍼런스',
+      '==============================================================================',
+      '1. 핵심 3대 연산자 (Operator + Motion)                          *operators*',
+      '  d{motion}       {motion} 범위의 텍스트를 삭제하고 레지스터에 저장 (예: dw, d$)',
+      '  c{motion}       {motion} 범위를 삭제하고 입력(INSERT) 모드로 진입 (예: cw, c$)',
+      '  y{motion}       {motion} 범위를 복사(Yank)하여 레지스터에 저장 (예: yiw, y$)',
+      '',
+      '2. 줄 단위 축약 명령                                            *linewise-change*',
+      '  dd              현재 줄 전체 삭제',
+      '  cc              현재 줄 전체를 비우고 인덴트 유지하며 입력 모드 진입',
+      '  yy              현재 줄 전체 복사',
+      '  D               커서 위치부터 줄 끝까지 삭제 (d$ 와 동일)',
+      '  C               커서 위치부터 줄 끝까지 삭제 후 입력 모드 (c$ 와 동일)',
+      '  Y               줄 복사 (또는 y$ 설정)',
+      '',
+      '3. 붙여넣기 및 결합                                             *putting*',
+      '  p               커서 뒤에 레지스터 내용 붙여넣기 (줄 단위는 아래 줄)',
+      '  P               커서 앞에 레지스터 내용 붙여넣기 (줄 단위는 윗 줄)',
+      '  J               아래 줄을 공백 하나로 결합하여 한 줄로 합치기 (Join)',
+      '  gJ              공백 없이 두 줄을 바짝 결합',
+      '  >> / <<         현재 줄을 오른쪽/왼쪽으로 들여쓰기',
+      '  ~               커서 위치 문자의 대소문자 반전',
+      '  gU{motion}      {motion} 범위 텍스트를 대문자로 변환 (예: gUiw)',
+      '  gu{motion}      {motion} 범위 텍스트를 소문자로 변환',
+      '  . (Dot)         마지막 텍스트 변경 작업을 그대로 반복 재실행',
+      '',
+      '관련 항목: |registers| |text-objects|',
+      '==============================================================================',
+    ],
+  },
+  'text-objects.txt': {
+    id: 'text-objects',
+    filename: 'text-objects.txt',
+    title: '텍스트 객체 (Text Objects)',
+    tags: ['text-objects', 'iw', 'aw', 'i"', 'di"', 'ci"', 'da(', 'cit', 'indent-object'],
+    content: [
+      '*text-objects.txt*   Vim 강력한 텍스트 객체 레퍼런스',
+      '==============================================================================',
+      '텍스트 객체는 연산자(d, c, y, v) 뒤에 결합하여 특정 문법 덩어리를 지정합니다.',
+      '  i{obj} = inner (내용물만)',
+      '  a{obj} = an/around (외벽 기호 및 공백 포함)',
+      '',
+      '1. 단어 및 문자열 객체                                          *word-objects*',
+      '  iw / aw         단어 내부 / 단어와 주변 공백 포함',
+      '  i" / a"         쌍따옴표 안의 문자열 / 따옴표 외벽 포함',
+      '  i\' / a\'         홑따옴표 안의 문자열 / 따옴표 외벽 포함',
+      '  i` / a`         백틱 내부 / 백틱 기호 포함',
+      '',
+      '2. 괄호 블록 객체                                              *bracket-objects*',
+      '  i( 또는 ib      소괄호 ( ) 안의 내용물만',
+      '  a( 또는 ab      소괄호 외벽 ( ) 포함 전체',
+      '  i{ 또는 iB      중괄호 { } 블록 내부 내용만',
+      '  a{ 또는 aB      중괄호 외벽 { } 포함 전체 블록',
+      '  i[ / a[         대괄호 [ ] 내부 / 외벽 포함',
+      '  i< / a<         꺾쇠 괄호 < > 내부 / 외벽 포함',
+      '',
+      '3. HTML/JSX 태그 및 문단 객체                                   *tag-objects*',
+      '  it              HTML/JSX 태그 안의 텍스트만 (<tag>내용</tag>)',
+      '  at              여는 태그와 닫는 태그 전체 포함',
+      '  ip / ap         빈 줄로 구분되는 문단(paragraph) 내부 / 주변 공백 포함',
+      '  ii / ai         동일한 들여쓰기 레벨의 코드 블록 (Indent Object)',
+      '',
+      '관련 항목: |change| |surround|',
+      '==============================================================================',
+    ],
+  },
+  'pattern.txt': {
+    id: 'pattern',
+    filename: 'pattern.txt',
+    title: '검색 및 정규식 치환 (Search & Substitution)',
+    tags: ['pattern', 'search', 'substitute', '/', '?', 's', '%s', 'regex', 'gn'],
+    content: [
+      '*pattern.txt*   검색 및 정규식 치환 레퍼런스',
+      '==============================================================================',
+      '1. 버퍼 내 탐색                                                 *search-commands*',
+      '  /{pattern}<CR>  문서 전방으로 {pattern} 검색',
+      '  ?{pattern}<CR>  문서 후방으로 {pattern} 검색',
+      '  n               같은 방향으로 다음 일치 항목으로 점프',
+      '  N               반대 방향으로 이전 일치 항목으로 점프',
+      '  *               커서 위치 단어(\\<word\\>)를 전방 검색',
+      '  #               커서 위치 단어를 후방 검색',
+      '  gn / gN         다음/이전 일치 항목을 선택하며 Visual 모드 진입',
+      '  :nohlsearch     현재 검색 하이라이트를 일시 해제 (:noh)',
+      '',
+      '2. Ex 치환 명령 (:substitute)                                   *:substitute*',
+      '  :s/old/new/     현재 줄에서 첫 번째 old를 new로 교체',
+      '  :s/old/new/g    현재 줄의 모든 old를 new로 교체',
+      '  :%s/old/new/g   전체 문서(%)의 모든 old를 new로 교체',
+      '  :%s/old/new/gc  각 치환마다 대화형(y/n/a/q) 확인 프롬프트 표시',
+      '  :&              직전 치환 명령을 동일하게 재실행',
+      '',
+      '관련 항목: |motion| |change|',
+      '==============================================================================',
+    ],
+  },
+  'windows.txt': {
+    id: 'windows',
+    filename: 'windows.txt',
+    title: '윈도우 창 분할 및 포커스 제어 (Window Splits)',
+    tags: ['windows', 'split', 'vsplit', 'ctrl-w', 'close', 'only', 'wincmd'],
+    content: [
+      '*windows.txt*   윈도우 창 분할 및 분할 제어 레퍼런스',
+      '==============================================================================',
+      '1. 창 분할 생성                                                 *split-commands*',
+      '  :split [file]   가로 수평 분할로 창 열기 (축약 :sp)',
+      '  :vsplit [file]  세로 수직 분할로 창 열기 (축약 :vsp)',
+      '  :new / :vnew    빈 파일의 가로/세로 분할 창 생성',
+      '  Ctrl-w s        현재 버퍼를 가로로 분할',
+      '  Ctrl-w v        현재 버퍼를 세로로 분할',
+      '',
+      '2. 창 간 포커스 이동                                            *window-focus*',
+      '  Ctrl-w w        다음 분할 창으로 포커스 순환 이동',
+      '  Ctrl-w h        왼쪽 창으로 포커스 이동',
+      '  Ctrl-w l        오른쪽 창으로 포커스 이동',
+      '  Ctrl-w k        위쪽 창으로 포커스 이동',
+      '  Ctrl-w j        아래쪽 창으로 포커스 이동',
+      '',
+      '3. 창 닫기 및 유지                                              *window-close*',
+      '  :close / :clo   현재 활성 분할 창 닫기 (Ctrl-w c)',
+      '  :only / :on     현재 활성 창만 남기고 나머지 모든 창 닫기 (Ctrl-w o)',
+      '  :q              현재 창 종료',
+      '',
+      '관련 항목: |buffers| |fuzzy|',
+      '==============================================================================',
+    ],
+  },
+  'registers.txt': {
+    id: 'registers',
+    filename: 'registers.txt',
+    title: '레지스터 및 클립보드 (Registers & Clipboard)',
+    tags: ['registers', 'clipboard', 'yank', 'expression-register', 'system-clipboard', 'reg'],
+    content: [
+      '*registers.txt*   레지스터 및 클립보드 레퍼런스',
+      '==============================================================================',
+      '1. 레지스터 지정 기본 문법                                      *registers-syntax*',
+      '  "{reg}y         {reg} 레지스터에 복사 (예: "ayiw)',
+      '  "{reg}p         {reg} 레지스터 내용 붙여넣기 (예: "ap)',
+      '  :registers      현재 저장된 모든 레지스터 내용 표 조회 (:reg)',
+      '',
+      '2. 주요 특수 레지스터                                           *special-registers*',
+      '  ""              기본 무명(unnamed) 레지스터 (최근 d, c, y 자동 저장)',
+      '  "0              복사(Yank) 전용 레지스터 (삭제 명령에 오염되지 않음)',
+      '  "a ~ "z         명명된 26개 독립 레지스터 (대문자 "A~"Z 는 내용 누적/append)',
+      '  "_              블랙홀 레지스터 (삭제/복사 내용이 레지스터를 덮어쓰지 않음)',
+      '  "+ / "*         OS 시스템 클립보드 (브라우저/데스크톱 클립보드와 실시간 연동)',
+      '  "=              표현식 계산기 레지스터 (Normal: "=expr<CR>p, Insert: Ctrl-r =)',
+      '  "%              현재 파일 이름 (읽기 전용)',
+      '  "/              최근 검색어 패턴 (읽기 전용)',
+      '',
+      '관련 항목: |change| |motion|',
+      '==============================================================================',
+    ],
+  },
+  'surround.txt': {
+    id: 'surround',
+    filename: 'surround.txt',
+    title: '순정 서라운드 괄호/따옴표 감싸기 엔진 (Surround)',
+    tags: ['surround', 'cs', 'ds', 'ys', 'ysiw'],
+    content: [
+      '*surround.txt*   순정 vim-surround 괄호/따옴표 조작 레퍼런스',
+      '==============================================================================',
+      '1. 둘러싼 기호 변경 (cs - Change Surround)                       *cs*',
+      '  cs\'"            \'hello\' -> "hello" 로 따옴표 교체',
+      '  cs"[            "hello" -> [hello] 로 대괄호 교체',
+      '  cs"(            "hello" -> ( hello ) 공백 포함 소괄호 교체',
+      '',
+      '2. 둘러싼 기호 삭제 (ds - Delete Surround)                       *ds*',
+      '  ds"             "hello" -> hello 로 따옴표 제거',
+      '  ds(             (hello) -> hello 로 괄호 제거',
+      '',
+      '3. 새로운 기호로 감싸기 (ys - Yank Surround)                     *ys*',
+      '  ysiw"           단어(iw)를 쌍따옴표("")로 감싸기',
+      '  ysiw)           단어를 공백 없는 소괄호 () 로 감싸기',
+      '  ysiw(           단어를 양쪽 공백 있는 소괄호 ( word ) 로 감싸기',
+      '  yss"            현재 줄 전체를 쌍따옴표로 감싸기',
+      '  Visual S"       선택된 영역을 쌍따옴표로 감싸기',
+      '',
+      '관련 항목: |text-objects| |change|',
+      '==============================================================================',
+    ],
+  },
+  'fuzzy.txt': {
+    id: 'fuzzy',
+    filename: 'fuzzy.txt',
+    title: '순정 파일 및 버퍼 퍼지 파인더 (Fuzzy Finder)',
+    tags: ['fuzzy', 'find', 'files', 'buffers', 'fzf'],
+    content: [
+      '*fuzzy.txt*   순정 파일/버퍼 퍼지 탐색기 레퍼런스',
+      '==============================================================================',
+      '1. 순정 Ex 파일 탐색                                            *:find*',
+      '  :find {name}    가상 파일시스템(VFS)을 퍼지 매칭하여 대상 파일을 즉시 엽니다.',
+      '  :find           인자 없이 실행 시 대화형 퍼지 파일 팝업 모달을 엽니다.',
+      '',
+      '2. 대화형 퍼지 팝업 모달                                         *:Files*',
+      '  :Files          프로젝트 전체 가상 파일 목록 퍼지 검색창 열기',
+      '  :Buffers        현재 열려 있는 버퍼 목록 퍼지 검색창 열기',
+      '',
+      '3. 퍼지 팝업 키보드 조작                                        *fuzzy-keys*',
+      '  <Ctrl-j> / <Down>     선택 항목 아래로 이동',
+      '  <Ctrl-k> / <Up>       선택 항목 위로 이동',
+      '  <Enter>               선택한 파일을 현재 창에서 열기',
+      '  <Ctrl-v>              선택한 파일을 세로 분할 창(:vsp)으로 열기',
+      '  <Ctrl-s>              선택한 파일을 가로 분할 창(:sp)으로 열기',
+      '  <Ctrl-t>              선택한 파일을 새 탭페이지(:tabnew)로 열기',
+      '  <Esc>                 퍼지 파인더 닫기',
+      '',
+      '관련 항목: |windows| |buffers|',
+      '==============================================================================',
+    ],
+  },
+};
+
+/** 키워드별 대상 토픽 및 행 번호 색인 테이블 */
+export interface HelpTagMatch {
+  topicKey: string;
+  lineIndex: number;
+}
+
+export function resolveHelpTag(keyword: string): HelpTagMatch {
+  const clean = keyword.trim().toLowerCase().replace(/^[:*|]/, '').replace(/[*|]$/, '');
+  if (!clean) {
+    return { topicKey: 'help.txt', lineIndex: 0 };
+  }
+
+  // 1. 토픽 파일명 직접 일치 (예: 'motion', 'motion.txt')
+  for (const [key, doc] of Object.entries(HELP_TOPICS)) {
+    if (doc.id === clean || key === clean || key === `${clean}.txt`) {
+      return { topicKey: key, lineIndex: 0 };
+    }
+  }
+
+  // 2. 태그 목록 일치
+  for (const [key, doc] of Object.entries(HELP_TOPICS)) {
+    if (doc.tags.includes(clean)) {
+      // 본문에서 *tag* 위치 찾기
+      const tagPattern = `*${clean}*`;
+      const idx = doc.content.findIndex((l) => l.includes(tagPattern));
+      return { topicKey: key, lineIndex: Math.max(0, idx) };
+    }
+  }
+
+  // 3. 본문 텍스트 내 부분 일치
+  for (const [key, doc] of Object.entries(HELP_TOPICS)) {
+    const idx = doc.content.findIndex((l) => l.toLowerCase().includes(clean));
+    if (idx !== -1) {
+      return { topicKey: key, lineIndex: idx };
+    }
+  }
+
+  // 일치하는 항목이 없으면 메인 도움말 반환
+  return { topicKey: 'help.txt', lineIndex: 0 };
+}

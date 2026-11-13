@@ -1,0 +1,248 @@
+.help-viewer-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1.5rem;
+}
+
+.help-viewer-window {
+  width: 100%;
+  max-width: 900px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  background-color: #1a1b26;
+  border: 1px solid #414868;
+  border-radius: 8px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  color: #c0caf5;
+  font-family: 'JetBrains Mono', 'Fira Code', Menlo, Monaco, Consolas, monospace;
+  overflow: hidden;
+}
+
+.help-viewer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1rem;
+  background-color: #1f2335;
+  border-bottom: 1px solid #292e42;
+}
+
+.help-viewer-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.help-viewer-badge {
+  background-color: #7aa2f7;
+  color: #15161e;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+
+.help-viewer-filename {
+  font-weight: 600;
+  color: #bb9af7;
+  font-size: 0.95rem;
+}
+
+.help-viewer-sep {
+  color: #565f89;
+}
+
+.help-viewer-title {
+  color: #7dcfff;
+  font-size: 0.9rem;
+}
+
+.help-viewer-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.help-viewer-btn {
+  background: #24283b;
+  border: 1px solid #3b4261;
+  color: #a9b1d6;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.help-viewer-btn:hover {
+  background: #3b4261;
+  color: #7aa2f7;
+  border-color: #7aa2f7;
+}
+
+.help-viewer-close-btn {
+  background: transparent;
+  border: none;
+  color: #787c99;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  line-height: 1;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.help-viewer-close-btn:hover {
+  color: #f7768e;
+  background-color: rgba(247, 118, 142, 0.15);
+}
+
+.help-viewer-breadcrumbs {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 1rem;
+  background-color: #16161e;
+  border-bottom: 1px solid #24283b;
+  font-size: 0.8rem;
+}
+
+.breadcrumb-label {
+  color: #565f89;
+}
+
+.breadcrumb-sep {
+  color: #414868;
+}
+
+.breadcrumb-item {
+  color: #7aa2f7;
+}
+
+.breadcrumb-item.active {
+  color: #2ac3de;
+  font-weight: 600;
+}
+
+.help-viewer-hint-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.4rem 1rem;
+  background-color: #1f2335;
+  border-bottom: 1px solid #292e42;
+  font-size: 0.78rem;
+  color: #9aa5ce;
+}
+
+.help-viewer-hint-bar kbd {
+  background: #24283b;
+  border: 1px solid #414868;
+  color: #e0af68;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  font-size: 0.75rem;
+}
+
+.help-viewer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem 0;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.help-line {
+  display: flex;
+  padding: 0.05rem 1rem;
+  min-height: 1.6em;
+  transition: background-color 0.1s ease;
+}
+
+.help-line.active-cursor-line {
+  background-color: rgba(122, 162, 247, 0.15);
+  border-left: 3px solid #7aa2f7;
+  padding-left: calc(1rem - 3px);
+}
+
+.help-line-num {
+  width: 3.2rem;
+  color: #414868;
+  user-select: none;
+  text-align: right;
+  margin-right: 1.2rem;
+  font-size: 0.82rem;
+}
+
+.help-line-text {
+  flex: 1;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.help-tag-link {
+  background: none;
+  border: none;
+  color: #73daca;
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  cursor: pointer;
+  padding: 0 0.1rem;
+  transition: all 0.15s ease;
+}
+
+.help-tag-link:hover {
+  color: #2ac3de;
+  text-decoration: underline;
+  background-color: rgba(42, 195, 222, 0.15);
+  border-radius: 2px;
+}
+
+.help-tag-def {
+  color: #bb9af7;
+  font-weight: 700;
+}
+
+.help-viewer-statusline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 1rem;
+  background-color: #1a1b26;
+  border-top: 1px solid #292e42;
+  font-size: 0.78rem;
+  color: #787c99;
+}
+
+.statusline-left {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.statusline-mode {
+  color: #9ece6a;
+  font-weight: 600;
+}
+
+.statusline-topic {
+  color: #c0caf5;
+}
+
+.statusline-right {
+  color: #565f89;
+}

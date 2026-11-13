@@ -16,6 +16,7 @@ import { MacroDebugger } from './components/MacroDebugger/MacroDebugger';
 import { VimGrammarASTViewer } from './components/VimGrammarASTViewer/VimGrammarASTViewer';
 import { QuickfixPanel } from './components/QuickfixPanel';
 import { FuzzyFinder } from './components/FuzzyFinder/FuzzyFinder';
+import { HelpViewer } from './components/HelpViewer/HelpViewer';
 import { ActionTimelinePanel } from './components/ActionTimelinePanel/ActionTimelinePanel';
 import {
   ActionTimelineStep,
@@ -37,6 +38,7 @@ import {
 } from './vim-engine';
 import { closeQuickfixWindow, jumpToQuickfixItem } from './vim-engine';
 import { selectFuzzyFinderItem, closeFuzzyFinder } from './vim-engine';
+import { jumpHelpTag, popHelpTag, closeHelp } from './vim-engine';
 import { closeLocationListWindow, jumpToLocationListItem } from './vim-engine';
 import { computeDiffHunks } from './vim-engine';
 import { selectCompletionCandidate } from './vim-engine';
@@ -430,6 +432,21 @@ export function App() {
         },
       };
     });
+  }, []);
+
+  const handleJumpHelpTag = useCallback((tag: string) => {
+    setEditorState((prevState) => jumpHelpTag(prevState, tag));
+    setIsEditorFocused(true);
+  }, []);
+
+  const handlePopHelpTag = useCallback(() => {
+    setEditorState((prevState) => popHelpTag(prevState));
+    setIsEditorFocused(true);
+  }, []);
+
+  const handleCloseHelp = useCallback(() => {
+    setEditorState((prevState) => closeHelp(prevState));
+    setIsEditorFocused(true);
   }, []);
 
   const currentMission = MISSIONS[currentMissionIndex];
@@ -2465,6 +2482,15 @@ export function App() {
           onSelectAction={handleSelectFuzzyFinderAction}
           onSelectItemIndex={handleSelectFuzzyItemIndex}
           onClose={handleCloseFuzzyFinder}
+        />
+      )}
+
+      {editorState.helpSession?.isOpen && (
+        <HelpViewer
+          session={editorState.helpSession}
+          onJumpTag={handleJumpHelpTag}
+          onPopTag={handlePopHelpTag}
+          onClose={handleCloseHelp}
         />
       )}
     </div>

@@ -55,6 +55,7 @@ import {
 } from './cmdlineWindow';
 import { handleNetrwKey } from './netrwEngine';
 import { handleFuzzyFinderKey } from './fuzzyFinder';
+import { handleHelpKey, openHelp } from './helpEngine';
 import { jumpDiffHunk, diffObtain, diffPut } from './diffEngine';
 import {
   jumpToNextSpellError,
@@ -297,6 +298,14 @@ export function rawHandleKey(
   // 퍼지 파인더 팝업 (:find, :Files, :Buffers) 활성화 시 전용 키 처리
   if (state.fuzzyFinder?.isOpen) {
     return handleFuzzyFinderKey(state, key);
+  }
+
+  // 순정 Vim 내장 도움말 창 (:help, K, F1) 활성화 시 전용 키 처리
+  if (state.helpSession?.isOpen) {
+    const helpHandled = handleHelpKey(state, key);
+    if (helpHandled !== null) {
+      return helpHandled;
+    }
   }
 
   // 매크로 기록 중인 상태 처리
@@ -3062,6 +3071,18 @@ function handleNormalModeKey(
   if (key === '&' && !state.pendingKeys) {
     const res = executeCommandLine({ ...state, pendingKeys: undefined }, 's', handleKey);
     return res.bell ? res : { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['&'] };
+  }
+
+  // 1-0-6-2. F1: 순정 Vim 메인 도움말 열기
+  if (key === 'F1' && !state.pendingKeys) {
+    return { ...openHelp(state), pendingKeys: undefined };
+  }
+
+  // 1-0-6-3. K: 커서 위치 단어 도움말 열기 (:help <cword>)
+  if (key === 'K' && !parsed.operator && !state.pendingKeys) {
+    const curLine = state.lines[state.cursor.line] ?? '';
+    const word = getWordAtCursor(curLine, state.cursor.col);
+    return { ...openHelp(state, word ?? undefined), pendingKeys: undefined };
   }
 
   // 1-0-7. J: 줄 이어 붙이기

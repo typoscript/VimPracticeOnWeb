@@ -584,6 +584,18 @@ export interface VimEditorState {
   activeAugroup?: string;
   /** autocmd 재귀 실행 깊이 (무한 루프 방지) */
   autocmdDepth?: number;
+  /** 순정 Vim 내장 도움말 세션 (:help, K, F1) */
+  helpSession?: HelpSession | null;
+}
+
+/** 순정 Vim 도움말 세션 (:help, K, F1) */
+export interface HelpSession {
+  isOpen: boolean;
+  topic: string;
+  title: string;
+  lines: string[];
+  cursor: CursorPosition;
+  tagStack: Array<{ topic: string; cursor: CursorPosition }>;
 }
 
 

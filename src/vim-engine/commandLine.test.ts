@@ -91,7 +91,8 @@ describe('commandLine module', () => {
     expect(saveResult.commandMessage).toContain('[가상 저장 완료]');
 
     const helpResult = executeCommandLine(state, ':help');
-    expect(helpResult.commandMessage).toContain('지원 명령어:');
+    expect(helpResult.helpSession?.isOpen).toBe(true);
+    expect(helpResult.helpSession?.topic).toBe('help.txt');
   });
 
   it('공백이 포함된 커맨드라인(: 2, :%s /apple/orange/g)도 유연하게 파싱한다', () => {

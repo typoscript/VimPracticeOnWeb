@@ -101,6 +101,7 @@ import {
   formatNetrwBookmarks,
 } from './netrwEngine';
 import { executeFindFileCommand, openFuzzyFinder } from './fuzzyFinder';
+import { openHelp, closeHelp } from './helpEngine';
 import { formatRegisters } from './registers';
 import { executeSetCommand } from './setEngine';
 import { sourceScript } from './sourceEngine';
@@ -2517,6 +2518,16 @@ export function executeCommandLine(
   }
 
   if (cleanCmd === 'q' || cleanCmd === 'quit') {
+    if (state.helpSession?.isOpen) {
+      const closed = closeHelp(state);
+      return {
+        ...closed,
+        mode: 'NORMAL',
+        visualAnchor: undefined,
+        commandBuffer: undefined,
+        commandType: undefined,
+      };
+    }
     if (state.splitDirection && state.splitDirection !== 'none') {
       const closed = closeSplitWindow(state);
       return {
@@ -2537,14 +2548,28 @@ export function executeCommandLine(
     };
   }
 
-  if (cleanCmd === 'h' || cleanCmd === 'help') {
+  if (cleanCmd === 'helpclose' || cleanCmd === 'hclose') {
+    const closed = closeHelp(state);
     return {
-      ...state,
+      ...closed,
       mode: 'NORMAL',
       visualAnchor: undefined,
       commandBuffer: undefined,
       commandType: undefined,
-      commandMessage: msg('지원 명령어: :[범위]d (삭제), :[범위]y (복사), :[범위]norm [명령], :g/패턴/d (글로벌), :s/이전/새문자/g'),
+    };
+  }
+
+  // 순정 Vim 내장 도움말 (:help, :h [topic])
+  const helpMatch = trimmed.match(/^:?\s*(?:help|h)(?:\s+(.+))?$/i);
+  if (helpMatch) {
+    const topic = helpMatch[1]?.trim();
+    const opened = openHelp(state, topic);
+    return {
+      ...opened,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
     };
   }
 

@@ -107,6 +107,13 @@ export function parseKeySequence(rhs: string, leaderKey = ' '): string[] {
           i = closeIdx + 1;
           continue;
         }
+
+        const fMatch = lower.match(/^f([1-9]|1[0-2])$/);
+        if (fMatch) {
+          tokens.push(`F${fMatch[1]}`);
+          i = closeIdx + 1;
+          continue;
+        }
       }
     }
 
@@ -119,6 +126,13 @@ export function parseKeySequence(rhs: string, leaderKey = ' '): string[] {
       if (rhs[i] === ' ' && i + 1 < rhs.length && /[a-zA-Z0-9]/.test(rhs[i + 1])) {
         i += 1;
       }
+      continue;
+    }
+
+    const unbracketedF = sub.match(/^F([1-9]|1[0-2])\b/);
+    if (unbracketedF) {
+      tokens.push(`F${unbracketedF[1]}`);
+      i += unbracketedF[0].length;
       continue;
     }
 

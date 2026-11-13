@@ -55,7 +55,6 @@ export const EN_MESSAGES: Record<string, string> = {
   "[Netrw 북마크 이동] /workspace/{path}": "[Netrw Bookmark Jump] /workspace/{path}",
   "등록된 Netrw 북마크가 없습니다.": "No Netrw bookmarks found.",
   "--- Netrw Bookmarks ---": "--- Netrw Bookmarks ---",
-  "지원 명령어: :[범위]d (삭제), :[범위]y (복사), :[범위]norm [명령], :g/패턴/d (글로벌), :s/이전/새문자/g": "Supported: :[range]d (delete), :[range]y (yank), :[range]norm [cmds], :g/pattern/d (global), :s/old/new/g",
   "[리더 키 설정] mapleader = \"{v}\"": "[Leader key] mapleader = \"{v}\"",
   "E464: 사용자 정의 명령 이름이 모호합니다: {v} ({v2})": "E464: Ambiguous use of user-defined command: {v} ({v2})",
   "{v}번째 줄로 이동했습니다.": "Moved to line {v}.",

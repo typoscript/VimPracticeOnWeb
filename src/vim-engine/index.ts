@@ -209,5 +209,22 @@ export type {
   FuzzyBufferItem,
 } from './fuzzyFinder';
 
+// ---- 순정 Vim 내장 도움말 시스템 (:help, K, F1, 태그 점프) ----
+export {
+  openHelp,
+  closeHelp,
+  jumpHelpTag,
+  popHelpTag,
+  handleHelpKey,
+} from './helpEngine';
+export {
+  HELP_TOPICS,
+  resolveHelpTag,
+} from './helpData';
+export type {
+  HelpDocTopic,
+  HelpTagMatch,
+} from './helpData';
+
 // ---- 개발용 불변성 검사 ----
 export { withInvariantCheck, assertValidVimState, deepFreeze } from './invariants';

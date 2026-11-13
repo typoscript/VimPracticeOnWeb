@@ -1175,4 +1175,14 @@ export const EN: Record<string, string> = {
   "실무 프로 10연타 챌린지": "Pro Master 10-Strike Challenge",
   "텍스트 객체(ci\", di(), cit), 단어 대소문자(gU), 인덴트(>>), 라인 합치기(J) 등 실무 핵심 10문제를 최단 키로 격파하세요!": "Conquer 10 core practical problems including text objects (ci\", di(), cit), casing (gU), indent (>>), and joining (J)!",
   "실무 프로 10연타! 최적의 Vim 텍스트 객체와 연산자로 목표 코드를 완성하세요.": "Pro Master 10-Strike! Complete the target code with optimal Vim text objects and operators.",
+
+  // Vim Help System (:help, K, F1, HelpViewer)
+  "이 태그로 이동 (Ctrl-] 또는 클릭)": "Jump to this tag (Ctrl-] or click)",
+  "이전 도움말 위치로 복귀 (Ctrl-t)": "Return to previous help position (Ctrl-t)",
+  "뒤로 (Ctrl-t)": "Back (Ctrl-t)",
+  "도움말 닫기 (:q, q)": "Close help (:q, q)",
+  "태그 히스토리": "Tag history",
+  "스크롤": "Scroll",
+  "태그 점프": "Tag jump",
+  "이전 위치": "Previous position",
 };
