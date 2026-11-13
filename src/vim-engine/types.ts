@@ -244,6 +244,10 @@ export interface VimOptions {
   filetype?: string;
   /** 구문 강조 활성화 여부 또는 지정 언어 (:syntax on / off, :set syntax=...) */
   syntax?: boolean | string;
+  /** 폴딩 방식 (:set fdm=manual / indent / marker / syntax / expr, :set foldmethod=...) */
+  foldmethod?: 'manual' | 'indent' | 'marker' | 'syntax' | 'expr';
+  /** 폴드 레벨 (:set fdl=0 / :set foldlevel=...) */
+  foldlevel?: number;
 }
 
 /** 맞춤법 검사기 오탈자 정보 */
@@ -338,6 +342,7 @@ export interface FoldRange {
   startRow: number; // 0-indexed 시작 행
   endRow: number;   // 0-indexed 종료 행
   closed: boolean;  // 접힘 여부
+  manual?: boolean; // 수동 생성 폴드(zf) 여부
 }
 
 export type SplitDirection = 'none' | 'horizontal' | 'vertical';

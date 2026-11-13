@@ -3,9 +3,101 @@ import { clampCursor } from './cursor';
 import { deleteLine, yankLine } from './operators';
 
 /**
+ * 들여쓰기(indentation) 구조를 분석하여 버퍼 내 모든 접을 수 있는 블록 범위를 탐색합니다. (:set fdm=indent)
+ */
+export function detectIndentFoldBlocks(lines: string[], shiftwidth = 2): FoldRange[] {
+  if (lines.length <= 1) return [];
+
+  const sw = Math.max(1, shiftwidth);
+  const rawLevels: number[] = lines.map((line) => {
+    if (line.trim() === '') return -1;
+    let spaces = 0;
+    for (let i = 0; i < line.length; i++) {
+      if (line[i] === ' ') spaces += 1;
+      else if (line[i] === '\t') spaces += sw;
+      else break;
+    }
+    return Math.floor(spaces / sw);
+  });
+
+  const levels = rawLevels.map((lvl, idx) => {
+    if (lvl !== -1) return lvl;
+    let prev = 0;
+    for (let p = idx - 1; p >= 0; p--) {
+      if (rawLevels[p] !== -1) {
+        prev = rawLevels[p];
+        break;
+      }
+    }
+    let next = 0;
+    for (let n = idx + 1; n < rawLevels.length; n++) {
+      if (rawLevels[n] !== -1) {
+        next = rawLevels[n];
+        break;
+      }
+    }
+    return Math.max(prev, next);
+  });
+
+  const maxLevel = Math.max(...levels, 0);
+  const blocks: FoldRange[] = [];
+
+  for (let targetLevel = 1; targetLevel <= maxLevel; targetLevel++) {
+    let blockStart = -1;
+    for (let i = 0; i < levels.length; i++) {
+      if (levels[i] >= targetLevel) {
+        if (blockStart === -1) {
+          blockStart = i;
+        }
+      } else {
+        if (blockStart !== -1) {
+          const blockEnd = i - 1;
+          if (blockEnd >= blockStart) {
+            blocks.push({
+              startRow: blockStart,
+              endRow: blockEnd,
+              closed: false,
+            });
+          }
+          blockStart = -1;
+        }
+      }
+    }
+    if (blockStart !== -1) {
+      const blockEnd = levels.length - 1;
+      if (blockEnd >= blockStart) {
+        blocks.push({
+          startRow: blockStart,
+          endRow: blockEnd,
+          closed: false,
+        });
+      }
+    }
+  }
+
+  const uniqueMap = new Map<string, FoldRange>();
+  for (const b of blocks) {
+    const key = `${b.startRow}-${b.endRow}`;
+    if (!uniqueMap.has(key)) {
+      uniqueMap.set(key, b);
+    }
+  }
+
+  return Array.from(uniqueMap.values()).sort((a, b) => a.startRow - b.startRow);
+}
+
+/**
  * 중괄호({}) 또는 들여쓰기 구조를 분석하여 버퍼 내 모든 접을 수 있는 블록 범위를 탐색합니다.
  */
-export function detectFoldBlocks(lines: string[]): FoldRange[] {
+export function detectFoldBlocks(
+  lines: string[],
+  foldmethod = 'manual',
+  shiftwidth = 2
+): FoldRange[] {
+  if (foldmethod === 'indent') {
+    return detectIndentFoldBlocks(lines, shiftwidth);
+  }
+
   const blocks: FoldRange[] = [];
   const braceStack: number[] = [];
 
@@ -67,7 +159,9 @@ export function detectFoldBlocks(lines: string[]): FoldRange[] {
 export function findFoldForCursor(
   folds: FoldRange[] | undefined,
   lines: string[],
-  cursorRow: number
+  cursorRow: number,
+  foldmethod = 'manual',
+  shiftwidth = 2
 ): { fold: FoldRange; index: number } | null {
   const currentFolds = folds ?? [];
 
@@ -96,7 +190,7 @@ export function findFoldForCursor(
   }
 
   // 4. 버퍼 분석을 통해 새롭게 감싸는 블록 탐색
-  const detected = detectFoldBlocks(lines);
+  const detected = detectFoldBlocks(lines, foldmethod, shiftwidth);
   const matched = detected
     .filter(
       (b) =>
@@ -122,7 +216,13 @@ export function findFoldForCursor(
  * zc: 현재 커서가 속한 블록 접기
  */
 export function foldClose(state: VimEditorState): VimEditorState {
-  const found = findFoldForCursor(state.folds, state.lines, state.cursor.line);
+  const found = findFoldForCursor(
+    state.folds,
+    state.lines,
+    state.cursor.line,
+    state.options?.foldmethod,
+    state.options?.shiftwidth
+  );
   if (!found) {
     return { ...state, pendingKeys: undefined };
   }
@@ -156,7 +256,13 @@ export function foldClose(state: VimEditorState): VimEditorState {
  * zo: 현재 접힌 블록 펼치기
  */
 export function foldOpen(state: VimEditorState): VimEditorState {
-  const found = findFoldForCursor(state.folds, state.lines, state.cursor.line);
+  const found = findFoldForCursor(
+    state.folds,
+    state.lines,
+    state.cursor.line,
+    state.options?.foldmethod,
+    state.options?.shiftwidth
+  );
   if (!found || found.index < 0) {
     return { ...state, pendingKeys: undefined };
   }
@@ -175,7 +281,13 @@ export function foldOpen(state: VimEditorState): VimEditorState {
  * za: 현재 블록 접기/펼치기 토글
  */
 export function foldToggle(state: VimEditorState): VimEditorState {
-  const found = findFoldForCursor(state.folds, state.lines, state.cursor.line);
+  const found = findFoldForCursor(
+    state.folds,
+    state.lines,
+    state.cursor.line,
+    state.options?.foldmethod,
+    state.options?.shiftwidth
+  );
   if (!found) {
     return { ...state, pendingKeys: undefined };
   }
@@ -211,7 +323,11 @@ export function foldToggle(state: VimEditorState): VimEditorState {
  * zM: 버퍼 내 모든 블록 일괄 접기
  */
 export function foldCloseAll(state: VimEditorState): VimEditorState {
-  const detected = detectFoldBlocks(state.lines);
+  const detected = detectFoldBlocks(
+    state.lines,
+    state.options?.foldmethod,
+    state.options?.shiftwidth
+  );
   const existingMap = new Map<string, FoldRange>();
 
   for (const f of state.folds ?? []) {
@@ -395,4 +511,127 @@ export function yankFoldOrLine(
   }
 
   return yankLine(state, count);
+}
+
+/**
+ * zf: 시작 줄부터 끝 줄까지 수동 폴드 생성 (Visual 모드 또는 Normal zf{motion})
+ */
+export function createFold(
+  state: VimEditorState,
+  startRow: number,
+  endRow: number
+): VimEditorState {
+  const start = Math.max(0, Math.min(startRow, endRow));
+  const end = Math.min(state.lines.length - 1, Math.max(startRow, endRow));
+
+  const existingFolds = [...(state.folds ?? [])];
+  const idx = existingFolds.findIndex(
+    (f) => f.startRow === start && f.endRow === end
+  );
+
+  if (idx >= 0) {
+    existingFolds[idx] = { ...existingFolds[idx], closed: true, manual: true };
+  } else {
+    existingFolds.push({
+      startRow: start,
+      endRow: end,
+      closed: true,
+      manual: true,
+    });
+  }
+
+  const sortedFolds = existingFolds.sort((a, b) => a.startRow - b.startRow);
+
+  return {
+    ...state,
+    folds: sortedFolds,
+    cursor: clampCursor(state.lines, { line: start, col: 0 }, 'NORMAL'),
+    pendingKeys: undefined,
+  };
+}
+
+/**
+ * zd: 현재 커서 위치의 폴드 1개 삭제
+ */
+export function deleteFoldAtCursor(state: VimEditorState): VimEditorState {
+  const folds = state.folds ?? [];
+  const cursorRow = state.cursor.line;
+
+  let targetIdx = -1;
+  let minSpan = Infinity;
+
+  for (let i = 0; i < folds.length; i++) {
+    const f = folds[i];
+    if (f.startRow <= cursorRow && cursorRow <= f.endRow) {
+      const span = f.endRow - f.startRow;
+      if (span < minSpan) {
+        minSpan = span;
+        targetIdx = i;
+      }
+    }
+  }
+
+  if (targetIdx === -1) {
+    return {
+      ...state,
+      bell: true,
+      pendingKeys: undefined,
+    };
+  }
+
+  const nextFolds = folds.filter((_, idx) => idx !== targetIdx);
+
+  return {
+    ...state,
+    folds: nextFolds,
+    pendingKeys: undefined,
+  };
+}
+
+/**
+ * zD: 현재 커서 위치를 포함하는 모든 폴드 삭제 (재귀적 삭제)
+ */
+export function deleteAllFoldsAtCursor(state: VimEditorState): VimEditorState {
+  const folds = state.folds ?? [];
+  const cursorRow = state.cursor.line;
+
+  const nextFolds = folds.filter(
+    (f) => !(f.startRow <= cursorRow && cursorRow <= f.endRow)
+  );
+
+  if (nextFolds.length === folds.length) {
+    return {
+      ...state,
+      bell: true,
+      pendingKeys: undefined,
+    };
+  }
+
+  return {
+    ...state,
+    folds: nextFolds,
+    pendingKeys: undefined,
+  };
+}
+
+/**
+ * zE: 버퍼 내의 모든 수동 생성 폴드 제거
+ */
+export function eliminateAllFolds(state: VimEditorState): VimEditorState {
+  return {
+    ...state,
+    folds: [],
+    pendingKeys: undefined,
+  };
+}
+
+/**
+ * 순정 Vim 스타일의 폴드 요약 배너 텍스트 생성
+ */
+export function generateFoldText(lines: string[], fold: FoldRange): string {
+  const count = fold.endRow - fold.startRow + 1;
+  const firstLine = lines[fold.startRow] ?? '';
+  const trimmed = firstLine.trim();
+  const countStr = count < 10 ? ` ${count}` : `${count}`;
+  return `+-- ${countStr} lines: ${trimmed} ----------------------------------------------------`.slice(0, 72);
 }

@@ -156,6 +156,25 @@ export {
   OPTION_ALIASES,
 } from './setEngine';
 
+// ---- 순정 텍스트 폴딩 엔진 (Folding: za, zo, zc, zM, zR, zf, zd, zD, zE) ----
+export {
+  foldClose,
+  foldOpen,
+  foldToggle,
+  foldCloseAll,
+  foldOpenAll,
+  createFold,
+  deleteFoldAtCursor,
+  deleteAllFoldsAtCursor,
+  eliminateAllFolds,
+  detectFoldBlocks,
+  detectIndentFoldBlocks,
+  findFoldForCursor,
+  getNextVisibleLine,
+  getPrevVisibleLine,
+  generateFoldText,
+} from './folding';
+
 // ---- 파일타입 플러그인 & 들여쓰기 시스템 (:filetype, ftplugin) ----
 export {
   executeFiletypeCommand,

@@ -186,6 +186,7 @@ export const EN_MESSAGES: Record<string, string> = {
   "이미 가장 최신 변경사항입니다.": "Already at newest change",
   "이후 변경사항으로 이동했습니다 (#{targetSeq})": "Moved to the next change (#{targetSeq})",
   "E474: 잘못된 인수입니다: :earlier {arg}": "E474: Invalid argument: :earlier {arg}",
+  "E474: 잘못된 인수입니다: {token}": "E474: Invalid argument: {token}",
   "{count}회 이전 저장 상태로 복귀했습니다 (#{targetSeq})": "Went back {count} file writes (#{targetSeq})",
   "이미 가장 오래된 저장 상태입니다.": "Already at the oldest file write",
   "가장 처음 상태(Seq 0)로 복귀했습니다.": "Back to the original state (seq 0)",

@@ -17,6 +17,8 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   wildmenu: true,
   spell: false,
   syntax: true,
+  foldmethod: 'manual',
+  foldlevel: 0,
 };
 
 export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
@@ -47,6 +49,10 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   filetype: 'filetype',
   syn: 'syntax',
   syntax: 'syntax',
+  fdm: 'foldmethod',
+  foldmethod: 'foldmethod',
+  fdl: 'foldlevel',
+  foldlevel: 'foldlevel',
 };
 
 /**
@@ -255,6 +261,41 @@ export function executeSetCommand(
           nextGlobal.syntax = rawVal;
         }
         appliedList.push(`syntax=${rawVal}`);
+        continue;
+      }
+      if (optKey === 'foldmethod') {
+        const validMethods = ['manual', 'indent', 'marker', 'syntax', 'expr'];
+        const method = rawVal.toLowerCase() as any;
+        if (!validMethods.includes(method)) {
+          return {
+            ...state,
+            commandMessage: msg('E474: 잘못된 인수입니다: {token}', { token }),
+          };
+        }
+        if (scope === 'local' || scope === 'both') {
+          nextLocal.foldmethod = method;
+        }
+        if (scope === 'global' || scope === 'both') {
+          nextGlobal.foldmethod = method;
+        }
+        appliedList.push(`foldmethod=${method}`);
+        continue;
+      }
+      if (optKey === 'foldlevel') {
+        const numVal = parseInt(rawVal, 10);
+        if (isNaN(numVal) || numVal < 0) {
+          return {
+            ...state,
+            commandMessage: msg('E521: 잘못된 숫자 인수: {token}', { token }),
+          };
+        }
+        if (scope === 'local' || scope === 'both') {
+          nextLocal.foldlevel = numVal;
+        }
+        if (scope === 'global' || scope === 'both') {
+          nextGlobal.foldlevel = numVal;
+        }
+        appliedList.push(`foldlevel=${numVal}`);
         continue;
       }
       if (!optKey || (optKey !== 'tabstop' && optKey !== 'shiftwidth')) {

@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 126개 테스트 파일, 1,632개 테스트 100% 통과 필수)*
+  *(현재 126개 테스트 파일, 1,640개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -71,7 +71,7 @@
   - `Ctrl+x Ctrl+f, Ctrl+x Ctrl+l` (경로/라인 완성)
   - `g-, g+, :undolist, :earlier, :later` (순정 Undo Tree 시간 여행)
   - `gU, gu, g~` (대소문자 오퍼레이터/모션)
-  - `za, zo, zM, zR` (순정 코드 폴딩)
+  - `za, zo, zc, zM, zR, zf, zd, zD, zE, :set fdm=indent/manual` (순정 코드 폴딩 및 들여쓰기/수동 폴드)
   - `:%s/old/new/gc` (대화형 선별 치환 y/n/a/q)
   - `:lvimgrep, :lopen, :lne, :lp, :lfile` (윈도우 로컬 로케이션 리스트)
   - `mA~mZ, 'A~'Z, :marks` (대문자 전역 마크 및 버퍼 자동 전환)
@@ -170,3 +170,4 @@
 39. ~~**하드코어 도장 실무 프로 10연타 챌린지 (`pro-master`)**~~ — 텍스트 객체/연산자 10종 노미스 연속 스피드런 코스 구현 완료.
 40. ~~**순정 Vim 파일/버퍼 퍼지 파인더 (`:find`, `:b [filter]`, `:Files`, `:Buffers`)**~~ — 순수 퍼지 매칭 엔진 및 모달 팝업 UI 구현 완료.
 41. ~~**순정 Vim 내장 도움말 시스템 (`:help`, `K`, `F1` 및 태그 링크 점프)**~~ — 순정 매뉴얼 색인(`help.txt`), 모션/연산자/텍스트객체/패턴/윈도우/버퍼/레지스터/서라운드/퍼지 등 10개 핵심 토픽, `|tag|` 링크 점프(`<CR>`, `Ctrl-]`) 및 태그 스택 복귀(`Ctrl-t`), 노멀 모드 `K` 커서 단어 도움말 조회, `F1` 도움말 열기 및 미려한 `HelpViewer` 윈도우 UI 구현 완료.
+42. ~~**순정 텍스트 폴딩(Folding) 확장 (`foldmethod=indent`, `zf`, `zd`, `zD`, `zE`)**~~ — 들여쓰기 깊이 기반 자동 폴딩(`detectIndentFoldBlocks`), 수동 폴드 생성(`zf{motion}` 및 비주얼 `zf`), 수동 폴드 삭제(`zd`, `zD`, `zE`), 순정 배너 텍스트(`generateFoldText`) 및 에디터 접힘 렌더링 확장 구현 완료.

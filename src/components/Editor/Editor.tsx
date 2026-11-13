@@ -280,7 +280,7 @@ export const Editor: React.FC<EditorProps> = ({
                       className="folded-summary"
                       data-testid={`fold-summary-${lineIdx + 1}`}
                     >
-                      {`+--- [${foldedLineCount} lines folded] ---`}
+                      {`+--- [${foldedLineCount} lines folded] --- ${lineText.trim()}`}
                     </div>
                   ) : (
                     <>

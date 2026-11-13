@@ -138,6 +138,7 @@ import {
   IndentObjectType,
   executeParagraphObjectOperator,
   ParagraphObjectType,
+  getParagraphObjectRange,
 } from './textObjects';
 import {
   findMatches,
@@ -201,6 +202,11 @@ import {
   getPrevVisibleLine,
   deleteFoldOrLine,
   yankFoldOrLine,
+  createFold,
+  deleteFoldAtCursor,
+  deleteAllFoldsAtCursor,
+  eliminateAllFolds,
+  detectFoldBlocks,
 } from './folding';
 import { msg } from './messages';
 export {
@@ -213,6 +219,10 @@ export {
   findFoldForCursor,
   getNextVisibleLine,
   getPrevVisibleLine,
+  createFold,
+  deleteFoldAtCursor,
+  deleteAllFoldsAtCursor,
+  eliminateAllFolds,
   deleteFoldOrLine,
   yankFoldOrLine,
 } from './folding';
@@ -1910,6 +1920,26 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
     return { ...state, pendingKeys: 'S' };
   }
 
+  // Visual 모드 수동 폴드 생성 (zf)
+  if (state.pendingKeys === 'z') {
+    if (key === 'f') {
+      const anchorLine = state.visualAnchor?.line ?? state.cursor.line;
+      const startRow = Math.min(anchorLine, state.cursor.line);
+      const endRow = Math.max(anchorLine, state.cursor.line);
+      const folded = createFold(state, startRow, endRow);
+      return {
+        ...folded,
+        mode: 'NORMAL',
+        visualAnchor: undefined,
+        pendingKeys: undefined,
+      };
+    }
+    return { ...state, pendingKeys: undefined };
+  }
+  if (key === 'z' && !state.pendingKeys) {
+    return { ...state, pendingKeys: 'z' };
+  }
+
   // Visual 모드 내 gn / gN (다음/이전 검색 매치로 선택 영역 확장) 및 gt / gT (탭 전환)
   if (state.pendingKeys === 'g') {
     if (key === 'n' || key === 'N') {
@@ -3051,7 +3081,62 @@ function handleNormalModeKey(
     return scrollHalfPageUp(state);
   }
 
-  // zz, zt, zb: 뷰포트 정렬 및 zc, zo, za, zM, zR: 코드 폴딩
+  // zf{motion}: 수동 폴드 생성 모션 처리
+  if (state.pendingKeys?.startsWith('zf')) {
+    const rawCountStr = state.pendingKeys.slice(2);
+    // 숫자 누적
+    if (/^[0-9]$/.test(key) && (rawCountStr.length > 0 || key !== '0')) {
+      return { ...state, pendingKeys: state.pendingKeys + key };
+    }
+
+    const count = parseInt(rawCountStr || '1', 10);
+    const curLine = state.cursor.line;
+
+    if (key === 'j' || key === 'ArrowDown') {
+      return createFold(state, curLine, curLine + count);
+    }
+    if (key === 'k' || key === 'ArrowUp') {
+      return createFold(state, curLine - count, curLine);
+    }
+    if (key === 'G') {
+      return createFold(state, curLine, state.lines.length - 1);
+    }
+    if (key === 'g' && state.pendingKeys === 'zf') {
+      return { ...state, pendingKeys: 'zfg' };
+    }
+    if (key === 'g' && state.pendingKeys === 'zfg') {
+      return createFold(state, 0, curLine);
+    }
+    if (key === '_' || key === 'Enter') {
+      return createFold(state, curLine, curLine + count - 1);
+    }
+    if (key === 'a' || key === 'i') {
+      return { ...state, pendingKeys: `zf${key}` };
+    }
+    return { ...state, bell: true, pendingKeys: undefined };
+  }
+
+  if (state.pendingKeys === 'zfa' || state.pendingKeys === 'zfi') {
+    const isInner = state.pendingKeys === 'zfi';
+    if (key === 'p') {
+      const range = getParagraphObjectRange(state.lines, state.cursor.line, isInner ? 'ip' : 'ap', 1);
+      if (range) {
+        return createFold(state, range.startLine, range.endLine);
+      }
+      return ringBell({ ...state, pendingKeys: undefined });
+    }
+    if (key === '{' || key === '}' || key === 'B') {
+      const detected = detectFoldBlocks(state.lines, state.options?.foldmethod, state.options?.shiftwidth);
+      const found = detected.find((b) => b.startRow <= state.cursor.line && state.cursor.line <= b.endRow);
+      if (found) {
+        return createFold(state, found.startRow, found.endRow);
+      }
+      return ringBell({ ...state, pendingKeys: undefined });
+    }
+    return { ...state, bell: true, pendingKeys: undefined };
+  }
+
+  // zz, zt, zb: 뷰포트 정렬 및 zc, zo, za, zM, zR, zd, zD, zE, zf: 코드 폴딩
   if (state.pendingKeys === 'z' || parsed.operator === 'z') {
     if (key === 'z') return scrollToCenter(state);
     if (key === 't') return scrollToTop(state);
@@ -3061,6 +3146,10 @@ function handleNormalModeKey(
     if (key === 'a') return foldToggle(state);
     if (key === 'M') return foldCloseAll(state);
     if (key === 'R') return foldOpenAll(state);
+    if (key === 'd') return deleteFoldAtCursor(state);
+    if (key === 'D') return deleteAllFoldsAtCursor(state);
+    if (key === 'E') return eliminateAllFolds(state);
+    if (key === 'f') return { ...state, pendingKeys: 'zf' };
     if (key === '=') return { ...startSpellSuggest(state), pendingKeys: undefined };
     if (key === 'g') return { ...addSpellGoodWord(state), pendingKeys: undefined };
     if (key === 'w') return { ...addSpellWrongWord(state), pendingKeys: undefined };

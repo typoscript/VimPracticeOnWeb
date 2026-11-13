@@ -1,6 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
   detectFoldBlocks,
+  detectIndentFoldBlocks,
+  createFold,
+  deleteFoldAtCursor,
+  deleteAllFoldsAtCursor,
+  eliminateAllFolds,
+  generateFoldText,
   foldClose,
   foldOpen,
   foldToggle,
@@ -11,6 +17,7 @@ import {
   deleteFoldOrLine,
   yankFoldOrLine,
 } from './folding';
+import { executeSetCommand } from './setEngine';
 import { handleKey } from './vimEngine';
 import { VimEditorState } from './types';
 
@@ -172,5 +179,154 @@ describe('코드 폴딩 모듈 (Folding Engine)', () => {
     state = handleKey(state, 'z');
     state = handleKey(state, 'a');
     expect(state.folds?.[0].closed).toBe(false);
+  });
+
+  describe('순정 확장: 들여쓰기 폴딩 (foldmethod=indent) 및 수동 폴드 (zf, zd, zD, zE)', () => {
+    const pythonLikeLines = [
+      'def main():',
+      '    print("start")',
+      '    if True:',
+      '        print("inside if")',
+      '        x = 10',
+      '    print("end")',
+    ];
+
+    it('detectIndentFoldBlocks: 들여쓰기 깊이 기반으로 폴드 블록을 탐색한다', () => {
+      const folds = detectIndentFoldBlocks(pythonLikeLines, 4);
+
+      // level >= 1: 라인 1 ~ 5 (4칸 들여쓰기 블록)
+      // level >= 2: 라인 3 ~ 4 (8칸 들여쓰기 블록)
+      expect(folds.length).toBeGreaterThanOrEqual(2);
+      expect(folds.some((f) => f.startRow === 1 && f.endRow === 5)).toBe(true);
+      expect(folds.some((f) => f.startRow === 3 && f.endRow === 4)).toBe(true);
+    });
+
+    it(':set fdm=indent 설정 시 들여쓰기 블록이 zc / za 로 접힌다', () => {
+      let state: VimEditorState = {
+        lines: [...pythonLikeLines],
+        cursor: { line: 3, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      state = executeSetCommand(state, 'fdm=indent');
+      expect(state.options?.foldmethod).toBe('indent');
+
+      // 라인 3에서 zc 입력 -> 안쪽 블록(3~4) 접힘
+      state = handleKey(state, 'z');
+      state = handleKey(state, 'c');
+      expect(state.folds?.some((f) => f.startRow === 3 && f.endRow === 4 && f.closed)).toBe(true);
+    });
+
+    it('Normal 모드 zf 모션 (zf2j): 커서 위치부터 2줄 아래까지 수동 폴드를 생성하고 접는다', () => {
+      let state: VimEditorState = {
+        lines: ['line 1', 'line 2', 'line 3', 'line 4', 'line 5'],
+        cursor: { line: 1, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      // z f 2 j
+      state = handleKey(state, 'z');
+      state = handleKey(state, 'f');
+      state = handleKey(state, '2');
+      state = handleKey(state, 'j');
+
+      expect(state.folds).toHaveLength(1);
+      expect(state.folds![0]).toEqual({
+        startRow: 1,
+        endRow: 3,
+        closed: true,
+        manual: true,
+      });
+      expect(state.cursor.line).toBe(1);
+    });
+
+    it('Visual 모드 zf: 선택한 라인 범위로 수동 폴드를 생성하고 Normal 모드로 복귀한다', () => {
+      let state: VimEditorState = {
+        lines: ['line 1', 'line 2', 'line 3', 'line 4'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      // V (VISUAL_LINE), j (line 1), z, f
+      state = handleKey(state, 'V');
+      expect(state.mode).toBe('VISUAL_LINE');
+      state = handleKey(state, 'j');
+      state = handleKey(state, 'z');
+      state = handleKey(state, 'f');
+
+      expect(state.mode).toBe('NORMAL');
+      expect(state.folds).toHaveLength(1);
+      expect(state.folds![0]).toEqual({
+        startRow: 0,
+        endRow: 1,
+        closed: true,
+        manual: true,
+      });
+    });
+
+    it('zd: 현재 커서 위치의 폴드를 삭제한다', () => {
+      let state: VimEditorState = {
+        lines: ['line 1', 'line 2', 'line 3'],
+        cursor: { line: 1, col: 0 },
+        mode: 'NORMAL',
+        folds: [{ startRow: 1, endRow: 2, closed: true, manual: true }],
+      };
+
+      // z d
+      state = handleKey(state, 'z');
+      state = handleKey(state, 'd');
+      expect(state.folds).toHaveLength(0);
+    });
+
+    it('zE: 버퍼 내 모든 폴드를 일괄 제거한다', () => {
+      let state: VimEditorState = {
+        lines: ['line 1', 'line 2', 'line 3'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+        folds: [
+          { startRow: 0, endRow: 1, closed: true },
+          { startRow: 1, endRow: 2, closed: false },
+        ],
+      };
+
+      // z E
+      state = handleKey(state, 'z');
+      state = handleKey(state, 'E');
+      expect(state.folds).toHaveLength(0);
+    });
+
+    it('createFold, deleteFoldAtCursor, deleteAllFoldsAtCursor, eliminateAllFolds 순수 함수 검증', () => {
+      let state: VimEditorState = {
+        lines: ['1', '2', '3', '4'],
+        cursor: { line: 1, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      state = createFold(state, 1, 2);
+      expect(state.folds).toHaveLength(1);
+      expect(state.folds![0].manual).toBe(true);
+
+      state = deleteFoldAtCursor(state);
+      expect(state.folds).toHaveLength(0);
+
+      state = createFold(state, 0, 3);
+      state = deleteAllFoldsAtCursor(state);
+      expect(state.folds).toHaveLength(0);
+
+      state = createFold(state, 1, 2);
+      state = eliminateAllFolds(state);
+      expect(state.folds).toHaveLength(0);
+    });
+
+    it('generateFoldText: 순정 Vim 스타일의 요약 배너 텍스트를 반환한다', () => {
+      const text = generateFoldText(['function test() {', '  return 42;', '}'], {
+        startRow: 0,
+        endRow: 2,
+        closed: true,
+      });
+
+      expect(text).toContain('+--  3 lines: function test() {');
+      expect(text.startsWith('+--')).toBe(true);
+    });
   });
 });
