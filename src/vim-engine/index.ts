@@ -180,9 +180,21 @@ export {
   executeFiletypeCommand,
   applyFiletypeIndent,
   getFiletypeIndentPreset,
+  getFiletypeCommentString,
   FILETYPE_INDENT_PRESETS,
+  FILETYPE_COMMENTSTRING_PRESETS,
 } from './ftpluginEngine';
 export type { FiletypeIndentConfig } from './ftpluginEngine';
+
+// ---- 순정 주석 토글 엔진 (gcc, gc{motion}, Visual gc, commentstring) ----
+export {
+  parseCommentString,
+  resolveCommentString,
+  isLineCommented,
+  toggleCommentRange,
+  getCommentTextObjectRange,
+} from './commentEngine';
+export type { ParsedCommentString } from './commentEngine';
 
 // ---- 순정 Vim ctags 심볼 탐색 및 태그 스택 (:tag, :pop, :tags, :tselect, :tjump, :tnext, :tprev) ----
 export {

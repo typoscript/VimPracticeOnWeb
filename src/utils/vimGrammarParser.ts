@@ -101,6 +101,7 @@ const OPERATOR_INFOS: Record<
   gu: { name: '소문자 변환 (Lowercase)', action: '소문자 변환', completion: '모든 영문자를 소문자로 변환합니다.' },
   gU: { name: '대문자 변환 (Uppercase)', action: '대문자 변환', completion: '모든 영문자를 대문자로 변환합니다.' },
   'g~': { name: '대소문자 반전 (Toggle Case)', action: '대소문자 반전', completion: '대소문자를 서로 반전시킵니다.' },
+  gc: { name: '주석 토글 (Comment Toggle)', action: '주석 처리/해제', completion: '대상 줄의 주석을 토글합니다.' },
   '>': { name: '들여쓰기 (Indent)', action: '오른쪽 들여쓰기', completion: '오른쪽으로 들여쓰기합니다.' },
   '<': { name: '내어쓰기 (Unindent)', action: '왼쪽 내어쓰기', completion: '왼쪽으로 내어쓰기합니다.' },
   '=': { name: '자동 서식 정렬 (Auto-Format)', action: '자동 들여쓰기', completion: '들여쓰기를 자동으로 정렬합니다.' },

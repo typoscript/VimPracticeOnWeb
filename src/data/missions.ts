@@ -2688,4 +2688,66 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 76,
+    title: '레슨 76: 순정 주석 토글(gcc, gc{motion})과 언어별 commentstring 마스터',
+    description:
+      'Neovim 0.10+ 에 기본 탑재된 순정 주석 토글 연산자(gc)를 사용하면, 별도 플러그인 없이도 파일타입(commentstring)에 맞춰 한 줄 또는 블록 전체의 주석을 즉시 켜고 끌 수 있습니다.\n\n1) 현재 줄 주석 토글 (gcc, [count]gcc):\n   - 노멀 모드에서 gcc 를 누르면 현재 줄을 주석 처리하거나 이미 주석이면 해제합니다.\n   - 3gcc 처럼 숫자를 붙이면 아래 3줄을 한꺼번에 토글합니다.\n\n2) 모션 & 텍스트 객체 결합 (gc{motion}, gcip, V...gc):\n   - gcj, gc2j, gc} 처럼 모션과 결합하거나, gcip 로 문단 전체의 주석을 한 번에 토글할 수 있습니다.\n   - 비주얼 모드(V)로 줄을 선택한 뒤 gc 를 눌러도 동일하게 동작합니다.\n   - 각 줄의 들여쓰기가 달라도 가장 얕은 들여쓰기 기준으로 주석 기호를 깔끔하게 정렬합니다.\n\n미션:\n1. 3번째 줄의 디버그 로그(console.log)로 내려가(2j) gcc 로 주석 처리하세요.\n2. 아래의 주석 처리된 if 문단으로 이동(3j)한 뒤, gcip 로 문단 전체의 주석을 한꺼번에 해제하여 코드를 복구하세요!',
+    hint: '2j 로 디버그 줄 이동 → gcc 로 주석 처리 → 3j 로 주석 문단 이동 → gcip 로 문단 주석 일괄 해제',
+    par: 12,
+    optimalKeys: [
+      '2', 'j',
+      'g', 'c', 'c',
+      '3', 'j',
+      'g', 'c', 'i', 'p',
+    ],
+    primaryFilename: 'authMiddleware.ts',
+    initialLines: [
+      '// 인증 미들웨어 디버그 코드를 주석 처리하고 비활성 블록을 복구하세요.',
+      'function verifySession(userId: string) {',
+      "  console.log('DEBUG userId:', userId);",
+      '  const cacheKey = `session:${userId}`;',
+      '',
+      '  // if (!cacheKey) {',
+      "  //   throw new Error('Missing session');",
+      '  // }',
+      '',
+      '  return cacheKey;',
+      '}',
+    ],
+    targetLines: [
+      '// 인증 미들웨어 디버그 코드를 주석 처리하고 비활성 블록을 복구하세요.',
+      'function verifySession(userId: string) {',
+      "  // console.log('DEBUG userId:', userId);",
+      '  const cacheKey = `session:${userId}`;',
+      '',
+      '  if (!cacheKey) {',
+      "    throw new Error('Missing session');",
+      '  }',
+      '',
+      '  return cacheKey;',
+      '}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const target = [
+        '// 인증 미들웨어 디버그 코드를 주석 처리하고 비활성 블록을 복구하세요.',
+        'function verifySession(userId: string) {',
+        "  // console.log('DEBUG userId:', userId);",
+        '  const cacheKey = `session:${userId}`;',
+        '',
+        '  if (!cacheKey) {',
+        "    throw new Error('Missing session');",
+        '  }',
+        '',
+        '  return cacheKey;',
+        '}',
+      ];
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines.length === target.length &&
+        state.lines.every((line, idx) => line === target[idx])
+      );
+    },
+  },
 ];

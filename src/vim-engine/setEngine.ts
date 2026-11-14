@@ -1,6 +1,7 @@
 import { VimEditorState, VimOptions } from './types';
 import { msg } from './messages';
-import { applyFiletypeIndent } from './ftpluginEngine';
+import { applyFiletypeIndent, getFiletypeCommentString } from './ftpluginEngine';
+import { detectFiletype } from './syntaxEngine';
 
 export const DEFAULT_VIM_OPTIONS: VimOptions = {
   number: true,
@@ -53,6 +54,8 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   foldmethod: 'foldmethod',
   fdl: 'foldlevel',
   foldlevel: 'foldlevel',
+  cms: 'commentstring',
+  commentstring: 'commentstring',
 };
 
 /**
@@ -136,6 +139,10 @@ export function formatOptionsList(
     displayedItems.push(`filetype=${options.filetype}`);
   }
 
+  if (options.commentstring !== undefined && (showAll || options.commentstring !== DEFAULT_VIM_OPTIONS.commentstring)) {
+    displayedItems.push(`commentstring=${options.commentstring}`);
+  }
+
   const defaultHeader = showAll ? '--- All Options ---' : '--- Modified Options ---';
   const header = customHeader ?? defaultHeader;
 
@@ -144,6 +151,53 @@ export function formatOptionsList(
   }
 
   return `${header}\n  ${displayedItems.join('  ')}`;
+}
+
+/**
+ * :set 인자 문자열을 토큰으로 분리합니다.
+ * 백슬래시 공백('\ ') 이스케이프와 따옴표를 보존합니다 (예: cms=//\ %s, cms="# %s").
+ */
+function tokenizeSetArgs(rawArgs: string): string[] {
+  const tokens: string[] = [];
+  let current = '';
+  let quote: '"' | "'" | null = null;
+
+  for (let i = 0; i < rawArgs.length; i++) {
+    const ch = rawArgs[i];
+    if (quote) {
+      if (ch === quote) {
+        quote = null;
+      } else {
+        current += ch;
+      }
+      continue;
+    }
+    if (ch === '\\' && i + 1 < rawArgs.length) {
+      const next = rawArgs[i + 1];
+      if (next === ' ' || next === '\t' || next === '\\' || next === '"' || next === "'") {
+        current += next;
+        i++;
+        continue;
+      }
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      continue;
+    }
+    if (/\s/.test(ch)) {
+      if (current.length > 0) {
+        tokens.push(current);
+        current = '';
+      }
+      continue;
+    }
+    current += ch;
+  }
+
+  if (current.length > 0) {
+    tokens.push(current);
+  }
+  return tokens;
 }
 
 /**
@@ -204,7 +258,7 @@ export function executeSetCommand(
     };
   }
 
-  const tokens = trimmed.split(/\s+/).filter(Boolean);
+  const tokens = tokenizeSetArgs(trimmed);
   const nextGlobal: VimOptions = { ...curGlobal };
   const nextLocal: Partial<VimOptions> = { ...curLocal };
   const queryMessages: string[] = [];
@@ -230,6 +284,10 @@ export function executeSetCommand(
       } else {
         val = nextLocal[optKey] ?? nextGlobal[optKey];
       }
+      if (optKey === 'commentstring' && val === undefined) {
+        const ft = nextLocal.filetype ?? nextGlobal.filetype ?? detectFiletype(state.primaryFilename);
+        val = getFiletypeCommentString(ft) ?? '// %s';
+      }
       if (typeof val === 'boolean') {
         queryMessages.push(val ? (optKey as string) : `no${optKey}`);
       } else {
@@ -238,10 +296,29 @@ export function executeSetCommand(
       continue;
     }
 
-    // 4. 숫자/값 할당 옵션 (:set ts=4, :set sw=2, :set ft=typescript)
+    // 4. 숫자/값 할당 옵션 (:set ts=4, :set sw=2, :set ft=typescript, :set cms=//\ %s)
     if (token.includes('=')) {
-      const [rawKey, rawVal] = token.split('=');
+      const eqIdx = token.indexOf('=');
+      const rawKey = token.slice(0, eqIdx);
+      const rawVal = token.slice(eqIdx + 1);
       const optKey = OPTION_ALIASES[rawKey];
+      if (optKey === 'commentstring') {
+        if (rawVal !== '' && !rawVal.includes('%s')) {
+          return {
+            ...state,
+            bell: true,
+            commandMessage: msg('E537: \'commentstring\' 값은 비어 있거나 %s를 포함해야 합니다: {token}', { token }),
+          };
+        }
+        if (scope === 'local' || scope === 'both') {
+          nextLocal.commentstring = rawVal;
+        }
+        if (scope === 'global' || scope === 'both') {
+          nextGlobal.commentstring = rawVal;
+        }
+        appliedList.push(`commentstring=${rawVal}`);
+        continue;
+      }
       if (optKey === 'filetype') {
         if (scope === 'local' || scope === 'both') {
           nextLocal.filetype = rawVal;

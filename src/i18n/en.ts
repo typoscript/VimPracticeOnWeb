@@ -1185,4 +1185,9 @@ export const EN: Record<string, string> = {
   "스크롤": "Scroll",
   "태그 점프": "Tag jump",
   "이전 위치": "Previous position",
+
+  // Comment Toggle Operator (gc / gcc)
+  "주석 토글 (Comment Toggle)": "Comment Toggle",
+  "주석 처리/해제": "Toggle comment",
+  "대상 줄의 주석을 토글합니다.": "Toggles comments on the target lines.",
 };

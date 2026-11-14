@@ -139,7 +139,12 @@ import {
   executeParagraphObjectOperator,
   ParagraphObjectType,
   getParagraphObjectRange,
+  executeLinewiseObjectOperator,
 } from './textObjects';
+import {
+  toggleCommentRange,
+  getCommentTextObjectRange,
+} from './commentEngine';
 import {
   findMatches,
   findNextMatch,
@@ -253,8 +258,8 @@ export function parsePending(pendingKeys?: string): ParsedPending {
     return { count1: c, totalCount: c };
   }
 
-  // 2. 연산자 및 카운트 조합: "d", "2d", "d2", "2d3", "c", "r", "y", "v", "g", "gu", "gU", "g~", "@", ">", "<", "=", "m", "'", "`"
-  const opMatch = pendingKeys.match(/^([1-9][0-9]*)?(g[uU~?]|[a-zA-Z@'`><=])([0-9]*)$/);
+  // 2. 연산자 및 카운트 조합: "d", "2d", "d2", "2d3", "c", "r", "y", "v", "g", "gu", "gU", "g~", "gc", "@", ">", "<", "=", "m", "'", "`"
+  const opMatch = pendingKeys.match(/^([1-9][0-9]*)?(g[uU~?c]|[a-zA-Z@'`><=])([0-9]*)$/);
   if (opMatch) {
     const count1 = opMatch[1] ? parseInt(opMatch[1], 10) : undefined;
     const operator = opMatch[2];
@@ -2069,6 +2074,13 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
     if (key === '?') {
       return changeCaseVisual(state, 'rot13');
     }
+    // gc: 선택 영역 주석 토글
+    if (key === 'c') {
+      if (!state.visualAnchor) return { ...state, mode: 'NORMAL', pendingKeys: undefined };
+      const minLine = Math.min(state.visualAnchor.line, state.cursor.line);
+      const maxLine = Math.max(state.visualAnchor.line, state.cursor.line);
+      return toggleCommentRange(state, minLine, maxLine);
+    }
     if (key === 'd') {
       return goToDeclaration(state);
     }
@@ -2649,8 +2661,25 @@ function handleNormalModeKey(
     const lineCount = parseInt(ggOpMatch[1] ?? '1', 10) * parseInt(ggOpMatch[3] ?? '1', 10);
     return applyOperatorMotion(state, op, 'gg', { count1: hasCount ? lineCount : undefined, operator: op, totalCount: lineCount }, isReplayingDot);
   }
-  if (state.pendingKeys?.match(/^([1-9][0-9]*)?([cdy])g$/)) {
-    // cg, dg, yg 대기 상태에서 n/N이 아닌 다른 키가 들어오면 pending 취소
+  // dgc / cgc / ygc (vgc): 연속된 주석 블록 텍스트 객체
+  const gcTextObjMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([cdyv])([1-9][0-9]*)?g$/);
+  if (gcTextObjMatch && key === 'c') {
+    const op = gcTextObjMatch[2] as 'd' | 'c' | 'y' | 'v';
+    const range = getCommentTextObjectRange(state);
+    if (!range) return ringBell(state);
+    const res = executeLinewiseObjectOperator(state, op, range);
+    const synced = syncRegisters(state, res, op === 'y');
+    const opKeys = [op, 'g', 'c'];
+    if (op === 'c') {
+      return { ...synced, currentChangeKeys: isReplayingDot ? state.currentChangeKeys : opKeys };
+    }
+    if (op === 'd') {
+      return { ...synced, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys };
+    }
+    return synced;
+  }
+  if (state.pendingKeys?.match(/^([1-9][0-9]*)?([cdy])([1-9][0-9]*)?g$/)) {
+    // cg, dg, yg 대기 상태에서 유효한 후속 키가 아니면 pending 취소
     state = { ...state, pendingKeys: undefined };
   }
 
@@ -3240,7 +3269,34 @@ function handleNormalModeKey(
     return { ...state, pendingKeys: undefined };
   }
 
-  // 1-0-12. 들여쓰기 / 내어쓰기 / 정렬 (>>, <<, ==)
+  // 1-0-12. 들여쓰기 / 내어쓰기 / 정렬 (>>, <<, ==) 및 주석 토글 (gcc, gc{motion})
+  // >{motion} / <{motion} / gc{motion} (>ip, >}, gcip, gcj ...): 항상 줄 단위 적용
+  const gcMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?gc([1-9][0-9]*)?([iagfFtT'`\[\]])?$/);
+  if (gcMatch) {
+    const [, c1, c2, prefix] = gcMatch;
+    if (!prefix && !c2 && key === 'c') {
+      const count = c1 ? parseInt(c1, 10) : 1;
+      const endLine = Math.min(state.lines.length - 1, state.cursor.line + count - 1);
+      const res = toggleCommentRange(state, state.cursor.line, endLine);
+      if (res.bell) return res;
+      const lKeys = [...(count > 1 ? String(count).split('') : []), 'g', 'c', 'c'];
+      return { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys };
+    }
+    if (!prefix && (/^[1-9]$/.test(key) || (key === '0' && c2))) {
+      return { ...state, pendingKeys: state.pendingKeys + key };
+    }
+    if (!prefix && "iagfFtT'`[]".includes(key)) {
+      return { ...state, pendingKeys: state.pendingKeys + key };
+    }
+    const count = (c1 ? parseInt(c1, 10) : 1) * (c2 ? parseInt(c2, 10) : 1);
+    const range = findShiftRange(state, prefix ? [prefix, key] : [key], count);
+    if (!range) return ringBell(state);
+    const res = toggleCommentRange(state, range.startLine, range.endLine);
+    if (res.bell) return res;
+    const keys = [...(state.pendingKeys ?? '').split(''), key];
+    return { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : keys };
+  }
+
   // >{motion} / <{motion} / >{텍스트 객체} (>ip, >}, >j, <a{, >3j, >gg ...): 항상 줄 단위 들여쓰기
   const shiftMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([<>])([1-9][0-9]*)?([iagfFtT'`\[\]])?$/);
   if (shiftMatch && key !== shiftMatch[2]) {
@@ -4200,7 +4256,7 @@ function handleNormalModeKey(
       }
       return { ...tjumpTag(state, word), pendingKeys: undefined };
     }
-    if (key === '~' || key === 'u' || key === 'U' || key === '?') {
+    if (key === '~' || key === 'u' || key === 'U' || key === '?' || key === 'c') {
 
       return {
         ...state,
@@ -4772,7 +4828,7 @@ function moveByExtraMotion(state: VimEditorState, key: string, count: number): V
  * 텍스트 객체(i/a + 대상)는 VISUAL 선택으로, 모션은 커서 이동으로 계산하여 어떤 모션·객체든 같은 방식으로 지원합니다.
  */
 function findShiftRange(state: VimEditorState, keys: string[], count: number): { startLine: number; endLine: number } | null {
-  const base: VimEditorState = { ...state, mode: 'NORMAL', pendingKeys: undefined, visualAnchor: undefined };
+  const base: VimEditorState = { ...state, mode: 'NORMAL', pendingKeys: undefined, visualAnchor: undefined, undoStack: [] };
   const countKeys = count > 1 ? String(count).split('') : [];
   if (keys[0] === 'i' || keys[0] === 'a') {
     const selected = [...['v'], ...countKeys, ...keys].reduce((s, k) => handleKey(s, k), base);

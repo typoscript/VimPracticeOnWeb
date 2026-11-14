@@ -337,4 +337,6 @@ export const EN_MESSAGES: Record<string, string> = {
   "파일타입 감지, 플러그인, 들여쓰기가 모두 활성화되었습니다": "Filetype detection, plugin and indent are on",
   "파일타입 플러그인 및 들여쓰기가 비활성화되었습니다": "Filetype plugin and indent are off",
   "E475: 잘못된 filetype 인수입니다: {arg}": "E475: Invalid filetype argument: {arg}",
+  "E537: 'commentstring' 값은 비어 있거나 %s를 포함해야 합니다: {token}": "E537: 'commentstring' must be empty or contain %s: {token}",
+  "E537: 'commentstring' 옵션이 비어 있거나 %s를 포함해야 합니다": "E537: 'commentstring' must be empty or contain %s",
 };

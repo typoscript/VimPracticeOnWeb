@@ -33,6 +33,52 @@ export const FILETYPE_INDENT_PRESETS: Record<string, FiletypeIndentConfig> = {
   yaml: { shiftwidth: 2, tabstop: 2, expandtab: true },
 };
 
+export const FILETYPE_COMMENTSTRING_PRESETS: Record<string, string> = {
+  typescript: '// %s',
+  ts: '// %s',
+  tsx: '// %s',
+  javascript: '// %s',
+  js: '// %s',
+  jsx: '// %s',
+  rust: '// %s',
+  rs: '// %s',
+  c: '// %s',
+  cpp: '// %s',
+  java: '// %s',
+  go: '// %s',
+  python: '# %s',
+  py: '# %s',
+  bash: '# %s',
+  sh: '# %s',
+  yaml: '# %s',
+  yml: '# %s',
+  toml: '# %s',
+  ruby: '# %s',
+  rb: '# %s',
+  dockerfile: '# %s',
+  html: '<!-- %s -->',
+  xml: '<!-- %s -->',
+  svg: '<!-- %s -->',
+  markdown: '<!-- %s -->',
+  md: '<!-- %s -->',
+  css: '/* %s */',
+  scss: '/* %s */',
+  vim: '" %s',
+  lua: '-- %s',
+  sql: '-- %s',
+  haskell: '-- %s',
+  json: '',
+};
+
+/**
+ * 특정 언어의 표준 주석 포맷(commentstring)을 조회합니다.
+ */
+export function getFiletypeCommentString(filetype: string): string | undefined {
+  if (!filetype) return undefined;
+  const clean = filetype.toLowerCase().trim();
+  return FILETYPE_COMMENTSTRING_PRESETS[clean];
+}
+
 /**
  * 특정 언어의 표준 들여쓰기 프리셋을 조회합니다.
  */
@@ -47,19 +93,26 @@ export function getFiletypeIndentPreset(filetype: string): FiletypeIndentConfig 
  */
 export function applyFiletypeIndent(state: VimEditorState, filetype: string): VimEditorState {
   const isIndentActive = state.filetypeSettings?.indent !== false;
-  if (!isIndentActive) return state;
+  const isPluginActive = state.filetypeSettings?.plugin !== false;
+  if (!isIndentActive && !isPluginActive) return state;
 
-  const preset = getFiletypeIndentPreset(filetype);
-  if (!preset) return state;
+  const preset = isIndentActive ? getFiletypeIndentPreset(filetype) : undefined;
+  const cms = isPluginActive ? getFiletypeCommentString(filetype) : undefined;
+  if (!preset && cms === undefined) return state;
 
   const curId = state.currentBufferId ?? 1;
   const curLocal = state.bufferLocalOptions?.[curId] ?? {};
 
   const updatedLocal = {
     ...curLocal,
-    shiftwidth: preset.shiftwidth,
-    tabstop: preset.tabstop,
-    expandtab: preset.expandtab,
+    ...(preset
+      ? {
+          shiftwidth: preset.shiftwidth,
+          tabstop: preset.tabstop,
+          expandtab: preset.expandtab,
+        }
+      : {}),
+    ...(cms !== undefined ? { commentstring: cms } : {}),
     filetype,
   };
 

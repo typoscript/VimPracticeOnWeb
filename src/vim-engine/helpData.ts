@@ -82,7 +82,7 @@ export const HELP_TOPICS: Record<string, HelpDocTopic> = {
     id: 'change',
     filename: 'change.txt',
     title: '텍스트 변경 및 연산자 (Operators & Changes)',
-    tags: ['change', 'operator', 'delete', 'yank', 'put', 'd', 'c', 'y', 'p', 'J', 'indent'],
+    tags: ['change', 'operator', 'delete', 'yank', 'put', 'd', 'c', 'y', 'p', 'J', 'indent', 'comment', 'gc', 'gcc'],
     content: [
       '*change.txt*   텍스트 변경 및 연산자 레퍼런스',
       '==============================================================================',
@@ -90,6 +90,8 @@ export const HELP_TOPICS: Record<string, HelpDocTopic> = {
       '  d{motion}       {motion} 범위의 텍스트를 삭제하고 레지스터에 저장 (예: dw, d$)',
       '  c{motion}       {motion} 범위를 삭제하고 입력(INSERT) 모드로 진입 (예: cw, c$)',
       '  y{motion}       {motion} 범위를 복사(Yank)하여 레지스터에 저장 (예: yiw, y$)',
+      '  gc{motion}      {motion} 범위의 줄들을 commentstring 규칙으로 주석 토글',
+      '  gcc             현재 줄 주석 토글 (비주얼 모드에서는 선택 줄 gc)',
       '',
       '2. 줄 단위 축약 명령                                            *linewise-change*',
       '  dd              현재 줄 전체 삭제',

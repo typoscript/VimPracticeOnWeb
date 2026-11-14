@@ -248,6 +248,8 @@ export interface VimOptions {
   foldmethod?: 'manual' | 'indent' | 'marker' | 'syntax' | 'expr';
   /** 폴드 레벨 (:set fdl=0 / :set foldlevel=...) */
   foldlevel?: number;
+  /** 주석 포맷 문자열 (:set cms=//\ %s, :set commentstring=#\ %s) */
+  commentstring?: string;
 }
 
 /** 맞춤법 검사기 오탈자 정보 */

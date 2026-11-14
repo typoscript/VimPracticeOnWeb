@@ -31,7 +31,7 @@ export function getTagLabel(tagId: MissionCategoryTag): string {
 }
 
 const MOTION_IDS = [1, 2, 3, 7, 8, 10, 13, 16, 18, 20, 27, 41, 47, 60];
-const TEXTOBJECT_IDS = [14, 25, 52, 54, 58];
+const TEXTOBJECT_IDS = [14, 25, 52, 54, 58, 76];
 const EX_IDS = [17, 22, 24, 32, 35, 36, 37, 38, 46, 48, 49, 55, 59, 63, 65];
 const VIMSCRIPT_IDS = [40, 51, 55, 56, 57, 61, 62, 63];
 const NETRW_IDS = [24, 33, 34, 38, 39, 42, 64];
