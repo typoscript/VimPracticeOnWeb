@@ -145,6 +145,7 @@ import {
   toggleCommentRange,
   getCommentTextObjectRange,
 } from './commentEngine';
+import { formatRange } from './formatEngine';
 import { gotoFileUnderCursor } from './gotoFileEngine';
 import {
   findMatches,
@@ -260,7 +261,7 @@ export function parsePending(pendingKeys?: string): ParsedPending {
   }
 
   // 2. 연산자 및 카운트 조합: "d", "2d", "d2", "2d3", "c", "r", "y", "v", "g", "gu", "gU", "g~", "gc", "@", ">", "<", "=", "m", "'", "`"
-  const opMatch = pendingKeys.match(/^([1-9][0-9]*)?(g[uU~?c]|[a-zA-Z@'`><=])([0-9]*)$/);
+  const opMatch = pendingKeys.match(/^([1-9][0-9]*)?(g[uU~?cqw]|[a-zA-Z@'`><=])([0-9]*)$/);
   if (opMatch) {
     const count1 = opMatch[1] ? parseInt(opMatch[1], 10) : undefined;
     const operator = opMatch[2];
@@ -2088,6 +2089,13 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
       const maxLine = Math.max(state.visualAnchor.line, state.cursor.line);
       return toggleCommentRange(state, minLine, maxLine);
     }
+    // gq / gw: 선택 영역 텍스트 포매팅 (textwidth 기준 리플로우)
+    if (key === 'q' || key === 'w') {
+      if (!state.visualAnchor) return { ...state, mode: 'NORMAL', pendingKeys: undefined };
+      const minLine = Math.min(state.visualAnchor.line, state.cursor.line);
+      const maxLine = Math.max(state.visualAnchor.line, state.cursor.line);
+      return formatRange(state, minLine, maxLine, key === 'w');
+    }
     // gf / gF: 선택된 파일 경로로 이동
     if (key === 'f') {
       return gotoFileUnderCursor(state, { withLineNumber: false });
@@ -3286,15 +3294,19 @@ function handleNormalModeKey(
 
   // 1-0-12. 들여쓰기 / 내어쓰기 / 정렬 (>>, <<, ==) 및 주석 토글 (gcc, gc{motion})
   // >{motion} / <{motion} / gc{motion} (>ip, >}, gcip, gcj ...): 항상 줄 단위 적용
-  const gcMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?gc([1-9][0-9]*)?([iagfFtT'`\[\]])?$/);
+  const gcMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?g([cqw])([1-9][0-9]*)?([iagfFtT'`\[\]])?$/);
   if (gcMatch) {
-    const [, c1, c2, prefix] = gcMatch;
-    if (!prefix && !c2 && key === 'c') {
+    const [, c1, opChar, c2, prefix] = gcMatch;
+    const applyLines = (s: number, e: number): VimEditorState =>
+      opChar === 'c' ? toggleCommentRange(state, s, e) : formatRange(state, s, e, opChar === 'w');
+    const isLineForm =
+      (!prefix && !c2 && key === opChar) || (opChar !== 'c' && prefix === 'g' && !c2 && key === opChar);
+    if (isLineForm) {
       const count = c1 ? parseInt(c1, 10) : 1;
       const endLine = Math.min(state.lines.length - 1, state.cursor.line + count - 1);
-      const res = toggleCommentRange(state, state.cursor.line, endLine);
+      const res = applyLines(state.cursor.line, endLine);
       if (res.bell) return res;
-      const lKeys = [...(count > 1 ? String(count).split('') : []), 'g', 'c', 'c'];
+      const lKeys = [...(count > 1 ? String(count).split('') : []), 'g', opChar, opChar];
       return { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys };
     }
     if (!prefix && (/^[1-9]$/.test(key) || (key === '0' && c2))) {
@@ -3306,7 +3318,7 @@ function handleNormalModeKey(
     const count = (c1 ? parseInt(c1, 10) : 1) * (c2 ? parseInt(c2, 10) : 1);
     const range = findShiftRange(state, prefix ? [prefix, key] : [key], count);
     if (!range) return ringBell(state);
-    const res = toggleCommentRange(state, range.startLine, range.endLine);
+    const res = applyLines(range.startLine, range.endLine);
     if (res.bell) return res;
     const keys = [...(state.pendingKeys ?? '').split(''), key];
     return { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : keys };
@@ -4277,7 +4289,7 @@ function handleNormalModeKey(
       }
       return { ...tjumpTag(state, word), pendingKeys: undefined };
     }
-    if (key === '~' || key === 'u' || key === 'U' || key === '?' || key === 'c') {
+    if (key === '~' || key === 'u' || key === 'U' || key === '?' || key === 'c' || key === 'q' || key === 'w') {
 
       return {
         ...state,

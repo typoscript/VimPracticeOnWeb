@@ -2915,4 +2915,51 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 80,
+    title: '레슨 80: 텍스트 포매팅(gq, :set textwidth)과 탭 정리(:retab) 마스터',
+    description:
+      '긴 주석이나 문서 문단을 손으로 줄바꿈하지 마세요. Vim 은 gq 로 문단을 정해진 폭에 맞춰 자동으로 다시 채워 주고, :retab 으로 탭/공백을 한 번에 정리합니다.\n\n1) 폭 지정 (:set textwidth=N, 줄여서 :set tw=N):\n   - gq 가 한 줄을 최대 N 글자로 맞춥니다 (0 이면 79열 기준).\n\n2) 포매팅 오퍼레이터 (gq{motion}, gqq, gqip, 비주얼 gq, gw):\n   - gqq 는 현재 줄, gqip 는 문단 전체를 다시 채웁니다. // 나 # 같은 주석 기호와 들여쓰기는 자동으로 유지됩니다. gw 는 커서 위치를 그대로 둡니다.\n\n3) 탭 정리 (:retab, :retab!, :retab N):\n   - expandtab 이 켜져 있으면 탭 문자를 공백으로 바꿉니다. (:retab! 은 연속 공백까지 변환)\n\n미션:\n1. :set tw=30<Enter> 로 폭을 30 으로 지정하세요.\n2. 첫 줄 위에서 gqq 로 긴 주석을 // 기호를 유지한 채 3줄로 나누세요.\n3. :retab<Enter> 로 아래 함수의 탭 들여쓰기를 공백으로 바꾸세요!',
+    hint: ':set tw=30<Enter> → gqq 로 주석 줄바꿈 → :retab<Enter> 로 탭을 공백으로',
+    par: 23,
+    optimalKeys: [
+      ':', 's', 'e', 't', ' ', 't', 'w', '=', '3', '0', 'Enter',
+      'g', 'q', 'q',
+      ':', 'r', 'e', 't', 'a', 'b', 'Enter',
+    ],
+    primaryFilename: 'notes.ts',
+    initialLines: [
+      '// The quick brown fox jumps over the lazy dog and keeps running far away',
+      '',
+      'function run() {',
+      '\treturn 1;',
+      '}',
+    ],
+    targetLines: [
+      '// The quick brown fox jumps',
+      '// over the lazy dog and keeps',
+      '// running far away',
+      '',
+      'function run() {',
+      '  return 1;',
+      '}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const target = [
+        '// The quick brown fox jumps',
+        '// over the lazy dog and keeps',
+        '// running far away',
+        '',
+        'function run() {',
+        '  return 1;',
+        '}',
+      ];
+      const isLinesMatched =
+        state.lines.length === target.length &&
+        state.lines.every((l, idx) => l === target[idx]);
+
+      return state.mode === 'NORMAL' && isLinesMatched && state.options?.textwidth === 30;
+    },
+  },
 ];

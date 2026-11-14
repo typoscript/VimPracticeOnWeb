@@ -196,6 +196,18 @@ export {
 } from './commentEngine';
 export type { ParsedCommentString } from './commentEngine';
 
+// ---- 순정 텍스트 포매팅 엔진 (gq, gw, :set textwidth, :retab) ----
+export {
+  DEFAULT_FORMAT_WIDTH,
+  formatLineRange,
+  formatRange,
+  getFormatOptions,
+  retabLine,
+  retabRange,
+  displayWidth,
+} from './formatEngine';
+export type { FormatOptions, FormatResult, FormatCursor } from './formatEngine';
+
 // ---- 커서 아래 파일 점프 엔진 (gf, gF, Ctrl-w f) ----
 export {
   extractFileTargetAtCursor,

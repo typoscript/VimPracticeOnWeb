@@ -104,6 +104,7 @@ import { executeFindFileCommand, openFuzzyFinder } from './fuzzyFinder';
 import { openHelp, closeHelp } from './helpEngine';
 import { formatRegisters } from './registers';
 import { executeSetCommand } from './setEngine';
+import { retabRange } from './formatEngine';
 import { sourceScript } from './sourceEngine';
 import { executeMakeSession } from './sessionEngine';
 import {
@@ -2775,6 +2776,38 @@ export function executeCommandLine(
   if (sortMatch) {
     const targetRange = range ?? fullBufferRange;
     return executeSort(state, targetRange, sortMatch[1], sortMatch[2]);
+  }
+
+  // 4-6-1. 탭/공백 일괄 변환: :[range]ret[ab][!] [N]
+  const retabMatch = cmdTrimmed.match(/^ret(?:a|ab)?(!?)(?:\s+(\S+))?$/);
+  if (retabMatch) {
+    const targetRange = range ?? fullBufferRange;
+    const rawN = retabMatch[2];
+    if (rawN !== undefined && !/^\d+$/.test(rawN)) {
+      return {
+        ...state,
+        mode: 'NORMAL',
+        visualAnchor: undefined,
+        commandBuffer: undefined,
+        commandType: undefined,
+        commandMessage: msg('E474: 잘못된 인수입니다: {token}', { token: rawN }),
+        bell: true,
+      };
+    }
+    const res = retabRange(
+      state,
+      targetRange.startLine,
+      targetRange.endLine,
+      retabMatch[1] === '!',
+      rawN !== undefined ? parseInt(rawN, 10) : undefined
+    );
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
   }
 
   // 4-7. 이동: :[range]m {address}, :m {address}

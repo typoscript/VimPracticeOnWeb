@@ -14,6 +14,7 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   tabstop: 2,
   shiftwidth: 2,
   expandtab: true,
+  textwidth: 0,
   list: false,
   wildmenu: true,
   spell: false,
@@ -42,6 +43,8 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   shiftwidth: 'shiftwidth',
   et: 'expandtab',
   expandtab: 'expandtab',
+  tw: 'textwidth',
+  textwidth: 'textwidth',
   list: 'list',
   wmenu: 'wildmenu',
   wildmenu: 'wildmenu',
@@ -111,7 +114,7 @@ export function formatOptionsList(
     'syntax',
   ];
 
-  const numericKeys: (keyof VimOptions)[] = ['tabstop', 'shiftwidth'];
+  const numericKeys: (keyof VimOptions)[] = ['tabstop', 'shiftwidth', 'textwidth'];
 
   const displayedItems: string[] = [];
 
@@ -375,14 +378,14 @@ export function executeSetCommand(
         appliedList.push(`foldlevel=${numVal}`);
         continue;
       }
-      if (!optKey || (optKey !== 'tabstop' && optKey !== 'shiftwidth')) {
+      if (!optKey || (optKey !== 'tabstop' && optKey !== 'shiftwidth' && optKey !== 'textwidth')) {
         return {
           ...state,
           commandMessage: msg('E518: 알 수 없는 옵션: {rawKey}', { rawKey }),
         };
       }
       const numVal = parseInt(rawVal, 10);
-      if (isNaN(numVal) || numVal < 1) {
+      if (isNaN(numVal) || numVal < (optKey === 'textwidth' ? 0 : 1)) {
         return {
           ...state,
           commandMessage: msg('E521: 잘못된 숫자 인수: {token}', { token }),

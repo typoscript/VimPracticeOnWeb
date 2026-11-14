@@ -234,6 +234,8 @@ export interface VimOptions {
   shiftwidth: number;
   /** 탭 대신 공백 사용 (:set et / noet) */
   expandtab: boolean;
+  /** 자동 줄바꿈·gq 포맷 폭 (:set tw=40, 0 이면 gq 는 79열 기준) */
+  textwidth?: number;
   /** 탭/공백 특수문자 표시 (:set list / nolist) */
   list: boolean;
   /** 명령행 완성 와일드메뉴 표시 여부 (:set wildmenu / nowildmenu) */
