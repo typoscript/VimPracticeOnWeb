@@ -145,6 +145,7 @@ import {
   toggleCommentRange,
   getCommentTextObjectRange,
 } from './commentEngine';
+import { gotoFileUnderCursor } from './gotoFileEngine';
 import {
   findMatches,
   findNextMatch,
@@ -1873,6 +1874,12 @@ function handleCtrlWKey(
   if (key === 'T') {
     return { ...moveWindowToNewTab(state), pendingKeys: undefined };
   }
+  if (key === 'f' || key === 'Ctrl-f' || key === 'Ctrl+f') {
+    return { ...gotoFileUnderCursor(state, { split: true }), pendingKeys: undefined };
+  }
+  if (key === 'F') {
+    return { ...gotoFileUnderCursor(state, { withLineNumber: true, split: true }), pendingKeys: undefined };
+  }
 
   // 창 크기 조절: =, +, -, >, <, _, |
   if (key === '=') {
@@ -2080,6 +2087,13 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
       const minLine = Math.min(state.visualAnchor.line, state.cursor.line);
       const maxLine = Math.max(state.visualAnchor.line, state.cursor.line);
       return toggleCommentRange(state, minLine, maxLine);
+    }
+    // gf / gF: 선택된 파일 경로로 이동
+    if (key === 'f') {
+      return gotoFileUnderCursor(state, { withLineNumber: false });
+    }
+    if (key === 'F') {
+      return gotoFileUnderCursor(state, { withLineNumber: true });
     }
     if (key === 'd') {
       return goToDeclaration(state);
@@ -3110,6 +3124,27 @@ function handleNormalModeKey(
     return scrollHalfPageUp(state);
   }
 
+  // zfip / zfap / zfi{ / zfa{ 텍스트 객체 수동 폴드 생성 (startsWith('zf') 보다 먼저 검사)
+  if (state.pendingKeys === 'zfa' || state.pendingKeys === 'zfi') {
+    const isInner = state.pendingKeys === 'zfi';
+    if (key === 'p') {
+      const range = getParagraphObjectRange(state.lines, state.cursor.line, isInner ? 'ip' : 'ap', 1);
+      if (range) {
+        return createFold(state, range.startLine, range.endLine);
+      }
+      return ringBell({ ...state, pendingKeys: undefined });
+    }
+    if (key === '{' || key === '}' || key === 'B') {
+      const detected = detectFoldBlocks(state.lines, state.options?.foldmethod, state.options?.shiftwidth);
+      const found = detected.find((b) => b.startRow <= state.cursor.line && state.cursor.line <= b.endRow);
+      if (found) {
+        return createFold(state, found.startRow, found.endRow);
+      }
+      return ringBell({ ...state, pendingKeys: undefined });
+    }
+    return { ...state, bell: true, pendingKeys: undefined };
+  }
+
   // zf{motion}: 수동 폴드 생성 모션 처리
   if (state.pendingKeys?.startsWith('zf')) {
     const rawCountStr = state.pendingKeys.slice(2);
@@ -3141,26 +3176,6 @@ function handleNormalModeKey(
     }
     if (key === 'a' || key === 'i') {
       return { ...state, pendingKeys: `zf${key}` };
-    }
-    return { ...state, bell: true, pendingKeys: undefined };
-  }
-
-  if (state.pendingKeys === 'zfa' || state.pendingKeys === 'zfi') {
-    const isInner = state.pendingKeys === 'zfi';
-    if (key === 'p') {
-      const range = getParagraphObjectRange(state.lines, state.cursor.line, isInner ? 'ip' : 'ap', 1);
-      if (range) {
-        return createFold(state, range.startLine, range.endLine);
-      }
-      return ringBell({ ...state, pendingKeys: undefined });
-    }
-    if (key === '{' || key === '}' || key === 'B') {
-      const detected = detectFoldBlocks(state.lines, state.options?.foldmethod, state.options?.shiftwidth);
-      const found = detected.find((b) => b.startRow <= state.cursor.line && state.cursor.line <= b.endRow);
-      if (found) {
-        return createFold(state, found.startRow, found.endRow);
-      }
-      return ringBell({ ...state, pendingKeys: undefined });
     }
     return { ...state, bell: true, pendingKeys: undefined };
   }
@@ -4210,6 +4225,12 @@ function handleNormalModeKey(
     }
     if (key === 'd') {
       return goToDeclaration(state);
+    }
+    if (key === 'f') {
+      return gotoFileUnderCursor(state, { withLineNumber: false });
+    }
+    if (key === 'F') {
+      return gotoFileUnderCursor(state, { withLineNumber: true });
     }
     if (key === 'i') {
       return goToLastInsert(state);

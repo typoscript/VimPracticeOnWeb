@@ -242,7 +242,7 @@ export function editBuffer(state: VimEditorState, filename: string): VimEditorSt
   const newId = maxId + 1;
   const curId = syncedState.currentBufferId ?? 1;
 
-  const vfsLines = getVfsFile(state.netrw?.files, cleanName);
+  const vfsLines = getVfsFile(state.netrw?.files, cleanName, state.virtualFiles);
   const initialLines = vfsLines ? [...vfsLines] : [''];
 
   const newBuf: VimBuffer = {

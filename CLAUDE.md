@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 127개 테스트 파일, 1,647개 테스트 100% 통과 필수)*
+  *(현재 128개 테스트 파일, 1,655개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 76)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 79)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -125,14 +125,13 @@
 - **하드코어 도장 실무 프로 10연타 챌린지 (`pro-master`, `src/components/HardcoreDojo/drillGenerators.ts`, `HardcoreDojo.tsx`)**: 텍스트 객체(`ci"`, `di(`, `cit`, `di{`), 대소문자 변환(`gUiw`), 숫자 증감(`Ctrl-a`), 들여쓰기(`>>`), 라인 결합(`J`), 줄 끝 삭제(`D`), 단어 치환(`cw`) 등 실무 핵심 10문제를 노미스로 연속 격파하는 스피드런 코스. 콤보 게이지, 실시간 타이머, 클리어 시간별 4단계 칭호(👑 GRANDMASTER / ⚔️ SENIOR ARCHITECT / 💼 TECH-LEAD / 📜 PRO-DEV) 및 랭킹 시스템 연동.
 - **표현식 레지스터(`"=`) 및 시스템 클립보드(`"+`, `"*"`) 완전 연동 (`src/vim-engine/registers.ts`, `types.ts`, `App.tsx`)**: Normal 모드 `"=수식<CR>p` 및 Insert/Command 모드 `Ctrl-r =` 계산 결과 즉시 삽입, OS 클립보드 레지스터(`"+`, `"*"`)의 동시 동기화, `setSystemClipboard` 외부 주입 API, 웹 브라우저 Clipboard API(`navigator.clipboard.writeText`)와의 실시간 양방향 연동.
 - **순정 주석 토글 오퍼레이터(`gcc`, `gc{motion}`, Visual `gc`, `dgc/ygc/cgc`) & `commentstring` (레슨 76, `src/vim-engine/commentEngine.ts`, `ftpluginEngine.ts`, `setEngine.ts`)**: Neovim 0.10+ 내장 주석 규칙 기반 토글(최소 들여쓰기 정렬, 빈 줄 처리, 부분 주석 일괄 처리, 블록 주석 `/* %s */` / `<!-- %s -->` 지원), 파일타입별 `commentstring` 프리셋 자동 적용, `:set cms` / `:setlocal cms` 및 `E537` 검증, `.` 반복·Undo·`gc` 텍스트 객체(`dgc`, `ygc`, `cgc`) 지원.
+- **커서 아래 파일 점프 (`gf`, `gF`, `Ctrl-w f`, `Ctrl-w F`) & 최근 엔진 연계 레슨 (레슨 77~79, `src/vim-engine/gotoFileEngine.ts`, `bufferEngine.ts`, `commandLine.ts`, `App.tsx`)**: 코드 내 경로(`import ... from './services/payment'`, `auth.ts:12`)에서 가상 파일시스템(`vfs`/`virtualFiles`) 및 열린 버퍼로 즉시 점프(`gf`), 줄 번호 이동(`gF`), 수평 분할 열기(`Ctrl-w f`/`F`), Visual 모드 선택 경로 열기, 상대 경로·기본 확장자(`.ts`/`.tsx`/`.js` 등) 해석 및 `E446`/`E447` 에러 처리. 아울러 `:w` 시 `virtualFiles` 동기화, `zfip` 텍스트 객체 폴드 생성 수정, 인덴트/수동 폴딩 실전(레슨 78) 및 표현식 레지스터(`"=`)·시스템 클립보드(`"+`) 실전(레슨 79) 레슨 추가.
 
 ---
 
 ## 5. 다음 개발 로드맵 추천 후보
 에이전트에게 다음 작업을 지시할 때 아래 항목 중에서 지정하시면 됩니다:
-1. **커서 아래 파일 점프 (`gf`, `gF`, `Ctrl-w f`) + 신규 레슨 77**: 코드 내 경로(`import ... from './services/payment'`, `auth.ts:12`)에서 가상 파일시스템(`vfs`)·버퍼로 즉시 이동.
-2. **최근 엔진 기능 연계 레슨 확장**: 표현식 레지스터(`"=`)·시스템 클립보드(`"+`) 및 인덴트/수동 폴딩(`fdm=indent`, `zf`/`zd`) 전용 미션 추가.
-3. **텍스트 포매팅 & 공백 정리 (`gq{motion}`, `gqq`, `:set textwidth`, `:retab`)**: 문단 줄바꿈 리플로우 및 탭/공백 일괄 변환.
-4. **입력/명령행 약어 (`:iabbrev`, `:cabbrev`, `:unabbrev`)**: 단어 경계 기반 오타 교정 및 스니펫 확장 엔진.
-5. **뷰포트 스크롤 & 정밀 붙여넣기 (`Ctrl-f/b/e/y`, `:set scrolloff`, `]p` / `[p` / `gp` / `gP`)**: 긴 문서 탐색 및 들여쓰기 맞춤 붙여넣기 고도화.
-6. **약점 기반 맞춤 드릴 생성 (`AnalyticsModal` × `HardcoreDojo`)**: 타건 통계/히트맵 데이터를 바탕으로 실수율 높은 모션·텍스트 객체 맞춤 연습 세트 자동 생성.
+1. **텍스트 포매팅 & 공백 정리 (`gq{motion}`, `gqq`, `:set textwidth`, `:retab`)**: 문단 줄바꿈 리플로우 및 탭/공백 일괄 변환.
+2. **입력/명령행 약어 (`:iabbrev`, `:cabbrev`, `:unabbrev`)**: 단어 경계 기반 오타 교정 및 스니펫 확장 엔진.
+3. **뷰포트 스크롤 & 정밀 붙여넣기 (`Ctrl-f/b/e/y`, `:set scrolloff`, `]p` / `[p` / `gp` / `gP`)**: 긴 문서 탐색 및 들여쓰기 맞춤 붙여넣기 고도화.
+4. **약점 기반 맞춤 드릴 생성 (`AnalyticsModal` × `HardcoreDojo`)**: 타건 통계/히트맵 데이터를 바탕으로 실수율 높은 모션·텍스트 객체 맞춤 연습 세트 자동 생성.

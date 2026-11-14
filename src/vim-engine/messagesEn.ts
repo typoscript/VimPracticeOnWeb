@@ -339,4 +339,7 @@ export const EN_MESSAGES: Record<string, string> = {
   "E475: 잘못된 filetype 인수입니다: {arg}": "E475: Invalid filetype argument: {arg}",
   "E537: 'commentstring' 값은 비어 있거나 %s를 포함해야 합니다: {token}": "E537: 'commentstring' must be empty or contain %s: {token}",
   "E537: 'commentstring' 옵션이 비어 있거나 %s를 포함해야 합니다": "E537: 'commentstring' must be empty or contain %s",
+  "E446: 커서 위치에 파일 이름이 없습니다": "E446: No file name under cursor",
+  "E447: 경로에서 \"{filename}\" 파일을 찾을 수 없습니다": "E447: Can't find file \"{filename}\" in path",
+  "\"{filename}\" 분할 창으로 열렸습니다": "Opened \"{filename}\" in split window",
 };

@@ -1520,8 +1520,63 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson76!.checkComplete(state)).toBe(true);
   });
 
-  it('모든 76개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(76);
+  it('레슨 77: 커서 아래 파일 점프(gf, gF)와 프로젝트 탐색 마스터 검증', () => {
+    const lesson77 = MISSIONS.find((m) => m.id === 77);
+    expect(lesson77).toBeDefined();
+
+    let state: VimEditorState = {
+      lines: [...lesson77!.initialLines],
+      cursor: { ...lesson77!.initialCursor },
+      mode: 'NORMAL',
+      primaryFilename: lesson77!.primaryFilename,
+      virtualFiles: lesson77!.initialVirtualFiles ? { ...lesson77!.initialVirtualFiles } : undefined,
+    };
+    expect(lesson77!.checkComplete(state)).toBe(false);
+
+    for (const key of lesson77!.optimalKeys!) {
+      state = handleKey(state, key);
+    }
+    expect(lesson77!.checkComplete(state)).toBe(true);
+  });
+
+  it('레슨 78: 들여쓰기 기반 폴딩(:set fdm=indent)과 수동 폴드(zf) 마스터 검증', () => {
+    const lesson78 = MISSIONS.find((m) => m.id === 78);
+    expect(lesson78).toBeDefined();
+
+    let state: VimEditorState = {
+      lines: [...lesson78!.initialLines],
+      cursor: { ...lesson78!.initialCursor },
+      mode: 'NORMAL',
+      primaryFilename: lesson78!.primaryFilename,
+    };
+    expect(lesson78!.checkComplete(state)).toBe(false);
+
+    for (const key of lesson78!.optimalKeys!) {
+      state = handleKey(state, key);
+    }
+    expect(lesson78!.checkComplete(state)).toBe(true);
+  });
+
+  it('레슨 79: 표현식 레지스터("=)와 시스템 클립보드("+) 완전 마스터 검증', () => {
+    const lesson79 = MISSIONS.find((m) => m.id === 79);
+    expect(lesson79).toBeDefined();
+
+    let state: VimEditorState = {
+      lines: [...lesson79!.initialLines],
+      cursor: { ...lesson79!.initialCursor },
+      mode: 'NORMAL',
+      primaryFilename: lesson79!.primaryFilename,
+    };
+    expect(lesson79!.checkComplete(state)).toBe(false);
+
+    for (const key of lesson79!.optimalKeys!) {
+      state = handleKey(state, key);
+    }
+    expect(lesson79!.checkComplete(state)).toBe(true);
+  });
+
+  it('모든 79개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(79);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();

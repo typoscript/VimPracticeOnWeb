@@ -196,6 +196,14 @@ export {
 } from './commentEngine';
 export type { ParsedCommentString } from './commentEngine';
 
+// ---- 커서 아래 파일 점프 엔진 (gf, gF, Ctrl-w f) ----
+export {
+  extractFileTargetAtCursor,
+  resolveFileFromProject,
+  gotoFileUnderCursor,
+} from './gotoFileEngine';
+export type { ExtractedFileTarget } from './gotoFileEngine';
+
 // ---- 순정 Vim ctags 심볼 탐색 및 태그 스택 (:tag, :pop, :tags, :tselect, :tjump, :tnext, :tprev) ----
 export {
   findTags,

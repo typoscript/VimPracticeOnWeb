@@ -2750,4 +2750,169 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 77,
+    title: '레슨 77: 커서 아래 파일 점프(gf, gF)와 프로젝트 탐색 마스터',
+    description:
+      '코드 속 import 경로 나 에러 로그의 파일:줄번호 위에 커서를 두고 gf / gF 를 누르면, 별도의 파일 찾기 없이 즉시 해당 파일(및 지정 줄)로 점프할 수 있습니다.\n\n1) 커서 아래 파일 열기 (gf) & 줄 번호 포함 점프 (gF):\n   - gf 는 커서 아래의 경로(예: ./config/routes 또는 src/config/routes.ts)를 프로젝트에서 찾아 버퍼로 열어줍니다.\n   - gF 는 경로 뒤의 :4 같은 줄 번호까지 함께 읽어 해당 줄로 커서를 바로 착지시킵니다.\n\n2) 수정 저장 후 원래 파일 복귀 (:w, Ctrl-^):\n   - 이동한 파일에서 값을 수정하고 :w 로 저장한 뒤, Ctrl-^ 를 누르면 직전에 보고 있던 메인 버퍼(src/app.ts)로 즉시 되돌아옵니다.\n\n미션:\n1. 첫 번째 줄의 경로(src/config/routes.ts:4) 위로 이동(fs)한 뒤 gF 를 눌러 4번째 줄로 즉시 점프하세요.\n2. timeout 값 3000 을 5000 으로 수정하세요 (f3 cw5000<Esc>).\n3. :w<Enter> 로 변경 사항을 저장한 뒤, Ctrl-^ 를 눌러 src/app.ts 로 복귀하여 미션을 완료하세요!',
+    hint: 'fs 로 경로 이동 → gF 로 routes.ts 4번 줄 점프 → f3 cw5000<Esc> → :w<Enter> 저장 → Ctrl-^ 복귀',
+    par: 18,
+    optimalKeys: [
+      'f', 's',
+      'g', 'F',
+      'f', '3',
+      'c', 'w', '5', '0', '0', '0', 'Escape',
+      ':', 'w', 'Enter',
+      'Ctrl-^',
+    ],
+    primaryFilename: 'src/app.ts',
+    initialVirtualFiles: {
+      'src/app.ts': [
+        '// 참조 위치(src/config/routes.ts:4)의 timeout 값을 5000으로 상향하세요.',
+        "import { ROUTES } from './config/routes';",
+        'const currentTimeout = ROUTES.timeout;',
+      ],
+      'src/config/routes.ts': [
+        'export const ROUTES = {',
+        "  login: '/v1/login',",
+        "  profile: '/v1/profile',",
+        '  timeout: 3000,',
+        '};',
+      ],
+    },
+    initialLines: [
+      '// 참조 위치(src/config/routes.ts:4)의 timeout 값을 5000으로 상향하세요.',
+      "import { ROUTES } from './config/routes';",
+      'const currentTimeout = ROUTES.timeout;',
+    ],
+    targetLines: [
+      '// 참조 위치(src/config/routes.ts:4)의 timeout 값을 5000으로 상향하세요.',
+      "import { ROUTES } from './config/routes';",
+      'const currentTimeout = ROUTES.timeout;',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const routesLines =
+        state.buffers?.find((b) => b.name === 'src/config/routes.ts')?.lines ??
+        state.virtualFiles?.['src/config/routes.ts'] ??
+        [];
+      const isRoutesUpdated = routesLines.some((l) => l.includes('timeout: 5000'));
+      return (
+        state.mode === 'NORMAL' &&
+        state.primaryFilename === 'src/app.ts' &&
+        isRoutesUpdated
+      );
+    },
+  },
+  {
+    id: 78,
+    title: '레슨 78: 들여쓰기 기반 폴딩(:set fdm=indent)과 수동 폴드(zf) 마스터',
+    description:
+      'Python 처럼 중괄호({})가 없는 언어에서는 들여쓰기 깊이에 따라 자동으로 접히는 :set fdm=indent 와, 원하는 범위를 직접 묶는 수동 폴드 zf 를 활용하면 긴 코드를 한눈에 정리할 수 있습니다.\n\n1) 들여쓰기 폴딩 활성화 (:set fdm=indent) & 토글 (za):\n   - :set fdm=indent 를 실행하면 들여쓰기가 적용된 블록을 za / zc / zo 로 접고 펼칠 수 있습니다.\n\n2) 수동 폴드 생성 (zf{motion}) & 접힌 블록 일괄 삭제 (dd):\n   - zfip 로 현재 문단 전체를 수동 폴드로 접은 뒤, 접힌 폴드 위에서 dd 를 누르면 접힌 블록 전체가 한 번에 삭제됩니다!\n\n미션:\n1. :set fdm=indent<Enter> 로 들여쓰기 폴딩을 활성화하세요.\n2. active_service 본문으로 이동(2j)해 za 로 본문을 접으세요.\n3. 아래 legacy_helper 함수로 이동(j)해 zfip 로 문단 전체를 수동 폴드로 접은 뒤, dd 로 접힌 레거시 블록을 통째로 삭제하세요!',
+    hint: ':set fdm=indent<Enter> → 2j za 로 active_service 본문 접기 → j zfip 로 legacy_helper 폴드 생성 → dd 로 통째 삭제',
+    par: 30,
+    optimalKeys: [
+      ':', 's', 'e', 't', ' ', 'f', 'd', 'm', '=', 'i', 'n', 'd', 'e', 'n', 't', 'Enter',
+      '2', 'j',
+      'z', 'a',
+      'j',
+      'z', 'f', 'i', 'p',
+      'd', 'd',
+    ],
+    primaryFilename: 'service.py',
+    initialLines: [
+      '# :set fdm=indent 로 인덴트 폴드를 접고(za), 수동 폴드(zfip) 후 삭제(dd)하세요.',
+      'def active_service():',
+      '  host = "localhost"',
+      '  port = 8080',
+      '  return f"{host}:{port}"',
+      '',
+      'def legacy_helper():',
+      '  old_a = 1',
+      '  old_b = 2',
+      '  return old_a + old_b',
+    ],
+    targetLines: [
+      '# :set fdm=indent 로 인덴트 폴드를 접고(za), 수동 폴드(zfip) 후 삭제(dd)하세요.',
+      'def active_service():',
+      '  host = "localhost"',
+      '  port = 8080',
+      '  return f"{host}:{port}"',
+      '',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const target = [
+        '# :set fdm=indent 로 인덴트 폴드를 접고(za), 수동 폴드(zfip) 후 삭제(dd)하세요.',
+        'def active_service():',
+        '  host = "localhost"',
+        '  port = 8080',
+        '  return f"{host}:{port}"',
+        '',
+      ];
+      const isLinesMatched =
+        state.lines.length === target.length &&
+        state.lines.every((l, idx) => l === target[idx]);
+      const hasIndentFdm = state.options?.foldmethod === 'indent';
+      const hasClosedActiveFold =
+        state.folds?.some((f) => f.closed && f.startRow === 2 && (f.endRow === 4 || f.endRow === 5)) ?? false;
+
+      return (
+        state.mode === 'NORMAL' &&
+        isLinesMatched &&
+        hasIndentFdm &&
+        hasClosedActiveFold
+      );
+    },
+  },
+  {
+    id: 79,
+    title: '레슨 79: 표현식 레지스터("=)와 시스템 클립보드("+) 완전 마스터',
+    description:
+      'Vim 의 표현식 레지스터("=)를 사용하면 에디터를 벗어나지 않고도 수식·함수 계산 결과를 즉시 버퍼에 삽입할 수 있으며, "+ 레지스터로 OS 시스템 클립보드와 자유롭게 값을 주고받을 수 있습니다.\n\n1) 표현식 레지스터 ("={expr}<CR> 후 p / P):\n   - 노멀 모드에서 "=250 * 4<Enter> 를 입력하면 계산 결과(1000)가 "= 레지스터에 저장되고, P 또는 p 로 즉시 붙여넣을 수 있습니다. (입력 모드에서는 Ctrl-r = 로도 가능)\n\n2) 시스템 클립보드 레지스터 ("+ / "*):\n   - "+yy 또는 "+yi" 처럼 "+ 레지스터를 지정해 복사하면 브라우저/OS 시스템 클립보드로 즉시 내보내집니다.\n\n미션:\n1. 4번째 줄의 세미콜론(;) 위치로 이동(3j f;)한 뒤, "=250 * 4<Enter> P 로 계산 결과 1000 을 삽입하세요.\n2. 아랫줄(exportedToken)로 내려가(j) "+yy 로 해당 줄을 시스템 클립보드("+)에 복사하여 미션을 완료하세요!',
+    hint: '3j f; 로 이동 → "=250 * 4<Enter>P 로 1000 삽입 → j "+yy 로 시스템 클립보드 복사',
+    par: 22,
+    optimalKeys: [
+      '3', 'j', 'f', ';',
+      '"', '=', '2', '5', '0', ' ', '*', ' ', '4', 'Enter', 'P',
+      'j', '"', '+', 'y', 'y',
+    ],
+    primaryFilename: 'invoice.ts',
+    initialLines: [
+      '// 표현식 레지스터("=)로 계산 값을 삽입하고, 시스템 클립보드("+)로 내보내세요.',
+      'const unitPrice = 250;',
+      'const quantity = 4;',
+      'const totalAmount = ;',
+      'const exportedToken = "SYNC_OK";',
+    ],
+    targetLines: [
+      '// 표현식 레지스터("=)로 계산 값을 삽입하고, 시스템 클립보드("+)로 내보내세요.',
+      'const unitPrice = 250;',
+      'const quantity = 4;',
+      'const totalAmount = 1000;',
+      'const exportedToken = "SYNC_OK";',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const target = [
+        '// 표현식 레지스터("=)로 계산 값을 삽입하고, 시스템 클립보드("+)로 내보내세요.',
+        'const unitPrice = 250;',
+        'const quantity = 4;',
+        'const totalAmount = 1000;',
+        'const exportedToken = "SYNC_OK";',
+      ];
+      const isLinesMatched =
+        state.lines.length === target.length &&
+        state.lines.every((l, idx) => l === target[idx]);
+      const plusContent = state.registers?.['+']?.content;
+      const hasClipboard =
+        typeof plusContent === 'string' && plusContent.includes('SYNC_OK');
+
+      return (
+        state.mode === 'NORMAL' &&
+        isLinesMatched &&
+        hasClipboard
+      );
+    },
+  },
 ];

@@ -2431,7 +2431,16 @@ export function executeCommandLine(
   ) {
     const preSaved = triggerAutocmd(state, 'BufWritePre', undefined, (s, cmd) => executeCommandLine(s, cmd, keyRunner));
     const savedState = recordFileSave(preSaved);
-    const postSaved = triggerAutocmd(savedState, 'BufWritePost', undefined, (s, cmd) => executeCommandLine(s, cmd, keyRunner));
+    const syncedVirtualFiles =
+      savedState.virtualFiles && savedState.primaryFilename
+        ? { ...savedState.virtualFiles, [savedState.primaryFilename]: [...savedState.lines] }
+        : savedState.virtualFiles;
+    const postSaved = triggerAutocmd(
+      { ...savedState, virtualFiles: syncedVirtualFiles },
+      'BufWritePost',
+      undefined,
+      (s, cmd) => executeCommandLine(s, cmd, keyRunner)
+    );
     return {
       ...postSaved,
       mode: 'NORMAL',
