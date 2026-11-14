@@ -2962,4 +2962,53 @@ export const MISSIONS: Mission[] = [
       return state.mode === 'NORMAL' && isLinesMatched && state.options?.textwidth === 30;
     },
   },
+  {
+    id: 81,
+    title: '레슨 81: 뷰포트 스크롤(:set scrolloff)과 정밀 붙여넣기(]p, gp) 마스터',
+    description:
+      '스크롤 여유 줄(:set scrolloff)로 시야를 확보하고, 상황에 맞게 붙여넣는 ]p 와 gp 를 결합하면 코드 리팩토링 속도가 극대화됩니다.\n\n1) 뷰포트 스크롤 & 여유 줄 (Ctrl-f/b/e/y, :set so=N):\n   - Ctrl-f / Ctrl-b 로 한 페이지씩 스크롤하고, Ctrl-e / Ctrl-y 로 커서는 유지한 채 화면만 한 줄씩 스크롤합니다.\n   - :set so=3 (:set scrolloff=3) 을 켜면 커서 위아래 최소 3줄의 맥락을 항상 유지합니다.\n\n2) 정밀 붙여넣기 (]p / [p, gp / gP):\n   - ]p 는 복사한 줄의 들여쓰기를 현재 줄의 들여쓰기 깊이에 자동으로 맞춰 아래에 붙여넣습니다.\n   - gp 는 붙여넣은 텍스트 바로 뒤 위치로 커서를 옮겨 곧바로 이어 입력(i)할 수 있게 합니다.\n\n미션:\n1. :set so=3<Enter> 로 scrolloff 여백을 3 으로 설정하세요.\n2. 3번째 줄의 "v1" 안의 텍스트(v1)를 yi" 로 복사해 2번째 줄 "" 안에 gp 로 붙여넣고, 바로 i_ok<Esc> 를 입력해 "v1_ok" 로 만드세요.\n3. 3번째 줄(prefix)을 yy 로 줄 단위 복사한 뒤, 5번째 줄(step = 1;)로 내려가 ]p 로 들여쓰기(4칸)를 맞춰 아래에 붙여넣으세요!',
+    hint: ':set so=3<Enter> → 2j f" yi" 로 복사 → k 0 f" gp 후 i_ok<Esc> → j yy 2j ]p',
+    par: 36,
+    optimalKeys: [
+      ':', 's', 'e', 't', ' ', 's', 'o', '=', '3', 'Enter',
+      '2', 'j', 'f', '"', 'y', 'i', '"',
+      'k', '0', 'f', '"', 'g', 'p', 'i', '_', 'o', 'k', 'Escape',
+      'j', 'y', 'y', '2', 'j', ']', 'p',
+    ],
+    primaryFilename: 'refactor.ts',
+    initialLines: [
+      '// scrolloff(:set so=3) 설정 후 ]p(인덴트 맞춤)와 gp(커서 뒤 이동)를 마스터하세요.',
+      'const label = "";',
+      '  const prefix = "v1";',
+      'function runTask() {',
+      '    const step = 1;',
+      '}',
+    ],
+    targetLines: [
+      '// scrolloff(:set so=3) 설정 후 ]p(인덴트 맞춤)와 gp(커서 뒤 이동)를 마스터하세요.',
+      'const label = "v1_ok";',
+      '  const prefix = "v1";',
+      'function runTask() {',
+      '    const step = 1;',
+      '    const prefix = "v1";',
+      '}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const target = [
+        '// scrolloff(:set so=3) 설정 후 ]p(인덴트 맞춤)와 gp(커서 뒤 이동)를 마스터하세요.',
+        'const label = "v1_ok";',
+        '  const prefix = "v1";',
+        'function runTask() {',
+        '    const step = 1;',
+        '    const prefix = "v1";',
+        '}',
+      ];
+      const isLinesMatched =
+        state.lines.length === target.length &&
+        state.lines.every((l, idx) => l === target[idx]);
+
+      return state.mode === 'NORMAL' && isLinesMatched && state.options?.scrolloff === 3;
+    },
+  },
 ];

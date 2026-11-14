@@ -79,8 +79,24 @@ export {
   formatMacroKeysToString,
   parseMacroStringToKeys,
   getRegisterContent,
+  putFromRegister,
   setSystemClipboard,
 } from './registers';
+export type { PutOptions } from './registers';
+export {
+  getViewport,
+  getScrolloff,
+  adjustViewport,
+  scrollFullPageDown,
+  scrollFullPageUp,
+  scrollLineDown,
+  scrollLineUp,
+  scrollHalfPageDown,
+  scrollHalfPageUp,
+  scrollToCenter,
+  scrollToTop,
+  scrollToBottom,
+} from './viewport';
 export type { MacroTrace, MacroFrame } from './macroDebugger';
 
 // ---- 순정 맞춤법 검사기 (:set spell, ]s, [s, z=, zg, zw) ----

@@ -236,6 +236,8 @@ export interface VimOptions {
   expandtab: boolean;
   /** 자동 줄바꿈·gq 포맷 폭 (:set tw=40, 0 이면 gq 는 79열 기준) */
   textwidth?: number;
+  /** 커서 위아래로 유지할 여유 줄 수 (:set so=5, :set scrolloff=5) */
+  scrolloff?: number;
   /** 탭/공백 특수문자 표시 (:set list / nolist) */
   list: boolean;
   /** 명령행 완성 와일드메뉴 표시 여부 (:set wildmenu / nowildmenu) */

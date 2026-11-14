@@ -1,6 +1,7 @@
 import { ClipboardRegister, RegisterEntry, VimEditorState } from './types';
-import { getMaxCol } from './cursor';
+import { clampCursor } from './cursor';
 import { pushUndoSnapshot } from './operators';
+import { getOptions } from './setEngine';
 
 /**
  * 연산(d, y, c, x 등) 완료 후 activeRegister에 따라 registers와 clipboard를 동기화합니다.
@@ -269,29 +270,63 @@ export function getRegisterContent(
   return state.clipboard ?? null;
 }
 
+export interface PutOptions {
+  /** ]p / [p: 현재 줄의 들여쓰기에 맞춰 줄 단위 텍스트의 들여쓰기를 재조정 */
+  adjustIndent?: boolean;
+  /** gp / gP: 붙여넣은 텍스트 바로 뒤(줄 단위는 다음 줄 첫 칸)로 커서를 이동 */
+  leaveCursorAfter?: boolean;
+}
+
+function measureIndentCols(line: string, tabstop: number): number {
+  let cols = 0;
+  for (const ch of line) {
+    if (ch === ' ') cols += 1;
+    else if (ch === '\t') cols += tabstop - (cols % tabstop);
+    else break;
+  }
+  return cols;
+}
+
+function formatIndentCols(cols: number, tabstop: number, expandtab: boolean): string {
+  if (cols <= 0) return '';
+  if (expandtab) return ' '.repeat(cols);
+  const tabs = Math.floor(cols / tabstop);
+  const spaces = cols % tabstop;
+  return '\t'.repeat(tabs) + ' '.repeat(spaces);
+}
+
+function reindentBlockToLine(
+  blockLines: string[],
+  targetLineText: string,
+  tabstop: number,
+  expandtab: boolean
+): string[] {
+  const targetCols = measureIndentCols(targetLineText, tabstop);
+  const firstCols = measureIndentCols(blockLines[0] ?? '', tabstop);
+  const delta = targetCols - firstCols;
+
+  return blockLines.map((l) => {
+    if (l.trim().length === 0) return '';
+    const wsMatch = l.match(/^[ \t]*/);
+    const body = l.slice(wsMatch ? wsMatch[0].length : 0);
+    const curCols = measureIndentCols(l, tabstop);
+    const nextCols = Math.max(0, curCols + delta);
+    return formatIndentCols(nextCols, tabstop, expandtab) + body;
+  });
+}
+
 /**
- * 레지스터의 내용을 현재 커서 위치에 붙여넣습니다 (p: 뒤에, P: 앞에).
+ * 레지스터의 내용을 현재 커서 위치에 붙여넣습니다 (p: 뒤에, P: 앞에, ]p/[p/gp/gP 지원).
  */
 export function putFromRegister(
   state: VimEditorState,
   reg?: string | null,
   isBefore = false,
-  count = 1
+  count = 1,
+  options?: PutOptions
 ): VimEditorState {
   const rawClip = getRegisterContent(state, reg ?? state.activeRegister);
-  // [count]p: 내용을 count 번 이어 붙여 한 번에 넣습니다 (실행 취소 1회, 여러 줄 레지스터도 a b a b 순서)
-  const clip =
-    rawClip && count > 1
-      ? {
-          ...rawClip,
-          content:
-            rawClip.type === 'line'
-              ? Array.from({ length: count }, () => rawClip.content).join('\n')
-              : rawClip.content.repeat(count),
-        }
-      : rawClip;
-
-  if (!clip || clip.content === undefined || clip.content === null) {
+  if (!rawClip || rawClip.content === undefined || rawClip.content === null) {
     return {
       ...state,
       activeRegister: undefined,
@@ -302,14 +337,43 @@ export function putFromRegister(
   const stateWithSnapshot = pushUndoSnapshot(state);
   const { line, col } = state.cursor;
 
-  if (clip.type === 'line') {
+  if (rawClip.type === 'line') {
+    const baseLines = rawClip.content.split('\n');
+    const adjustedUnit = options?.adjustIndent
+      ? (() => {
+          const opts = getOptions(state);
+          return reindentBlockToLine(
+            baseLines,
+            state.lines[line] ?? '',
+            opts.tabstop,
+            opts.expandtab
+          );
+        })()
+      : baseLines;
+
+    const insertedLines: string[] = [];
+    for (let i = 0; i < Math.max(1, count); i++) {
+      insertedLines.push(...adjustedUnit);
+    }
+
     const targetLine = isBefore ? line : line + 1;
-    const insertedLines = clip.content.split('\n');
     const nextLines = [
       ...state.lines.slice(0, targetLine),
       ...insertedLines,
       ...state.lines.slice(targetLine),
     ];
+
+    if (options?.leaveCursorAfter) {
+      const afterLine = Math.min(nextLines.length - 1, targetLine + insertedLines.length);
+      return {
+        ...stateWithSnapshot,
+        lines: nextLines,
+        cursor: { line: afterLine, col: 0 },
+        activeRegister: undefined,
+        pendingKeys: undefined,
+      };
+    }
+
     const firstLine = insertedLines[0] ?? '';
     const firstNonWs = firstLine.search(/\S/);
     const targetCol = firstNonWs !== -1 ? firstNonWs : 0;
@@ -322,14 +386,15 @@ export function putFromRegister(
     };
   }
 
-  // 인라인 / 멀티라인 문자열(text) 붙여넣기
+  // 문자/멀티라인 텍스트 붙여넣기
+  const textContent = count > 1 ? rawClip.content.repeat(count) : rawClip.content;
   const currentLine = state.lines[line] ?? '';
   const insertCol = isBefore ? col : (currentLine.length === 0 ? 0 : col + 1);
 
-  if (clip.content.includes('\n')) {
+  if (textContent.includes('\n')) {
     const before = currentLine.slice(0, insertCol);
     const after = currentLine.slice(insertCol);
-    const parts = clip.content.split('\n');
+    const parts = textContent.split('\n');
     const firstLine = before + parts[0];
     const lastLine = parts[parts.length - 1] + after;
     const middleLines = parts.slice(1, -1);
@@ -341,10 +406,18 @@ export function putFromRegister(
       ...state.lines.slice(line + 1),
     ];
 
+    const nextCursor = options?.leaveCursorAfter
+      ? clampCursor(
+          nextLines,
+          { line: line + parts.length - 1, col: parts[parts.length - 1].length },
+          'NORMAL'
+        )
+      : { line, col: insertCol };
+
     return {
       ...stateWithSnapshot,
       lines: nextLines,
-      cursor: { line, col: insertCol },
+      cursor: nextCursor,
       activeRegister: undefined,
       pendingKeys: undefined,
     };
@@ -352,15 +425,15 @@ export function putFromRegister(
 
   const newLine =
     currentLine.slice(0, insertCol) +
-    clip.content +
+    textContent +
     currentLine.slice(insertCol);
   const nextLines = [...state.lines];
   nextLines[line] = newLine;
 
-  const newCol = Math.min(
-    getMaxCol(newLine, 'NORMAL'),
-    col + clip.content.length
-  );
+  const targetCol = options?.leaveCursorAfter
+    ? insertCol + textContent.length
+    : col + textContent.length;
+  const newCol = clampCursor(nextLines, { line, col: targetCol }, 'NORMAL').col;
 
   return {
     ...stateWithSnapshot,

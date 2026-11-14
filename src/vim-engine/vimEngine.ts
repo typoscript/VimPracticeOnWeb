@@ -175,8 +175,13 @@ import {
   cursorToLow,
   scrollHalfPageDown,
   scrollHalfPageUp,
+  scrollFullPageDown,
+  scrollFullPageUp,
+  scrollLineDown,
+  scrollLineUp,
   adjustViewport,
   getViewport,
+  getScrolloff,
 } from './viewport';
 import {
   recordJump,
@@ -408,9 +413,14 @@ export function rawHandleKey(
     nextState = state;
   }
 
-  // 커서 이동 시 화면 뷰포트 자동 동기화 (커서가 화면을 벗어나지 않도록 보정)
+  // 커서 이동 시 화면 뷰포트 자동 동기화 (커서가 화면 및 scrolloff 여백을 벗어나지 않도록 보정)
   if (nextState.cursor && nextState.lines) {
-    const vp = adjustViewport(getViewport(nextState), nextState.cursor.line, nextState.lines.length);
+    const vp = adjustViewport(
+      getViewport(nextState),
+      nextState.cursor.line,
+      nextState.lines.length,
+      getScrolloff(nextState)
+    );
     if (!nextState.viewport || nextState.viewport.topRow !== vp.topRow || nextState.viewport.visibleRows !== vp.visibleRows) {
       nextState = {
         ...nextState,
@@ -2106,6 +2116,19 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
     if (key === 'd') {
       return goToDeclaration(state);
     }
+    if (key === 'p' || key === 'P') {
+      const snap = state.visualAnchor
+        ? {
+            mode: state.mode as 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK',
+            anchor: { ...state.visualAnchor },
+            cursor: { ...state.cursor },
+          }
+        : state.lastVisualSelection;
+      const delRes = deleteVisualSelection(state);
+      const synced = syncRegisters(state, delRes, false);
+      const res = putFromRegister(synced, state.activeRegister, false, 1, { leaveCursorAfter: true });
+      return { ...res, lastVisualSelection: snap };
+    }
     if (key === ';') {
       return traverseChangeList(state, 'prev', parsed.totalCount);
     }
@@ -2308,6 +2331,22 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
   }
   if (key === 'Ctrl-u' || key === 'Ctrl+u' || key === 'ctrl-u') {
     const res = scrollHalfPageUp(state);
+    return { ...state, cursor: res.cursor, viewport: res.viewport, pendingKeys: undefined };
+  }
+  if (key === 'Ctrl-f' || key === 'Ctrl+f' || key === 'ctrl-f') {
+    const res = scrollFullPageDown(state, parsed.totalCount);
+    return { ...state, cursor: res.cursor, viewport: res.viewport, pendingKeys: undefined };
+  }
+  if (key === 'Ctrl-b' || key === 'Ctrl+b' || key === 'ctrl-b') {
+    const res = scrollFullPageUp(state, parsed.totalCount);
+    return { ...state, cursor: res.cursor, viewport: res.viewport, pendingKeys: undefined };
+  }
+  if (key === 'Ctrl-e' || key === 'Ctrl+e' || key === 'ctrl-e') {
+    const res = scrollLineDown(state, parsed.totalCount);
+    return { ...state, cursor: res.cursor, viewport: res.viewport, pendingKeys: undefined };
+  }
+  if (key === 'Ctrl-y' || key === 'Ctrl+y' || key === 'ctrl-y') {
+    const res = scrollLineUp(state, parsed.totalCount);
     return { ...state, cursor: res.cursor, viewport: res.viewport, pendingKeys: undefined };
   }
 
@@ -2601,6 +2640,24 @@ function isEmptyPut(before: VimEditorState, after: VimEditorState): boolean {
 function emptyRegisterBell(state: VimEditorState): VimEditorState {
   const reg = state.activeRegister ?? '"';
   return { ...ringBell(state), activeRegister: undefined, commandMessage: msg('E353: 레지스터 {reg} 가 비어 있습니다', { reg }) };
+}
+
+/** p / P / ]p / [p / gp / gP 공통 실행기 (빈 레지스터 검사 + . 반복 기록 포함) */
+function executePutVariant(
+  state: VimEditorState,
+  isBefore: boolean,
+  count: number,
+  options: { adjustIndent?: boolean; leaveCursorAfter?: boolean } | undefined,
+  baseKeys: string[],
+  isReplayingDot: boolean
+): VimEditorState {
+  const res = putFromRegister(state, state.activeRegister, isBefore, count, options);
+  if (isEmptyPut(state, res)) return emptyRegisterBell(state);
+  const keys = count > 1 ? [String(count), ...baseKeys] : baseKeys;
+  return {
+    ...res,
+    lastChangeKeys: isReplayingDot ? state.lastChangeKeys : keys,
+  };
 }
 
 /** 연산자 + 일반 모션을 실행하고 레지스터 동기화와 `.` 반복 키를 기록합니다. */
@@ -3124,12 +3181,24 @@ function handleNormalModeKey(
     return cursorToLow(state);
   }
 
-  // Ctrl-d / Ctrl-u: 반 페이지 아래/위 스크롤
+  // Ctrl-d / Ctrl-u / Ctrl-f / Ctrl-b / Ctrl-e / Ctrl-y: 뷰포트 스크롤
   if ((key === 'Ctrl-d' || key === 'Ctrl+d' || key === 'ctrl-d') && !parsed.operator) {
     return scrollHalfPageDown(state);
   }
   if ((key === 'Ctrl-u' || key === 'Ctrl+u' || key === 'ctrl-u') && !parsed.operator) {
     return scrollHalfPageUp(state);
+  }
+  if ((key === 'Ctrl-f' || key === 'Ctrl+f' || key === 'ctrl-f') && !parsed.operator) {
+    return scrollFullPageDown(state, parsed.totalCount);
+  }
+  if ((key === 'Ctrl-b' || key === 'Ctrl+b' || key === 'ctrl-b') && !parsed.operator) {
+    return scrollFullPageUp(state, parsed.totalCount);
+  }
+  if ((key === 'Ctrl-e' || key === 'Ctrl+e' || key === 'ctrl-e') && !parsed.operator) {
+    return scrollLineDown(state, parsed.totalCount);
+  }
+  if ((key === 'Ctrl-y' || key === 'Ctrl+y' || key === 'ctrl-y') && !parsed.operator) {
+    return scrollLineUp(state, parsed.totalCount);
   }
 
   // zfip / zfap / zfi{ / zfa{ 텍스트 객체 수동 폴드 생성 (startsWith('zf') 보다 먼저 검사)
@@ -3494,6 +3563,17 @@ function handleNormalModeKey(
         ...res,
         pendingKeys: undefined,
       };
+    }
+    // ]p, [p, ]P, [P: 현재 줄 들여쓰기에 맞춰 붙여넣기
+    if (key === 'p' || key === 'P') {
+      return executePutVariant(
+        state,
+        key === 'P' || bracket === '[',
+        bCount,
+        { adjustIndent: true },
+        [bracket, key],
+        isReplayingDot
+      );
     }
     state = { ...state, pendingKeys: undefined };
   }
@@ -4244,6 +4324,17 @@ function handleNormalModeKey(
     if (key === 'F') {
       return gotoFileUnderCursor(state, { withLineNumber: true });
     }
+    // gp / gP: 붙여넣은 뒤 커서를 삽입 끝 다음으로 이동
+    if (key === 'p' || key === 'P') {
+      return executePutVariant(
+        state,
+        key === 'P',
+        parsed.totalCount,
+        { leaveCursorAfter: true },
+        ['g', key],
+        isReplayingDot
+      );
+    }
     if (key === 'i') {
       return goToLastInsert(state);
     }
@@ -4472,24 +4563,9 @@ function handleNormalModeKey(
     return redo(state);
   }
 
-  // p: 레지스터/클립보드 붙여넣기 (커서 뒤)
-  if (key === 'p') {
-    const res = putFromRegister(state, state.activeRegister, false, parsed.totalCount);
-    if (isEmptyPut(state, res)) return emptyRegisterBell(state);
-    return {
-      ...res,
-      lastChangeKeys: isReplayingDot ? state.lastChangeKeys : parsed.totalCount > 1 ? [String(parsed.totalCount), 'p'] : ['p'],
-    };
-  }
-
-  // P: 레지스터/클립보드 붙여넣기 (커서 앞)
-  if (key === 'P') {
-    const res = putFromRegister(state, state.activeRegister, true, parsed.totalCount);
-    if (isEmptyPut(state, res)) return emptyRegisterBell(state);
-    return {
-      ...res,
-      lastChangeKeys: isReplayingDot ? state.lastChangeKeys : parsed.totalCount > 1 ? [String(parsed.totalCount), 'P'] : ['P'],
-    };
+  // p / P: 레지스터/클립보드 붙여넣기 (p: 뒤, P: 앞)
+  if (key === 'p' || key === 'P') {
+    return executePutVariant(state, key === 'P', parsed.totalCount, undefined, [key], isReplayingDot);
   }
 
   // Y: 한 줄 복사 (yy와 동일)
