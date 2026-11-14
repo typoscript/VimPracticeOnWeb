@@ -353,4 +353,8 @@ export const EN_MESSAGES: Record<string, string> = {
   "선택 {cols}열; {lines} / {totalLines}줄; {words} / {totalWords}단어; {bytes} / {totalBytes}바이트": "Selected {cols} Cols; {lines} of {totalLines} Lines; {words} of {totalWords} Words; {bytes} of {totalBytes} Bytes",
   "선택 {lines} / {totalLines}줄; {words} / {totalWords}단어; {bytes} / {totalBytes}바이트": "Selected {lines} of {totalLines} Lines; {words} of {totalWords} Words; {bytes} of {totalBytes} Bytes",
   "열 {col} / {lineCols}; 줄 {line} / {totalLines}; 단어 {word} / {totalWords}; 바이트 {byte} / {totalBytes}": "Col {col} of {lineCols}; Line {line} of {totalLines}; Word {word} of {totalWords}; Byte {byte} of {totalBytes}",
+  "E475: 잘못된 정렬 인자입니다: {arg}": "E475: Invalid argument: {arg}",
+  "E194: 대체 파일 이름이 없습니다 (#)": "E194: No alternate file name to substitute for '#'",
+  "E484: \"{filename}\" 파일을 열 수 없습니다": "E484: Can't open file \"{filename}\"",
+  "\"{filename}\" {count}줄 읽음": "\"{filename}\" {count} lines read",
 };

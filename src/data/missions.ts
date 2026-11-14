@@ -3105,4 +3105,60 @@ export const MISSIONS: Mission[] = [
       return state.mode === 'NORMAL' && isLinesMatched && hasWordCountMessage;
     },
   },
+  {
+    id: 84,
+    title: '레슨 84: 고급 Ex 정렬(:sort /pat/ f ! i)과 파일 삽입(:read), 줄 이동·복제(:move/:copy) 마스터',
+    description:
+      '터미널에서 로그나 지표 리포트를 가공할 때, 파일 삽입(:read), 정규식 오프셋 기준 숫자 정렬(:sort), 줄 이동·복제(:move / :copy)를 조합하면 한 줄의 수작업 없이 보고서를 완성할 수 있습니다.\n\n1) 외부 파일 내용 삽입 (:[range]r[ead] {file}):\n   - :r header.txt 는 현재 줄 아래에 파일 내용을 삽입하고, :0r header.txt 는 1번째 줄 앞(맨 위)에 삽입합니다. (:$r 는 맨 끝)\n\n2) 고급 정렬 (:sort[!] [i][u][n|f|x|o|b][r] [/pattern/]):\n   - :sort f 는 소수점 실수(float), :sort n 은 정수, :sort x 는 16진수, :sort i 는 대소문자 무시로 정렬하며 ! 를 붙이면 내림차순입니다.\n   - /pattern/ 을 지정하면 매치 뒤의 텍스트를 기준으로 정렬합니다 (예: :3,6sort! /=/ f 는 = 뒤의 실수 기준 내림차순 정렬).\n\n3) 줄 이동과 복제 (:[range]m[ove] {addr}, :[range]t {addr} / :co {addr}):\n   - :3m $ 로 3번째 줄을 맨 끝($)으로 옮기고, :3t $ 로 3번째 줄을 지우지 않고 맨 끝에 복제합니다.\n\n미션:\n1. :0r templates/header.txt<Enter> 로 버퍼 맨 위에 헤더(2줄)를 삽입하세요.\n2. :3m $<Enter> 로 3번째 줄(# Summary:)을 맨 끝으로 이동시키세요.\n3. :3,6sort! /=/ f<Enter> 로 3~6번 메트릭 줄을 = 뒤의 실수(ms) 기준 내림차순으로 정렬하세요.\n4. :3t $<Enter> 로 가장 느린 최상위 지표(3번 줄)를 맨 끝 # Summary: 아래에 복제해 완성하세요!',
+    hint: ':0r templates/header.txt<Enter> → :3m $<Enter> → :3,6sort! /=/ f<Enter> → :3t $<Enter>',
+    par: 55,
+    optimalKeys: [
+      ':', '0', 'r', ' ', 't', 'e', 'm', 'p', 'l', 'a', 't', 'e', 's', '/', 'h', 'e', 'a', 'd', 'e', 'r', '.', 't', 'x', 't', 'Enter',
+      ':', '3', 'm', ' ', '$', 'Enter',
+      ':', '3', ',', '6', 's', 'o', 'r', 't', '!', ' ', '/', '=', '/', ' ', 'f', 'Enter',
+      ':', '3', 't', ' ', '$', 'Enter',
+    ],
+    primaryFilename: 'metrics.txt',
+    initialVirtualFiles: {
+      'templates/header.txt': [
+        '# === Latency Report ===',
+        '# Unit: ms',
+      ],
+    },
+    initialLines: [
+      '# Summary:',
+      'metric: avg=8.25ms',
+      'metric: p50=12.4ms',
+      'metric: p99=120.5ms',
+      'metric: p95=45.0ms',
+    ],
+    targetLines: [
+      '# === Latency Report ===',
+      '# Unit: ms',
+      'metric: p99=120.5ms',
+      'metric: p95=45.0ms',
+      'metric: p50=12.4ms',
+      'metric: avg=8.25ms',
+      '# Summary:',
+      'metric: p99=120.5ms',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const target = [
+        '# === Latency Report ===',
+        '# Unit: ms',
+        'metric: p99=120.5ms',
+        'metric: p95=45.0ms',
+        'metric: p50=12.4ms',
+        'metric: avg=8.25ms',
+        '# Summary:',
+        'metric: p99=120.5ms',
+      ];
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines.length === target.length &&
+        state.lines.every((l, idx) => l === target[idx])
+      );
+    },
+  },
 ];

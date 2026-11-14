@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 132개 테스트 파일, 1,706개 테스트 100% 통과 필수)*
+  *(현재 132개 테스트 파일, 1,717개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 83)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 84)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -131,11 +131,12 @@
 - **입력/명령행 자동 약어 엔진 (`:iabbrev`, `:cabbrev`, `:abbrev`, `:inoreabbrev`, `:cnoreabbrev`, `:noreabbrev`, `:unabbrev`, `:abclear`, `Ctrl-]`, `Ctrl-v`) (레슨 82, `src/vim-engine/abbrevEngine.ts`, `vimEngine.ts`, `commandLine.ts`, `sourceEngine.ts`)**: Vim 단어 경계 규칙(`ateh` 미확장·`-teh` 확장·비단어 시작 `@e` 공백 경계), 트리거 키(`Space`, 구두점, `Enter`, `Tab`, `Esc`), `Ctrl-]` 무문자 수동 확장, `Ctrl-v` 다음 문자 리터럴 억제, RHS 특수 키 시퀀스(`<CR>`, `<Left>`, `<Esc>`) 실행, 비재귀(`nore`) 및 재귀 연쇄 확장, `:cunabbrev` 자기 보호, `.vimrc` 소싱 및 `.` 도트 반복 일관성 지원.
 - **약점 기반 맞춤 드릴 생성 (`AnalyticsModal` × `HardcoreDojo`, `src/utils/weaknessDrillAnalyzer.ts`, `AnalyticsModal.tsx`, `HardcoreDojo.tsx`)**: 타건 통계·안티패턴 감지 횟수·5각형 숙련도 점수를 분석(`analyzeWeaknesses`, `buildWeaknessDrillPlan`)해 상위 3개 약점(`navigation`, `targeting`, `textObjects`, `lineEndOps`, `lineStartOps`, `wordReplace`)을 5:3:2 비중의 10문제 맞춤 드릴 세트로 구성합니다. `AnalyticsModal` 에서 진단 배지와 `약점 맞춤 드릴 바로 시작 →` 원클릭 이동을 제공하고, `HardcoreDojo` 의 `weakness-custom` 탭에서 안티패턴 전용 교정 문제(`A/C/D`, `I`, `ciw/dw`) 및 통계 재분석·완주 요약을 지원합니다.
 - **Visual 모드 고급 편집 (`o` / `O`, `g Ctrl-g`, `gJ`, `Ctrl-v $ A / c`) (레슨 83, `src/vim-engine/visual.ts`, `vimEngine.ts`, `Editor.tsx`, `App.tsx`)**: Visual/Visual Line/Visual Block 커서-앵커 반전(`swapVisualCursorAnchor`: `o` 대각선, Visual Block `O` 같은 행 반대편 열 코너), 선택 영역을 유지한 채 열·줄·단어·UTF-8 바이트 통계를 출력하는 `g Ctrl-g`(`executeGCtrlG`, 한/영 Vim 원문 메시지 지원), Visual `gJ` 공백 없는 줄 병합(`gv`/`.` 반복 호환), `Ctrl-v $` EOL 확장 모드(`visualBlockEndOfLine`)에서 불규칙 길이 줄 끝 일괄 추가(`A`)·치환(`c`)·삭제(`d`)·복사(`y`) 및 짧은 줄 패딩/스킵 처리를 완성했습니다.
+- **고급 Ex 정렬·파일 삽입·줄 이동/복제 (`:read`, `:sort /pat/ f x o b i r`, `:move`/`:copy`) (레슨 84, `src/vim-engine/commandLine.ts`)**: `:0r`/`:$r`/`:r %`/`:r #` VFS·버퍼 파일 삽입(`executeRead`, 단일 undo 및 `E194`/`E484` + `bell`), `:sort[!] [i][u][n|f|x|o|b][r] [/pattern/]` 실수(`f`)·16/8/2진수(`x`/`o`/`b`)·대소문자 무시(`i`/`ui`)·매치 후 텍스트/매치 자체(`r`) 기준 정렬(`parseSortOptions`, `compileVimRegex`, `E475`), `:m`/`:mo`/`:mov`/`:move` 및 `:t`/`:co`/`:cop`/`:copy` `/pat/`·`?pat?` 주소 지원 및 `E14`/`E134` `bell` 일관성 보강을 완성했습니다.
 
 ---
 
 ## 5. 다음 개발 로드맵 추천 후보
 에이전트에게 다음 작업을 지시할 때 아래 항목 중에서 지정하시면 됩니다:
-1. **고급 Ex 정렬·파일 삽입 (`:read`, `:sort n / ! / /pat/`, `:copy`/`:move`) + 레슨 84**: VFS 파일 삽입 `:read` 및 숫자(`n`)·역순(`!`)·패턴(`/pat/`) 기준 정렬 옵션 지원.
-2. **엔진 구조 분할 & 메인 번들 청크 최적화**: `vimEngine.ts` 모드별 모듈 분리 및 프로덕션 메인 번들(`index`) 코드 분할 경량화.
-3. **가상 셸 파이프·필터링 (`:!cmd`, `:[range]!sort/uniq`, `:r !`, `:w !`) + 레슨 84**: 안전한 내장 셸 유틸 에뮬레이터로 선택 범위/전체 버퍼 파이프 가공 워크플로우 구현.
+1. **엔진 구조 분할 & 메인 번들 청크 최적화**: `vimEngine.ts` 모드별 모듈 분리 및 프로덕션 메인 번들(`index`) 코드 분할 경량화.
+2. **가상 셸 파이프·필터링 (`:!cmd`, `:[range]!sort/uniq`, `:r !`, `:w !`) + 레슨 85**: 안전한 내장 셸 유틸 에뮬레이터로 선택 범위/전체 버퍼 파이프 가공 워크플로우 구현.
+3. **고급 검색 오프셋(`/pat/+n`, `?pat?-n`, `//e`, `/pat/b`) & 카운트 점프 + 레슨 85**: 검색 매치 끝/오프셋 지정 이동과 연산자(`d/pat/e`, `c//b`) 결합 정밀 편집.

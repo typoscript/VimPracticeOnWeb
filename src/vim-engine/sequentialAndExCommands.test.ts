@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { VimEditorState } from './types';
 import { handleKey } from './vimEngine';
 import { executeCommandLine } from './commandLine';
+import { configureVimEngine } from './config';
 
 function createState(lines: string[], cursor = { line: 0, col: 0 }, mode: VimEditorState['mode'] = 'NORMAL'): VimEditorState {
   return {
@@ -258,5 +259,201 @@ describe('Ex Command: :[range]t {address} / :co[py] {address}', () => {
     const result = executeCommandLine(state, ':copy .');
 
     expect(result.lines).toEqual(['item', 'item']);
+  });
+
+  it(':mov, :move, :cop 축약형 및 /pattern/, ?pattern? 주소 지정을 지원한다', () => {
+    const state = createState(['alpha', 'target: end', 'move me', 'omega'], { line: 2, col: 0 });
+    const moved = executeCommandLine(state, ':move ?alpha?');
+    expect(moved.lines).toEqual(['alpha', 'move me', 'target: end', 'omega']);
+    expect(moved.cursor.line).toBe(1);
+
+    const copied = executeCommandLine(moved, ':1cop /omega/');
+    expect(copied.lines).toEqual(['alpha', 'move me', 'target: end', 'omega', 'alpha']);
+    expect(copied.cursor.line).toBe(4);
+  });
+
+  it('주소 없는 :copy / :move 및 자기 자신 이동 E134 는 bell 을 울린다', () => {
+    const state = createState(['a', 'b', 'c'], { line: 1, col: 0 });
+
+    const bareCopy = executeCommandLine(state, ':copy');
+    expect(bareCopy.bell).toBe(true);
+    expect(bareCopy.commandMessage).toContain('E14');
+
+    const bareMove = executeCommandLine(state, ':move');
+    expect(bareMove.bell).toBe(true);
+    expect(bareMove.commandMessage).toContain('E14');
+
+    const selfMove = executeCommandLine(state, ':1,2m 1');
+    expect(selfMove.bell).toBe(true);
+    expect(selfMove.commandMessage).toContain('E134');
+  });
+});
+
+describe('Ex Command: :sort 옵션 (i, n, f, x, o, b, r, /pattern/, !)', () => {
+  it(':sort i 는 대소문자를 구분하지 않고 정렬하고, :sort ui 는 대소문자 무시 중복 제거한다', () => {
+    const state = createState(['Banana', 'apple', 'APPLE', 'cherry']);
+    const sorted = executeCommandLine(state, ':sort i');
+    expect(sorted.lines).toEqual(['apple', 'APPLE', 'Banana', 'cherry']);
+
+    const unique = executeCommandLine(state, ':sort ui');
+    expect(unique.lines).toEqual(['apple', 'Banana', 'cherry']);
+  });
+
+  it(':sort f, :sort x, :sort o, :sort b 로 실수/16진수/8진수/2진수를 정렬한다', () => {
+    const floats = createState(['v=10.5', 'v=-2.5', 'v=2.25', 'v=10.25']);
+    expect(executeCommandLine(floats, ':sort f').lines).toEqual(['v=-2.5', 'v=2.25', 'v=10.25', 'v=10.5']);
+
+    const hex = createState(['0x20', '0x0a', '0xff', '0x10']);
+    expect(executeCommandLine(hex, ':sort x').lines).toEqual(['0x0a', '0x10', '0x20', '0xff']);
+
+    const oct = createState(['020', '07', '0100', '010']);
+    expect(executeCommandLine(oct, ':sort o').lines).toEqual(['07', '010', '020', '0100']);
+
+    const bin = createState(['0b1010', '0b10', '0b111', '0b1']);
+    expect(executeCommandLine(bin, ':sort b').lines).toEqual(['0b1', '0b10', '0b111', '0b1010']);
+  });
+
+  it(':sort /pat/ 는 매치 뒤의 텍스트 기준으로 정렬하고 미매치 줄은 오름차순 앞/내림차순 뒤에 둔다', () => {
+    const state = createState([
+      'header line',
+      'user: zoe',
+      'user: amy',
+      'user: bob',
+    ]);
+    const asc = executeCommandLine(state, ':sort /user: /');
+    expect(asc.lines).toEqual([
+      'header line',
+      'user: amy',
+      'user: bob',
+      'user: zoe',
+    ]);
+
+    const desc = executeCommandLine(state, ':sort! /user: /');
+    expect(desc.lines).toEqual([
+      'user: zoe',
+      'user: bob',
+      'user: amy',
+      'header line',
+    ]);
+  });
+
+  it(':sort /pat/ n 과 :sort r /pat/ 및 :sort! /pat/ r n 을 정확히 정렬한다', () => {
+    const afterNum = createState([
+      'task#10: high',
+      'task#2: low',
+      'task#30: mid',
+    ]);
+    expect(executeCommandLine(afterNum, ':sort /#/ n').lines).toEqual([
+      'task#2: low',
+      'task#10: high',
+      'task#30: mid',
+    ]);
+
+    const matchedKey = createState([
+      'a score=20',
+      'b score=100',
+      'c score=5',
+    ]);
+    expect(executeCommandLine(matchedKey, ':sort! /score=\\d\\+/ r n').lines).toEqual([
+      'b score=100',
+      'a score=20',
+      'c score=5',
+    ]);
+
+    const matchedText = createState([
+      '2024 [WARN] disk',
+      '2024 [ERR] crash',
+      '2024 [INFO] ok',
+    ]);
+    expect(executeCommandLine(matchedText, ':sort r /\\[\\w\\+\\]/').lines).toEqual([
+      '2024 [ERR] crash',
+      '2024 [INFO] ok',
+      '2024 [WARN] disk',
+    ]);
+  });
+
+  it('잘못된 정렬 인자 또는 깨진 패턴은 E475 와 bell 을 반환한다', () => {
+    const state = createState(['b', 'a']);
+    const badOpt = executeCommandLine(state, ':sort z');
+    expect(badOpt.bell).toBe(true);
+    expect(badOpt.commandMessage).toContain('E475');
+    expect(badOpt.lines).toEqual(['b', 'a']);
+  });
+});
+
+describe('Ex Command: :[range]r[ead] {file}', () => {
+  it(':r {file} 은 현재 줄 아래에 VFS 파일을 삽입하고 첫 삽입 줄 col 0 에 커서를 둔다', () => {
+    const state: VimEditorState = {
+      ...createState(['// top', '// bottom'], { line: 0, col: 3 }),
+      primaryFilename: 'app.ts',
+      virtualFiles: {
+        'snippets/header.ts': ['export const VER = 1;', 'export const ENV = "prod";'],
+      },
+    };
+    const result = executeCommandLine(state, ':r snippets/header.ts');
+    expect(result.lines).toEqual([
+      '// top',
+      'export const VER = 1;',
+      'export const ENV = "prod";',
+      '// bottom',
+    ]);
+    expect(result.cursor).toEqual({ line: 1, col: 0 });
+    expect(result.commandMessage).toContain('snippets/header.ts');
+    expect(result.commandMessage).toContain('2');
+
+    // u 로 한 번에 되돌리기 가능
+    const undone = handleKey(result, 'u');
+    expect(undone.lines).toEqual(['// top', '// bottom']);
+  });
+
+  it(':0r 는 파일 맨 위(1번째 줄 앞)에 삽입하고, :$r 는 맨 끝에 삽입한다', () => {
+    const state: VimEditorState = {
+      ...createState(['middle'], { line: 0, col: 2 }),
+      virtualFiles: {
+        'head.txt': ['HEADER_1', 'HEADER_2'],
+        'foot.txt': ['FOOTER'],
+      },
+    };
+
+    const prepended = executeCommandLine(state, ':0r ./head.txt');
+    expect(prepended.lines).toEqual(['HEADER_1', 'HEADER_2', 'middle']);
+    expect(prepended.cursor).toEqual({ line: 0, col: 0 });
+
+    const appended = executeCommandLine(prepended, ':$r foot.txt');
+    expect(appended.lines).toEqual(['HEADER_1', 'HEADER_2', 'middle', 'FOOTER']);
+    expect(appended.cursor).toEqual({ line: 3, col: 0 });
+  });
+
+  it(':r (인자 없음) / :r % / :r # 및 E194 / E484 에러와 영어 메시지를 처리한다', () => {
+    const base: VimEditorState = {
+      ...createState(['line A', 'line B'], { line: 0, col: 0 }),
+      primaryFilename: 'main.ts',
+      secondaryFilename: 'alt.ts',
+      secondaryLines: ['// alt 1', '// alt 2'],
+    };
+
+    const readSelf = executeCommandLine(base, ':re');
+    expect(readSelf.lines).toEqual(['line A', 'line A', 'line B', 'line B']);
+
+    const readAlt = executeCommandLine(base, ':rea #');
+    expect(readAlt.lines).toEqual(['line A', '// alt 1', '// alt 2', 'line B']);
+
+    const noAlt = executeCommandLine({ ...base, secondaryFilename: undefined, secondaryLines: undefined }, ':r #');
+    expect(noAlt.bell).toBe(true);
+    expect(noAlt.commandMessage).toContain('E194');
+
+    const missing = executeCommandLine(base, ':read nonexistent.ts');
+    expect(missing.bell).toBe(true);
+    expect(missing.commandMessage).toContain('E484');
+
+    configureVimEngine({ locale: 'en' });
+    try {
+      const enErr = executeCommandLine(base, ':r missing.txt');
+      expect(enErr.commandMessage).toBe('E484: Can\'t open file "missing.txt"');
+      const enOk = executeCommandLine(base, ':read #');
+      expect(enOk.commandMessage).toBe('"alt.ts" 2 lines read');
+    } finally {
+      configureVimEngine({ locale: 'ko' });
+    }
   });
 });

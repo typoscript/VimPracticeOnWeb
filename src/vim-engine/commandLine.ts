@@ -106,6 +106,7 @@ import { formatRegisters } from './registers';
 import { executeSetCommand } from './setEngine';
 import { retabRange } from './formatEngine';
 import { sourceScript } from './sourceEngine';
+import { buildVfsMap, getVfsFile } from './vfs';
 import { executeMakeSession } from './sessionEngine';
 import {
   executeAutocmdCommand,
@@ -539,6 +540,7 @@ export function extractRangeAndCommand(
   hasRange: boolean;
   command: string;
   error?: string;
+  isLineZero?: boolean;
 } {
   const raw = rawInput.replace(/^:\s*/, '').trimStart();
   const totalLines = state.lines.length;
@@ -613,6 +615,7 @@ export function extractRangeAndCommand(
       range: { startLine: targetLine, endLine: targetLine },
       hasRange: true,
       command: cmd,
+      isLineZero: res1.line === -1,
     };
   }
 }
@@ -2776,11 +2779,23 @@ export function executeCommandLine(
     return executeRangeNorm(state, targetRange, normMatch[2], trimmed, keyRunner);
   }
 
-  // 4-6. 정렬: :[range]sort, :sort
-  const sortMatch = cmdTrimmed.match(/^sort(!?)(?:\s+(.*))?$/);
+  // 4-6. 정렬: :[range]sort[!] [i][u][n|f|x|o|b][r] [/{pattern}/]
+  const sortMatch = cmdTrimmed.match(/^sort(!?)(?:\s+(.*)|([/!#@?,].*))?$/);
   if (sortMatch) {
     const targetRange = range ?? fullBufferRange;
-    return executeSort(state, targetRange, sortMatch[1], sortMatch[2]);
+    const rawArgs = [sortMatch[2], sortMatch[3]].filter(Boolean).join(' ');
+    return executeSort(state, targetRange, sortMatch[1], rawArgs);
+  }
+
+  // 4-6-0. 파일 읽기 삽입: :[range]r[ead] [file] (:0r, :$r, :r %, :r # 지원)
+  const readMatch = cmdTrimmed.match(/^r(?:e(?:ad?)?)?(?:\s+(.*))?$/);
+  if (readMatch) {
+    const insertAfterLine = hasRange
+      ? extracted.isLineZero
+        ? -1
+        : (range?.endLine ?? state.cursor.line)
+      : state.cursor.line;
+    return executeRead(state, insertAfterLine, readMatch[1]);
   }
 
   // 4-6-1. 탭/공백 일괄 변환: :[range]ret[ab][!] [N]
@@ -2815,16 +2830,16 @@ export function executeCommandLine(
     };
   }
 
-  // 4-7. 이동: :[range]m {address}, :m {address}
-  // :m0 / :t. 처럼 공백 없이 주소를 바로 붙여 쓸 수 있습니다 (주소 문자가 올 때만, :marks 등과 구분)
-  const moveMatch = cmdTrimmed.match(/^(?:m|move)(?=\s|[\d.$+\-'])\s*(.*)$/);
+  // 4-7. 이동: :[range]m[ove] {address}
+  // :m0 / :t. / :1cop /pat/ 처럼 공백 없이 주소를 바로 붙여 쓸 수 있습니다
+  const moveMatch = cmdTrimmed.match(/^(?:m|mo|mov|move)(?:(?=\s|[\d.$+\-'/?])|$)\s*(.*)$/);
   if (moveMatch) {
     const targetRange = range ?? currentLineRange;
     return executeMove(state, targetRange, moveMatch[1]);
   }
 
-  // 4-8. 복제: :[range]t {address}, :t {address}, :co, :copy
-  const copyMatch = cmdTrimmed.match(/^(?:t|co|copy)(?=\s|[\d.$+\-'])\s*(.*)$/);
+  // 4-8. 복제: :[range]t {address}, :co[py] {address}
+  const copyMatch = cmdTrimmed.match(/^(?:t|co|cop|copy)(?:(?=\s|[\d.$+\-'/?])|$)\s*(.*)$/);
   if (copyMatch) {
     const targetRange = range ?? currentLineRange;
     return executeCopy(state, targetRange, copyMatch[1]);
@@ -2842,8 +2857,138 @@ export function executeCommandLine(
   };
 }
 
+interface ParsedSortOptions {
+  descending: boolean;
+  ignoreCase: boolean;
+  unique: boolean;
+  numericMode: 'n' | 'f' | 'x' | 'o' | 'b' | null;
+  matchPatternText: boolean;
+  hasPattern: boolean;
+  pattern: string;
+  error?: string;
+}
+
+function parseSortOptions(bang: string, argsStr?: string): ParsedSortOptions {
+  const opts: ParsedSortOptions = {
+    descending: bang === '!',
+    ignoreCase: false,
+    unique: false,
+    numericMode: null,
+    matchPatternText: false,
+    hasPattern: false,
+    pattern: '',
+  };
+
+  const raw = (argsStr ?? '').trim();
+  let i = 0;
+
+  while (i < raw.length) {
+    const ch = raw[i];
+    if (/\s/.test(ch)) {
+      i++;
+      continue;
+    }
+    if (ch === '!') {
+      opts.descending = true;
+      i++;
+      continue;
+    }
+    if (ch === 'i') {
+      opts.ignoreCase = true;
+      i++;
+      continue;
+    }
+    if (ch === 'u') {
+      opts.unique = true;
+      i++;
+      continue;
+    }
+    if (ch === 'n' || ch === 'f' || ch === 'x' || ch === 'o' || ch === 'b') {
+      opts.numericMode = ch;
+      i++;
+      continue;
+    }
+    if (ch === 'r') {
+      opts.matchPatternText = true;
+      i++;
+      continue;
+    }
+    if (!opts.hasPattern && /[^a-zA-Z0-9_\s]/.test(ch)) {
+      const delim = ch;
+      i++;
+      let pat = '';
+      let closed = false;
+      while (i < raw.length) {
+        const cur = raw[i];
+        if (cur === '\\' && i + 1 < raw.length) {
+          const next = raw[i + 1];
+          if (next === delim || next === '\\') {
+            pat += next === '\\' ? '\\\\' : delim;
+            i += 2;
+            continue;
+          }
+          pat += '\\' + next;
+          i += 2;
+          continue;
+        }
+        if (cur === delim) {
+          closed = true;
+          i++;
+          break;
+        }
+        pat += cur;
+        i++;
+      }
+      if (!closed) {
+        opts.error = msg('E475: 잘못된 정렬 인자입니다: {arg}', { arg: raw });
+        return opts;
+      }
+      opts.hasPattern = true;
+      opts.pattern = pat;
+      continue;
+    }
+
+    opts.error = msg('E475: 잘못된 정렬 인자입니다: {arg}', { arg: raw.slice(i) });
+    return opts;
+  }
+
+  return opts;
+}
+
+function extractSortNumber(subject: string, mode: 'n' | 'f' | 'x' | 'o' | 'b'): number | null {
+  if (mode === 'n') {
+    const m = subject.match(/[-+]?\d+/);
+    return m ? parseInt(m[0], 10) : null;
+  }
+  if (mode === 'f') {
+    const m = subject.match(/[-+]?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?/);
+    if (!m) return null;
+    const val = parseFloat(m[0]);
+    return Number.isNaN(val) ? null : val;
+  }
+  if (mode === 'x') {
+    const m = subject.match(/([-+]?)(?:0[xX])?([0-9a-fA-F]+)/);
+    if (!m) return null;
+    const val = parseInt(m[2], 16);
+    if (Number.isNaN(val)) return null;
+    return m[1] === '-' ? -val : val;
+  }
+  if (mode === 'o') {
+    const m = subject.match(/([-+]?)(?:0[oO])?([0-7]+)/);
+    if (!m) return null;
+    const val = parseInt(m[2], 8);
+    if (Number.isNaN(val)) return null;
+    return m[1] === '-' ? -val : val;
+  }
+  const m = subject.match(/([-+]?)(?:0[bB])?([01]+)/);
+  if (!m) return null;
+  const val = parseInt(m[2], 2);
+  if (Number.isNaN(val)) return null;
+  return m[1] === '-' ? -val : val;
+}
+
 /**
- * [range]sort [u][!] [n] 명령어를 실행합니다.
+ * [range]sort[!] [i][u][n|f|x|o|b][r] [/{pattern}/] 명령어를 실행합니다.
  */
 export function executeSort(
   state: VimEditorState,
@@ -2858,57 +3003,132 @@ export function executeSort(
     return { ...state, mode: 'NORMAL', commandBuffer: undefined, commandType: undefined };
   }
 
-  const stateWithUndo = pushUndoSnapshot(state);
-  const flags = (argsStr ?? '').trim();
-  const isDescending = bang === '!' || flags.includes('!');
-  const isUnique = flags.includes('u');
-  const isNumeric = flags.includes('n');
+  const parsed = parseSortOptions(bang, argsStr);
+  if (parsed.error) {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: parsed.error,
+      bell: true,
+    };
+  }
 
+  let patternRegex: RegExp | null = null;
+  if (parsed.hasPattern) {
+    const effectivePat = parsed.pattern || state.lastSearchQuery || '';
+    if (effectivePat) {
+      try {
+        patternRegex = compileVimRegex(effectivePat, {
+          ignorecase: parsed.ignoreCase,
+          smartcase: false,
+          lastSubstitute: state.lastSubstitute?.replacement,
+        });
+      } catch {
+        return {
+          ...state,
+          mode: 'NORMAL',
+          visualAnchor: undefined,
+          commandBuffer: undefined,
+          commandType: undefined,
+          commandMessage: msg('E475: 잘못된 정렬 인자입니다: {arg}', { arg: parsed.pattern }),
+          bell: true,
+        };
+      }
+    }
+  }
+
+  const stateWithUndo = pushUndoSnapshot(state);
   const selectedLines = state.lines.slice(minLine, maxLine + 1);
 
-  const extractNumber = (line: string): number | null => {
-    const m = line.match(/-?\d+/);
-    return m ? parseInt(m[0], 10) : null;
-  };
+  const indexed = selectedLines.map((line, idx) => {
+    let matched = true;
+    let subject = line;
 
-  // 안정 정렬(Stable Sort)을 위해 원본 인덱스 유지
-  const indexed = selectedLines.map((line, idx) => ({ line, idx }));
+    if (parsed.hasPattern && patternRegex) {
+      patternRegex.lastIndex = 0;
+      const m = patternRegex.exec(line);
+      if (!m) {
+        matched = false;
+        subject = '';
+      } else {
+        subject = parsed.matchPatternText ? m[0] : line.slice(m.index + m[0].length);
+      }
+    }
+
+    const numVal =
+      matched && parsed.numericMode
+        ? extractSortNumber(subject, parsed.numericMode)
+        : null;
+
+    return { line, idx, matched, subject, numVal };
+  });
 
   indexed.sort((a, b) => {
-    if (isNumeric) {
-      const numA = extractNumber(a.line);
-      const numB = extractNumber(b.line);
-      if (numA !== null && numB !== null) {
-        if (numA !== numB) {
-          return isDescending ? numB - numA : numA - numB;
+    if (a.matched !== b.matched) {
+      if (parsed.descending) {
+        return a.matched ? -1 : 1;
+      }
+      return a.matched ? 1 : -1;
+    }
+
+    if (!a.matched && !b.matched) {
+      return a.idx - b.idx;
+    }
+
+    if (parsed.numericMode) {
+      if (a.numVal !== null && b.numVal !== null) {
+        if (a.numVal !== b.numVal) {
+          return parsed.descending ? b.numVal - a.numVal : a.numVal - b.numVal;
         }
-      } else if (numA !== null) {
-        return isDescending ? 1 : -1;
-      } else if (numB !== null) {
-        return isDescending ? -1 : 1;
+      } else if (a.numVal !== null) {
+        return parsed.descending ? -1 : 1;
+      } else if (b.numVal !== null) {
+        return parsed.descending ? 1 : -1;
       }
       return a.idx - b.idx;
     }
 
-    const cmp = a.line.localeCompare(b.line);
+    const sa = parsed.ignoreCase ? a.subject.toLowerCase() : a.subject;
+    const sb = parsed.ignoreCase ? b.subject.toLowerCase() : b.subject;
+    const cmp = sa.localeCompare(sb);
     if (cmp !== 0) {
-      return isDescending ? -cmp : cmp;
+      return parsed.descending ? -cmp : cmp;
     }
     return a.idx - b.idx;
   });
 
-  const sortedLines = indexed.map((item) => item.line);
+  const isSameSortKey = (a: (typeof indexed)[number], b: (typeof indexed)[number]): boolean => {
+    if (a.matched !== b.matched) return false;
+    if (!a.matched && !b.matched) {
+      return (parsed.ignoreCase ? a.line.toLowerCase() === b.line.toLowerCase() : a.line === b.line);
+    }
+    if (parsed.numericMode) {
+      if (a.numVal !== null && b.numVal !== null) return a.numVal === b.numVal;
+      if (a.numVal !== null || b.numVal !== null) return false;
+    }
+    if (!parsed.hasPattern && !parsed.ignoreCase && !parsed.numericMode) {
+      return a.line === b.line;
+    }
+    return parsed.ignoreCase
+      ? a.subject.toLowerCase() === b.subject.toLowerCase()
+      : a.subject === b.subject;
+  };
 
   let finalLines: string[];
-  if (isUnique) {
+  if (parsed.unique) {
     finalLines = [];
-    for (let i = 0; i < sortedLines.length; i++) {
-      if (i === 0 || sortedLines[i] !== sortedLines[i - 1]) {
-        finalLines.push(sortedLines[i]);
+    let lastKept: (typeof indexed)[number] | null = null;
+    for (const item of indexed) {
+      if (!lastKept || !isSameSortKey(lastKept, item)) {
+        finalLines.push(item.line);
+        lastKept = item;
       }
     }
   } else {
-    finalLines = sortedLines;
+    finalLines = indexed.map((item) => item.line);
   }
 
   const newLines = [
@@ -2940,6 +3160,110 @@ export function executeSort(
 }
 
 /**
+ * :[range]r[ead] [file] 명령어를 실행하여 VFS 또는 열린 버퍼의 내용을 지정 줄 아래에 삽입합니다.
+ * :0r 은 첫 줄 위(인덱스 0), :$r 은 파일 끝, 인자 없음/:r % 는 현재 파일, :r # 는 대안 버퍼를 삽입합니다.
+ */
+export function executeRead(
+  state: VimEditorState,
+  insertAfterLine: number,
+  rawArg?: string
+): VimEditorState {
+  const arg = (rawArg ?? '').trim();
+  const vfs = buildVfsMap(state);
+  let targetLines: string[] | undefined;
+  let displayName = arg;
+
+  if (!arg || arg === '%') {
+    displayName = state.primaryFilename || '%';
+    if (arg === '%' || !state.primaryFilename) {
+      targetLines = [...state.lines];
+    } else {
+      targetLines =
+        getVfsFile(state.netrw?.files, state.primaryFilename, state.virtualFiles) ??
+        vfs[state.primaryFilename] ??
+        [...state.lines];
+    }
+  } else if (arg === '#') {
+    const altBuf = state.alternateBufferId
+      ? state.buffers?.find((b) => b.id === state.alternateBufferId)
+      : undefined;
+    if (altBuf) {
+      displayName = altBuf.name;
+      targetLines = [...altBuf.lines];
+    } else if (state.secondaryFilename && state.secondaryLines) {
+      displayName = state.secondaryFilename;
+      targetLines = [...state.secondaryLines];
+    } else {
+      return {
+        ...state,
+        mode: 'NORMAL',
+        visualAnchor: undefined,
+        commandBuffer: undefined,
+        commandType: undefined,
+        commandMessage: msg('E194: 대체 파일 이름이 없습니다 (#)'),
+        bell: true,
+      };
+    }
+  } else {
+    const normalized = arg.replace(/^\.\//, '');
+    targetLines =
+      vfs[arg] ??
+      vfs[normalized] ??
+      getVfsFile(state.netrw?.files, arg, state.virtualFiles) ??
+      getVfsFile(state.netrw?.files, normalized, state.virtualFiles);
+    if (!targetLines) {
+      const basenameMatches = Object.keys(vfs).filter((k) => k.split('/').pop() === normalized);
+      if (basenameMatches.length === 1) {
+        displayName = basenameMatches[0];
+        targetLines = vfs[displayName];
+      }
+    }
+  }
+
+  if (!targetLines) {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: msg('E484: "{filename}" 파일을 열 수 없습니다', { filename: arg }),
+      bell: true,
+    };
+  }
+
+  const linesToInsert = [...targetLines];
+  const stateWithUndo = pushUndoSnapshot(state);
+  const insertIndex = Math.max(0, Math.min(state.lines.length, insertAfterLine + 1));
+
+  const newLines = [
+    ...state.lines.slice(0, insertIndex),
+    ...linesToInsert,
+    ...state.lines.slice(insertIndex),
+  ];
+
+  const nextCursor = clampCursor(
+    newLines,
+    { line: Math.min(insertIndex, Math.max(0, newLines.length - 1)), col: 0 },
+    'NORMAL'
+  );
+
+  return {
+    ...stateWithUndo,
+    lines: newLines,
+    cursor: nextCursor,
+    mode: 'NORMAL',
+    visualAnchor: undefined,
+    commandBuffer: undefined,
+    commandType: undefined,
+    commandMessage: msg('"{filename}" {count}줄 읽음', {
+      filename: displayName,
+      count: linesToInsert.length,
+    }),
+  };
+}
+
+/**
  * :[range]m[ove] {address} 명령어를 실행합니다.
  */
 export function executeMove(
@@ -2947,7 +3271,8 @@ export function executeMove(
   range: { startLine: number; endLine: number },
   destStr: string
 ): VimEditorState {
-  const targetLine = parseAddress(destStr, state);
+  const destTrimmed = destStr.trim();
+  const targetLine = destTrimmed ? parseAddress(destTrimmed, state) : null;
   if (targetLine === null) {
     return {
       ...state,
@@ -2956,6 +3281,7 @@ export function executeMove(
       commandBuffer: undefined,
       commandType: undefined,
       commandMessage: msg('E14: 잘못된 주소입니다: {destStr}', { destStr }),
+      bell: true,
     };
   }
 
@@ -2971,6 +3297,7 @@ export function executeMove(
       commandBuffer: undefined,
       commandType: undefined,
       commandMessage: 'E134: Cannot move a range of lines into itself',
+      bell: true,
     };
   }
 
@@ -3023,7 +3350,8 @@ export function executeCopy(
   range: { startLine: number; endLine: number },
   destStr: string
 ): VimEditorState {
-  const targetLine = parseAddress(destStr, state);
+  const destTrimmed = destStr.trim();
+  const targetLine = destTrimmed ? parseAddress(destTrimmed, state) : null;
   if (targetLine === null) {
     return {
       ...state,
@@ -3032,6 +3360,7 @@ export function executeCopy(
       commandBuffer: undefined,
       commandType: undefined,
       commandMessage: msg('E14: 잘못된 주소입니다: {destStr}', { destStr }),
+      bell: true,
     };
   }
 
