@@ -1,4 +1,10 @@
-export type DojoDrillType = 'relative-jump' | 'ft-sniper' | 'word-jump' | 'sudden-death' | 'pro-master';
+export type DojoDrillType =
+  | 'relative-jump'
+  | 'ft-sniper'
+  | 'word-jump'
+  | 'sudden-death'
+  | 'pro-master'
+  | 'weakness-custom';
 
 export interface DojoLeaderboardEntry {
   id: string;

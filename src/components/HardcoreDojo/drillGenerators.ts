@@ -44,6 +44,13 @@ export const DOJO_DRILL_METAS: Record<string, DojoDrillMeta> = localized({
     description: '텍스트 객체(ci", di(), cit), 단어 대소문자(gU), 인덴트(>>), 라인 합치기(J) 등 실무 핵심 10문제를 최단 키로 격파하세요!',
     keyInstructions: '실무 프로 10연타! 최적의 Vim 텍스트 객체와 연산자로 목표 코드를 완성하세요.',
   },
+  'weakness-custom': {
+    id: 'weakness-custom',
+    title: '약점 집중 맞춤 드릴',
+    badge: '🧬 Weakness Fix',
+    description: '숙련도 레이더와 안티패턴 감지 통계를 분석해 가장 약한 모션·연산자 10문제를 맞춤 출제합니다.',
+    keyInstructions: '나의 약점 집중 교정 코스! 최적의 단축키와 모션으로 10문제를 완주하세요.',
+  },
 });
 
 export function generateSuddenDeathProblem(combo = 0): DojoProblem {

@@ -85,4 +85,27 @@ describe('AnalyticsModal 컴포넌트', () => {
     fireEvent.click(keyJ);
     expect(screen.getByText(/2회 타건/i)).toBeDefined();
   });
+
+  it('약점 맞춤 드릴 추천 카드와 바로 시작 버튼이 정상 동작한다', () => {
+    recordAntiPatternDetection('A 키 하나로 줄 끝 이동과 입력 모드 진입을 한 번에 할 수 있습니다!');
+    recordAntiPatternDetection('A 키 하나로 줄 끝 이동과 입력 모드 진입을 한 번에 할 수 있습니다!');
+    const onClose = vi.fn();
+    const onStartWeaknessDrill = vi.fn();
+
+    render(
+      <AnalyticsModal
+        isOpen={true}
+        onClose={onClose}
+        progress={{}}
+        onStartWeaknessDrill={onStartWeaknessDrill}
+      />
+    );
+
+    expect(screen.getByTestId('analytics-weakness-recommendation')).toBeDefined();
+    const startBtn = screen.getByTestId('analytics-start-weakness-drill-btn');
+    fireEvent.click(startBtn);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onStartWeaknessDrill).toHaveBeenCalledTimes(1);
+  });
 });

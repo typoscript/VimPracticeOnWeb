@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 131개 테스트 파일, 1,693개 테스트 100% 통과 필수)*
+  *(현재 132개 테스트 파일, 1,699개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -129,9 +129,12 @@
 - **텍스트 포매팅 `gq`/`gw` & `:set textwidth` & `:retab` (레슨 80, `src/vim-engine/formatEngine.ts`)**: `gq{motion}`/`gqq`/`gqgq`/`[count]gqq`/`gqip`/`gqap`/Visual `gq` 가 `textwidth`(`tw`, 0 이면 79열) 폭으로 문단을 다시 채우고 커서를 마지막 포매팅 줄 첫 비공백에 놓으며, `gw` 는 커서를 같은 글자 위에 유지합니다. Neovim 기본값(autoindent, `comments=//,b:#,:%,n:>,fb:-`) 기준: 첫 줄 들여쓰기를 모든 줄에 적용, 빈 줄(공백·리더만 있는 줄)은 문단 경계, 주석 리더(`//`, `# `, `% `, `> `)는 유지하며 리더가 다른 줄은 별도 문단, `- ` 목록은 항목마다 문단이고 이어지는 줄은 항목 글자 뒤로 정렬, 줄 내부 연속 공백 보존, 폭보다 긴 단어는 나누지 않음. `.` 반복·Undo·`pushUndoSnapshot` 지원. `:[range]ret[ab][!] [N]` 은 Vim `ex_retab` 와 같은 규칙(탭이 든 공백 구간만, `!` 는 2칸 이상 공백도, `expandtab` 에 따라 공백/탭 재배치, `N` 은 새 `tabstop` 적용)으로 변환합니다. 모든 기대 동작은 `nvim --headless` 로 대조했습니다.
 - **뷰포트 스크롤(`Ctrl-f/b/e/y`, `:set scrolloff`) & 정밀 붙여넣기(`]p`, `[p`, `]P`, `[P`, `gp`, `gP`) (레슨 81, `src/vim-engine/viewport.ts`, `registers.ts`, `setEngine.ts`)**: Normal/Visual 모드 페이지 스크롤(`Ctrl-f`/`Ctrl-b`, `visibleRows - 2`줄) 및 커서 유지 단일 줄 스크롤(`Ctrl-e`/`Ctrl-y`) + `[count]` 지원, `:set scrolloff`/`so` 여백 자동 유지(`adjustViewport`, `zt`/`zb`/`H`/`L` 연계). 줄 단위 붙여넣기 시 현재 줄 들여쓰기에 상대 인덴트를 자동 정렬하는 `]p`/`[p`/`]P`/`[P`(`expandtab`·`tabstop` 반영), 붙여넣은 텍스트 바로 뒤(줄 단위는 다음 줄 `col: 0`)로 커서를 이동하는 `gp`/`gP`, `[count]`·`.` 반복·`E353` 에러 일관성 지원.
 - **입력/명령행 자동 약어 엔진 (`:iabbrev`, `:cabbrev`, `:abbrev`, `:inoreabbrev`, `:cnoreabbrev`, `:noreabbrev`, `:unabbrev`, `:abclear`, `Ctrl-]`, `Ctrl-v`) (레슨 82, `src/vim-engine/abbrevEngine.ts`, `vimEngine.ts`, `commandLine.ts`, `sourceEngine.ts`)**: Vim 단어 경계 규칙(`ateh` 미확장·`-teh` 확장·비단어 시작 `@e` 공백 경계), 트리거 키(`Space`, 구두점, `Enter`, `Tab`, `Esc`), `Ctrl-]` 무문자 수동 확장, `Ctrl-v` 다음 문자 리터럴 억제, RHS 특수 키 시퀀스(`<CR>`, `<Left>`, `<Esc>`) 실행, 비재귀(`nore`) 및 재귀 연쇄 확장, `:cunabbrev` 자기 보호, `.vimrc` 소싱 및 `.` 도트 반복 일관성 지원.
+- **약점 기반 맞춤 드릴 생성 (`AnalyticsModal` × `HardcoreDojo`, `src/utils/weaknessDrillAnalyzer.ts`, `AnalyticsModal.tsx`, `HardcoreDojo.tsx`)**: 타건 통계·안티패턴 감지 횟수·5각형 숙련도 점수를 분석(`analyzeWeaknesses`, `buildWeaknessDrillPlan`)해 상위 3개 약점(`navigation`, `targeting`, `textObjects`, `lineEndOps`, `lineStartOps`, `wordReplace`)을 5:3:2 비중의 10문제 맞춤 드릴 세트로 구성합니다. `AnalyticsModal` 에서 진단 배지와 `약점 맞춤 드릴 바로 시작 →` 원클릭 이동을 제공하고, `HardcoreDojo` 의 `weakness-custom` 탭에서 안티패턴 전용 교정 문제(`A/C/D`, `I`, `ciw/dw`) 및 통계 재분석·완주 요약을 지원합니다.
 
 ---
 
 ## 5. 다음 개발 로드맵 추천 후보
 에이전트에게 다음 작업을 지시할 때 아래 항목 중에서 지정하시면 됩니다:
-1. **약점 기반 맞춤 드릴 생성 (`AnalyticsModal` × `HardcoreDojo`)**: 타건 통계/히트맵 데이터를 바탕으로 실수율 높은 모션·텍스트 객체 맞춤 연습 세트 자동 생성.
+1. **Visual 모드 고급 편집 (`o` / `O`, `g Ctrl-g`, `gJ`, `Ctrl-v` `A`/`c`) + 레슨 83**: Visual/Visual Block 커서-앵커 반전, 공백 없는 줄 병합 `gJ`, 선택 영역 통계 `g Ctrl-g`, 블록 줄 끝 추가/변경 완성도 보강.
+2. **고급 Ex 정렬·파일 삽입 (`:read`, `:sort n / ! / /pat/`, `:copy`/`:move`) + 레슨 83**: VFS 파일 삽입 `:read` 및 숫자·역순·패턴 기준 정렬 옵션 지원.
+3. **엔진 구조 분할 & 메인 번들 청크 최적화**: `vimEngine.ts` 모드별 모듈 분리 및 프로덕션 메인 번들(`index`) 코드 분할 경량화.

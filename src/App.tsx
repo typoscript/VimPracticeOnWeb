@@ -162,6 +162,10 @@ export function App() {
   const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [isBYOCModalOpen, setIsBYOCModalOpen] = useState(false);
+  const [dojoInitialDrill, setDojoInitialDrill] = useState<{
+    drill: 'weakness-custom';
+    nonce: number;
+  } | null>(null);
   // 지연 로딩 모달: 처음 열 때 불러오고 이후에는 마운트 유지
   const customModalLoaded = useOpenedOnce(isCustomModalOpen);
   const analyticsModalLoaded = useOpenedOnce(isAnalyticsModalOpen);
@@ -1817,6 +1821,8 @@ export function App() {
               onBackToCourse={() => handleSwitchTab('course')}
               playKeySound={playKeySound}
               playSuccessSound={playSuccessSound}
+              initialDrill={dojoInitialDrill}
+              analyticsProgress={progress}
             />
           </Suspense>
         ) : (
@@ -2435,6 +2441,10 @@ export function App() {
             onClose={() => setIsAnalyticsModalOpen(false)}
             progress={progress}
             onOpenDailyChallenge={() => setIsDailyModalOpen(true)}
+            onStartWeaknessDrill={() => {
+              setDojoInitialDrill({ drill: 'weakness-custom', nonce: Date.now() });
+              handleSwitchTab('dojo');
+            }}
           />
         )}
 

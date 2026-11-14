@@ -179,4 +179,38 @@ describe('HardcoreDojo Component', () => {
     // 콤보가 1 / 10 으로 증가해야 함
     expect(screen.getByText('1 / 10')).toBeInTheDocument();
   });
+
+  it('약점 집중 맞춤 드릴 탭과 initialDrill 진입 시 약점 기반 문제 세트를 구성하고 풀이할 수 있다', () => {
+    localStorage.setItem(
+      'vim_user_analytics_v1',
+      JSON.stringify({
+        totalKeystrokes: 50,
+        keyFrequencies: { h: 20, j: 20 },
+        antiPatternCounts: { '$ 후 a (대문자 A 권장)': 5 },
+        totalAntiPatternsTriggered: 5,
+        arcadeBestScore: 0,
+        arcadeHighestWave: 0,
+        arcadeMaxCombo: 0,
+        arcadeGamesPlayed: 0,
+        dailyStreak: 0,
+        dailyRecords: {},
+      })
+    );
+
+    render(<HardcoreDojo initialDrill={{ drill: 'weakness-custom', nonce: 1 }} />);
+
+    expect(screen.getByTestId('dojo-weakness-plan-box')).toBeInTheDocument();
+    expect(screen.getByText(/줄 끝 단축 연산/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('dojo-weakness-start-btn'));
+    expect(screen.getByText('0 / 10')).toBeInTheDocument();
+
+    // 첫 문제: const ready = true -> A;<Esc>
+    const arena = screen.getByLabelText('Dojo Editor Arena');
+    fireEvent.keyDown(arena, { key: 'A' });
+    fireEvent.keyDown(arena, { key: ';' });
+    fireEvent.keyDown(arena, { key: 'Escape' });
+
+    expect(screen.getByText('1 / 10')).toBeInTheDocument();
+  });
 });

@@ -25,7 +25,13 @@ import {
   DojoHighScore,
   loadDojoLeaderboard,
   saveDojoLeaderboardEntry,
+  LessonProgress,
 } from '../../utils/storage';
+import { loadUserAnalytics } from '../../utils/analyticsStorage';
+import {
+  buildWeaknessDrillPlan,
+  WeaknessDrillPlan,
+} from '../../utils/weaknessDrillAnalyzer';
 import './HardcoreDojo.css';
 import { t } from '../../i18n';
 
@@ -33,17 +39,31 @@ export interface HardcoreDojoProps {
   onBackToCourse?: () => void;
   playKeySound?: (key: string, mode: VimMode) => void;
   playSuccessSound?: () => void;
+  initialDrill?: { drill: DojoDrillType; nonce: number } | null;
+  analyticsProgress?: LessonProgress;
 }
 
 export function HardcoreDojo({
   onBackToCourse,
   playKeySound,
   playSuccessSound,
+  initialDrill,
+  analyticsProgress,
 }: HardcoreDojoProps) {
-  const [selectedDrill, setSelectedDrill] = useState<DojoDrillType>('relative-jump');
+  const [selectedDrill, setSelectedDrill] = useState<DojoDrillType>(
+    initialDrill?.drill ?? 'relative-jump'
+  );
   const [gameState, setGameState] = useState<
-    'ready' | 'running' | 'finished' | 'sudden-death-failed' | 'sudden-death-cleared'
+    | 'ready'
+    | 'running'
+    | 'finished'
+    | 'sudden-death-failed'
+    | 'sudden-death-cleared'
+    | 'weakness-cleared'
   >('ready');
+  const [weaknessPlan, setWeaknessPlan] = useState<WeaknessDrillPlan>(() =>
+    buildWeaknessDrillPlan(loadUserAnalytics(), analyticsProgress ?? {})
+  );
   const [timeLeft, setTimeLeft] = useState<number>(30.0);
   const [score, setScore] = useState<number>(0);
   const [targetsHit, setTargetsHit] = useState<number>(0);
@@ -91,7 +111,8 @@ export function HardcoreDojo({
 
   // 문제 생성 헬퍼
   const createProblemForDrill = useCallback(
-    (drillType: DojoDrillType, targetCombo = 0): DojoProblem => {
+    (drillType: DojoDrillType, targetCombo = 0, planOverride?: WeaknessDrillPlan): DojoProblem => {
+      const activePlan = planOverride ?? weaknessPlan;
       switch (drillType) {
         case 'relative-jump':
           return generateRelativeJumpProblem();
@@ -103,9 +124,13 @@ export function HardcoreDojo({
           return generateSuddenDeathProblem(targetCombo);
         case 'pro-master':
           return generateProMasterProblem(targetCombo);
+        case 'weakness-custom': {
+          const idx = Math.max(0, targetCombo % activePlan.queue.length);
+          return activePlan.queue[idx].problem;
+        }
       }
     },
-    []
+    [weaknessPlan]
   );
 
   // 새 문제 로드 및 에디터 상태 초기화
@@ -128,6 +153,13 @@ export function HardcoreDojo({
     }
   }, []);
 
+  // 통계 기반 약점 플랜 재분석
+  const refreshWeaknessPlan = useCallback((): WeaknessDrillPlan => {
+    const freshPlan = buildWeaknessDrillPlan(loadUserAnalytics(), analyticsProgress ?? {});
+    setWeaknessPlan(freshPlan);
+    return freshPlan;
+  }, [analyticsProgress]);
+
   // 드릴 변경 시 준비 상태로 전환
   const handleSelectDrill = useCallback(
     (drillType: DojoDrillType) => {
@@ -137,11 +169,33 @@ export function HardcoreDojo({
       setCombo(0);
       setFinalTime(null);
       setSuddenDeathFailReason(null);
-      const prob = createProblemForDrill(drillType, 0);
+      const activePlan = drillType === 'weakness-custom' ? refreshWeaknessPlan() : weaknessPlan;
+      const prob = createProblemForDrill(drillType, 0, activePlan);
       loadProblem(prob);
     },
-    [gameState, createProblemForDrill, loadProblem]
+    [gameState, createProblemForDrill, loadProblem, refreshWeaknessPlan, weaknessPlan]
   );
+
+  // AnalyticsModal 등에서 특정 드릴로 진입 시 자동 선택/재분석
+  const lastInitialNonceRef = useRef<number | undefined>(initialDrill?.nonce);
+  useEffect(() => {
+    if (!initialDrill) return;
+    if (lastInitialNonceRef.current === initialDrill.nonce && selectedDrill === initialDrill.drill) {
+      return;
+    }
+    lastInitialNonceRef.current = initialDrill.nonce;
+    setSelectedDrill(initialDrill.drill);
+    setGameState('ready');
+    setCombo(0);
+    setScore(0);
+    setTargetsHit(0);
+    setKeystrokes(0);
+    setFinalTime(null);
+    setSuddenDeathFailReason(null);
+    const activePlan =
+      initialDrill.drill === 'weakness-custom' ? refreshWeaknessPlan() : weaknessPlan;
+    loadProblem(createProblemForDrill(initialDrill.drill, 0, activePlan));
+  }, [initialDrill, selectedDrill, refreshWeaknessPlan, weaknessPlan, createProblemForDrill, loadProblem]);
 
   // 게임 시작
   const startGame = useCallback(() => {
@@ -156,19 +210,25 @@ export function HardcoreDojo({
     setWarningMessage(null);
     hardcoreGuardRef.current.reset();
 
-    if (selectedDrill === 'sudden-death' || selectedDrill === 'pro-master') {
+    const activePlan = selectedDrill === 'weakness-custom' ? refreshWeaknessPlan() : weaknessPlan;
+
+    if (
+      selectedDrill === 'sudden-death' ||
+      selectedDrill === 'pro-master' ||
+      selectedDrill === 'weakness-custom'
+    ) {
       setTimeLeft(0.0);
     } else {
       setTimeLeft(30.0);
     }
 
-    const prob = createProblemForDrill(selectedDrill, 0);
+    const prob = createProblemForDrill(selectedDrill, 0, activePlan);
     loadProblem(prob);
 
     setGameState('running');
     startTimeRef.current = Date.now();
     arenaRef.current?.focus();
-  }, [selectedDrill, createProblemForDrill, loadProblem]);
+  }, [selectedDrill, createProblemForDrill, loadProblem, refreshWeaknessPlan, weaknessPlan]);
 
   // 카운트다운 또는 스피드런 타이머
   useEffect(() => {
@@ -181,7 +241,11 @@ export function HardcoreDojo({
       const now = Date.now();
       const elapsed = (now - (startTimeRef.current ?? now)) / 1000;
 
-      if (selectedDrill === 'sudden-death' || selectedDrill === 'pro-master') {
+      if (
+        selectedDrill === 'sudden-death' ||
+        selectedDrill === 'pro-master' ||
+        selectedDrill === 'weakness-custom'
+      ) {
         setTimeLeft(elapsed);
       } else {
         const remaining = Math.max(0, 30.0 - elapsed);
@@ -201,7 +265,12 @@ export function HardcoreDojo({
 
   // 게임 종료 시 고득점 계산 및 저장 (일반 드릴)
   useEffect(() => {
-    if (gameState === 'finished' && selectedDrill !== 'sudden-death') {
+    if (
+      gameState === 'finished' &&
+      selectedDrill !== 'sudden-death' &&
+      selectedDrill !== 'pro-master' &&
+      selectedDrill !== 'weakness-custom'
+    ) {
       const finalSpm = Math.round((targetsHit / 30) * 60);
       const finalApm = Math.round((keystrokes / 30) * 60);
 
@@ -284,6 +353,45 @@ export function HardcoreDojo({
       }
     },
     [playSuccessSound, playerName, createProblemForDrill, loadProblem]
+  );
+
+  // 약점 집중 맞춤 드릴 타깃 해결 핸들러 (10문제 완주형)
+  const handleWeaknessHit = useCallback(
+    (currentCombo: number, currentScore: number, totalKeys: number) => {
+      const nextCombo = currentCombo + 1;
+      const nextScore = currentScore + 120;
+      playSuccessSound?.();
+      setScore(nextScore);
+      setTargetsHit((h) => h + 1);
+      setIsTargetHit(true);
+
+      setTimeout(() => {
+        if (isMountedRef.current) setIsTargetHit(false);
+      }, 300);
+
+      const totalProblems = weaknessPlan.queue.length || 10;
+      if (nextCombo >= totalProblems) {
+        const now = Date.now();
+        const elapsed = (now - (startTimeRef.current ?? now)) / 1000;
+        const finalSec = Number(Math.max(0.1, elapsed).toFixed(2));
+        setFinalTime(finalSec);
+        setCombo(totalProblems);
+        const res = saveDojoHighScore('weakness-custom', {
+          score: nextScore,
+          targetsHit: totalProblems,
+          spm: Math.round((totalProblems / Math.max(1, finalSec)) * 60),
+          apm: Math.round((totalKeys / Math.max(1, finalSec)) * 60),
+        });
+        setIsNewRecord(res.isNewRecord);
+        setHighScores(loadDojoHighScores());
+        setGameState('weakness-cleared');
+      } else {
+        setCombo(nextCombo);
+        const nextProblem = createProblemForDrill('weakness-custom', nextCombo);
+        loadProblem(nextProblem);
+      }
+    },
+    [playSuccessSound, weaknessPlan, createProblemForDrill, loadProblem]
   );
 
   // 하드코어 경고 & 셰이크 발동
@@ -386,7 +494,9 @@ export function HardcoreDojo({
         );
         if (!targetPresent) {
           // 목표 라인이 dd 등으로 성공적으로 삭제됨!
-          if (selectedDrill === 'sudden-death') {
+          if (selectedDrill === 'weakness-custom') {
+            handleWeaknessHit(combo, score, keystrokes + 1);
+          } else if (selectedDrill === 'sudden-death') {
             handleSuddenDeathHit(combo);
           } else {
             const bonus = nextProbKeys <= 5 ? 50 : 0;
@@ -399,7 +509,9 @@ export function HardcoreDojo({
           nextState.cursor.col === currentProblem.targetCol
         ) {
           // 목표 문자 위치에 착지함!
-          if (selectedDrill === 'sudden-death') {
+          if (selectedDrill === 'weakness-custom') {
+            handleWeaknessHit(combo, score, keystrokes + 1);
+          } else if (selectedDrill === 'sudden-death') {
             handleSuddenDeathHit(combo);
           } else {
             const bonus = nextProbKeys <= 3 ? 50 : 0;
@@ -413,7 +525,9 @@ export function HardcoreDojo({
           nextState.cursor.col <= currentProblem.targetEndCol
         ) {
           // 목표 단어 범위에 착지함!
-          if (selectedDrill === 'sudden-death') {
+          if (selectedDrill === 'weakness-custom') {
+            handleWeaknessHit(combo, score, keystrokes + 1);
+          } else if (selectedDrill === 'sudden-death') {
             handleSuddenDeathHit(combo);
           } else {
             const bonus = nextProbKeys <= currentProblem.optimalKeyCount + 1 ? 50 : 0;
@@ -425,7 +539,11 @@ export function HardcoreDojo({
           nextState.lines.length === currentProblem.targetLines.length &&
           nextState.lines.every((l, i) => l === currentProblem.targetLines[i]);
         if (isMatched && nextState.mode === 'NORMAL') {
-          handleSuddenDeathHit(combo);
+          if (selectedDrill === 'weakness-custom') {
+            handleWeaknessHit(combo, score, keystrokes + 1);
+          } else {
+            handleSuddenDeathHit(combo);
+          }
         }
       }
     },
@@ -436,10 +554,13 @@ export function HardcoreDojo({
       editorState,
       selectedDrill,
       combo,
+      score,
+      keystrokes,
       playKeySound,
       triggerHardcoreWarning,
       triggerTargetHit,
       handleSuddenDeathHit,
+      handleWeaknessHit,
     ]
   );
 
@@ -452,8 +573,15 @@ export function HardcoreDojo({
   }, [currentProblem, selectedDrill, createProblemForDrill, loadProblem]);
 
   // 실시간 SPM / APM 계산
-  const elapsedSeconds =
-    selectedDrill === 'sudden-death' ? timeLeft : 30.0 - timeLeft;
+  const isTenStageMode =
+    selectedDrill === 'sudden-death' ||
+    selectedDrill === 'pro-master' ||
+    selectedDrill === 'weakness-custom';
+  const elapsedSeconds = isTenStageMode ? timeLeft : 30.0 - timeLeft;
+  const activeWeaknessItem =
+    selectedDrill === 'weakness-custom'
+      ? weaknessPlan.queue[Math.min(combo, weaknessPlan.queue.length - 1)]
+      : null;
   const currentSpm =
     elapsedSeconds > 0 ? Math.round((targetsHit / Math.max(1, elapsedSeconds)) * 60) : 0;
   const currentApm =
@@ -529,9 +657,14 @@ export function HardcoreDojo({
               <div className="dojo-tab-badge">{meta.badge}</div>
               <div className="dojo-tab-title">{meta.title}</div>
               <div className="dojo-tab-desc">{meta.description}</div>
-              {!isSpeedrun && best && (
+              {!isSpeedrun && drillId !== 'weakness-custom' && best && (
                 <div style={{ fontSize: '0.72rem', color: '#ff9e64', marginTop: '0.35rem' }}>
                   {t('👑 최고: {score}점 ({hits}개)', { score: best.score, hits: best.targetsHit })}
+                </div>
+              )}
+              {drillId === 'weakness-custom' && (
+                <div style={{ fontSize: '0.72rem', color: '#7dcfff', marginTop: '0.35rem', fontWeight: 700 }}>
+                  {t('🧬 내 약점 집중 10문제')}
                 </div>
               )}
               {isSpeedrun && (
@@ -546,8 +679,8 @@ export function HardcoreDojo({
 
       {/* 대시보드 게이지 & 메트릭 */}
       <div className="dojo-dashboard">
-        {selectedDrill === 'sudden-death' || selectedDrill === 'pro-master' ? (
-          /* 10연타 콤보 프로그레스 바 */
+        {isTenStageMode ? (
+          /* 10문제 진행도 프로그레스 바 */
           <div className="dojo-progress-track sudden-death">
             <div
               className="dojo-progress-fill sudden-death"
@@ -565,14 +698,16 @@ export function HardcoreDojo({
         )}
 
         <div className="dojo-metrics-grid">
-          {selectedDrill === 'sudden-death' || selectedDrill === 'pro-master' ? (
+          {isTenStageMode ? (
             <>
               <div className="dojo-metric-card">
                 <div className="dojo-metric-label">{t('⏱️ 경과 시간')}</div>
                 <div className="dojo-metric-value highlight">{timeLeft.toFixed(1)}s</div>
               </div>
               <div className="dojo-metric-card">
-                <div className="dojo-metric-label">{t('🔥 연속 콤보')}</div>
+                <div className="dojo-metric-label">
+                  {selectedDrill === 'weakness-custom' ? t('진행 문제') : t('🔥 연속 콤보')}
+                </div>
                 <div className="dojo-metric-value highlight">{combo} / 10</div>
               </div>
               <div className="dojo-metric-card">
@@ -648,7 +783,11 @@ export function HardcoreDojo({
 
         {/* 안내 지침 바 */}
         <div className="dojo-instruction-bar">
-          <div>💡 {currentMeta.keyInstructions}</div>
+          <div>
+            {activeWeaknessItem
+              ? `🧬 ${t('🧬 현재 집중 영역: {badge}', { badge: t(activeWeaknessItem.focusBadge) })} — ${t(activeWeaknessItem.focusHint)}`
+              : `💡 ${currentMeta.keyInstructions}`}
+          </div>
           {currentProblem?.type === 'ft-sniper' && (
             <div style={{ color: '#7aa2f7' }}>{t("🎯 타깃: '{char}'", { char: currentProblem.targetChar })}</div>
           )}
@@ -657,7 +796,7 @@ export function HardcoreDojo({
           )}
           {currentProblem?.type === 'pro-master' && (
             <div style={{ color: '#bb9af7', fontWeight: 600 }}>
-              {t('🎯 목표:')} {(currentProblem as ProMasterProblem).prompt} | {t('힌트:')} {(currentProblem as ProMasterProblem).hint}
+              {t('🎯 목표:')} {t((currentProblem as ProMasterProblem).prompt)} | {t('힌트:')} {t((currentProblem as ProMasterProblem).hint)}
             </div>
           )}
         </div>
@@ -739,7 +878,45 @@ export function HardcoreDojo({
           <div className="dojo-overlay">
             <h3>{currentMeta.title}</h3>
             <p>{currentMeta.description}</p>
-            {selectedDrill === 'pro-master' ? (
+            {selectedDrill === 'weakness-custom' ? (
+              <>
+                <div className="dojo-weakness-plan-box" data-testid="dojo-weakness-plan-box">
+                  <div className="dojo-weakness-plan-title">
+                    {t('🧬 약점 기반 맞춤 10문제 세트 구성:')}
+                  </div>
+                  <div className="dojo-weakness-pills">
+                    {weaknessPlan.topWeaknesses.map((w, idx) => (
+                      <div key={w.id} className="dojo-weakness-pill">
+                        <strong>#{idx + 1} {t(w.label)}</strong>
+                        <span>{w.reason}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="dojo-btn-row">
+                  <button
+                    type="button"
+                    className="dojo-start-btn"
+                    style={{ background: '#7dcfff', color: '#1a1b26' }}
+                    onClick={startGame}
+                    data-testid="dojo-weakness-start-btn"
+                  >
+                    {t('🧬 약점 맞춤 드릴 시작 (10문제)')}
+                  </button>
+                  <button
+                    type="button"
+                    className="dojo-leaderboard-btn"
+                    onClick={() => {
+                      const fresh = refreshWeaknessPlan();
+                      loadProblem(createProblemForDrill('weakness-custom', 0, fresh));
+                    }}
+                    data-testid="dojo-weakness-refresh-btn"
+                  >
+                    {t('🔄 통계 재분석')}
+                  </button>
+                </div>
+              </>
+            ) : selectedDrill === 'pro-master' ? (
               <>
                 <div style={{ color: '#bb9af7', fontSize: '0.9rem', marginBottom: '1.25rem', fontWeight: 700 }}>
                   {t('👑 실무 핵심 텍스트 객체와 연산자 10문제를 최단 타수로 돌파하세요!')}
@@ -899,6 +1076,47 @@ export function HardcoreDojo({
                 onClick={() => setIsLeaderboardOpen(true)}
               >
                 {t('🏆 랭킹 보드 보기')}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 약점 맞춤 드릴 10문제 완주 오버레이 */}
+        {gameState === 'weakness-cleared' && (
+          <div className="dojo-overlay cleared" data-testid="dojo-weakness-cleared">
+            <div className="dojo-tier-badge">🧬</div>
+            <div className="dojo-tier-title master" style={{ color: '#7dcfff' }}>
+              {t('🎉 약점 집중 맞춤 드릴 완주!')}
+            </div>
+            <div style={{ color: '#9ece6a', fontSize: '0.95rem', marginBottom: '1rem', fontWeight: 700 }}>
+              {t('약점 집중 교정 10문제를 모두 완료했습니다!')}
+            </div>
+            {isNewRecord && <div className="dojo-new-record-tag">{t('🎉 신기록 달성!')}</div>}
+
+            <div className="dojo-stats-summary">
+              <div className="dojo-stat-item">
+                <div className="num" style={{ color: '#7dcfff' }}>
+                  {finalTime?.toFixed(2)}s
+                </div>
+                <div className="label">{t('완주 시간')}</div>
+              </div>
+              <div className="dojo-stat-item">
+                <div className="num">{score}</div>
+                <div className="label">{t('최종 점수')}</div>
+              </div>
+              <div className="dojo-stat-item">
+                <div className="num">10 / 10</div>
+                <div className="label">{t('달성 콤보')}</div>
+              </div>
+              <div className="dojo-stat-item">
+                <div className="num">{keystrokes}</div>
+                <div className="label">{t('총 타수')}</div>
+              </div>
+            </div>
+
+            <div className="dojo-btn-row">
+              <button type="button" className="dojo-start-btn" onClick={startGame}>
+                {t('🔄 새 약점 드릴 다시 풀기')}
               </button>
             </div>
           </div>

@@ -459,3 +459,85 @@
 .analytics-confirm-btn:hover {
   background: #89b4fa;
 }
+
+/* 약점 맞춤 드릴 추천 카드 */
+.weakness-recommendation-card {
+  margin: 0 1.5rem 1.25rem;
+  padding: 1rem 1.2rem;
+  border-radius: 10px;
+  border: 1px solid rgba(187, 154, 247, 0.45);
+  background: linear-gradient(135deg, rgba(187, 154, 247, 0.12), rgba(125, 207, 255, 0.08));
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.weakness-rec-content {
+  flex: 1 1 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.weakness-rec-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.weakness-rec-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #bb9af7;
+}
+
+.weakness-rec-sub {
+  font-size: 0.78rem;
+  color: #a6adc8;
+}
+
+.weakness-rec-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.weakness-rec-pill {
+  background: rgba(24, 24, 37, 0.85);
+  border: 1px solid #3b4261;
+  border-radius: 6px;
+  padding: 0.35rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: 0.74rem;
+}
+
+.weakness-rec-pill strong {
+  color: #7dcfff;
+}
+
+.weakness-rec-pill span {
+  color: #a6adc8;
+}
+
+.weakness-start-btn {
+  background: linear-gradient(90deg, #bb9af7, #7aa2f7);
+  color: #11121d;
+  font-weight: 800;
+  font-size: 0.85rem;
+  border: none;
+  border-radius: 8px;
+  padding: 0.68rem 1.15rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+
+.weakness-start-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+}

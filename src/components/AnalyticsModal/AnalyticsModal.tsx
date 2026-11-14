@@ -5,6 +5,7 @@ import {
   calculateProficiency,
   getTopCommands,
 } from '../../utils/analyticsStorage';
+import { buildWeaknessDrillPlan } from '../../utils/weaknessDrillAnalyzer';
 import { KeystrokeHeatmap } from './KeystrokeHeatmap';
 import './AnalyticsModal.css';
 import { t } from '../../i18n';
@@ -14,6 +15,7 @@ export interface AnalyticsModalProps {
   onClose: () => void;
   progress: LessonProgress;
   onOpenDailyChallenge?: () => void;
+  onStartWeaknessDrill?: () => void;
 }
 
 function getAntiPatternTip(name: string): string {
@@ -43,6 +45,7 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
   onClose,
   progress,
   onOpenDailyChallenge,
+  onStartWeaknessDrill,
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'heatmap'>('overview');
 
@@ -50,6 +53,11 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
     if (!isOpen) return null;
     return loadUserAnalytics();
   }, [isOpen]);
+
+  const weaknessPlan = useMemo(() => {
+    if (!analytics) return null;
+    return buildWeaknessDrillPlan(analytics, progress);
+  }, [analytics, progress]);
 
   const proficiency = useMemo(() => {
     if (!analytics) {
@@ -372,6 +380,50 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
             </div>
           )}
         </section>
+
+        {/* 약점 기반 맞춤 드릴 추천 배너 */}
+        {weaknessPlan && (
+          <section
+            className="weakness-recommendation-card"
+            data-testid="analytics-weakness-recommendation"
+          >
+            <div className="weakness-rec-content">
+              <div className="weakness-rec-header">
+                <span className="weakness-rec-title">
+                  🧬 {t('약점 진단 & 맞춤 도장 드릴 처방')}
+                </span>
+                <span className="weakness-rec-sub">
+                  {weaknessPlan.hasAnalyticsData
+                    ? t('누적 타건·안티패턴 데이터 기반 상위 약점 {n}종 선정', {
+                        n: weaknessPlan.topWeaknesses.length,
+                      })
+                    : t('현재 숙련도 레이더 기준 기초 집중 세트 추천')}
+                </span>
+              </div>
+              <div className="weakness-rec-badges">
+                {weaknessPlan.topWeaknesses.map((w, idx) => (
+                  <div key={w.id} className="weakness-rec-pill">
+                    <strong>#{idx + 1} {t(w.label)}</strong>
+                    <span>{w.reason}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {onStartWeaknessDrill && (
+              <button
+                type="button"
+                className="weakness-start-btn"
+                onClick={() => {
+                  onClose();
+                  onStartWeaknessDrill();
+                }}
+                data-testid="analytics-start-weakness-drill-btn"
+              >
+                🎯 {t('약점 맞춤 드릴 바로 시작 →')}
+              </button>
+            )}
+          </section>
+        )}
         </>
         )}
 
