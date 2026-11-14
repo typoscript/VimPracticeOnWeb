@@ -350,4 +350,7 @@ export const EN_MESSAGES: Record<string, string> = {
   "E446: 커서 위치에 파일 이름이 없습니다": "E446: No file name under cursor",
   "E447: 경로에서 \"{filename}\" 파일을 찾을 수 없습니다": "E447: Can't find file \"{filename}\" in path",
   "\"{filename}\" 분할 창으로 열렸습니다": "Opened \"{filename}\" in split window",
+  "선택 {cols}열; {lines} / {totalLines}줄; {words} / {totalWords}단어; {bytes} / {totalBytes}바이트": "Selected {cols} Cols; {lines} of {totalLines} Lines; {words} of {totalWords} Words; {bytes} of {totalBytes} Bytes",
+  "선택 {lines} / {totalLines}줄; {words} / {totalWords}단어; {bytes} / {totalBytes}바이트": "Selected {lines} of {totalLines} Lines; {words} of {totalWords} Words; {bytes} of {totalBytes} Bytes",
+  "열 {col} / {lineCols}; 줄 {line} / {totalLines}; 단어 {word} / {totalWords}; 바이트 {byte} / {totalBytes}": "Col {col} of {lineCols}; Line {line} of {totalLines}; Word {word} of {totalWords}; Byte {byte} of {totalBytes}",
 };

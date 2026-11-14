@@ -30,6 +30,8 @@ export interface EditorProps {
   mode: VimMode;
   targetPosition?: CursorPosition;
   visualAnchor?: CursorPosition;
+  /** VISUAL_BLOCK 모드에서 $ 로 줄 끝까지 확장 중인지 여부 */
+  visualBlockEndOfLine?: boolean;
   /** 상대 라인 번호 (relativenumber) 활성화 여부 */
   relativeLineNumbers?: boolean;
   /** 현재 검색어 (실시간 하이라이트용) */
@@ -83,6 +85,7 @@ export const Editor: React.FC<EditorProps> = ({
   mode,
   targetPosition,
   visualAnchor,
+  visualBlockEndOfLine,
   relativeLineNumbers = false,
   searchQuery,
   isFocused = true,
@@ -291,6 +294,7 @@ export const Editor: React.FC<EditorProps> = ({
                         mode,
                         targetCol,
                         visualAnchor,
+                        visualBlockEndOfLine,
                         lineMatches,
                         isFocused,
                         insertNormalSession,
@@ -384,6 +388,7 @@ interface RenderLineOptions {
   mode: VimMode;
   targetCol: number | null;
   visualAnchor?: CursorPosition;
+  visualBlockEndOfLine?: boolean;
   lineMatches: SearchMatch[];
   isFocused: boolean;
   insertNormalSession?: boolean;
@@ -423,6 +428,7 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     mode,
     targetCol,
     visualAnchor,
+    visualBlockEndOfLine,
     lineMatches,
     isFocused,
     insertNormalSession,
@@ -495,7 +501,7 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     const isTarget = i === targetCol;
     const isSelected =
       hasVisual &&
-      isPositionSelected(lineIdx, i, visualAnchor, cursor, mode);
+      isPositionSelected(lineIdx, i, visualAnchor, cursor, mode, visualBlockEndOfLine);
     const isSearchMatch = lineMatches.some(
       (m) => i >= m.col && i < m.col + m.length
     );

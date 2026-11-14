@@ -161,6 +161,8 @@ export interface VimTabPage {
   cursor: CursorPosition;
   mode: VimMode;
   visualAnchor?: CursorPosition;
+  /** VISUAL_BLOCK 모드에서 $ 로 줄 끝까지 확장 중인지 여부 */
+  visualBlockEndOfLine?: boolean;
   undoStack?: StateSnapshot[];
   redoStack?: StateSnapshot[];
   splitDirection?: SplitDirection;
@@ -178,6 +180,8 @@ export interface CommandLineWindowSession {
   cursor: CursorPosition;
   mode: VimMode;
   visualAnchor?: CursorPosition;
+  /** VISUAL_BLOCK 모드에서 $ 로 줄 끝까지 확장 중인지 여부 */
+  visualBlockEndOfLine?: boolean;
   pendingKeys?: string;
   undoStack?: StateSnapshot[];
   redoStack?: StateSnapshot[];
@@ -321,6 +325,9 @@ export interface BlockInsertSession {
   col: number;             // 삽입 기준 열 번호
   insertMode: 'I' | 'A' | 'c';
   typedChars: string[];    // INSERT 세션 중 입력된 문자 목록
+  endOfLine?: boolean;     // Ctrl-v $ 이후 A / c 실행 시 각 줄의 끝 기준 처리 여부
+  minCol?: number;         // 블록 왼쪽 경계 열 번호 (짧은 줄 필터링용)
+  skippedLines?: number[]; // 블록 범위(minCol)에 도달하지 않아 제외된 짧은 줄 목록
 }
 
 export interface CompletionSession {
@@ -366,6 +373,8 @@ export interface SplitPaneState {
   cursor: CursorPosition;
   mode: VimMode;
   visualAnchor?: CursorPosition;
+  /** VISUAL_BLOCK 모드에서 $ 로 줄 끝까지 확장 중인지 여부 */
+  visualBlockEndOfLine?: boolean;
   viewport?: ViewportState;
   undoStack?: StateSnapshot[];
   redoStack?: StateSnapshot[];
@@ -399,7 +408,9 @@ export interface VimEditorState {
   lines: string[];
   cursor: CursorPosition;
   mode: VimMode;
-  visualAnchor?: CursorPosition; // VISUAL 모드 선택 시작점
+  visualAnchor?: CursorPosition;
+  /** VISUAL_BLOCK 모드에서 $ 로 줄 끝까지 확장 중인지 여부 */
+  visualBlockEndOfLine?: boolean; // VISUAL 모드 선택 시작점
   pendingKeys?: string; // gg, dd, dw 등 다중 키 입력을 위한 버퍼
   clipboard?: ClipboardRegister;
   /** 실제 시스템/OS 클립보드 연동용 문자열 버퍼 ("+, "* 레지스터) */

@@ -88,6 +88,8 @@ import {
   deleteVisualSelection,
   yankVisualSelection,
   startVisualBlockInsert,
+  swapVisualCursorAnchor,
+  executeGCtrlG,
 } from './visual';
 import {
   startOrCycleCompletion,
@@ -1533,18 +1535,40 @@ function handleInsertModeKey(
   if (key === 'Escape') {
     // 비주얼 블록(Ctrl+v) 삽입 세션 중인 경우 나머지 행에 일괄 복제 반영
     if (state.blockInsertSession) {
-      const insertedText = state.blockInsertSession.typedChars.join('');
-      const targetLines = state.blockInsertSession.lines;
-      const insertCol = state.blockInsertSession.col;
+      const {
+        typedChars,
+        lines: targetLines,
+        col: insertCol,
+        insertMode,
+        endOfLine,
+        minCol = 0,
+        skippedLines,
+      } = state.blockInsertSession;
+      const insertedText = typedChars.join('');
+      const skippedSet = skippedLines ? new Set(skippedLines) : null;
       const nextLines = [...state.lines];
 
       for (let i = 1; i < targetLines.length; i++) {
         const lineIdx = targetLines[i];
+        if (skippedSet?.has(lineIdx)) continue;
         let lineText = nextLines[lineIdx] ?? '';
-        if (lineText.length < insertCol) {
-          lineText = lineText.padEnd(insertCol, ' ');
+        if (endOfLine) {
+          nextLines[lineIdx] = lineText + insertedText;
+        } else if (insertMode === 'A') {
+          if (insertedText.length > 0) {
+            if (lineText.length < insertCol) {
+              lineText = lineText.padEnd(insertCol, ' ');
+            }
+            nextLines[lineIdx] = lineText.slice(0, insertCol) + insertedText + lineText.slice(insertCol);
+          }
+        } else if (insertMode === 'I') {
+          if (insertCol === 0 || lineText.length > insertCol) {
+            nextLines[lineIdx] = lineText.slice(0, insertCol) + insertedText + lineText.slice(insertCol);
+          }
+        } else {
+          const cCol = Math.min(minCol, lineText.length);
+          nextLines[lineIdx] = lineText.slice(0, cCol) + insertedText + lineText.slice(cCol);
         }
-        nextLines[lineIdx] = lineText.slice(0, insertCol) + insertedText + lineText.slice(insertCol);
       }
 
       const firstLineIdx = targetLines[0];
@@ -1754,6 +1778,16 @@ function handleInsertModeKey(
     const ts = opts.tabstop || opts.shiftwidth || 2;
     const et = opts.expandtab !== false;
     const indent = et ? ' '.repeat(ts) : '\t';
+    if (state.blockInsertSession) {
+      const updatedChars = [...state.blockInsertSession.typedChars, ...indent.split('')];
+      state = {
+        ...state,
+        blockInsertSession: {
+          ...state.blockInsertSession,
+          typedChars: updatedChars,
+        },
+      };
+    }
     const newLine = currentLine.slice(0, col) + indent + currentLine.slice(col);
     const nextLines = [...state.lines];
     nextLines[line] = newLine;
@@ -2085,6 +2119,7 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
       ...state,
       mode: 'NORMAL',
       visualAnchor: undefined,
+      visualBlockEndOfLine: undefined,
       pendingKeys: undefined,
       activeRegister: undefined,
       lastVisualSelection: state.visualAnchor
@@ -2313,24 +2348,47 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
     ) {
       return modifyNumberVisual(state, false, true, parsed.totalCount);
     }
+    if (
+      key === 'Ctrl-g' ||
+      key === 'Ctrl+g' ||
+      key === 'ctrl-g' ||
+      key === '<C-g>'
+    ) {
+      return executeGCtrlG(state);
+    }
     if (key === 'J') {
-      if (!state.visualAnchor) return { ...state, mode: 'NORMAL', pendingKeys: undefined };
+      if (!state.visualAnchor) {
+        return { ...state, mode: 'NORMAL', visualBlockEndOfLine: undefined, pendingKeys: undefined };
+      }
+      const snap = {
+        mode: state.mode as 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK',
+        anchor: { ...state.visualAnchor },
+        cursor: { ...state.cursor },
+      };
       const minLine = Math.min(state.visualAnchor.line, state.cursor.line);
       const maxLine = Math.max(state.visualAnchor.line, state.cursor.line);
-      const joinCount = maxLine - minLine;
+      const joinCount = Math.max(1, maxLine - minLine);
       const tempState: VimEditorState = {
         ...state,
         cursor: { line: minLine, col: 0 },
         mode: 'NORMAL',
         visualAnchor: undefined,
+        visualBlockEndOfLine: undefined,
         pendingKeys: undefined,
       };
-      return joinLines(tempState, Math.max(1, joinCount), false);
+      const joined = joinLines(tempState, joinCount, false);
+      const changed = joined.lines !== state.lines;
+      const gKeys = joinCount > 1 ? [String(joinCount), 'g', 'J'] : ['g', 'J'];
+      return {
+        ...joined,
+        lastVisualSelection: snap,
+        lastChangeKeys: changed ? gKeys : state.lastChangeKeys,
+      };
     }
     return { ...state, pendingKeys: undefined };
   }
 
-  // 복합 키 표현 (g<Ctrl-a>, g<C-a>, g Ctrl-a, g Ctrl+a, g<Ctrl-x>, g<C-x>, g Ctrl-x, g Ctrl+x)
+  // 복합 키 표현 (g<Ctrl-a>, g<C-a>, g Ctrl-a, g Ctrl+a, g<Ctrl-x>, g<C-x>, g Ctrl-x, g Ctrl+x, g<Ctrl-g>)
   if (
     key === 'g<Ctrl-a>' ||
     key === 'g<C-a>' ||
@@ -2346,6 +2404,14 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
     key === 'g Ctrl+x'
   ) {
     return modifyNumberVisual(state, false, true, parsed.totalCount);
+  }
+  if (
+    key === 'g<Ctrl-g>' ||
+    key === 'g<C-g>' ||
+    key === 'g Ctrl-g' ||
+    key === 'g Ctrl+g'
+  ) {
+    return executeGCtrlG(state);
   }
 
   // VISUAL 모드 직접 Ctrl-a / Ctrl-x (모든 선택 숫자 일괄 증감)
@@ -2384,6 +2450,7 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
         ...state,
         mode: 'NORMAL',
         visualAnchor: undefined,
+        visualBlockEndOfLine: undefined,
         pendingKeys: undefined,
         lastVisualSelection: state.visualAnchor
           ? {
@@ -2397,6 +2464,7 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
     return {
       ...state,
       mode: 'VISUAL',
+      visualBlockEndOfLine: undefined,
       pendingKeys: undefined,
     };
   }
@@ -2408,6 +2476,7 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
         ...state,
         mode: 'NORMAL',
         visualAnchor: undefined,
+        visualBlockEndOfLine: undefined,
         pendingKeys: undefined,
         lastVisualSelection: state.visualAnchor
           ? {
@@ -2421,6 +2490,7 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
     return {
       ...state,
       mode: 'VISUAL_LINE',
+      visualBlockEndOfLine: undefined,
       pendingKeys: undefined,
     };
   }
@@ -2432,6 +2502,7 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
         ...state,
         mode: 'NORMAL',
         visualAnchor: undefined,
+        visualBlockEndOfLine: undefined,
         pendingKeys: undefined,
         lastVisualSelection: state.visualAnchor
           ? {
@@ -2445,8 +2516,14 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
     return {
       ...state,
       mode: 'VISUAL_BLOCK',
+      visualBlockEndOfLine: undefined,
       pendingKeys: undefined,
     };
+  }
+
+  // o / O: Visual 및 Visual Block 선택 영역의 커서와 앵커 반전
+  if ((key === 'o' || key === 'O') && !state.pendingKeys) {
+    return swapVisualCursorAnchor(state, key);
   }
 
 
@@ -2680,17 +2757,27 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
 
   // J: 선택 영역 모든 행 이어 붙이기
   if (key === 'J') {
-    if (!state.visualAnchor) return { ...state, mode: 'NORMAL', pendingKeys: undefined };
+    if (!state.visualAnchor) {
+      return { ...state, mode: 'NORMAL', visualBlockEndOfLine: undefined, pendingKeys: undefined };
+    }
     const minLine = Math.min(state.visualAnchor.line, state.cursor.line);
     const maxLine = Math.max(state.visualAnchor.line, state.cursor.line);
-    const joinCount = maxLine - minLine;
+    const joinCount = Math.max(1, maxLine - minLine);
     const tempState: VimEditorState = {
       ...state,
       cursor: { line: minLine, col: 0 },
       mode: 'NORMAL',
       visualAnchor: undefined,
+      visualBlockEndOfLine: undefined,
     };
-    return joinLines(tempState, Math.max(1, joinCount));
+    const joined = joinLines(tempState, joinCount);
+    const changed = joined.lines !== state.lines;
+    const jKeys = joinCount > 1 ? [String(joinCount), 'J'] : ['J'];
+    return {
+      ...joined,
+      lastVisualSelection: visualSnapshot,
+      lastChangeKeys: changed ? jKeys : state.lastChangeKeys,
+    };
   }
 
   // 대소문자 변환 (~, u, U)
@@ -2783,9 +2870,27 @@ function handleVisualModeKey(state: VimEditorState, key: string, macroDepth = 0)
     if (isFailedMotion(key, state.cursor, motionCursor)) {
       return ringBell(state);
     }
+    let nextCursor = motionCursor;
+    let nextBlockEol = state.visualBlockEndOfLine;
+    if (state.mode === 'VISUAL_BLOCK') {
+      if (key === '$') {
+        nextBlockEol = true;
+      } else if (
+        nextBlockEol &&
+        (key === 'j' || key === 'k' || key === 'G' || key === '{' || key === '}' || key === 'ArrowDown' || key === 'ArrowUp')
+      ) {
+        const lineLen = (state.lines[motionCursor.line] ?? '').length;
+        nextCursor = { line: motionCursor.line, col: Math.max(0, lineLen - 1) };
+      } else {
+        nextBlockEol = undefined;
+      }
+    } else {
+      nextBlockEol = undefined;
+    }
     return {
       ...state,
-      cursor: motionCursor,
+      cursor: nextCursor,
+      visualBlockEndOfLine: nextBlockEol,
       pendingKeys: undefined,
     };
   }
@@ -4503,6 +4608,14 @@ function handleNormalModeKey(
     if (key === 'v') {
       return reselectLastVisual(state);
     }
+    if (
+      key === 'Ctrl-g' ||
+      key === 'Ctrl+g' ||
+      key === 'ctrl-g' ||
+      key === '<C-g>'
+    ) {
+      return executeGCtrlG(state);
+    }
     if (key === ';') {
       return traverseChangeList(state, 'prev', parsed.totalCount);
     }
@@ -4550,6 +4663,15 @@ function handleNormalModeKey(
       };
     }
     state = { ...state, pendingKeys: undefined };
+  }
+
+  if (
+    key === 'g<Ctrl-g>' ||
+    key === 'g<C-g>' ||
+    key === 'g Ctrl-g' ||
+    key === 'g Ctrl+g'
+  ) {
+    return executeGCtrlG(state);
   }
 
   // 9. 연산자 및 매크로 키 등록 (d, c, r, g, y, f, F, t, T, @, q, m, ', `, >, <, =, z, ], [)

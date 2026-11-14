@@ -140,7 +140,7 @@ const TAB_LOADING_FALLBACK = (
 /** 스피드런 챌린지 후보 미션 ID 목록 (리팩토링/편집 미션) */
 export const SPEEDRUN_CANDIDATE_IDS = [
   4, 6, 7, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 21, 23, 25, 26, 28, 29, 30, 31, 32, 43, 44,
-  47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82,
+  47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83,
 ];
 
 export function generateSpeedrunStages(): Mission[] {
@@ -1437,6 +1437,15 @@ export function App() {
         }
       }
 
+      // Ctrl+g 또는 Cmd+g: 현재 위치/선택 영역 단어·줄·바이트 통계 (g Ctrl-g)
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'g' || e.key === 'G')) {
+        if (editorState.mode === 'NORMAL' || editorState.mode.startsWith('VISUAL')) {
+          e.preventDefault();
+          processKeyInput('Ctrl-g');
+          return;
+        }
+      }
+
       // Ctrl+u 또는 Cmd+u 또는 Alt+u: 반 페이지 위 스크롤 (NORMAL/VISUAL) 및 줄 시작까지 삭제 (INSERT)
       if ((e.ctrlKey || e.metaKey || e.altKey) && (e.key === 'u' || e.key === 'U')) {
         if (editorState.mode === 'NORMAL' || editorState.mode.startsWith('VISUAL') || editorState.mode === 'INSERT') {
@@ -2022,6 +2031,7 @@ export function App() {
                       mode={editorState.activePaneIndex === 0 ? editorState.mode : editorState.splitPanes[0].mode}
                       targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
                       visualAnchor={editorState.activePaneIndex === 0 ? editorState.visualAnchor : editorState.splitPanes[0].visualAnchor}
+                      visualBlockEndOfLine={editorState.activePaneIndex === 0 ? editorState.visualBlockEndOfLine : editorState.splitPanes[0].visualBlockEndOfLine}
                       relativeLineNumbers={relativeLineNumbers}
                       searchQuery={
                         editorState.activePaneIndex === 0 && editorState.mode === 'SEARCH'
@@ -2073,6 +2083,7 @@ export function App() {
                       mode={editorState.activePaneIndex === 1 ? editorState.mode : editorState.splitPanes[1].mode}
                       targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
                       visualAnchor={editorState.activePaneIndex === 1 ? editorState.visualAnchor : editorState.splitPanes[1].visualAnchor}
+                      visualBlockEndOfLine={editorState.activePaneIndex === 1 ? editorState.visualBlockEndOfLine : editorState.splitPanes[1].visualBlockEndOfLine}
                       relativeLineNumbers={relativeLineNumbers}
                       searchQuery={
                         editorState.activePaneIndex === 1 && editorState.mode === 'SEARCH'
@@ -2111,6 +2122,7 @@ export function App() {
                   mode={displayEditorState.mode}
                   targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
                   visualAnchor={displayEditorState.visualAnchor}
+                  visualBlockEndOfLine={displayEditorState.visualBlockEndOfLine}
                   relativeLineNumbers={relativeLineNumbers}
                   searchQuery={
                     displayEditorState.mode === 'SEARCH'

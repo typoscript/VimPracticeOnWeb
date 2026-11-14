@@ -3057,4 +3057,52 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 83,
+    title: '레슨 83: Visual 고급 편집(o / O, g Ctrl-g, gJ)과 비주얼 블록(Ctrl-v $ A / c) 마스터',
+    description:
+      'Visual 및 Visual Block 모드의 숨은 고급 조작을 익히면 불규칙한 길이의 여러 줄도 한 번에 정교하게 리팩토링할 수 있습니다.\n\n1) 커서·앵커 반전 (o / O) & 공백 없는 줄 병합 (gJ):\n   - Visual(v/V)에서 o / O 는 선택 영역의 시작과 끝(anchor ↔ cursor)을 즉시 바꿉니다.\n   - Visual Block(Ctrl-v)에서 o 는 대각선 반대 모서리로, O 는 같은 줄 반대쪽 가로 모서리로 커서를 옮깁니다.\n   - gJ 는 J 와 달리 연결할 때 사이에 공백을 추가하지 않고 바짝 붙입니다.\n\n2) 선택 영역 통계 (g Ctrl-g) & 비주얼 블록 줄 끝 추가/변경 (Ctrl-v $ A / c):\n   - g Ctrl-g 는 현재 커서 또는 선택 영역의 열·줄·단어·바이트 수를 상태줄에 출력합니다.\n   - Ctrl-v 로 여러 줄을 잡은 뒤 $ A 를 입력하면 길이가 제각각인 줄들의 실제 끝($)에 일괄 추가되며, c 는 블록 구간을 한 번에 수정합니다.\n\n미션:\n1. 2~3번째 줄("https://" 와 "api.dev/v1";)을 V j g J 로 공백 없이 한 줄로 붙이세요.\n2. 아래 3줄(old_*)의 old 부분을 Ctrl-v 2j 2l 로 선택한 뒤 o 와 O 로 모서리를 오간 후 c new<Esc> 로 new_ 로 일괄 변경하세요.\n3. Ctrl-v 2j $ A ;<Esc> 로 세 줄의 서로 다른 줄 끝에 세미콜론(;)을 붙이고, g Ctrl-g 로 전체 줄·단어·바이트 통계를 확인하세요!',
+    hint: 'j V j g J → j 0 Ctrl-v 2j 2l o O c new<Esc> → Ctrl-v 2j $ A ;<Esc> → g Ctrl-g',
+    par: 29,
+    optimalKeys: [
+      'j', 'V', 'j', 'g', 'J',
+      'j', '0', 'Ctrl-v', '2', 'j', '2', 'l', 'o', 'O', 'c', 'n', 'e', 'w', 'Escape',
+      'Ctrl-v', '2', 'j', '$', 'A', ';', 'Escape',
+      'g', 'Ctrl-g',
+    ],
+    primaryFilename: 'apiConfig.ts',
+    initialLines: [
+      '// Visual o/O, gJ, g Ctrl-g, Ctrl-v $ A/c 로 API 설정을 정리하세요.',
+      'const endpoint = "https://',
+      '  api.dev/v1";',
+      'old_host = "local"',
+      'old_port = "8080"',
+      'old_mode = "prod"',
+    ],
+    targetLines: [
+      '// Visual o/O, gJ, g Ctrl-g, Ctrl-v $ A/c 로 API 설정을 정리하세요.',
+      'const endpoint = "https://api.dev/v1";',
+      'new_host = "local";',
+      'new_port = "8080";',
+      'new_mode = "prod";',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const target = [
+        '// Visual o/O, gJ, g Ctrl-g, Ctrl-v $ A/c 로 API 설정을 정리하세요.',
+        'const endpoint = "https://api.dev/v1";',
+        'new_host = "local";',
+        'new_port = "8080";',
+        'new_mode = "prod";',
+      ];
+      const isLinesMatched =
+        state.lines.length === target.length &&
+        state.lines.every((l, idx) => l === target[idx]);
+      const hasWordCountMessage =
+        typeof state.commandMessage === 'string' &&
+        /(\d+\s*\/\s*\d+|\d+\s+of\s+\d+)/.test(state.commandMessage);
+
+      return state.mode === 'NORMAL' && isLinesMatched && hasWordCountMessage;
+    },
+  },
 ];
