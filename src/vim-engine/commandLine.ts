@@ -129,6 +129,7 @@ import {
   unregisterKeymap,
   formatKeymapsList,
 } from './keymapEngine';
+import { executeAbbrevCommand } from './abbrevEngine';
 import { executeUserCommandDefinition, executeUserCommand, lookupUserCommand } from './userCommandEngine';
 import {
   appendFunctionDraftLine,
@@ -2644,6 +2645,10 @@ export function executeCommandLine(
     const from = unmapMatch[2];
     return unregisterKeymap(state, cmdType, from);
   }
+
+  // 약어: :iabbrev, :cabbrev, :abbrev, :inoreabbrev, :cnoreabbrev, :noreabbrev, :unabbrev, :abclear 등
+  const abbrevRes = executeAbbrevCommand(state, trimmed);
+  if (abbrevRes) return abbrevRes;
 
   // 4. 공통 Range 파서 및 Ex 명령어 실행
   const extracted = extractRangeAndCommand(trimmed, state);

@@ -79,6 +79,13 @@ export interface UserCommand {
   replacement: string;
 }
 
+export interface AbbreviationEntry {
+  mode: 'i' | 'c';
+  lhs: string;
+  rhs: string;
+  noremap: boolean;
+}
+
 export interface ClipboardRegister {
   type: 'line' | 'text';
   content: string;
@@ -451,6 +458,10 @@ export interface VimEditorState {
   secondaryLines?: string[];
   /** 사용자 정의 키매핑 테이블 (예: { 'i:jk': '<Esc>', 'n:<leader>w': ':w' }) */
   userKeymaps?: Record<string, string>;
+  /** 사용자 정의 입력/명령행 약어 (:iabbrev, :cabbrev, :abbrev, 키: 'i:teh' | 'c:W') */
+  abbreviations?: Record<string, AbbreviationEntry>;
+  /** Insert/Command 모드 Ctrl-v 직후 다음 키를 리터럴로 처리할지 여부 */
+  literalNextPending?: boolean;
   /** 사용자 정의 Ex 명령 (:command! Name ...) */
   userCommands?: Record<string, UserCommand>;
   /** :nohlsearch 로 검색 하이라이트를 잠시 끈 상태 (다음 검색·n·N·*·# 에서 해제) */

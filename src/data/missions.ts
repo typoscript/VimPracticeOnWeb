@@ -3011,4 +3011,50 @@ export const MISSIONS: Mission[] = [
       return state.mode === 'NORMAL' && isLinesMatched && state.options?.scrolloff === 3;
     },
   },
+  {
+    id: 82,
+    title: '레슨 82: 자동 약어 확장(:iabbrev, :cabbrev, Ctrl-])과 오타 자동 교정 마스터',
+    description:
+      '자주 틀리는 오타나 반복 입력하는 긴 명령을 Vim 약어(:abbrev)로 등록해 두면, 단어 경계에서 공백이나 구두점을 치는 순간 자동으로 치환됩니다.\n\n1) 입력 모드 약어 (:iabbrev, :inoreabbrev):\n   - :iabbrev teh the 로 등록한 뒤, 입력 모드에서 teh 뒤 Space / . / Tab / Enter / Esc 를 누르면 자동으로 the 로 교정됩니다.\n   - ateh 처럼 단어 중간에 붙어 있으면 확장하지 않고, 정확히 한 단어일 때만 동작합니다. (Ctrl-v 로 다음 문자 확장 억제, Ctrl-] 로 문자 삽입 없이 즉시 확장)\n\n2) 커맨드라인 약어 & 해제 (:cabbrev, :unabbrev, :abclear):\n   - :cabbrev S 3,4sort 처럼 등록하면 커맨드라인에서 :S<Enter> 만 입력해도 3,4sort 가 실행됩니다.\n   - :iunabbrev teh / :cunabbrev S / :abclear 로 언제든 약어를 해제·초기화할 수 있습니다.\n\n미션:\n1. :iabbrev teh the<Enter> 로 오타 교정 약어를 등록하세요.\n2. :cabbrev S 3,4sort<Enter> 로 커맨드라인 단축 약어를 등록하세요.\n3. 2번째 줄(msg)로 내려가 "" 안에 teh ok 를 입력(f" a teh ok<Esc>)해 자동 교정을 발동시키고, :S<Enter> 로 아래 두 줄(3~4번 줄)을 알파벳순으로 정렬하세요!',
+    hint: ':iabbrev teh the<Enter> → :cabbrev S 3,4sort<Enter> → j f" a teh ok<Esc> 로 교정 후 :S<Enter> 로 정렬',
+    par: 54,
+    optimalKeys: [
+      ':', 'i', 'a', 'b', 'b', 'r', 'e', 'v', ' ', 't', 'e', 'h', ' ', 't', 'h', 'e', 'Enter',
+      ':', 'c', 'a', 'b', 'b', 'r', 'e', 'v', ' ', 'S', ' ', '3', ',', '4', 's', 'o', 'r', 't', 'Enter',
+      'j', 'f', '"', 'a', 't', 'e', 'h', ' ', 'o', 'k', 'Escape',
+      ':', 'S', 'Enter',
+    ],
+    primaryFilename: 'notes.ts',
+    initialLines: [
+      '// :iabbrev 로 자동 교정하고 :cabbrev 로 긴 Ex 명령을 단축하세요.',
+      'const msg = "";',
+      'const itemB = 2;',
+      'const itemA = 1;',
+    ],
+    targetLines: [
+      '// :iabbrev 로 자동 교정하고 :cabbrev 로 긴 Ex 명령을 단축하세요.',
+      'const msg = "the ok";',
+      'const itemA = 1;',
+      'const itemB = 2;',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const target = [
+        '// :iabbrev 로 자동 교정하고 :cabbrev 로 긴 Ex 명령을 단축하세요.',
+        'const msg = "the ok";',
+        'const itemA = 1;',
+        'const itemB = 2;',
+      ];
+      const isLinesMatched =
+        state.lines.length === target.length &&
+        state.lines.every((l, idx) => l === target[idx]);
+
+      return (
+        state.mode === 'NORMAL' &&
+        isLinesMatched &&
+        Boolean(state.abbreviations?.['i:teh']) &&
+        Boolean(state.abbreviations?.['c:S'])
+      );
+    },
+  },
 ];

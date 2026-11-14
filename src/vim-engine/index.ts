@@ -293,5 +293,21 @@ export type {
   HelpTagMatch,
 } from './helpData';
 
+// ---- 순정 Vim 약어 엔진 (:iabbrev, :cabbrev, :abbrev, :unabbrev, :abclear, Ctrl-]) ----
+export {
+  isAbbrevWordChar,
+  isAbbrevTriggerKey,
+  findMatchingAbbrev,
+  isAbbrevManagementCmd,
+  formatAbbrevsList,
+  registerAbbrev,
+  unregisterAbbrev,
+  clearAbbrevs,
+  executeAbbrevCommand,
+  expandCmdlineAbbrev,
+} from './abbrevEngine';
+export type { AbbrevMode, AbbrevMatch } from './abbrevEngine';
+export type { AbbreviationEntry } from './types';
+
 // ---- 개발용 불변성 검사 ----
 export { withInvariantCheck, assertValidVimState, deepFreeze } from './invariants';

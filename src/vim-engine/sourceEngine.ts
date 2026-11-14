@@ -2,6 +2,7 @@ import { VimEditorState } from './types';
 import { executeSetCommand } from './setEngine';
 import { getVfsFile } from './vfs';
 import { registerKeymap } from './keymapEngine';
+import { executeAbbrevCommand } from './abbrevEngine';
 import { executeUserCommandDefinition } from './userCommandEngine';
 import { defineFunctionFromLines, isEndFunctionLine, isFunctionHeaderLine } from './vimscriptEngine';
 import { isSessionScript, restoreSession } from './sessionEngine';
@@ -99,6 +100,14 @@ export function sourceScript(state: VimEditorState, targetFile = '%', runEx?: So
         appliedCount++;
         continue;
       }
+    }
+
+    // 3.5. 약어 (:iabbrev, :cabbrev, :abbrev, :unabbrev, :abclear 등)
+    const abbrevRes = executeAbbrevCommand(curState, line);
+    if (abbrevRes) {
+      curState = abbrevRes;
+      appliedCount++;
+      continue;
     }
 
     // 4. 리더키 설정 (let mapleader = "..." 또는 let g:mapleader = "...")

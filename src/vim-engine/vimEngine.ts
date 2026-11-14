@@ -160,6 +160,11 @@ import { executeCommandLine, handleConfirmSubstituteKey } from './commandLine';
 import { triggerAutocmd } from './autocmdEngine';
 import { parseKeySequence } from './keymapEngine';
 import {
+  findMatchingAbbrev,
+  isAbbrevTriggerKey,
+  expandCmdlineAbbrev,
+} from './abbrevEngine';
+import {
   executeDeleteSurround,
   executeChangeSurround,
   executeYouSurround,
@@ -279,6 +284,13 @@ export function parsePending(pendingKeys?: string): ParsedPending {
   return { totalCount: 1 };
 }
 
+interface AbbrevReplayCtx {
+  depth: number;
+  seen: ReadonlySet<string>;
+}
+
+const INITIAL_ABBREV_CTX: AbbrevReplayCtx = { depth: 0, seen: new Set<string>() };
+
 /**
  * Vim 키 입력 처리 순수 함수: (state, key) => newState
  */
@@ -286,7 +298,8 @@ export function rawHandleKey(
   state: VimEditorState,
   key: string,
   isReplayingDot = false,
-  macroDepth = 0
+  macroDepth = 0,
+  abbrevCtx: AbbrevReplayCtx = INITIAL_ABBREV_CTX
 ): VimEditorState {
   // z= 맞춤법 교체 추천 세션 처리
   if (state.spellSuggest) {
@@ -372,7 +385,7 @@ export function rawHandleKey(
   } else if (state.mode === 'REPLACE') {
     nextState = handleReplaceModeKey(state, key, isReplayingDot, macroDepth);
   } else if (state.mode === 'INSERT') {
-    nextState = handleInsertModeKey(state, key, isReplayingDot);
+    nextState = handleInsertModeKey(state, key, isReplayingDot, macroDepth, abbrevCtx);
   } else if (state.mode === 'VISUAL' || state.mode === 'VISUAL_LINE' || state.mode === 'VISUAL_BLOCK') {
     nextState = handleVisualModeKey(state, key, macroDepth);
   } else if (state.mode === 'NORMAL') {
@@ -1077,6 +1090,37 @@ function handleCommandLineModeKey(state: VimEditorState, key: string): VimEditor
     };
   }
 
+  // 2.5. Ctrl-v 리터럴 다음 문자 (커맨드라인 약어 확장 억제)
+  if (state.literalNextPending) {
+    if (key.length === 1 || key === 'Tab') {
+      const ch = key === 'Tab' ? '\t' : key;
+      const s = state.wildmenu?.active ? acceptWildmenu(state) : state;
+      return {
+        ...s,
+        commandBuffer: (s.commandBuffer ?? '') + ch,
+        literalNextPending: undefined,
+      };
+    }
+    state = { ...state, literalNextPending: undefined };
+  }
+
+  if (key === 'Ctrl-v' || key === 'Ctrl+v' || key === 'ctrl-v' || key === '<C-v>') {
+    return {
+      ...state,
+      literalNextPending: true,
+    };
+  }
+
+  // Ctrl-] 수동 커맨드라인 약어 확장 (트리거 문자 삽입 없음)
+  if (key === 'Ctrl-]' || key === 'Ctrl+]' || key === 'ctrl-]' || key === '<C-]>') {
+    const s = state.wildmenu?.active ? acceptWildmenu(state) : state;
+    const expanded = expandCmdlineAbbrev(s, s.commandBuffer ?? '', 'Ctrl-]');
+    return {
+      ...s,
+      commandBuffer: expanded,
+    };
+  }
+
   // Ctrl+f: 커맨드라인 윈도우(q:) 열기
   if (key === 'Ctrl-f' || key === 'Ctrl+f' || key === 'ctrl-f') {
     return openCommandLineWindow(state, ':', state.commandBuffer);
@@ -1121,6 +1165,7 @@ function handleCommandLineModeKey(state: VimEditorState, key: string): VimEditor
       commandBuffer: undefined,
       commandType: undefined,
       insertRegisterPending: undefined,
+      literalNextPending: undefined,
       wildmenu: null,
     };
   }
@@ -1143,27 +1188,93 @@ function handleCommandLineModeKey(state: VimEditorState, key: string): VimEditor
       commandBuffer: undefined,
       commandType: undefined,
       insertRegisterPending: undefined,
+      literalNextPending: undefined,
       wildmenu: null,
     };
   }
 
   if (key === 'Enter') {
     const s = state.wildmenu?.active ? acceptWildmenu(state) : state;
-    const cmd = s.commandBuffer ?? '';
+    const rawCmd = s.commandBuffer ?? '';
+    const cmd = expandCmdlineAbbrev(s, rawCmd, 'Enter');
     const nextState = addHistory(s, cmd, ':');
     return executeCommandLine(nextState, cmd, handleKey);
   }
 
-  // 일반 타이핑 문자 누적
+  // 일반 타이핑 문자 누적 (비단어 문자 입력 시 커맨드라인 약어 확장)
   if (key.length === 1) {
     const s = state.wildmenu?.active ? acceptWildmenu(state) : state;
+    const rawBuf = s.commandBuffer ?? '';
+    const buf = !/\w/.test(key) ? expandCmdlineAbbrev(s, rawBuf, key) : rawBuf;
     return {
       ...s,
-      commandBuffer: (s.commandBuffer ?? '') + key,
+      commandBuffer: buf + key,
     };
   }
 
   return state;
+}
+
+function applyInsertAbbrev(
+  state: VimEditorState,
+  triggerKey: string,
+  isReplayingDot: boolean,
+  macroDepth: number,
+  abbrevCtx: AbbrevReplayCtx
+): VimEditorState | null {
+  if (abbrevCtx.depth >= 20) return null;
+  const { line, col } = state.cursor;
+  const currentLine = state.lines[line] ?? '';
+  const match = findMatchingAbbrev(state, 'i', currentLine.slice(0, col), triggerKey, abbrevCtx.seen);
+  if (!match) return null;
+
+  const startCol = col - match.lhsLen;
+  const nextLines = [...state.lines];
+  nextLines[line] = currentLine.slice(0, startCol) + currentLine.slice(col);
+
+  const nextBlock = state.blockInsertSession
+    ? {
+        ...state.blockInsertSession,
+        typedChars: state.blockInsertSession.typedChars.slice(
+          0,
+          Math.max(0, state.blockInsertSession.typedChars.length - match.lhsLen)
+        ),
+      }
+    : undefined;
+
+  const nextChangeKeys =
+    !isReplayingDot && state.currentChangeKeys
+      ? state.currentChangeKeys.slice(0, Math.max(0, state.currentChangeKeys.length - match.lhsLen))
+      : state.currentChangeKeys;
+
+  let s: VimEditorState = {
+    ...state,
+    lines: nextLines,
+    cursor: { line, col: startCol },
+    pendingKeys: undefined,
+    blockInsertSession: nextBlock,
+    currentChangeKeys: nextChangeKeys,
+  };
+
+  const nextCtx: AbbrevReplayCtx = match.entry.noremap
+    ? { depth: 99, seen: abbrevCtx.seen }
+    : { depth: abbrevCtx.depth + 1, seen: new Set([...abbrevCtx.seen, match.entry.lhs]) };
+
+  const tokens = parseKeySequence(match.entry.rhs, state.leaderKey || ' ');
+  for (const tok of tokens) {
+    s = rawHandleKey(s, tok, isReplayingDot, macroDepth, nextCtx);
+    if (s.bell) break;
+  }
+
+  if (
+    triggerKey !== 'Ctrl-]' &&
+    triggerKey !== 'Ctrl+]' &&
+    triggerKey !== 'ctrl-]' &&
+    triggerKey !== '<C-]>'
+  ) {
+    s = rawHandleKey(s, triggerKey, isReplayingDot, macroDepth, nextCtx);
+  }
+  return s;
 }
 
 /**
@@ -1172,14 +1283,54 @@ function handleCommandLineModeKey(state: VimEditorState, key: string): VimEditor
 function handleInsertModeKey(
   state: VimEditorState,
   key: string,
-  isReplayingDot = false
+  isReplayingDot = false,
+  macroDepth = 0,
+  abbrevCtx: AbbrevReplayCtx = INITIAL_ABBREV_CTX
 ): VimEditorState {
   const { line, col } = state.cursor;
   const currentLine = state.lines[line] ?? '';
 
   // 타임아웃 발생 시 대기 버퍼 초기화
   if (key === 'Timeout') {
-    return { ...state, pendingKeys: undefined, insertRegisterPending: undefined };
+    return {
+      ...state,
+      pendingKeys: undefined,
+      insertRegisterPending: undefined,
+      literalNextPending: undefined,
+    };
+  }
+
+  // Ctrl+v 다음 문자 리터럴 삽입 (약어 확장 억제)
+  if (state.literalNextPending) {
+    if (key.length === 1 || key === 'Tab') {
+      const ch = key === 'Tab' ? '\t' : key;
+      const nextBlock = state.blockInsertSession
+        ? { ...state.blockInsertSession, typedChars: [...state.blockInsertSession.typedChars, ch] }
+        : undefined;
+      const newLine = currentLine.slice(0, col) + ch + currentLine.slice(col);
+      const nextLines = [...state.lines];
+      nextLines[line] = newLine;
+      const nextChangeKeys =
+        !isReplayingDot && state.currentChangeKeys
+          ? [...state.currentChangeKeys, 'Ctrl-v', key]
+          : state.currentChangeKeys;
+      return {
+        ...state,
+        lines: nextLines,
+        cursor: { line, col: col + ch.length },
+        literalNextPending: undefined,
+        blockInsertSession: nextBlock,
+        currentChangeKeys: nextChangeKeys,
+      };
+    }
+    state = { ...state, literalNextPending: undefined };
+  }
+
+  if (key === 'Ctrl-v' || key === 'Ctrl+v' || key === 'ctrl-v' || key === '<C-v>') {
+    return {
+      ...state,
+      literalNextPending: true,
+    };
   }
 
   // Ctrl+r 레지스터 대기 상태 (INSERT_REGISTER_PENDING)
@@ -1354,6 +1505,17 @@ function handleInsertModeKey(
   // 자동완성 이외의 키가 입력되면 활성 자동완성 세션 해제
   if (state.completionSession) {
     state = { ...state, completionSession: null };
+  }
+
+  // Ctrl-]: 수동 약어 확장 (트리거 키 삽입 없이 약어만 치환)
+  if (key === 'Ctrl-]' || key === 'Ctrl+]' || key === 'ctrl-]' || key === '<C-]>') {
+    return applyInsertAbbrev(state, 'Ctrl-]', isReplayingDot, macroDepth, abbrevCtx) ?? state;
+  }
+
+  // INSERT 모드 약어 자동 확장 (비단어 문자, Space, Enter, Tab, Escape)
+  if (isAbbrevTriggerKey(key, true)) {
+    const expanded = applyInsertAbbrev(state, key, isReplayingDot, macroDepth, abbrevCtx);
+    if (expanded) return expanded;
   }
 
   // Ctrl+o: 단 1회의 Normal 명령 실행 (INSERT (normal))
