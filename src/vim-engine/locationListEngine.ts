@@ -2,6 +2,9 @@ import { QuickfixItem, QuickfixState, VimEditorState, SplitPaneState } from './t
 import { switchBuffer, syncCurrentBuffer, editBuffer } from './bufferEngine';
 import { parseQuickfixErrorLines } from './quickfixEngine';
 import { compileVimRegex } from './vimRegex';
+import { getOptions } from './setEngine';
+import { buildVfsMap } from './vfs';
+import { parseLinesWithErrorformat, evaluateErrorExprLines, runVfsGrep } from './errorformat';
 import { msg } from './messages';
 
 /**
@@ -410,10 +413,15 @@ export function loadLocationListFromFile(
   }
 
   if (!fileLines) {
+    const vfs = buildVfsMap(synced);
+    fileLines = vfs[filename] ?? synced.netrw?.files?.[filename];
+  }
+
+  if (!fileLines) {
     return { ...state, commandMessage: `E484: Can't open file ${filename}` };
   }
 
-  const items = parseQuickfixErrorLines(fileLines);
+  const items = parseQuickfixErrorLines(fileLines, getOptions(synced).errorformat);
   if (items.length === 0) {
     return {
       ...state,
@@ -422,6 +430,61 @@ export function loadLocationListFromFile(
   }
 
   return setLocationList(state, items, jumpToFirst);
+}
+
+/**
+ * Vim script 표현식을 평가해 'errorformat' 으로 파싱한 뒤 로케이션 리스트를 설정·추가합니다 (:lexpr, :lgetexpr, :laddexpr).
+ */
+export function lexprLocationList(
+  state: VimEditorState,
+  rawExpr: string,
+  mode: 'replace' | 'get' | 'add',
+  callUserFn: (s: VimEditorState, name: string, args: any[]) => { value: any; state: VimEditorState; error?: string }
+): VimEditorState {
+  const expr = rawExpr.trim();
+  if (!expr) {
+    return { ...state, commandMessage: 'E471: Argument required', bell: true };
+  }
+
+  const evaluated = evaluateErrorExprLines(state, expr, callUserFn);
+  if (!evaluated.ok) {
+    return { ...state, commandMessage: evaluated.error, bell: true };
+  }
+
+  const nextState = evaluated.state;
+  const parsedItems = parseLinesWithErrorformat(evaluated.lines, getOptions(nextState).errorformat);
+
+  if (mode === 'add') {
+    const existing = nextState.locationList?.items ?? [];
+    return setLocationList(nextState, [...existing, ...parsedItems], false);
+  }
+
+  return setLocationList(nextState, parsedItems, mode === 'replace');
+}
+
+/**
+ * VFS 파일 및 버퍼에서 :lgrep / :lgrepadd 를 실행하여 로케이션 리스트를 구성합니다.
+ */
+export function grepToLocationList(
+  state: VimEditorState,
+  rawArgs: string,
+  isAppend = false,
+  jumpToFirst = true
+): VimEditorState {
+  const res = runVfsGrep(state, rawArgs);
+  if (!res.ok) {
+    return { ...state, commandMessage: res.error, bell: true };
+  }
+
+  if (res.items.length === 0) {
+    return { ...state, commandMessage: `E480: No match: ${res.pattern}`, bell: true };
+  }
+
+  const existing = isAppend && state.locationList ? state.locationList.items : [];
+  const merged = [...existing, ...res.items];
+  const jumpIdx = isAppend ? existing.length : 0;
+  const nextState = setLocationList(state, merged, false);
+  return jumpToFirst ? jumpToLocationListItem(nextState, jumpIdx) : nextState;
 }
 
 /**

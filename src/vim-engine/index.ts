@@ -36,8 +36,15 @@ export {
   switchCommandLineWindowType,
   clearCommandLineHistory,
 } from './cmdlineWindow';
-export { closeQuickfixWindow, jumpToQuickfixItem, cdo, cfdo } from './quickfixEngine';
-export { closeLocationListWindow, jumpToLocationListItem, ldo, lfdo } from './locationListEngine';
+export { closeQuickfixWindow, jumpToQuickfixItem, cdo, cfdo, cexprQuickfix, grepToQuickfix, parseQuickfixErrorLines } from './quickfixEngine';
+export { closeLocationListWindow, jumpToLocationListItem, ldo, lfdo, lexprLocationList, grepToLocationList } from './locationListEngine';
+export {
+  DEFAULT_ERRORFORMAT,
+  splitErrorformatEntries,
+  compileErrorformatPattern,
+  parseLinesWithErrorformat,
+  runVfsGrep,
+} from './errorformat';
 export {
   startOrCycleCompletion,
   cancelCompletion,
@@ -308,6 +315,18 @@ export {
 } from './abbrevEngine';
 export type { AbbrevMode, AbbrevMatch } from './abbrevEngine';
 export type { AbbreviationEntry } from './types';
+
+// ---- 가상 POSIX 셸 파이프·필터링 (:!cmd, :[range]!cmd, :r !cmd, :w !cmd) ----
+export {
+  expandShellCommand,
+  splitShellPipeline,
+  runShellPipeline,
+  executeShellCommand,
+  executeFilterRange,
+  executeReadShell,
+  executeWriteShell,
+} from './shellEngine';
+export type { ShellExecResult } from './shellEngine';
 
 // ---- 개발용 불변성 검사 ----
 export { withInvariantCheck, assertValidVimState, deepFreeze } from './invariants';

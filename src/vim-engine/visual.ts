@@ -483,7 +483,7 @@ export function swapVisualCursorAnchor(
   };
 }
 
-function utf8ByteLength(str: string): number {
+export function utf8ByteLength(str: string): number {
   let bytes = 0;
   for (let i = 0; i < str.length; i++) {
     const code = str.charCodeAt(i);

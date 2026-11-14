@@ -6,7 +6,7 @@ import { EN_CONTENT } from './enContent';
 import { MISSIONS } from '../data/missions';
 import { DUNGEON_STAGES, DUNGEON_SKILLS } from '../data/dungeonStages';
 import { SANDBOX_INITIAL_LINES } from '../data/sandbox';
-import { t, localized, setLocale, getLocale } from './index';
+import { t, localized, setLocale, getLocale, ensureLocaleDictionaries } from './index';
 
 /**
  * 영어 사전(en.ts)이 화면 문구를 빠짐없이 덮는지 검사합니다.
@@ -148,5 +148,10 @@ describe('i18n coverage', () => {
     expect(t('{n}타', { n: 7 })).toBe('7 keys');
     expect(t('번역 없는 문구')).toBe('번역 없는 문구');
     expect(t(MISSIONS[0].title)).toBe('Lesson 1: Basic Movement (h, j, k, l)');
+  });
+
+  it('ensureLocaleDictionaries resolves cleanly for both ko and en', async () => {
+    await expect(ensureLocaleDictionaries('ko')).resolves.toBeUndefined();
+    await expect(ensureLocaleDictionaries('en')).resolves.toBeUndefined();
   });
 });

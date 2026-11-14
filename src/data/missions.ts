@@ -3161,4 +3161,53 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 85,
+    title: '레슨 85: 가상 셸 파이프·필터링(:!cmd, :[range]!cmd, :r !cmd, !! / !{motion}) 마스터',
+    description:
+      'Vim 의 ! 필터 연산자와 Ex 셸 명령을 사용하면 에디터를 떠나지 않고도 sort, uniq, grep, awk, sed, tr, column, jq 같은 POSIX 파이프라인으로 버퍼 텍스트를 즉시 가공할 수 있습니다.\n\n1) 셸 출력 읽기 & 파이프 확인 (:r !cmd, :w !cmd):\n   - :0r !echo "// top" 처럼 :[range]r !{cmd} 를 실행하면 외부 명령의 출력을 버퍼에 삽입합니다.\n   - :w !wc -l 처럼 :[range]w !{cmd} 를 실행하면 버퍼(또는 범위) 내용을 수정하지 않고 셸 명령의 표준 입력(stdin)으로 넘겨 결과를 확인합니다.\n\n2) 버퍼 범위 필터링 (:[range]!cmd, !!, !{motion}):\n   - 노멀 모드에서 !! 를 누르면 현재 줄(: .!), !G 나 !ip 를 누르면 해당 범위(:.,$! / :.,.+N!)가 커맨드라인에 자동 입력됩니다.\n   - 이어서 sort | uniq 나 tr a-z A-Z 같은 파이프라인을 입력하고 <Enter> 를 누르면 해당 범위가 표준 출력으로 교체됩니다. (:%!cmd 는 전체 필터)\n\n미션:\n1. :0r !echo "// top"<Enter> 로 버퍼 맨 위에 // top 줄을 삽입하세요.\n2. 다음 줄(// raw)로 내려가(j) !!tr a-z A-Z<Enter> 로 현재 줄만 대문자(// RAW)로 변환하세요.\n3. 그 아래 데이터 시작 줄(zeta)로 이동(j)한 뒤 !Gsort | uniq<Enter> 로 끝까지 정렬 및 중복 제거하세요.\n4. 마지막으로 :w !wc -l<Enter> 로 전체 줄 수(5)를 파이프 집계하여 완료하세요!',
+    hint: ':0r !echo "// top"<Enter> → j !!tr a-z A-Z<Enter> → j !Gsort | uniq<Enter> → :w !wc -l<Enter>',
+    par: 64,
+    optimalKeys: [
+      ':', '0', 'r', ' ', '!', 'e', 'c', 'h', 'o', ' ', '"', '/', '/', ' ', 't', 'o', 'p', '"', 'Enter',
+      'j', '!', '!', 't', 'r', ' ', 'a', '-', 'z', ' ', 'A', '-', 'Z', 'Enter',
+      'j', '!', 'G', 's', 'o', 'r', 't', ' ', '|', ' ', 'u', 'n', 'i', 'q', 'Enter',
+      ':', 'w', ' ', '!', 'w', 'c', ' ', '-', 'l', 'Enter',
+    ],
+    primaryFilename: 'services.txt',
+    initialLines: [
+      '// raw',
+      'zeta',
+      'alpha',
+      'beta',
+      'alpha',
+    ],
+    targetLines: [
+      '// top',
+      '// RAW',
+      'alpha',
+      'beta',
+      'zeta',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const target = [
+        '// top',
+        '// RAW',
+        'alpha',
+        'beta',
+        'zeta',
+      ];
+      const isLinesMatched =
+        state.lines.length === target.length &&
+        state.lines.every((l, idx) => l === target[idx]);
+
+      return (
+        state.mode === 'NORMAL' &&
+        isLinesMatched &&
+        state.lastShellCommand === 'wc -l' &&
+        state.commandMessage === '5'
+      );
+    },
+  },
 ];

@@ -265,6 +265,10 @@ export interface VimOptions {
   foldlevel?: number;
   /** 주석 포맷 문자열 (:set cms=//\ %s, :set commentstring=#\ %s) */
   commentstring?: string;
+  /** 에러 파싱 포맷 (:set efm=%f:%l:%c:%m, :set errorformat=...) */
+  errorformat?: string;
+  /** 외부 grep 프로그램 설정 (:set grepprg=...) */
+  grepprg?: string;
 }
 
 /** 맞춤법 검사기 오탈자 정보 */
@@ -619,6 +623,10 @@ export interface VimEditorState {
   autocmdDepth?: number;
   /** 순정 Vim 내장 도움말 세션 (:help, K, F1) */
   helpSession?: HelpSession | null;
+  /** 직전에 실행한 셸 명령어 (:!!, ! 재확장용) */
+  lastShellCommand?: string;
+  /** Normal !{motion} / !! 에서 COMMAND 모드로 넘어갈 때 . 반복을 위해 보관하는 연산자 키 시퀀스 */
+  filterOperatorKeys?: string[];
 }
 
 /** 순정 Vim 도움말 세션 (:help, K, F1) */

@@ -1,6 +1,9 @@
 import { QuickfixItem, QuickfixState, VimEditorState } from './types';
 import { switchBuffer, syncCurrentBuffer, editBuffer } from './bufferEngine';
 import { compileVimRegex } from './vimRegex';
+import { getOptions } from './setEngine';
+import { buildVfsMap } from './vfs';
+import { parseLinesWithErrorformat, evaluateErrorExprLines, runVfsGrep } from './errorformat';
 import { msg } from './messages';
 
 /**
@@ -354,56 +357,10 @@ export function vimgrep(
 }
 
 /**
- * 에러 로그 텍스트 줄을 파싱하여 Quickfix 항목 목록을 생성합니다.
- * 지원 형식:
- * 1) filename:line:col: message
- * 2) filename:line: message
- * 3) filename(line,col): message
+ * 에러 로그 텍스트 줄을 'errorformat' 규칙에 따라 파싱하여 Quickfix 항목 목록을 생성합니다.
  */
-export function parseQuickfixErrorLines(lines: string[]): QuickfixItem[] {
-  const items: QuickfixItem[] = [];
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (trimmed.length === 0) continue;
-
-    // 1. filename:line:col: message
-    const match1 = trimmed.match(/^([^:\s]+):(\d+):(\d+):\s*(.*)$/);
-    if (match1) {
-      const filename = match1[1];
-      const lineNum = parseInt(match1[2], 10);
-      const colNum = parseInt(match1[3], 10);
-      const text = match1[4] || '';
-      const type = /error/i.test(text) ? 'E' : /warn/i.test(text) ? 'W' : 'I';
-      items.push({ filename, line: lineNum, col: colNum, text, type });
-      continue;
-    }
-
-    // 2. filename:line: message
-    const match2 = trimmed.match(/^([^:\s]+):(\d+):\s*(.*)$/);
-    if (match2) {
-      const filename = match2[1];
-      const lineNum = parseInt(match2[2], 10);
-      const text = match2[3] || '';
-      const type = /error/i.test(text) ? 'E' : /warn/i.test(text) ? 'W' : 'I';
-      items.push({ filename, line: lineNum, col: 1, text, type });
-      continue;
-    }
-
-    // 3. filename(line,col): message
-    const match3 = trimmed.match(/^([^:\s\(]+)\((\d+),(\d+)\):\s*(.*)$/);
-    if (match3) {
-      const filename = match3[1];
-      const lineNum = parseInt(match3[2], 10);
-      const colNum = parseInt(match3[3], 10);
-      const text = match3[4] || '';
-      const type = /error/i.test(text) ? 'E' : /warn/i.test(text) ? 'W' : 'I';
-      items.push({ filename, line: lineNum, col: colNum, text, type });
-      continue;
-    }
-  }
-
-  return items;
+export function parseQuickfixErrorLines(lines: string[], errorformat?: string): QuickfixItem[] {
+  return parseLinesWithErrorformat(lines, errorformat);
 }
 
 /**
@@ -419,8 +376,9 @@ export function loadQuickfixFromFile(
     return { ...state, commandMessage: 'E471: Argument required' };
   }
 
-  // 파일 줄 내용 찾기 (버퍼 목록, Netrw VFS, 현재 버퍼 등)
+  // 파일 줄 내용 찾기 (버퍼 목록, Netrw VFS, 워크스페이스 VFS, 현재 버퍼 등)
   let targetLines: string[] | undefined = undefined;
+  const vfs = buildVfsMap(state);
 
   const buf = state.buffers?.find((b) => b.name === cleanName);
   if (buf) {
@@ -431,6 +389,8 @@ export function loadQuickfixFromFile(
     targetLines = state.lines;
   } else if (cleanName === state.secondaryFilename && state.secondaryLines) {
     targetLines = state.secondaryLines;
+  } else if (vfs[cleanName]) {
+    targetLines = vfs[cleanName];
   }
 
   if (!targetLines) {
@@ -440,7 +400,7 @@ export function loadQuickfixFromFile(
     };
   }
 
-  const items = parseQuickfixErrorLines(targetLines);
+  const items = parseQuickfixErrorLines(targetLines, getOptions(state).errorformat);
   if (items.length === 0) {
     return {
       ...state,
@@ -449,6 +409,61 @@ export function loadQuickfixFromFile(
   }
 
   return setQuickfixList(state, items, jumpToFirst);
+}
+
+/**
+ * Vim script 표현식을 평가해 'errorformat' 으로 파싱한 뒤 퀵픽스 목록을 설정·추가합니다 (:cexpr, :cgetexpr, :caddexpr).
+ */
+export function cexprQuickfix(
+  state: VimEditorState,
+  rawExpr: string,
+  mode: 'replace' | 'get' | 'add',
+  callUserFn: (s: VimEditorState, name: string, args: any[]) => { value: any; state: VimEditorState; error?: string }
+): VimEditorState {
+  const expr = rawExpr.trim();
+  if (!expr) {
+    return { ...state, commandMessage: 'E471: Argument required', bell: true };
+  }
+
+  const evaluated = evaluateErrorExprLines(state, expr, callUserFn);
+  if (!evaluated.ok) {
+    return { ...state, commandMessage: evaluated.error, bell: true };
+  }
+
+  const nextState = evaluated.state;
+  const parsedItems = parseLinesWithErrorformat(evaluated.lines, getOptions(nextState).errorformat);
+
+  if (mode === 'add') {
+    const existing = nextState.quickfix?.items ?? [];
+    return setQuickfixList(nextState, [...existing, ...parsedItems], false);
+  }
+
+  return setQuickfixList(nextState, parsedItems, mode === 'replace');
+}
+
+/**
+ * VFS 파일 및 버퍼에서 :grep / :grepadd 를 실행하여 퀵픽스 목록을 구성합니다.
+ */
+export function grepToQuickfix(
+  state: VimEditorState,
+  rawArgs: string,
+  isAppend = false,
+  jumpToFirst = true
+): VimEditorState {
+  const res = runVfsGrep(state, rawArgs);
+  if (!res.ok) {
+    return { ...state, commandMessage: res.error, bell: true };
+  }
+
+  if (res.items.length === 0) {
+    return { ...state, commandMessage: `E480: No match: ${res.pattern}`, bell: true };
+  }
+
+  const existing = isAppend && state.quickfix ? state.quickfix.items : [];
+  const merged = [...existing, ...res.items];
+  const jumpIdx = isAppend ? existing.length : 0;
+  const nextState = setQuickfixList(state, merged, false);
+  return jumpToFirst ? jumpToQuickfixItem(nextState, jumpIdx) : nextState;
 }
 
 /**

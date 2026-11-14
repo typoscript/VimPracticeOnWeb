@@ -62,6 +62,10 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   foldlevel: 'foldlevel',
   cms: 'commentstring',
   commentstring: 'commentstring',
+  efm: 'errorformat',
+  errorformat: 'errorformat',
+  gp: 'grepprg',
+  grepprg: 'grepprg',
 };
 
 /**
@@ -147,6 +151,14 @@ export function formatOptionsList(
 
   if (options.commentstring !== undefined && (showAll || options.commentstring !== DEFAULT_VIM_OPTIONS.commentstring)) {
     displayedItems.push(`commentstring=${options.commentstring}`);
+  }
+
+  if (options.errorformat !== undefined && (showAll || options.errorformat !== DEFAULT_VIM_OPTIONS.errorformat)) {
+    displayedItems.push(`errorformat=${options.errorformat}`);
+  }
+
+  if (options.grepprg !== undefined && (showAll || options.grepprg !== DEFAULT_VIM_OPTIONS.grepprg)) {
+    displayedItems.push(`grepprg=${options.grepprg}`);
   }
 
   const defaultHeader = showAll ? '--- All Options ---' : '--- Modified Options ---';
@@ -294,6 +306,12 @@ export function executeSetCommand(
         const ft = nextLocal.filetype ?? nextGlobal.filetype ?? detectFiletype(state.primaryFilename);
         val = getFiletypeCommentString(ft) ?? '// %s';
       }
+      if (optKey === 'errorformat' && val === undefined) {
+        val = '%f:%l:%c:%m,%f:%l:%m,%f(%l\\,%c):%m';
+      }
+      if (optKey === 'grepprg' && val === undefined) {
+        val = 'grep -n $* /dev/null';
+      }
       if (typeof val === 'boolean') {
         queryMessages.push(val ? (optKey as string) : `no${optKey}`);
       } else {
@@ -302,12 +320,41 @@ export function executeSetCommand(
       continue;
     }
 
-    // 4. 숫자/값 할당 옵션 (:set ts=4, :set sw=2, :set ft=typescript, :set cms=//\ %s)
+    // 4. 숫자/값 할당 옵션 (:set ts=4, :set sw=2, :set ft=typescript, :set cms=//\ %s, :set efm+=...)
     if (token.includes('=')) {
       const eqIdx = token.indexOf('=');
-      const rawKey = token.slice(0, eqIdx);
+      const rawKeyWithMod = token.slice(0, eqIdx);
+      const mod =
+        rawKeyWithMod.endsWith('+') || rawKeyWithMod.endsWith('^') || rawKeyWithMod.endsWith('-')
+          ? rawKeyWithMod.slice(-1)
+          : '';
+      const rawKey = mod ? rawKeyWithMod.slice(0, -1) : rawKeyWithMod;
       const rawVal = token.slice(eqIdx + 1);
       const optKey = OPTION_ALIASES[rawKey];
+      if (optKey === 'errorformat' || optKey === 'grepprg') {
+        const currentStr =
+          (nextLocal[optKey] ?? nextGlobal[optKey]) ??
+          (optKey === 'errorformat' ? '%f:%l:%c:%m,%f:%l:%m,%f(%l\\,%c):%m' : 'grep -n $* /dev/null');
+        let nextStr = rawVal;
+        if (optKey === 'errorformat' && mod === '+') {
+          nextStr = currentStr ? `${currentStr},${rawVal}` : rawVal;
+        } else if (optKey === 'errorformat' && mod === '^') {
+          nextStr = currentStr ? `${rawVal},${currentStr}` : rawVal;
+        } else if (optKey === 'errorformat' && mod === '-') {
+          nextStr = currentStr
+            .split(',')
+            .filter((part) => part !== rawVal)
+            .join(',');
+        }
+        if (scope === 'local' || scope === 'both') {
+          (nextLocal as any)[optKey] = nextStr;
+        }
+        if (scope === 'global' || scope === 'both') {
+          (nextGlobal as any)[optKey] = nextStr;
+        }
+        appliedList.push(`${optKey}=${nextStr}`);
+        continue;
+      }
       if (optKey === 'commentstring') {
         if (rawVal !== '' && !rawVal.includes('%s')) {
           return {

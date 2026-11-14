@@ -15,6 +15,10 @@ export default defineConfig(({ mode }) => ({
           if (/node_modules\/(react|react-dom|scheduler)\//.test(id)) return 'react-vendor';
           // 독립 모듈인 Vim 엔진은 앱 코드와 따로 묶어 청크 크기를 나누고 캐시를 분리합니다
           if (id.includes('/src/vim-engine/')) return 'vim-engine';
+          // 영어 사전은 영어 모드 진입 시에만 지연 로딩되는 별도 청크로 분리합니다
+          if (/\/src\/i18n\/en(Content)?\.ts$/.test(id)) return 'i18n-en';
+          // 레슨 커리큘럼 데이터는 앱 로직과 별도 캐시 청크로 분리합니다
+          if (/\/src\/data\/missions\.ts$/.test(id)) return 'curriculum';
         },
       },
     },

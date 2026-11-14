@@ -1,7 +1,11 @@
 import '@testing-library/jest-dom';
 import { configureVimEngine } from '../vim-engine';
-import { setLocale } from '../i18n';
+import { setLocale, registerEnglishDictionaries } from '../i18n';
+import { EN } from '../i18n/en';
+import { EN_CONTENT } from '../i18n/enContent';
 import { DEMO_VIMRC, DEMO_WORKSPACE_FILES } from '../data/demoWorkspace';
+
+registerEnglishDictionaries(EN, EN_CONTENT);
 
 // 테스트에서는 불변성 검사를 켜고, 앱과 같은 데모 워크스페이스를 사용합니다
 configureVimEngine({ devChecks: true, workspaceFiles: DEMO_WORKSPACE_FILES, vimrc: DEMO_VIMRC });

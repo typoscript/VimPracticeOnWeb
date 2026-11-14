@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 132개 테스트 파일, 1,717개 테스트 100% 통과 필수)*
+  *(현재 134개 테스트 파일, 1,736개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 84)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 85)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -132,11 +132,14 @@
 - **약점 기반 맞춤 드릴 생성 (`AnalyticsModal` × `HardcoreDojo`, `src/utils/weaknessDrillAnalyzer.ts`, `AnalyticsModal.tsx`, `HardcoreDojo.tsx`)**: 타건 통계·안티패턴 감지 횟수·5각형 숙련도 점수를 분석(`analyzeWeaknesses`, `buildWeaknessDrillPlan`)해 상위 3개 약점(`navigation`, `targeting`, `textObjects`, `lineEndOps`, `lineStartOps`, `wordReplace`)을 5:3:2 비중의 10문제 맞춤 드릴 세트로 구성합니다. `AnalyticsModal` 에서 진단 배지와 `약점 맞춤 드릴 바로 시작 →` 원클릭 이동을 제공하고, `HardcoreDojo` 의 `weakness-custom` 탭에서 안티패턴 전용 교정 문제(`A/C/D`, `I`, `ciw/dw`) 및 통계 재분석·완주 요약을 지원합니다.
 - **Visual 모드 고급 편집 (`o` / `O`, `g Ctrl-g`, `gJ`, `Ctrl-v $ A / c`) (레슨 83, `src/vim-engine/visual.ts`, `vimEngine.ts`, `Editor.tsx`, `App.tsx`)**: Visual/Visual Line/Visual Block 커서-앵커 반전(`swapVisualCursorAnchor`: `o` 대각선, Visual Block `O` 같은 행 반대편 열 코너), 선택 영역을 유지한 채 열·줄·단어·UTF-8 바이트 통계를 출력하는 `g Ctrl-g`(`executeGCtrlG`, 한/영 Vim 원문 메시지 지원), Visual `gJ` 공백 없는 줄 병합(`gv`/`.` 반복 호환), `Ctrl-v $` EOL 확장 모드(`visualBlockEndOfLine`)에서 불규칙 길이 줄 끝 일괄 추가(`A`)·치환(`c`)·삭제(`d`)·복사(`y`) 및 짧은 줄 패딩/스킵 처리를 완성했습니다.
 - **고급 Ex 정렬·파일 삽입·줄 이동/복제 (`:read`, `:sort /pat/ f x o b i r`, `:move`/`:copy`) (레슨 84, `src/vim-engine/commandLine.ts`)**: `:0r`/`:$r`/`:r %`/`:r #` VFS·버퍼 파일 삽입(`executeRead`, 단일 undo 및 `E194`/`E484` + `bell`), `:sort[!] [i][u][n|f|x|o|b][r] [/pattern/]` 실수(`f`)·16/8/2진수(`x`/`o`/`b`)·대소문자 무시(`i`/`ui`)·매치 후 텍스트/매치 자체(`r`) 기준 정렬(`parseSortOptions`, `compileVimRegex`, `E475`), `:m`/`:mo`/`:mov`/`:move` 및 `:t`/`:co`/`:cop`/`:copy` `/pat/`·`?pat?` 주소 지원 및 `E14`/`E134` `bell` 일관성 보강을 완성했습니다.
+- **엔진 모드별 모듈 분리 & 메인 번들 청크 최적화 (`src/vim-engine/`, `src/i18n/index.ts`, `vite.config.ts`)**: 기존 5,375줄이던 `vimEngine.ts`를 라우터(`vimEngine.ts`, 254줄)·공통 헬퍼(`engineHelpers.ts`)·모드별 모듈(`searchMode.ts`, `cmdlineMode.ts`, `insertMode.ts`, `visualMode.ts`, `normalMode.ts`)로 비순환 분리했고, 영어 사전(`en.ts`·`enContent.ts`)을 `locale === 'en'`일 때만 동적 로드(`ensureLocaleDictionaries`, 테스트는 `registerEnglishDictionaries`)하도록 전환 및 `vite.config.ts`에서 `i18n-en`·`curriculum` 청크를 분리해 메인 `index` 청크를 570.31 kB → 189.06 kB(500 kB 미만, 경고 0건)로 경량화했습니다.
+- **가상 POSIX 셸 파이프·필터링 (`:!cmd`, `:[range]!cmd`, `:r !cmd`, `:w !cmd`, `!!`, `!{motion}`, Visual `!`) (레슨 85, `src/vim-engine/shellEngine.ts`, `commandLine.ts`, `normalMode.ts`, `visualMode.ts`)**: 브라우저 안전 내장 POSIX 유틸 에뮬레이터(`echo`, `printf`, `cat`, `sort`, `uniq`, `grep`/`egrep`/`fgrep`, `cut`, `tr`, `sed`, `awk`, `head`, `tail`, `wc`, `nl`, `tac`, `rev`, `column`, `jq`, `ls` VFS 연동) 및 멀티 스테이지 `|` 파이프라인(`splitPipedCommands` Ex 셸 구문 보존), `%`/`#`/`!` 확장(`lastShellCommand`, `E34`/`E499`/`E194`), 필터링 후 첫 비공백 커서 정밀 이동·부분/전체 빈 출력 불변식·단일 undo 및 Normal `.` 반복(`filterOperatorKeys`)을 완성했습니다.
+- **Ex 커맨드라인 모듈 분리 & `:grep` / `'errorformat'` · `:caddexpr` 강화 (`src/vim-engine/commandLine.ts`, `errorformat.ts`, `exRange.ts`, `exSubstitute.ts`, `exBufferOps.ts`, `exWorkspaceCommands.ts`, `exListAndToolCommands.ts`)**: 기존 4,172줄이던 `commandLine.ts` 를 비순환 6개 모듈(`commandLine.ts` 383줄·`exRange.ts`·`exSubstitute.ts`·`exBufferOps.ts`·`exWorkspaceCommands.ts`·`exListAndToolCommands.ts`)로 분리하고 기존 공개 export 를 유지했습니다. 아울러 `'errorformat'`(`efm`, `+=`/`^=`/`-=`/`?`) 및 `'grepprg'`(`gp`) 옵션, `splitErrorformatEntries`/`compileErrorformatPattern`/`parseLinesWithErrorformat`, `:cexpr`/`:cgetexpr`/`:caddexpr`(`:cad`)·`:lexpr`/`:lgetexpr`/`:laddexpr`(`:lad`) 표현식 평가, VFS 기반 `:grep[!]`/`:grepadd`/`:lgrep[!]`/`:lgrepadd`(`-i`, `-w`, `-F`, `-v`, `E471`, `E480`)를 구현했습니다.
 
 ---
 
 ## 5. 다음 개발 로드맵 추천 후보
 에이전트에게 다음 작업을 지시할 때 아래 항목 중에서 지정하시면 됩니다:
-1. **엔진 구조 분할 & 메인 번들 청크 최적화**: `vimEngine.ts` 모드별 모듈 분리 및 프로덕션 메인 번들(`index`) 코드 분할 경량화.
-2. **가상 셸 파이프·필터링 (`:!cmd`, `:[range]!sort/uniq`, `:r !`, `:w !`) + 레슨 85**: 안전한 내장 셸 유틸 에뮬레이터로 선택 범위/전체 버퍼 파이프 가공 워크플로우 구현.
-3. **고급 검색 오프셋(`/pat/+n`, `?pat?-n`, `//e`, `/pat/b`) & 카운트 점프 + 레슨 85**: 검색 매치 끝/오프셋 지정 이동과 연산자(`d/pat/e`, `c//b`) 결합 정밀 편집.
+1. **고급 검색 오프셋(`/pat/+n`, `?pat?-n`, `//e`, `/pat/b`) & 역방향 `?` 연산자 결합 + 레슨 86**: 검색 매치 끝/오프셋 지정 이동과 연산자(`d/pat/e`, `c//b`, `c?pat?`) 결합 정밀 편집.
+2. **고급 레지스터·폴드·매크로 실전 유틸리티 (`:put!`, `:delete {reg}`, `foldexpr`, `q: `/` / `?` 편집 실행 강화) + 레슨 86**: 레지스터 직접 삽입/삭제 명령, 표현식 폴딩(`:set fdm=expr`), 커맨드라인 윈도우 고급 워크플로우 확장.
+3. **멀티 윈도우 레이아웃 회전·일괄 제어(`Ctrl-w H/J/K/L`, `Ctrl-w r/R/x`, `:windo`, `:set scrollbind`)**: 분할 창 방향 전환·위치 교환, 전 창 일괄 Ex 실행(`:windo`), 동기 스크롤(`scrollbind`) 지원.

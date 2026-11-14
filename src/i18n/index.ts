@@ -1,6 +1,4 @@
 import { useSyncExternalStore } from 'react';
-import { EN } from './en';
-import { EN_CONTENT } from './enContent';
 import { configureVimEngine } from '../vim-engine';
 
 /**
@@ -32,6 +30,41 @@ function detectLocale(): Locale {
 let currentLocale: Locale = detectLocale();
 const listeners = new Set<() => void>();
 
+let enDict: Record<string, string> = {};
+let enContentDict: Record<string, string> = {};
+let enLoaded = false;
+let enLoadPromise: Promise<void> | null = null;
+
+/** 테스트 환경 등에서 영어 사전을 동기로 미리 등록합니다. */
+export function registerEnglishDictionaries(
+  en: Record<string, string>,
+  enContent: Record<string, string>
+): void {
+  enDict = en;
+  enContentDict = enContent;
+  enLoaded = true;
+}
+
+/** 영어 화면을 쓸 때만 en / enContent 청크를 동적으로 불러옵니다. */
+export function ensureLocaleDictionaries(locale: Locale = currentLocale): Promise<void> {
+  if (locale !== 'en' || enLoaded) {
+    return Promise.resolve();
+  }
+  if (!enLoadPromise) {
+    enLoadPromise = Promise.all([import('./en'), import('./enContent')])
+      .then(([enMod, contentMod]) => {
+        enDict = enMod.EN;
+        enContentDict = contentMod.EN_CONTENT;
+        enLoaded = true;
+        listeners.forEach((fn) => fn());
+      })
+      .finally(() => {
+        enLoadPromise = null;
+      });
+  }
+  return enLoadPromise;
+}
+
 function applyLocale(locale: Locale): void {
   if (typeof document !== 'undefined') {
     document.documentElement.lang = locale;
@@ -57,6 +90,9 @@ export function setLocale(locale: Locale, options: { persist?: boolean } = {}): 
       // 저장소를 쓸 수 없는 환경
     }
   }
+  if (locale === 'en' && !enLoaded) {
+    void ensureLocaleDictionaries('en');
+  }
   if (locale === currentLocale) return;
   currentLocale = locale;
   applyLocale(locale);
@@ -75,7 +111,7 @@ export function useLocale(): Locale {
 
 /** 한국어 원문을 현재 언어로 바꿉니다. {name} 자리 표시는 params 로 채웁니다. */
 export function t(ko: string, params?: Record<string, string | number | boolean | null | undefined>): string {
-  const template = currentLocale === 'en' ? EN[ko] ?? EN_CONTENT[ko] ?? ko : ko;
+  const template = currentLocale === 'en' ? enDict[ko] ?? enContentDict[ko] ?? ko : ko;
   if (!params) return template;
   return template.replace(/\{(\w+)\}/g, (whole, key: string) => (key in params ? String(params[key]) : whole));
 }

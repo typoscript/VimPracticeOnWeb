@@ -71,6 +71,14 @@ describe('splitPipedCommands (Vim :bar 분할 파서)', () => {
       'echo "ok"',
     ]);
   });
+
+  it('셸 파이프/필터 명령(:!, :%!, :r !, :w !) 내부의 | 는 분할하지 않는다', () => {
+    expect(splitPipedCommands('%!sort | uniq -c')).toEqual(['%!sort | uniq -c']);
+    expect(splitPipedCommands('!echo hello | tr a-z A-Z')).toEqual(['!echo hello | tr a-z A-Z']);
+    expect(splitPipedCommands('0r !ls | head -n 2')).toEqual(['0r !ls | head -n 2']);
+    expect(splitPipedCommands('w !grep err | wc -l')).toEqual(['w !grep err | wc -l']);
+    expect(splitPipedCommands('set number | %!sort | uniq')).toEqual(['set number', '%!sort | uniq']);
+  });
 });
 
 describe('파이프(|) 다중 Ex 명령 순차 실행', () => {
