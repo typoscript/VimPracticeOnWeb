@@ -292,7 +292,7 @@ export function runScriptLines(
         }
         continue;
       }
-      if (word === 'finally' || word === 'fin') {
+      if (/^fina(?:l(?:ly?)?)?$/.test(word)) {
         const top = stack[stack.length - 1];
         if (top?.type !== 'try') throw new VimScriptError(msg('E606: :try 없이 :finally 가 사용되었습니다'));
         top.inFinally = true;
@@ -339,6 +339,7 @@ export function runScriptLines(
         const next = runEx(withoutBell(ctx.state), line);
         ctx.state = next;
         if (next.bell) throw new VimScriptError(next.commandMessage ?? msg('E492: 명령 실행에 실패했습니다: {line}', { line }));
+        if (ctx.state.scriptFinished) return { state: ctx.state, value: 0, error: firstError };
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);

@@ -50,14 +50,21 @@ export function sourceScript(state: VimEditorState, targetFile = '%', runEx?: So
     return restoreSession(state, linesToRun, sourceName, runEx);
   }
 
-  let curState = state;
+  const prevDepth = state.scriptSourcingDepth ?? 0;
+  let curState: VimEditorState = { ...state, scriptSourcingDepth: prevDepth + 1, scriptFinished: false };
   let appliedCount = 0;
 
   for (let idx = 0; idx < linesToRun.length; idx++) {
+    if (curState.scriptFinished) break;
     const line = linesToRun[idx].trim();
     if (!line || line.startsWith('"')) {
       // 주석 및 빈 줄 무시
       continue;
+    }
+
+    if (/^(?:fin|fini|finis|finish)$/i.test(line)) {
+      appliedCount++;
+      break;
     }
 
     // 0. 함수 정의 블록 (function! Name() ... endfunction)
@@ -132,6 +139,8 @@ export function sourceScript(state: VimEditorState, targetFile = '%', runEx?: So
 
   return {
     ...curState,
+    scriptSourcingDepth: prevDepth > 0 ? prevDepth : undefined,
+    scriptFinished: undefined,
     commandMessage: msg('"{sourceName}" {appliedCount}개 설정 적용 완료 (sourced successfully)', { sourceName, appliedCount }),
   };
 }

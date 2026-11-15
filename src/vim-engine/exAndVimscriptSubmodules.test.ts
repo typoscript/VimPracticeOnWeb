@@ -206,6 +206,6 @@ describe('vimscriptLexer submodule', () => {
   it('throws E114, E115, and E15 on malformed literals and unknown characters', () => {
     expect(() => tokenize('"unclosed')).toThrow(/E114/);
     expect(() => tokenize("'unclosed")).toThrow(/E115/);
-    expect(() => tokenize('$bad')).toThrow(/E15/);
+    expect(() => tokenize('`bad')).toThrow(/E15/);
   });
 });

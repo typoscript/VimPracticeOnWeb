@@ -408,6 +408,10 @@ export const EN_MESSAGES: Record<string, string> = {
   "{count}개 줄을 하나로 합쳤습니다": "{count} lines joined",
   "{linesCount}개 줄을 {dir} {times}회 들여썼습니다": "{linesCount} line(s) {dir}ed {times} time(s)",
   "E113: 알 수 없는 옵션입니다: {opt}": "E113: Unknown option: {opt}",
+  "E168: :finish 는 소스 파일 안에서만 사용할 수 있습니다": "E168: :finish used outside of a sourced file",
+  "E474: funcref 는 JSON 으로 변환할 수 없습니다": "E474: Cannot encode funcref to JSON",
+  "E474: 유효하지 않은 JSON 입니다: {v}": "E474: Invalid argument: {v}",
   "E475: 잘못된 인수입니다: {arg}": "E475: Invalid argument: {arg}",
+  "E738: 스코프 딕셔너리에는 딕셔너리만 대입할 수 있습니다: {name}": "E738: Can only assign Dict to scope dictionary: {name}",
   "메시지 기록이 비어 있습니다": "No messages in history",
 };

@@ -22,6 +22,9 @@ import {
   removeIn,
   resolveVariableName,
   readRegister,
+  readEnvVar,
+  writeEnvVar,
+  deleteEnvVar,
   readVariable,
   writeVariable,
   deleteVariable,
@@ -69,6 +72,9 @@ export function readLValue(ctx: EvalContext, lv: LValue): VimScriptValue {
     if (val === null) throw new VimScriptError(msg('E113: 알 수 없는 옵션입니다: {opt}', { opt: lv.base.slice(1) }));
     return val;
   }
+  if (lv.base.startsWith('$')) {
+    return readEnvVar(ctx.state, lv.base.slice(1));
+  }
   let value: VimScriptValue = lv.base.startsWith('@') ? readRegister(ctx.state, lv.base[1]) : readVariable(ctx, lv.base);
   for (const key of lv.path) value = getIn(value, key);
   return value;
@@ -87,6 +93,11 @@ export function writeLValue(ctx: EvalContext, lv: LValue, value: VimScriptValue)
     ctx.state = nextState;
     return;
   }
+  if (lv.base.startsWith('$')) {
+    if (lv.path.length > 0) throw new VimScriptError(msg('E475: 잘못된 대입 대상입니다: {source}', { source: lv.base }));
+    ctx.state = writeEnvVar(ctx.state, lv.base.slice(1), toVimString(value));
+    return;
+  }
   if (lv.base.startsWith('@')) {
     if (lv.path.length > 0) throw new VimScriptError(msg('E15: 레지스터에는 인덱스를 쓸 수 없습니다: {base}', { base: lv.base }));
     const reg = lv.base[1] === '"' ? '"' : lv.base[1].toLowerCase();
@@ -102,6 +113,10 @@ export function writeLValue(ctx: EvalContext, lv: LValue, value: VimScriptValue)
 
 /** :unlet 대상(변수, 리스트 항목, 딕셔너리 키)을 지웁니다. */
 export function unsetLValue(ctx: EvalContext, lv: LValue, force: boolean): void {
+  if (lv.base.startsWith('$')) {
+    ctx.state = deleteEnvVar(ctx.state, lv.base.slice(1));
+    return;
+  }
   if (lv.path.length === 0) {
     deleteVariable(ctx, lv.base, force);
     return;
@@ -162,6 +177,7 @@ class Evaluator {
     let base: string;
     if (t.type === 'reg') base = `@${t.value}`;
     else if (t.type === 'opt') base = t.value;
+    else if (t.type === 'env') base = `$${t.value}`;
     else if (t.type === 'name') base = t.value;
     else throw new VimScriptError(msg('E475: 잘못된 대입 대상입니다: {source}', { source: this.source }));
     this.pos++;
@@ -489,6 +505,10 @@ class Evaluator {
       this.pos++;
       return readRegister(this.ctx.state, t.value);
     }
+    if (t.type === 'env') {
+      this.pos++;
+      return readEnvVar(this.ctx.state, t.value);
+    }
     if (t.type === 'opt') {
       this.pos++;
       const val = readOptionForScript(this.ctx.state, t.value);
@@ -521,14 +541,21 @@ class Evaluator {
       const items: Record<string, VimScriptValue> = {};
       while (!this.isOp('}')) {
         let key: string;
+        let hasColon = false;
         const kt = this.peek();
-        if (literalKeys && (kt.type === 'name' || kt.type === 'num')) {
+        if (literalKeys && kt.type === 'name' && /^[gblwtsav]:$/.test(kt.value)) {
+          key = kt.value.slice(0, -1);
+          hasColon = true;
+          this.pos++;
+        } else if (literalKeys && (kt.type === 'name' || kt.type === 'num')) {
           key = String(kt.value);
           this.pos++;
         } else {
           key = toVimString(this.or());
         }
-        this.expectOp(':', () => new VimScriptError(msg('E720: 딕셔너리 키 뒤에 : 가 없습니다: {source}', { source: this.source })));
+        if (!hasColon) {
+          this.expectOp(':', () => new VimScriptError(msg('E720: 딕셔너리 키 뒤에 : 가 없습니다: {source}', { source: this.source })));
+        }
         items[key] = this.ternary();
         if (!this.isOp(',')) break;
         this.pos++;

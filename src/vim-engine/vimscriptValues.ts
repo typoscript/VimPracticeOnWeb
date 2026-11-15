@@ -243,16 +243,49 @@ export function removeIn(container: VimScriptValue, path: (number | string)[]): 
   throw new VimScriptError(msg('E689: 리스트나 딕셔너리만 인덱스로 접근할 수 있습니다'));
 }
 
+export type VarScope = 'g' | 'b' | 'w' | 't' | 's' | 'l' | 'a' | 'v';
+
 /** 이름의 스코프를 판별합니다. 함수 안에서는 접두어 없는 이름이 l:, 밖에서는 g: 입니다. */
-export function resolveVariableName(ctx: Pick<EvalContext, 'locals'>, name: string): { scope: 'g' | 'l' | 'a' | 'v'; key: string } {
-  const m = name.match(/^([gblwtsav]):(.+)$/);
-  if (m) {
-    const scope = m[1];
-    if (scope === 'a' || scope === 'l' || scope === 'v') return { scope, key: m[2] };
-    // b: w: t: s: 는 단순화를 위해 g: 공간에 접두어를 붙여 저장
-    return { scope: 'g', key: scope === 'g' ? m[2] : `${scope}:${m[2]}` };
-  }
+export function resolveVariableName(ctx: Pick<EvalContext, 'locals'>, name: string): { scope: VarScope; key: string } {
+  const m = name.match(/^([gblwtsav]):(.*)$/);
+  if (m) return { scope: m[1] as VarScope, key: m[2] };
   return ctx.locals ? { scope: 'l', key: name } : { scope: 'g', key: name };
+}
+
+function getScopeStore(ctx: EvalContext, scope: VarScope): Record<string, VimScriptValue> {
+  const s = ctx.state;
+  if (scope === 'v') {
+    return { true: 1, false: 0, exception: '', throwpoint: '', ...(ctx.vvars ?? {}) };
+  }
+  if (scope === 'a') return ctx.args ?? {};
+  if (scope === 'l') return ctx.locals ?? {};
+  if (scope === 'b') return s.bufferVars?.[s.currentBufferId ?? 1] ?? {};
+  if (scope === 'w') return s.windowVars?.[s.activePaneIndex ?? 0] ?? {};
+  if (scope === 't') return s.tabVars?.[s.currentTabId ?? 1] ?? {};
+  if (scope === 's') return s.scriptVars ?? {};
+  return s.globalVars ?? {};
+}
+
+function updateScopeStore(ctx: EvalContext, scope: VarScope, next: Record<string, VimScriptValue>): void {
+  const s = ctx.state;
+  if (scope === 'l') {
+    if (!ctx.locals) ctx.locals = {};
+    for (const k of Object.keys(ctx.locals)) delete ctx.locals[k];
+    Object.assign(ctx.locals, next);
+  } else if (scope === 'b') {
+    const id = s.currentBufferId ?? 1;
+    ctx.state = { ...s, bufferVars: { ...(s.bufferVars ?? {}), [id]: next } };
+  } else if (scope === 'w') {
+    const id = s.activePaneIndex ?? 0;
+    ctx.state = { ...s, windowVars: { ...(s.windowVars ?? {}), [id]: next } };
+  } else if (scope === 't') {
+    const id = s.currentTabId ?? 1;
+    ctx.state = { ...s, tabVars: { ...(s.tabVars ?? {}), [id]: next } };
+  } else if (scope === 's') {
+    ctx.state = { ...s, scriptVars: next };
+  } else {
+    ctx.state = { ...s, globalVars: next };
+  }
 }
 
 export function readRegister(state: VimEditorState, reg: string): string {
@@ -262,22 +295,42 @@ export function readRegister(state: VimEditorState, reg: string): string {
   return '';
 }
 
+function defaultEnvMap(state: VimEditorState): Record<string, string> {
+  return {
+    HOME: '/home/user',
+    USER: 'vim',
+    PWD: getEffectiveCwd(state),
+    SHELL: '/bin/sh',
+    TERM: 'xterm-256color',
+  };
+}
+
+export function hasEnvVar(state: VimEditorState, name: string): boolean {
+  if (state.envVars && name in state.envVars) return true;
+  return name in defaultEnvMap(state);
+}
+
+export function readEnvVar(state: VimEditorState, name: string): string {
+  if (state.envVars && name in state.envVars) return state.envVars[name];
+  return defaultEnvMap(state)[name] ?? '';
+}
+
+export function writeEnvVar(state: VimEditorState, name: string, value: string): VimEditorState {
+  return { ...state, envVars: { ...(state.envVars ?? {}), [name]: value } };
+}
+
+export function deleteEnvVar(state: VimEditorState, name: string): VimEditorState {
+  if (!state.envVars || !(name in state.envVars)) return state;
+  const next = { ...state.envVars };
+  delete next[name];
+  return { ...state, envVars: next };
+}
+
 export function readVariable(ctx: EvalContext, name: string): VimScriptValue {
   const { scope, key } = resolveVariableName(ctx, name);
-  if (scope === 'v') {
-    if (key === 'true') return 1;
-    if (key === 'false') return 0;
-    if (key === 'exception') return ctx.vvars?.['exception'] ?? '';
-    if (key === 'throwpoint') return ctx.vvars?.['throwpoint'] ?? '';
-    if (ctx.vvars && key in ctx.vvars) return ctx.vvars[key];
-  } else if (scope === 'a') {
-    if (ctx.args && key in ctx.args) return ctx.args[key];
-  } else if (scope === 'l') {
-    if (ctx.locals && key in ctx.locals) return ctx.locals[key];
-  } else {
-    const globals = ctx.state.globalVars ?? {};
-    if (key in globals) return globals[key];
-  }
+  const store = getScopeStore(ctx, scope);
+  if (key === '') return makeDict({ ...store });
+  if (key in store) return store[key];
   throw new VimScriptError(msg('E121: 정의되지 않은 변수입니다: {name}', { name }));
 }
 
@@ -285,27 +338,33 @@ export function readVariable(ctx: EvalContext, name: string): VimScriptValue {
 export function writeVariable(ctx: EvalContext, name: string, value: VimScriptValue): void {
   const { scope, key } = resolveVariableName(ctx, name);
   if (scope === 'a' || scope === 'v') throw new VimScriptError(msg('E46: 읽기 전용 변수는 바꿀 수 없습니다: {name}', { name }));
-  if (scope === 'l') {
-    ctx.locals![key] = value;
-  } else {
-    ctx.state = { ...ctx.state, globalVars: { ...(ctx.state.globalVars ?? {}), [key]: value } };
+  if (key === '') {
+    if (!isDict(value)) throw new VimScriptError(msg('E738: 스코프 딕셔너리에는 딕셔너리만 대입할 수 있습니다: {name}', { name }));
+    updateScopeStore(ctx, scope, { ...value.items });
+    return;
   }
+  if (scope === 'l' && ctx.locals) {
+    ctx.locals[key] = value;
+    return;
+  }
+  updateScopeStore(ctx, scope, { ...getScopeStore(ctx, scope), [key]: value });
 }
 
 export function deleteVariable(ctx: EvalContext, name: string, force: boolean): void {
   const { scope, key } = resolveVariableName(ctx, name);
-  const store = scope === 'l' ? ctx.locals : scope === 'g' ? ctx.state.globalVars : undefined;
-  if (!store || !(key in store)) {
+  if (scope === 'a' || scope === 'v') throw new VimScriptError(msg('E46: 읽기 전용 변수는 바꿀 수 없습니다: {name}', { name }));
+  const store = getScopeStore(ctx, scope);
+  if (!key || !(key in store)) {
     if (force) return;
     throw new VimScriptError(msg('E108: 해당 변수가 없습니다: {name}', { name }));
   }
-  if (scope === 'l') {
-    delete ctx.locals![key];
-  } else {
-    const globals = { ...(ctx.state.globalVars ?? {}) };
-    delete globals[key];
-    ctx.state = { ...ctx.state, globalVars: globals };
+  if (scope === 'l' && ctx.locals) {
+    delete ctx.locals[key];
+    return;
   }
+  const next = { ...store };
+  delete next[key];
+  updateScopeStore(ctx, scope, next);
 }
 
 /** :redir 세션이 활성화된 경우 출력 문자열을 대상 변수 또는 레지스터에 추가합니다. */
@@ -402,7 +461,7 @@ function extractTokenAtCursor(line: string, col: number, charRe: RegExp): string
   return line.slice(start, end + 1);
 }
 
-function applyPathModifiers(val: string, mods: string, state: VimEditorState): string {
+export function applyPathModifiers(val: string, mods: string, state: VimEditorState): string {
   let out = val;
   for (const m of mods.matchAll(/:([phtre])/g)) {
     if (!out) break;

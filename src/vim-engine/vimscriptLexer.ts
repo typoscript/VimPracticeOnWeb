@@ -7,6 +7,7 @@ export type Token = (
   | { type: 'name'; value: string }
   | { type: 'reg'; value: string }
   | { type: 'opt'; value: string }
+  | { type: 'env'; value: string }
   | { type: 'op'; value: string }
   | { type: 'eof'; value?: undefined }
 ) & { space: boolean; start: number; end: number };
@@ -97,6 +98,16 @@ export function tokenize(src: string): Token[] {
         continue;
       }
     }
+    // $ENV 환경 변수 ($HOME, $PATH 등)
+    if (ch === '$') {
+      const envMatch = src.slice(i).match(/^\$[A-Za-z_][A-Za-z0-9_]*/);
+      if (envMatch) {
+        const len = envMatch[0].length;
+        push({ type: 'env', value: envMatch[0].slice(1) }, i, i + len);
+        i += len;
+        continue;
+      }
+    }
     // a:0, a:1, a:000 (가변 인자)
     const argIdx = src.slice(i).match(/^a:\d+/);
     if (argIdx) {
@@ -105,8 +116,8 @@ export function tokenize(src: string): Token[] {
       i += len;
       continue;
     }
-    // 이름 (g:x, a:name, v:true, Func)
-    const name = src.slice(i).match(/^([gblwtsav]:)?[A-Za-z_][A-Za-z0-9_]*/);
+    // 이름 (g:, b:, g:x, a:name, v:true, Func)
+    const name = src.slice(i).match(/^(?:[gblwtsav]:(?![A-Za-z0-9_])|(?:[gblwtsav]:)?[A-Za-z_][A-Za-z0-9_]*)/);
     if (name) {
       const len = name[0].length;
       push({ type: 'name', value: name[0] }, i, i + len);

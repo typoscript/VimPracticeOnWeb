@@ -54,6 +54,7 @@ export const AVAILABLE_COMMANDS: string[] = [
   'Explore',
   'E',
   'file',
+  'finish',
   'global',
   'g',
   'j',

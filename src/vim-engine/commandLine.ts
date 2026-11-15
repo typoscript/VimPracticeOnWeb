@@ -85,7 +85,7 @@ function executePipedCommands(
 ): VimEditorState {
   const isControlFlow = (cmd: string) => {
     const word = cmd.trim().replace(/^:\s*/, '').match(/^(\w+)/)?.[1] ?? '';
-    return /^(if|elseif|elsei|else|el|endif|en|while|wh|endwhile|endw|for|endfor|endfo|try|catch|cat|finally|fin|endtry|endt|throw|th|return|retu)$/.test(word);
+    return /^(if|elseif|elsei|else|el|endif|en|while|wh|endwhile|endw|for|endfor|endfo|try|catch|cat|finally|finall|final|fina|endtry|endt|throw|th|return|retu)$/.test(word);
   };
 
   const hasControlFlow = commands.some(isControlFlow);
@@ -100,7 +100,7 @@ function executePipedCommands(
     const cleaned = cmd.trim();
     if (cleaned.length === 0) continue;
     cur = executeCommandLine(cur, cleaned, keyRunner, userCommandDepth);
-    if (cur.bell) {
+    if (cur.bell || cur.scriptFinished) {
       break;
     }
   }
@@ -253,6 +253,29 @@ export function executeCommandLine(
     };
     if (next.redirSession && hist.length > 0) next = appendRedirText(next, text);
     return next;
+  }
+
+  // 1-0c. :finish (스크립트 소싱 조기 종료)
+  if (/^:?\s*(?:fin|fini|finis|finish)$/i.test(trimmed.trim())) {
+    if ((state.scriptSourcingDepth ?? 0) > 0) {
+      return {
+        ...state,
+        mode: 'NORMAL',
+        visualAnchor: undefined,
+        commandBuffer: undefined,
+        commandType: undefined,
+        scriptFinished: true,
+      };
+    }
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      bell: true,
+      commandMessage: msg('E168: :finish 는 소스 파일 안에서만 사용할 수 있습니다'),
+    };
   }
 
   // 1-1. Vim script: :function, :endfunction, :delfunction, :let, :unlet, :echo, :execute, :[range]call

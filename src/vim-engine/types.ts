@@ -685,6 +685,20 @@ export interface VimEditorState {
   redirSession?: { target: string; append: boolean } | null;
   /** :noautocmd 모디파이어 실행 중 자동 명령 억제 여부 */
   noautocmdSuppressed?: boolean;
+  /** 버퍼별 변수 저장소 (b:var, bufferId -> vars) */
+  bufferVars?: Record<number, Record<string, VimScriptValue>>;
+  /** 창별 변수 저장소 (w:var, paneIndex -> vars) */
+  windowVars?: Record<number, Record<string, VimScriptValue>>;
+  /** 탭별 변수 저장소 (t:var, tabId -> vars) */
+  tabVars?: Record<number, Record<string, VimScriptValue>>;
+  /** 스크립트 로컬 변수 저장소 (s:var) */
+  scriptVars?: Record<string, VimScriptValue>;
+  /** 환경 변수 저장소 ($VAR) */
+  envVars?: Record<string, string>;
+  /** :source 실행 중 :finish 로 조기 종료 요청되었는지 여부 */
+  scriptFinished?: boolean;
+  /** 현재 :source 실행 중첩 깊이 (:finish 검증용) */
+  scriptSourcingDepth?: number;
 }
 
 export type LspDiagnosticSeverity = 'error' | 'warning' | 'info' | 'hint';

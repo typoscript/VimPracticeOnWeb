@@ -19,9 +19,11 @@ import {
   getIn,
   removeIn,
   readVariable,
+  hasEnvVar,
   expandScriptExpr,
 } from './vimscriptValues';
 import { OPTION_ALIASES } from './setOptionsCore';
+import { EXTRA_BUILTINS } from './vimscriptBuiltinsExtra';
 
 // ---------------------------------------------------------------------------
 // 내장 함수
@@ -62,12 +64,12 @@ function resolveLineArg(state: VimEditorState, arg: VimScriptValue): number {
 const SUPPORTED_FEATURES = new Set([
   'vim', 'nvim', 'eval', 'syntax', 'folding', 'spell', 'quickfix', 'loclist',
   'diff', 'wildmenu', 'autocmd', 'user_commands', 'lambda', 'funcref',
-  'cmdline_compl', 'multi_byte', 'timers',
+  'cmdline_compl', 'multi_byte', 'timers', 'json',
 ]);
 
 const KNOWN_BUILTIN_COMMANDS = new Set([
   'e', 'edit', 'enew', 'ene', 'w', 'write', 'wa', 'wall', 'q', 'quit', 'qa', 'qall',
-  'wq', 'wqa', 'wqall', 'x', 'xa', 'xall', 'saveas', 'sav', 'f', 'file', 'files',
+  'wq', 'wqa', 'wqall', 'x', 'xa', 'xall', 'saveas', 'sav', 'f', 'file', 'files', 'finish',
   'ls', 'buffers', 'b', 'buffer', 'bn', 'bnext', 'bp', 'bprev', 'bd', 'bdelete',
   'bun', 'bunload', 'bw', 'bwipeout', 'sp', 'split', 'vsp', 'vsplit', 'tabnew',
   'cd', 'chdir', 'lcd', 'lchdir', 'pwd', 'set', 'se', 'setlocal', 'setglobal',
@@ -253,6 +255,7 @@ export function createBuiltinRegistry(
   }
 
   const BUILTINS: Record<string, Builtin> = {
+    ...EXTRA_BUILTINS,
     // ---- 버퍼·커서 ----
     line: { min: 1, max: 1, fn: (ctx, [a]) => resolveLineArg(ctx.state, a) + 1 },
     col: {
@@ -464,6 +467,9 @@ export function createBuiltinRegistry(
         if (name.startsWith(':')) {
           const cmd = name.slice(1);
           return ctx.state.userCommands?.[cmd] || KNOWN_BUILTIN_COMMANDS.has(cmd) ? 2 : 0;
+        }
+        if (name.startsWith('$')) {
+          return hasEnvVar(ctx.state, name.slice(1)) ? 1 : 0;
         }
         if (name.startsWith('@')) {
           return name.length === 2 && /^[a-zA-Z0-9"_+*/%.:=-]$/.test(name[1]) ? 1 : 0;

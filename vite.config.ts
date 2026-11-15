@@ -20,6 +20,7 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'cursor.ts',
       'vimRegex.ts',
       'vimscriptValues.ts',
+      'vimscriptBuiltinsExtra.ts',
       'vimscriptBuiltins.ts',
       'vimscriptLexer.ts',
       'vimscriptEval.ts',
