@@ -15,6 +15,7 @@ import {
 } from './storage';
 import { DUNGEON_STORAGE_KEY } from './dungeonStorage';
 import { ANALYTICS_STORAGE_KEY } from './analyticsStorage';
+import { SRS_STORAGE_KEY } from './srsScheduler';
 import {
   KEYMAP_PRESETS_STORAGE_KEY,
   LEADER_KEY_STORAGE_KEY,
@@ -28,6 +29,7 @@ export const BACKUP_KEYS = [
   PROGRESS_STORAGE_KEY,
   DUNGEON_STORAGE_KEY,
   ANALYTICS_STORAGE_KEY,
+  SRS_STORAGE_KEY,
   SPEEDRUN_RECORD_STORAGE_KEY,
   DOJO_HIGH_SCORES_STORAGE_KEY,
   DOJO_LEADERBOARD_STORAGE_KEY,

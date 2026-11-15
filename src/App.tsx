@@ -26,6 +26,7 @@ import {
 } from './utils/actionTimeline';
 import { VimEditorState, SplitPaneState } from './vim-engine';
 import { Mission } from './types/mission';
+import { recordLessonSrsReview } from './utils/srsScheduler';
 import { handleKey } from './vim-engine';
 import { switchPaneFocus } from './vim-engine';
 import { switchBuffer, ensureBuffers } from './vim-engine';
@@ -687,14 +688,18 @@ export function App() {
     }
   }, [currentTab, isCompleted, currentMission.id, currentMission.par, keystrokeCount]);
 
-  // 미션 클리어 시 레트로 8비트 아르페지오 성공 효과음 재생
+  // 미션 클리어 시 레트로 8비트 아르페지오 성공 효과음 재생 및 SRS 간격 반복 스케줄 갱신
   const wasCompletedRef = useRef(false);
   useEffect(() => {
     if (isCompleted && !wasCompletedRef.current) {
       playSuccessSound();
+      if (currentTab === 'course') {
+        const rating = calculateStars(keystrokeCount, currentMission.par);
+        recordLessonSrsReview(currentMission.id, rating.starCount);
+      }
     }
     wasCompletedRef.current = isCompleted;
-  }, [isCompleted, playSuccessSound]);
+  }, [isCompleted, playSuccessSound, currentTab, currentMission.id, currentMission.par, keystrokeCount]);
 
   // 시스템 클립보드 ("+, "*) 변경 시 실제 웹 브라우저 클립보드에 동기화
   const prevSystemClipboardRef = useRef<string | undefined>(editorState.systemClipboard);
@@ -2456,6 +2461,13 @@ export function App() {
             onStartWeaknessDrill={() => {
               setDojoInitialDrill({ drill: 'weakness-custom', nonce: Date.now() });
               handleSwitchTab('dojo');
+            }}
+            onSelectLesson={(missionId) => {
+              const idx = MISSIONS.findIndex((m) => m.id === missionId);
+              if (idx !== -1) {
+                handleSelectMission(idx);
+                setCurrentTab('course');
+              }
             }}
           />
         )}

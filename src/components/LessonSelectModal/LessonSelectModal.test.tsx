@@ -224,4 +224,30 @@ describe('LessonSelectModal Component', () => {
     expect(screen.queryByTestId('empty-search-state')).toBeNull();
     expect(screen.getByTestId('lesson-card-1')).toBeInTheDocument();
   });
+
+  it('약점·간격 반복(SRS) 복습 추천 배너가 표시되고 클릭 시 레슨이 선택된다', () => {
+    const onSelectLesson = vi.fn();
+    const onClose = vi.fn();
+
+    render(
+      <LessonSelectModal
+        isOpen={true}
+        onClose={onClose}
+        missions={MISSIONS}
+        currentMissionId={1}
+        progress={{
+          ...mockProgress,
+          14: { completed: true, bestStars: 1, minKeystrokes: 30 },
+        }}
+        onSelectLesson={onSelectLesson}
+      />
+    );
+
+    expect(screen.getByTestId('lesson-srs-banner')).toBeInTheDocument();
+    const chip = screen.getByTestId('lesson-srs-chip-14');
+    fireEvent.click(chip);
+
+    expect(onSelectLesson).toHaveBeenCalledWith(14);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 });

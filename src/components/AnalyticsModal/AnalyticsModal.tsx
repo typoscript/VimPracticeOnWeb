@@ -6,6 +6,8 @@ import {
   getTopCommands,
 } from '../../utils/analyticsStorage';
 import { buildWeaknessDrillPlan } from '../../utils/weaknessDrillAnalyzer';
+import { buildSrsReviewQueue, loadSrsSchedule } from '../../utils/srsScheduler';
+import { MISSIONS } from '../../data/missions';
 import { KeystrokeHeatmap } from './KeystrokeHeatmap';
 import './AnalyticsModal.css';
 import { t } from '../../i18n';
@@ -16,6 +18,7 @@ export interface AnalyticsModalProps {
   progress: LessonProgress;
   onOpenDailyChallenge?: () => void;
   onStartWeaknessDrill?: () => void;
+  onSelectLesson?: (missionId: number) => void;
 }
 
 function getAntiPatternTip(name: string): string {
@@ -46,6 +49,7 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
   progress,
   onOpenDailyChallenge,
   onStartWeaknessDrill,
+  onSelectLesson,
 }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'heatmap'>('overview');
 
@@ -57,6 +61,11 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
   const weaknessPlan = useMemo(() => {
     if (!analytics) return null;
     return buildWeaknessDrillPlan(analytics, progress);
+  }, [analytics, progress]);
+
+  const srsPlan = useMemo(() => {
+    if (!analytics) return null;
+    return buildSrsReviewQueue(MISSIONS, progress, analytics, loadSrsSchedule(), Date.now(), 4);
   }, [analytics, progress]);
 
   const proficiency = useMemo(() => {
@@ -422,6 +431,53 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
                 🎯 {t('약점 맞춤 드릴 바로 시작 →')}
               </button>
             )}
+          </section>
+        )}
+
+        {/* 약점 기반 SRS(간격 반복) 복습 큐 */}
+        {srsPlan && srsPlan.items.length > 0 && (
+          <section className="srs-review-section" data-testid="analytics-srs-queue">
+            <div className="srs-section-header">
+              <h3 className="section-title">
+                <span>🔁</span> {t('오늘의 약점·간격 반복(SRS) 복습 큐')}
+              </h3>
+              <span className="srs-due-count-badge">
+                {t('복습 권장 {n}개', { n: srsPlan.dueCount })}
+              </span>
+            </div>
+            <div className="srs-queue-grid">
+              {srsPlan.items.map((item) => (
+                <div
+                  key={item.mission.id}
+                  className={`srs-queue-card ${item.isDue ? 'is-due' : ''}`}
+                  data-testid={`analytics-srs-item-${item.mission.id}`}
+                >
+                  <div className="srs-card-top">
+                    <span className="srs-lesson-id">#{item.mission.id}</span>
+                    <span className="srs-lesson-stars">
+                      {item.stars > 0 ? '★'.repeat(item.stars) + '☆'.repeat(3 - item.stars) : t('미완료')}
+                    </span>
+                  </div>
+                  <div className="srs-lesson-title">{t(item.mission.title)}</div>
+                  <div className="srs-card-footer">
+                    <span className="srs-reason-pill">{t(item.reasonKey, item.reasonParams)}</span>
+                    {onSelectLesson && (
+                      <button
+                        type="button"
+                        className="srs-review-go-btn"
+                        data-testid={`analytics-srs-go-${item.mission.id}`}
+                        onClick={() => {
+                          onClose();
+                          onSelectLesson(item.mission.id);
+                        }}
+                      >
+                        {t('복습 →')}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </section>
         )}
         </>

@@ -108,4 +108,29 @@ describe('AnalyticsModal 컴포넌트', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(onStartWeaknessDrill).toHaveBeenCalledTimes(1);
   });
+
+  it('약점 기반 SRS 복습 큐를 표시하고 복습 버튼 클릭 시 해당 레슨으로 이동한다', () => {
+    const onClose = vi.fn();
+    const onSelectLesson = vi.fn();
+
+    render(
+      <AnalyticsModal
+        isOpen={true}
+        onClose={onClose}
+        progress={{
+          13: { completed: true, bestStars: 1, minKeystrokes: 22 },
+        }}
+        onSelectLesson={onSelectLesson}
+      />
+    );
+
+    expect(screen.getByTestId('analytics-srs-queue')).toBeDefined();
+    expect(screen.getByTestId('analytics-srs-item-13')).toBeDefined();
+
+    const goBtn = screen.getByTestId('analytics-srs-go-13');
+    fireEvent.click(goBtn);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onSelectLesson).toHaveBeenCalledWith(13);
+  });
 });

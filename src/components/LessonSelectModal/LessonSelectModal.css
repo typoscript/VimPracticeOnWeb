@@ -477,6 +477,74 @@
   opacity: 0.9;
 }
 
+.lesson-srs-banner {
+  margin-bottom: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 8px;
+  border: 1px solid rgba(122, 162, 247, 0.35);
+  background: rgba(122, 162, 247, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lesson-srs-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+}
+
+.lesson-srs-title {
+  font-weight: 700;
+  color: #cdd6f4;
+}
+
+.lesson-srs-count {
+  font-size: 0.74rem;
+  color: #f9e2af;
+  font-weight: 600;
+}
+
+.lesson-srs-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.lesson-srs-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid rgba(137, 180, 250, 0.35);
+  background: rgba(30, 30, 46, 0.9);
+  color: #cdd6f4;
+  font-size: 0.76rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease, transform 0.12s ease;
+}
+
+.lesson-srs-chip.due {
+  border-color: rgba(249, 226, 175, 0.55);
+}
+
+.lesson-srs-chip:hover {
+  border-color: #89b4fa;
+  transform: translateY(-1px);
+}
+
+.lesson-srs-chip .chip-id {
+  font-weight: 700;
+  color: #89b4fa;
+  font-family: monospace;
+}
+
+.lesson-srs-chip .chip-reason {
+  color: #a6adc8;
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }

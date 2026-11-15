@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Mission } from '../../types/mission';
 import { LessonProgress } from '../../utils/storage';
+import { loadUserAnalytics } from '../../utils/analyticsStorage';
+import { buildSrsReviewQueue, loadSrsSchedule } from '../../utils/srsScheduler';
 import {
   filterMissions,
   getMissionTags,
@@ -66,6 +68,11 @@ export const LessonSelectModal: React.FC<LessonSelectModalProps> = ({
       progress
     );
   }, [missions, searchQuery, selectedCategory, showUncompletedOnly, progress]);
+
+  const srsPlan = useMemo(() => {
+    if (!isOpen) return null;
+    return buildSrsReviewQueue(missions, progress, loadUserAnalytics(), loadSrsSchedule(), Date.now(), 4);
+  }, [isOpen, missions, progress]);
 
   if (!isOpen) return null;
 
@@ -204,6 +211,31 @@ export const LessonSelectModal: React.FC<LessonSelectModalProps> = ({
         </div>
 
         <div className="lesson-list" data-testid="lesson-list">
+          {srsPlan && srsPlan.items.length > 0 && !searchQuery && selectedCategory === 'all' && !showUncompletedOnly && (
+            <div className="lesson-srs-banner" data-testid="lesson-srs-banner">
+              <div className="lesson-srs-header">
+                <span className="lesson-srs-title">🔁 {t('약점·간격 반복(SRS) 복습 추천')}</span>
+                <span className="lesson-srs-count">{t('복습 권장 {n}개', { n: srsPlan.dueCount })}</span>
+              </div>
+              <div className="lesson-srs-chips">
+                {srsPlan.items.map((item) => (
+                  <button
+                    key={item.mission.id}
+                    type="button"
+                    className={`lesson-srs-chip ${item.isDue ? 'due' : ''}`}
+                    data-testid={`lesson-srs-chip-${item.mission.id}`}
+                    onClick={() => {
+                      onSelectLesson(item.mission.id);
+                      onClose();
+                    }}
+                  >
+                    <span className="chip-id">#{item.mission.id}</span>
+                    <span className="chip-reason">{t(item.reasonKey, item.reasonParams)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           {filteredMissions.length === 0 ? (
             <div className="empty-search-state" data-testid="empty-search-state">
               <div className="empty-icon">🔍</div>
