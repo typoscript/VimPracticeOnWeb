@@ -22,6 +22,7 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   syntax: true,
   foldmethod: 'manual',
   foldlevel: 0,
+  scrollbind: false,
 };
 
 export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
@@ -66,6 +67,8 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   errorformat: 'errorformat',
   gp: 'grepprg',
   grepprg: 'grepprg',
+  scb: 'scrollbind',
+  scrollbind: 'scrollbind',
 };
 
 /**
@@ -92,11 +95,18 @@ export function getLocalOptions(state: VimEditorState, bufferId?: number): Parti
 export function getOptions(state: VimEditorState): VimOptions {
   const global = getGlobalOptions(state);
   const local = getLocalOptions(state);
-  return {
+  const base: VimOptions = {
     ...global,
     ...(state.options ?? {}),
     ...local,
   };
+  if (state.splitPanes && state.splitDirection && state.splitDirection !== 'none') {
+    const pane = state.splitPanes[state.activePaneIndex ?? 0];
+    if (pane && pane.scrollbind !== undefined) {
+      base.scrollbind = pane.scrollbind;
+    }
+  }
+  return base;
 }
 
 /**
@@ -119,6 +129,7 @@ export function formatOptionsList(
     'expandtab',
     'spell',
     'syntax',
+    'scrollbind',
   ];
 
   const numericKeys: (keyof VimOptions)[] = ['tabstop', 'shiftwidth', 'textwidth', 'scrolloff'];
@@ -282,6 +293,10 @@ export function executeSetCommand(
   const queryMessages: string[] = [];
   const appliedList: string[] = [];
   let updatedFiletype: string | undefined = undefined;
+  let updatedScrollbind: boolean | undefined = undefined;
+  const isSplit = !!(state.splitPanes && state.splitDirection && state.splitDirection !== 'none');
+  const activePaneIdx = state.activePaneIndex ?? 0;
+  const activePaneScrollbind = isSplit ? state.splitPanes![activePaneIdx]?.scrollbind : undefined;
 
   for (const token of tokens) {
     // 3. 옵션 상태 조회 (:set opt?, :setlocal opt?, :setglobal opt?)
@@ -295,7 +310,9 @@ export function executeSetCommand(
         };
       }
       let val: any;
-      if (scope === 'local') {
+      if (optKey === 'scrollbind' && scope !== 'global' && activePaneScrollbind !== undefined) {
+        val = updatedScrollbind ?? activePaneScrollbind;
+      } else if (scope === 'local') {
         val = nextLocal[optKey] ?? nextGlobal[optKey];
       } else if (scope === 'global') {
         val = nextGlobal[optKey];
@@ -467,14 +484,22 @@ export function executeSetCommand(
           commandMessage: msg('E518: 알 수 없는 옵션: {rawKey}', { rawKey }),
         };
       }
-      const curVal = nextLocal[optKey] ?? nextGlobal[optKey];
+      const curVal: VimOptions[keyof VimOptions] =
+        optKey === 'scrollbind' && scope !== 'global' && (updatedScrollbind !== undefined || activePaneScrollbind !== undefined)
+          ? (updatedScrollbind ?? activePaneScrollbind)
+          : (nextLocal[optKey] ?? nextGlobal[optKey]);
       if (typeof curVal === 'boolean' || optKey === 'syntax') {
-        const nextVal = !curVal;
-        if (scope === 'local' || scope === 'both') {
-          (nextLocal as any)[optKey] = nextVal;
-        }
-        if (scope === 'global' || scope === 'both') {
-          (nextGlobal as any)[optKey] = nextVal;
+        const nextVal: boolean = !curVal;
+        if (optKey === 'scrollbind' && isSplit) {
+          if (scope !== 'global') updatedScrollbind = nextVal;
+          if (scope === 'global' || scope === 'both') nextGlobal.scrollbind = nextVal;
+        } else {
+          if (scope === 'local' || scope === 'both') {
+            (nextLocal as any)[optKey] = nextVal;
+          }
+          if (scope === 'global' || scope === 'both') {
+            (nextGlobal as any)[optKey] = nextVal;
+          }
         }
         appliedList.push(nextVal ? (optKey as string) : `no${optKey}`);
         continue;
@@ -493,11 +518,16 @@ export function executeSetCommand(
       }
       const curVal = nextLocal[optKey] ?? nextGlobal[optKey];
       if (typeof curVal === 'boolean' || optKey === 'syntax') {
-        if (scope === 'local' || scope === 'both') {
-          (nextLocal as any)[optKey] = false;
-        }
-        if (scope === 'global' || scope === 'both') {
-          (nextGlobal as any)[optKey] = false;
+        if (optKey === 'scrollbind' && isSplit) {
+          if (scope !== 'global') updatedScrollbind = false;
+          if (scope === 'global' || scope === 'both') nextGlobal.scrollbind = false;
+        } else {
+          if (scope === 'local' || scope === 'both') {
+            (nextLocal as any)[optKey] = false;
+          }
+          if (scope === 'global' || scope === 'both') {
+            (nextGlobal as any)[optKey] = false;
+          }
         }
         appliedList.push(`no${optKey}`);
         continue;
@@ -514,11 +544,16 @@ export function executeSetCommand(
     }
     const curVal = nextLocal[optKey] ?? nextGlobal[optKey];
     if (typeof curVal === 'boolean' || optKey === 'syntax') {
-      if (scope === 'local' || scope === 'both') {
-        (nextLocal as any)[optKey] = true;
-      }
-      if (scope === 'global' || scope === 'both') {
-        (nextGlobal as any)[optKey] = true;
+      if (optKey === 'scrollbind' && isSplit) {
+        if (scope !== 'global') updatedScrollbind = true;
+        if (scope === 'global' || scope === 'both') nextGlobal.scrollbind = true;
+      } else {
+        if (scope === 'local' || scope === 'both') {
+          (nextLocal as any)[optKey] = true;
+        }
+        if (scope === 'global' || scope === 'both') {
+          (nextGlobal as any)[optKey] = true;
+        }
       }
       appliedList.push(optKey as string);
       continue;
@@ -529,7 +564,18 @@ export function executeSetCommand(
     ...DEFAULT_VIM_OPTIONS,
     ...nextGlobal,
     ...nextLocal,
+    ...(isSplit && (updatedScrollbind !== undefined || activePaneScrollbind !== undefined)
+      ? { scrollbind: updatedScrollbind ?? activePaneScrollbind }
+      : {}),
   };
+
+  const nextSplitPanes =
+    isSplit && updatedScrollbind !== undefined && state.splitPanes
+      ? ([
+          activePaneIdx === 0 ? { ...state.splitPanes[0], scrollbind: updatedScrollbind } : state.splitPanes[0],
+          activePaneIdx === 1 ? { ...state.splitPanes[1], scrollbind: updatedScrollbind } : state.splitPanes[1],
+        ] as [typeof state.splitPanes[0], typeof state.splitPanes[1]])
+      : state.splitPanes;
 
   const nextBufferLocalOptions = {
     ...(state.bufferLocalOptions ?? {}),
@@ -567,6 +613,7 @@ export function executeSetCommand(
     globalOptions: nextGlobal,
     bufferLocalOptions: nextBufferLocalOptions,
     buffers: nextBuffers,
+    splitPanes: nextSplitPanes,
     commandMessage: message,
   };
 

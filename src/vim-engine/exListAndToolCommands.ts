@@ -3,6 +3,7 @@ import { undo, redo } from './operators';
 import { formatUndoList, jumpUndoSeq, travelEarlier, travelLater } from './undoTreeEngine';
 import { bufdo } from './bufferEngine';
 import { tabdo } from './tabEngine';
+import { windo, syncScrollbind } from './splitWindow';
 import {
   openQuickfixWindow,
   closeQuickfixWindow,
@@ -975,6 +976,33 @@ export function tryExecuteToolExCommand(
     const isBang = tabdoMatch[1] === '!';
     const cmdToRun = tabdoMatch[2] ?? '';
     const res = tabdo(state, cmdToRun, runEx, isBang);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 창 일괄 실행: :windo[!] {cmd}
+  const windoMatch = cleanCmdRaw.match(/^windo(!?)(?:\s+(.*))?$/i);
+  if (windoMatch) {
+    const isBang = windoMatch[1] === '!';
+    const cmdToRun = windoMatch[2] ?? '';
+    const res = windo(state, cmdToRun, runEx, isBang);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 동기 스크롤 위치 맞춤: :syncbind / :syncb
+  if (/^syncb(?:ind)?$/i.test(cleanCmd)) {
+    const res = syncScrollbind(state);
     return {
       ...res,
       mode: 'NORMAL',

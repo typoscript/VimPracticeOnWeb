@@ -1720,8 +1720,28 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson87!.checkComplete(state)).toBe(true);
   });
 
-  it('모든 87개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(87);
+  it('레슨 88: 멀티 윈도우 레이아웃 재배치(Ctrl-w L) + :windo + :set scb 마스터 검증', () => {
+    const lesson88 = MISSIONS.find((m) => m.id === 88);
+    expect(lesson88).toBeDefined();
+
+    let state: VimEditorState = {
+      lines: [...lesson88!.initialLines],
+      cursor: { ...lesson88!.initialCursor },
+      mode: 'NORMAL',
+      primaryFilename: lesson88!.primaryFilename,
+      secondaryFilename: lesson88!.secondaryFilename,
+      secondaryLines: lesson88!.secondaryLines ? [...lesson88!.secondaryLines] : undefined,
+    };
+    expect(lesson88!.checkComplete(state)).toBe(false);
+
+    for (const key of lesson88!.optimalKeys!) {
+      state = handleKey(state, key);
+    }
+    expect(lesson88!.checkComplete(state)).toBe(true);
+  });
+
+  it('모든 88개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(88);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();

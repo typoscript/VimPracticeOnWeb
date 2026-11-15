@@ -9,7 +9,7 @@ import { handleFuzzyFinderKey } from './fuzzyFinder';
 import { handleHelpKey } from './helpEngine';
 import { handleSpellSuggestKey } from './spellEngine';
 import { recordUndoTreeChange } from './undoTreeEngine';
-import { syncActivePane } from './splitWindow';
+import { applyScrollbindDelta } from './splitWindow';
 import { adjustViewport, getViewport, getScrolloff } from './viewport';
 import {
   AbbrevReplayCtx,
@@ -114,6 +114,10 @@ export function rawHandleKey(
     }
   }
 
+  const prevTopRow = getViewport(state).topRow;
+  const prevActivePaneIndex = state.activePaneIndex ?? 0;
+  const prevSplitPanes = state.splitPanes;
+
   let nextState: VimEditorState;
   if (state.mode === 'SEARCH') {
     nextState = handleSearchModeKey(state, key, isReplayingDot);
@@ -184,7 +188,7 @@ export function rawHandleKey(
     nextState = recordUndoTreeChange(nextState);
   }
 
-  return syncActivePane(nextState);
+  return applyScrollbindDelta(prevTopRow, prevActivePaneIndex, prevSplitPanes, nextState);
 }
 
 /**

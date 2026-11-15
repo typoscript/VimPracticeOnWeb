@@ -20,6 +20,7 @@ export const EN_MESSAGES: Record<string, string> = {
   "({filesCount}개 파일에 대해 :lfdo '{cleanCmd}' 실행 완료)": "(:lfdo '{cleanCmd}' done for {filesCount} files)",
   "({count}개 버퍼에 대해 :bufdo '{cleanCmd}' 실행 완료)": "(:bufdo '{cleanCmd}' done for {count} buffers)",
   "({count}개 탭에 대해 :tabdo '{cleanCmd}' 실행 완료)": "(:tabdo '{cleanCmd}' done for {count} tabs)",
+  "({count}개 창에 대해 :windo '{cleanCmd}' 실행 완료)": "(:windo '{cleanCmd}' done for {count} windows)",
   "E23: 다른 버퍼가 없습니다": "E23: No alternate file",
   "E94: 일치하는 버퍼를 찾을 수 없습니다: {target}": "E94: No matching buffer for {target}",
   "\"{name}\" [버퍼 {id}] 현재 활성": "\"{name}\" [buffer {id}] active",

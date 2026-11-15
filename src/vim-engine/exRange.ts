@@ -330,8 +330,8 @@ export function splitPipedCommands(input: string): string[] {
     return [trimmed];
   }
 
-  // :argdo, :bufdo, :cdo, :cfdo, :ldo, :lfdo, :tabdo 등은 파이프(|)를 자체 인자로 포함하여 순회 실행함
-  if (/^(argdo|bufdo|cdo|cfdo|ldo|lfdo|tabdo)(!?)\s+/.test(trimmed)) {
+  // :argdo, :bufdo, :cdo, :cfdo, :ldo, :lfdo, :tabdo, :windo 등은 파이프(|)를 자체 인자로 포함하여 순회 실행함
+  if (/^(argdo|bufdo|cdo|cfdo|ldo|lfdo|tabdo|windo)(!?)\s+/.test(trimmed)) {
     return [trimmed];
   }
 

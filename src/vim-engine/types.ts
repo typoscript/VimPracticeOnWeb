@@ -269,6 +269,8 @@ export interface VimOptions {
   errorformat?: string;
   /** 외부 grep 프로그램 설정 (:set grepprg=...) */
   grepprg?: string;
+  /** 분할 창 동기 스크롤 여부 (:set scb / noscb, :set scrollbind) */
+  scrollbind?: boolean;
 }
 
 /** 맞춤법 검사기 오탈자 정보 */
@@ -386,6 +388,8 @@ export interface SplitPaneState {
   blockInsertSession?: BlockInsertSession | null;
   /** 해당 창이 diff 모드인지 여부 (:diffsplit, :diffthis) */
   diff?: boolean;
+  /** 해당 분할 창의 동기 스크롤 여부 (:set scb / :setlocal scb) */
+  scrollbind?: boolean;
   /** 해당 분할 창의 로케이션 리스트 (:lopen, :lclose, :lnext, :lprev, :lvimgrep) */
   locationList?: QuickfixState | null;
 }

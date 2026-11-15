@@ -1,6 +1,16 @@
 import { SplitPaneState, VimEditorState } from './types';
 import { openNewTab } from './tabEngine';
 import { msg } from './messages';
+import { getGlobalOptions, getOptions } from './setEngine';
+
+function withPaneScrollbindOption(
+  state: VimEditorState,
+  scrollbind: boolean | undefined
+): VimEditorState['options'] {
+  if (scrollbind === undefined && !state.options) return state.options;
+  const base = state.options ?? getOptions(state);
+  return { ...base, scrollbind: scrollbind ?? base.scrollbind ?? false };
+}
 
 /**
  * 에디터 창을 가로(:sp, :new) 또는 세로(:vsp, :vnew)로 분할합니다.
@@ -26,6 +36,9 @@ export function splitWindow(
   const primaryName = state.primaryFilename || 'source.ts';
   const secondaryName = secondaryFilename || state.secondaryFilename || 'target.ts';
 
+  const curScb = getOptions(state).scrollbind ?? false;
+  const newWinScb = secondaryLines ? (getGlobalOptions(state).scrollbind ?? false) : curScb;
+
   const pane0: SplitPaneState = {
     filename: primaryName,
     lines: [...state.lines],
@@ -38,6 +51,7 @@ export function splitWindow(
     pendingKeys: state.pendingKeys,
     blockInsertSession: state.blockInsertSession,
     locationList: state.locationList,
+    scrollbind: curScb,
   };
 
   const p1Lines = secondaryLines ?? state.secondaryLines ?? [...state.lines];
@@ -49,6 +63,7 @@ export function splitWindow(
     viewport: { topRow: 0, visibleRows: 10 },
     undoStack: [],
     redoStack: [],
+    scrollbind: newWinScb,
   };
 
   return {
@@ -98,6 +113,7 @@ export function closeSplitWindow(state: VimEditorState): VimEditorState {
       splitPanes: undefined,
       splitRatio: undefined,
       locationList: p0.locationList,
+      options: withPaneScrollbindOption(state, p0.scrollbind),
       commandMessage: msg('분할 창을 닫았습니다 (:close)'),
     };
   }
@@ -120,6 +136,7 @@ export function closeSplitWindow(state: VimEditorState): VimEditorState {
     splitPanes: undefined,
     splitRatio: undefined,
     locationList: p1.locationList,
+    options: withPaneScrollbindOption(state, p1.scrollbind),
     commandMessage: msg('분할 창을 닫았습니다 (:close)'),
   };
 }
@@ -189,6 +206,8 @@ export function switchPaneFocus(
     pendingKeys: state.pendingKeys,
     blockInsertSession: state.blockInsertSession,
     locationList: state.locationList,
+    scrollbind: state.splitPanes[curIdx]?.scrollbind ?? getOptions(state).scrollbind ?? false,
+    diff: state.splitPanes[curIdx]?.diff,
   };
 
   const newPanes: [SplitPaneState, SplitPaneState] = [
@@ -213,6 +232,7 @@ export function switchPaneFocus(
     previousPaneIndex: curIdx,
     splitPanes: newPanes,
     locationList: targetPane.locationList,
+    options: withPaneScrollbindOption(state, targetPane.scrollbind),
   };
 }
 
@@ -243,7 +263,11 @@ export function exchangePanes(state: VimEditorState): VimEditorState {
     redoStack: newActive.redoStack ? [...newActive.redoStack] : [],
     primaryFilename: swappedPanes[0].filename,
     secondaryFilename: swappedPanes[1].filename,
+    previousPaneIndex:
+      synced.previousPaneIndex !== undefined ? 1 - synced.previousPaneIndex : undefined,
     splitPanes: swappedPanes,
+    locationList: newActive.locationList,
+    options: withPaneScrollbindOption(synced, newActive.scrollbind),
     commandMessage: msg('두 창의 위치를 맞바꿨습니다 (Ctrl-w x)'),
   };
 }
@@ -280,7 +304,11 @@ export function rotatePanes(
     primaryFilename: rotatedPanes[0].filename,
     secondaryFilename: rotatedPanes[1].filename,
     activePaneIndex: nextActiveIdx,
+    previousPaneIndex:
+      synced.previousPaneIndex !== undefined ? 1 - synced.previousPaneIndex : undefined,
     splitPanes: rotatedPanes,
+    locationList: newActive.locationList,
+    options: withPaneScrollbindOption(synced, newActive.scrollbind),
     commandMessage: counterClockwise
       ? msg('창을 반시계 방향으로 회전했습니다 (Ctrl-w R)')
       : msg('창을 시계 방향으로 회전했습니다 (Ctrl-w r)'),
@@ -313,17 +341,30 @@ export function movePaneToDirection(
   }
 
   const activePane = panes[targetIndex];
+  const prevIdx =
+    synced.previousPaneIndex !== undefined
+      ? curIdx !== targetIndex
+        ? 1 - synced.previousPaneIndex
+        : synced.previousPaneIndex
+      : undefined;
 
   return {
     ...synced,
     splitDirection: isVertical ? 'vertical' : 'horizontal',
     activePaneIndex: targetIndex,
+    previousPaneIndex: prevIdx,
     splitPanes: panes,
     primaryFilename: panes[0].filename,
     secondaryFilename: panes[1].filename,
     lines: [...activePane.lines],
     cursor: { ...activePane.cursor },
     mode: activePane.mode ?? 'NORMAL',
+    visualAnchor: activePane.visualAnchor,
+    viewport: activePane.viewport,
+    undoStack: activePane.undoStack ? [...activePane.undoStack] : [],
+    redoStack: activePane.redoStack ? [...activePane.redoStack] : [],
+    locationList: activePane.locationList,
+    options: withPaneScrollbindOption(synced, activePane.scrollbind),
     commandMessage: msg('창 레이아웃을 {v}로 재배치했습니다 (Ctrl-w {dir})', { v: isVertical ? msg('세로') : msg('가로'), dir }),
   };
 }
@@ -455,14 +496,15 @@ export function syncActivePane(state: VimEditorState): VimEditorState {
 }
 
 /**
- * :wincmd {arg} 명령을 실행합니다. (예: :wincmd w, :1wincmd w, :wincmd v, :wincmd s, :wincmd c, :wincmd o)
+ * :wincmd {arg} 명령을 실행합니다. (예: :wincmd w, :1wincmd w, :wincmd H/J/K/L/r/R/x, :wincmd v/s/c/o)
  */
 export function executeWincmd(state: VimEditorState, arg: string, count?: number): VimEditorState {
-  if (count !== undefined && count >= 1) {
-    return switchPaneFocus(state, count - 1);
+  if (count !== undefined && count >= 1 && (arg === 'w' || arg === 'W')) {
+    return switchPaneFocus(state, Math.min(1, count - 1));
   }
-  switch (arg.toLowerCase()) {
+  switch (arg) {
     case 'w':
+    case 'W':
       return switchPaneFocus(state, (state.activePaneIndex ?? 0) === 0 ? 1 : 0);
     case 'h':
     case 'k':
@@ -475,6 +517,7 @@ export function executeWincmd(state: VimEditorState, arg: string, count?: number
     case 'p':
       return switchPaneFocus(state, state.previousPaneIndex ?? 0);
     case 'c':
+    case 'q':
       return closeSplitWindow(state);
     case 'o':
       return closeOtherPanes(state);
@@ -482,7 +525,175 @@ export function executeWincmd(state: VimEditorState, arg: string, count?: number
       return splitWindow(state, 'horizontal');
     case 'v':
       return splitWindow(state, 'vertical');
+    case 'x':
+      return exchangePanes(state);
+    case 'r':
+      return rotatePanes(state, false);
+    case 'R':
+      return rotatePanes(state, true);
+    case 'H':
+    case 'J':
+    case 'K':
+    case 'L':
+      return movePaneToDirection(state, arg);
+    case 'T':
+      return moveWindowToNewTab(state);
+    case '=':
+      return resizeSplit(state, '=');
+    case '_':
+    case '|':
+      return resizeSplit(state, arg);
+    case '+':
+    case '>':
+      return resizeSplit(state, count ?? 5);
+    case '-':
+    case '<':
+      return resizeSplit(state, -(count ?? 5));
     default:
       return state;
   }
+}
+
+/**
+ * 모든 분할 창에 대해 지정된 Ex 명령어를 일괄 실행합니다 (:windo[!] {cmd}).
+ */
+export function windo(
+  state: VimEditorState,
+  commandStr: string,
+  executeCmd: (s: VimEditorState, c: string) => VimEditorState,
+  isBang = false
+): VimEditorState {
+  const cleanCmd = commandStr.trim();
+  if (!cleanCmd) {
+    return {
+      ...state,
+      commandMessage: msg('E471: 인수가 필요합니다'),
+      bell: true,
+    };
+  }
+
+  if (!state.splitDirection || state.splitDirection === 'none' || !state.splitPanes) {
+    let currState = executeCmd(state, cleanCmd);
+    if (currState.bell) {
+      if (!isBang) return currState;
+      currState = { ...currState, bell: false };
+    }
+    return {
+      ...currState,
+      commandMessage: msg('({count}개 창에 대해 :windo \'{cleanCmd}\' 실행 완료)', { count: 1, cleanCmd }),
+    };
+  }
+
+  let currState = syncActivePane(state);
+  const origActiveIdx = currState.activePaneIndex ?? 0;
+  let executedCount = 0;
+
+  for (let i = 0; i < 2; i++) {
+    if (!currState.splitPanes || currState.splitDirection === 'none') {
+      break;
+    }
+    currState = switchPaneFocus(currState, i);
+    currState = executeCmd(currState, cleanCmd);
+    currState = syncActivePane(currState);
+    executedCount++;
+
+    if (currState.bell) {
+      if (!isBang) {
+        return currState;
+      }
+      currState = { ...currState, bell: false };
+    }
+  }
+
+  if (currState.splitPanes && currState.splitDirection !== 'none') {
+    currState = switchPaneFocus(currState, origActiveIdx);
+  }
+
+  return {
+    ...currState,
+    commandMessage: msg('({count}개 창에 대해 :windo \'{cleanCmd}\' 실행 완료)', { count: executedCount, cleanCmd }),
+  };
+}
+
+/**
+ * :syncbind — scrollbind 가 활성화된 다른 분할 창의 상단 행을 현재 창과 맞춥니다.
+ */
+export function syncScrollbind(state: VimEditorState): VimEditorState {
+  const synced = syncActivePane(state);
+  if (!synced.splitDirection || synced.splitDirection === 'none' || !synced.splitPanes) {
+    return synced;
+  }
+
+  const activeIdx = synced.activePaneIndex ?? 0;
+  const activeScb = synced.splitPanes[activeIdx]?.scrollbind ?? getOptions(synced).scrollbind ?? false;
+  if (!activeScb) return synced;
+
+  const activeTop = synced.viewport?.topRow ?? 0;
+  const otherIdx = activeIdx === 0 ? 1 : 0;
+  const otherPane = synced.splitPanes[otherIdx];
+  if (!otherPane?.scrollbind) return synced;
+
+  const maxOtherTop = Math.max(0, otherPane.lines.length - 1);
+  const nextOtherTop = Math.max(0, Math.min(maxOtherTop, activeTop));
+  const otherVp = otherPane.viewport ?? { topRow: 0, visibleRows: 15 };
+  if (otherVp.topRow === nextOtherTop) return synced;
+
+  const nextPanes: [SplitPaneState, SplitPaneState] = [synced.splitPanes[0], synced.splitPanes[1]];
+  nextPanes[otherIdx] = {
+    ...otherPane,
+    viewport: { ...otherVp, topRow: nextOtherTop },
+  };
+  return {
+    ...synced,
+    splitPanes: nextPanes,
+  };
+}
+
+/**
+ * 키 입력 전후의 뷰포트 topRow 변화량(delta)을 scrollbind 가 켜진 상대 창에 동기화합니다.
+ */
+export function applyScrollbindDelta(
+  prevTopRow: number,
+  prevActivePaneIndex: number,
+  prevSplitPanes: [SplitPaneState, SplitPaneState] | undefined,
+  state: VimEditorState
+): VimEditorState {
+  const synced = syncActivePane(state);
+  if (
+    !prevSplitPanes ||
+    !synced.splitPanes ||
+    !synced.splitDirection ||
+    synced.splitDirection === 'none'
+  ) {
+    return synced;
+  }
+
+  const activeIdx = synced.activePaneIndex ?? 0;
+  if (activeIdx !== prevActivePaneIndex) return synced;
+
+  const otherIdx = activeIdx === 0 ? 1 : 0;
+  if (synced.splitPanes[otherIdx] !== prevSplitPanes[otherIdx]) return synced;
+
+  const activeScb = synced.splitPanes[activeIdx]?.scrollbind ?? getOptions(synced).scrollbind ?? false;
+  const otherPane = synced.splitPanes[otherIdx];
+  if (!activeScb || !otherPane?.scrollbind) return synced;
+
+  const nextTopRow = synced.viewport?.topRow ?? 0;
+  const delta = nextTopRow - prevTopRow;
+  if (delta === 0) return synced;
+
+  const otherVp = otherPane.viewport ?? { topRow: 0, visibleRows: 15 };
+  const maxOtherTop = Math.max(0, otherPane.lines.length - 1);
+  const newOtherTop = Math.max(0, Math.min(maxOtherTop, otherVp.topRow + delta));
+  if (newOtherTop === otherVp.topRow) return synced;
+
+  const nextPanes: [SplitPaneState, SplitPaneState] = [synced.splitPanes[0], synced.splitPanes[1]];
+  nextPanes[otherIdx] = {
+    ...otherPane,
+    viewport: { ...otherVp, topRow: newOtherTop },
+  };
+  return {
+    ...synced,
+    splitPanes: nextPanes,
+  };
 }

@@ -3275,4 +3275,47 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 88,
+    title: '레슨 88: 멀티 윈도우 레이아웃 회전·일괄 제어(Ctrl-w H/J/K/L, r/R/x, :windo, :set scb) 마스터',
+    description:
+      '여러 분할 창을 열어 비교하거나 동시에 리팩토링할 때, 창 위치를 바꾸고(:vsp/Ctrl-w H/J/K/L/r/x), 모든 창에 명령을 일괄 적용(:windo)하며, 두 창의 스크롤을 동기화(:set scrollbind)할 수 있습니다.\n\n1) 분할 창 회전·교환·재배치 (Ctrl-w x / r / R / H / J / K / L):\n   - Ctrl-w x 는 두 창의 위치를 맞바꾸고, Ctrl-w r / R 은 창을 시계/반시계 방향으로 회전합니다.\n   - Ctrl-w H / L 은 수직 분할로 전환해 현재 창을 좌/우 끝으로, K / J 는 수평 분할로 전환해 상/하 끝으로 보냅니다.\n\n2) 전 창 일괄 실행 (:windo[!] {cmd}) & 동기 스크롤 (:set scb / noscb):\n   - :windo {cmd} 는 열려 있는 모든 분할 창을 순회하며 Ex 명령을 실행합니다. (예: :windo %s/a/b/g | set scb)\n   - :set scb (scrollbind) 를 양쪽 창에 모두 켜면 한 창을 스크롤(Ctrl-e/y/d/u)할 때 다른 창도 함께 스크롤됩니다.\n\n미션:\n1. :sp<Enter> 로 가로 분할 창을 여세요.\n2. Ctrl-w L 을 눌러 현재 창(main.ts)을 세로 분할 오른쪽 창으로 이동하세요.\n3. :windo %s/dev/prod/g | set scb<Enter> 로 양쪽 창의 dev 를 prod 로 바꾸고 동기 스크롤을 켜세요!',
+    hint: ':sp<Enter> → Ctrl-w L → :windo %s/dev/prod/g | set scb<Enter>',
+    par: 42,
+    optimalKeys: [
+      ':', 's', 'p', 'Enter',
+      'Ctrl-w', 'L',
+      ':', 'w', 'i', 'n', 'd', 'o', ' ', '%', 's', '/', 'd', 'e', 'v', '/', 'p', 'r', 'o', 'd', '/', 'g', ' ', '|', ' ', 's', 'e', 't', ' ', 's', 'c', 'b', 'Enter',
+    ],
+    primaryFilename: 'main.ts',
+    secondaryFilename: 'side.ts',
+    initialLines: [
+      'const env = "dev";',
+      '// main panel',
+    ],
+    secondaryLines: [
+      'const mode = "dev";',
+      '// side panel',
+    ],
+    targetLines: [
+      'const env = "prod";',
+      '// main panel',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL' || state.splitDirection !== 'vertical' || !state.splitPanes) {
+        return false;
+      }
+      const p0 = state.splitPanes[0];
+      const p1 = state.splitPanes[1];
+      return (
+        p0.filename === 'side.ts' &&
+        p0.lines[0] === 'const mode = "prod";' &&
+        p0.scrollbind === true &&
+        p1.filename === 'main.ts' &&
+        p1.lines[0] === 'const env = "prod";' &&
+        p1.scrollbind === true
+      );
+    },
+  },
 ];
