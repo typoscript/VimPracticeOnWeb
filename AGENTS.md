@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 145개 테스트 파일, 1,905개 테스트 100% 통과 필수)*
+  *(현재 153개 테스트 파일, 1,924개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -156,6 +156,7 @@
 - **2차 대형 파일 모듈화 (`src/vim-engine/shellBuiltins.ts`, `src/hooks/useActionTimeline.ts`·`useSpeedrunSession.ts`, `src/components/AppHeader/`·`EditorViewport/`·`AppModals/`, `src/components/HardcoreDojo/DojoArenaContent.tsx`·`DojoOverlays.tsx`·`DojoLeaderboardModal.tsx`)**: `shellEngine.ts`(1,763→563줄)에서 순수 POSIX 유틸리티(`runEcho`, `runSed`, `runAwk`, `runJq`, `readFilesOrStdin` 등)를 `shellBuiltins.ts`로 분리하고, `App.tsx`(1,993→1,187줄)에서 액션 타임라인/스피드런 훅과 상단 네비게이션·에디터 뷰포트(분할 창 중복 제거)·지연 로딩 모달 호스트를 추출했으며, `HardcoreDojo.tsx`(1,218→801줄)의 아레나 에디터·오버레이·랭킹 모달을 하위 컴포넌트로 분리했습니다.
 - **3차 대형 파일 모듈화 (`src/data/missions/*.ts`, `src/vim-engine/vimscriptValues.ts`·`vimscriptBuiltins.ts`, `src/vim-engine/exQuickfixCommands.ts`)**: `missions.ts`(3,922줄)를 챕터별 5개 모듈(`part1Basics`~`part5Mastery`)로 분할해 `missions.ts` 배럴로 통합하고 `vite.config.ts`의 `curriculum` 청크 매처를 확장했으며, `vimscriptEval.ts`(1,545→722줄)에서 값·스코프 헬퍼(`vimscriptValues.ts`)와 내장 함수 레지스트리(`vimscriptBuiltins.ts`)를 순환 없이 추출해 `vim-engine-core` 청크에 등록했습니다. 또한 `exListAndToolCommands.ts`(1,360→893줄)에서 퀵픽스/로케이션 리스트 Ex 명령을 `exQuickfixCommands.ts`로 분리했습니다.
 - **레슨 80~100 `nvim --headless` 골든 검증 확장 & 분리 UI 컴포넌트 테스트 (`scripts/generateGoldenTests.ts`, `test/neovimGolden.test.ts`, `test/fixtures/neovim-golden-cases.json`, `AppHeader.test.tsx`, `EditorViewport.test.tsx`, `AppModals.test.tsx`)**: Neovim v0.12.6 headless 대조 골든 케이스를 70건→95건으로 확장해 Visual 치환(`v_r`/`V_r`/`Ctrl-v r`), `gq`/`gw`/`:retab`, `:center`/`:right`/`:left`, `]m`, `g*`, `gD`, `nrformats`(`hex`/`bin`/`alpha`), 특수 마크(`` `^ ``/`` `[ ``), `gp`/`]p`, `@:`, Insert `Ctrl-v uXXXX` 정합성을 보강(`96 tests` 통과)하고, `AppHeader`·`EditorViewport`·`AppModals` 전용 단위 테스트를 추가했습니다.
+- **커스텀 훅 7종 단위 테스트 및 `App.tsx` 뷰 설정·미션 초기 상태 분리 (`src/hooks/*.test.ts`, `src/hooks/useEditorViewSettings.ts`, `src/utils/missionInitialState.ts`)**: `useGhostReplay`·`useSpeedrunSession`·`useActionTimeline`·`useHardcoreAndKeymaps`·`useVimKeyboardInput`·`useEditorWorkspaceHandlers`·`useEditorViewSettings` 및 `missionInitialState` 전용 단위 테스트(8개 파일, 19개 테스트)를 추가하고, `App.tsx`(1,187→977줄)에서 에디터 뷰 설정·모달 상태(`useEditorViewSettings`)와 미션/샌드박스 초기 상태 생성 헬퍼(`missionInitialState.ts`)를 추출했습니다.
 
 ---
 

@@ -14,13 +14,7 @@ import { ActionTimelinePanel } from './components/ActionTimelinePanel/ActionTime
 import { AppHeader, AppTab } from './components/AppHeader/AppHeader';
 import { EditorViewport } from './components/EditorViewport/EditorViewport';
 import { AppModals } from './components/AppModals/AppModals';
-import {
-  VimEditorState,
-  SplitPaneState,
-  handleKey,
-  diagnosticsToQuickfixItems,
-  computeDiffHunks,
-} from './vim-engine';
+import { VimEditorState, handleKey } from './vim-engine';
 import { Mission } from './types/mission';
 import { recordLessonSrsReview } from './utils/srsScheduler';
 import { MISSIONS } from './data/missions';
@@ -28,18 +22,6 @@ import { sandboxInitialLines } from './data/sandbox';
 import {
   loadProgress,
   saveLessonRecord,
-  loadRelativeLineSetting,
-  saveRelativeLineSetting,
-  loadVirtualKeyboardSetting,
-  saveVirtualKeyboardSetting,
-  loadDiffViewSetting,
-  saveDiffViewSetting,
-  loadRegisterInspectorSetting,
-  saveRegisterInspectorSetting,
-  loadMarksVisualizerSetting,
-  saveMarksVisualizerSetting,
-  loadGrammarASTSetting,
-  saveGrammarASTSetting,
   loadActionTimelineSetting,
   loadSpeedrunRecord,
   LessonProgress,
@@ -55,12 +37,18 @@ import {
   recordKeyInputStats,
   recordAntiPatternDetection,
 } from './utils/analyticsStorage';
-import { compileUserKeymaps } from './utils/keymapStorage';
+import {
+  buildMissionInitialState,
+  buildCustomInitialState,
+  buildSandboxInitialState,
+  resolveStatusFilename,
+} from './utils/missionInitialState';
 import { useEditorWorkspaceHandlers } from './hooks/useEditorWorkspaceHandlers';
 import { useHardcoreAndKeymaps } from './hooks/useHardcoreAndKeymaps';
 import { useVimKeyboardInput } from './hooks/useVimKeyboardInput';
 import { useGhostReplay } from './hooks/useGhostReplay';
 import { useActionTimeline } from './hooks/useActionTimeline';
+import { useEditorViewSettings } from './hooks/useEditorViewSettings';
 import {
   useSpeedrunSession,
   SPEEDRUN_CANDIDATE_IDS,
@@ -89,16 +77,10 @@ export function App() {
 
   const [currentTab, setCurrentTab] = useState<AppTab>(initialCustomMission ? 'custom' : 'course');
   const [customMission, setCustomMission] = useState<Mission | null>(initialCustomMission);
-  const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
-  const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
-  const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
-  const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
-  const [isBYOCModalOpen, setIsBYOCModalOpen] = useState(false);
   const [dojoInitialDrill, setDojoInitialDrill] = useState<{
     drill: 'weakness-custom';
     nonce: number;
   } | null>(null);
-  const [showGrammarAST, setShowGrammarAST] = useState<boolean>(() => loadGrammarASTSetting());
 
   const setEditorStateRef = useRef<Dispatch<SetStateAction<VimEditorState>> | null>(null);
   const {
@@ -126,38 +108,8 @@ export function App() {
   const { isMuted, toggleMute, playKeySound, playSuccessSound } = useSoundEffects();
 
   const [currentMissionIndex, setCurrentMissionIndex] = useState(0);
-  const [isModalOpen, setIsModalOpen] = useState(false);
   const [progress, setProgress] = useState<LessonProgress>(() => loadProgress());
-  const [relativeLineNumbers, setRelativeLineNumbers] = useState<boolean>(() => loadRelativeLineSetting());
-  const [showVirtualKeyboard, setShowVirtualKeyboard] = useState<boolean>(() => loadVirtualKeyboardSetting());
-  const [showDiffView, setShowDiffView] = useState<boolean>(() => loadDiffViewSetting());
-  const [showRegisterInspector, setShowRegisterInspector] = useState<boolean>(() => loadRegisterInspectorSetting());
-  const [showMarksVisualizer, setShowMarksVisualizer] = useState<boolean>(() => loadMarksVisualizerSetting());
   const [isEditorFocused, setIsEditorFocused] = useState<boolean>(true);
-
-  const handleToggleRegisterInspector = useCallback(() => {
-    setShowRegisterInspector((prev) => {
-      const next = !prev;
-      saveRegisterInspectorSetting(next);
-      return next;
-    });
-  }, []);
-
-  const handleToggleMarksVisualizer = useCallback(() => {
-    setShowMarksVisualizer((prev) => {
-      const next = !prev;
-      saveMarksVisualizerSetting(next);
-      return next;
-    });
-  }, []);
-
-  const handleToggleGrammarAST = useCallback(() => {
-    setShowGrammarAST((prev) => {
-      const next = !prev;
-      saveGrammarASTSetting(next);
-      return next;
-    });
-  }, []);
 
   const currentMission = MISSIONS[currentMissionIndex];
 
@@ -167,91 +119,15 @@ export function App() {
   const [coachingMessage, setCoachingMessage] = useState<string | null>(null);
   const antiPatternDetectorRef = useRef(new AntiPatternDetector());
 
-  const getMissionInitialState = useCallback((m: Mission): VimEditorState => {
-    const isSplit = m.initialSplit && m.initialSplit !== 'none';
-    let splitPanes: [SplitPaneState, SplitPaneState] | undefined = undefined;
-    if (isSplit) {
-      const p0: SplitPaneState = {
-        filename: m.primaryFilename || 'source.ts',
-        lines: [...m.initialLines],
-        cursor: { ...m.initialCursor },
-        mode: 'NORMAL',
-        diff: m.initialDiffMode ?? false,
-      };
-      const p1: SplitPaneState = {
-        filename: m.secondaryFilename || 'target.ts',
-        lines: m.secondaryLines ? [...m.secondaryLines] : [...m.initialLines],
-        cursor: { line: 0, col: 0 },
-        mode: 'NORMAL',
-        diff: m.initialDiffMode ?? false,
-      };
-      splitPanes = [p0, p1];
-    }
-    return {
-      lines: [...m.initialLines],
-      cursor: { ...m.initialCursor },
-      mode: 'NORMAL',
-      undoStack: m.initialUndoStack ? [...m.initialUndoStack] : [],
-      redoStack: [],
-      undoTreeNodes: m.initialUndoTreeNodes,
-      currentUndoSeq: m.initialCurrentUndoSeq,
-      maxUndoSeq: m.initialMaxUndoSeq,
-      undoTimeHistory: m.initialUndoTimeHistory,
-      undoTimeIndex: m.initialUndoTimeIndex,
-      clipboard: m.initialClipboard,
-      registers: m.initialRegisters ? { ...m.initialRegisters } : undefined,
-      primaryFilename: m.primaryFilename,
-      secondaryFilename: m.secondaryFilename,
-      secondaryLines: m.secondaryLines,
-      splitDirection: m.initialSplit ?? 'none',
-      splitPanes,
-      diffMode: m.initialDiffMode ?? false,
-      diffHunks: m.initialDiffMode && splitPanes ? computeDiffHunks(splitPanes[0].lines, splitPanes[1].lines) : undefined,
-      activePaneIndex: 0,
-      commandHistory: m.initialCommandHistory ? [...m.initialCommandHistory] : undefined,
-      searchHistory: m.initialSearchHistory ? [...m.initialSearchHistory] : undefined,
-      quickfix: m.initialQuickfixItems
-        ? { items: [...m.initialQuickfixItems], currentIndex: 0, isOpen: false }
-        : undefined,
-      locationList: m.initialLocationListItems
-        ? { items: [...m.initialLocationListItems], currentIndex: 0, isOpen: false }
-        : m.initialLspDiagnostics
-        ? {
-            items: diagnosticsToQuickfixItems(
-              m.primaryFilename || `lesson_${m.id}.ts`,
-              m.initialLspDiagnostics
-            ),
-            currentIndex: 0,
-            isOpen: false,
-          }
-        : undefined,
-      lspDiagnostics: m.initialLspDiagnostics
-        ? m.initialLspDiagnostics.map((d) => ({ ...d }))
-        : undefined,
-      lspSymbols: m.initialLspSymbols ? { ...m.initialLspSymbols } : undefined,
-      lspHover: null,
-      changeList: m.initialChangeList ? [...m.initialChangeList] : undefined,
-      changeIndex: m.initialChangeList ? m.initialChangeList.length : undefined,
-      argList: m.initialArgs
-        ? { files: [...m.initialArgs], currentIndex: 0 }
-        : undefined,
-      folds: m.initialFolds ? [...m.initialFolds] : undefined,
-      virtualFiles: m.initialVirtualFiles ? { ...m.initialVirtualFiles } : undefined,
-      userKeymaps: compileUserKeymaps(activePresets, leaderKey, customKeymaps),
-      leaderKey,
-    };
-  }, [activePresets, leaderKey, customKeymaps]);
+  const getMissionInitialState = useCallback(
+    (m: Mission): VimEditorState =>
+      buildMissionInitialState(m, { activePresets, leaderKey, customKeymaps }),
+    [activePresets, leaderKey, customKeymaps]
+  );
 
   const createCustomInitialState = useCallback(
-    (mission: Mission): VimEditorState => ({
-      lines: [...mission.initialLines],
-      cursor: { ...mission.initialCursor },
-      mode: 'NORMAL',
-      undoStack: [],
-      redoStack: [],
-      userKeymaps: compileUserKeymaps(activePresets, leaderKey, customKeymaps),
-      leaderKey,
-    }),
+    (mission: Mission): VimEditorState =>
+      buildCustomInitialState(mission, { activePresets, leaderKey, customKeymaps }),
     [activePresets, leaderKey, customKeymaps]
   );
 
@@ -261,6 +137,40 @@ export function App() {
       : getMissionInitialState(currentMission)
   );
   setEditorStateRef.current = setEditorState;
+
+  const {
+    isModalOpen,
+    setIsModalOpen,
+    isCustomModalOpen,
+    setIsCustomModalOpen,
+    isAnalyticsModalOpen,
+    setIsAnalyticsModalOpen,
+    isDailyModalOpen,
+    setIsDailyModalOpen,
+    isConfigModalOpen,
+    setIsConfigModalOpen,
+    isBYOCModalOpen,
+    setIsBYOCModalOpen,
+    isAnyModalOpen,
+    relativeLineNumbers,
+    showVirtualKeyboard,
+    showDiffView,
+    showRegisterInspector,
+    showMarksVisualizer,
+    showGrammarAST,
+    setShowGrammarAST,
+    showMacroDebugger,
+    handleToggleRegisterInspector,
+    handleToggleMarksVisualizer,
+    handleToggleGrammarAST,
+    handleToggleVirtualKeyboard,
+    handleToggleDiffView,
+    enableDiffView,
+    handleToggleRelativeLine,
+    handleToggleMacroDebugger,
+    handleOpenMacroDebugger,
+    restoreViewSettings,
+  } = useEditorViewSettings({ editorState, setEditorState });
 
   const {
     handleSwitchPane,
@@ -313,7 +223,6 @@ export function App() {
     playKeySound,
   });
 
-  const [showMacroDebugger, setShowMacroDebugger] = useState<boolean>(false);
   const [macroPreviewState, setMacroPreviewState] = useState<VimEditorState | null>(null);
   const [bellCount, setBellCount] = useState(0);
 
@@ -431,31 +340,6 @@ export function App() {
     }
   }, [initialCustomMission]);
 
-  useEffect(() => {
-    if (editorState.showRegisterInspector !== undefined) {
-      setShowRegisterInspector(editorState.showRegisterInspector);
-    }
-  }, [editorState.showRegisterInspector]);
-
-  useEffect(() => {
-    if (editorState.showMarksVisualizer !== undefined) {
-      setShowMarksVisualizer(editorState.showMarksVisualizer);
-    }
-  }, [editorState.showMarksVisualizer]);
-
-  useEffect(() => {
-    if (editorState.options?.relativenumber !== undefined) {
-      setRelativeLineNumbers(editorState.options.relativenumber);
-      saveRelativeLineSetting(editorState.options.relativenumber);
-    }
-  }, [editorState.options?.relativenumber]);
-
-  useEffect(() => {
-    if (editorState.showConfigModal !== undefined) {
-      setIsConfigModalOpen(editorState.showConfigModal);
-    }
-  }, [editorState.showConfigModal]);
-
   const resetSessionWithState = useCallback(
     (initState: VimEditorState, message: string | null = null) => {
       setEditorState(initState);
@@ -487,27 +371,15 @@ export function App() {
 
   const handleResetSandbox = useCallback(() => {
     handleStopGhostReplay();
-    resetSessionWithState({
-      lines: sandboxInitialLines(),
-      cursor: { line: 0, col: 0 },
-      mode: 'NORMAL',
-      undoStack: [],
-      redoStack: [],
-      userKeymaps: compileUserKeymaps(activePresets, leaderKey, customKeymaps),
-      leaderKey,
-    });
+    resetSessionWithState(
+      buildSandboxInitialState({ activePresets, leaderKey, customKeymaps })
+    );
   }, [handleStopGhostReplay, resetSessionWithState, activePresets, leaderKey, customKeymaps]);
 
   const handleResetCustomMission = useCallback(() => {
     if (!customMission) return;
     handleStopGhostReplay();
-    resetSessionWithState({
-      lines: [...customMission.initialLines],
-      cursor: { ...customMission.initialCursor },
-      mode: 'NORMAL',
-      undoStack: [],
-      redoStack: [],
-    });
+    resetSessionWithState(buildCustomInitialState(customMission));
   }, [customMission, handleStopGhostReplay, resetSessionWithState]);
 
   const handlePlayCustomMission = useCallback(
@@ -517,13 +389,7 @@ export function App() {
       setCustomMission(newMission);
       setCurrentTab('custom');
       resetSessionWithState(
-        {
-          lines: [...newMission.initialLines],
-          cursor: { ...newMission.initialCursor },
-          mode: 'NORMAL',
-          undoStack: [],
-          redoStack: [],
-        },
+        buildCustomInitialState(newMission),
         t('⛳ 커스텀 미션 [{title}] 시작! 최소 타수로 완성을 노려보세요.', {
           title: newMission.title,
         })
@@ -548,13 +414,12 @@ export function App() {
         targetText: missionData.targetText,
         par: missionData.par,
       });
-      setShowDiffView(true);
-      saveDiffViewSetting(true);
+      enableDiffView();
       setCoachingMessage(
         t('⛳ [BYOC] 리팩토링 미션 시작! 힌트: {hint}', { hint: missionData.hint })
       );
     },
-    [handlePlayCustomMission]
+    [handlePlayCustomMission, enableDiffView]
   );
 
   const handleSwitchTab = useCallback(
@@ -572,13 +437,7 @@ export function App() {
       } else if (tab === 'arcade' || tab === 'dungeon' || tab === 'dojo') {
         // 게임 탭은 자체 상태를 갖습니다
       } else if (tab === 'custom' && customMission) {
-        setEditorState({
-          lines: [...customMission.initialLines],
-          cursor: { ...customMission.initialCursor },
-          mode: 'NORMAL',
-          undoStack: [],
-          redoStack: [],
-        });
+        setEditorState(buildCustomInitialState(customMission));
         setKeystrokeCount(0);
         setRecentKeys([]);
       } else {
@@ -596,56 +455,6 @@ export function App() {
       getMissionInitialState,
     ]
   );
-
-  const handleToggleRelativeLine = useCallback(() => {
-    setRelativeLineNumbers((prev) => {
-      const next = !prev;
-      saveRelativeLineSetting(next);
-      setEditorState((st) => ({
-        ...st,
-        options: {
-          number: st.options?.number ?? true,
-          relativenumber: next,
-          ignorecase: st.options?.ignorecase ?? false,
-          smartcase: st.options?.smartcase ?? false,
-          hlsearch: st.options?.hlsearch ?? true,
-          wrap: st.options?.wrap ?? true,
-          cursorline: st.options?.cursorline ?? true,
-          tabstop: st.options?.tabstop ?? 2,
-          shiftwidth: st.options?.shiftwidth ?? 2,
-          expandtab: st.options?.expandtab ?? true,
-          list: st.options?.list ?? false,
-          wildmenu: st.options?.wildmenu ?? true,
-          spell: st.options?.spell ?? false,
-        },
-      }));
-      return next;
-    });
-  }, []);
-
-  const handleToggleVirtualKeyboard = useCallback(() => {
-    setShowVirtualKeyboard((prev) => {
-      const next = !prev;
-      saveVirtualKeyboardSetting(next);
-      return next;
-    });
-  }, []);
-
-  const handleToggleDiffView = useCallback(() => {
-    setShowDiffView((prev) => {
-      const next = !prev;
-      saveDiffViewSetting(next);
-      return next;
-    });
-  }, []);
-
-  const handleToggleMacroDebugger = useCallback(() => {
-    setShowMacroDebugger((prev) => !prev);
-  }, []);
-
-  const handleOpenMacroDebugger = useCallback((_register: string) => {
-    setShowMacroDebugger(true);
-  }, []);
 
   const processKeyInput = useCallback(
     (key: string) => {
@@ -719,12 +528,7 @@ export function App() {
   );
 
   const isModalOrGameBlocked =
-    isModalOpen ||
-    isCustomModalOpen ||
-    isAnalyticsModalOpen ||
-    isDailyModalOpen ||
-    isConfigModalOpen ||
-    isBYOCModalOpen ||
+    isAnyModalOpen ||
     currentTab === 'arcade' ||
     currentTab === 'dungeon' ||
     currentTab === 'dojo';
@@ -767,31 +571,17 @@ export function App() {
   const handleRestoreBackup = useCallback(() => {
     setProgress(loadProgress());
     reloadHardcoreAndKeymaps();
-    setRelativeLineNumbers(loadRelativeLineSetting());
-    setShowVirtualKeyboard(loadVirtualKeyboardSetting());
-    setShowDiffView(loadDiffViewSetting());
-    setShowRegisterInspector(loadRegisterInspectorSetting());
-    setShowMarksVisualizer(loadMarksVisualizerSetting());
-    setShowGrammarAST(loadGrammarASTSetting());
+    restoreViewSettings();
     setShowActionTimeline(loadActionTimelineSetting());
     setSpeedrunBestRecord(loadSpeedrunRecord());
-  }, [reloadHardcoreAndKeymaps, setShowActionTimeline, setSpeedrunBestRecord]);
+  }, [reloadHardcoreAndKeymaps, restoreViewSettings, setShowActionTimeline, setSpeedrunBestRecord]);
 
-  const statusFilename = displayEditorState.splitPanes
-    ? displayEditorState.activePaneIndex === 1
-      ? displayEditorState.secondaryFilename ||
-        displayEditorState.splitPanes[1].filename ||
-        'target.ts'
-      : displayEditorState.primaryFilename ||
-        displayEditorState.splitPanes[0].filename ||
-        'source.ts'
-    : currentTab === 'course'
-    ? currentMission.primaryFilename || `lesson_${currentMission.id}.txt`
-    : currentTab === 'custom'
-    ? 'custom_golf.txt'
-    : currentTab === 'speedrun'
-    ? `speedrun_stage_${speedrunCurrentStage + 1}.txt`
-    : 'sandbox.ts';
+  const statusFilename = resolveStatusFilename(
+    displayEditorState,
+    currentTab,
+    currentMission,
+    speedrunCurrentStage
+  );
 
   return (
     <div className="app-layout">
