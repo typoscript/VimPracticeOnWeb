@@ -13,6 +13,8 @@ import {
   runGrep,
   runCut,
   runTr,
+} from './shellBuiltins';
+import {
   runSed,
   runAwk,
   runHeadOrTail,
@@ -20,7 +22,7 @@ import {
   runNl,
   runColumn,
   runJq,
-} from './shellBuiltins';
+} from './shellStreamFilters';
 
 export interface ShellExecResult {
   ok: boolean;

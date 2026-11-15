@@ -1,6 +1,5 @@
 import { VimEditorState } from './types';
-import { clampCursor, getMaxCol } from './cursor';
-import { getRegisterContent } from './registers';
+import { clampCursor } from './cursor';
 import { parseKeySequence } from './keymapEngine';
 import { findMatchingAbbrev, isAbbrevTriggerKey } from './abbrevEngine';
 import {
@@ -12,23 +11,25 @@ import {
 } from './completion';
 import { getOptions } from './setEngine';
 import { recordChangePosition } from './advancedMotions';
-import { lookupDigraph } from './digraphs';
 import {
   AbbrevReplayCtx,
   INITIAL_ABBREV_CTX,
   DispatchKeyFn,
   insertTextAtCursor,
 } from './engineHelpers';
+import {
+  resolveLastInsertedText,
+  handleInsertLiteralNext,
+  handleInsertDigraph,
+  handleInsertRegister,
+  handleInsertEscape,
+  handleInsertLastInserted,
+} from './insertSpecialKeys';
 
 function trimInsertText(text: string | undefined, count: number): string | undefined {
   if (!text || count <= 0) return text;
   const trimmed = text.slice(0, Math.max(0, text.length - count));
   return trimmed;
-}
-
-function resolveLastInsertedText(state: VimEditorState, candidate?: string): string | undefined {
-  const txt = candidate !== undefined ? candidate : state.currentInsertText;
-  return txt && txt.length > 0 ? txt : state.lastInsertedText;
 }
 
 /**
@@ -146,8 +147,13 @@ export function handleInsertModeKey(
   macroDepth = 0,
   abbrevCtx: AbbrevReplayCtx = INITIAL_ABBREV_CTX
 ): VimEditorState {
-  const { line, col } = state.cursor;
-  const currentLine = state.lines[line] ?? '';
+  let { line, col } = state.cursor;
+  let currentLine = state.lines[line] ?? '';
+  const syncCursorLoc = () => {
+    line = state.cursor.line;
+    col = state.cursor.col;
+    currentLine = state.lines[line] ?? '';
+  };
 
   // 타임아웃 발생 시 대기 버퍼 초기화
   if (key === 'Timeout') {
@@ -160,193 +166,22 @@ export function handleInsertModeKey(
     };
   }
 
-  const insertLiteralChar = (
-    targetState: VimEditorState,
-    ch: string,
-    extraChangeKeys: string[]
-  ): VimEditorState => {
-    const tLine = targetState.cursor.line;
-    const tCol = targetState.cursor.col;
-    const lineStr = targetState.lines[tLine] ?? '';
-    const nextBlock = targetState.blockInsertSession
-      ? { ...targetState.blockInsertSession, typedChars: [...targetState.blockInsertSession.typedChars, ch] }
-      : undefined;
-    const nextLines = [...targetState.lines];
-    nextLines[tLine] = lineStr.slice(0, tCol) + ch + lineStr.slice(tCol);
-    const nextChangeKeys =
-      !isReplayingDot && targetState.currentChangeKeys
-        ? [...targetState.currentChangeKeys, ...extraChangeKeys]
-        : targetState.currentChangeKeys;
-    return {
-      ...targetState,
-      lines: nextLines,
-      cursor: { line: tLine, col: tCol + ch.length },
-      literalNextPending: undefined,
-      blockInsertSession: nextBlock,
-      currentChangeKeys: nextChangeKeys,
-      currentInsertText: (targetState.currentInsertText ?? '') + ch,
-    };
-  };
-
-  // Ctrl+v 리터럴 삽입 및 uXXXX / UXXXXXXXX 유니코드 16진수 코드 포인트 입력
-  if (state.literalNextPending) {
-    if (typeof state.literalNextPending === 'object') {
-      const { kind, digits } = state.literalNextPending;
-      const prefixKey = kind === 'hex4' ? 'u' : 'U';
-      const maxLen = kind === 'hex4' ? 4 : 8;
-      const decodeHex = (): string | null => {
-        if (!digits) return null;
-        const cp = parseInt(digits, 16);
-        if (Number.isNaN(cp) || cp <= 0 || cp > 0x10ffff || (cp >= 0xd800 && cp <= 0xdfff)) {
-          return null;
-        }
-        return String.fromCodePoint(cp);
-      };
-
-      if (/^[0-9a-fA-F]$/.test(key)) {
-        const nextDigits = digits + key;
-        if (nextDigits.length >= maxLen) {
-          const cp = parseInt(nextDigits, 16);
-          const ch =
-            !Number.isNaN(cp) && cp > 0 && cp <= 0x10ffff && (cp < 0xd800 || cp > 0xdfff)
-              ? String.fromCodePoint(cp)
-              : '';
-          return ch
-            ? insertLiteralChar(state, ch, ['Ctrl-v', prefixKey, ...nextDigits])
-            : { ...state, literalNextPending: undefined };
-        }
-        return {
-          ...state,
-          literalNextPending: { kind, digits: nextDigits },
-        };
-      }
-
-      const resolved = decodeHex();
-      let afterHex: VimEditorState = resolved
-        ? insertLiteralChar(state, resolved, ['Ctrl-v', prefixKey, ...digits, key === 'Enter' || key === ' ' ? key : ''].filter(Boolean))
-        : { ...state, literalNextPending: undefined };
-
-      // 16진수 조기 종료 후 Enter/Space가 아닌 키(예: Escape, 일반 문자)는 이어서 정상 처리
-      if (key === 'Enter' || key === ' ') {
-        return afterHex;
-      }
-      return handleInsertModeKey(afterHex, key, dispatchKey, isReplayingDot, macroDepth, abbrevCtx);
-    }
-
-    if (key === 'u') {
-      return { ...state, literalNextPending: { kind: 'hex4', digits: '' } };
-    }
-    if (key === 'U') {
-      return { ...state, literalNextPending: { kind: 'hex8', digits: '' } };
-    }
-    if (key.length === 1 || key === 'Tab') {
-      const ch = key === 'Tab' ? '\t' : key;
-      return insertLiteralChar(state, ch, ['Ctrl-v', key]);
-    }
-    state = { ...state, literalNextPending: undefined };
+  const literalRes = handleInsertLiteralNext(state, key, isReplayingDot);
+  if (literalRes.handled) return literalRes.state;
+  if (literalRes.state !== state) {
+    state = literalRes.state;
+    syncCursorLoc();
   }
 
-  if (key === 'Ctrl-v' || key === 'Ctrl+v' || key === 'ctrl-v' || key === '<C-v>') {
-    return {
-      ...state,
-      literalNextPending: true,
-    };
+  const digraphRes = handleInsertDigraph(state, key, isReplayingDot);
+  if (digraphRes.handled) return digraphRes.state;
+  if (digraphRes.state !== state) {
+    state = digraphRes.state;
+    syncCursorLoc();
   }
 
-  // Ctrl+k 다이그래프 입력 (Ctrl-k {c1}{c2} -> 특수/유니코드 문자 삽입, :help i_CTRL-K)
-  if (state.digraphPending !== undefined && state.digraphPending !== null) {
-    if (key === 'Escape' || key === 'Ctrl-c' || key === 'Ctrl+c') {
-      return { ...state, digraphPending: undefined };
-    }
-    if (state.digraphPending === '') {
-      if (key.length === 1) {
-        return { ...state, digraphPending: key };
-      }
-      if (key === 'Backspace') {
-        return { ...state, digraphPending: undefined };
-      }
-      state = { ...state, digraphPending: undefined };
-    } else {
-      const c1 = state.digraphPending;
-      if (key.length === 1) {
-        const { char: ch } = lookupDigraph(c1, key, state.userDigraphs);
-        const inserted = insertTextAtCursor({ ...state, digraphPending: undefined }, ch);
-        const nextChangeKeys =
-          !isReplayingDot && state.currentChangeKeys
-            ? [...state.currentChangeKeys, 'Ctrl-k', c1, key]
-            : state.currentChangeKeys;
-        return {
-          ...inserted,
-          currentChangeKeys: nextChangeKeys,
-        };
-      }
-      if (key === 'Backspace') {
-        return { ...state, digraphPending: undefined };
-      }
-      state = { ...state, digraphPending: undefined };
-    }
-  }
-
-  if (key === 'Ctrl-k' || key === 'Ctrl+k' || key === 'ctrl-k' || key === '<C-k>') {
-    return {
-      ...state,
-      digraphPending: '',
-      completionSession: state.completionSession ? null : state.completionSession,
-    };
-  }
-
-  // Ctrl+r 레지스터 대기 상태 (INSERT_REGISTER_PENDING)
-  if (state.insertRegisterPending) {
-    if (key === 'Escape' || key === 'Ctrl-c' || key === 'Ctrl+c') {
-      return { ...state, insertRegisterPending: undefined };
-    }
-
-    // Ctrl+r = (표현식 레지스터 입력 프롬프트)
-    if (key === '=') {
-      return {
-        ...state,
-        mode: 'COMMAND',
-        commandType: '=',
-        commandBuffer: '',
-        insertRegisterPending: undefined,
-        expressionReturnContext: {
-          mode: 'INSERT',
-          cursor: state.cursor,
-        },
-      };
-    }
-
-    // 레지스터 키 입력 (", 0~9, a~z, %, /, _, =)
-    const regKey = key.length === 1 ? key : undefined;
-    if (regKey) {
-      const regClip = getRegisterContent(state, regKey);
-      const textToInsert = regClip?.content ?? '';
-
-      let nextState: VimEditorState = {
-        ...state,
-        insertRegisterPending: undefined,
-      };
-
-      if (textToInsert.length > 0) {
-        nextState = insertTextAtCursor(nextState, textToInsert);
-        if (!isReplayingDot && state.currentChangeKeys) {
-          nextState.currentChangeKeys = [...state.currentChangeKeys, 'Ctrl-r', regKey];
-        }
-      }
-
-      return nextState;
-    }
-
-    return { ...state, insertRegisterPending: undefined };
-  }
-
-  // Ctrl+r: 레지스터 즉시 삽입 대기 상태 진입
-  if (key === 'Ctrl-r' || key === 'Ctrl+r' || key === 'ctrl-r' || key === '<C-r>') {
-    return {
-      ...state,
-      insertRegisterPending: true,
-    };
-  }
+  const regRes = handleInsertRegister(state, key, isReplayingDot);
+  if (regRes) return regRes;
 
   // 커스텀 키매핑 검사 (예: Insert 모드 jk 또는 jj -> <Esc>)
   if (state.pendingKeys) {
@@ -509,92 +344,7 @@ export function handleInsertModeKey(
 
   // ESC: NORMAL 모드로 복귀 (커서 1칸 좌측 보정)
   if (key === 'Escape') {
-    // 비주얼 블록(Ctrl+v) 삽입 세션 중인 경우 나머지 행에 일괄 복제 반영
-    if (state.blockInsertSession) {
-      const {
-        typedChars,
-        lines: targetLines,
-        col: insertCol,
-        insertMode,
-        endOfLine,
-        minCol = 0,
-        skippedLines,
-      } = state.blockInsertSession;
-      const insertedText = typedChars.join('');
-      const skippedSet = skippedLines ? new Set(skippedLines) : null;
-      const nextLines = [...state.lines];
-
-      for (let i = 1; i < targetLines.length; i++) {
-        const lineIdx = targetLines[i];
-        if (skippedSet?.has(lineIdx)) continue;
-        let lineText = nextLines[lineIdx] ?? '';
-        if (endOfLine) {
-          nextLines[lineIdx] = lineText + insertedText;
-        } else if (insertMode === 'A') {
-          if (insertedText.length > 0) {
-            if (lineText.length < insertCol) {
-              lineText = lineText.padEnd(insertCol, ' ');
-            }
-            nextLines[lineIdx] = lineText.slice(0, insertCol) + insertedText + lineText.slice(insertCol);
-          }
-        } else if (insertMode === 'I') {
-          if (insertCol === 0 || lineText.length > insertCol) {
-            nextLines[lineIdx] = lineText.slice(0, insertCol) + insertedText + lineText.slice(insertCol);
-          }
-        } else {
-          const cCol = Math.min(minCol, lineText.length);
-          nextLines[lineIdx] = lineText.slice(0, cCol) + insertedText + lineText.slice(cCol);
-        }
-      }
-
-      const firstLineIdx = targetLines[0];
-      const nextCol = Math.max(0, col - 1);
-      const lastPos = { line: firstLineIdx, col: insertCol, row: firstLineIdx };
-      const changeRecord = recordChangePosition(state.changeList, { line: firstLineIdx, col: insertCol });
-
-      return {
-        ...state,
-        lines: nextLines,
-        mode: 'NORMAL',
-        cursor: clampCursor(nextLines, { line: firstLineIdx, col: nextCol }, 'NORMAL'),
-        blockInsertSession: null,
-        pendingKeys: undefined,
-        digraphPending: undefined,
-        currentChangeKeys: undefined,
-        lastInsertedText: resolveLastInsertedText(state, insertedText),
-        currentInsertText: undefined,
-        lastInsertPos: lastPos,
-        changeList: changeRecord.changeList,
-        changeIndex: changeRecord.changeIndex,
-        marks: { ...(state.marks ?? {}), '^': { row: firstLineIdx, col: insertCol } },
-      };
-    }
-
-    const nextCol = Math.max(0, col - 1);
-
-    let nextLastChange = state.lastChangeKeys;
-    if (!isReplayingDot && state.currentChangeKeys) {
-      nextLastChange = [...state.currentChangeKeys, 'Escape'];
-    }
-
-    const lastPos = { line, col, row: line };
-    const changeRecord = recordChangePosition(state.changeList, { line, col });
-
-    return {
-      ...state,
-      mode: 'NORMAL',
-      cursor: clampCursor(state.lines, { line, col: nextCol }, 'NORMAL'),
-      pendingKeys: undefined,
-      digraphPending: undefined,
-      lastChangeKeys: nextLastChange,
-      currentChangeKeys: undefined,
-      lastInsertedText: resolveLastInsertedText(state),
-      currentInsertText: undefined,
-      lastInsertPos: lastPos,
-      changeList: changeRecord.changeList,
-      changeIndex: changeRecord.changeIndex,
-      marks: { ...(state.marks ?? {}), '^': { row: line, col } },
-    };
+    return handleInsertEscape(state, isReplayingDot);
   }
 
   // 키 입력 기록 (Dot Repeat 용)
@@ -604,57 +354,8 @@ export function handleInsertModeKey(
   };
 
   // Ctrl+a / Ctrl+@: 직전 INSERT 세션에서 삽입한 텍스트 재삽입 (:help i_CTRL-A / i_CTRL-@)
-  if (
-    key === 'Ctrl-a' ||
-    key === 'Ctrl+a' ||
-    key === 'ctrl-a' ||
-    key === '<C-a>' ||
-    key === 'Ctrl-@' ||
-    key === 'Ctrl+@' ||
-    key === 'ctrl-@' ||
-    key === '<C-@>'
-  ) {
-    const text = state.lastInsertedText ?? '';
-    const isExitInsert = key.endsWith('@');
-    let nextState = state;
-    if (text.length > 0) {
-      nextState = insertTextAtCursor(state, text);
-      if (!isReplayingDot && state.currentChangeKeys) {
-        const insertedKeys = [...text].map((ch) => (ch === '\n' ? 'Enter' : ch === '\t' ? 'Tab' : ch));
-        nextState = {
-          ...nextState,
-          currentChangeKeys: [...state.currentChangeKeys, ...insertedKeys],
-        };
-      }
-    }
-    if (isExitInsert) {
-      const finalCol = nextState.cursor.col;
-      const finalLine = nextState.cursor.line;
-      const nextCol = Math.max(0, finalCol - 1);
-      const nextLastChange =
-        !isReplayingDot && nextState.currentChangeKeys
-          ? [...nextState.currentChangeKeys, 'Escape']
-          : nextState.lastChangeKeys;
-      const lastPos = { line: finalLine, col: finalCol, row: finalLine };
-      const changeRecord = recordChangePosition(nextState.changeList, { line: finalLine, col: finalCol });
-      return {
-        ...nextState,
-        mode: 'NORMAL',
-        cursor: clampCursor(nextState.lines, { line: finalLine, col: nextCol }, 'NORMAL'),
-        pendingKeys: undefined,
-        digraphPending: undefined,
-        lastChangeKeys: nextLastChange,
-        currentChangeKeys: undefined,
-        lastInsertedText: resolveLastInsertedText(nextState),
-        currentInsertText: undefined,
-        lastInsertPos: lastPos,
-        changeList: changeRecord.changeList,
-        changeIndex: changeRecord.changeIndex,
-        marks: { ...(nextState.marks ?? {}), '^': { row: finalLine, col: finalCol } },
-      };
-    }
-    return nextState;
-  }
+  const lastInsertedRes = handleInsertLastInserted(state, key, isReplayingDot);
+  if (lastInsertedRes) return lastInsertedRes;
 
   // Ctrl+t / Ctrl+d: 현재 줄 들여쓰기 증가 / 감소 (shiftwidth 단위)
   if (key === 'Ctrl-t' || key === 'Ctrl+t' || key === 'Alt-t' || key === 'Alt+t') {
@@ -916,133 +617,4 @@ export function handleInsertModeKey(
   return state;
 }
 
-/**
- * REPLACE (R) 모드 키 입력 처리:
- * 1:1 글자 덮어쓰기 및 Backspace 시 원본 글자 복원
- */
-export function handleReplaceModeKey(
-  state: VimEditorState,
-  key: string,
-  isReplayingDot = false,
-  _macroDepth = 0
-): VimEditorState {
-  if (key === 'Escape') {
-    const curLine = state.lines[state.cursor.line] ?? '';
-    const maxCol = getMaxCol(curLine, 'NORMAL');
-    const newCol = Math.max(0, Math.min(state.cursor.col - 1, maxCol));
-    const nextLastChange = state.currentChangeKeys ? [...state.currentChangeKeys, 'Escape'] : undefined;
-    return {
-      ...state,
-      mode: 'NORMAL',
-      cursor: { line: state.cursor.line, col: newCol },
-      replaceStack: undefined,
-      currentChangeKeys: undefined,
-      lastChangeKeys: isReplayingDot ? state.lastChangeKeys : nextLastChange,
-    };
-  }
-
-  if (key === 'Backspace') {
-    const stack = state.replaceStack ?? [];
-    if (stack.length === 0) {
-      // 교체 모드 진입 지점 이전으로는 백스페이스 이동 불가
-      return state;
-    }
-    const last = stack[stack.length - 1];
-    const newStack = stack.slice(0, -1);
-    const lineIdx = last.line;
-    const curLine = state.lines[lineIdx] ?? '';
-    let newLine: string;
-
-    if (last.char === '') {
-      // 줄 끝을 초과하여 덧붙여졌던 문자 삭제
-      newLine = curLine.slice(0, last.col) + curLine.slice(last.col + 1);
-    } else {
-      // 덮어써졌던 원본 문자 복구
-      newLine = curLine.slice(0, last.col) + last.char + curLine.slice(last.col + 1);
-    }
-
-    const nextLines = [...state.lines];
-    nextLines[lineIdx] = newLine;
-    const nextChangeKeys = state.currentChangeKeys ? [...state.currentChangeKeys, 'Backspace'] : undefined;
-
-    return {
-      ...state,
-      lines: nextLines,
-      cursor: { line: lineIdx, col: last.col },
-      replaceStack: newStack,
-      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : nextChangeKeys,
-    };
-  }
-
-  if (key === 'Enter') {
-    const lineIdx = state.cursor.line;
-    const col = state.cursor.col;
-    const curLine = state.lines[lineIdx] ?? '';
-    const before = curLine.slice(0, col);
-    const after = curLine.slice(col);
-    const nextLines = [
-      ...state.lines.slice(0, lineIdx),
-      before,
-      after,
-      ...state.lines.slice(lineIdx + 1),
-    ];
-    const nextChangeKeys = state.currentChangeKeys ? [...state.currentChangeKeys, 'Enter'] : undefined;
-    return {
-      ...state,
-      lines: nextLines,
-      cursor: { line: lineIdx + 1, col: 0 },
-      replaceStack: [],
-      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : nextChangeKeys,
-    };
-  }
-
-  if (key === 'ArrowLeft') {
-    return { ...state, cursor: { line: state.cursor.line, col: Math.max(0, state.cursor.col - 1) } };
-  }
-  if (key === 'ArrowRight') {
-    return { ...state, cursor: { line: state.cursor.line, col: state.cursor.col + 1 } };
-  }
-  if (key === 'ArrowUp') {
-    return { ...state, cursor: { line: Math.max(0, state.cursor.line - 1), col: state.cursor.col } };
-  }
-  if (key === 'ArrowDown') {
-    return { ...state, cursor: { line: Math.min(state.lines.length - 1, state.cursor.line + 1), col: state.cursor.col } };
-  }
-
-  // 단일 입력 문자 1:1 덮어쓰기
-  if (key.length === 1) {
-    const lineIdx = state.cursor.line;
-    const col = state.cursor.col;
-    const curLine = state.lines[lineIdx] ?? '';
-    const stack = state.replaceStack ?? [];
-
-    let newLine: string;
-    let oldChar = '';
-
-    if (col < curLine.length) {
-      oldChar = curLine[col];
-      newLine = curLine.slice(0, col) + key + curLine.slice(col + 1);
-    } else {
-      const padding = ' '.repeat(col - curLine.length);
-      newLine = curLine + padding + key;
-      oldChar = '';
-    }
-
-    const nextLines = [...state.lines];
-    nextLines[lineIdx] = newLine;
-    const newStack = [...stack, { char: oldChar, line: lineIdx, col }];
-    const nextChangeKeys = state.currentChangeKeys
-      ? [...state.currentChangeKeys, key]
-      : ['R', key];
-
-    return {
-      ...state,
-      lines: nextLines,
-      cursor: { line: lineIdx, col: col + 1 },
-      replaceStack: newStack,
-      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : nextChangeKeys,
-    };
-  }
-
-  return state;
-}
+export { handleReplaceModeKey } from './replaceMode';
