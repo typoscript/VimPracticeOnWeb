@@ -2,12 +2,11 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   DojoDrillType,
   DojoProblem,
-  RelativeJumpProblem,
-  FTSniperProblem,
-  WordJumpProblem,
-  ProMasterProblem,
   DojoLeaderboardEntry,
 } from './HardcoreDojo.types';
+import { DojoArenaContent } from './DojoArenaContent';
+import { DojoOverlays, DojoGamePhase } from './DojoOverlays';
+import { DojoLeaderboardModal } from './DojoLeaderboardModal';
 import {
   DOJO_DRILL_METAS,
   generateRelativeJumpProblem,
@@ -53,14 +52,7 @@ export function HardcoreDojo({
   const [selectedDrill, setSelectedDrill] = useState<DojoDrillType>(
     initialDrill?.drill ?? 'relative-jump'
   );
-  const [gameState, setGameState] = useState<
-    | 'ready'
-    | 'running'
-    | 'finished'
-    | 'sudden-death-failed'
-    | 'sudden-death-cleared'
-    | 'weakness-cleared'
-  >('ready');
+  const [gameState, setGameState] = useState<DojoGamePhase>('ready');
   const [weaknessPlan, setWeaknessPlan] = useState<WeaknessDrillPlan>(() =>
     buildWeaknessDrillPlan(loadUserAnalytics(), analyticsProgress ?? {})
   );
@@ -766,453 +758,44 @@ export function HardcoreDojo({
         {/* 경고 툴팁 토스트 */}
         {warningMessage && <div className="dojo-warning-toast">{warningMessage}</div>}
 
-        {/* 상단 툴바 */}
-        <div className="dojo-arena-toolbar">
-          <div>
-            {t('모드:')} <strong>{editorState.mode}</strong> | {t('대기 키:')}{' '}
-            <code>{editorState.pendingKeys || t('(없음)')}</code>
-          </div>
-          {selectedDrill === 'sudden-death' ? (
-            <div className="dojo-rule-badge sudden-death">
-              {t('💀 서든데스: 1회 실수·방향키·연타 즉시 탈락 | 10연타 스피드런')}
-            </div>
-          ) : (
-            <div className="dojo-rule-badge">{t('🔥 방향키·마우스 차단 | 1.5초 3회 초과 연타 무시')}</div>
-          )}
-        </div>
+        <DojoArenaContent
+          selectedDrill={selectedDrill}
+          editorState={editorState}
+          currentProblem={currentProblem}
+          activeWeaknessItem={activeWeaknessItem}
+          keyInstructions={currentMeta.keyInstructions}
+        />
 
-        {/* 안내 지침 바 */}
-        <div className="dojo-instruction-bar">
-          <div>
-            {activeWeaknessItem
-              ? `🧬 ${t('🧬 현재 집중 영역: {badge}', { badge: t(activeWeaknessItem.focusBadge) })} — ${t(activeWeaknessItem.focusHint)}`
-              : `💡 ${currentMeta.keyInstructions}`}
-          </div>
-          {currentProblem?.type === 'ft-sniper' && (
-            <div style={{ color: '#7aa2f7' }}>{t("🎯 타깃: '{char}'", { char: currentProblem.targetChar })}</div>
-          )}
-          {currentProblem?.type === 'word-jump' && (
-            <div style={{ color: '#7aa2f7' }}>{t("🎯 타깃: '{char}'", { char: currentProblem.targetToken })}</div>
-          )}
-          {currentProblem?.type === 'pro-master' && (
-            <div style={{ color: '#bb9af7', fontWeight: 600 }}>
-              {t('🎯 목표:')} {t((currentProblem as ProMasterProblem).prompt)} | {t('힌트:')} {t((currentProblem as ProMasterProblem).hint)}
-            </div>
-          )}
-        </div>
-
-        {/* 코드 편집 영역 */}
-        <div className="dojo-editor-content">
-          {editorState.lines.map((lineText, lineIdx) => {
-            const isCursorLine = editorState.cursor.line === lineIdx;
-            const isRelativeJump = currentProblem?.type === 'relative-jump';
-            const isTargetLine =
-              isRelativeJump &&
-              lineIdx === (currentProblem as RelativeJumpProblem).targetLine;
-
-            // 상대 라인 번호 계산
-            const dist = Math.abs(lineIdx - editorState.cursor.line);
-            const lineNumDisplay = dist === 0 ? lineIdx + 1 : dist;
-
-            return (
-              <div
-                key={lineIdx}
-                className={`dojo-line-row ${isCursorLine ? 'active-line' : ''} ${
-                  isTargetLine ? 'target-line' : ''
-                }`}
-              >
-                {/* 라인 거터 (상대 라인 번호) */}
-                <div className="dojo-line-gutter">
-                  <span className={dist > 0 ? 'dojo-relative-number' : ''}>
-                    {lineNumDisplay}
-                  </span>
-                </div>
-
-                {/* 코드 텍스트 및 커서/타깃 렌더링 */}
-                <div className="dojo-code-text">
-                  {lineText.length === 0 ? (
-                    isCursorLine && editorState.cursor.col === 0 ? (
-                      <span className="dojo-char dojo-cursor">&nbsp;</span>
-                    ) : (
-                      <span>&nbsp;</span>
-                    )
-                  ) : (
-                    lineText.split('').map((ch, charIdx) => {
-                      const isCursor =
-                        isCursorLine && editorState.cursor.col === charIdx;
-
-                      // FT-Sniper 타깃 표시
-                      const isFTSniperTarget =
-                        currentProblem?.type === 'ft-sniper' &&
-                        lineIdx === 0 &&
-                        charIdx === (currentProblem as FTSniperProblem).targetCol;
-
-                      // Word-Jump 타깃 표시
-                      const isWordTarget =
-                        currentProblem?.type === 'word-jump' &&
-                        lineIdx === 0 &&
-                        charIdx >= (currentProblem as WordJumpProblem).targetStartCol &&
-                        charIdx <= (currentProblem as WordJumpProblem).targetEndCol;
-
-                      let classNames = 'dojo-char';
-                      if (isCursor) classNames += ' dojo-cursor';
-                      if (isFTSniperTarget || isWordTarget) {
-                        classNames += ' dojo-target-reticle';
-                      }
-
-                      return (
-                        <span key={charIdx} className={classNames}>
-                          {ch}
-                        </span>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* 시작 전 오버레이 */}
-        {gameState === 'ready' && (
-          <div className="dojo-overlay">
-            <h3>{currentMeta.title}</h3>
-            <p>{currentMeta.description}</p>
-            {selectedDrill === 'weakness-custom' ? (
-              <>
-                <div className="dojo-weakness-plan-box" data-testid="dojo-weakness-plan-box">
-                  <div className="dojo-weakness-plan-title">
-                    {t('🧬 약점 기반 맞춤 10문제 세트 구성:')}
-                  </div>
-                  <div className="dojo-weakness-pills">
-                    {weaknessPlan.topWeaknesses.map((w, idx) => (
-                      <div key={w.id} className="dojo-weakness-pill">
-                        <strong>#{idx + 1} {t(w.label)}</strong>
-                        <span>{w.reason}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div className="dojo-btn-row">
-                  <button
-                    type="button"
-                    className="dojo-start-btn"
-                    style={{ background: '#7dcfff', color: '#1a1b26' }}
-                    onClick={startGame}
-                    data-testid="dojo-weakness-start-btn"
-                  >
-                    {t('🧬 약점 맞춤 드릴 시작 (10문제)')}
-                  </button>
-                  <button
-                    type="button"
-                    className="dojo-leaderboard-btn"
-                    onClick={() => {
-                      const fresh = refreshWeaknessPlan();
-                      loadProblem(createProblemForDrill('weakness-custom', 0, fresh));
-                    }}
-                    data-testid="dojo-weakness-refresh-btn"
-                  >
-                    {t('🔄 통계 재분석')}
-                  </button>
-                </div>
-              </>
-            ) : selectedDrill === 'pro-master' ? (
-              <>
-                <div style={{ color: '#bb9af7', fontSize: '0.9rem', marginBottom: '1.25rem', fontWeight: 700 }}>
-                  {t('👑 실무 핵심 텍스트 객체와 연산자 10문제를 최단 타수로 돌파하세요!')}
-                </div>
-                <button type="button" className="dojo-start-btn" style={{ background: '#bb9af7', color: '#1a1b26' }} onClick={startGame}>
-                  {t('👑 프로 마스터 도전 시작 (10연타)')}
-                </button>
-              </>
-            ) : selectedDrill === 'sudden-death' ? (
-              <>
-                <div style={{ color: '#f7768e', fontSize: '0.9rem', marginBottom: '1.25rem', fontWeight: 700 }}>
-                  {t('⚡ 단 1회의 실수도 허용되지 않는 서든데스! 10연속 노미스로 목표를 완주하세요!')}
-                </div>
-                <button type="button" className="dojo-start-btn sudden-death" onClick={startGame}>
-                  {t('⚡ 서든데스 도전 시작 (10연타)')}
-                </button>
-              </>
-            ) : (
-              <>
-                <div style={{ color: '#bb9af7', fontSize: '0.85rem', marginBottom: '1.25rem' }}>
-                  {t('⚡ 30초 동안 방향키 없이 최단 경로로 과녁을 격파하세요!')}
-                </div>
-                <button type="button" className="dojo-start-btn" onClick={startGame}>
-                  {t('🥋 수련 시작 (30초)')}
-                </button>
-              </>
-            )}
-          </div>
-        )}
-
-        {/* 일반 드릴 종료 결과 오버레이 */}
-        {gameState === 'finished' && (
-          <div className="dojo-overlay">
-            <div className="dojo-tier-badge">{getTier().title.split(' ')[0]}</div>
-            <div className={`dojo-tier-title ${getTier().className}`}>
-              {getTier().title}
-            </div>
-            <div style={{ color: '#9aa5ce', fontSize: '0.9rem', marginBottom: '1rem' }}>
-              {getTier().desc}
-            </div>
-
-            {isNewRecord && <div className="dojo-new-record-tag">{t('🎉 신기록 달성!')}</div>}
-
-            <div className="dojo-stats-summary">
-              <div className="dojo-stat-item">
-                <div className="num">{score}</div>
-                <div className="label">{t('최종 점수')}</div>
-              </div>
-              <div className="dojo-stat-item">
-                <div className="num">{t('{n}개', { n: targetsHit })}</div>
-                <div className="label">{t('처치 과녁')}</div>
-              </div>
-              <div className="dojo-stat-item">
-                <div className="num">{Math.round((targetsHit / 30) * 60)}</div>
-                <div className="label">{t('SPM (목표/분)')}</div>
-              </div>
-              <div className="dojo-stat-item">
-                <div className="num">{Math.round((keystrokes / 30) * 60)}</div>
-                <div className="label">{t('APM (타수/분)')}</div>
-              </div>
-            </div>
-
-            <div className="dojo-btn-row">
-              <button type="button" className="dojo-start-btn" onClick={startGame}>
-                {t('🔄 다시 수련하기')}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* 서든데스 탈락 오버레이 */}
-        {gameState === 'sudden-death-failed' && (
-          <div className="dojo-overlay failed">
-            <div className="dojo-tier-badge">💀</div>
-            <div className="dojo-tier-title bronze" style={{ color: '#f7768e' }}>
-              {t('서든데스 탈락!')}
-            </div>
-            <div className="dojo-failure-reason">
-              {t('탈락 사유:')} <strong>{suddenDeathFailReason || t('오입력 감지')}</strong>
-            </div>
-
-            <div className="dojo-stats-summary">
-              <div className="dojo-stat-item">
-                <div className="num" style={{ color: '#ff9e64' }}>
-                  {combo} / 10
-                </div>
-                <div className="label">{t('달성 콤보')}</div>
-              </div>
-              <div className="dojo-stat-item">
-                <div className="num">{timeLeft.toFixed(2)}s</div>
-                <div className="label">{t('생존 시간')}</div>
-              </div>
-              <div className="dojo-stat-item">
-                <div className="num">{keystrokes}</div>
-                <div className="label">{t('총 타수')}</div>
-              </div>
-            </div>
-
-            <div className="dojo-btn-row">
-              <button type="button" className="dojo-start-btn" onClick={startGame}>
-                {t('🔄 다시 도전하기')}
-              </button>
-              <button
-                type="button"
-                className="dojo-leaderboard-btn"
-                onClick={() => setIsLeaderboardOpen(true)}
-              >
-                {t('🏆 랭킹 보드 보기')}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* 서든데스 완주 클리어 오버레이 */}
-        {gameState === 'sudden-death-cleared' && (
-          <div className="dojo-overlay cleared">
-            <div className="dojo-tier-badge">👑</div>
-            <div className="dojo-tier-title master" style={{ color: '#e0af68' }}>
-              {t('🎉 10연타 서든데스 완전 정복!')}
-            </div>
-            <div style={{ color: '#9ece6a', fontSize: '1rem', marginBottom: '1rem', fontWeight: 700 }}>
-              {t('🏆 명예의 전당 {rank}위 등극!', { rank: myRank ?? 1 })}
-            </div>
-
-            <div className="dojo-stats-summary">
-              <div className="dojo-stat-item">
-                <div className="num" style={{ color: '#9ece6a' }}>
-                  {finalTime?.toFixed(2)}s
-                </div>
-                <div className="label">{t('완주 시간')}</div>
-              </div>
-              <div className="dojo-stat-item">
-                <div className="num" style={{ color: '#ff9e64' }}>
-                  10 / 10
-                </div>
-                <div className="label">{t('달성 콤보')}</div>
-              </div>
-              <div className="dojo-stat-item">
-                <div className="num">
-                  {Math.round((10 / Math.max(1, finalTime ?? 1)) * 60)}
-                </div>
-                <div className="label">{t('SPM (목표/분)')}</div>
-              </div>
-              <div className="dojo-stat-item">
-                <div className="num">{keystrokes}</div>
-                <div className="label">{t('총 타수')}</div>
-              </div>
-            </div>
-
-            <div className="dojo-btn-row">
-              <button type="button" className="dojo-start-btn" onClick={startGame}>
-                {t('🔄 다시 도전하기')}
-              </button>
-              <button
-                type="button"
-                className="dojo-leaderboard-btn"
-                onClick={() => setIsLeaderboardOpen(true)}
-              >
-                {t('🏆 랭킹 보드 보기')}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* 약점 맞춤 드릴 10문제 완주 오버레이 */}
-        {gameState === 'weakness-cleared' && (
-          <div className="dojo-overlay cleared" data-testid="dojo-weakness-cleared">
-            <div className="dojo-tier-badge">🧬</div>
-            <div className="dojo-tier-title master" style={{ color: '#7dcfff' }}>
-              {t('🎉 약점 집중 맞춤 드릴 완주!')}
-            </div>
-            <div style={{ color: '#9ece6a', fontSize: '0.95rem', marginBottom: '1rem', fontWeight: 700 }}>
-              {t('약점 집중 교정 10문제를 모두 완료했습니다!')}
-            </div>
-            {isNewRecord && <div className="dojo-new-record-tag">{t('🎉 신기록 달성!')}</div>}
-
-            <div className="dojo-stats-summary">
-              <div className="dojo-stat-item">
-                <div className="num" style={{ color: '#7dcfff' }}>
-                  {finalTime?.toFixed(2)}s
-                </div>
-                <div className="label">{t('완주 시간')}</div>
-              </div>
-              <div className="dojo-stat-item">
-                <div className="num">{score}</div>
-                <div className="label">{t('최종 점수')}</div>
-              </div>
-              <div className="dojo-stat-item">
-                <div className="num">10 / 10</div>
-                <div className="label">{t('달성 콤보')}</div>
-              </div>
-              <div className="dojo-stat-item">
-                <div className="num">{keystrokes}</div>
-                <div className="label">{t('총 타수')}</div>
-              </div>
-            </div>
-
-            <div className="dojo-btn-row">
-              <button type="button" className="dojo-start-btn" onClick={startGame}>
-                {t('🔄 새 약점 드릴 다시 풀기')}
-              </button>
-            </div>
-          </div>
-        )}
+        <DojoOverlays
+          gameState={gameState}
+          selectedDrill={selectedDrill}
+          metaTitle={currentMeta.title}
+          metaDescription={currentMeta.description}
+          weaknessPlan={weaknessPlan}
+          onRefreshWeaknessPlan={() => {
+            const fresh = refreshWeaknessPlan();
+            loadProblem(createProblemForDrill('weakness-custom', 0, fresh));
+          }}
+          onStartGame={startGame}
+          onOpenLeaderboard={() => setIsLeaderboardOpen(true)}
+          tierInfo={getTier()}
+          isNewRecord={isNewRecord}
+          score={score}
+          targetsHit={targetsHit}
+          keystrokes={keystrokes}
+          combo={combo}
+          timeLeft={timeLeft}
+          finalTime={finalTime}
+          myRank={myRank}
+          suddenDeathFailReason={suddenDeathFailReason}
+        />
       </div>
 
-      {/* 실시간 랭킹 모달 (Leaderboard) */}
-      {isLeaderboardOpen && (
-        <div
-          className="dojo-modal-backdrop"
-          onClick={() => setIsLeaderboardOpen(false)}
-        >
-          <div
-            className="dojo-leaderboard-modal"
-            onClick={(e) => e.stopPropagation()}
-            role="dialog"
-            aria-label="Dojo Leaderboard"
-          >
-            <div className="dojo-modal-header">
-              <h3>{t('🏆 하드코어 도장 서든데스 명예의 전당')}</h3>
-              <button
-                type="button"
-                className="dojo-modal-close-btn"
-                onClick={() => setIsLeaderboardOpen(false)}
-                aria-label="Close"
-              >
-                ✕
-              </button>
-            </div>
-            <p className="dojo-modal-subtitle">
-              {t('노미스 10연타를 가장 빠른 속도로 주파한 전설의 Vim 전사들')}
-            </p>
-
-            <div className="dojo-table-container">
-              <table className="dojo-leaderboard-table">
-                <thead>
-                  <tr>
-                    <th>{t('순위')}</th>
-                    <th>{t('플레이어')}</th>
-                    <th>{t('클리어 시간')}</th>
-                    <th>{t('칭호')}</th>
-                    <th>{t('일시')}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {leaderboard.map((entry, index) => {
-                    const isTop1 = index === 0;
-                    const isTop2 = index === 1;
-                    const isTop3 = index === 2;
-                    return (
-                      <tr
-                        key={entry.id}
-                        className={
-                          isTop1
-                            ? 'rank-gold'
-                            : isTop2
-                            ? 'rank-silver'
-                            : isTop3
-                            ? 'rank-bronze'
-                            : ''
-                        }
-                      >
-                        <td className="rank-col">
-                          {isTop1
-                            ? '🥇 1'
-                            : isTop2
-                            ? '🥈 2'
-                            : isTop3
-                            ? '🥉 3'
-                            : `${index + 1}`}
-                        </td>
-                        <td className="player-col">{entry.playerName}</td>
-                        <td className="time-col">{entry.clearTime.toFixed(2)}s</td>
-                        <td className="tier-col">{entry.tier}</td>
-                        <td className="date-col">
-                          {new Date(entry.completedAt).toLocaleDateString()}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="dojo-modal-footer">
-              <button
-                type="button"
-                className="dojo-modal-btn"
-                onClick={() => setIsLeaderboardOpen(false)}
-              >
-                {t('닫기')}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DojoLeaderboardModal
+        isOpen={isLeaderboardOpen}
+        leaderboard={leaderboard}
+        onClose={() => setIsLeaderboardOpen(false)}
+      />
     </div>
   );
 }

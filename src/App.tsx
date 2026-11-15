@@ -1,35 +1,23 @@
 import { useEffect, useState, useCallback, useRef, lazy, Suspense, Dispatch, SetStateAction } from 'react';
-import { Editor } from './components/Editor/Editor';
-import { StatusBar } from './components/StatusBar/StatusBar';
 import { MissionPanel, calculateStars } from './components/MissionPanel/MissionPanel';
 import { Keycaster } from './components/Keycaster/Keycaster';
 import { CoachingToast } from './components/CoachingToast/CoachingToast';
-import { LessonSelectModal } from './components/LessonSelectModal/LessonSelectModal';
 import { DiffViewer } from './components/DiffViewer/DiffViewer';
 import { VirtualKeyboard } from './components/VirtualKeyboard/VirtualKeyboard';
 import { SpeedrunPanel } from './components/SpeedrunPanel/SpeedrunPanel';
-import { ThemeSwitcher } from './components/ThemeSwitcher/ThemeSwitcher';
-import { ViewPanelsDropdown } from './components/ViewPanelsDropdown/ViewPanelsDropdown';
+import { StatusBar } from './components/StatusBar/StatusBar';
 import { RegisterInspector } from './components/RegisterInspector/RegisterInspector';
 import { MarksJumpVisualizer } from './components/MarksJumpVisualizer/MarksJumpVisualizer';
 import { MacroDebugger } from './components/MacroDebugger/MacroDebugger';
 import { VimGrammarASTViewer } from './components/VimGrammarASTViewer/VimGrammarASTViewer';
-import { QuickfixPanel } from './components/QuickfixPanel';
-import { FuzzyFinder } from './components/FuzzyFinder/FuzzyFinder';
-import { HelpViewer } from './components/HelpViewer/HelpViewer';
 import { ActionTimelinePanel } from './components/ActionTimelinePanel/ActionTimelinePanel';
-import {
-  ActionTimelineStep,
-  createInitialTimelineStep,
-  formatCommandLabel,
-  getActionDescription,
-} from './utils/actionTimeline';
+import { AppHeader, AppTab } from './components/AppHeader/AppHeader';
+import { EditorViewport } from './components/EditorViewport/EditorViewport';
+import { AppModals } from './components/AppModals/AppModals';
 import {
   VimEditorState,
   SplitPaneState,
   handleKey,
-  ensureBuffers,
-  ensureTabPages,
   diagnosticsToQuickfixItems,
   computeDiffHunks,
 } from './vim-engine';
@@ -53,10 +41,7 @@ import {
   loadGrammarASTSetting,
   saveGrammarASTSetting,
   loadActionTimelineSetting,
-  saveActionTimelineSetting,
   loadSpeedrunRecord,
-  saveSpeedrunRecord,
-  SpeedrunRecord,
   LessonProgress,
 } from './utils/storage';
 import { AntiPatternDetector } from './utils/antiPatternDetector';
@@ -75,28 +60,21 @@ import { useEditorWorkspaceHandlers } from './hooks/useEditorWorkspaceHandlers';
 import { useHardcoreAndKeymaps } from './hooks/useHardcoreAndKeymaps';
 import { useVimKeyboardInput } from './hooks/useVimKeyboardInput';
 import { useGhostReplay } from './hooks/useGhostReplay';
+import { useActionTimeline } from './hooks/useActionTimeline';
+import {
+  useSpeedrunSession,
+  SPEEDRUN_CANDIDATE_IDS,
+  generateSpeedrunStages,
+} from './hooks/useSpeedrunSession';
 import './App.css';
-import { t, useLocale, setLocale } from './i18n';
+import { t, useLocale } from './i18n';
 
-// 첫 화면에 필요 없는 탭 화면과 모달은 처음 열 때 별도 청크로 불러옵니다 (초기 번들 크기 절감)
+export { SPEEDRUN_CANDIDATE_IDS, generateSpeedrunStages };
+
+// 첫 화면에 필요 없는 게임 탭 화면은 처음 열 때 별도 청크로 불러옵니다 (초기 번들 크기 절감)
 const ArcadeSurvival = lazy(() => import('./components/ArcadeSurvival/ArcadeSurvival').then((m) => ({ default: m.ArcadeSurvival })));
 const DungeonRPG = lazy(() => import('./components/DungeonRPG/DungeonRPG').then((m) => ({ default: m.DungeonRPG })));
 const HardcoreDojo = lazy(() => import('./components/HardcoreDojo/HardcoreDojo').then((m) => ({ default: m.HardcoreDojo })));
-const CustomMissionModal = lazy(() => import('./components/CustomMissionModal/CustomMissionModal').then((m) => ({ default: m.CustomMissionModal })));
-const AnalyticsModal = lazy(() => import('./components/AnalyticsModal/AnalyticsModal').then((m) => ({ default: m.AnalyticsModal })));
-const DailyChallengeModal = lazy(() => import('./components/DailyChallengeModal/DailyChallengeModal').then((m) => ({ default: m.DailyChallengeModal })));
-const ConfigExporterModal = lazy(() => import('./components/ConfigExporterModal/ConfigExporterModal').then((m) => ({ default: m.ConfigExporterModal })));
-const BYOCModal = lazy(() => import('./components/BYOCModal/BYOCModal').then((m) => ({ default: m.BYOCModal })));
-
-/**
- * 한 번이라도 열린 적이 있으면 true 를 유지합니다.
- * 모달을 처음 열 때 불러온 뒤에는 계속 마운트해 두어, 닫았다 다시 열어도 내부 상태가 유지됩니다 (기존 동작과 동일).
- */
-function useOpenedOnce(isOpen: boolean): boolean {
-  const [opened, setOpened] = useState(isOpen);
-  if (isOpen && !opened) setOpened(true);
-  return opened || isOpen;
-}
 
 /** 지연 로딩되는 탭 화면을 불러오는 동안 보여줄 자리 표시 */
 const TAB_LOADING_FALLBACK = (
@@ -105,25 +83,11 @@ const TAB_LOADING_FALLBACK = (
   </div>
 );
 
-/** 스피드런 챌린지 후보 미션 ID 목록 (리팩토링/편집 미션) */
-export const SPEEDRUN_CANDIDATE_IDS = [
-  4, 6, 7, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 21, 23, 25, 26, 28, 29, 30, 31, 32, 43, 44,
-  47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100,
-];
-
-export function generateSpeedrunStages(): Mission[] {
-  const candidates = MISSIONS.filter((m) => SPEEDRUN_CANDIDATE_IDS.includes(m.id));
-  const shuffled = [...candidates].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, 5);
-}
-
 export function App() {
   const initialChallenge = useRef(getChallengeFromUrl()).current;
   const initialCustomMission = initialChallenge ? createCustomMissionObject(initialChallenge) : null;
 
-  const [currentTab, setCurrentTab] = useState<
-    'course' | 'sandbox' | 'speedrun' | 'custom' | 'arcade' | 'dungeon' | 'dojo'
-  >(initialCustomMission ? 'custom' : 'course');
+  const [currentTab, setCurrentTab] = useState<AppTab>(initialCustomMission ? 'custom' : 'course');
   const [customMission, setCustomMission] = useState<Mission | null>(initialCustomMission);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [isAnalyticsModalOpen, setIsAnalyticsModalOpen] = useState(false);
@@ -134,12 +98,6 @@ export function App() {
     drill: 'weakness-custom';
     nonce: number;
   } | null>(null);
-  // 지연 로딩 모달: 처음 열 때 불러오고 이후에는 마운트 유지
-  const customModalLoaded = useOpenedOnce(isCustomModalOpen);
-  const analyticsModalLoaded = useOpenedOnce(isAnalyticsModalOpen);
-  const dailyModalLoaded = useOpenedOnce(isDailyModalOpen);
-  const configModalLoaded = useOpenedOnce(isConfigModalOpen);
-  const byocModalLoaded = useOpenedOnce(isBYOCModalOpen);
   const [showGrammarAST, setShowGrammarAST] = useState<boolean>(() => loadGrammarASTSetting());
 
   const setEditorStateRef = useRef<Dispatch<SetStateAction<VimEditorState>> | null>(null);
@@ -164,10 +122,7 @@ export function App() {
     reloadHardcoreAndKeymaps,
   } = useHardcoreAndKeymaps(setEditorStateRef);
 
-  // 화면 언어 (바꾸면 App 이 다시 렌더링되어 모든 t() 문구가 갱신됨)
   const locale = useLocale();
-
-  // Web Audio 기계식 키보드 음향 효과음 훅
   const { isMuted, toggleMute, playKeySound, playSuccessSound } = useSoundEffects();
 
   const [currentMissionIndex, setCurrentMissionIndex] = useState(0);
@@ -206,25 +161,11 @@ export function App() {
 
   const currentMission = MISSIONS[currentMissionIndex];
 
-  // 총 입력 타수 및 최근 키 입력 히스토리, 가상 키보드 프레스 상태
   const [keystrokeCount, setKeystrokeCount] = useState(0);
   const [recentKeys, setRecentKeys] = useState<string[]>([]);
   const [lastPressedKey, setLastPressedKey] = useState<string | undefined>(undefined);
-
-  // 스마트 코칭: 비효율적 입력 습관(안티패턴) 실시간 분석기
   const [coachingMessage, setCoachingMessage] = useState<string | null>(null);
   const antiPatternDetectorRef = useRef(new AntiPatternDetector());
-
-  // 스피드런 상태 관리
-  const [speedrunStatus, setSpeedrunStatus] = useState<'ready' | 'running' | 'completed'>('ready');
-  const [speedrunStages, setSpeedrunStages] = useState<Mission[]>(() => generateSpeedrunStages());
-  const [speedrunCurrentStage, setSpeedrunCurrentStage] = useState(0);
-  const [speedrunElapsedSeconds, setSpeedrunElapsedSeconds] = useState(0);
-  const [speedrunKeystrokes, setSpeedrunKeystrokes] = useState(0);
-  const [speedrunBestRecord, setSpeedrunBestRecord] = useState<SpeedrunRecord | null>(() => loadSpeedrunRecord());
-  const [speedrunIsNewRecord, setSpeedrunIsNewRecord] = useState(false);
-
-  const activeSpeedrunMission = speedrunStages[speedrunCurrentStage];
 
   const getMissionInitialState = useCallback((m: Mission): VimEditorState => {
     const isSplit = m.initialSplit && m.initialSplit !== 'none';
@@ -301,20 +242,24 @@ export function App() {
     };
   }, [activePresets, leaderKey, customKeymaps]);
 
-  const [editorState, setEditorState] = useState<VimEditorState>(() => {
-    if (initialCustomMission) {
-      return {
-        lines: [...initialCustomMission.initialLines],
-        cursor: { ...initialCustomMission.initialCursor },
-        mode: 'NORMAL',
-        undoStack: [],
-        redoStack: [],
-        userKeymaps: compileUserKeymaps(activePresets, leaderKey, customKeymaps),
-        leaderKey,
-      };
-    }
-    return getMissionInitialState(currentMission);
-  });
+  const createCustomInitialState = useCallback(
+    (mission: Mission): VimEditorState => ({
+      lines: [...mission.initialLines],
+      cursor: { ...mission.initialCursor },
+      mode: 'NORMAL',
+      undoStack: [],
+      redoStack: [],
+      userKeymaps: compileUserKeymaps(activePresets, leaderKey, customKeymaps),
+      leaderKey,
+    }),
+    [activePresets, leaderKey, customKeymaps]
+  );
+
+  const [editorState, setEditorState] = useState<VimEditorState>(() =>
+    initialCustomMission
+      ? createCustomInitialState(initialCustomMission)
+      : getMissionInitialState(currentMission)
+  );
   setEditorStateRef.current = setEditorState;
 
   const {
@@ -368,117 +313,70 @@ export function App() {
     playKeySound,
   });
 
-  // 실시간 명령 복기 타임라인 & Vim X-Ray 투시기 상태
-  const [showActionTimeline, setShowActionTimeline] = useState<boolean>(() => loadActionTimelineSetting());
-  const [timelineSteps, setTimelineSteps] = useState<ActionTimelineStep[]>(() => [
-    createInitialTimelineStep(
-      initialCustomMission
-        ? {
-            lines: [...initialCustomMission.initialLines],
-            cursor: { ...initialCustomMission.initialCursor },
-            mode: 'NORMAL',
-            undoStack: [],
-            redoStack: [],
-            userKeymaps: compileUserKeymaps(activePresets, leaderKey, customKeymaps),
-            leaderKey,
-          }
-        : getMissionInitialState(currentMission)
-    ),
-  ]);
-  const [pendingActionKeys, setPendingActionKeys] = useState<string[]>([]);
-  const [allKeysSoFar, setAllKeysSoFar] = useState<string[]>([]);
-  const [previewStepIndex, setPreviewStepIndex] = useState<number | null>(null);
-  // 매크로 슬로우모션 디버거: 패널 표시 여부 및 현재 프레임 미리보기 상태
   const [showMacroDebugger, setShowMacroDebugger] = useState<boolean>(false);
   const [macroPreviewState, setMacroPreviewState] = useState<VimEditorState | null>(null);
-  // visualbell: 키 실패(bell) 발생 횟수 (값이 바뀔 때마다 에디터가 깜빡임)
   const [bellCount, setBellCount] = useState(0);
 
   const editorStateRef = useRef(editorState);
   editorStateRef.current = editorState;
-  const timelineStepsRef = useRef(timelineSteps);
-  timelineStepsRef.current = timelineSteps;
-  const pendingActionKeysRef = useRef(pendingActionKeys);
-  pendingActionKeysRef.current = pendingActionKeys;
-  const allKeysSoFarRef = useRef(allKeysSoFar);
-  allKeysSoFarRef.current = allKeysSoFar;
   const keystrokeCountRef = useRef(keystrokeCount);
   keystrokeCountRef.current = keystrokeCount;
-  const previewStepIndexRef = useRef(previewStepIndex);
-  previewStepIndexRef.current = previewStepIndex;
 
-  const handleToggleActionTimeline = useCallback(() => {
-    setShowActionTimeline((prev) => {
-      const next = !prev;
-      saveActionTimelineSetting(next);
-      return next;
-    });
-  }, []);
-
-  const handleSelectTimelineStep = useCallback((stepIndex: number) => {
-    setPreviewStepIndex((prev) => (prev === stepIndex ? null : stepIndex));
-    previewStepIndexRef.current = previewStepIndexRef.current === stepIndex ? null : stepIndex;
-  }, []);
-
-  const handleCancelPreview = useCallback(() => {
-    setPreviewStepIndex(null);
-    previewStepIndexRef.current = null;
-  }, []);
-
-  const handleBranchFromStep = useCallback((stepIndex: number) => {
-    const targetStep = timelineStepsRef.current[stepIndex];
-    if (!targetStep) return;
-
-    editorStateRef.current = targetStep.snapshot;
-    setEditorState(targetStep.snapshot);
-
-    keystrokeCountRef.current = targetStep.keystrokesSoFar;
-    setKeystrokeCount(targetStep.keystrokesSoFar);
-
-    previewStepIndexRef.current = null;
-    setPreviewStepIndex(null);
-
-    pendingActionKeysRef.current = [];
-    setPendingActionKeys([]);
-
-    // stepIndex 이후 스텝들 잘라내기 (해당 시점부터 분기)
-    const slicedSteps = timelineStepsRef.current.slice(0, stepIndex + 1);
-    timelineStepsRef.current = slicedSteps;
-    setTimelineSteps(slicedSteps);
-
-    // allKeysSoFar도 targetStep 시점까지의 키들만 보존
-    const prunedKeys: string[] = [];
-    for (let i = 1; i <= stepIndex; i++) {
-      if (timelineStepsRef.current[i]) {
-        prunedKeys.push(...timelineStepsRef.current[i].keys);
-      }
-    }
-    allKeysSoFarRef.current = prunedKeys;
-    setAllKeysSoFar(prunedKeys);
-    setCoachingMessage(t('⏪ 스텝 #{stepIndex} ({command}) 시점부터 이어서 플레이합니다!', { stepIndex, command: targetStep.command }));
-  }, []);
-
-  const resetActionTimeline = useCallback((initialState: VimEditorState) => {
-    const step0 = [createInitialTimelineStep(initialState)];
-    setTimelineSteps(step0);
-    timelineStepsRef.current = step0;
-    setPendingActionKeys([]);
-    pendingActionKeysRef.current = [];
-    setAllKeysSoFar([]);
-    allKeysSoFarRef.current = [];
-    setPreviewStepIndex(null);
-    previewStepIndexRef.current = null;
-    editorStateRef.current = initialState;
-    keystrokeCountRef.current = 0;
-  }, []);
-
-  // 타임라인 스텝 미리보기 중이면 해당 스냅샷이 다음 키 입력의 기준 상태가 됩니다.
-  const timelineBaseState =
-    previewStepIndex !== null && timelineSteps[previewStepIndex]
-      ? timelineSteps[previewStepIndex].snapshot
-      : editorState;
+  const {
+    showActionTimeline,
+    setShowActionTimeline,
+    timelineSteps,
+    allKeysSoFar,
+    previewStepIndex,
+    timelineBaseState,
+    handleToggleActionTimeline,
+    handleSelectTimelineStep,
+    handleCancelPreview,
+    handleBranchFromStep,
+    resetActionTimeline,
+    beginTimelineKeyInput,
+    commitTimelineKeyStep,
+  } = useActionTimeline({
+    createInitialState: () =>
+      initialCustomMission
+        ? createCustomInitialState(initialCustomMission)
+        : getMissionInitialState(currentMission),
+    editorState,
+    editorStateRef,
+    setEditorState,
+    keystrokeCountRef,
+    setKeystrokeCount,
+    setCoachingMessage,
+  });
 
   const displayEditorState = macroPreviewState ?? timelineBaseState;
+
+  const {
+    speedrunStatus,
+    speedrunStages,
+    speedrunCurrentStage,
+    speedrunElapsedSeconds,
+    speedrunKeystrokes,
+    setSpeedrunKeystrokes,
+    speedrunBestRecord,
+    setSpeedrunBestRecord,
+    speedrunIsNewRecord,
+    activeSpeedrunMission,
+    handleStartSpeedrun,
+    resetSpeedrunReady,
+  } = useSpeedrunSession({
+    currentTab,
+    editorState,
+    getMissionInitialState,
+    setEditorState,
+    setCoachingMessage,
+    playSuccessSound,
+    handleStopGhostReplay,
+    resetActionTimeline,
+    setRecentKeys,
+    setLastPressedKey,
+    antiPatternDetectorRef,
+  });
 
   const isCompleted =
     currentTab === 'course'
@@ -523,28 +421,28 @@ export function App() {
     }
   }, [editorState.systemClipboard]);
 
-  // URL에서 커스텀 미션을 감지한 경우 안내 코칭 메시지 표시
   useEffect(() => {
     if (initialCustomMission) {
-      setCoachingMessage(t('⛳ URL 커스텀 Vim Golf 미션 [{title}]이(가) 로드되었습니다!', { title: initialCustomMission.title }));
+      setCoachingMessage(
+        t('⛳ URL 커스텀 Vim Golf 미션 [{title}]이(가) 로드되었습니다!', {
+          title: initialCustomMission.title,
+        })
+      );
     }
   }, [initialCustomMission]);
 
-  // :reg / :registers Ex 명령 실행 시 레지스터 인스펙터 패널 자동 열림/닫힘 연동
   useEffect(() => {
     if (editorState.showRegisterInspector !== undefined) {
       setShowRegisterInspector(editorState.showRegisterInspector);
     }
   }, [editorState.showRegisterInspector]);
 
-  // :marks / :jumps Ex 명령 실행 시 마크 & 점프 리스트 비주얼 맵 패널 자동 열림/닫힘 연동
   useEffect(() => {
     if (editorState.showMarksVisualizer !== undefined) {
       setShowMarksVisualizer(editorState.showMarksVisualizer);
     }
   }, [editorState.showMarksVisualizer]);
 
-  // :set rnu / :set nornu Ex 명령 실행 시 상대 라인 번호 상태 연동
   useEffect(() => {
     if (editorState.options?.relativenumber !== undefined) {
       setRelativeLineNumbers(editorState.options.relativenumber);
@@ -552,169 +450,87 @@ export function App() {
     }
   }, [editorState.options?.relativenumber]);
 
-  // :vimrc / :config / :export Ex 명령 실행 시 설정 내보내기 모달 자동 열림 연동
   useEffect(() => {
     if (editorState.showConfigModal !== undefined) {
       setIsConfigModalOpen(editorState.showConfigModal);
     }
   }, [editorState.showConfigModal]);
 
-  // 스피드런 타이머 연동 (100ms마다 0.1초 증가)
-  useEffect(() => {
-    let interval: NodeJS.Timeout | null = null;
-    if (currentTab === 'speedrun' && speedrunStatus === 'running') {
-      interval = setInterval(() => {
-        setSpeedrunElapsedSeconds((prev) => Number((prev + 0.1).toFixed(1)));
-      }, 100);
-    }
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [currentTab, speedrunStatus]);
-
-  // 스피드런 스테이지 완료 및 다음 스테이지 자동 전이
-  useEffect(() => {
-    if (
-      currentTab === 'speedrun' &&
-      speedrunStatus === 'running' &&
-      activeSpeedrunMission &&
-      activeSpeedrunMission.checkComplete(editorState)
-    ) {
-      if (speedrunCurrentStage < speedrunStages.length - 1) {
-        // 다음 스테이지로 즉시 이동
-        const nextStageIdx = speedrunCurrentStage + 1;
-        setSpeedrunCurrentStage(nextStageIdx);
-        const nextMission = speedrunStages[nextStageIdx];
-        setEditorState(getMissionInitialState(nextMission));
-        setCoachingMessage(t('🎉 스테이지 {v} 돌파! 다음 목표로 이동합니다.', { v: speedrunCurrentStage + 1 }));
-      } else {
-        // 5개 스테이지 최종 완료!
-        setSpeedrunStatus('completed');
-        playSuccessSound();
-        const saveRes = saveSpeedrunRecord(speedrunElapsedSeconds, speedrunKeystrokes);
-        setSpeedrunBestRecord(saveRes.record);
-        setSpeedrunIsNewRecord(saveRes.isNewRecord);
-      }
-    }
-  }, [
-    currentTab,
-    speedrunStatus,
-    activeSpeedrunMission,
-    speedrunCurrentStage,
-    speedrunStages,
-    editorState,
-    speedrunElapsedSeconds,
-    speedrunKeystrokes,
-    playSuccessSound,
-  ]);
-
-  const handleSelectMission = useCallback((index: number) => {
-    if (index >= 0 && index < MISSIONS.length) {
-      handleStopGhostReplay();
-      setCurrentMissionIndex(index);
-      const nextMission = MISSIONS[index];
-      const initState = getMissionInitialState(nextMission);
+  const resetSessionWithState = useCallback(
+    (initState: VimEditorState, message: string | null = null) => {
       setEditorState(initState);
       resetActionTimeline(initState);
       setKeystrokeCount(0);
       setRecentKeys([]);
       setLastPressedKey(undefined);
-      setCoachingMessage(null);
+      setCoachingMessage(message);
       antiPatternDetectorRef.current.reset();
-    }
-  }, [handleStopGhostReplay, getMissionInitialState, resetActionTimeline]);
+    },
+    [resetActionTimeline]
+  );
+
+  const handleSelectMission = useCallback(
+    (index: number) => {
+      if (index >= 0 && index < MISSIONS.length) {
+        handleStopGhostReplay();
+        setCurrentMissionIndex(index);
+        resetSessionWithState(getMissionInitialState(MISSIONS[index]));
+      }
+    },
+    [handleStopGhostReplay, getMissionInitialState, resetSessionWithState]
+  );
 
   const handleResetMission = useCallback(() => {
     handleStopGhostReplay();
-    const initState = getMissionInitialState(currentMission);
-    setEditorState(initState);
-    resetActionTimeline(initState);
-    setKeystrokeCount(0);
-    setRecentKeys([]);
-    setLastPressedKey(undefined);
-    setCoachingMessage(null);
-    antiPatternDetectorRef.current.reset();
-  }, [currentMission, handleStopGhostReplay, getMissionInitialState, resetActionTimeline]);
+    resetSessionWithState(getMissionInitialState(currentMission));
+  }, [currentMission, handleStopGhostReplay, getMissionInitialState, resetSessionWithState]);
 
   const handleResetSandbox = useCallback(() => {
     handleStopGhostReplay();
-    const initState = {
+    resetSessionWithState({
       lines: sandboxInitialLines(),
       cursor: { line: 0, col: 0 },
-      mode: 'NORMAL' as const,
+      mode: 'NORMAL',
       undoStack: [],
       redoStack: [],
       userKeymaps: compileUserKeymaps(activePresets, leaderKey, customKeymaps),
       leaderKey,
-    };
-    setEditorState(initState);
-    resetActionTimeline(initState);
-    setKeystrokeCount(0);
-    setRecentKeys([]);
-    setLastPressedKey(undefined);
-    setCoachingMessage(null);
-    antiPatternDetectorRef.current.reset();
-  }, [handleStopGhostReplay, resetActionTimeline, activePresets, leaderKey, customKeymaps]);
-
-  const handleStartSpeedrun = useCallback(() => {
-    handleStopGhostReplay();
-    const newStages = generateSpeedrunStages();
-    setSpeedrunStages(newStages);
-    setSpeedrunCurrentStage(0);
-    setSpeedrunElapsedSeconds(0);
-    setSpeedrunKeystrokes(0);
-    setSpeedrunIsNewRecord(false);
-    setSpeedrunStatus('running');
-
-    const first = newStages[0];
-    const initState = getMissionInitialState(first);
-    setEditorState(initState);
-    resetActionTimeline(initState);
-    setRecentKeys([]);
-    setLastPressedKey(undefined);
-    setCoachingMessage(null);
-    antiPatternDetectorRef.current.reset();
-  }, [handleStopGhostReplay, resetActionTimeline, getMissionInitialState]);
+    });
+  }, [handleStopGhostReplay, resetSessionWithState, activePresets, leaderKey, customKeymaps]);
 
   const handleResetCustomMission = useCallback(() => {
     if (!customMission) return;
     handleStopGhostReplay();
-    const initState: VimEditorState = {
+    resetSessionWithState({
       lines: [...customMission.initialLines],
       cursor: { ...customMission.initialCursor },
       mode: 'NORMAL',
       undoStack: [],
       redoStack: [],
-    };
-    setEditorState(initState);
-    resetActionTimeline(initState);
-    setKeystrokeCount(0);
-    setRecentKeys([]);
-    setLastPressedKey(undefined);
-    setCoachingMessage(null);
-    antiPatternDetectorRef.current.reset();
-  }, [customMission, handleStopGhostReplay, resetActionTimeline]);
+    });
+  }, [customMission, handleStopGhostReplay, resetSessionWithState]);
 
-  const handlePlayCustomMission = useCallback((data: CustomMissionData) => {
-    handleStopGhostReplay();
-    const newMission = createCustomMissionObject(data);
-    setCustomMission(newMission);
-    setCurrentTab('custom');
-    const initState: VimEditorState = {
-      lines: [...newMission.initialLines],
-      cursor: { ...newMission.initialCursor },
-      mode: 'NORMAL',
-      undoStack: [],
-      redoStack: [],
-    };
-    setEditorState(initState);
-    resetActionTimeline(initState);
-    setKeystrokeCount(0);
-    setRecentKeys([]);
-    setLastPressedKey(undefined);
-    setCoachingMessage(t('⛳ 커스텀 미션 [{title}] 시작! 최소 타수로 완성을 노려보세요.', { title: newMission.title }));
-    antiPatternDetectorRef.current.reset();
-  }, [handleStopGhostReplay, resetActionTimeline, getMissionInitialState]);
+  const handlePlayCustomMission = useCallback(
+    (data: CustomMissionData) => {
+      handleStopGhostReplay();
+      const newMission = createCustomMissionObject(data);
+      setCustomMission(newMission);
+      setCurrentTab('custom');
+      resetSessionWithState(
+        {
+          lines: [...newMission.initialLines],
+          cursor: { ...newMission.initialCursor },
+          mode: 'NORMAL',
+          undoStack: [],
+          redoStack: [],
+        },
+        t('⛳ 커스텀 미션 [{title}] 시작! 최소 타수로 완성을 노려보세요.', {
+          title: newMission.title,
+        })
+      );
+    },
+    [handleStopGhostReplay, resetSessionWithState]
+  );
 
   const handlePlayBYOCMission = useCallback(
     (missionData: {
@@ -734,13 +550,15 @@ export function App() {
       });
       setShowDiffView(true);
       saveDiffViewSetting(true);
-      setCoachingMessage(t('⛳ [BYOC] 리팩토링 미션 시작! 힌트: {hint}', { hint: missionData.hint }));
+      setCoachingMessage(
+        t('⛳ [BYOC] 리팩토링 미션 시작! 힌트: {hint}', { hint: missionData.hint })
+      );
     },
     [handlePlayCustomMission]
   );
 
   const handleSwitchTab = useCallback(
-    (tab: 'course' | 'sandbox' | 'speedrun' | 'custom' | 'arcade' | 'dungeon' | 'dojo') => {
+    (tab: AppTab) => {
       handleStopGhostReplay();
       setCurrentTab(tab);
       setLastPressedKey(undefined);
@@ -750,16 +568,9 @@ export function App() {
       if (tab === 'sandbox') {
         handleResetSandbox();
       } else if (tab === 'speedrun') {
-        setSpeedrunStatus('ready');
-        setSpeedrunElapsedSeconds(0);
-        setSpeedrunKeystrokes(0);
-        setSpeedrunIsNewRecord(false);
-      } else if (tab === 'arcade') {
-        // 아케이드 서바이벌 모드는 자체 상태를 갖습니다
-      } else if (tab === 'dungeon') {
-        // 던전 RPG 모드는 자체 상태를 갖습니다
-      } else if (tab === 'dojo') {
-        // 하드코어 도장 모드는 자체 상태를 갖습니다
+        resetSpeedrunReady();
+      } else if (tab === 'arcade' || tab === 'dungeon' || tab === 'dojo') {
+        // 게임 탭은 자체 상태를 갖습니다
       } else if (tab === 'custom' && customMission) {
         setEditorState({
           lines: [...customMission.initialLines],
@@ -771,13 +582,19 @@ export function App() {
         setKeystrokeCount(0);
         setRecentKeys([]);
       } else {
-        const mission = MISSIONS[currentMissionIndex];
-        setEditorState(getMissionInitialState(mission));
+        setEditorState(getMissionInitialState(MISSIONS[currentMissionIndex]));
         setKeystrokeCount(0);
         setRecentKeys([]);
       }
     },
-    [currentMissionIndex, handleResetSandbox, customMission, handleStopGhostReplay, getMissionInitialState]
+    [
+      currentMissionIndex,
+      handleResetSandbox,
+      resetSpeedrunReady,
+      customMission,
+      handleStopGhostReplay,
+      getMissionInitialState,
+    ]
   );
 
   const handleToggleRelativeLine = useCallback(() => {
@@ -826,22 +643,16 @@ export function App() {
     setShowMacroDebugger((prev) => !prev);
   }, []);
 
-  const handleOpenMacroDebugger = useCallback(
-    (_register: string) => {
-      setShowMacroDebugger(true);
-    },
-    []
-  );
+  const handleOpenMacroDebugger = useCallback((_register: string) => {
+    setShowMacroDebugger(true);
+  }, []);
 
-  // 실제 키 입력 또는 가상 키보드 클릭 시 공통 실행 함수
   const processKeyInput = useCallback(
     (key: string) => {
-      // 단독 보조 키 필터링
       if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(key)) {
         return;
       }
 
-      // 🔥 하드코어 모드 가드 검사
       if (hardcoreMode) {
         const check = hardcoreGuardRef.current.checkKey(key, Date.now());
         if (check.blocked) {
@@ -850,30 +661,8 @@ export function App() {
         }
       }
 
-      // 과거 스텝을 미리보는 중 키를 입력하면 해당 시점에서 자동 분기(Branch)
-      let baseState = editorStateRef.current;
-      let baseKeystrokes = keystrokeCountRef.current;
-      let baseSteps = timelineStepsRef.current;
-      let currentPending = pendingActionKeysRef.current;
-      let baseAllKeys = allKeysSoFarRef.current;
-
-      if (previewStepIndexRef.current !== null) {
-        const targetStep = timelineStepsRef.current[previewStepIndexRef.current];
-        if (targetStep) {
-          baseState = targetStep.snapshot;
-          baseKeystrokes = targetStep.keystrokesSoFar;
-          baseSteps = timelineStepsRef.current.slice(0, previewStepIndexRef.current + 1);
-          currentPending = [];
-          const pruned: string[] = [];
-          for (let i = 1; i <= previewStepIndexRef.current; i++) {
-            if (timelineStepsRef.current[i]) pruned.push(...timelineStepsRef.current[i].keys);
-          }
-          baseAllKeys = pruned;
-        }
-        previewStepIndexRef.current = null;
-        setPreviewStepIndex(null);
-      }
-      // 실제 키 입력이 들어오면 매크로 디버거 미리보기를 해제합니다.
+      const { baseState, baseKeystrokes, baseSteps, nextActionKeys } =
+        beginTimelineKeyInput(key);
       setMacroPreviewState(null);
 
       setLastPressedKey(key);
@@ -882,23 +671,13 @@ export function App() {
       setKeystrokeCount(nextKeystrokes);
       setRecentKeys((prev) => [...prev.slice(-7), key]);
 
-      const nextAllKeys = [...baseAllKeys, key];
-      allKeysSoFarRef.current = nextAllKeys;
-      setAllKeysSoFar(nextAllKeys);
-
-      const nextActionKeys = [...currentPending, key];
-
-      // Web Audio 기계식 키보드 타건 효과음 재생
       playKeySound(key, baseState.mode);
-
-      // 전체 누적 키 입력 통계 기록
       recordKeyInputStats(key);
 
       if (currentTab === 'speedrun' && speedrunStatus === 'running') {
         setSpeedrunKeystrokes((prev) => prev + 1);
       }
 
-      // 스마트 코칭 시스템: 비효율적 입력 습관(안티패턴) 실시간 감지
       const coachingAdvice = antiPatternDetectorRef.current.processKey(
         key,
         baseState.mode,
@@ -916,33 +695,21 @@ export function App() {
         setBellCount((c) => c + 1);
       }
 
-      // 액션 완료 판정 (NORMAL 모드 복귀 및 대기 키 없음)
-      if (nextState.mode === 'NORMAL' && !nextState.pendingKeys) {
-        const newStep: ActionTimelineStep = {
-          stepIndex: baseSteps.length,
-          command: formatCommandLabel(nextActionKeys),
-          description: getActionDescription(nextActionKeys, nextState),
-          keys: nextActionKeys,
-          keystrokesSoFar: nextKeystrokes,
-          snapshot: nextState,
-          timestamp: Date.now(),
-        };
-        const updatedSteps = [...baseSteps, newStep];
-        timelineStepsRef.current = updatedSteps;
-        setTimelineSteps(updatedSteps);
-        pendingActionKeysRef.current = [];
-        setPendingActionKeys([]);
-      } else {
-        timelineStepsRef.current = baseSteps;
-        setTimelineSteps(baseSteps);
-        pendingActionKeysRef.current = nextActionKeys;
-        setPendingActionKeys(nextActionKeys);
-      }
+      commitTimelineKeyStep(baseSteps, nextActionKeys, nextKeystrokes, nextState);
     },
-    [currentTab, speedrunStatus, playKeySound, hardcoreMode, triggerHardcoreViolation]
+    [
+      currentTab,
+      speedrunStatus,
+      playKeySound,
+      hardcoreMode,
+      hardcoreGuardRef,
+      triggerHardcoreViolation,
+      beginTimelineKeyInput,
+      commitTimelineKeyStep,
+      setSpeedrunKeystrokes,
+    ]
   );
 
-  // 매크로 디버거의 실행 버튼: 실제 키 입력과 동일하게 [count]@{reg}를 전달하여 타수·타임라인에 반영합니다.
   const handleRunMacroFromDebugger = useCallback(
     (register: string, count: number = 1) => {
       const keys = [...(count > 1 ? String(count).split('') : []), '@', register];
@@ -986,9 +753,49 @@ export function App() {
       ? activeSpeedrunMission
       : undefined;
 
+  const handleSelectLessonById = useCallback(
+    (missionId: number) => {
+      const idx = MISSIONS.findIndex((m) => m.id === missionId);
+      if (idx !== -1) {
+        handleSelectMission(idx);
+        setCurrentTab('course');
+      }
+    },
+    [handleSelectMission]
+  );
+
+  const handleRestoreBackup = useCallback(() => {
+    setProgress(loadProgress());
+    reloadHardcoreAndKeymaps();
+    setRelativeLineNumbers(loadRelativeLineSetting());
+    setShowVirtualKeyboard(loadVirtualKeyboardSetting());
+    setShowDiffView(loadDiffViewSetting());
+    setShowRegisterInspector(loadRegisterInspectorSetting());
+    setShowMarksVisualizer(loadMarksVisualizerSetting());
+    setShowGrammarAST(loadGrammarASTSetting());
+    setShowActionTimeline(loadActionTimelineSetting());
+    setSpeedrunBestRecord(loadSpeedrunRecord());
+  }, [reloadHardcoreAndKeymaps, setShowActionTimeline, setSpeedrunBestRecord]);
+
+  const statusFilename = displayEditorState.splitPanes
+    ? displayEditorState.activePaneIndex === 1
+      ? displayEditorState.secondaryFilename ||
+        displayEditorState.splitPanes[1].filename ||
+        'target.ts'
+      : displayEditorState.primaryFilename ||
+        displayEditorState.splitPanes[0].filename ||
+        'source.ts'
+    : currentTab === 'course'
+    ? currentMission.primaryFilename || `lesson_${currentMission.id}.txt`
+    : currentTab === 'custom'
+    ? 'custom_golf.txt'
+    : currentTab === 'speedrun'
+    ? `speedrun_stage_${speedrunCurrentStage + 1}.txt`
+    : 'sandbox.ts';
+
   return (
     <div className="app-layout">
-      {/* 🚀 상단 고정 플로팅 알림 토스트 (레이아웃 흔들림/깨짐 방지) */}
+      {/* 🚀 상단 고정 플로팅 알림 토스트 */}
       <div className="top-toast-container" data-testid="top-toast-container" aria-live="polite">
         {hardcoreWarning && (
           <div
@@ -1017,230 +824,41 @@ export function App() {
         />
       </div>
 
-      <header className="app-header">
-        <div className="header-brand">
-          <span className="brand-icon">⌨</span>
-          <h1 className="brand-title">VimPracticeOnWeb</h1>
-        </div>
-        <p className="header-desc">{t('인터랙티브 Vim 튜토리얼 & 연습 코스')}</p>
-      </header>
-
-      {/* 탭 전환 및 상단 툴바 */}
-      <div className="app-nav-bar" data-testid="app-nav-bar">
-        <div className="nav-tabs" role="tablist">
-          <button
-            role="tab"
-            aria-selected={currentTab === 'course'}
-            className={`nav-tab-btn ${currentTab === 'course' ? 'active' : ''}`}
-            onClick={() => handleSwitchTab('course')}
-            data-testid="tab-course-btn"
-          >
-            {t('🎯 튜토리얼 코스')}
-          </button>
-          <button
-            role="tab"
-            aria-selected={currentTab === 'sandbox'}
-            className={`nav-tab-btn ${currentTab === 'sandbox' ? 'active' : ''}`}
-            onClick={() => handleSwitchTab('sandbox')}
-            data-testid="tab-sandbox-btn"
-          >
-            {t('🧪 자유 연습장')}
-          </button>
-          <button
-            role="tab"
-            aria-selected={currentTab === 'speedrun'}
-            className={`nav-tab-btn ${currentTab === 'speedrun' ? 'active' : ''}`}
-            onClick={() => handleSwitchTab('speedrun')}
-            data-testid="tab-speedrun-btn"
-          >
-            {t('⚡ 스피드런')}
-          </button>
-          <button
-            role="tab"
-            aria-selected={currentTab === 'arcade'}
-            className={`nav-tab-btn ${currentTab === 'arcade' ? 'active' : ''}`}
-            onClick={() => handleSwitchTab('arcade')}
-            data-testid="tab-arcade-btn"
-          >
-            {t('👾 아케이드')}
-          </button>
-          <button
-            role="tab"
-            aria-selected={currentTab === 'dungeon'}
-            className={`nav-tab-btn ${currentTab === 'dungeon' ? 'active' : ''}`}
-            onClick={() => handleSwitchTab('dungeon')}
-            data-testid="tab-dungeon-btn"
-          >
-            {t('🗡️ 던전 RPG')}
-          </button>
-          <button
-            role="tab"
-            aria-selected={currentTab === 'dojo'}
-            className={`nav-tab-btn ${currentTab === 'dojo' ? 'active' : ''}`}
-            onClick={() => handleSwitchTab('dojo')}
-            data-testid="tab-dojo-btn"
-          >
-            {t('🥋 도장')}
-          </button>
-          {customMission && (
-            <button
-              role="tab"
-              aria-selected={currentTab === 'custom'}
-              className={`nav-tab-btn ${currentTab === 'custom' ? 'active' : ''}`}
-              onClick={() => handleSwitchTab('custom')}
-              data-testid="tab-custom-btn"
-            >
-              {t('⛳ 커스텀 골프')}
-            </button>
-          )}
-        </div>
-
-        <div className="nav-actions">
-          {/* 주요 훈련 및 모달 도구 그룹 */}
-          <div className="nav-action-group nav-tools-group">
-            {/* 🔥 하드코어 수련 모드 토글 스위치 */}
-            <button
-              className={`toolbar-btn hardcore-mode-btn ${hardcoreMode ? 'active' : ''}`}
-              onClick={handleToggleHardcoreMode}
-              data-testid="toggle-hardcore-mode-btn"
-              title={t('🔥 하드코어 수련 모드: 방향키 및 마우스 완전 차단, 1.5초 3회 초과 연타 무시')}
-            >
-              {hardcoreMode ? t('🔥 하드코어: ON') : t('🔥 하드코어: OFF')}
-            </button>
-
-            {/* 데일리 챌린지 모달 */}
-            <button
-              className="toolbar-btn daily-challenge-btn"
-              onClick={() => setIsDailyModalOpen(true)}
-              data-testid="open-daily-modal-btn"
-              title={t('오늘의 데일리 Vim Golf 챌린지')}
-            >
-              {t('📅 데일리')}
-            </button>
-
-            {/* 숙련도 분석 대시보드 모달 */}
-            <button
-              className="toolbar-btn analytics-btn"
-              onClick={() => setIsAnalyticsModalOpen(true)}
-              data-testid="open-analytics-modal-btn"
-              title={t('Vim 숙련도 5각 레이더 및 명령어 사용 통계 대시보드')}
-            >
-              {t('📊 숙련도 분석')}
-            </button>
-
-            {/* 커스텀 Vim Golf 미션 생성 모달 */}
-            <button
-              className="toolbar-btn custom-mission-btn"
-              onClick={() => setIsCustomModalOpen(true)}
-              data-testid="open-custom-modal-btn"
-              title={t('URL 공유 가능한 커스텀 Vim Golf 미션 생성기')}
-            >
-              {t('⛳ 미션 만들기')}
-            </button>
-
-            {/* 커스텀 키매핑 및 설정 파일 내보내기 모달 */}
-            <button
-              className="toolbar-btn config-export-btn"
-              onClick={() => setIsConfigModalOpen(true)}
-              data-testid="open-config-modal-btn"
-              title={t('키매핑 프리셋 설정 및 .vimrc/init.lua/VS Code/IdeaVim 설정 내보내기')}
-            >
-              {t('⚙️ 설정/내보내기')}
-            </button>
-
-            {currentTab === 'course' && (
-              <button
-                className="toolbar-btn lesson-list-btn"
-                onClick={() => setIsModalOpen(true)}
-                data-testid="open-lesson-modal-btn"
-              >
-                {t('📚 레슨 목록')}
-              </button>
-            )}
-          </div>
-
-          {/* 에디터 보조 패널 & 인스펙터 드롭다운 그룹 */}
-          <div className="nav-action-group nav-view-group">
-            <ViewPanelsDropdown
-              showDiffView={showDiffView}
-              onToggleDiffView={handleToggleDiffView}
-              isSandbox={currentTab === 'sandbox'}
-              showRegisterInspector={showRegisterInspector}
-              onToggleRegisterInspector={handleToggleRegisterInspector}
-              showMarksVisualizer={showMarksVisualizer}
-              onToggleMarksVisualizer={handleToggleMarksVisualizer}
-              showGrammarAST={showGrammarAST}
-              onToggleGrammarAST={handleToggleGrammarAST}
-              showActionTimeline={showActionTimeline}
-              onToggleActionTimeline={handleToggleActionTimeline}
-              showVirtualKeyboard={showVirtualKeyboard}
-              onToggleVirtualKeyboard={handleToggleVirtualKeyboard}
-              relativeLineNumbers={relativeLineNumbers}
-              onToggleRelativeLineNumbers={handleToggleRelativeLine}
-              showMacroDebugger={showMacroDebugger}
-              onToggleMacroDebugger={handleToggleMacroDebugger}
-            />
-          </div>
-
-          {/* 환경 설정 (테마, 타건음, 언어) 그룹 */}
-          <div className="nav-action-group nav-settings-group">
-            {/* 에디터 컬러 테마 스위처 */}
-            <ThemeSwitcher
-              currentTheme={currentTheme}
-              onThemeChange={handleThemeChange}
-            />
-
-            {/* 기계식 키보드 음향 효과음 토글 */}
-            <button
-              className={`toolbar-btn sound-toggle-btn ${isMuted ? 'muted' : ''}`}
-              onClick={toggleMute}
-              data-testid="toggle-sound-btn"
-              title={t('기계식 키보드 타건 효과음 토글')}
-            >
-              {isMuted ? t('🔇 소리: OFF') : t('🔊 소리: ON')}
-            </button>
-
-            {/* 화면 언어 한/영 전환 */}
-            <button
-              className="toolbar-btn locale-toggle-btn"
-              onClick={() => setLocale(locale === 'ko' ? 'en' : 'ko')}
-              data-testid="toggle-locale-btn"
-              title={t('화면 언어 전환 (한국어 / English)')}
-              aria-label={t('화면 언어 전환 (한국어 / English)')}
-            >
-              🌐 {locale === 'ko' ? '한국어' : 'English'}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <section className="key-cheatsheet" aria-label="Keyboard Shortcuts">
-        <span className="cheat-item"><code>h j k l</code> {t('이동')}</span>
-        <span className="cheat-item"><code>w b e</code> {t('단어 점프')}</span>
-        <span className="cheat-item"><code>f F t T</code> {t('문자 탐색')}</span>
-        <span className="cheat-item"><code>/ n N *</code> {t('키워드 검색')}</span>
-        <span className="cheat-item"><code>{t(': [숫자] / :s')}</code> {t('커맨드라인')}</span>
-        <span className="cheat-item"><code>0 $ ^</code> {t('줄 이동')}</span>
-        <span className="cheat-item"><code>i a I A o O</code> {t('입력 진입')}</span>
-        <span className="cheat-item"><code>Esc</code> {t('일반 모드')}</span>
-        <span className="cheat-item"><code>x</code> {t('글자 삭제')}</span>
-        <span className="cheat-item"><code>cw cc C r</code> {t('수정/교체')}</span>
-        <span className="cheat-item"><code>iw i" i(</code> {t('텍스트 객체')}</span>
-        <span className="cheat-item"><code>v / V</code> {t('영역 선택')}</span>
-        <span className="cheat-item"><code>dd dw</code> {t('줄/단어 삭제')}</span>
-        <span className="cheat-item"><code>.</code> {t('직전 변경 반복')}</span>
-        <span className="cheat-item"><code>m ' Ctrl-o</code> {t('마크/점프')}</span>
-        <span className="cheat-item"><code>J ~ &gt;&gt; Ctrl-a</code> {t('라인/편집')}</span>
-        <span className="cheat-item"><code>:g :norm</code> {t('일괄/글로벌')}</span>
-        <span className="cheat-item"><code>zz H M L</code> {t('뷰포트/스크롤')}</span>
-        <span className="cheat-item"><code>"a "0 "_</code> {t('레지스터')}</span>
-        <span className="cheat-item"><code>:sp :vsp Ctrl-w</code> {t('창 분할')}</span>
-        <span className="cheat-item"><code>p</code> {t('붙여넣기')}</span>
-        <span className="cheat-item"><code>u / Ctrl-r</code> {t('실행취소/다시실행')}</span>
-      </section>
+      <AppHeader
+        currentTab={currentTab}
+        customMission={customMission}
+        onSwitchTab={handleSwitchTab}
+        hardcoreMode={hardcoreMode}
+        onToggleHardcoreMode={handleToggleHardcoreMode}
+        onOpenDailyModal={() => setIsDailyModalOpen(true)}
+        onOpenAnalyticsModal={() => setIsAnalyticsModalOpen(true)}
+        onOpenCustomModal={() => setIsCustomModalOpen(true)}
+        onOpenConfigModal={() => setIsConfigModalOpen(true)}
+        onOpenLessonModal={() => setIsModalOpen(true)}
+        showDiffView={showDiffView}
+        onToggleDiffView={handleToggleDiffView}
+        showRegisterInspector={showRegisterInspector}
+        onToggleRegisterInspector={handleToggleRegisterInspector}
+        showMarksVisualizer={showMarksVisualizer}
+        onToggleMarksVisualizer={handleToggleMarksVisualizer}
+        showGrammarAST={showGrammarAST}
+        onToggleGrammarAST={handleToggleGrammarAST}
+        showActionTimeline={showActionTimeline}
+        onToggleActionTimeline={handleToggleActionTimeline}
+        showVirtualKeyboard={showVirtualKeyboard}
+        onToggleVirtualKeyboard={handleToggleVirtualKeyboard}
+        relativeLineNumbers={relativeLineNumbers}
+        onToggleRelativeLineNumbers={handleToggleRelativeLine}
+        showMacroDebugger={showMacroDebugger}
+        onToggleMacroDebugger={handleToggleMacroDebugger}
+        currentTheme={currentTheme}
+        onThemeChange={handleThemeChange}
+        isMuted={isMuted}
+        onToggleMute={toggleMute}
+        locale={locale}
+      />
 
       <main className="editor-wrapper">
-        {/* 실시간 Vim 명령어 문법 AST 인스펙터 */}
         {showGrammarAST && currentTab !== 'arcade' && currentTab !== 'dungeon' && currentTab !== 'dojo' && (
           <VimGrammarASTViewer
             currentKeySequence={editorState.pendingKeys || ''}
@@ -1353,384 +971,41 @@ export function App() {
               />
             )}
 
-            {/* 에디터 렌더링 영역 및 하드코어 펄스/마우스 감시 */}
-            <div
-              className={`editor-main-viewport ${isEditorShaking ? 'shake-hardcore' : ''}`}
-              onClick={handleEditorAreaClick}
-              data-testid="editor-main-viewport"
-            >
-              {/* 상단 탭 페이지 바 (Tabline: :tabnew, :tabc, gt, gT) */}
-              {(() => {
-                const stateWithTabs = ensureTabPages(displayEditorState);
-                const tabList = stateWithTabs.tabPages ?? [];
-                if (tabList.length <= 1) return null;
-                const currentTabId = stateWithTabs.currentTabId ?? 1;
-
-                return (
-                  <div className="editor-tab-bar" data-testid="editor-tab-bar">
-                    <div className="tab-list">
-                      {tabList.map((tab, idx) => {
-                        const isCurrent = tab.id === currentTabId;
-                        return (
-                          <div
-                            key={tab.id}
-                            className={`tab-page ${isCurrent ? 'active' : ''}`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSwitchTabPage(tab.id);
-                            }}
-                            data-testid={`tab-page-${tab.id}`}
-                            title={t('탭 {v}: {filename}', { v: idx + 1, filename: tab.filename })}
-                          >
-                            <span className="tab-number">{idx + 1}</span>
-                            <span className="tab-filename">{tab.filename}</span>
-                            {tabList.length > 1 && (
-                              <button
-                                type="button"
-                                className="tab-close-btn"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleCloseTabPage(tab.id);
-                                }}
-                                title={t('탭 닫기 (:tabclose)')}
-                              >
-                                ✕
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <button
-                      type="button"
-                      className="tab-new-btn"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleNewTabPage();
-                      }}
-                      title={t('새 탭 열기 (:tabnew)')}
-                    >
-                      +
-                    </button>
-                  </div>
-                );
-              })()}
-
-              {/* 상단 버퍼 탭 바 (Bufferline) */}
-              {(() => {
-                const stateWithBuffers = ensureBuffers(displayEditorState);
-                const bufferList = stateWithBuffers.buffers ?? [];
-                if (bufferList.length <= 1) return null;
-                const currentBufId = stateWithBuffers.currentBufferId ?? 1;
-                const altBufId = stateWithBuffers.alternateBufferId;
-
-                return (
-                  <div className="editor-buffer-bar" data-testid="editor-buffer-bar">
-                    {bufferList.map((buf) => {
-                      const isCurrent = buf.id === currentBufId;
-                      const isAlt = buf.id === altBufId;
-                      return (
-                        <div
-                          key={buf.id}
-                          className={`buffer-tab ${isCurrent ? 'active' : ''} ${isAlt ? 'alternate' : ''}`}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleSwitchBuffer(buf.id);
-                          }}
-                          data-testid={`buffer-tab-${buf.id}`}
-                          title={t('버퍼 {id}: {name}', { id: buf.id, name: buf.name })}
-                        >
-                          <span className="buffer-number">{buf.id}</span>
-                          <span className="buffer-indicator">{isCurrent ? '%' : isAlt ? '#' : ''}</span>
-                          <span className="buffer-name">{buf.name}</span>
-                          {buf.isModified && <span className="buffer-modified">*</span>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-
-              {/* 에디터 렌더링: 분할 창 모드 vs 단일 창 모드 */}
-              {editorState.splitDirection && editorState.splitDirection !== 'none' && editorState.splitPanes ? (
-                <div
-                  className={`editor-split-container split-${editorState.splitDirection}`}
-                  data-testid="editor-split-container"
-                >
-                  {/* 왼쪽/상단 주 창 (Pane 0) */}
-                  <div
-                    className={`editor-split-pane ${editorState.activePaneIndex === 0 ? 'active' : ''}`}
-                    onClick={() => handleSwitchPane(0)}
-                    data-testid="split-pane-0"
-                    style={{ flex: `${editorState.splitRatio ?? 50} 1 0%` }}
-                  >
-                    <div className="pane-header">
-                      <span className="pane-filename">
-                        📄 {editorState.primaryFilename || editorState.splitPanes[0].filename || 'source.ts'}
-                      </span>
-                      {displayEditorState.diffMode && <span className="pane-diff-badge" data-testid="diff-badge-0">[DIFF]</span>}
-                      {editorState.activePaneIndex === 0 && <span className="pane-active-indicator">FOCUS</span>}
-                    </div>
-                    <Editor
-                      lines={editorState.activePaneIndex === 0 ? editorState.lines : editorState.splitPanes[0].lines}
-                      cursor={editorState.activePaneIndex === 0 ? editorState.cursor : editorState.splitPanes[0].cursor}
-                      mode={editorState.activePaneIndex === 0 ? editorState.mode : editorState.splitPanes[0].mode}
-                      targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
-                      visualAnchor={editorState.activePaneIndex === 0 ? editorState.visualAnchor : editorState.splitPanes[0].visualAnchor}
-                      visualBlockEndOfLine={editorState.activePaneIndex === 0 ? editorState.visualBlockEndOfLine : editorState.splitPanes[0].visualBlockEndOfLine}
-                      relativeLineNumbers={relativeLineNumbers}
-                      searchQuery={
-                        editorState.activePaneIndex === 0 && editorState.mode === 'SEARCH'
-                          ? editorState.commandBuffer
-                          : editorState.hlsearchSuppressed
-                          ? undefined
-                          : editorState.lastSearchQuery
-                      }
-                      isFocused={isEditorFocused && editorState.activePaneIndex === 0}
-                      onFocus={() => handleSwitchPane(0)}
-                      marks={editorState.marks}
-                      jumpList={editorState.jumpList}
-                      jumpIndex={editorState.jumpIndex}
-                      onJumpToMark={handleJumpToMark}
-                      viewport={editorState.activePaneIndex === 0 ? editorState.viewport : editorState.splitPanes[0].viewport}
-                      folds={editorState.folds}
-                      completionSession={editorState.activePaneIndex === 0 ? editorState.completionSession : undefined}
-                      insertNormalSession={editorState.activePaneIndex === 0 ? editorState.insertNormalSession : undefined}
-                      insertRegisterPending={editorState.activePaneIndex === 0 ? editorState.insertRegisterPending : undefined}
-                      confirmSubstitute={editorState.activePaneIndex === 0 ? editorState.confirmSubstitute : undefined}
-                      options={displayEditorState.options}
-                      spellGoodWords={displayEditorState.spellGoodWords}
-                      spellWrongWords={displayEditorState.spellWrongWords}
-                      diffHunks={displayEditorState.diffMode ? displayEditorState.diffHunks : undefined}
-                      diffPaneIndex={0}
-                      bellSignal={editorState.activePaneIndex === 0 ? bellCount : undefined}
-                      onSelectCompletionItem={handleSelectCompletionCandidate}
-                      primaryFilename={editorState.primaryFilename || editorState.splitPanes[0].filename || (currentTab === 'course' ? currentMission.primaryFilename : undefined)}
-                    />
-                  </div>
-
-                  {/* 오른쪽/하단 보조 창 (Pane 1) */}
-                  <div
-                    className={`editor-split-pane ${editorState.activePaneIndex === 1 ? 'active' : ''}`}
-                    onClick={() => handleSwitchPane(1)}
-                    data-testid="split-pane-1"
-                    style={{ flex: `${100 - (editorState.splitRatio ?? 50)} 1 0%` }}
-                  >
-                    <div className="pane-header">
-                      <span className="pane-filename">
-                        📄 {editorState.secondaryFilename || editorState.splitPanes[1].filename || 'target.ts'}
-                      </span>
-                      {displayEditorState.diffMode && <span className="pane-diff-badge" data-testid="diff-badge-1">[DIFF]</span>}
-                      {editorState.activePaneIndex === 1 && <span className="pane-active-indicator">FOCUS</span>}
-                    </div>
-                    <Editor
-                      lines={editorState.activePaneIndex === 1 ? editorState.lines : editorState.splitPanes[1].lines}
-                      cursor={editorState.activePaneIndex === 1 ? editorState.cursor : editorState.splitPanes[1].cursor}
-                      mode={editorState.activePaneIndex === 1 ? editorState.mode : editorState.splitPanes[1].mode}
-                      targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
-                      visualAnchor={editorState.activePaneIndex === 1 ? editorState.visualAnchor : editorState.splitPanes[1].visualAnchor}
-                      visualBlockEndOfLine={editorState.activePaneIndex === 1 ? editorState.visualBlockEndOfLine : editorState.splitPanes[1].visualBlockEndOfLine}
-                      relativeLineNumbers={relativeLineNumbers}
-                      searchQuery={
-                        editorState.activePaneIndex === 1 && editorState.mode === 'SEARCH'
-                          ? editorState.commandBuffer
-                          : editorState.hlsearchSuppressed
-                          ? undefined
-                          : editorState.lastSearchQuery
-                      }
-                      isFocused={isEditorFocused && editorState.activePaneIndex === 1}
-                      onFocus={() => handleSwitchPane(1)}
-                      marks={editorState.marks}
-                      jumpList={editorState.jumpList}
-                      jumpIndex={editorState.jumpIndex}
-                      onJumpToMark={handleJumpToMark}
-                      viewport={editorState.activePaneIndex === 1 ? editorState.viewport : editorState.splitPanes[1].viewport}
-                      folds={editorState.folds}
-                      completionSession={editorState.activePaneIndex === 1 ? editorState.completionSession : undefined}
-                      insertNormalSession={editorState.activePaneIndex === 1 ? editorState.insertNormalSession : undefined}
-                      insertRegisterPending={editorState.activePaneIndex === 1 ? editorState.insertRegisterPending : undefined}
-                      confirmSubstitute={editorState.activePaneIndex === 1 ? editorState.confirmSubstitute : undefined}
-                      options={displayEditorState.options}
-                      spellGoodWords={displayEditorState.spellGoodWords}
-                      spellWrongWords={displayEditorState.spellWrongWords}
-                      diffHunks={displayEditorState.diffMode ? displayEditorState.diffHunks : undefined}
-                      diffPaneIndex={1}
-                      bellSignal={editorState.activePaneIndex === 1 ? bellCount : undefined}
-                      onSelectCompletionItem={handleSelectCompletionCandidate}
-                      primaryFilename={editorState.secondaryFilename || editorState.splitPanes[1].filename || 'target.ts'}
-                    />
-                  </div>
-                </div>
-              ) : (
-                <Editor
-                  lines={displayEditorState.lines}
-                  cursor={displayEditorState.cursor}
-                  mode={displayEditorState.mode}
-                  targetPosition={currentTab === 'course' ? currentMission.targetCursor : activeSpeedrunMission?.targetCursor}
-                  visualAnchor={displayEditorState.visualAnchor}
-                  visualBlockEndOfLine={displayEditorState.visualBlockEndOfLine}
-                  relativeLineNumbers={relativeLineNumbers}
-                  searchQuery={
-                    displayEditorState.mode === 'SEARCH'
-                      ? displayEditorState.commandBuffer
-                      : displayEditorState.hlsearchSuppressed
-                      ? undefined
-                      : displayEditorState.lastSearchQuery
-                  }
-                  isFocused={isEditorFocused}
-                  onFocus={() => setIsEditorFocused(true)}
-                  marks={displayEditorState.marks}
-                  jumpList={displayEditorState.jumpList}
-                  jumpIndex={displayEditorState.jumpIndex}
-                  onJumpToMark={handleJumpToMark}
-                  viewport={displayEditorState.viewport}
-                  folds={displayEditorState.folds}
-                  completionSession={displayEditorState.completionSession}
-                  insertNormalSession={displayEditorState.insertNormalSession}
-                  insertRegisterPending={displayEditorState.insertRegisterPending}
-                  confirmSubstitute={displayEditorState.confirmSubstitute}
-                  options={displayEditorState.options}
-                  spellGoodWords={displayEditorState.spellGoodWords}
-                  spellWrongWords={displayEditorState.spellWrongWords}
-                  bellSignal={bellCount}
-                  onSelectCompletionItem={handleSelectCompletionCandidate}
-                  primaryFilename={displayEditorState.primaryFilename || (currentTab === 'course' ? currentMission.primaryFilename : undefined)}
-                  lspDiagnostics={displayEditorState.lspDiagnostics}
-                  lspHover={displayEditorState.lspHover}
-                  onCloseLspHover={handleCloseLspHover}
-                />
-              )}
-
-              {/* 퀵픽스 분할 창 (Quickfix List: :copen, :cclose, :cn, :cp, :vimgrep) */}
-              {displayEditorState.quickfix?.isOpen && (
-                <QuickfixPanel
-                  type="quickfix"
-                  state={displayEditorState.quickfix}
-                  onJump={handleJumpQuickfixItem}
-                  onClose={handleCloseQuickfixWindow}
-                />
-              )}
-
-              {/* 로케이션 리스트 분할 창 (Location List: :lopen, :lclose, :lne, :lp, :lvimgrep) */}
-              {displayEditorState.locationList?.isOpen && (
-                <QuickfixPanel
-                  type="locationList"
-                  state={displayEditorState.locationList}
-                  onJump={handleJumpLocationListItem}
-                  onClose={handleCloseLocationListWindow}
-                />
-              )}
-            </div>
-
-            {/* 커맨드라인 윈도우 (Command-line Window: q:, q/, q?, Ctrl-f) */}
-            {displayEditorState.cmdlineWindow && (
-              <div className="cmdline-window-container" data-testid="cmdline-window">
-                <div className="cmdline-window-header">
-                  <div className="cmdline-window-header-left">
-                    <span className="cmdline-window-title">
-                      Command-line Window
-                    </span>
-                    <div className="cmdline-type-tabs">
-                      <button
-                        className={`cmdline-type-tab ${displayEditorState.cmdlineWindow.type === ':' ? 'active' : ''}`}
-                        onClick={() => handleSwitchCommandLineWindowType(':')}
-                        title={t('명령어 히스토리 보기 (q:)')}
-                        data-testid="cmdline-tab-commands"
-                      >
-                        : {t('Ex 명령')}
-                      </button>
-                      <button
-                        className={`cmdline-type-tab ${displayEditorState.cmdlineWindow.type === '/' ? 'active' : ''}`}
-                        onClick={() => handleSwitchCommandLineWindowType('/')}
-                        title={t('검색어 히스토리 보기 (q/)')}
-                        data-testid="cmdline-tab-search"
-                      >
-                        / {t('검색어')}
-                      </button>
-                    </div>
-                    <span
-                      className={`cmdline-mode-badge ${
-                        displayEditorState.cmdlineWindow.mode === 'INSERT' ? 'insert' : 'normal'
-                      }`}
-                    >
-                      {displayEditorState.cmdlineWindow.mode}
-                    </span>
-                  </div>
-
-                  <span className="cmdline-window-hint">
-                    {t('Enter/더블클릭: 실행 | Esc: 닫기 | k/j: 탐색 | i/cw/dd: 편집')}
-                  </span>
-
-                  <div className="cmdline-header-actions">
-                    <button
-                      className="cmdline-clear-btn"
-                      onClick={() => handleClearCommandLineHistory(displayEditorState.cmdlineWindow!.type)}
-                      title={t('현재 히스토리 비우기')}
-                      data-testid="cmdline-clear-btn"
-                    >
-                      🗑️ {t('비우기')}
-                    </button>
-                    <button
-                      className="cmdline-window-close"
-                      onClick={handleCloseCommandLineWindow}
-                      title={t('커맨드라인 윈도우 닫기 (Esc)')}
-                    >
-                      ✕
-                    </button>
-                  </div>
-                </div>
-                <div className="cmdline-window-body">
-                  {displayEditorState.cmdlineWindow.lines.map((line, lineIdx) => {
-                    const isCurrentLine = lineIdx === displayEditorState.cmdlineWindow!.cursor.line;
-                    const cursorCol = displayEditorState.cmdlineWindow!.cursor.col;
-                    const isInsert = displayEditorState.cmdlineWindow!.mode === 'INSERT';
-
-                    return (
-                      <div
-                        key={lineIdx}
-                        className={`cmdline-line ${isCurrentLine ? 'active' : ''}`}
-                        onClick={() => handleSelectCommandLineWindowLine(lineIdx)}
-                        onDoubleClick={() => handleExecuteCommandLineWindowLine(lineIdx)}
-                        title={t('클릭: 이동 | 더블클릭: 즉시 실행')}
-                        data-testid={`cmdline-line-${lineIdx}`}
-                      >
-                        <span className="cmdline-prompt">{displayEditorState.cmdlineWindow!.type}</span>
-                        <span className="cmdline-num">{lineIdx + 1}</span>
-                        <div className="cmdline-text">
-                          {isCurrentLine ? (
-                            <>
-                              {line.slice(0, cursorCol)}
-                              <span
-                                className={`cmdline-cursor ${
-                                  isInsert ? 'cursor-insert' : 'cursor-normal'
-                                }`}
-                              >
-                                {line[cursorCol] || ' '}
-                              </span>
-                              {line.slice(cursorCol + 1)}
-                            </>
-                          ) : (
-                            line || ' '
-                          )}
-                        </div>
-                        <button
-                          className="cmdline-run-chip"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleExecuteCommandLineWindowLine(lineIdx);
-                          }}
-                          title={t('이 명령어 즉시 실행')}
-                          tabIndex={-1}
-                        >
-                          ▶ {t('실행')}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
+            <EditorViewport
+              editorState={editorState}
+              displayEditorState={displayEditorState}
+              targetPosition={
+                currentTab === 'course'
+                  ? currentMission.targetCursor
+                  : activeSpeedrunMission?.targetCursor
+              }
+              fallbackPrimaryFilename={
+                currentTab === 'course' ? currentMission.primaryFilename : undefined
+              }
+              isEditorShaking={isEditorShaking}
+              isEditorFocused={isEditorFocused}
+              relativeLineNumbers={relativeLineNumbers}
+              bellCount={bellCount}
+              onFocusEditor={() => setIsEditorFocused(true)}
+              onEditorAreaClick={handleEditorAreaClick}
+              onSwitchPane={handleSwitchPane}
+              onSelectCompletionCandidate={handleSelectCompletionCandidate}
+              onSwitchBuffer={handleSwitchBuffer}
+              onSwitchTabPage={handleSwitchTabPage}
+              onCloseTabPage={handleCloseTabPage}
+              onNewTabPage={handleNewTabPage}
+              onJumpToMark={handleJumpToMark}
+              onCloseLspHover={handleCloseLspHover}
+              onJumpQuickfixItem={handleJumpQuickfixItem}
+              onCloseQuickfixWindow={handleCloseQuickfixWindow}
+              onJumpLocationListItem={handleJumpLocationListItem}
+              onCloseLocationListWindow={handleCloseLocationListWindow}
+              onSwitchCommandLineWindowType={handleSwitchCommandLineWindowType}
+              onClearCommandLineHistory={handleClearCommandLineHistory}
+              onCloseCommandLineWindow={handleCloseCommandLineWindow}
+              onSelectCommandLineWindowLine={handleSelectCommandLineWindowLine}
+              onExecuteCommandLineWindowLine={handleExecuteCommandLineWindowLine}
+            />
 
             <Keycaster recentKeys={recentKeys} />
             <StatusBar
@@ -1740,19 +1015,7 @@ export function App() {
               insertRegisterPending={displayEditorState.insertRegisterPending}
               insertCtrlXMode={displayEditorState.insertCtrlXMode}
               confirmSubstitute={displayEditorState.confirmSubstitute}
-              filename={
-                displayEditorState.splitPanes
-                  ? (displayEditorState.activePaneIndex === 1
-                      ? (displayEditorState.secondaryFilename || displayEditorState.splitPanes[1].filename || 'target.ts')
-                      : (displayEditorState.primaryFilename || displayEditorState.splitPanes[0].filename || 'source.ts'))
-                  : (currentTab === 'course'
-                      ? (currentMission.primaryFilename || `lesson_${currentMission.id}.txt`)
-                      : currentTab === 'custom'
-                      ? 'custom_golf.txt'
-                      : currentTab === 'speedrun'
-                      ? `speedrun_stage_${speedrunCurrentStage + 1}.txt`
-                      : 'sandbox.ts')
-              }
+              filename={statusFilename}
               pendingKeys={displayEditorState.pendingKeys}
               recordingMacro={displayEditorState.recordingMacro}
               commandType={displayEditorState.commandType}
@@ -1765,12 +1028,14 @@ export function App() {
               spellActive={displayEditorState.options?.spell}
               functionDraft={
                 displayEditorState.functionDraft
-                  ? { name: displayEditorState.functionDraft.name, lines: displayEditorState.functionDraft.body.length }
+                  ? {
+                      name: displayEditorState.functionDraft.name,
+                      lines: displayEditorState.functionDraft.body.length,
+                    }
                   : null
               }
             />
 
-            {/* 실시간 레지스터 및 매크로 인스펙터 패널 */}
             <RegisterInspector
               isOpen={showRegisterInspector}
               onToggle={handleToggleRegisterInspector}
@@ -1784,7 +1049,6 @@ export function App() {
               onDeleteRegister={handleDeleteRegister}
             />
 
-            {/* 마크 & 점프 리스트 비주얼 맵 패널 */}
             <MarksJumpVisualizer
               isOpen={showMarksVisualizer}
               onClose={handleToggleMarksVisualizer}
@@ -1805,7 +1069,6 @@ export function App() {
               onJumpToLine={handleJumpToLine}
             />
 
-            {/* 매크로 슬로우모션 디버거 패널 */}
             <MacroDebugger
               isOpen={showMacroDebugger}
               onToggle={handleToggleMacroDebugger}
@@ -1814,7 +1077,6 @@ export function App() {
               onRunMacro={handleRunMacroFromDebugger}
             />
 
-            {/* 목표 상태 Diff 비교 하이라이트 뷰 */}
             {showDiffView && activeMissionForDiff && (
               <DiffViewer
                 currentLines={displayEditorState.lines}
@@ -1823,7 +1085,6 @@ export function App() {
               />
             )}
 
-            {/* 반응형 인터랙티브 가상 키보드 패널 */}
             {showVirtualKeyboard && (
               <VirtualKeyboard
                 mode={editorState.mode}
@@ -1832,7 +1093,6 @@ export function App() {
               />
             )}
 
-            {/* 실시간 명령 복기 타임라인 & 초보자용 Vim X-Ray 투시기 패널 */}
             {showActionTimeline && (
               <ActionTimelinePanel
                 steps={timelineSteps}
@@ -1874,118 +1134,52 @@ export function App() {
         <span>{t('VimPracticeOnWeb • 키보드로 미션을 완료하며 자연스럽게 Vim을 마스터하세요')}</span>
       </footer>
 
-      <LessonSelectModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        missions={MISSIONS}
+      <AppModals
+        editorState={editorState}
         currentMissionId={currentMission.id}
         progress={progress}
-        onSelectLesson={(missionId) => {
-          const idx = MISSIONS.findIndex((m) => m.id === missionId);
-          if (idx !== -1) {
-            handleSelectMission(idx);
-            setCurrentTab('course');
-          }
+        isModalOpen={isModalOpen}
+        onCloseLessonModal={() => setIsModalOpen(false)}
+        onSelectLessonById={handleSelectLessonById}
+        isCustomModalOpen={isCustomModalOpen}
+        onCloseCustomModal={() => setIsCustomModalOpen(false)}
+        onPlayCustomMission={handlePlayCustomMission}
+        isAnalyticsModalOpen={isAnalyticsModalOpen}
+        onCloseAnalyticsModal={() => setIsAnalyticsModalOpen(false)}
+        onOpenDailyFromAnalytics={() => setIsDailyModalOpen(true)}
+        onStartWeaknessDrill={() => {
+          setDojoInitialDrill({ drill: 'weakness-custom', nonce: Date.now() });
+          handleSwitchTab('dojo');
         }}
+        isDailyModalOpen={isDailyModalOpen}
+        onCloseDailyModal={() => setIsDailyModalOpen(false)}
+        playKeySound={playKeySound}
+        playSuccessSound={playSuccessSound}
+        isConfigModalOpen={isConfigModalOpen}
+        onCloseConfigModal={() => {
+          setIsConfigModalOpen(false);
+          setEditorState((prev) => ({ ...prev, showConfigModal: false }));
+        }}
+        relativeLineNumbers={relativeLineNumbers}
+        currentTheme={currentTheme}
+        leaderKey={leaderKey}
+        activePresets={activePresets}
+        onTogglePreset={handleTogglePreset}
+        onChangeLeaderKey={handleChangeLeaderKey}
+        customKeymaps={customKeymaps}
+        onAddCustomKeymap={handleAddCustomKeymap}
+        onDeleteCustomKeymap={handleDeleteCustomKeymap}
+        onRestoreBackup={handleRestoreBackup}
+        isBYOCModalOpen={isBYOCModalOpen}
+        onCloseBYOCModal={() => setIsBYOCModalOpen(false)}
+        onPlayBYOCMission={handlePlayBYOCMission}
+        onSelectFuzzyFinderAction={handleSelectFuzzyFinderAction}
+        onSelectFuzzyItemIndex={handleSelectFuzzyItemIndex}
+        onCloseFuzzyFinder={handleCloseFuzzyFinder}
+        onJumpHelpTag={handleJumpHelpTag}
+        onPopHelpTag={handlePopHelpTag}
+        onCloseHelp={handleCloseHelp}
       />
-
-      <Suspense fallback={null}>
-        {customModalLoaded && (
-          <CustomMissionModal
-            isOpen={isCustomModalOpen}
-            onClose={() => setIsCustomModalOpen(false)}
-            onPlayMission={handlePlayCustomMission}
-          />
-        )}
-
-        {analyticsModalLoaded && (
-          <AnalyticsModal
-            isOpen={isAnalyticsModalOpen}
-            onClose={() => setIsAnalyticsModalOpen(false)}
-            progress={progress}
-            onOpenDailyChallenge={() => setIsDailyModalOpen(true)}
-            onStartWeaknessDrill={() => {
-              setDojoInitialDrill({ drill: 'weakness-custom', nonce: Date.now() });
-              handleSwitchTab('dojo');
-            }}
-            onSelectLesson={(missionId) => {
-              const idx = MISSIONS.findIndex((m) => m.id === missionId);
-              if (idx !== -1) {
-                handleSelectMission(idx);
-                setCurrentTab('course');
-              }
-            }}
-          />
-        )}
-
-        {dailyModalLoaded && (
-          <DailyChallengeModal
-            isOpen={isDailyModalOpen}
-            onClose={() => setIsDailyModalOpen(false)}
-            onPlayKeySound={playKeySound}
-            onPlaySuccessSound={playSuccessSound}
-          />
-        )}
-
-        {configModalLoaded && (
-          <ConfigExporterModal
-            isOpen={isConfigModalOpen}
-            onClose={() => {
-              setIsConfigModalOpen(false);
-              setEditorState((prev) => ({ ...prev, showConfigModal: false }));
-            }}
-            relativenumber={relativeLineNumbers}
-            theme={currentTheme}
-            leaderKey={leaderKey}
-            activePresets={activePresets}
-            onTogglePreset={handleTogglePreset}
-            onChangeLeaderKey={handleChangeLeaderKey}
-            customKeymaps={customKeymaps}
-            onAddCustomKeymap={handleAddCustomKeymap}
-            onDeleteCustomKeymap={handleDeleteCustomKeymap}
-            options={editorState.options}
-            onRestoreBackup={() => {
-              setProgress(loadProgress());
-              reloadHardcoreAndKeymaps();
-              setRelativeLineNumbers(loadRelativeLineSetting());
-              setShowVirtualKeyboard(loadVirtualKeyboardSetting());
-              setShowDiffView(loadDiffViewSetting());
-              setShowRegisterInspector(loadRegisterInspectorSetting());
-              setShowMarksVisualizer(loadMarksVisualizerSetting());
-              setShowGrammarAST(loadGrammarASTSetting());
-              setShowActionTimeline(loadActionTimelineSetting());
-              setSpeedrunBestRecord(loadSpeedrunRecord());
-            }}
-          />
-        )}
-
-        {byocModalLoaded && (
-          <BYOCModal
-            isOpen={isBYOCModalOpen}
-            onClose={() => setIsBYOCModalOpen(false)}
-            initialCode={editorState.lines.join('\n')}
-            onStartMission={handlePlayBYOCMission}
-          />
-        )}
-      </Suspense>
-
-      {editorState.fuzzyFinder?.isOpen && (
-        <FuzzyFinder
-          state={editorState}
-          onSelectAction={handleSelectFuzzyFinderAction}
-          onSelectItemIndex={handleSelectFuzzyItemIndex}
-          onClose={handleCloseFuzzyFinder}
-        />
-      )}
-
-      {editorState.helpSession?.isOpen && (
-        <HelpViewer
-          session={editorState.helpSession}
-          onJumpTag={handleJumpHelpTag}
-          onPopTag={handlePopHelpTag}
-          onClose={handleCloseHelp}
-        />
-      )}
     </div>
   );
 }
