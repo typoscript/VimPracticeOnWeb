@@ -215,6 +215,11 @@ export function getRegisterContent(
       content: state.lastSearchQuery ?? '',
     };
   }
+  if (targetReg === '.') {
+    return state.lastInsertedText
+      ? { type: 'text', content: state.lastInsertedText }
+      : null;
+  }
 
   // 시스템 클립보드 ("+, "*) 조회
   if (targetReg === '+' || targetReg === '*') {

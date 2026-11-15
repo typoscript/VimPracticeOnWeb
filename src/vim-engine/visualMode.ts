@@ -530,15 +530,16 @@ export function handleVisualModeKey(
   }
 
   // 화면 뷰포트 기준 이동 및 스크롤 (H, M, L, Ctrl-d, Ctrl-u)
-  if (key === 'H') {
+  const isPureVisualCountOrEmpty = !state.pendingKeys || /^[1-9][0-9]*$/.test(state.pendingKeys);
+  if (key === 'H' && isPureVisualCountOrEmpty) {
     const res = cursorToHigh(state);
     return { ...state, cursor: res.cursor, pendingKeys: undefined };
   }
-  if (key === 'M') {
+  if (key === 'M' && isPureVisualCountOrEmpty) {
     const res = cursorToMiddle(state);
     return { ...state, cursor: res.cursor, pendingKeys: undefined };
   }
-  if (key === 'L') {
+  if (key === 'L' && isPureVisualCountOrEmpty) {
     const res = cursorToLow(state);
     return { ...state, cursor: res.cursor, pendingKeys: undefined };
   }
@@ -822,13 +823,14 @@ export function handleVisualModeKey(
     return moveByExtraMotion(state, key, parsed.totalCount);
   }
 
-  // VISUAL 모드 괄호·섹션 모션 [( [{ ]) ]} [[ ]] [] ][
+  // VISUAL 모드 괄호·섹션·메서드 모션 [( [{ ]) ]} [[ ]] [] ][ ]m [m ]M [M
   const visualBracket = state.pendingKeys?.match(/^([1-9][0-9]*)?([\[\]])$/);
   if (visualBracket) {
     const bracket = visualBracket[2];
     const isPaired = (bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'));
     const isSection = key === '[' || key === ']';
-    if (isPaired || isSection) {
+    const isMethod = key === 'm' || key === 'M';
+    if (isPaired || isSection || isMethod) {
       return moveByExtraMotion(state, `${bracket}${key}`, visualBracket[1] ? parseInt(visualBracket[1], 10) : 1);
     }
     return { ...state, pendingKeys: undefined };

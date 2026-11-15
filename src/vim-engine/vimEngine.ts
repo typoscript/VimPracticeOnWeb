@@ -194,6 +194,15 @@ export function rawHandleKey(
     nextState = state;
   }
 
+  // INSERT 모드 신규 진입(Ctrl-o 일회성 복귀 제외) 시 직전 입력 텍스트 버퍼 초기화
+  if (state.mode !== 'INSERT' && nextState.mode === 'INSERT' && !state.insertNormalSession) {
+    nextState = {
+      ...nextState,
+      currentInsertText: undefined,
+      digraphPending: undefined,
+    };
+  }
+
   // 커서 이동 시 화면 뷰포트 자동 동기화 (커서가 화면 및 scrolloff 여백을 벗어나지 않도록 보정)
   if (nextState.cursor && nextState.lines) {
     const vp = adjustViewport(

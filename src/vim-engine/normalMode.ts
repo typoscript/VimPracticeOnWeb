@@ -135,6 +135,7 @@ import {
   moveByExtraMotion,
   findShiftRange,
   describeCharAt,
+  describeCharUtf8Bytes,
   isFailedMotion,
   evaluateMotionWithCount,
   handleCtrlWKey,
@@ -658,14 +659,15 @@ export function handleNormalModeKey(
   }
 
   // 뷰포트 스크롤 및 화면 기준 커서 이동:
-  // H, M, L: 화면 뷰포트 기준 최상단, 중앙, 최하단 줄로 이동
-  if (key === 'H' && !parsed.operator) {
+  // H, M, L: 화면 뷰포트 기준 최상단, 중앙, 최하단 줄로 이동 ([count]H/M/L 허용, ]M / c]M 등은 제외)
+  const isPureCountOrEmpty = !state.pendingKeys || /^[1-9][0-9]*$/.test(state.pendingKeys);
+  if (key === 'H' && !parsed.operator && isPureCountOrEmpty) {
     return cursorToHigh(state);
   }
-  if (key === 'M' && !parsed.operator) {
+  if (key === 'M' && !parsed.operator && isPureCountOrEmpty) {
     return cursorToMiddle(state);
   }
-  if (key === 'L' && !parsed.operator) {
+  if (key === 'L' && !parsed.operator && isPureCountOrEmpty) {
     return cursorToLow(state);
   }
 
@@ -1104,8 +1106,8 @@ export function handleNormalModeKey(
     if ((bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'))) {
       return moveByExtraMotion(state, `${bracket}${key}`, bCount);
     }
-    // [[ ]] [] ][: 섹션 시작/끝 블록 점프
-    if (key === '[' || key === ']') {
+    // [[ ]] [] ][: 섹션 시작/끝 블록 점프, ]m [m ]M [M: 메서드 시작/끝 블록 점프
+    if (key === '[' || key === ']' || key === 'm' || key === 'M') {
       return moveByExtraMotion(state, `${bracket}${key}`, bCount);
     }
     // ]d [d ]D [D: Neovim 스타일 진단(Diagnostic) 탐색
@@ -1209,13 +1211,14 @@ export function handleNormalModeKey(
     state = { ...state, pendingKeys: undefined };
   }
 
-  // 연산자 + 괄호/섹션 모션 (d[(, c]}, y[{, d]], c[[ ...)
+  // 연산자 + 괄호/섹션/메서드 모션 (d[(, c]}, y[{, d]], c[[, d]m, y[M ...)
   const opBracketMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([cdy])([1-9][0-9]*)?([\]\[])$/);
   if (opBracketMatch) {
     const bracket = opBracketMatch[4];
     const isPaired = (bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'));
     const isSection = key === '[' || key === ']';
-    if (isPaired || isSection) {
+    const isMethod = key === 'm' || key === 'M';
+    if (isPaired || isSection || isMethod) {
       const op = opBracketMatch[2] as 'd' | 'c' | 'y';
       const total = (opBracketMatch[1] ? parseInt(opBracketMatch[1], 10) : 1) * (opBracketMatch[3] ? parseInt(opBracketMatch[3], 10) : 1);
       return applyOperatorMotion(state, op, `${bracket}${key}`, { operator: op, count1: total > 1 ? total : undefined, totalCount: total }, isReplayingDot);
@@ -1481,8 +1484,8 @@ export function handleNormalModeKey(
     }
   }
 
-  // 1-9 숫자 누적
-  if (/^[1-9]$/.test(key)) {
+  // 1-9 숫자 누적 (g8 등은 숫자 카운트로 소비하지 않고 g 연산자로 전달)
+  if (/^[1-9]$/.test(key) && parsed.operator !== 'g') {
     return {
       ...state,
       pendingKeys: (state.pendingKeys ?? '') + key,
@@ -1914,6 +1917,10 @@ export function handleNormalModeKey(
     // ga: 커서 문자의 코드 값 표시 (:help ga)
     if (key === 'a') {
       return { ...state, pendingKeys: undefined, commandMessage: describeCharAt(currentLine, state.cursor.col) };
+    }
+    // g8: 커서 위치 문자의 UTF-8 바이트 16진수 표시 (:help g8)
+    if (key === '8') {
+      return { ...state, pendingKeys: undefined, commandMessage: describeCharUtf8Bytes(currentLine, state.cursor.col) };
     }
     // ge / gE / g_: 이전 단어 끝, 이전 WORD 끝, 줄의 마지막 공백 아닌 문자
     if (key === 'e' || key === 'E' || key === '_') {

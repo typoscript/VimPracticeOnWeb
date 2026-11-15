@@ -3562,4 +3562,60 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 93,
+    title: '레슨 93: 메서드 점프(]m/[m), 다이그래프(Ctrl-k), 직전 삽입(Ctrl-a) & UTF-8 바이트(g8) 마스터',
+    description:
+      '클래스 내부 메서드를 단숨에 오가는 ]m / [m / ]M / [M 모션, 입력 모드 특수문자 다이그래프(Ctrl-k), 직전 입력 내용을 즉시 반복하는 Insert Ctrl-a, 그리고 커서 아래 문자의 UTF-8 16진수 바이트를 확인하는 g8 을 실전에서 결합해 보세요.\n\n1) 메서드 블록 점프 (]m / [m / ]M / [M):\n   - ]m / [m 은 다음·이전 메서드 여는 중괄호({)로, ]M / [M 은 닫는 중괄호(})로 즉시 이동합니다. (카운트 및 d/c/y/v 결합 지원)\n\n2) 다이그래프(Ctrl-k {c1}{c2}) & 직전 삽입 반복(Ctrl-a):\n   - INSERT 모드에서 Ctrl-k 뒤 두 문자(예: -> 는 →, != 는 ≠, *l 은 λ)를 치면 유니코드 특수 기호가 입력됩니다.\n   - 다른 위치로 이동해 다시 INSERT 모드에서 Ctrl-a 를 누르면 방금 전 INSERT 세션에 입력했던 텍스트 전체가 즉시 재삽입됩니다.\n\n3) UTF-8 바이트 검사 (g8):\n   - NORMAL 모드에서 커서 아래 문자의 UTF-8 인코딩 16진수 바이트(예: → 는 e2 86 92)를 명령줄에 표시합니다.\n\n미션:\n1. 2]m 으로 stepOne() { 로 점프한 뒤 아래 줄 문자열을 "ok → go" 로 바꾸세요. (→ 는 Insert 모드 Ctrl-k - >)\n2. F<Space> h g8 로 → 문자 위의 UTF-8 바이트(e2 86 92)를 확인하세요.\n3. ]m 으로 stepTwo() { 로 내려간 뒤 문자열 안으로 들어가 Ctrl-a 로 "ok → go" 를 한 번에 채워 완료하세요!',
+    hint: '2]m → j f" ci" ok<Space>Ctrl-k - ><Space>go<Esc> → F<Space> h g8 → ]m j f" ci" Ctrl-a<Esc>',
+    par: 34,
+    optimalKeys: [
+      '2', ']', 'm',
+      'j', 'f', '"', 'c', 'i', '"',
+      'o', 'k', ' ', 'Ctrl-k', '-', '>', ' ', 'g', 'o', 'Escape',
+      'F', ' ', 'h',
+      'g', '8',
+      ']', 'm',
+      'j', 'f', '"', 'c', 'i', '"', 'Ctrl-a', 'Escape',
+    ],
+    primaryFilename: 'pipeline.ts',
+    initialLines: [
+      'class Pipeline {',
+      '  stepOne() {',
+      '    const flow = "TODO";',
+      '  }',
+      '  stepTwo() {',
+      '    const backup = "TODO";',
+      '  }',
+      '}',
+    ],
+    targetLines: [
+      'class Pipeline {',
+      '  stepOne() {',
+      '    const flow = "ok → go";',
+      '  }',
+      '  stepTwo() {',
+      '    const backup = "ok → go";',
+      '  }',
+      '}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const target = [
+        'class Pipeline {',
+        '  stepOne() {',
+        '    const flow = "ok → go";',
+        '  }',
+        '  stepTwo() {',
+        '    const backup = "ok → go";',
+        '  }',
+        '}',
+      ];
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines.length === target.length &&
+        state.lines.every((l, idx) => l === target[idx])
+      );
+    },
+  },
 ];

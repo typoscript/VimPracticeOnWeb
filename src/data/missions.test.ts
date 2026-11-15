@@ -1828,8 +1828,36 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson92!.checkComplete(state)).toBe(true);
   });
 
-  it('모든 92개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(92);
+  it('레슨 93 (]m/[m 메서드 점프, Ctrl-k 다이그래프, Ctrl-a 직전 삽입, g8 UTF-8 바이트) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson93 = MISSIONS.find((m) => m.id === 93);
+    expect(lesson93).toBeDefined();
+
+    let state: VimEditorState = {
+      lines: [...lesson93!.initialLines],
+      cursor: { ...lesson93!.initialCursor },
+      mode: 'NORMAL',
+      primaryFilename: lesson93!.primaryFilename,
+    };
+
+    expect(lesson93!.checkComplete(state)).toBe(false);
+
+    const keys = lesson93!.optimalKeys!;
+    // g8 실행 시점까지 순차 입력 (index 24 직후 g8 완료)
+    const g8End = 24;
+    for (let i = 0; i < g8End; i++) {
+      state = handleKey(state, keys[i]);
+    }
+    expect(state.commandMessage).toBe('e2 86 92');
+    expect(state.lastInsertedText).toBe('ok → go');
+
+    for (let i = g8End; i < keys.length; i++) {
+      state = handleKey(state, keys[i]);
+    }
+    expect(lesson93!.checkComplete(state)).toBe(true);
+  });
+
+  it('모든 93개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(93);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();

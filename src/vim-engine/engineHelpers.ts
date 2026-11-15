@@ -178,6 +178,29 @@ export function describeCharAt(line: string, col: number): string {
   return msg('{label} {code}, 16진수 {v}, 8진수 {v2}', { label, code, v: code.toString(16), v2: code.toString(8) });
 }
 
+/** g8 출력: 커서 위치 문자의 UTF-8 바이트 16진수 표현 (예: e2 86 92, 빈 줄이면 NUL) */
+export function describeCharUtf8Bytes(line: string, col: number): string {
+  const ch = [...line.slice(col)][0];
+  if (ch === undefined) return 'NUL';
+  const cp = ch.codePointAt(0) ?? 0;
+  let bytes: number[];
+  if (cp <= 0x7f) {
+    bytes = [cp];
+  } else if (cp <= 0x7ff) {
+    bytes = [0xc0 | (cp >> 6), 0x80 | (cp & 0x3f)];
+  } else if (cp <= 0xffff) {
+    bytes = [0xe0 | (cp >> 12), 0x80 | ((cp >> 6) & 0x3f), 0x80 | (cp & 0x3f)];
+  } else {
+    bytes = [
+      0xf0 | (cp >> 18),
+      0x80 | ((cp >> 12) & 0x3f),
+      0x80 | ((cp >> 6) & 0x3f),
+      0x80 | (cp & 0x3f),
+    ];
+  }
+  return bytes.map((b) => b.toString(16).padStart(2, '0')).join(' ');
+}
+
 /** 모션이 커서를 전혀 움직이지 못했는지 (세로 모션은 줄 기준) */
 export function isFailedMotion(key: string, from: CursorPosition, to: CursorPosition): boolean {
   if (!FAILABLE_MOTION_KEYS.has(key)) return false;
@@ -318,6 +341,10 @@ export function insertTextAtCursor(
     };
   }
 
+  const nextInsertText = state.mode === 'INSERT'
+    ? (state.currentInsertText ?? '') + text
+    : state.currentInsertText;
+
   if (!text.includes('\n')) {
     const newLine = currentLine.slice(0, col) + text + currentLine.slice(col);
     const nextLines = [...state.lines];
@@ -326,6 +353,7 @@ export function insertTextAtCursor(
       ...state,
       lines: nextLines,
       cursor: { line, col: col + text.length },
+      currentInsertText: nextInsertText,
     };
   }
 
@@ -348,6 +376,7 @@ export function insertTextAtCursor(
     ...state,
     lines: newLines,
     cursor: { line: finalLine, col: finalCol },
+    currentInsertText: nextInsertText,
   };
 }
 

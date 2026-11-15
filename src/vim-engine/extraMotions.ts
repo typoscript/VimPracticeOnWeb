@@ -22,7 +22,7 @@ export interface MotionResult {
 
 export const EXTRA_MOTION_KEYS = new Set([
   '(', ')', '+', '-', 'Enter', '|', 'ge', 'gE', 'g_', '[(', '[{', '])', ']}',
-  '[[', ']]', '[]', '][', 'g0', 'g$', 'gm', 'gM',
+  '[[', ']]', '[]', '][', '[m', ']m', '[M', ']M', 'g0', 'g$', 'gm', 'gM',
 ]);
 
 function firstNonBlankCol(text: string): number {
@@ -226,6 +226,38 @@ export function evaluateExtraMotion(
       }
       if (cursor.line === 0 && cursor.col === 0) return null;
       return { target: { line: 0, col: 0 }, kind: 'exclusive' };
+    }
+    // ]m, [m: 다음/이전 메서드·블록 여는 중괄호 '{' 로 이동 (:help ]m / [m)
+    // ]M, [M: 다음/이전 메서드·블록 닫는 중괄호 '}' 로 이동 (:help ]M / [M)
+    case ']m':
+    case '[m':
+    case ']M':
+    case '[M': {
+      const targetChar = key === ']m' || key === '[m' ? '{' : '}';
+      const forward = key === ']m' || key === ']M';
+      let found = 0;
+      if (forward) {
+        for (let line = cursor.line; line <= last; line++) {
+          const text = lines[line] ?? '';
+          const startCol = line === cursor.line ? cursor.col + 1 : 0;
+          for (let col = startCol; col < text.length; col++) {
+            if (text[col] === targetChar && ++found === n) {
+              return { target: { line, col }, kind: 'exclusive' };
+            }
+          }
+        }
+        return null;
+      }
+      for (let line = cursor.line; line >= 0; line--) {
+        const text = lines[line] ?? '';
+        const startCol = line === cursor.line ? cursor.col - 1 : text.length - 1;
+        for (let col = startCol; col >= 0; col--) {
+          if (text[col] === targetChar && ++found === n) {
+            return { target: { line, col }, kind: 'exclusive' };
+          }
+        }
+      }
+      return null;
     }
     case 'g0':
       return { target: { line: cursor.line, col: 0 }, kind: 'exclusive' };

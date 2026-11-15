@@ -12,12 +12,24 @@ import {
 } from './completion';
 import { getOptions } from './setEngine';
 import { recordChangePosition } from './advancedMotions';
+import { lookupDigraph } from './digraphs';
 import {
   AbbrevReplayCtx,
   INITIAL_ABBREV_CTX,
   DispatchKeyFn,
   insertTextAtCursor,
 } from './engineHelpers';
+
+function trimInsertText(text: string | undefined, count: number): string | undefined {
+  if (!text || count <= 0) return text;
+  const trimmed = text.slice(0, Math.max(0, text.length - count));
+  return trimmed;
+}
+
+function resolveLastInsertedText(state: VimEditorState, candidate?: string): string | undefined {
+  const txt = candidate !== undefined ? candidate : state.currentInsertText;
+  return txt && txt.length > 0 ? txt : state.lastInsertedText;
+}
 
 /**
  * Insert 모드에서 현재 줄의 선행 들여쓰기를 shiftwidth 단위로 증감합니다 (Ctrl-t / Ctrl-d).
@@ -144,6 +156,7 @@ export function handleInsertModeKey(
       pendingKeys: undefined,
       insertRegisterPending: undefined,
       literalNextPending: undefined,
+      digraphPending: undefined,
     };
   }
 
@@ -168,6 +181,7 @@ export function handleInsertModeKey(
         literalNextPending: undefined,
         blockInsertSession: nextBlock,
         currentChangeKeys: nextChangeKeys,
+        currentInsertText: (state.currentInsertText ?? '') + ch,
       };
     }
     state = { ...state, literalNextPending: undefined };
@@ -177,6 +191,48 @@ export function handleInsertModeKey(
     return {
       ...state,
       literalNextPending: true,
+    };
+  }
+
+  // Ctrl+k 다이그래프 입력 (Ctrl-k {c1}{c2} -> 특수/유니코드 문자 삽입, :help i_CTRL-K)
+  if (state.digraphPending !== undefined && state.digraphPending !== null) {
+    if (key === 'Escape' || key === 'Ctrl-c' || key === 'Ctrl+c') {
+      return { ...state, digraphPending: undefined };
+    }
+    if (state.digraphPending === '') {
+      if (key.length === 1) {
+        return { ...state, digraphPending: key };
+      }
+      if (key === 'Backspace') {
+        return { ...state, digraphPending: undefined };
+      }
+      state = { ...state, digraphPending: undefined };
+    } else {
+      const c1 = state.digraphPending;
+      if (key.length === 1) {
+        const { char: ch } = lookupDigraph(c1, key);
+        const inserted = insertTextAtCursor({ ...state, digraphPending: undefined }, ch);
+        const nextChangeKeys =
+          !isReplayingDot && state.currentChangeKeys
+            ? [...state.currentChangeKeys, 'Ctrl-k', c1, key]
+            : state.currentChangeKeys;
+        return {
+          ...inserted,
+          currentChangeKeys: nextChangeKeys,
+        };
+      }
+      if (key === 'Backspace') {
+        return { ...state, digraphPending: undefined };
+      }
+      state = { ...state, digraphPending: undefined };
+    }
+  }
+
+  if (key === 'Ctrl-k' || key === 'Ctrl+k' || key === 'ctrl-k' || key === '<C-k>') {
+    return {
+      ...state,
+      digraphPending: '',
+      completionSession: state.completionSession ? null : state.completionSession,
     };
   }
 
@@ -255,6 +311,10 @@ export function handleInsertModeKey(
 
       const lastPos = { line, col: nextCol, row: line };
       const changeRecord = recordChangePosition(state.changeList, { line, col: nextCol });
+      const cleanedInsert =
+        state.pendingKeys && (state.currentInsertText ?? '').endsWith(state.pendingKeys)
+          ? (state.currentInsertText ?? '').slice(0, -state.pendingKeys.length)
+          : state.currentInsertText;
 
       return {
         ...state,
@@ -262,8 +322,11 @@ export function handleInsertModeKey(
         mode: 'NORMAL',
         cursor: clampCursor(nextLines, { line, col: nextCol }, 'NORMAL'),
         pendingKeys: undefined,
+        digraphPending: undefined,
         lastChangeKeys: nextLastChange,
         currentChangeKeys: undefined,
+        lastInsertedText: resolveLastInsertedText(state, cleanedInsert),
+        currentInsertText: undefined,
         lastInsertPos: lastPos,
         changeList: changeRecord.changeList,
         changeIndex: changeRecord.changeIndex,
@@ -437,7 +500,10 @@ export function handleInsertModeKey(
         cursor: clampCursor(nextLines, { line: firstLineIdx, col: nextCol }, 'NORMAL'),
         blockInsertSession: null,
         pendingKeys: undefined,
+        digraphPending: undefined,
         currentChangeKeys: undefined,
+        lastInsertedText: resolveLastInsertedText(state, insertedText),
+        currentInsertText: undefined,
         lastInsertPos: lastPos,
         changeList: changeRecord.changeList,
         changeIndex: changeRecord.changeIndex,
@@ -460,8 +526,11 @@ export function handleInsertModeKey(
       mode: 'NORMAL',
       cursor: clampCursor(state.lines, { line, col: nextCol }, 'NORMAL'),
       pendingKeys: undefined,
+      digraphPending: undefined,
       lastChangeKeys: nextLastChange,
       currentChangeKeys: undefined,
+      lastInsertedText: resolveLastInsertedText(state),
+      currentInsertText: undefined,
       lastInsertPos: lastPos,
       changeList: changeRecord.changeList,
       changeIndex: changeRecord.changeIndex,
@@ -474,6 +543,59 @@ export function handleInsertModeKey(
     if (isReplayingDot || !state.currentChangeKeys) return state.currentChangeKeys;
     return [...state.currentChangeKeys, k];
   };
+
+  // Ctrl+a / Ctrl+@: 직전 INSERT 세션에서 삽입한 텍스트 재삽입 (:help i_CTRL-A / i_CTRL-@)
+  if (
+    key === 'Ctrl-a' ||
+    key === 'Ctrl+a' ||
+    key === 'ctrl-a' ||
+    key === '<C-a>' ||
+    key === 'Ctrl-@' ||
+    key === 'Ctrl+@' ||
+    key === 'ctrl-@' ||
+    key === '<C-@>'
+  ) {
+    const text = state.lastInsertedText ?? '';
+    const isExitInsert = key.endsWith('@');
+    let nextState = state;
+    if (text.length > 0) {
+      nextState = insertTextAtCursor(state, text);
+      if (!isReplayingDot && state.currentChangeKeys) {
+        const insertedKeys = [...text].map((ch) => (ch === '\n' ? 'Enter' : ch === '\t' ? 'Tab' : ch));
+        nextState = {
+          ...nextState,
+          currentChangeKeys: [...state.currentChangeKeys, ...insertedKeys],
+        };
+      }
+    }
+    if (isExitInsert) {
+      const finalCol = nextState.cursor.col;
+      const finalLine = nextState.cursor.line;
+      const nextCol = Math.max(0, finalCol - 1);
+      const nextLastChange =
+        !isReplayingDot && nextState.currentChangeKeys
+          ? [...nextState.currentChangeKeys, 'Escape']
+          : nextState.lastChangeKeys;
+      const lastPos = { line: finalLine, col: finalCol, row: finalLine };
+      const changeRecord = recordChangePosition(nextState.changeList, { line: finalLine, col: finalCol });
+      return {
+        ...nextState,
+        mode: 'NORMAL',
+        cursor: clampCursor(nextState.lines, { line: finalLine, col: nextCol }, 'NORMAL'),
+        pendingKeys: undefined,
+        digraphPending: undefined,
+        lastChangeKeys: nextLastChange,
+        currentChangeKeys: undefined,
+        lastInsertedText: resolveLastInsertedText(nextState),
+        currentInsertText: undefined,
+        lastInsertPos: lastPos,
+        changeList: changeRecord.changeList,
+        changeIndex: changeRecord.changeIndex,
+        marks: { ...(nextState.marks ?? {}), '^': { row: finalLine, col: finalCol } },
+      };
+    }
+    return nextState;
+  }
 
   // Ctrl+t / Ctrl+d: 현재 줄 들여쓰기 증가 / 감소 (shiftwidth 단위)
   if (key === 'Ctrl-t' || key === 'Ctrl+t' || key === 'Alt-t' || key === 'Alt+t') {
@@ -499,6 +621,7 @@ export function handleInsertModeKey(
         lines: nextLines,
         cursor: { line: line - 1, col: prevLine.length },
         currentChangeKeys: nextChangeKeys,
+        currentInsertText: trimInsertText(state.currentInsertText, 1),
       };
     }
     if (col > 0) {
@@ -525,6 +648,7 @@ export function handleInsertModeKey(
         lines: nextLines,
         cursor: { line, col: start },
         currentChangeKeys: nextChangeKeys,
+        currentInsertText: trimInsertText(state.currentInsertText, col - start),
       };
     }
     return { ...state, currentChangeKeys: nextChangeKeys };
@@ -546,6 +670,7 @@ export function handleInsertModeKey(
         lines: nextLines,
         cursor: { line: line - 1, col: prevLine.length },
         currentChangeKeys: nextChangeKeys,
+        currentInsertText: trimInsertText(state.currentInsertText, 1),
       };
     }
     const newLine = currentLine.slice(col);
@@ -556,6 +681,7 @@ export function handleInsertModeKey(
       lines: nextLines,
       cursor: { line, col: 0 },
       currentChangeKeys: nextChangeKeys,
+      currentInsertText: trimInsertText(state.currentInsertText, col),
     };
   }
 
@@ -588,6 +714,7 @@ export function handleInsertModeKey(
         lines: nextLines,
         cursor: { line, col: col - 1 },
         currentChangeKeys: nextChangeKeys,
+        currentInsertText: trimInsertText(state.currentInsertText, 1),
       };
     }
 
@@ -604,6 +731,7 @@ export function handleInsertModeKey(
         lines: nextLines,
         cursor: { line: line - 1, col: prevLine.length },
         currentChangeKeys: nextChangeKeys,
+        currentInsertText: trimInsertText(state.currentInsertText, 1),
       };
     }
 
@@ -628,6 +756,7 @@ export function handleInsertModeKey(
       lines: nextLines,
       cursor: { line: line + 1, col: 0 },
       currentChangeKeys: nextChangeKeys,
+      currentInsertText: (state.currentInsertText ?? '') + '\n',
     };
   }
 
@@ -656,6 +785,7 @@ export function handleInsertModeKey(
       lines: nextLines,
       cursor: { line, col: col + indent.length },
       currentChangeKeys: nextChangeKeys,
+      currentInsertText: (state.currentInsertText ?? '') + indent,
     };
   }
 
@@ -720,6 +850,7 @@ export function handleInsertModeKey(
       cursor: { line, col: col + 1 },
       pendingKeys: isMappingPrefix ? key : undefined,
       currentChangeKeys: nextChangeKeys,
+      currentInsertText: (state.currentInsertText ?? '') + key,
     };
   }
 
