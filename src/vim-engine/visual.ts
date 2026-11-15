@@ -674,3 +674,81 @@ export function executeGCtrlG(state: VimEditorState): VimEditorState {
     ),
   };
 }
+
+/**
+ * VISUAL / VISUAL_LINE / VISUAL_BLOCK 선택 영역의 각 문자를 지정 문자로 일괄 치환합니다 (v_r{char}).
+ */
+export function replaceVisualChars(
+  state: VimEditorState,
+  replacementChar: string
+): VimEditorState {
+  if (!state.visualAnchor) {
+    return { ...state, mode: 'NORMAL', pendingKeys: undefined, visualBlockEndOfLine: undefined };
+  }
+
+  const ch = replacementChar === 'Space' ? ' ' : replacementChar;
+  const stateWithSnapshot = pushUndoSnapshot(state);
+  const anchor = state.visualAnchor;
+  const cursor = state.cursor;
+  const snap = {
+    mode: state.mode as 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK',
+    anchor: { ...anchor },
+    cursor: { ...cursor },
+  };
+  const nextLines = [...state.lines];
+  let targetPos: CursorPosition;
+
+  if (state.mode === 'VISUAL_BLOCK') {
+    const minLine = Math.min(anchor.line, cursor.line);
+    const maxLine = Math.max(anchor.line, cursor.line);
+    const minCol = Math.min(anchor.col, cursor.col);
+    const maxCol = Math.max(anchor.col, cursor.col);
+    const isEol = Boolean(state.visualBlockEndOfLine);
+
+    for (let l = minLine; l <= maxLine; l++) {
+      const lineText = nextLines[l] ?? '';
+      if (lineText.length <= minCol) continue;
+      const endCol = isEol ? lineText.length - 1 : Math.min(maxCol, lineText.length - 1);
+      const count = endCol - minCol + 1;
+      if (count > 0) {
+        nextLines[l] = lineText.slice(0, minCol) + ch.repeat(count) + lineText.slice(endCol + 1);
+      }
+    }
+    targetPos = { line: minLine, col: minCol };
+  } else if (state.mode === 'VISUAL_LINE') {
+    const minLine = Math.min(anchor.line, cursor.line);
+    const maxLine = Math.max(anchor.line, cursor.line);
+    for (let l = minLine; l <= maxLine; l++) {
+      const lineText = nextLines[l] ?? '';
+      if (lineText.length > 0) {
+        nextLines[l] = ch.repeat(lineText.length);
+      }
+    }
+    targetPos = { line: minLine, col: 0 };
+  } else {
+    const { start, end } = getOrderedRange(anchor, cursor);
+    for (let l = start.line; l <= end.line; l++) {
+      const lineText = nextLines[l] ?? '';
+      if (lineText.length === 0) continue;
+      const fromCol = l === start.line ? Math.min(start.col, lineText.length - 1) : 0;
+      const toCol = l === end.line ? Math.min(end.col, lineText.length - 1) : lineText.length - 1;
+      const count = toCol - fromCol + 1;
+      if (count > 0) {
+        nextLines[l] = lineText.slice(0, fromCol) + ch.repeat(count) + lineText.slice(toCol + 1);
+      }
+    }
+    targetPos = start;
+  }
+
+  return {
+    ...stateWithSnapshot,
+    lines: nextLines,
+    mode: 'NORMAL',
+    cursor: clampCursor(nextLines, targetPos, 'NORMAL'),
+    visualAnchor: undefined,
+    visualBlockEndOfLine: undefined,
+    pendingKeys: undefined,
+    activeRegister: undefined,
+    lastVisualSelection: snap,
+  };
+}

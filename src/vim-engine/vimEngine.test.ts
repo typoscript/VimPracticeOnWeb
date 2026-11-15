@@ -1521,3 +1521,38 @@ describe('Vim Engine - Extended Text Objects Integration in handleKey', () => {
     expect(state.lines[0]).toBe('orange melon');
   });
 });
+
+describe('Vim Engine - Visual Replace (v/V/Ctrl-v r{char})', () => {
+  it('VISUAL 모드 r{char}: 선택 영역 문자를 단일 문자로 일괄 치환하고 시작 위치로 이동한다', () => {
+    let state = createState(['abcdef', '123'], 0, 2);
+    for (const k of ['v', 'l', 'l', 'r', 'x']) {
+      state = handleKey(state, k);
+    }
+    expect(state.mode).toBe('NORMAL');
+    expect(state.lines).toEqual(['abxxxf', '123']);
+    expect(state.cursor).toEqual({ line: 0, col: 2 });
+
+    state = handleKey(state, 'u');
+    expect(state.lines).toEqual(['abcdef', '123']);
+  });
+
+  it('VISUAL_LINE 모드 r{char}: 선택된 줄의 모든 문자를 치환한다', () => {
+    let state = createState(['abc', '12'], 0, 0);
+    for (const k of ['V', 'j', 'r', 'x']) {
+      state = handleKey(state, k);
+    }
+    expect(state.mode).toBe('NORMAL');
+    expect(state.lines).toEqual(['xxx', 'xx']);
+    expect(state.cursor).toEqual({ line: 0, col: 0 });
+  });
+
+  it('VISUAL_BLOCK 모드 r{char}: 사각형 블록 내 문자만 치환하고 짧은 줄은 패딩하지 않는다', () => {
+    let state = createState(['abcdef', 'xy', '123456'], 0, 1);
+    for (const k of ['Ctrl-v', '2', 'j', '2', 'l', 'r', '*']) {
+      state = handleKey(state, k);
+    }
+    expect(state.mode).toBe('NORMAL');
+    expect(state.lines).toEqual(['a***ef', 'x*', '1***56']);
+    expect(state.cursor).toEqual({ line: 0, col: 1 });
+  });
+});

@@ -10,6 +10,7 @@ import {
   startVisualBlockInsert,
   swapVisualCursorAnchor,
   executeGCtrlG,
+  replaceVisualChars,
 } from './visual';
 import {
   goToDeclaration,
@@ -90,9 +91,15 @@ export function handleVisualModeKey(
     };
   }
 
-  // Visual 모드 vim-surround (S{char})
+  // Visual 모드 vim-surround (S{char}) 및 선택 영역 일괄 문자 치환 (r{char})
   if (state.pendingKeys === 'S') {
     return executeVisualSurround(state, key);
+  }
+  if (state.pendingKeys === 'r') {
+    if (key === 'Space' || key.length === 1) {
+      return replaceVisualChars(state, key);
+    }
+    return ringBell({ ...state, pendingKeys: undefined });
   }
   if (key === 'S' && !state.pendingKeys) {
     return { ...state, pendingKeys: 'S' };
@@ -508,6 +515,10 @@ export function handleVisualModeKey(
     if (key === 'c') {
       return startVisualBlockInsert(state, 'c');
     }
+  }
+
+  if (key === 'r' && !state.pendingKeys) {
+    return { ...state, pendingKeys: 'r' };
   }
 
   // ':' 키: VISUAL 선택 영역 범위를 포함하여 커맨드라인 모드 진입 (:'<,'>)

@@ -3827,4 +3827,96 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 99,
+    title: '레슨 99: 덮어쓰기 모드(R), [count]r & 비주얼 블록 치환(Ctrl-v r) 마스터',
+    description:
+      '글자를 지우고 다시 쓰는 대신 기존 자리에 정확히 1:1로 덮어쓰는 Replace 모드(R), 반복 카운트 단일 치환([count]r), 그리고 선택 영역 전체를 단 한 글자로 덮는 Visual r{char} 마스킹 기법을 익혀 보세요.\n\n1) 덮어쓰기 모드 (R) & [count]r:\n   - Normal 모드에서 R 을 누르면 REPLACE 모드로 진입해 입력한 글자마다 기존 문자를 1:1로 덮어씁니다. (Backspace 로 원본 복구, Esc 로 복귀)\n   - [count]r{char} (예: 3r0) 는 커서부터 지정 개수만큼을 한 글자로 즉시 치환합니다.\n\n2) Visual / Visual Block 일괄 치환 (v / V / Ctrl-v + r{char}):\n   - 선택 영역을 잡은 뒤 r{char} 를 누르면 선택된 모든 문자(Visual Block 은 사각형 영역 전체)를 해당 문자로 한 번에 치환해 민감한 키·비밀번호를 1초 만에 마스킹할 수 있습니다.\n\n미션:\n1. 1번째 줄의 "1" 위(f1)에서 R 2_NEW<Esc> 로 "1_OLD" 를 "2_NEW" 로 덮어쓰세요.\n2. f9 로 첫 번째 9 위에 이동한 뒤 3r0 으로 "999" 를 "000" 으로 한 번에 치환하세요.\n3. j F_ l 로 2번째 줄의 "9" 로 내려간 뒤 Ctrl-v j 3l r* 를 눌러 두 API 키의 뒷자리(9876, 1234)를 모두 "****" 로 마스킹하세요!',
+    hint: 'f1 R 2_NEW<Esc> → f9 3r0 → j F_ l Ctrl-v j 3l r*',
+    par: 26,
+    optimalKeys: [
+      'f', '1', 'R', '2', '_', 'N', 'E', 'W', 'Escape',
+      'f', '9', '3', 'r', '0',
+      'j', 'F', '_', 'l', 'Ctrl-v', 'j', '3', 'l', 'r', '*',
+    ],
+    primaryFilename: 'secrets.ts',
+    initialLines: [
+      'const code = "V1_OLD_999";',
+      'const keyA = "sk_9876";',
+      'const keyB = "sk_1234";',
+    ],
+    targetLines: [
+      'const code = "V2_NEW_000";',
+      'const keyA = "sk_****";',
+      'const keyB = "sk_****";',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const target = [
+        'const code = "V2_NEW_000";',
+        'const keyA = "sk_****";',
+        'const keyB = "sk_****";',
+      ];
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines.length === target.length &&
+        state.lines.every((l, idx) => l === target[idx])
+      );
+    },
+  },
+  {
+    id: 100,
+    title: '레슨 100: [대단원] 정규식 캡처·매크로·vim-surround·다중 파일 배치 종합 마스터 챌린지',
+    description:
+      '축하합니다! 드디어 100강 마지막 졸업 미션입니다. 지금까지 익힌 정규식 치환(\\(\\)/\\u), 매크로(qq/@q), vim-surround(cs), 숫자 증가(Ctrl-a), 그리고 다중 버퍼 일괄 리팩토링(:vimgrep + :cdo + Ctrl-^)을 하나의 흐름으로 결합해 릴리스 코드를 완성하세요!\n\n미션:\n1. :%s/_\\([a-z]\\)/\\u\\1/g<Enter> 로 모든 snake_case 변수명(service_name, worker_name, target_env)을 camelCase 로 변환하세요.\n2. 2G 로 내려간 뒤 qq f\' cs\'" f1 Ctrl-a j 0 q 로 매크로를 녹화해 \'auth-v1\' → "auth-v2" 로 바꾸고, @q 로 다음 줄(\'queue-v1\' → "queue-v2")까지 자동 변환하세요.\n3. :vimgrep /staging/ *<Enter> 로 release.ts 와 deploy.ts 를 모두 검색한 뒤, :cdo s/staging/production/g<Enter> 로 두 파일의 "staging" 을 모두 "production" 으로 바꾸고 Ctrl-^ 로 원래 파일(release.ts)로 복귀해 졸업하세요!',
+    hint: ':%s/_\\([a-z]\\)/\\u\\1/g<Enter> → 2G qq f\' cs\'" f1 Ctrl-a j 0 q @q → :vimgrep /staging/ *<Enter> → :cdo s/staging/production/g<Enter> → Ctrl-^',
+    par: 95,
+    optimalKeys: [
+      ':', '%', 's', '/', '_', '\\', '(', '[', 'a', '-', 'z', ']', '\\', ')', '/', '\\', 'u', '\\', '1', '/', 'g', 'Enter',
+      '2', 'G', 'q', 'q', 'f', "'", 'c', 's', "'", '"', 'f', '1', 'Ctrl-a', 'j', '0', 'q', '@', 'q',
+      ':', 'v', 'i', 'm', 'g', 'r', 'e', 'p', ' ', '/', 's', 't', 'a', 'g', 'i', 'n', 'g', '/', ' ', '*', 'Enter',
+      ':', 'c', 'd', 'o', ' ', 's', '/', 's', 't', 'a', 'g', 'i', 'n', 'g', '/', 'p', 'r', 'o', 'd', 'u', 'c', 't', 'i', 'o', 'n', '/', 'g', 'Enter',
+      'Ctrl-^',
+    ],
+    primaryFilename: 'release.ts',
+    secondaryFilename: 'deploy.ts',
+    initialLines: [
+      '// [Lesson 100] Vim Grandmaster Challenge',
+      "const service_name = 'auth-v1';",
+      "const worker_name = 'queue-v1';",
+      'const target_env = "staging";',
+    ],
+    secondaryLines: [
+      'export const deployEnv = "staging";',
+    ],
+    targetLines: [
+      '// [Lesson 100] Vim Grandmaster Challenge',
+      'const serviceName = "auth-v2";',
+      'const workerName = "queue-v2";',
+      'const targetEnv = "production";',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      if (state.mode !== 'NORMAL') return false;
+      const target = [
+        '// [Lesson 100] Vim Grandmaster Challenge',
+        'const serviceName = "auth-v2";',
+        'const workerName = "queue-v2";',
+        'const targetEnv = "production";',
+      ];
+      const s = ensureBuffers(state);
+      const releaseBuf = s.buffers?.find((b) => b.name === 'release.ts' || b.id === 1);
+      const deployBuf = s.buffers?.find((b) => b.name === 'deploy.ts' || b.id === 2);
+      const isBackOnRelease = s.currentBufferId === 1 || s.primaryFilename === 'release.ts';
+      const isReleaseMatched =
+        Boolean(releaseBuf) &&
+        releaseBuf!.lines.length === target.length &&
+        releaseBuf!.lines.every((l, idx) => l === target[idx]);
+      const isDeployMatched =
+        deployBuf?.lines.length === 1 &&
+        deployBuf.lines[0] === 'export const deployEnv = "production";';
+
+      return isBackOnRelease && isReleaseMatched && isDeployMatched;
+    },
+  },
 ];

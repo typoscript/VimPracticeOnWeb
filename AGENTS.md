@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 142개 테스트 파일, 1,866개 테스트 100% 통과 필수)*
+  *(현재 142개 테스트 파일, 1,871개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 98)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 100)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -152,6 +152,7 @@
 - **특수 마크 점프(`''`, `` `` ``, `'.`, `'^`, `'[`/`']`, `'<`/`'>`) & `:set nrformats` (레슨 97, `src/vim-engine/marks.ts`, `lineOperators.ts`, `setEngine.ts`, `vimEngine.ts`, `normalMode.ts`, `visualMode.ts`)**: `recordJump`·`lastInsertPos`·`lastVisualSelection` 및 버퍼 변경/복사 경계(`computeSpecialMarksUpdate`·`lastBracketMarks`)를 기반으로 Normal/Visual/연산자 결합·`:marks` 에서 특수 마크를 모두 지원하고, `:set nrformats`(`nf`, `=`, `+=`, `-=`, `^=`, `&`, `?`, `E474` 검증)를 통해 `Ctrl-a`/`Ctrl-x` 및 Visual `g Ctrl-a`/`g Ctrl-x` 의 16진수(`hex`)·2진수(`bin`)·8진수(`octal`)·알파벳(`alpha`)·부호없는 정수(`unsigned`) 증감을 구현했습니다.
 - **불가시 문자 시각화(`:set list`/`listchars`) & 명령행·검색줄 `<C-r>` 컨텍스트 삽입 (레슨 98, `src/vim-engine/setEngine.ts`, `cmdlineEdit.ts`, `cmdlineMode.ts`, `searchMode.ts`, `registers.ts`, `Editor.tsx`)**: `:set list`/`nolist` 및 `:set listchars`(`lcs`, `=`/`+=`/`-=`/`^=`/`&`/`?`, `E474`/`E1511` 검증, `parseListchars`)를 기반으로 `Editor.tsx`에서 `tab`·`trail`·`space`·`lead`·`nbsp`·`eol` 불가시 문자를 렌더링하고, `:` 명령행과 `/`/`?` 검색줄에서 공통 `handleCmdlineCtrlRStep`을 통해 `Ctrl-r Ctrl-w`(`<cword>`)·`Ctrl-r Ctrl-a`(`<cWORD>`)·`Ctrl-r Ctrl-l`(현재 줄)·`Ctrl-r Ctrl-f`(`<cfile>`)·`Ctrl-r {reg}`(`"#` 대안 파일명 포함)·`Ctrl-r =` 수식 삽입을 지원합니다.
 - **대형 코어·앱 모듈 분해 및 비순환 번들 계층화 (`normalZPrefix.ts`/`normalBracketPrefix.ts`/`normalGPrefix.ts`, `src/hooks/`, `vite.config.ts`, `test/bundleChunks.test.ts`)**: `normalMode.ts`(2,474→1,976줄)에서 `z`·`[`/`]`·`g` 접두 및 연산자 핸들러를 단방향 헬퍼로 분리하고, `App.tsx`(2,578→1,991줄)의 워크스페이스·하드코어/키매핑·키보드/IME·고스트 리플레이 로직을 `src/hooks/`(`useEditorWorkspaceHandlers`, `useHardcoreAndKeymaps`, `useVimKeyboardInput`, `useGhostReplay`)로 추출했습니다. 아울러 `vite.config.ts`에 비순환 `vim-engine-core` 청크를 신설해 `vim-engine` 청크 크기를 `487.92 kB` → `411.61 kB` 로 경량화(88 kB+ 여유)하고 `test/bundleChunks.test.ts`로 계층 무결성을 상시 검증합니다.
+- **Visual 치환(`v_r`/`V_r`/`Ctrl-v r`) 및 튜토리얼 100강 대단원 완성 (레슨 99 ~ 100, `src/vim-engine/visual.ts`, `visualMode.ts`, `missions.ts`)**: `replaceVisualChars`로 Visual/Visual Line/Visual Block 선택 영역 일괄 문자 치환(`v`/`V`/`Ctrl-v` + `r{char}`, Undo/`lastVisualSelection` 호환, 짧은 줄 비패딩 Neovim 일치)을 구현하고, `R` 덮어쓰기 모드·`[count]r`·`Ctrl-v r*` 마스킹을 다루는 **레슨 99** 및 정규식 캡처·매크로·`vim-surround`·`:vimgrep`/`:cdo`/`Ctrl-^` 를 통합한 100강 대단원 졸업 미션 **레슨 100** 을 추가해 전체 커리큘럼 100강을 완성했습니다.
 
 ---
 
