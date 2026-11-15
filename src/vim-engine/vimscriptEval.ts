@@ -28,6 +28,7 @@ import {
 } from './vimscriptValues';
 import { createBuiltinRegistry, MutationResult } from './vimscriptBuiltins';
 import { Token, tokenize } from './vimscriptLexer';
+import { readOptionForScript, writeOptionForScript } from './setOptionsCore';
 
 export {
   VimScriptError,
@@ -63,6 +64,11 @@ export interface LValue {
 
 /** 대입 대상의 현재 값을 읽습니다. */
 export function readLValue(ctx: EvalContext, lv: LValue): VimScriptValue {
+  if (lv.base.startsWith('&')) {
+    const val = readOptionForScript(ctx.state, lv.base);
+    if (val === null) throw new VimScriptError(msg('E113: 알 수 없는 옵션입니다: {opt}', { opt: lv.base.slice(1) }));
+    return val;
+  }
   let value: VimScriptValue = lv.base.startsWith('@') ? readRegister(ctx.state, lv.base[1]) : readVariable(ctx, lv.base);
   for (const key of lv.path) value = getIn(value, key);
   return value;
@@ -70,6 +76,17 @@ export function readLValue(ctx: EvalContext, lv: LValue): VimScriptValue {
 
 /** 대입 대상에 값을 씁니다. (l[0] = x, d.key = x 는 리스트·딕셔너리를 복사해 바꾼 뒤 변수에 다시 저장) */
 export function writeLValue(ctx: EvalContext, lv: LValue, value: VimScriptValue): void {
+  if (lv.base.startsWith('&')) {
+    if (lv.path.length > 0) throw new VimScriptError(msg('E475: 잘못된 대입 대상입니다: {source}', { source: lv.base }));
+    const nextState = writeOptionForScript(ctx.state, lv.base, {
+      num: toNumber(value),
+      str: toVimString(value),
+      truthy: isTruthy(value),
+    });
+    if (!nextState) throw new VimScriptError(msg('E113: 알 수 없는 옵션입니다: {opt}', { opt: lv.base.slice(1) }));
+    ctx.state = nextState;
+    return;
+  }
   if (lv.base.startsWith('@')) {
     if (lv.path.length > 0) throw new VimScriptError(msg('E15: 레지스터에는 인덱스를 쓸 수 없습니다: {base}', { base: lv.base }));
     const reg = lv.base[1] === '"' ? '"' : lv.base[1].toLowerCase();
@@ -144,6 +161,7 @@ class Evaluator {
     const t = this.peek();
     let base: string;
     if (t.type === 'reg') base = `@${t.value}`;
+    else if (t.type === 'opt') base = t.value;
     else if (t.type === 'name') base = t.value;
     else throw new VimScriptError(msg('E475: 잘못된 대입 대상입니다: {source}', { source: this.source }));
     this.pos++;
@@ -470,6 +488,12 @@ class Evaluator {
     if (t.type === 'reg') {
       this.pos++;
       return readRegister(this.ctx.state, t.value);
+    }
+    if (t.type === 'opt') {
+      this.pos++;
+      const val = readOptionForScript(this.ctx.state, t.value);
+      if (val === null) throw new VimScriptError(msg('E113: 알 수 없는 옵션입니다: {opt}', { opt: t.value.slice(1) }));
+      return val;
     }
     if (t.type === 'op' && t.value === '(') {
       this.pos++;

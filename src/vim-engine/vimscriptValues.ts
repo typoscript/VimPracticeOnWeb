@@ -1,6 +1,7 @@
 import { VimEditorState, VimScriptDict, VimScriptFuncref, VimScriptValue } from './types';
 import { compileVimRegex } from './vimRegex';
 import { msg } from './messages';
+import { getEffectiveCwd } from './vfs';
 
 /**
  * Vim script 표현식 평가기 (eval / Function 미사용, 재귀 하강 파서)
@@ -305,4 +306,148 @@ export function deleteVariable(ctx: EvalContext, name: string, force: boolean): 
     delete globals[key];
     ctx.state = { ...ctx.state, globalVars: globals };
   }
+}
+
+/** :redir 세션이 활성화된 경우 출력 문자열을 대상 변수 또는 레지스터에 추가합니다. */
+export function appendRedirText(state: VimEditorState, text: string): VimEditorState {
+  const session = state.redirSession;
+  if (!session) return state;
+  if (session.target.startsWith('@')) {
+    const reg = session.target[1] === '"' ? '"' : session.target[1].toLowerCase();
+    const prev = readRegister(state, reg);
+    return {
+      ...state,
+      registers: {
+        ...(state.registers ?? {}),
+        [reg]: { type: 'char', content: `${prev}\n${text}` },
+      },
+    };
+  }
+  const key = session.target.replace(/^g:/, '');
+  const prevRaw = state.globalVars?.[key];
+  const prev = typeof prevRaw === 'string' ? prevRaw : prevRaw !== undefined ? toVimString(prevRaw) : '';
+  return {
+    ...state,
+    globalVars: {
+      ...(state.globalVars ?? {}),
+      [key]: `${prev}\n${text}`,
+    },
+  };
+}
+
+/** :redir => g:var / :redir =>> g:var / :redir @a> / :redir END 명령을 처리합니다. */
+export function handleRedirCommand(state: VimEditorState, rawArg: string): VimEditorState {
+  const arg = rawArg.trim();
+  const baseReturn = (next: VimEditorState): VimEditorState => ({
+    ...next,
+    mode: 'NORMAL',
+    visualAnchor: undefined,
+    commandBuffer: undefined,
+    commandType: undefined,
+  });
+
+  if (/^END$/i.test(arg)) {
+    return baseReturn({ ...state, redirSession: null });
+  }
+
+  const varMatch = arg.match(/^=>(>?)\s*([gblwts]:)?([A-Za-z_][A-Za-z0-9_]*)$/);
+  if (varMatch) {
+    const append = varMatch[1] === '>';
+    const scope = varMatch[2] ?? '';
+    const name = varMatch[3];
+    const key = scope && scope !== 'g:' ? `${scope}${name}` : name;
+    const prevVars = state.globalVars ?? {};
+    const nextVars = append ? prevVars : { ...prevVars, [key]: '' };
+    return baseReturn({
+      ...state,
+      globalVars: nextVars,
+      redirSession: { target: key, append },
+    });
+  }
+
+  const regMatch = arg.match(/^@([a-zA-Z"])>(>?)$/);
+  if (regMatch) {
+    const rawReg = regMatch[1];
+    const isUpperAppend = rawReg >= 'A' && rawReg <= 'Z';
+    const append = regMatch[2] === '>' || isUpperAppend;
+    const reg = rawReg === '"' ? '"' : rawReg.toLowerCase();
+    const nextRegs = append
+      ? state.registers
+      : { ...(state.registers ?? {}), [reg]: { type: 'char' as const, content: '' } };
+    return baseReturn({
+      ...state,
+      registers: nextRegs,
+      redirSession: { target: `@${reg}`, append },
+    });
+  }
+
+  return baseReturn({
+    ...state,
+    bell: true,
+    commandMessage: msg('E475: 잘못된 인수입니다: {arg}', { arg }),
+  });
+}
+
+function extractTokenAtCursor(line: string, col: number, charRe: RegExp): string {
+  if (!line) return '';
+  let idx = Math.max(0, Math.min(col, line.length - 1));
+  if (!charRe.test(line[idx])) {
+    while (idx < line.length && !charRe.test(line[idx])) idx++;
+    if (idx >= line.length) return '';
+  }
+  let start = idx;
+  let end = idx;
+  while (start > 0 && charRe.test(line[start - 1])) start--;
+  while (end + 1 < line.length && charRe.test(line[end + 1])) end++;
+  return line.slice(start, end + 1);
+}
+
+function applyPathModifiers(val: string, mods: string, state: VimEditorState): string {
+  let out = val;
+  for (const m of mods.matchAll(/:([phtre])/g)) {
+    if (!out) break;
+    const mod = m[1];
+    if (mod === 'p') {
+      if (!out.startsWith('/')) out = `${getEffectiveCwd(state).replace(/\/$/, '')}/${out.replace(/^\.\//, '')}`;
+    } else if (mod === 'h') {
+      const idx = out.lastIndexOf('/');
+      out = idx > 0 ? out.slice(0, idx) : idx === 0 ? '/' : '.';
+    } else if (mod === 't') {
+      const idx = out.lastIndexOf('/');
+      out = idx >= 0 ? out.slice(idx + 1) : out;
+    } else if (mod === 'r') {
+      const slash = out.lastIndexOf('/');
+      const dot = out.lastIndexOf('.');
+      if (dot > slash && dot > 0) out = out.slice(0, dot);
+    } else if (mod === 'e') {
+      const slash = out.lastIndexOf('/');
+      const dot = out.lastIndexOf('.');
+      out = dot > slash && dot > 0 ? out.slice(dot + 1) : '';
+    }
+  }
+  return out;
+}
+
+/** expand('%' | '#' | '<cword>' | '<cWORD>' | '<cfile>' ...) 및 :p/:h/:t/:r/:e 모디파이어를 평가합니다. */
+export function expandScriptExpr(state: VimEditorState, raw: string): string {
+  const m = raw.match(/^(%|#|<(?:cword|cWORD|cfile|slnum|sflnum)>)((?::[phtre])*)$/);
+  if (!m) return raw.startsWith('$') || raw.startsWith('<') ? '' : raw;
+  const [, token, mods] = m;
+  let base = '';
+  if (token === '%') {
+    base = state.primaryFilename && state.primaryFilename !== '[No Name]' ? state.primaryFilename : '';
+  } else if (token === '#') {
+    const altId = state.alternateBufferId;
+    const alt = altId ? state.buffers?.find((b) => b.id === altId)?.name : state.secondaryFilename;
+    base = alt && alt !== '[No Name]' ? alt : '';
+  } else if (token === '<cword>') {
+    base = extractTokenAtCursor(state.lines[state.cursor.line] ?? '', state.cursor.col, /[A-Za-z0-9_]/);
+  } else if (token === '<cWORD>') {
+    base = extractTokenAtCursor(state.lines[state.cursor.line] ?? '', state.cursor.col, /\S/);
+  } else if (token === '<cfile>') {
+    base = extractTokenAtCursor(state.lines[state.cursor.line] ?? '', state.cursor.col, /[A-Za-z0-9_./~-]/);
+  } else if (token === '<slnum>' || token === '<sflnum>') {
+    base = String(state.cursor.line + 1);
+  }
+  return mods ? applyPathModifiers(base, mods, state) : base;
 }

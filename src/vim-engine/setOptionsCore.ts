@@ -359,3 +359,100 @@ export function tokenizeSetArgs(rawArgs: string): string[] {
   }
   return tokens;
 }
+
+const NUMERIC_OPTION_KEYS = new Set<keyof VimOptions>([
+  'tabstop',
+  'shiftwidth',
+  'textwidth',
+  'scrolloff',
+  'sidescroll',
+  'sidescrolloff',
+  'foldlevel',
+]);
+
+const BOOLEAN_OPTION_KEYS = new Set<keyof VimOptions>([
+  'number',
+  'relativenumber',
+  'ignorecase',
+  'smartcase',
+  'hlsearch',
+  'wrap',
+  'cursorline',
+  'list',
+  'wildmenu',
+  'expandtab',
+  'spell',
+  'syntax',
+  'scrollbind',
+]);
+
+/** '&nu', '&g:sw', '&l:wrap' 문자열에서 스코프와 정규화된 옵션 키를 해석합니다. */
+export function parseOptionRef(raw: string): { scope: 'default' | 'g' | 'l'; key: keyof VimOptions } | null {
+  const m = raw.trim().match(/^&(?:([gl]):)?([A-Za-z_][A-Za-z0-9_]*)$/);
+  if (!m) return null;
+  const scope = (m[1] as 'g' | 'l' | undefined) ?? 'default';
+  const key = OPTION_ALIASES[m[2]];
+  if (!key) return null;
+  return { scope, key };
+}
+
+/** &option 값을 Vim script 표현식 값(불리언 1/0, 숫자, 문자열)으로 읽습니다. */
+export function readOptionForScript(state: VimEditorState, raw: string): number | string | null {
+  const parsed = parseOptionRef(raw);
+  if (!parsed) return null;
+  const { scope, key } = parsed;
+  const curId = state.currentBufferId ?? 1;
+  const rawVal =
+    scope === 'l'
+      ? state.bufferLocalOptions?.[curId]?.[key] ?? state.options?.[key] ?? DEFAULT_VIM_OPTIONS[key]
+      : scope === 'g'
+        ? state.globalOptions?.[key] ?? state.options?.[key] ?? DEFAULT_VIM_OPTIONS[key]
+        : state.options?.[key] ?? state.globalOptions?.[key] ?? DEFAULT_VIM_OPTIONS[key];
+
+  if (BOOLEAN_OPTION_KEYS.has(key)) {
+    return rawVal ? 1 : 0;
+  }
+  if (NUMERIC_OPTION_KEYS.has(key)) {
+    return typeof rawVal === 'number' ? rawVal : Number(rawVal ?? 0) || 0;
+  }
+  return rawVal === undefined ? '' : String(rawVal);
+}
+
+/** :let &option = value 결과를 에디터 옵션 상태에 반영합니다. */
+export function writeOptionForScript(
+  state: VimEditorState,
+  raw: string,
+  coerced: { num: number; str: string; truthy: boolean }
+): VimEditorState | null {
+  const parsed = parseOptionRef(raw);
+  if (!parsed) return null;
+  const { scope, key } = parsed;
+  const nextVal: VimOptions[keyof VimOptions] = BOOLEAN_OPTION_KEYS.has(key)
+    ? (coerced.truthy as VimOptions[typeof key])
+    : NUMERIC_OPTION_KEYS.has(key)
+      ? (coerced.num as VimOptions[typeof key])
+      : (coerced.str as VimOptions[typeof key]);
+
+  const baseGlobal = { ...DEFAULT_VIM_OPTIONS, ...(state.globalOptions ?? state.options ?? {}) };
+  const baseEffective = { ...DEFAULT_VIM_OPTIONS, ...(state.options ?? {}) };
+  const curId = state.currentBufferId ?? 1;
+
+  if (scope === 'g') {
+    const nextGlobal = { ...baseGlobal, [key]: nextVal };
+    return { ...state, globalOptions: nextGlobal, options: { ...baseEffective, [key]: nextVal } };
+  }
+  if (scope === 'l') {
+    const prevLocal = state.bufferLocalOptions?.[curId] ?? {};
+    return {
+      ...state,
+      bufferLocalOptions: { ...(state.bufferLocalOptions ?? {}), [curId]: { ...prevLocal, [key]: nextVal } },
+      options: { ...baseEffective, [key]: nextVal },
+    };
+  }
+
+  return {
+    ...state,
+    globalOptions: { ...baseGlobal, [key]: nextVal },
+    options: { ...baseEffective, [key]: nextVal },
+  };
+}

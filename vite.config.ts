@@ -33,12 +33,12 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'bracketMatch.ts',
       'wordMotion.ts',
       'vfs.ts',
+      'setOptionsCore.ts',
     ],
   },
   {
     name: 'vim-engine-services',
     files: [
-      'setOptionsCore.ts',
       'syntaxEngine.ts',
       'ftpluginEngine.ts',
       'setEngine.ts',

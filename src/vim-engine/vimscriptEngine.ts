@@ -17,6 +17,7 @@ import {
   unsetLValue,
   writeLValue,
 } from './vimscriptEval';
+import { appendRedirText } from './vimscriptValues';
 import { pushUndoSnapshot } from './operators';
 import { msg } from './messages';
 import {
@@ -403,8 +404,14 @@ function runScriptCommand(ctx: EvalContext, line: string, runEx: ExRunner): bool
   }
 
   if (cmd === 'ec' || cmd === 'echo' || cmd === 'echom' || cmd === 'echomsg') {
-    const values = evaluateVimScriptList(rest, ctx);
-    ctx.state = { ...ctx.state, commandMessage: values.map(displayValue).join(' ') };
+    const text = evaluateVimScriptList(rest, ctx).map(displayValue).join(' ');
+    const isHistory = cmd === 'echom' || cmd === 'echomsg';
+    const nextHistory = isHistory
+      ? [...(ctx.state.messageHistory ?? []), text].slice(-200)
+      : ctx.state.messageHistory;
+    let nextState: VimEditorState = { ...ctx.state, commandMessage: text, messageHistory: nextHistory };
+    if (nextState.redirSession) nextState = appendRedirText(nextState, text);
+    ctx.state = nextState;
     return true;
   }
 

@@ -407,4 +407,7 @@ export const EN_MESSAGES: Record<string, string> = {
   "{count}개 버퍼를 모두 저장했습니다 (:wall)": "{count} buffer(s) written (:wall)",
   "{count}개 줄을 하나로 합쳤습니다": "{count} lines joined",
   "{linesCount}개 줄을 {dir} {times}회 들여썼습니다": "{linesCount} line(s) {dir}ed {times} time(s)",
+  "E113: 알 수 없는 옵션입니다: {opt}": "E113: Unknown option: {opt}",
+  "E475: 잘못된 인수입니다: {arg}": "E475: Invalid argument: {arg}",
+  "메시지 기록이 비어 있습니다": "No messages in history",
 };

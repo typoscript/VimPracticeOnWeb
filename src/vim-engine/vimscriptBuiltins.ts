@@ -19,7 +19,9 @@ import {
   getIn,
   removeIn,
   readVariable,
+  expandScriptExpr,
 } from './vimscriptValues';
+import { OPTION_ALIASES } from './setOptionsCore';
 
 // ---------------------------------------------------------------------------
 // 내장 함수
@@ -57,6 +59,25 @@ function resolveLineArg(state: VimEditorState, arg: VimScriptValue): number {
 }
 
 /** Funcref 또는 람다를 호출합니다 */
+const SUPPORTED_FEATURES = new Set([
+  'vim', 'nvim', 'eval', 'syntax', 'folding', 'spell', 'quickfix', 'loclist',
+  'diff', 'wildmenu', 'autocmd', 'user_commands', 'lambda', 'funcref',
+  'cmdline_compl', 'multi_byte', 'timers',
+]);
+
+const KNOWN_BUILTIN_COMMANDS = new Set([
+  'e', 'edit', 'enew', 'ene', 'w', 'write', 'wa', 'wall', 'q', 'quit', 'qa', 'qall',
+  'wq', 'wqa', 'wqall', 'x', 'xa', 'xall', 'saveas', 'sav', 'f', 'file', 'files',
+  'ls', 'buffers', 'b', 'buffer', 'bn', 'bnext', 'bp', 'bprev', 'bd', 'bdelete',
+  'bun', 'bunload', 'bw', 'bwipeout', 'sp', 'split', 'vsp', 'vsplit', 'tabnew',
+  'cd', 'chdir', 'lcd', 'lchdir', 'pwd', 'set', 'se', 'setlocal', 'setglobal',
+  'let', 'unlet', 'ec', 'echo', 'echom', 'echomsg', 'execute', 'exe', 'call',
+  'function', 'redir', 'mes', 'messages', 'silent', 'keeppatterns', 'noautocmd',
+  's', 'substitute', 'g', 'global', 'v', 'vglobal', 'j', 'join', 'p', 'print',
+  'nu', 'number', 'l', 'list', 'd', 'delete', 'y', 'yank', 'pu', 'put', 'norm',
+  'normal', 'sort', 'r', 'read', 'retab', 'm', 'move', 't', 'co', 'copy', 'help',
+  'copen', 'vimgrep', 'au', 'autocmd', 'command', 'marks', 'jumps', 'reg', 'registers',
+]);
 
 /**
  * evaluateExpr 콜백을 주입받아 순환 참조 없이 Vim script 내장 함수 레지스트리와 Funcref 실행기를 생성합니다.
@@ -436,6 +457,17 @@ export function createBuiltinRegistry(
       fn: (ctx, [s]) => {
         const name = toVimString(s);
         if (name.startsWith('*')) return ctx.state.userFunctions?.[name.slice(1)] || BUILTINS[name.slice(1)] ? 1 : 0;
+        if (name.startsWith('&') || name.startsWith('+')) {
+          const opt = name.slice(1).replace(/^[gl]:/, '');
+          return OPTION_ALIASES[opt] ? 1 : 0;
+        }
+        if (name.startsWith(':')) {
+          const cmd = name.slice(1);
+          return ctx.state.userCommands?.[cmd] || KNOWN_BUILTIN_COMMANDS.has(cmd) ? 2 : 0;
+        }
+        if (name.startsWith('@')) {
+          return name.length === 2 && /^[a-zA-Z0-9"_+*/%.:=-]$/.test(name[1]) ? 1 : 0;
+        }
         try {
           readVariable(ctx, name);
           return 1;
@@ -443,6 +475,16 @@ export function createBuiltinRegistry(
           return 0;
         }
       },
+    },
+    has: {
+      min: 1,
+      max: 1,
+      fn: (_ctx, [feat]) => (SUPPORTED_FEATURES.has(toVimString(feat).toLowerCase()) ? 1 : 0),
+    },
+    expand: {
+      min: 1,
+      max: 3,
+      fn: (ctx, [expr]) => expandScriptExpr(ctx.state, toVimString(expr)),
     },
     get: {
       min: 2,

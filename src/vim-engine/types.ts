@@ -679,6 +679,12 @@ export interface VimEditorState {
   lspSymbols?: Record<string, LspHoverSymbol>;
   /** 현재 열린 LSP 호버 플로팅 창 (K) */
   lspHover?: LspHoverState | null;
+  /** :echom / :echomsg 로 기록된 메시지 이력 (:messages 조회용) */
+  messageHistory?: string[];
+  /** :redir 출력 리디렉션 세션 (:redir => g:var / :redir END) */
+  redirSession?: { target: string; append: boolean } | null;
+  /** :noautocmd 모디파이어 실행 중 자동 명령 억제 여부 */
+  noautocmdSuppressed?: boolean;
 }
 
 export type LspDiagnosticSeverity = 'error' | 'warning' | 'info' | 'hint';

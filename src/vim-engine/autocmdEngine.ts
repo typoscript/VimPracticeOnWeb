@@ -453,6 +453,7 @@ export function triggerAutocmd(
   },
   keyRunner?: (s: VimEditorState, cmd: string) => VimEditorState
 ): VimEditorState {
+  if (state.noautocmdSuppressed) return state;
   const autocmds = state.autocmds;
   if (!autocmds || autocmds.length === 0) return state;
 

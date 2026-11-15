@@ -6,6 +6,7 @@ export type Token = (
   | { type: 'str'; value: string }
   | { type: 'name'; value: string }
   | { type: 'reg'; value: string }
+  | { type: 'opt'; value: string }
   | { type: 'op'; value: string }
   | { type: 'eof'; value?: undefined }
 ) & { space: boolean; start: number; end: number };
@@ -85,6 +86,16 @@ export function tokenize(src: string): Token[] {
       push({ type: 'reg', value: src[i + 1] }, i, i + 2);
       i += 2;
       continue;
+    }
+    // &option / &g:option / &l:option
+    if (ch === '&' && src[i + 1] !== '&') {
+      const optMatch = src.slice(i).match(/^&(?:[gl]:)?[A-Za-z_][A-Za-z0-9_]*/);
+      if (optMatch) {
+        const len = optMatch[0].length;
+        push({ type: 'opt', value: optMatch[0] }, i, i + len);
+        i += len;
+        continue;
+      }
     }
     // a:0, a:1, a:000 (가변 인자)
     const argIdx = src.slice(i).match(/^a:\d+/);

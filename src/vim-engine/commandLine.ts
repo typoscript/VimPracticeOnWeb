@@ -4,6 +4,7 @@ import { executeShellCommand, executeFilterRange, executeWriteShell } from './sh
 import { retabRange } from './formatEngine';
 import { executeUserCommand, lookupUserCommand } from './userCommandEngine';
 import { appendFunctionDraftLine, executeCallCommand, executeScriptBlock, executeScriptCommandLine } from './vimscriptEngine';
+import { appendRedirText, handleRedirCommand } from './vimscriptValues';
 import { vimRegexToJsRegex } from './vimRegex';
 import { msg } from './messages';
 import {
@@ -106,6 +107,78 @@ function executePipedCommands(
   return cur;
 }
 
+const EX_MODIFIER_RE = /^:?\s*(sil(?:e(?:n(?:t)?)?)?|keepp(?:a(?:t(?:t(?:e(?:r(?:n(?:s)?)?)?)?)?)?)?|noa(?:u(?:t(?:o(?:c(?:m(?:d)?)?)?)?)?)?|verb(?:o(?:s(?:e)?)?)?)(!)?(?:\s+(.*))?$/;
+
+/**
+ * 선행 Ex 모디파이어(:silent[!], :keeppatterns, :noautocmd, :verbose)를 벗겨내고 래핑 실행합니다.
+ */
+function tryExecuteWithModifiers(
+  state: VimEditorState,
+  trimmed: string,
+  runInner: (s: VimEditorState, cmd: string) => VimEditorState
+): VimEditorState | null {
+  let rest = trimmed;
+  let hasModifier = false;
+  let silent = false;
+  let silentBang = false;
+  let keeppatterns = false;
+  let noautocmd = false;
+
+  for (;;) {
+    const m = rest.match(EX_MODIFIER_RE);
+    if (!m) break;
+    hasModifier = true;
+    const mod = m[1].toLowerCase();
+    const bang = m[2] === '!';
+    if (mod.startsWith('sil')) {
+      silent = true;
+      if (bang) silentBang = true;
+    } else if (mod.startsWith('keepp')) {
+      keeppatterns = true;
+    } else if (mod.startsWith('noa')) {
+      noautocmd = true;
+    }
+    rest = (m[3] ?? '').trimStart();
+    if (!rest) break;
+  }
+
+  if (!hasModifier) return null;
+  if (!rest) {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  const prevNoa = state.noautocmdSuppressed;
+  const savedSearch = keeppatterns
+    ? {
+        lastSearchQuery: state.lastSearchQuery,
+        lastSearchDirection: state.lastSearchDirection,
+        lastSearchOffset: state.lastSearchOffset,
+        hlsearchSuppressed: state.hlsearchSuppressed,
+      }
+    : null;
+
+  let res = runInner(noautocmd ? { ...state, noautocmdSuppressed: true } : state, rest);
+
+  if (noautocmd) {
+    res = { ...res, noautocmdSuppressed: prevNoa };
+  }
+  if (savedSearch) {
+    res = { ...res, ...savedSearch };
+  }
+  if (silentBang) {
+    res = { ...res, bell: undefined, commandMessage: undefined };
+  } else if (silent && !res.bell) {
+    res = { ...res, commandMessage: undefined };
+  }
+  return res;
+}
+
 /**
  * COMMAND 모드(:)에서 입력된 명령어를 파싱하고 실행합니다.
  */
@@ -141,8 +214,48 @@ export function executeCommandLine(
     return executePipedCommands(state, pipedCommands, keyRunner, userCommandDepth);
   }
 
-  // 1-1. Vim script: :function, :endfunction, :delfunction, :let, :unlet, :echo, :execute, :[range]call
   const runEx = (s: VimEditorState, cmd: string) => executeCommandLine(s, cmd, keyRunner, userCommandDepth);
+
+  // 1-0a. Ex 명령 모디파이어 (:silent[!], :keeppatterns, :noautocmd, :verbose)
+  const modRes = tryExecuteWithModifiers(state, trimmed, runEx);
+  if (modRes) {
+    return modRes;
+  }
+
+  // 1-0b. 출력 리디렉션 (:redir => g:var / :redir @a> / :redir END) 및 :messages
+  const redirMatch = trimmed.match(/^:?\s*redi(?:r)?(?:\s+(.*))?$/i);
+  if (redirMatch) {
+    return handleRedirCommand(state, redirMatch[1] ?? '');
+  }
+  const mesMatch = trimmed.match(/^:?\s*mes(?:s(?:a(?:g(?:es?)?)?)?)?(?:\s+(.*))?$/);
+  if (mesMatch) {
+    const sub = (mesMatch[1] ?? '').trim().toLowerCase();
+    if (sub === 'clear') {
+      return {
+        ...state,
+        mode: 'NORMAL',
+        visualAnchor: undefined,
+        commandBuffer: undefined,
+        commandType: undefined,
+        messageHistory: [],
+        commandMessage: undefined,
+      };
+    }
+    const hist = state.messageHistory ?? [];
+    const text = hist.length > 0 ? hist.join('\n') : msg('메시지 기록이 비어 있습니다');
+    let next: VimEditorState = {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: text,
+    };
+    if (next.redirSession && hist.length > 0) next = appendRedirText(next, text);
+    return next;
+  }
+
+  // 1-1. Vim script: :function, :endfunction, :delfunction, :let, :unlet, :echo, :execute, :[range]call
   const scriptRes = executeScriptCommandLine(state, trimmed, runEx);
   if (scriptRes) {
     return scriptRes;
@@ -153,24 +266,28 @@ export function executeCommandLine(
     return executeCallCommand(state, callMatch[1], callExtracted.hasRange ? callExtracted.range : null, runEx);
   }
 
+  const withRedir = (res: VimEditorState): VimEditorState => {
+    if (res.redirSession && res.commandMessage && !res.bell) {
+      return appendRedirText(res, res.commandMessage);
+    }
+    return res;
+  };
+
   // 2. 글로벌 명령: :g/pattern/cmd, :v/pattern/cmd, :g!/pattern/cmd
   const gMatch = trimmed.match(/^:?\s*(g|global|v|vglobal)(!?)\s*\/([^\/]+)\/(.*)$/);
   if (gMatch) {
-    return executeGlobalCommand(state, gMatch, commandStr, keyRunner);
+    return withRedir(executeGlobalCommand(state, gMatch, commandStr, keyRunner));
   }
 
   // 3. 창 분할 및 종료, 설정, 키매핑 명령어
-  let cleanCmdRaw = trimmed.replace(/^:/, '').trim();
-  if (/^silent!?\s+/i.test(cleanCmdRaw)) {
-    cleanCmdRaw = cleanCmdRaw.replace(/^silent!?\s+/i, '');
-  }
+  const cleanCmdRaw = trimmed.replace(/^:/, '').trim();
   const cleanCmd = cleanCmdRaw.toLowerCase();
 
   const wsRes = tryExecuteWorkspaceExCommand(state, cleanCmdRaw, cleanCmd, trimmed, runEx);
-  if (wsRes) return wsRes;
+  if (wsRes) return withRedir(wsRes);
 
   const toolRes = tryExecuteToolExCommand(state, cleanCmdRaw, cleanCmd, trimmed, runEx);
-  if (toolRes) return toolRes;
+  if (toolRes) return withRedir(toolRes);
 
   // 4. 공통 Range 파서 및 Ex 명령어 실행
   const extracted = extractRangeAndCommand(trimmed, state);
@@ -428,17 +545,17 @@ export function executeCommandLine(
   const printMatch = cmdTrimmed.match(/^p(?:r(?:i(?:n(?:t)?)?)?)?(?:\s+(\d+))?$/);
   if (printMatch) {
     const count = printMatch[1] !== undefined ? parseInt(printMatch[1], 10) : undefined;
-    return executePrintRange(state, range, 'print', count);
+    return withRedir(executePrintRange(state, range, 'print', count));
   }
   const numberMatch = cmdTrimmed.match(/^(?:nu(?:m(?:b(?:e(?:r)?)?)?)?|#)(?:\s+(\d+))?$/);
   if (numberMatch) {
     const count = numberMatch[1] !== undefined ? parseInt(numberMatch[1], 10) : undefined;
-    return executePrintRange(state, range, 'number', count);
+    return withRedir(executePrintRange(state, range, 'number', count));
   }
   const listMatch = cmdTrimmed.match(/^l(?:i(?:s(?:t)?)?)?(?:\s+(\d+))?$/);
   if (listMatch) {
     const count = listMatch[1] !== undefined ? parseInt(listMatch[1], 10) : undefined;
-    return executePrintRange(state, range, 'list', count);
+    return withRedir(executePrintRange(state, range, 'list', count));
   }
 
   // 5. 알 수 없는 명령어는 에러 메시지와 함께 NORMAL 모드로 복귀
