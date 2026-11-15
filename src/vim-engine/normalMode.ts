@@ -5,7 +5,6 @@ import {
   moveToLineStart,
   moveToLineEnd,
   moveToFirstNonBlank,
-  moveToFirstLine,
   moveToLastLine,
   moveToNextWord,
   moveToNextWORD,
@@ -29,29 +28,13 @@ import {
   getCharType,
 } from './operators';
 import { syncRegisters, parseMacroStringToKeys } from './registers';
-import {
-  alternateBuffer,
-  nextBuffer,
-  prevBuffer,
-  firstBuffer,
-  lastBuffer,
-} from './bufferEngine';
-import { nextQuickfix, prevQuickfix, firstQuickfix, lastQuickfix } from './quickfixEngine';
-import {
-  nextLocationList,
-  prevLocationList,
-  firstLocationList,
-  lastLocationList,
-} from './locationListEngine';
-import { nextArg, prevArg, firstArg, lastArg } from './argEngine';
-import { nextTab, prevTab } from './tabEngine';
+import { alternateBuffer } from './bufferEngine';
 import { openCommandLineWindow } from './cmdlineWindow';
 import { openHelp } from './helpEngine';
-import { openLspHover, closeLspHover, jumpToDiagnostic } from './lspEngine';
-import { jumpDiffHunk, diffObtain, diffPut } from './diffEngine';
-import { jumpToNextSpellError, jumpToPrevSpellError, startSpellSuggest, addSpellGoodWord, addSpellWrongWord } from './spellEngine';
+import { openLspHover, closeLspHover } from './lspEngine';
+import { diffObtain, diffPut } from './diffEngine';
 import { travelUndoTime } from './undoTreeEngine';
-import { jumpToTag, popTagStack, tjumpTag } from './tagEngine';
+import { jumpToTag, popTagStack } from './tagEngine';
 import { switchPaneFocus } from './splitWindow';
 import { deleteVisualSelection, yankVisualSelection, executeGCtrlG } from './visual';
 import { findMatchingBracket } from './bracketMatch';
@@ -74,20 +57,12 @@ import {
   IndentObjectType,
   executeParagraphObjectOperator,
   ParagraphObjectType,
-  getParagraphObjectRange,
-  executeLinewiseObjectOperator,
 } from './textObjects';
-import { toggleCommentRange, getCommentTextObjectRange } from './commentEngine';
-import { formatRange } from './formatEngine';
-import { gotoFileUnderCursor } from './gotoFileEngine';
 import { getWordAtCursor } from './search';
 import { executeCommandLine } from './commandLine';
 import { parseKeySequence } from './keymapEngine';
 import { executeDeleteSurround, executeChangeSurround, executeYouSurround, executeLineSurround } from './surroundEngine';
 import {
-  scrollToCenter,
-  scrollToTop,
-  scrollToBottom,
   cursorToHigh,
   cursorToMiddle,
   cursorToLow,
@@ -97,45 +72,28 @@ import {
   scrollFullPageUp,
   scrollLineDown,
   scrollLineUp,
-  handleHorizontalViewportKey,
 } from './viewport';
 import { recordJump, jumpOlder, jumpNewer, setMark, jumpToMark, executeMarkOperator, isValidMarkJumpChar } from './marks';
 import {
   joinLines,
   toggleCaseChar,
-  executeCaseMotion,
   indentLines,
   modifyNumberAtCursor,
   formatIndentLines,
   formatIndentRange,
 } from './lineOperators';
 import {
-  foldClose,
-  foldOpen,
-  foldToggle,
-  foldCloseAll,
-  foldOpenAll,
   deleteFoldOrLine,
   yankFoldOrLine,
-  createFold,
-  deleteFoldAtCursor,
-  deleteAllFoldsAtCursor,
-  eliminateAllFolds,
-  detectFoldBlocks,
-  jumpToNextFold,
-  jumpToPrevFold,
-  jumpToFoldEdge,
 } from './folding';
 import { msg } from './messages';
-import { executeGn, repeatSearch, executeWordSearch } from './searchMode';
+import { repeatSearch, executeWordSearch } from './searchMode';
 import {
   parsePending,
   ringBell,
   NORMAL_EXTRA_KEYS,
   moveByExtraMotion,
   findShiftRange,
-  describeCharAt,
-  describeCharUtf8Bytes,
   isFailedMotion,
   evaluateMotionWithCount,
   handleCtrlWKey,
@@ -145,6 +103,13 @@ import {
   DispatchKeyFn,
   RunHandleKeyFn,
 } from './engineHelpers';
+import { handleNormalZPrefix } from './normalZPrefix';
+import { handleNormalBracketPrefix } from './normalBracketPrefix';
+import {
+  handleNormalOpGPrefix,
+  handleNormalCommentFormatOrCaseG,
+  handleNormalGOperator,
+} from './normalGPrefix';
 
 /**
  * NORMAL 모드 키 입력 처리
@@ -175,59 +140,11 @@ export function handleNormalModeKey(
     return closeLspHover(state);
   }
 
-  // gn / gN (검색 매치 텍스트 객체 및 cgn, dgn, ygn 결합)
-  const gnMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([cdy])?g$/);
-  if (gnMatch && (key === 'n' || key === 'N')) {
-    const op = gnMatch[2];
-    return executeGn(state, key === 'n', op, isReplayingDot);
-  }
-  // dge / dgE / dg_ / dgj / dgk / dg0 / dg$ / dgm / dgM (cge, yg_ ...)
-  const gMotionOpMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([cdy])([1-9][0-9]*)?g$/);
-  if (
-    gMotionOpMatch &&
-    (key === 'e' ||
-      key === 'E' ||
-      key === '_' ||
-      key === 'j' ||
-      key === 'k' ||
-      key === '0' ||
-      key === '$' ||
-      key === 'm' ||
-      key === 'M')
-  ) {
-    const op = gMotionOpMatch[2] as 'd' | 'c' | 'y';
-    const total = (gMotionOpMatch[1] ? parseInt(gMotionOpMatch[1], 10) : 1) * (gMotionOpMatch[3] ? parseInt(gMotionOpMatch[3], 10) : 1);
-    return applyOperatorMotion(state, op, `g${key}`, { operator: op, count1: total > 1 ? total : undefined, totalCount: total }, isReplayingDot);
-  }
-
-  // dgg / cgg / ygg ([count]은 줄 번호)
-  const ggOpMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([cdy])([1-9][0-9]*)?g$/);
-  if (ggOpMatch && key === 'g') {
-    const op = ggOpMatch[2] as 'd' | 'c' | 'y';
-    const hasCount = !!(ggOpMatch[1] || ggOpMatch[3]);
-    const lineCount = parseInt(ggOpMatch[1] ?? '1', 10) * parseInt(ggOpMatch[3] ?? '1', 10);
-    return applyOperatorMotion(state, op, 'gg', { count1: hasCount ? lineCount : undefined, operator: op, totalCount: lineCount }, isReplayingDot);
-  }
-  // dgc / cgc / ygc (vgc): 연속된 주석 블록 텍스트 객체
-  const gcTextObjMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([cdyv])([1-9][0-9]*)?g$/);
-  if (gcTextObjMatch && key === 'c') {
-    const op = gcTextObjMatch[2] as 'd' | 'c' | 'y' | 'v';
-    const range = getCommentTextObjectRange(state);
-    if (!range) return ringBell(state);
-    const res = executeLinewiseObjectOperator(state, op, range);
-    const synced = syncRegisters(state, res, op === 'y');
-    const opKeys = [op, 'g', 'c'];
-    if (op === 'c') {
-      return { ...synced, currentChangeKeys: isReplayingDot ? state.currentChangeKeys : opKeys };
-    }
-    if (op === 'd') {
-      return { ...synced, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys };
-    }
-    return synced;
-  }
-  if (state.pendingKeys?.match(/^([1-9][0-9]*)?([cdy])([1-9][0-9]*)?g$/)) {
-    // cg, dg, yg 대기 상태에서 유효한 후속 키가 아니면 pending 취소
-    state = { ...state, pendingKeys: undefined };
+  // gn / gN / dge / dgE / dg_ / dgg / dgc 등 연산자+g 접두 처리
+  const opGRes = handleNormalOpGPrefix(state, key, isReplayingDot);
+  if (opGRes) {
+    if (opGRes.handled) return opGRes.state;
+    state = opGRes.state;
   }
 
   // 1-0. 커스텀 키매핑 및 리더 키(Leader Key) 시뮬레이션
@@ -691,92 +608,9 @@ export function handleNormalModeKey(
     return scrollLineUp(state, parsed.totalCount);
   }
 
-  // zfip / zfap / zfi{ / zfa{ 텍스트 객체 수동 폴드 생성 (startsWith('zf') 보다 먼저 검사)
-  if (state.pendingKeys === 'zfa' || state.pendingKeys === 'zfi') {
-    const isInner = state.pendingKeys === 'zfi';
-    if (key === 'p') {
-      const range = getParagraphObjectRange(state.lines, state.cursor.line, isInner ? 'ip' : 'ap', 1);
-      if (range) {
-        return createFold(state, range.startLine, range.endLine);
-      }
-      return ringBell({ ...state, pendingKeys: undefined });
-    }
-    if (key === '{' || key === '}' || key === 'B') {
-      const detected = detectFoldBlocks(
-        state.lines,
-        state.options?.foldmethod,
-        state.options?.shiftwidth,
-        state.options?.foldexpr,
-        state,
-        state.options?.foldmarker
-      );
-      const found = detected.find((b) => b.startRow <= state.cursor.line && state.cursor.line <= b.endRow);
-      if (found) {
-        return createFold(state, found.startRow, found.endRow);
-      }
-      return ringBell({ ...state, pendingKeys: undefined });
-    }
-    return { ...state, bell: true, pendingKeys: undefined };
-  }
-
-  // zf{motion}: 수동 폴드 생성 모션 처리
-  if (state.pendingKeys?.startsWith('zf')) {
-    const rawCountStr = state.pendingKeys.slice(2);
-    // 숫자 누적
-    if (/^[0-9]$/.test(key) && (rawCountStr.length > 0 || key !== '0')) {
-      return { ...state, pendingKeys: state.pendingKeys + key };
-    }
-
-    const count = parseInt(rawCountStr || '1', 10);
-    const curLine = state.cursor.line;
-
-    if (key === 'j' || key === 'ArrowDown') {
-      return createFold(state, curLine, curLine + count);
-    }
-    if (key === 'k' || key === 'ArrowUp') {
-      return createFold(state, curLine - count, curLine);
-    }
-    if (key === 'G') {
-      return createFold(state, curLine, state.lines.length - 1);
-    }
-    if (key === 'g' && state.pendingKeys === 'zf') {
-      return { ...state, pendingKeys: 'zfg' };
-    }
-    if (key === 'g' && state.pendingKeys === 'zfg') {
-      return createFold(state, 0, curLine);
-    }
-    if (key === '_' || key === 'Enter') {
-      return createFold(state, curLine, curLine + count - 1);
-    }
-    if (key === 'a' || key === 'i') {
-      return { ...state, pendingKeys: `zf${key}` };
-    }
-    return { ...state, bell: true, pendingKeys: undefined };
-  }
-
-  // zz, zt, zb, zh/zl/zH/zL/ze/zs: 뷰포트 정렬 및 zc, zo, za, zM, zR, zd, zD, zE, zf: 코드 폴딩
-  if (state.pendingKeys === 'z' || parsed.operator === 'z') {
-    const horiz = handleHorizontalViewportKey(state, key, parsed.count1 ?? 1);
-    if (horiz) return horiz;
-    if (key === 'z') return scrollToCenter(state);
-    if (key === 't') return scrollToTop(state);
-    if (key === 'b') return scrollToBottom(state);
-    if (key === 'c') return foldClose(state);
-    if (key === 'o') return foldOpen(state);
-    if (key === 'a') return foldToggle(state);
-    if (key === 'M') return foldCloseAll(state);
-    if (key === 'R') return foldOpenAll(state);
-    if (key === 'd') return deleteFoldAtCursor(state);
-    if (key === 'D') return deleteAllFoldsAtCursor(state);
-    if (key === 'E') return eliminateAllFolds(state);
-    if (key === 'j') return jumpToNextFold(state, parsed.count1 ?? 1);
-    if (key === 'k') return jumpToPrevFold(state, parsed.count1 ?? 1);
-    if (key === 'f') return { ...state, pendingKeys: 'zf' };
-    if (key === '=') return { ...startSpellSuggest(state), pendingKeys: undefined };
-    if (key === 'g') return { ...addSpellGoodWord(state), pendingKeys: undefined };
-    if (key === 'w') return { ...addSpellWrongWord(state), pendingKeys: undefined };
-    return { ...state, pendingKeys: undefined };
-  }
+  // z 접두 (폴딩 zc/zo/za/zM/zR/zf/zd/zD/zE/zj/zk, 뷰포트 정렬 zz/zt/zb/zh/zl/zH/zL/ze/zs, 맞춤법 z=/zg/zw)
+  const zRes = handleNormalZPrefix(state, key, parsed.operator, parsed.count1);
+  if (zRes) return zRes;
 
   // 1-0-6-1. &: 직전 :s 를 현재 줄에 다시 실행 (플래그 없이, :s 와 동일)
   if (key === '&' && !state.pendingKeys) {
@@ -867,36 +701,16 @@ export function handleNormalModeKey(
   }
 
   // 1-0-12. 들여쓰기 / 내어쓰기 / 정렬 (>>, <<, ==) 및 주석 토글 (gcc, gc{motion})
-  // >{motion} / <{motion} / gc{motion} (>ip, >}, gcip, gcj ...): 항상 줄 단위 적용
-  const gcMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?g([cqw])([1-9][0-9]*)?([iagfFtT'`\[\]])?$/);
-  if (gcMatch) {
-    const [, c1, opChar, c2, prefix] = gcMatch;
-    const applyLines = (s: number, e: number): VimEditorState =>
-      opChar === 'c' ? toggleCommentRange(state, s, e) : formatRange(state, s, e, opChar === 'w');
-    const isLineForm =
-      (!prefix && !c2 && key === opChar) || (opChar !== 'c' && prefix === 'g' && !c2 && key === opChar);
-    if (isLineForm) {
-      const count = c1 ? parseInt(c1, 10) : 1;
-      const endLine = Math.min(state.lines.length - 1, state.cursor.line + count - 1);
-      const res = applyLines(state.cursor.line, endLine);
-      if (res.bell) return res;
-      const lKeys = [...(count > 1 ? String(count).split('') : []), 'g', opChar, opChar];
-      return { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys };
-    }
-    if (!prefix && (/^[1-9]$/.test(key) || (key === '0' && c2))) {
-      return { ...state, pendingKeys: state.pendingKeys + key };
-    }
-    if (!prefix && "iagfFtT'`[]".includes(key)) {
-      return { ...state, pendingKeys: state.pendingKeys + key };
-    }
-    const count = (c1 ? parseInt(c1, 10) : 1) * (c2 ? parseInt(c2, 10) : 1);
-    const range = findShiftRange(state, prefix ? [prefix, key] : [key], count, runHandleKey);
-    if (!range) return ringBell(state);
-    const res = applyLines(range.startLine, range.endLine);
-    if (res.bell) return res;
-    const keys = [...(state.pendingKeys ?? '').split(''), key];
-    return { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : keys };
-  }
+  // gc/gq/gw{motion}, gu/gU/g~/g?{motion}
+  const gCommentOrFormatRes = handleNormalCommentFormatOrCaseG(
+    state,
+    key,
+    parsed.operator,
+    parsed.totalCount,
+    isReplayingDot,
+    runHandleKey
+  );
+  if (gCommentOrFormatRes) return gCommentOrFormatRes;
 
   // !{motion} / !! : 셸 파이프 필터 연산자 (!!, [count]!!, !G, !ip, !} 등)
   const filterMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?!([1-9][0-9]*)?([iagfFtT'`\[\]])?$/);
@@ -1051,181 +865,11 @@ export function handleNormalModeKey(
     state = { ...state, pendingKeys: undefined };
   }
 
-  // gugu / gUgU / g~g~ / g?g? (gUgg 포함): 대소문자 연산자 뒤에 g 를 다시 누른 상태
-  const caseOpG = state.pendingKeys?.match(/^([1-9][0-9]*)?(g[uU~?])g$/);
-  if (caseOpG) {
-    const op = caseOpG[2] as 'gu' | 'gU' | 'g~' | 'g?';
-    const count = caseOpG[1] ? parseInt(caseOpG[1], 10) : 1;
-    if (key === op[1] || key === 'g') {
-      const motionKey = key === 'g' ? 'gg' : key;
-      const res = executeCaseMotion({ ...state, pendingKeys: undefined }, op, motionKey, count);
-      const opKeys = [...(count > 1 ? [String(count)] : []), op, 'g', key];
-      return { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys, pendingKeys: undefined };
-    }
-    return { ...state, pendingKeys: undefined };
-  }
-
-  // 1-0-13. 순정 Vim 대소문자 변환 연산자 (gu, gU, g~ + 모션 / 텍스트객체 / 라인반복)
-  if (parsed.operator === 'gu' || parsed.operator === 'gU' || parsed.operator === 'g~' || parsed.operator === 'g?') {
-    const op = parsed.operator as 'gu' | 'gU' | 'g~' | 'g?';
-    // 텍스트 객체 대기 (i, a)
-    if (key === 'i' || key === 'a') {
-      return {
-        ...state,
-        pendingKeys: (state.pendingKeys ?? '') + key,
-      };
-    }
-    // g 재입력 대기 (예: gUg -> gUgg, gUgU)
-    if (key === 'g' && !state.pendingKeys?.endsWith('g')) {
-      return {
-        ...state,
-        pendingKeys: (state.pendingKeys ?? '') + key,
-      };
-    }
-    const motionKey = state.pendingKeys?.endsWith('g') ? (key === 'g' ? 'gg' : key) : key;
-    const res = executeCaseMotion(state, op, motionKey, parsed.totalCount);
-    const opKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), op, motionKey] : [op, motionKey];
-    return {
-      ...res,
-      lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys,
-      pendingKeys: undefined,
-    };
-  }
-
-  // 1-0-14. 순정 Vim Diff 점프 모션 (]c, [c, [count]]c, [count][c)
-  const bracketMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([\]\[])$/);
-  if (bracketMatch) {
-    const bCount = bracketMatch[1] ? parseInt(bracketMatch[1], 10) : 1;
-    const bracket = bracketMatch[2];
-    if (key === 'c') {
-      const dir = bracket === ']' ? 'next' : 'prev';
-      return {
-        ...jumpDiffHunk(state, dir, bCount),
-        pendingKeys: undefined,
-      };
-    }
-    // [( [{ ]) ]}: 감싸고 있는 짝 없는 괄호로 이동
-    if ((bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'))) {
-      return moveByExtraMotion(state, `${bracket}${key}`, bCount);
-    }
-    // [[ ]] [] ][: 섹션 시작/끝 블록 점프, ]m [m ]M [M: 메서드 시작/끝 블록 점프
-    if (key === '[' || key === ']' || key === 'm' || key === 'M') {
-      return moveByExtraMotion(state, `${bracket}${key}`, bCount);
-    }
-    // ]d [d ]D [D: Neovim 스타일 진단(Diagnostic) 탐색
-    if (key === 'd' || key === 'D') {
-      const dir = key === 'D'
-        ? (bracket === ']' ? 'last' : 'first')
-        : (bracket === ']' ? 'next' : 'prev');
-      return jumpToDiagnostic(state, dir, bCount);
-    }
-    // ]q [q ]Q [Q: 퀵픽스 탐색
-    if (key === 'q' || key === 'Q') {
-      const res =
-        key === 'Q'
-          ? bracket === ']'
-            ? lastQuickfix(state)
-            : firstQuickfix(state)
-          : bracket === ']'
-            ? nextQuickfix(state, bCount)
-            : prevQuickfix(state, bCount);
-      return { ...res, pendingKeys: undefined };
-    }
-    // ]l [l ]L [L: 로케이션 리스트 탐색
-    if (key === 'l' || key === 'L') {
-      const res =
-        key === 'L'
-          ? bracket === ']'
-            ? lastLocationList(state)
-            : firstLocationList(state)
-          : bracket === ']'
-            ? nextLocationList(state, bCount)
-            : prevLocationList(state, bCount);
-      return { ...res, pendingKeys: undefined };
-    }
-    // ]b [b ]B [B: 버퍼 탐색
-    if (key === 'b' || key === 'B') {
-      const res =
-        key === 'B'
-          ? bracket === ']'
-            ? lastBuffer(state)
-            : firstBuffer(state)
-          : bracket === ']'
-            ? nextBuffer(state, bCount)
-            : prevBuffer(state, bCount);
-      return { ...res, pendingKeys: undefined };
-    }
-    // ]a [a ]A [A: 아규먼트 리스트 탐색
-    if (key === 'a' || key === 'A') {
-      const res =
-        key === 'A'
-          ? bracket === ']'
-            ? lastArg(state)
-            : firstArg(state)
-          : bracket === ']'
-            ? nextArg(state, bCount)
-            : prevArg(state, bCount);
-      return { ...res, pendingKeys: undefined };
-    }
-    // ]<Space> [<Space>: 커서 줄 위/아래에 빈 줄 삽입 (커서 위치 유지)
-    if (key === ' ' || key === 'Space') {
-      const stateWithUndo = pushUndoSnapshot(state);
-      const insertAt = bracket === '[' ? state.cursor.line : state.cursor.line + 1;
-      const blanks = Array.from({ length: bCount }, () => '');
-      const nextLines = [
-        ...state.lines.slice(0, insertAt),
-        ...blanks,
-        ...state.lines.slice(insertAt),
-      ];
-      const nextLine = bracket === '[' ? state.cursor.line + bCount : state.cursor.line;
-      const spaceKeys = bCount > 1 ? [String(bCount), bracket, ' '] : [bracket, ' '];
-      return {
-        ...stateWithUndo,
-        lines: nextLines,
-        cursor: { line: nextLine, col: state.cursor.col },
-        pendingKeys: undefined,
-        lastChangeKeys: isReplayingDot ? state.lastChangeKeys : spaceKeys,
-      };
-    }
-    // ]s, [s, ]S, [S: 맞춤법 오류 점프
-    if (key === 's' || key === 'S') {
-      const res = bracket === ']' ? jumpToNextSpellError(state) : jumpToPrevSpellError(state);
-      return {
-        ...res,
-        pendingKeys: undefined,
-      };
-    }
-    // [z, ]z: 현재 열린 폴드의 시작/끝 줄로 점프
-    if (key === 'z') {
-      return jumpToFoldEdge(state, bracket === '[' ? 'start' : 'end');
-    }
-    // ]p, [p, ]P, [P: 현재 줄 들여쓰기에 맞춰 붙여넣기
-    if (key === 'p' || key === 'P') {
-      return executePutVariant(
-        state,
-        key === 'P' || bracket === '[',
-        bCount,
-        { adjustIndent: true },
-        [bracket, key],
-        isReplayingDot
-      );
-    }
-    state = { ...state, pendingKeys: undefined };
-  }
-
-  // 연산자 + 괄호/섹션/메서드 모션 (d[(, c]}, y[{, d]], c[[, d]m, y[M ...)
-  const opBracketMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([cdy])([1-9][0-9]*)?([\]\[])$/);
-  if (opBracketMatch) {
-    const bracket = opBracketMatch[4];
-    const isPaired = (bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'));
-    const isSection = key === '[' || key === ']';
-    const isMethod = key === 'm' || key === 'M';
-    if (isPaired || isSection || isMethod) {
-      const op = opBracketMatch[2] as 'd' | 'c' | 'y';
-      const total = (opBracketMatch[1] ? parseInt(opBracketMatch[1], 10) : 1) * (opBracketMatch[3] ? parseInt(opBracketMatch[3], 10) : 1);
-      return applyOperatorMotion(state, op, `${bracket}${key}`, { operator: op, count1: total > 1 ? total : undefined, totalCount: total }, isReplayingDot);
-    }
-    state = { ...state, pendingKeys: undefined };
+  // [ / ] 접두 및 연산자 + 괄호/섹션/메서드 모션 (]c, [(, ]m, d[(, d]] 등)
+  const bracketRes = handleNormalBracketPrefix(state, key, isReplayingDot);
+  if (bracketRes) {
+    if (bracketRes.handled) return bracketRes.state;
+    state = bracketRes.state;
   }
 
   // 1-1. 매크로 녹화 시작 대기 (q) 또는 커맨드라인 윈도우 (q:, q/, q?)
@@ -1944,158 +1588,16 @@ export function handleNormalModeKey(
     }
     state = { ...state, pendingKeys: undefined };
   } else if (parsed.operator === 'g') {
-    // ga: 커서 문자의 코드 값 표시 (:help ga)
-    if (key === 'a') {
-      return { ...state, pendingKeys: undefined, commandMessage: describeCharAt(currentLine, state.cursor.col) };
-    }
-    // g8: 커서 위치 문자의 UTF-8 바이트 16진수 표시 (:help g8)
-    if (key === '8') {
-      return { ...state, pendingKeys: undefined, commandMessage: describeCharUtf8Bytes(currentLine, state.cursor.col) };
-    }
-    // ge / gE / g_: 이전 단어 끝, 이전 WORD 끝, 줄의 마지막 공백 아닌 문자
-    if (key === 'e' || key === 'E' || key === '_') {
-      return moveByExtraMotion(state, `g${key}`, parsed.totalCount);
-    }
-    // g&: 직전 치환을 같은 플래그로 모든 줄에 다시 실행 (:%s//~/&)
-    if (key === '&') {
-      const res = executeCommandLine({ ...state, pendingKeys: undefined }, '%&&', runHandleKey);
-      return res.bell ? res : { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['g', '&'] };
-    }
-    if (key === '-') {
-      return travelUndoTime(state, 'older', parsed.totalCount);
-    }
-    if (key === '+') {
-      return travelUndoTime(state, 'newer', parsed.totalCount);
-    }
-    if (key === 'g') {
-      const stateWithJump = recordJump(state);
-      if (parsed.count1 !== undefined) {
-        const targetLine = Math.max(0, Math.min(parsed.count1 - 1, state.lines.length - 1));
-        const maxCol = getMaxCol(state.lines[targetLine], 'NORMAL');
-        return {
-          ...stateWithJump,
-          cursor: { line: targetLine, col: Math.min(state.cursor.col, maxCol) },
-          pendingKeys: undefined,
-        };
-      }
-      const nextCursor = moveToFirstLine(state.lines, state.cursor);
-      return {
-        ...stateWithJump,
-        cursor: clampCursor(state.lines, nextCursor, 'NORMAL'),
-        pendingKeys: undefined,
-      };
-    }
-    if (key === 'd') {
-      return goToDeclaration(state, 'local');
-    }
-    if (key === 'D') {
-      return goToDeclaration(state, 'global');
-    }
-    if (key === '*' || key === '#') {
-      return executeWordSearch(state, key === '*' ? 'forward' : 'backward', false);
-    }
-    if (key === 'f') {
-      return gotoFileUnderCursor(state, { withLineNumber: false });
-    }
-    if (key === 'F') {
-      return gotoFileUnderCursor(state, { withLineNumber: true });
-    }
-    // gp / gP: 붙여넣은 뒤 커서를 삽입 끝 다음으로 이동
-    if (key === 'p' || key === 'P') {
-      return executePutVariant(
-        state,
-        key === 'P',
-        parsed.totalCount,
-        { leaveCursorAfter: true },
-        ['g', key],
-        isReplayingDot
-      );
-    }
-    if (key === 'i') {
-      return goToLastInsert(state);
-    }
-    if (key === 'I') {
-      const stateWithSnapshot = pushUndoSnapshot(state);
-      return {
-        ...stateWithSnapshot,
-        mode: 'INSERT',
-        cursor: { line: state.cursor.line, col: 0 },
-        pendingKeys: undefined,
-        currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['g', 'I'],
-      };
-    }
-    if (key === 'j' || key === 'k') {
-      const target = evaluateMotionWithCount(state.lines, state.cursor, key, parsed.totalCount, state.folds);
-      if (!target || target.line === state.cursor.line) return ringBell(state);
-      return {
-        ...state,
-        cursor: target,
-        stickyDollar: false,
-        pendingKeys: undefined,
-      };
-    }
-    if (key === '0' || key === '$' || key === 'm' || key === 'M') {
-      const moved = moveByExtraMotion(state, `g${key}`, parsed.totalCount);
-      return key === '$' ? { ...moved, stickyDollar: true } : moved;
-    }
-    if (key === 'v') {
-      return reselectLastVisual(state);
-    }
-    if (
-      key === 'Ctrl-g' ||
-      key === 'Ctrl+g' ||
-      key === 'ctrl-g' ||
-      key === '<C-g>'
-    ) {
-      return executeGCtrlG(state);
-    }
-    if (key === ';') {
-      return traverseChangeList(state, 'prev', parsed.totalCount);
-    }
-    if (key === ',') {
-      return traverseChangeList(state, 'next', parsed.totalCount);
-    }
-    if (key === 'J') {
-      if (state.cursor.line >= state.lines.length - 1) return ringBell(state);
-      const res = joinLines(state, parsed.totalCount, false);
-      const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'g', 'J'] : ['g', 'J'];
-      return {
-        ...res,
-        lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
-      };
-    }
-    if (key === 't') {
-      return {
-        ...nextTab(state, parsed.count1),
-        pendingKeys: undefined,
-      };
-    }
-    if (key === 'T') {
-      return {
-        ...prevTab(state, parsed.count1 ?? 1),
-        pendingKeys: undefined,
-      };
-    }
-    if (key === ']' || key === 'Ctrl-]' || key === 'Ctrl+]') {
-      const curLine = state.lines[state.cursor.line] ?? '';
-      const word = getWordAtCursor(curLine, state.cursor.col);
-      if (!word) {
-        return {
-          ...state,
-          commandMessage: msg('E349: 커서 위치에 식별자가 없습니다 (no identifier under cursor)'),
-          pendingKeys: undefined,
-        };
-      }
-      return { ...tjumpTag(state, word), pendingKeys: undefined };
-    }
-    if (key === '~' || key === 'u' || key === 'U' || key === '?' || key === 'c' || key === 'q' || key === 'w') {
-
-      return {
-        ...state,
-        pendingKeys: (state.pendingKeys ?? '') + key,
-      };
-    }
-    state = { ...state, pendingKeys: undefined };
+    const gOpRes = handleNormalGOperator(
+      state,
+      key,
+      parsed.count1,
+      parsed.totalCount,
+      isReplayingDot,
+      runHandleKey
+    );
+    if (gOpRes.handled) return gOpRes.state;
+    state = gOpRes.state;
   }
 
   if (

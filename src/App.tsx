@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useRef, lazy, Suspense } from 'react';
+import { useEffect, useState, useCallback, useRef, lazy, Suspense, Dispatch, SetStateAction } from 'react';
 import { Editor } from './components/Editor/Editor';
 import { StatusBar } from './components/StatusBar/StatusBar';
 import { MissionPanel, calculateStars } from './components/MissionPanel/MissionPanel';
@@ -24,36 +24,17 @@ import {
   formatCommandLabel,
   getActionDescription,
 } from './utils/actionTimeline';
-import { VimEditorState, SplitPaneState } from './vim-engine';
+import {
+  VimEditorState,
+  SplitPaneState,
+  handleKey,
+  ensureBuffers,
+  ensureTabPages,
+  diagnosticsToQuickfixItems,
+  computeDiffHunks,
+} from './vim-engine';
 import { Mission } from './types/mission';
 import { recordLessonSrsReview } from './utils/srsScheduler';
-import { handleKey } from './vim-engine';
-import { switchPaneFocus } from './vim-engine';
-import { switchBuffer, ensureBuffers } from './vim-engine';
-import { switchTab, openNewTab, closeTab, ensureTabPages } from './vim-engine';
-import {
-  closeCommandLineWindow,
-  selectCommandLineWindowLine,
-  switchCommandLineWindowType,
-  clearCommandLineHistory,
-} from './vim-engine';
-import { closeQuickfixWindow, jumpToQuickfixItem } from './vim-engine';
-import { selectFuzzyFinderItem, closeFuzzyFinder } from './vim-engine';
-import { jumpHelpTag, popHelpTag, closeHelp } from './vim-engine';
-import { closeLocationListWindow, jumpToLocationListItem } from './vim-engine';
-import { diagnosticsToQuickfixItems, closeLspHover } from './vim-engine';
-import { computeDiffHunks } from './vim-engine';
-import { selectCompletionCandidate } from './vim-engine';
-import {
-  setMark,
-  jumpToMark,
-  clearJumps,
-  deleteMarks,
-  deleteSingleMark,
-  jumpToIndex,
-  jumpOlder,
-  jumpNewer,
-} from './vim-engine';
 import { MISSIONS } from './data/missions';
 import { sandboxInitialLines } from './data/sandbox';
 import {
@@ -75,20 +56,10 @@ import {
   saveActionTimelineSetting,
   loadSpeedrunRecord,
   saveSpeedrunRecord,
-  loadHardcoreMode,
-  saveHardcoreMode,
   SpeedrunRecord,
   LessonProgress,
 } from './utils/storage';
-import { normalizeImeKey } from './utils/imeHelper';
 import { AntiPatternDetector } from './utils/antiPatternDetector';
-import { HardcoreGuard } from './utils/hardcoreGuard';
-import {
-  loadThemeSetting,
-  saveThemeSetting,
-  applyTheme,
-  VimTheme,
-} from './utils/theme';
 import { useSoundEffects } from './utils/soundEffects';
 import {
   getChallengeFromUrl,
@@ -99,16 +70,11 @@ import {
   recordKeyInputStats,
   recordAntiPatternDetection,
 } from './utils/analyticsStorage';
-import {
-  loadActivePresets,
-  saveActivePresets,
-  loadLeaderKey,
-  saveLeaderKey,
-  loadCustomKeymaps,
-  saveCustomKeymaps,
-  compileUserKeymaps,
-  CustomKeymapItem,
-} from './utils/keymapStorage';
+import { compileUserKeymaps } from './utils/keymapStorage';
+import { useEditorWorkspaceHandlers } from './hooks/useEditorWorkspaceHandlers';
+import { useHardcoreAndKeymaps } from './hooks/useHardcoreAndKeymaps';
+import { useVimKeyboardInput } from './hooks/useVimKeyboardInput';
+import { useGhostReplay } from './hooks/useGhostReplay';
 import './App.css';
 import { t, useLocale, setLocale } from './i18n';
 
@@ -176,128 +142,27 @@ export function App() {
   const byocModalLoaded = useOpenedOnce(isBYOCModalOpen);
   const [showGrammarAST, setShowGrammarAST] = useState<boolean>(() => loadGrammarASTSetting());
 
-  // 🔥 하드코어 수련 모드 및 가드 상태
-  const [hardcoreMode, setHardcoreMode] = useState<boolean>(() => loadHardcoreMode());
-  const hardcoreGuardRef = useRef(new HardcoreGuard());
-  const [isEditorShaking, setIsEditorShaking] = useState(false);
-  const [hardcoreWarning, setHardcoreWarning] = useState<string | null>(null);
-  const shakeTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const warningTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    return () => {
-      if (shakeTimerRef.current) clearTimeout(shakeTimerRef.current);
-      if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
-    };
-  }, []);
-
-  const handleToggleHardcoreMode = useCallback(() => {
-    setHardcoreMode((prev) => {
-      const next = !prev;
-      saveHardcoreMode(next);
-      return next;
-    });
-  }, []);
-
-  const triggerHardcoreViolation = useCallback((msg: string, suggestion?: string) => {
-    setIsEditorShaking(true);
-    setHardcoreWarning(`${msg}${suggestion ? ` 👉 ${suggestion}` : ''}`);
-
-    if (shakeTimerRef.current) clearTimeout(shakeTimerRef.current);
-    shakeTimerRef.current = setTimeout(() => {
-      setIsEditorShaking(false);
-    }, 400);
-
-    if (warningTimerRef.current) clearTimeout(warningTimerRef.current);
-    warningTimerRef.current = setTimeout(() => {
-      setHardcoreWarning(null);
-    }, 2800);
-  }, []);
-
-  const handleEditorAreaClick = useCallback(() => {
-    if (hardcoreMode) {
-      const check = hardcoreGuardRef.current.checkMouseClick();
-      if (check.blocked) {
-        triggerHardcoreViolation(check.message!, check.suggestion);
-      }
-    }
-  }, [hardcoreMode, triggerHardcoreViolation]);
-
-  // 커스텀 키매핑 프리셋 및 리더 키 상태
-  const [activePresets, setActivePresets] = useState<Record<string, boolean>>(() => loadActivePresets());
-  const [leaderKey, setLeaderKey] = useState<string>(() => loadLeaderKey());
-  const [customKeymaps, setCustomKeymaps] = useState<CustomKeymapItem[]>(() => loadCustomKeymaps());
-
-  const handleTogglePreset = useCallback((presetId: string) => {
-    setActivePresets((prev) => {
-      const updated = { ...prev, [presetId]: !prev[presetId] };
-      saveActivePresets(updated);
-      setEditorState((st) => ({
-        ...st,
-        userKeymaps: compileUserKeymaps(updated, leaderKey, customKeymaps),
-      }));
-      return updated;
-    });
-  }, [leaderKey, customKeymaps]);
-
-  const handleChangeLeaderKey = useCallback((newLeader: string) => {
-    setLeaderKey(newLeader);
-    saveLeaderKey(newLeader);
-    setEditorState((st) => ({
-      ...st,
-      leaderKey: newLeader,
-      userKeymaps: compileUserKeymaps(activePresets, newLeader, customKeymaps),
-    }));
-  }, [activePresets, customKeymaps]);
-
-  const handleAddCustomKeymap = useCallback((item: Omit<CustomKeymapItem, 'id'>) => {
-    const newItem: CustomKeymapItem = {
-      ...item,
-      id: `map_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
-    };
-    setCustomKeymaps((prev) => {
-      const updated = [...prev, newItem];
-      saveCustomKeymaps(updated);
-      setEditorState((st) => ({
-        ...st,
-        userKeymaps: compileUserKeymaps(activePresets, leaderKey, updated),
-        commandMessage: t('[키매핑 등록] {mode}: {from} -> {to}', {
-          mode: item.mode,
-          from: item.from,
-          to: item.to,
-        }),
-      }));
-      return updated;
-    });
-  }, [activePresets, leaderKey]);
-
-  const handleDeleteCustomKeymap = useCallback((id: string) => {
-    setCustomKeymaps((prev) => {
-      const target = prev.find((m) => m.id === id);
-      const updated = prev.filter((m) => m.id !== id);
-      saveCustomKeymaps(updated);
-      setEditorState((st) => ({
-        ...st,
-        userKeymaps: compileUserKeymaps(activePresets, leaderKey, updated),
-        commandMessage: target
-          ? t('[키매핑 삭제] {mode}: {from}', { mode: target.mode, from: target.from })
-          : undefined,
-      }));
-      return updated;
-    });
-  }, [activePresets, leaderKey]);
-
-  // 테마 관리
-  const [currentTheme, setCurrentTheme] = useState<VimTheme>(() => loadThemeSetting());
-  useEffect(() => {
-    applyTheme(currentTheme);
-  }, [currentTheme]);
-
-  const handleThemeChange = useCallback((newTheme: VimTheme) => {
-    setCurrentTheme(newTheme);
-    saveThemeSetting(newTheme);
-    applyTheme(newTheme);
-  }, []);
+  const setEditorStateRef = useRef<Dispatch<SetStateAction<VimEditorState>> | null>(null);
+  const {
+    hardcoreMode,
+    hardcoreGuardRef,
+    isEditorShaking,
+    hardcoreWarning,
+    dismissHardcoreWarning,
+    handleToggleHardcoreMode,
+    triggerHardcoreViolation,
+    handleEditorAreaClick,
+    activePresets,
+    leaderKey,
+    customKeymaps,
+    handleTogglePreset,
+    handleChangeLeaderKey,
+    handleAddCustomKeymap,
+    handleDeleteCustomKeymap,
+    currentTheme,
+    handleThemeChange,
+    reloadHardcoreAndKeymaps,
+  } = useHardcoreAndKeymaps(setEditorStateRef);
 
   // 화면 언어 (바꾸면 App 이 다시 렌더링되어 모든 t() 문구가 갱신됨)
   const locale = useLocale();
@@ -339,127 +204,6 @@ export function App() {
     });
   }, []);
 
-  const handleSwitchPane = useCallback((targetIndex: number) => {
-    setEditorState((prevState) => switchPaneFocus(prevState, targetIndex));
-    setIsEditorFocused(true);
-  }, []);
-
-  const handleSelectCompletionCandidate = useCallback((index: number) => {
-    setEditorState((prevState) => selectCompletionCandidate(prevState, index));
-    setIsEditorFocused(true);
-  }, []);
-
-  const handleSwitchBuffer = useCallback((targetId: number) => {
-    setEditorState((prevState) => switchBuffer(prevState, targetId));
-    setIsEditorFocused(true);
-  }, []);
-
-  const handleSwitchTabPage = useCallback((targetId: number) => {
-    setEditorState((prevState) => switchTab(prevState, targetId));
-    setIsEditorFocused(true);
-  }, []);
-
-  const handleCloseTabPage = useCallback((targetId: number) => {
-    setEditorState((prevState) => closeTab(prevState, targetId));
-    setIsEditorFocused(true);
-  }, []);
-
-  const handleNewTabPage = useCallback(() => {
-    setEditorState((prevState) => openNewTab(prevState));
-    setIsEditorFocused(true);
-  }, []);
-
-  const handleCloseCommandLineWindow = useCallback(() => {
-    setEditorState((prevState) => closeCommandLineWindow(prevState));
-    setIsEditorFocused(true);
-  }, []);
-
-  const handleSelectCommandLineWindowLine = useCallback((lineIdx: number) => {
-    setEditorState((prevState) => selectCommandLineWindowLine(prevState, lineIdx));
-    setIsEditorFocused(true);
-  }, []);
-
-  const handleSwitchCommandLineWindowType = useCallback((type: ':' | '/' | '?') => {
-    setEditorState((prevState) => switchCommandLineWindowType(prevState, type));
-    setIsEditorFocused(true);
-  }, []);
-
-  const handleClearCommandLineHistory = useCallback((type: ':' | '/' | '?') => {
-    setEditorState((prevState) => clearCommandLineHistory(prevState, type));
-    setIsEditorFocused(true);
-  }, []);
-
-  const handleExecuteCommandLineWindowLine = useCallback((lineIdx: number) => {
-    setEditorState((prevState) => {
-      const selected = selectCommandLineWindowLine(prevState, lineIdx);
-      return handleKey(selected, 'Enter');
-    });
-    setIsEditorFocused(true);
-  }, []);
-
-  const handleJumpQuickfixItem = useCallback((index: number) => {
-    setEditorState((prevState) => jumpToQuickfixItem(prevState, index));
-    setIsEditorFocused(true);
-  }, []);
-
-  const handleCloseQuickfixWindow = useCallback(() => {
-    setEditorState((prevState) => closeQuickfixWindow(prevState));
-    setIsEditorFocused(true);
-  }, []);
-
-  const handleJumpLocationListItem = useCallback((index: number) => {
-    setEditorState((prevState) => jumpToLocationListItem(prevState, index));
-    setIsEditorFocused(true);
-  }, []);
-
-  const handleCloseLocationListWindow = useCallback(() => {
-    setEditorState((prevState) => closeLocationListWindow(prevState));
-    setIsEditorFocused(true);
-  }, []);
-
-  const handleCloseLspHover = useCallback(() => {
-    setEditorState((prevState) => closeLspHover(prevState));
-    setIsEditorFocused(true);
-  }, []);
-
-  const handleSelectFuzzyFinderAction = useCallback((action: 'open' | 'vsplit' | 'split' | 'tab') => {
-    setEditorState((prevState) => selectFuzzyFinderItem(prevState, action));
-    setIsEditorFocused(true);
-  }, []);
-
-  const handleCloseFuzzyFinder = useCallback(() => {
-    setEditorState((prevState) => closeFuzzyFinder(prevState));
-    setIsEditorFocused(true);
-  }, []);
-
-  const handleSelectFuzzyItemIndex = useCallback((index: number) => {
-    setEditorState((prevState) => {
-      if (!prevState.fuzzyFinder) return prevState;
-      return {
-        ...prevState,
-        fuzzyFinder: {
-          ...prevState.fuzzyFinder,
-          selectedIndex: index,
-        },
-      };
-    });
-  }, []);
-
-  const handleJumpHelpTag = useCallback((tag: string) => {
-    setEditorState((prevState) => jumpHelpTag(prevState, tag));
-    setIsEditorFocused(true);
-  }, []);
-
-  const handlePopHelpTag = useCallback(() => {
-    setEditorState((prevState) => popHelpTag(prevState));
-    setIsEditorFocused(true);
-  }, []);
-
-  const handleCloseHelp = useCallback(() => {
-    setEditorState((prevState) => closeHelp(prevState));
-    setIsEditorFocused(true);
-  }, []);
-
   const currentMission = MISSIONS[currentMissionIndex];
 
   // 총 입력 타수 및 최근 키 입력 히스토리, 가상 키보드 프레스 상태
@@ -470,14 +214,6 @@ export function App() {
   // 스마트 코칭: 비효율적 입력 습관(안티패턴) 실시간 분석기
   const [coachingMessage, setCoachingMessage] = useState<string | null>(null);
   const antiPatternDetectorRef = useRef(new AntiPatternDetector());
-
-  // 최적 타수(Par) 모범 답안 고스트 리플레이 상태
-  const [isGhostReplaying, setIsGhostReplaying] = useState(false);
-  const [ghostReplayProgress, setGhostReplayProgress] = useState<{ current: number; total: number }>({
-    current: 0,
-    total: 0,
-  });
-  const ghostTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 스피드런 상태 관리
   const [speedrunStatus, setSpeedrunStatus] = useState<'ready' | 'running' | 'completed'>('ready');
@@ -578,6 +314,58 @@ export function App() {
       };
     }
     return getMissionInitialState(currentMission);
+  });
+  setEditorStateRef.current = setEditorState;
+
+  const {
+    handleSwitchPane,
+    handleSelectCompletionCandidate,
+    handleSwitchBuffer,
+    handleSwitchTabPage,
+    handleCloseTabPage,
+    handleNewTabPage,
+    handleCloseCommandLineWindow,
+    handleSelectCommandLineWindowLine,
+    handleSwitchCommandLineWindowType,
+    handleClearCommandLineHistory,
+    handleExecuteCommandLineWindowLine,
+    handleJumpQuickfixItem,
+    handleCloseQuickfixWindow,
+    handleJumpLocationListItem,
+    handleCloseLocationListWindow,
+    handleCloseLspHover,
+    handleSelectFuzzyFinderAction,
+    handleCloseFuzzyFinder,
+    handleSelectFuzzyItemIndex,
+    handleJumpHelpTag,
+    handlePopHelpTag,
+    handleCloseHelp,
+    handleJumpToMark,
+    handleDeleteMark,
+    handleDeleteAllLocalMarks,
+    handleJumpToIndex,
+    handleJumpOlder,
+    handleJumpNewer,
+    handleClearJumps,
+    handleSetMark,
+    handleJumpToLine,
+    handleUpdateRegister,
+    handleDeleteRegister,
+  } = useEditorWorkspaceHandlers({ setEditorState, setIsEditorFocused });
+
+  const {
+    isGhostReplaying,
+    ghostReplayProgress,
+    handleStopGhostReplay,
+    handleStartGhostReplay,
+  } = useGhostReplay({
+    currentMission,
+    getMissionInitialState,
+    setEditorState,
+    setKeystrokeCount,
+    setRecentKeys,
+    setLastPressedKey,
+    playKeySound,
   });
 
   // 실시간 명령 복기 타임라인 & Vim X-Ray 투시기 상태
@@ -756,49 +544,6 @@ export function App() {
     }
   }, [editorState.showMarksVisualizer]);
 
-  // 마크 및 점프 리스트 HUD 인터랙션 핸들러
-  const handleJumpToMark = useCallback((markChar: string) => {
-    setEditorState((prev) => jumpToMark(prev, markChar, false));
-  }, []);
-
-  const handleDeleteMark = useCallback((markChar: string) => {
-    setEditorState((prev) => deleteSingleMark(prev, markChar));
-  }, []);
-
-  const handleDeleteAllLocalMarks = useCallback(() => {
-    setEditorState((prev) => deleteMarks(prev, '', true));
-  }, []);
-
-  const handleJumpToIndex = useCallback((index: number) => {
-    setEditorState((prev) => jumpToIndex(prev, index));
-  }, []);
-
-  const handleJumpOlder = useCallback(() => {
-    setEditorState((prev) => jumpOlder(prev));
-  }, []);
-
-  const handleJumpNewer = useCallback(() => {
-    setEditorState((prev) => jumpNewer(prev));
-  }, []);
-
-  const handleClearJumps = useCallback(() => {
-    setEditorState((prev) => clearJumps(prev));
-  }, []);
-
-  const handleSetMark = useCallback((markChar: string) => {
-    setEditorState((prev) => setMark(prev, markChar));
-  }, []);
-
-  const handleJumpToLine = useCallback((line: number) => {
-    setEditorState((prev) => ({
-      ...prev,
-      cursor: {
-        line: Math.max(0, Math.min(line, prev.lines.length - 1)),
-        col: 0,
-      },
-    }));
-  }, []);
-
   // :set rnu / :set nornu Ex 명령 실행 시 상대 라인 번호 상태 연동
   useEffect(() => {
     if (editorState.options?.relativenumber !== undefined) {
@@ -862,75 +607,6 @@ export function App() {
     speedrunKeystrokes,
     playSuccessSound,
   ]);
-
-  const handleStopGhostReplay = useCallback(() => {
-    if (ghostTimerRef.current) {
-      clearInterval(ghostTimerRef.current);
-      ghostTimerRef.current = null;
-    }
-    setIsGhostReplaying(false);
-    setLastPressedKey(undefined);
-  }, []);
-
-  const handleStartGhostReplay = useCallback(() => {
-    const keys = currentMission.optimalKeys;
-    if (!keys || keys.length === 0) return;
-
-    if (ghostTimerRef.current) {
-      clearInterval(ghostTimerRef.current);
-      ghostTimerRef.current = null;
-    }
-
-    let currentState = getMissionInitialState(currentMission);
-    setEditorState(currentState);
-    setKeystrokeCount(0);
-    setRecentKeys([]);
-    setLastPressedKey(undefined);
-    setIsGhostReplaying(true);
-    setGhostReplayProgress({ current: 0, total: keys.length });
-
-    let step = 0;
-    ghostTimerRef.current = setInterval(() => {
-      if (step >= keys.length) {
-        if (ghostTimerRef.current) {
-          clearInterval(ghostTimerRef.current);
-          ghostTimerRef.current = null;
-        }
-        setIsGhostReplaying(false);
-        setLastPressedKey(undefined);
-        return;
-      }
-
-      const key = keys[step];
-      const prevMode = currentState.mode;
-      currentState = handleKey(currentState, key);
-      setEditorState(currentState);
-
-      setLastPressedKey(key);
-      playKeySound(key, prevMode);
-      setKeystrokeCount((prev) => prev + 1);
-      setRecentKeys((prev) => [...prev.slice(-7), key]);
-      step += 1;
-      setGhostReplayProgress({ current: step, total: keys.length });
-
-      if (step >= keys.length) {
-        if (ghostTimerRef.current) {
-          clearInterval(ghostTimerRef.current);
-          ghostTimerRef.current = null;
-        }
-        setIsGhostReplaying(false);
-        setLastPressedKey(undefined);
-      }
-    }, 350);
-  }, [currentMission, playKeySound]);
-
-  useEffect(() => {
-    return () => {
-      if (ghostTimerRef.current) {
-        clearInterval(ghostTimerRef.current);
-      }
-    };
-  }, []);
 
   const handleSelectMission = useCallback((index: number) => {
     if (index >= 0 && index < MISSIONS.length) {
@@ -1150,28 +826,6 @@ export function App() {
     setShowMacroDebugger((prev) => !prev);
   }, []);
 
-  const handleUpdateRegister = useCallback(
-    (register: string, content: string | string[], type: 'char' | 'line' | 'macro') => {
-      setEditorState((prev) => {
-        const nextRegisters = { ...(prev.registers ?? {}) };
-        nextRegisters[register] = { type, content };
-        return { ...prev, registers: nextRegisters };
-      });
-    },
-    []
-  );
-
-  const handleDeleteRegister = useCallback(
-    (register: string) => {
-      setEditorState((prev) => {
-        const nextRegisters = { ...(prev.registers ?? {}) };
-        delete nextRegisters[register];
-        return { ...prev, registers: nextRegisters };
-      });
-    },
-    []
-  );
-
   const handleOpenMacroDebugger = useCallback(
     (_register: string) => {
       setShowMacroDebugger(true);
@@ -1297,264 +951,31 @@ export function App() {
     [processKeyInput]
   );
 
-  // 브라우저 윈도우 포커스/블러 감지
-  useEffect(() => {
-    const handleWindowFocus = () => setIsEditorFocused(true);
-    const handleWindowBlur = () => setIsEditorFocused(false);
-    window.addEventListener('focus', handleWindowFocus);
-    window.addEventListener('blur', handleWindowBlur);
-    return () => {
-      window.removeEventListener('focus', handleWindowFocus);
-      window.removeEventListener('blur', handleWindowBlur);
-    };
-  }, []);
+  const isModalOrGameBlocked =
+    isModalOpen ||
+    isCustomModalOpen ||
+    isAnalyticsModalOpen ||
+    isDailyModalOpen ||
+    isConfigModalOpen ||
+    isBYOCModalOpen ||
+    currentTab === 'arcade' ||
+    currentTab === 'dungeon' ||
+    currentTab === 'dojo';
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // 고스트 리플레이 재생 중 사용자가 키를 누르면 리플레이 중지
-      if (isGhostReplaying) {
-        handleStopGhostReplay();
-        return;
-      }
-
-      // 모달이 열려 있거나 아케이드/던전/도장 모드일 때는 기본 에디터 키 입력을 차단
-      if (
-        isModalOpen ||
-        isCustomModalOpen ||
-        isAnalyticsModalOpen ||
-        isDailyModalOpen ||
-        isConfigModalOpen ||
-        isBYOCModalOpen ||
-        currentTab === 'arcade' ||
-        currentTab === 'dungeon' ||
-        currentTab === 'dojo'
-      ) {
-        return;
-      }
-
-      // 키 입력 시 에디터 포커스 자동 활성화
-      if (!isEditorFocused) {
-        setIsEditorFocused(true);
-      }
-
-      // 단독 메타/보조 키는 타수 및 엔진 전달 제외
-      if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(e.key)) {
-        return;
-      }
-
-      // Ctrl+r 또는 Cmd+r: Redo 실행 취소 취소 (브라우저 페이지 새로고침 완벽 차단)
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'r' || e.key === 'R')) {
-        e.preventDefault();
-        processKeyInput('Ctrl-r');
-        return;
-      }
-
-      // Ctrl+w 또는 Cmd+w 또는 Alt+w: 윈도우 분할(NORMAL/VISUAL) 및 단어 삭제(INSERT)
-      if ((e.ctrlKey || e.metaKey || e.altKey) && (e.key === 'w' || e.key === 'W')) {
-        if (editorState.mode === 'NORMAL' || editorState.mode.startsWith('VISUAL') || editorState.mode === 'INSERT') {
-          e.preventDefault();
-          processKeyInput('Ctrl-w');
-          return;
-        }
-      }
-
-      // Ctrl+h 또는 Cmd+h 또는 Alt+h: INSERT 모드 백스페이스
-      if ((e.ctrlKey || e.metaKey || e.altKey) && (e.key === 'h' || e.key === 'H')) {
-        if (editorState.mode === 'INSERT') {
-          e.preventDefault();
-          processKeyInput('Ctrl-h');
-          return;
-        }
-      }
-
-      // Ctrl+n 또는 Cmd+n 또는 Alt+n: INSERT 모드 인버퍼 자동완성 (다음 후보)
-      if ((e.ctrlKey || e.metaKey || e.altKey) && (e.key === 'n' || e.key === 'N')) {
-        if (editorState.mode === 'INSERT') {
-          e.preventDefault();
-          processKeyInput('Ctrl-n');
-          return;
-        }
-      }
-
-      // Ctrl+p 또는 Cmd+p 또는 Alt+p: INSERT 모드 인버퍼 자동완성 (이전 후보)
-      if ((e.ctrlKey || e.metaKey || e.altKey) && (e.key === 'p' || e.key === 'P')) {
-        if (editorState.mode === 'INSERT') {
-          e.preventDefault();
-          processKeyInput('Ctrl-p');
-          return;
-        }
-      }
-
-      // Ctrl+h/j/k/l: 분할 창 빠른 이동 (브라우저 히스토리/다운로드 기본 동작 차단)
-      if ((e.ctrlKey || e.metaKey) && ['h', 'j', 'k', 'l'].includes(e.key.toLowerCase())) {
-        if (editorState.mode === 'NORMAL' && activePresets['ctrlWindowNav']) {
-          e.preventDefault();
-          processKeyInput(`Ctrl-${e.key.toLowerCase()}`);
-          return;
-        }
-      }
-
-      // Ctrl+f 또는 Cmd+f: 브라우저 찾기 대신 Vim 검색 모드(/) 진입 유도
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'f' || e.key === 'F')) {
-        e.preventDefault();
-        processKeyInput('/');
-        return;
-      }
-
-      // Ctrl+v 또는 Cmd+v: 비주얼 블록(VISUAL_BLOCK) 모드 토글
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'V')) {
-        if (editorState.mode !== 'INSERT' && editorState.mode !== 'COMMAND' && editorState.mode !== 'SEARCH' && editorState.mode !== 'REPLACE') {
-          e.preventDefault();
-          processKeyInput('Ctrl-v');
-          return;
-        }
-      }
-
-      // Ctrl+^ 또는 Ctrl+6: 대안 버퍼(Alternate Buffer) 토글
-      if ((e.ctrlKey || e.metaKey) && (e.key === '^' || e.key === '6')) {
-        e.preventDefault();
-        processKeyInput('Ctrl-^');
-        return;
-      }
-
-      // Ctrl+o 또는 Cmd+o 또는 Alt+o: 점프 리스트 이전 위치(NORMAL) 및 일회성 Normal 명령(INSERT)
-      if ((e.ctrlKey || e.metaKey || e.altKey) && (e.key === 'o' || e.key === 'O')) {
-        if (editorState.mode === 'NORMAL' || editorState.mode === 'INSERT') {
-          e.preventDefault();
-          processKeyInput('Ctrl-o');
-          return;
-        }
-      }
-
-      // Ctrl+i 또는 Cmd+i: 점프 리스트 다음 위치
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'i' || e.key === 'I')) {
-        if (editorState.mode === 'NORMAL') {
-          e.preventDefault();
-          processKeyInput('Ctrl-i');
-          return;
-        }
-      }
-
-      // Ctrl+a 또는 Cmd+a 또는 Alt+a: 숫자 증가 (NORMAL 또는 VISUAL 모드에서 브라우저 전체 선택 차단)
-      if ((e.ctrlKey || e.metaKey || e.altKey) && (e.key === 'a' || e.key === 'A')) {
-        if (editorState.mode === 'NORMAL' || editorState.mode.startsWith('VISUAL')) {
-          e.preventDefault();
-          processKeyInput('Ctrl-a');
-          return;
-        }
-      }
-
-      // Ctrl+x 또는 Cmd+x 또는 Alt+x: 숫자 감소 (NORMAL 또는 VISUAL 모드에서 브라우저 잘라내기 차단)
-      if ((e.ctrlKey || e.metaKey || e.altKey) && (e.key === 'x' || e.key === 'X')) {
-        if (editorState.mode === 'NORMAL' || editorState.mode.startsWith('VISUAL')) {
-          e.preventDefault();
-          processKeyInput('Ctrl-x');
-          return;
-        }
-      }
-
-      // Ctrl+d 또는 Cmd+d: 반 페이지 아래 스크롤 (브라우저 북마크 차단)
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'd' || e.key === 'D')) {
-        if (editorState.mode === 'NORMAL' || editorState.mode.startsWith('VISUAL')) {
-          e.preventDefault();
-          processKeyInput('Ctrl-d');
-          return;
-        }
-      }
-
-      // Ctrl+g 또는 Cmd+g: 현재 위치/선택 영역 단어·줄·바이트 통계 (g Ctrl-g)
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'g' || e.key === 'G')) {
-        if (editorState.mode === 'NORMAL' || editorState.mode.startsWith('VISUAL')) {
-          e.preventDefault();
-          processKeyInput('Ctrl-g');
-          return;
-        }
-      }
-
-      // Ctrl+u 또는 Cmd+u 또는 Alt+u: 반 페이지 위 스크롤 (NORMAL/VISUAL) 및 줄 시작까지 삭제 (INSERT)
-      if ((e.ctrlKey || e.metaKey || e.altKey) && (e.key === 'u' || e.key === 'U')) {
-        if (editorState.mode === 'NORMAL' || editorState.mode.startsWith('VISUAL') || editorState.mode === 'INSERT') {
-          e.preventDefault();
-          processKeyInput('Ctrl-u');
-          return;
-        }
-      }
-
-      // 그 외 메타 키 조합은 브라우저 기본 단축키 허용
-      if (e.metaKey || e.ctrlKey || e.altKey) {
-        return;
-      }
-
-      // 브라우저 기본 스크롤, 포커스 이동, 검색창, 엔터(버튼 재클릭 방지), 뒤로가기 방지
-      if (
-        [
-          'ArrowUp',
-          'ArrowDown',
-          'ArrowLeft',
-          'ArrowRight',
-          ' ',
-          'Backspace',
-          'Tab',
-          '/',
-          'Enter',
-          'PageUp',
-          'PageDown',
-        ].includes(e.key)
-      ) {
-        e.preventDefault();
-      }
-
-      // 이전 UI 버튼에 남아 있는 HTML 포커스 해제
-      if (
-        document.activeElement &&
-        document.activeElement instanceof HTMLElement &&
-        document.activeElement.tagName !== 'BODY'
-      ) {
-        document.activeElement.blur();
-      }
-
-      // 한/영 입력기(IME) 정규화: NORMAL/VISUAL 모드에서 물리 키코드(e.code)를 매핑해 한글 상태에서도 이동/명령 유지
-      const { key: normalizedKey, isNormalized } = normalizeImeKey(e, editorState.mode);
-
-      if (isNormalized) {
-        setCoachingMessage(t('💡 한글 입력이 감지되어 영문(\'{normalizedKey}\')으로 자동 매핑되었습니다. 원활한 입력을 위해 [한/영] 전환을 권장합니다.', { normalizedKey }));
-      } else if (e.key === 'Process' || /[ㄱ-ㅎㅏ-ㅣ가-힣]/.test(e.key)) {
-        setCoachingMessage(t('⚠️ 현재 한글 입력 상태입니다. 원활한 Vim 명령어 입력을 위해 [한/영] 키를 눌러 영문 모드로 전환해 주세요!'));
-      }
-
-      // 🔥 하드코어 모드 가드: 방향키/연타 조기 차단
-      if (hardcoreMode) {
-        const check = hardcoreGuardRef.current.checkKey(normalizedKey, Date.now());
-        if (check.blocked) {
-          triggerHardcoreViolation(check.message!, check.suggestion);
-          e.preventDefault();
-          return;
-        }
-      }
-
-      processKeyInput(normalizedKey);
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [
-    isModalOpen,
-    isCustomModalOpen,
-    isAnalyticsModalOpen,
-    isDailyModalOpen,
-    isConfigModalOpen,
-    activePresets,
-    currentTab,
+  useVimKeyboardInput({
+    isModalOrGameBlocked,
     isGhostReplaying,
     handleStopGhostReplay,
     isEditorFocused,
-    editorState.mode,
+    setIsEditorFocused,
+    editorMode: editorState.mode,
+    activePresets,
     hardcoreMode,
+    hardcoreGuardRef,
     triggerHardcoreViolation,
+    setCoachingMessage,
     processKeyInput,
-  ]);
+  });
 
   const activeMissionForDiff =
     currentTab === 'course'
@@ -1582,7 +1003,7 @@ export function App() {
             <button
               type="button"
               className="hardcore-warning-close-btn"
-              onClick={() => setHardcoreWarning(null)}
+              onClick={dismissHardcoreWarning}
               aria-label={t('닫기')}
             >
               ✕
@@ -2525,10 +1946,7 @@ export function App() {
             options={editorState.options}
             onRestoreBackup={() => {
               setProgress(loadProgress());
-              setActivePresets(loadActivePresets());
-              setLeaderKey(loadLeaderKey());
-              setCustomKeymaps(loadCustomKeymaps());
-              setHardcoreMode(loadHardcoreMode());
+              reloadHardcoreAndKeymaps();
               setRelativeLineNumbers(loadRelativeLineSetting());
               setShowVirtualKeyboard(loadVirtualKeyboardSetting());
               setShowDiffView(loadDiffViewSetting());
@@ -2537,9 +1955,6 @@ export function App() {
               setShowGrammarAST(loadGrammarASTSetting());
               setShowActionTimeline(loadActionTimelineSetting());
               setSpeedrunBestRecord(loadSpeedrunRecord());
-              const restoredTheme = loadThemeSetting();
-              setCurrentTheme(restoredTheme);
-              applyTheme(restoredTheme);
             }}
           />
         )}

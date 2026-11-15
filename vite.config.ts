@@ -4,13 +4,21 @@ import react from '@vitejs/plugin-react';
 
 /**
  * Vite/Rollup 프로덕션 번들의 청크 분리 규칙.
- * - 대용량 정적 데이터(spellData·helpData·messagesEn)는 'vim-engine-data' 로 분리해
- *   엔진 코어 청크('vim-engine')를 500 kB 미만으로 유지하고 순환 참조 없이 캐시를 분리합니다.
+ * - 대용량 정적 데이터(spellData·helpData·messagesEn)는 'vim-engine-data' 로 분리합니다.
+ * - 순수 코어 기반/스크립트 엔진 레이어는 'vim-engine-core' 로 분리해
+ *   엔진 모듈('vim-engine')과 함께 순환 참조 없이 500 kB 미만(여유 폭 150 kB+)으로 유지합니다.
  */
 export function resolveManualChunk(id: string): string | undefined {
   const normalized = id.replace(/\\/g, '/');
   if (/node_modules\/(react|react-dom|scheduler)\//.test(normalized)) return 'react-vendor';
   if (/\/src\/vim-engine\/(spellData|helpData|messagesEn)\.ts$/.test(normalized)) return 'vim-engine-data';
+  if (
+    /\/src\/vim-engine\/(config|types|messages|cursor|vimRegex|vimscriptEval|vimscriptEngine|operators|undoTreeEngine|expressionParser|digraphs|invariants|bracketMatch|wordMotion|vfs)\.ts$/.test(
+      normalized
+    )
+  ) {
+    return 'vim-engine-core';
+  }
   if (normalized.includes('/src/vim-engine/')) return 'vim-engine';
   // 영어 사전은 영어 모드 진입 시에만 지연 로딩되는 별도 청크로 분리합니다
   if (/\/src\/i18n\/en(Content)?\.ts$/.test(normalized)) return 'i18n-en';

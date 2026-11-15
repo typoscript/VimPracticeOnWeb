@@ -28,7 +28,9 @@ function walk(dir: string): string[] {
 }
 
 function uiSourceFiles(): string[] {
-  return [path.join(SRC_DIR, 'App.tsx'), ...walk(path.join(SRC_DIR, 'components')), ...walk(path.join(SRC_DIR, 'utils'))];
+  const hooksDir = path.join(SRC_DIR, 'hooks');
+  const hookFiles = fs.existsSync(hooksDir) ? walk(hooksDir) : [];
+  return [path.join(SRC_DIR, 'App.tsx'), ...hookFiles, ...walk(path.join(SRC_DIR, 'components')), ...walk(path.join(SRC_DIR, 'utils'))];
 }
 
 function unescapeLiteral(body: string): string {
