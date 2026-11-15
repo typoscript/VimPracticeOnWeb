@@ -7,8 +7,8 @@ import {
   findNextMatch,
   findPrevMatch,
   parseSearchQuery,
-  applySearchOffset,
   findCurrentOrNextMatch,
+  findSearchTarget,
 } from './search';
 import { recordJump } from './marks';
 import { addHistory, navigateHistory, openCommandLineWindow } from './cmdlineWindow';
@@ -295,33 +295,47 @@ export function executeSearchQuery(
     };
   }
 
-  const { pattern, offset } = parseSearchQuery(rawQuery);
+  const backward = state.commandType === '?';
+  const delimChar = backward ? '?' : '/';
+  const direction: 'forward' | 'backward' = backward ? 'backward' : 'forward';
+  const parsedQuery = parseSearchQuery(rawQuery, delimChar);
+  const offset = parsedQuery.offset;
+  const returnCursor = state.searchOperator?.initialCursor ?? state.cursor;
+  const failBase = {
+    ...state,
+    mode: 'NORMAL' as const,
+    cursor: returnCursor,
+    commandBuffer: undefined,
+    commandType: undefined,
+    searchOperator: undefined,
+    bell: true,
+  };
+
+  // 빈 패턴(`//e`, `??b`)은 직전 검색 패턴을 새 오프셋으로 재사용합니다.
+  let pattern = parsedQuery.pattern;
+  if (pattern === '') {
+    if (!state.lastSearchQuery) {
+      return { ...failBase, commandMessage: msg('E35: 이전 정규식이 없습니다') };
+    }
+    pattern = state.lastSearchQuery;
+  }
+
   const matches = findMatches(state.lines, pattern, state.options);
   if (matches.length === 0) {
-    const returnCursor = state.searchOperator?.initialCursor ?? state.cursor;
     return {
-      ...state,
-      mode: 'NORMAL',
-      cursor: returnCursor,
+      ...failBase,
       lastSearchQuery: pattern,
       lastSearchOffset: offset,
-      commandBuffer: undefined,
-      commandType: undefined,
+      lastSearchDirection: direction,
       commandMessage: msg('E486: 패턴을 찾을 수 없습니다: {pattern}', { pattern }),
-      searchOperator: undefined,
-      bell: true,
     };
   }
 
-  const fromLine = state.searchOperator ? state.searchOperator.initialCursor.line : state.cursor.line;
-  const fromCol = state.searchOperator ? state.searchOperator.initialCursor.col : state.cursor.col;
-  const targetMatch =
-    findNextMatch(matches, { line: fromLine, col: fromCol - 1 }) ??
-    matches[0];
+  const found = findSearchTarget(state.lines, matches, returnCursor, offset, !backward, true)!;
+  const targetMatch = found.match;
+  const targetPos = found.target;
 
-  const targetPos = applySearchOffset(state.lines, targetMatch, offset);
-
-  // 연산자(d/pat/e, c/pat/e, y/pat/e 등) 결합 처리
+  // 연산자(d/pat/e, c?pat?b, y/pat/+1 등) 결합 처리
   if (state.searchOperator) {
     const op = state.searchOperator.op;
     const startPos = state.searchOperator.initialCursor;
@@ -329,13 +343,14 @@ export function executeSearchQuery(
 
     const res = executeSearchOperator(state, op, startPos, targetPos, isLinewise, offset?.type === 'end');
     const synced = syncRegisters(state, res, op === 'y');
-    const opKeys = [op, '/', ...rawQuery.split(''), 'Enter'];
+    const opKeys = [op, delimChar, ...rawQuery.split(''), 'Enter'];
 
     if (op === 'c') {
       return {
         ...synced,
         lastSearchQuery: pattern,
         lastSearchOffset: offset,
+        lastSearchDirection: direction,
         commandBuffer: undefined,
         commandType: undefined,
         searchOperator: undefined,
@@ -345,8 +360,10 @@ export function executeSearchQuery(
 
     return {
       ...synced,
+      mode: 'NORMAL',
       lastSearchQuery: pattern,
       lastSearchOffset: offset,
+      lastSearchDirection: direction,
       commandBuffer: undefined,
       commandType: undefined,
       searchOperator: undefined,
@@ -366,9 +383,40 @@ export function executeSearchQuery(
     cursor: targetPos,
     lastSearchQuery: pattern,
     lastSearchOffset: offset,
+    lastSearchDirection: direction,
     commandBuffer: undefined,
     commandType: undefined,
     commandMessage: msg('검색 일치 ({v}/{matchesCount}): {pattern}', { v: matchIdx + 1, matchesCount: matches.length, pattern }),
+  };
+}
+
+/**
+ * n / N: 마지막 검색 패턴·방향·오프셋으로 반복합니다. (`?` 검색 뒤의 n 은 위쪽으로)
+ */
+export function repeatSearch(state: VimEditorState, reverse: boolean): VimEditorState {
+  if (!state.lastSearchQuery) {
+    return { ...state, pendingKeys: undefined };
+  }
+  const matches = findMatches(state.lines, state.lastSearchQuery, state.options);
+  if (matches.length === 0) {
+    return {
+      ...state,
+      commandMessage: msg('E486: 패턴을 찾을 수 없습니다: {lastSearchQuery}', { lastSearchQuery: state.lastSearchQuery }),
+      pendingKeys: undefined,
+      bell: true,
+    };
+  }
+  const forward = (state.lastSearchDirection !== 'backward') !== reverse;
+  const found = findSearchTarget(state.lines, matches, state.cursor, state.lastSearchOffset, forward)!;
+  const matchIdx = matches.findIndex((m) => m.line === found.match.line && m.col === found.match.col);
+  const stateWithJump = recordJump(state);
+  return {
+    ...stateWithJump,
+    cursor: found.target,
+    commandMessage: reverse
+      ? msg('이전 검색 결과 ({v}/{matchesCount}): {lastSearchQuery}', { v: matchIdx + 1, matchesCount: matches.length, lastSearchQuery: state.lastSearchQuery })
+      : msg('다음 검색 결과 ({v}/{matchesCount}): {lastSearchQuery}', { v: matchIdx + 1, matchesCount: matches.length, lastSearchQuery: state.lastSearchQuery }),
+    pendingKeys: undefined,
   };
 }
 

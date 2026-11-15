@@ -66,7 +66,7 @@ import {
 import { toggleCommentRange, getCommentTextObjectRange } from './commentEngine';
 import { formatRange } from './formatEngine';
 import { gotoFileUnderCursor } from './gotoFileEngine';
-import { findMatches, findNextMatch, findPrevMatch, getWordAtCursor, applySearchOffset } from './search';
+import { findMatches, findNextMatch, findPrevMatch, getWordAtCursor } from './search';
 import { executeCommandLine } from './commandLine';
 import { parseKeySequence } from './keymapEngine';
 import { executeDeleteSurround, executeChangeSurround, executeYouSurround, executeLineSurround } from './surroundEngine';
@@ -109,7 +109,7 @@ import {
   detectFoldBlocks,
 } from './folding';
 import { msg } from './messages';
-import { executeGn } from './searchMode';
+import { executeGn, repeatSearch } from './searchMode';
 import {
   parsePending,
   ringBell,
@@ -1497,11 +1497,11 @@ export function handleNormalModeKey(
         pendingKeys: (state.pendingKeys ?? '') + key,
       };
     }
-    if (key === '/') {
+    if (key === '/' || key === '?') {
       return {
         ...state,
         mode: 'SEARCH',
-        commandType: '/',
+        commandType: key,
         commandBuffer: '',
         searchOperator: {
           op: 'd',
@@ -1629,11 +1629,11 @@ export function handleNormalModeKey(
         pendingKeys: (state.pendingKeys ?? '') + key,
       };
     }
-    if (key === '/') {
+    if (key === '/' || key === '?') {
       return {
         ...state,
         mode: 'SEARCH',
-        commandType: '/',
+        commandType: key,
         commandBuffer: '',
         searchOperator: {
           op: 'c',
@@ -1741,11 +1741,11 @@ export function handleNormalModeKey(
         pendingKeys: (state.pendingKeys ?? '') + key,
       };
     }
-    if (key === '/') {
+    if (key === '/' || key === '?') {
       return {
         ...state,
         mode: 'SEARCH',
-        commandType: '/',
+        commandType: key,
         commandBuffer: '',
         searchOperator: {
           op: 'y',
@@ -1914,12 +1914,12 @@ export function handleNormalModeKey(
 
   // 10. 단일 키 명령 및 모드 진입
   // /: 검색 모드 진입
-  if (key === '/') {
+  if (key === '/' || key === '?') {
     if (parsed.operator) {
       return {
         ...state,
         mode: 'SEARCH',
-        commandType: '/',
+        commandType: key,
         commandBuffer: '',
         searchOperator: {
           op: parsed.operator,
@@ -1933,7 +1933,7 @@ export function handleNormalModeKey(
     return {
       ...state,
       mode: 'SEARCH',
-      commandType: '/',
+      commandType: key,
       commandBuffer: '',
       pendingKeys: undefined,
       commandMessage: undefined,
@@ -1952,56 +1952,9 @@ export function handleNormalModeKey(
     };
   }
 
-  // n: 다음 검색 결과로 점프
-  if (key === 'n') {
-    if (state.lastSearchQuery) {
-      const matches = findMatches(state.lines, state.lastSearchQuery, state.options);
-      if (matches.length === 0) {
-        return {
-          ...state,
-          commandMessage: msg('E486: 패턴을 찾을 수 없습니다: {lastSearchQuery}', { lastSearchQuery: state.lastSearchQuery }),
-          pendingKeys: undefined,
-          bell: true,
-        };
-      }
-      const nextMatch = findNextMatch(matches, state.cursor) ?? matches[0];
-      const matchIdx = matches.findIndex((m) => m.line === nextMatch.line && m.col === nextMatch.col);
-      const targetPos = applySearchOffset(state.lines, nextMatch, state.lastSearchOffset);
-      const stateWithJump = recordJump(state);
-      return {
-        ...stateWithJump,
-        cursor: targetPos,
-        commandMessage: msg('다음 검색 결과 ({v}/{matchesCount}): {lastSearchQuery}', { v: matchIdx + 1, matchesCount: matches.length, lastSearchQuery: state.lastSearchQuery }),
-        pendingKeys: undefined,
-      };
-    }
-    return { ...state, pendingKeys: undefined };
-  }
-
-  // N: 이전 검색 결과로 점프
-  if (key === 'N') {
-    if (state.lastSearchQuery) {
-      const matches = findMatches(state.lines, state.lastSearchQuery, state.options);
-      if (matches.length === 0) {
-        return {
-          ...state,
-          commandMessage: msg('E486: 패턴을 찾을 수 없습니다: {lastSearchQuery}', { lastSearchQuery: state.lastSearchQuery }),
-          pendingKeys: undefined,
-          bell: true,
-        };
-      }
-      const prevMatch = findPrevMatch(matches, state.cursor) ?? matches[matches.length - 1];
-      const matchIdx = matches.findIndex((m) => m.line === prevMatch.line && m.col === prevMatch.col);
-      const targetPos = applySearchOffset(state.lines, prevMatch, state.lastSearchOffset);
-      const stateWithJump = recordJump(state);
-      return {
-        ...stateWithJump,
-        cursor: targetPos,
-        commandMessage: msg('이전 검색 결과 ({v}/{matchesCount}): {lastSearchQuery}', { v: matchIdx + 1, matchesCount: matches.length, lastSearchQuery: state.lastSearchQuery }),
-        pendingKeys: undefined,
-      };
-    }
-    return { ...state, pendingKeys: undefined };
+  // n / N: 마지막 검색 방향(/ 또는 ?)과 오프셋을 따라 반복
+  if (key === 'n' || key === 'N') {
+    return repeatSearch(state, key === 'N');
   }
 
   // *: 커서 아래 단어로 검색어 설정 후 다음 결과로 점프
@@ -2019,6 +1972,8 @@ export function handleNormalModeKey(
         ...stateWithJump,
         cursor: nextMatch ? { line: nextMatch.line, col: nextMatch.col } : state.cursor,
         lastSearchQuery: query,
+        lastSearchOffset: null,
+        lastSearchDirection: 'forward',
         commandMessage: msg('단어 \'{word}\' 검색 ({v}/{matchesCount})', { word, v: matchIdx + 1, matchesCount: matches.length }),
         pendingKeys: undefined,
       };
@@ -2041,6 +1996,8 @@ export function handleNormalModeKey(
         ...stateWithJump,
         cursor: prevMatch ? { line: prevMatch.line, col: prevMatch.col } : state.cursor,
         lastSearchQuery: query,
+        lastSearchOffset: null,
+        lastSearchDirection: 'backward',
         commandMessage: msg('단어 \'{word}\' 역방향 검색 ({v}/{matchesCount})', { word, v: matchIdx + 1, matchesCount: matches.length }),
         pendingKeys: undefined,
       };

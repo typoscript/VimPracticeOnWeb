@@ -62,13 +62,21 @@ export function findMatches(
   return matches;
 }
 
+/** `?` 검색에서 `\?` 는 리터럴 물음표입니다 (`/` 검색의 `\/` 는 정규식이 이미 처리) */
+function unescapeDelimiter(pattern: string, delimiter: '/' | '?'): string {
+  return delimiter === '?' ? pattern.replace(/\\\?/g, '?') : pattern;
+}
+
 /**
  * 검색 커맨드라인 문자열(raw)에서 패턴과 오프셋을 분리 파싱합니다.
  * 예: 'foo/e' -> pattern: 'foo', offset: { type: 'end', offset: 0 }
  *     'foo/s+2' -> pattern: 'foo', offset: { type: 'start', offset: 2 }
  *     'TODO/+1' -> pattern: 'TODO', offset: { type: 'line', offset: 1 }
  */
-export function parseSearchQuery(raw: string): {
+export function parseSearchQuery(
+  raw: string,
+  delimiter: '/' | '?' = '/'
+): {
   pattern: string;
   offset: SearchOffset | null;
 } {
@@ -84,7 +92,7 @@ export function parseSearchQuery(raw: string): {
       i += 2;
       continue;
     }
-    if (raw[i] === '/') {
+    if (raw[i] === delimiter) {
       delimIdx = i;
       break;
     }
@@ -92,10 +100,10 @@ export function parseSearchQuery(raw: string): {
   }
 
   if (delimIdx === -1) {
-    return { pattern: raw, offset: null };
+    return { pattern: unescapeDelimiter(raw, delimiter), offset: null };
   }
 
-  const pattern = raw.slice(0, delimIdx);
+  const pattern = unescapeDelimiter(raw.slice(0, delimIdx), delimiter);
   const offsetStr = raw.slice(delimIdx + 1).trim();
 
   if (offsetStr.length === 0) {
@@ -287,4 +295,48 @@ export function getWordAtCursor(lineText: string, col: number): string | null {
 
   const word = lineText.slice(start, end + 1);
   return word.length > 0 ? word : null;
+}
+
+function isAfter(a: CursorPosition, b: CursorPosition): boolean {
+  return a.line > b.line || (a.line === b.line && a.col > b.col);
+}
+
+/**
+ * 검색 방향·오프셋을 고려해 이동할 매치를 고릅니다.
+ * 오프셋이 적용된 도착 위치가 커서보다 엄격히 앞/뒤인 첫 매치를 고르고, 없으면 반대편 끝으로 순환합니다
+ * (`/pat/e` 로 매치 끝에 있을 때 `n` 이 같은 매치에 머물지 않도록).
+ */
+export function findSearchTarget(
+  lines: string[],
+  matches: SearchMatch[],
+  from: CursorPosition,
+  offset: SearchOffset | null | undefined,
+  forward: boolean,
+  includeAtCursor = false
+): { match: SearchMatch; target: CursorPosition; wrapped: boolean } | null {
+  if (matches.length === 0) return null;
+  // 줄 오프셋(+N/-N)은 도착 줄이 아니라 매치 시작 위치를 커서와 비교합니다 (Vim 동작)
+  const lineOffset = offset?.type === 'line';
+  const withTarget = matches.map((match) => {
+    const target = applySearchOffset(lines, match, offset);
+    return { match, target, probe: lineOffset ? { line: match.line, col: match.col } : target };
+  });
+  if (forward) {
+    // includeAtCursor: 오프셋 없는 첫 `/pat` 입력은 커서 위치의 매치도 허용(기존 동작 유지)
+    const hit = withTarget.find(
+      (c) =>
+        isAfter(c.probe, from) ||
+        (includeAtCursor && !offset && c.probe.line === from.line && c.probe.col === from.col)
+    );
+    return hit
+      ? { match: hit.match, target: hit.target, wrapped: false }
+      : { match: withTarget[0].match, target: withTarget[0].target, wrapped: true };
+  }
+  for (let i = withTarget.length - 1; i >= 0; i--) {
+    if (isAfter(from, withTarget[i].probe)) {
+      return { match: withTarget[i].match, target: withTarget[i].target, wrapped: false };
+    }
+  }
+  const last = withTarget[withTarget.length - 1];
+  return { match: last.match, target: last.target, wrapped: true };
 }

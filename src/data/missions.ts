@@ -3210,4 +3210,36 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 86,
+    title: '레슨 86: 검색 오프셋과 연산자 결합(/pat/e, /pat/+1, ?pat?b, d/pat/e, c?pat?b) 마스터',
+    description:
+      '검색 명령 뒤에 오프셋을 붙이면 "어디에 착지할지"를 정할 수 있고, 연산자(d/c/y)와 결합하면 매치 위치까지의 정밀한 편집이 한 번에 끝납니다.\n\n1) 검색 오프셋 (/pat/{offset}, ?pat?{offset}):\n   - /pat/e (매치 끝), /pat/e+1 (끝 다음 글자), /pat/b 또는 /pat/s-1 (매치 시작 기준), /pat/+1 · /pat/-1 (매치 줄에서 ±N줄, 줄 첫 글자).\n   - ? 는 위쪽(역방향) 검색입니다. ?pat?e 처럼 구분자도 ? 이고, 이후 n 은 같은 방향(위), N 은 반대 방향입니다.\n   - // 처럼 패턴을 비우면 직전 패턴을 재사용하므로 //e 로 방금 검색한 패턴에 새 오프셋만 줄 수 있습니다. n / N 도 마지막 오프셋을 그대로 따릅니다.\n\n2) 연산자 결합 (d/pat/e, c/pat/e, y?pat?b ...):\n   - 오프셋이 e 면 inclusive(착지 글자까지 포함), 그 외 문자 오프셋은 exclusive, 줄 오프셋(+N/-N)은 줄 단위(linewise) 연산입니다.\n   - 위쪽 검색(d?pat?)은 커서 앞쪽 범위를 지웁니다. 결합된 변경은 . 로 반복할 수 있습니다.\n\n미션:\n1. 커서가 맨 위에 있을 때 d/TODO/-1<Enter> 로 TODO 줄 바로 앞 줄까지(2줄)를 한 번에 지우세요.\n2. 이제 TODO 줄에서 c/ship/e<Enter>DONE<Esc> 로 "TODO ship"을 DONE 으로 바꾸세요.\n3. G 0 으로 마지막 줄(footer) 맨 앞으로 가서 d?body?b<Enter> 로 body 줄을 위쪽 검색 오프셋으로 삭제하세요.',
+    hint: 'd/TODO/-1<Enter> → c/ship/e<Enter>DONE<Esc> → G0 d?body?b<Enter>',
+    par: 38,
+    optimalKeys: [
+      'd', '/', 'T', 'O', 'D', 'O', '/', '-', '1', 'Enter', 'c', '/', 's', 'h', 'i', 'p', '/', 'e', 'Enter', 'D', 'O', 'N', 'E', 'Escape', 'G', '0', 'd', '?', 'b', 'o', 'd', 'y', '?', 'b', 'Enter',
+    ],
+    primaryFilename: 'notes.txt',
+    initialLines: [
+      '[draft] release notes v1',
+      'owner: temp-user',
+      'TODO ship it',
+      'body line',
+      'footer',
+    ],
+    targetLines: [
+      'DONE it',
+      'footer',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const target = ['DONE it', 'footer'];
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines.length === target.length &&
+        state.lines.every((l, idx) => l === target[idx])
+      );
+    },
+  },
 ];

@@ -428,7 +428,7 @@ export interface VimEditorState {
   /** 커맨드라인(:) 또는 검색(/) 입력 버퍼 */
   commandBuffer?: string;
   /** 커맨드라인 종류 (':' | '/' | '=') */
-  commandType?: ':' | '/' | '=';
+  commandType?: ':' | '/' | '?' | '=';
   /** 마지막 검색어 ('n', 'N', '*' 재검색용) */
   lastSearchQuery?: string;
   /** 커맨드라인 또는 검색 실행 결과 피드백 메시지 (예: '10번째 줄로 이동', 'E492: 알 수 없는 명령어') */
@@ -519,6 +519,8 @@ export interface VimEditorState {
   changeIndex?: number;
   /** 마지막 검색 시 사용된 커서 오프셋 (/pattern/e, /pattern/+1 등) */
   lastSearchOffset?: SearchOffset | null;
+  /** 마지막 검색 방향 (/ = forward, ? = backward). n/N 이 따릅니다 */
+  lastSearchDirection?: 'forward' | 'backward';
   /** 검색 모드 진입 전 대기 중이던 연산자 정보 (예: d/pattern/e) */
   searchOperator?: {
     op: string;

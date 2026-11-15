@@ -11,7 +11,7 @@ export interface StatusBarProps {
   /** 매크로 기록 중 상태 정보 */
   recordingMacro?: { register: string; keys: string[] } | null;
   /** 커맨드라인 종류 (':' | '/' | '=') */
-  commandType?: ':' | '/' | '=';
+  commandType?: ':' | '/' | '?' | '=';
   /** 커맨드라인 입력 문자열 */
   commandBuffer?: string;
   /** 커맨드/검색 실행 결과 알림 메시지 */
