@@ -29,6 +29,35 @@ export { parsePending, withoutBell, insertTextAtCursor, executeSearchQuery };
 export { withInvariantCheck, assertValidVimState, deepFreeze } from './invariants';
 
 /**
+ * Ctrl-o 일회성 노멀/커맨드/검색 세션 종료 시 조건을 확인해 INSERT 모드로 복귀합니다.
+ */
+function finishInsertNormalSession(
+  nextState: VimEditorState,
+  allowStickyDollar = false
+): VimEditorState {
+  if (
+    nextState.mode === 'NORMAL' &&
+    !nextState.cmdlineWindow &&
+    !nextState.netrw?.isOpen &&
+    !nextState.fuzzyFinder?.isOpen &&
+    !nextState.helpSession?.isOpen &&
+    !nextState.functionDraft
+  ) {
+    const currentLineText = nextState.lines[nextState.cursor.line] ?? '';
+    const targetCol = allowStickyDollar && nextState.stickyDollar
+      ? currentLineText.length
+      : Math.min(nextState.cursor.col, currentLineText.length);
+    return {
+      ...nextState,
+      mode: 'INSERT',
+      cursor: { line: nextState.cursor.line, col: targetCol },
+      insertNormalSession: undefined,
+    };
+  }
+  return { ...nextState, insertNormalSession: undefined };
+}
+
+/**
  * Vim 키 입력 처리 순수 함수 (불변성 가드 래퍼 내부 구현)
  */
 export function rawHandleKey(
@@ -121,8 +150,14 @@ export function rawHandleKey(
   let nextState: VimEditorState;
   if (state.mode === 'SEARCH') {
     nextState = handleSearchModeKey(state, key, isReplayingDot);
+    if (state.insertNormalSession && nextState.mode === 'NORMAL') {
+      nextState = finishInsertNormalSession(nextState);
+    }
   } else if (state.mode === 'COMMAND') {
     nextState = handleCommandLineModeKey(state, key, handleKey);
+    if (state.insertNormalSession && nextState.mode === 'NORMAL') {
+      nextState = finishInsertNormalSession(nextState);
+    }
   } else if (state.mode === 'REPLACE') {
     nextState = handleReplaceModeKey(state, key, isReplayingDot, macroDepth);
   } else if (state.mode === 'INSERT') {
@@ -137,23 +172,14 @@ export function rawHandleKey(
         // Escape 입력 시 세션 취소하고 NORMAL 모드로 잔류
         nextState = { ...nextState, insertNormalSession: undefined };
       } else if (!nextState.pendingKeys) {
-        // pendingKeys가 없으면 단일 normal 명령이 완결되었으므로 다시 INSERT 모드로 자동 복귀
-        if (nextState.mode === 'NORMAL') {
-          const currentLineText = nextState.lines[nextState.cursor.line] ?? '';
-          const targetCol = nextState.stickyDollar
-            ? currentLineText.length
-            : nextState.cursor.col;
+        if (nextState.mode === 'COMMAND' || nextState.mode === 'SEARCH') {
           nextState = {
             ...nextState,
-            mode: 'INSERT',
-            cursor: { line: nextState.cursor.line, col: targetCol },
-            insertNormalSession: undefined,
+            insertNormalSession: true,
           };
         } else {
-          nextState = {
-            ...nextState,
-            insertNormalSession: undefined,
-          };
+          // pendingKeys가 없으면 단일 normal 명령이 완결되었으므로 다시 INSERT 모드로 자동 복귀
+          nextState = finishInsertNormalSession(nextState, true);
         }
       } else {
         // pendingKeys가 남아 있는 경우(예: 'z', '2', 'd' 등) 세션 유지

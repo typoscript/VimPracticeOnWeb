@@ -107,6 +107,9 @@ import {
   deleteAllFoldsAtCursor,
   eliminateAllFolds,
   detectFoldBlocks,
+  jumpToNextFold,
+  jumpToPrevFold,
+  jumpToFoldEdge,
 } from './folding';
 import { msg } from './messages';
 import { executeGn, repeatSearch } from './searchMode';
@@ -649,7 +652,8 @@ export function handleNormalModeKey(
         state.options?.foldmethod,
         state.options?.shiftwidth,
         state.options?.foldexpr,
-        state
+        state,
+        state.options?.foldmarker
       );
       const found = detected.find((b) => b.startRow <= state.cursor.line && state.cursor.line <= b.endRow);
       if (found) {
@@ -708,6 +712,8 @@ export function handleNormalModeKey(
     if (key === 'd') return deleteFoldAtCursor(state);
     if (key === 'D') return deleteAllFoldsAtCursor(state);
     if (key === 'E') return eliminateAllFolds(state);
+    if (key === 'j') return jumpToNextFold(state, parsed.count1 ?? 1);
+    if (key === 'k') return jumpToPrevFold(state, parsed.count1 ?? 1);
     if (key === 'f') return { ...state, pendingKeys: 'zf' };
     if (key === '=') return { ...startSpellSuggest(state), pendingKeys: undefined };
     if (key === 'g') return { ...addSpellGoodWord(state), pendingKeys: undefined };
@@ -1048,6 +1054,10 @@ export function handleNormalModeKey(
         ...res,
         pendingKeys: undefined,
       };
+    }
+    // [z, ]z: 현재 열린 폴드의 시작/끝 줄로 점프
+    if (key === 'z') {
+      return jumpToFoldEdge(state, bracket === '[' ? 'start' : 'end');
     }
     // ]p, [p, ]P, [P: 현재 줄 들여쓰기에 맞춰 붙여넣기
     if (key === 'p' || key === 'P') {

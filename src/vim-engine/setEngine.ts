@@ -22,6 +22,7 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   syntax: true,
   foldmethod: 'manual',
   foldexpr: '0',
+  foldmarker: '{{{,}}}',
   foldlevel: 0,
   scrollbind: false,
 };
@@ -62,6 +63,8 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   foldmethod: 'foldmethod',
   fde: 'foldexpr',
   foldexpr: 'foldexpr',
+  fmr: 'foldmarker',
+  foldmarker: 'foldmarker',
   fdl: 'foldlevel',
   foldlevel: 'foldlevel',
   cms: 'commentstring',
@@ -169,6 +172,10 @@ export function formatOptionsList(
 
   if (options.foldexpr !== undefined && (showAll || options.foldexpr !== DEFAULT_VIM_OPTIONS.foldexpr)) {
     displayedItems.push(`foldexpr=${options.foldexpr}`);
+  }
+
+  if (options.foldmarker !== undefined && (showAll || options.foldmarker !== DEFAULT_VIM_OPTIONS.foldmarker)) {
+    displayedItems.push(`foldmarker=${options.foldmarker}`);
   }
 
   if (options.commentstring !== undefined && (showAll || options.commentstring !== DEFAULT_VIM_OPTIONS.commentstring)) {
@@ -346,6 +353,9 @@ export function executeSetCommand(
       if (optKey === 'foldexpr' && val === undefined) {
         val = '0';
       }
+      if (optKey === 'foldmarker' && val === undefined) {
+        val = '{{{,}}}';
+      }
       if (typeof val === 'boolean') {
         queryMessages.push(val ? (optKey as string) : `no${optKey}`);
       } else {
@@ -454,6 +464,26 @@ export function executeSetCommand(
           nextGlobal.foldexpr = exprVal;
         }
         appliedList.push(`foldexpr=${exprVal}`);
+        continue;
+      }
+      if (optKey === 'foldmarker') {
+        const commaIdx = rawVal.indexOf(',');
+        const startM = commaIdx >= 0 ? rawVal.slice(0, commaIdx) : '';
+        const endM = commaIdx >= 0 ? rawVal.slice(commaIdx + 1) : '';
+        if (commaIdx <= 0 || !startM || !endM) {
+          return {
+            ...state,
+            bell: true,
+            commandMessage: msg('E474: 잘못된 인수입니다: {token}', { token }),
+          };
+        }
+        if (scope === 'local' || scope === 'both') {
+          nextLocal.foldmarker = rawVal;
+        }
+        if (scope === 'global' || scope === 'both') {
+          nextGlobal.foldmarker = rawVal;
+        }
+        appliedList.push(`foldmarker=${rawVal}`);
         continue;
       }
       if (optKey === 'foldlevel') {

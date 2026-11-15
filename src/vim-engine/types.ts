@@ -267,6 +267,8 @@ export interface VimOptions {
   foldmethod?: 'manual' | 'indent' | 'marker' | 'syntax' | 'expr';
   /** 표현식 폴딩 수식 (:set fde=..., :set foldexpr=...) */
   foldexpr?: string;
+  /** 마커 폴딩 구분 기호 (:set fmr={{{,}}}, :set foldmarker=...) */
+  foldmarker?: string;
   /** 폴드 레벨 (:set fdl=0 / :set foldlevel=...) */
   foldlevel?: number;
   /** 주석 포맷 문자열 (:set cms=//\ %s, :set commentstring=#\ %s) */

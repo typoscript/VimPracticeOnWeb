@@ -117,6 +117,30 @@ describe('Insert Mode Control Keys (Ctrl+h, Ctrl+w, Ctrl+u, Ctrl+o, Ctrl+n/p)', 
       expect(state.mode).toBe('NORMAL');
       expect(state.insertNormalSession).toBeUndefined();
     });
+
+    it('returns to INSERT mode after Ctrl-o :cmd<Enter> and Ctrl-o /pat<Enter>', () => {
+      let state = createInsertState(['hello world foo'], 0, 3);
+      state = handleKey(state, 'Ctrl-o');
+      for (const ch of ':set nu') {
+        state = handleKey(state, ch);
+      }
+      state = handleKey(state, 'Enter');
+      expect(state.mode).toBe('INSERT');
+      expect(state.options?.number).toBe(true);
+      expect(state.insertNormalSession).toBeUndefined();
+
+      state = handleKey(state, 'Ctrl-o');
+      for (const ch of '/foo') {
+        state = handleKey(state, ch);
+      }
+      state = handleKey(state, 'Enter');
+      expect(state.mode).toBe('INSERT');
+      expect(state.cursor.col).toBe(12);
+      expect(state.insertNormalSession).toBeUndefined();
+
+      state = handleKey(state, 'X');
+      expect(state.lines[0]).toBe('hello world Xfoo');
+    });
   });
 
   describe('Ctrl+n and Ctrl+p (Buffer Autocompletion)', () => {

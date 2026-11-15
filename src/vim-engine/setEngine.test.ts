@@ -309,4 +309,23 @@ describe('setEngine (:set Option System)', () => {
       expect(getOptions(state).shiftwidth).toBe(2);
     });
   });
+
+  describe('foldmarker (fmr) 옵션 처리', () => {
+    it(':set fmr=... / :set fmr? 로 마커 구분자를 설정하고 조회한다', () => {
+      let state = createBaseState();
+      state = executeSetCommand(state, 'fdm=marker fmr=<<<,>>>');
+      expect(state.options?.foldmethod).toBe('marker');
+      expect(state.options?.foldmarker).toBe('<<<,>>>');
+
+      const query = executeSetCommand(state, 'fmr?');
+      expect(query.commandMessage).toBe('foldmarker=<<<,>>>');
+    });
+
+    it('잘못된 foldmarker 형식은 E474 에러와 bell 을 발생시킨다', () => {
+      const state = createBaseState();
+      const bad = executeSetCommand(state, 'fmr=onlyopen');
+      expect(bad.bell).toBe(true);
+      expect(bad.commandMessage).toContain('E474');
+    });
+  });
 });

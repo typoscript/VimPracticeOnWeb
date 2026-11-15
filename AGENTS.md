@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 139개 테스트 파일, 1,788개 테스트 100% 통과 필수)*
+  *(현재 139개 테스트 파일, 1,795개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 89)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 90)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -141,6 +141,7 @@
 - **학습 진행도·설정 JSON 전체 백업 및 복원 (`src/utils/backupStorage.ts`, `ConfigExporterModal.tsx`, `App.tsx`)**: 21개 `localStorage` 키(`BACKUP_KEYS`) 일괄 내보내기·가져오기, 병합(`merge`) / 덮어쓰기(`replace`) 복원 모드, 스키마 검증 및 `App.tsx` 실시간 상태·테마 재동기화를 지원합니다.
 - **표현식 폴딩(`foldexpr`) & 커맨드라인 윈도우(`q:`, `q/`, `q?`) 고급 실행 (레슨 89, `src/vim-engine/folding.ts`, `setEngine.ts`, `vimscriptEval.ts`, `cmdlineWindow.ts`, `exListAndToolCommands.ts`)**: `:set fdm=expr` / `fde=...` (`v:lnum`, `getline()`, `indent()`, `>N`, `<N`, `=`, `aN`, `sN`, 사용자 함수 호출 지원)으로 동적 폴드 블록을 계산하고, `q:`/`q/`/`q?` 창 내부 검색(`/pat`, `?pat`), `:q`·`:{줄}` 서브 커맨드, `Ctrl-c` 모드 복귀, `q?` 역방향 검색 실행, `:history`/`:his` 이력 조회를 지원합니다.
 - **약점 기반 간격 반복(SRS) 복습 큐 (`src/utils/srsScheduler.ts`, `AnalyticsModal.tsx`, `LessonSelectModal.tsx`, `App.tsx`)**: 레슨 완료 별점(1~3★)에 따른 SM-2 기반 복습 간격 계산(`vim_srs_schedule_v1`, `BACKUP_KEYS` 포함), `analyzeWeaknesses` 약점 카테고리 매핑·복습 도래 우선순위 큐 생성(`buildSrsReviewQueue`), `AnalyticsModal` 복습 카드 및 `LessonSelectModal` 퀵 복습 추천 배너에서 원클릭 레슨 점프를 지원합니다.
+- **마커 폴딩(`foldmarker`)·폴드 이동(`zj`/`zk`/`[z`/`]z`) & Insert 단발 `Ctrl-o` Ex/검색 완성 (레슨 90, `src/vim-engine/folding.ts`, `setEngine.ts`, `normalMode.ts`, `vimEngine.ts`)**: `:set fdm=marker` 및 `'foldmarker'`(`fmr`, 기본 `'{{{,}}}'`, `E474` 검증)로 기본/중첩/레벨 마커(`{{{`, `}}}`, `{{{N`, `}}}N`)를 감지(`detectMarkerFoldBlocks`)하고 `fdm=marker` 모드 `zf` 실행 시 `commentstring` 기반 주석 마커를 삽입·접기하며, `zj`/`zk`/`[z`/`]z` 폴드 탐색(`jumpToNextFold`, `jumpToPrevFold`, `jumpToFoldEdge`)을 지원합니다. 또한 Insert 모드 `Ctrl-o` 가 일반 모션뿐 아니라 `Ctrl-o :...<Enter>` / `Ctrl-o /...<Enter>` 실행 후에도 `finishInsertNormalSession` 으로 자동 `INSERT` 복귀하도록 완성했습니다.
 
 ---
 

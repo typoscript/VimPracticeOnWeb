@@ -1758,8 +1758,25 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson89!.checkComplete(state)).toBe(true);
   });
 
-  it('모든 89개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(89);
+  it('레슨 90: 마커 폴딩(:set fdm=marker fmr=...) + zj/zo + Insert Ctrl-o Ex/모션 검증', () => {
+    const lesson90 = MISSIONS.find((m) => m.id === 90);
+    expect(lesson90).toBeDefined();
+
+    let state: VimEditorState = {
+      lines: [...lesson90!.initialLines],
+      cursor: { ...lesson90!.initialCursor },
+      mode: 'NORMAL',
+    };
+    expect(lesson90!.checkComplete(state)).toBe(false);
+
+    for (const key of lesson90!.optimalKeys!) {
+      state = handleKey(state, key);
+    }
+    expect(lesson90!.checkComplete(state)).toBe(true);
+  });
+
+  it('모든 90개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(90);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();

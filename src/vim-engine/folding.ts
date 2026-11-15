@@ -1,6 +1,7 @@
 import { FoldRange, VimEditorState } from './types';
 import { clampCursor } from './cursor';
-import { deleteLine, yankLine } from './operators';
+import { deleteLine, pushUndoSnapshot, yankLine } from './operators';
+import { resolveCommentString } from './commentEngine';
 import { EvalContext, evaluateVimScript, toVimString } from './vimscriptEval';
 import { callUserFunction } from './vimscriptEngine';
 
@@ -207,21 +208,118 @@ export function detectExprFoldBlocks(
   return Array.from(uniqueMap.values()).sort((a, b) => a.startRow - b.startRow);
 }
 
+function escapeFoldRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+export function parseFoldMarker(foldmarker = '{{{,}}}'): [string, string] {
+  const commaIdx = foldmarker.indexOf(',');
+  if (commaIdx <= 0) return ['{{{', '}}}'];
+  const startM = foldmarker.slice(0, commaIdx);
+  const endM = foldmarker.slice(commaIdx + 1);
+  return startM && endM ? [startM, endM] : ['{{{', '}}}'];
+}
+
 /**
- * 중괄호({}) 또는 들여쓰기 구조를 분석하여 버퍼 내 모든 접을 수 있는 블록 범위를 탐색합니다.
+ * 마커(foldmarker, 기본 {{{ / }}}) 및 레벨 숫자({{{1, }}}1)를 분석하여 폴딩 블록을 탐색합니다. (:set fdm=marker)
+ */
+export function detectMarkerFoldBlocks(
+  lines: string[],
+  foldmarker = '{{{,}}}'
+): FoldRange[] {
+  if (lines.length <= 1) return [];
+  const [startMarker, endMarker] = parseFoldMarker(foldmarker);
+  const pattern = new RegExp(
+    `(${escapeFoldRegex(startMarker)}(\\d*)|${escapeFoldRegex(endMarker)}(\\d*))`,
+    'g'
+  );
+
+  const blocks: FoldRange[] = [];
+  const openStarts = new Map<number, number>();
+  let currentLevel = 0;
+
+  const closeLevelsAbove = (targetLevel: number, endRow: number) => {
+    for (const [lvl, startRow] of Array.from(openStarts.entries())) {
+      if (lvl > targetLevel) {
+        openStarts.delete(lvl);
+        if (endRow > startRow) {
+          blocks.push({ startRow, endRow, closed: false });
+        }
+      }
+    }
+  };
+
+  const openLevelsUpTo = (targetLevel: number, startRow: number) => {
+    for (let lvl = 1; lvl <= targetLevel; lvl++) {
+      if (!openStarts.has(lvl)) {
+        openStarts.set(lvl, startRow);
+      }
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? '';
+    pattern.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = pattern.exec(line)) !== null) {
+      if (m[2] !== undefined) {
+        // 시작 마커: startMarker[N]
+        if (m[2].length > 0) {
+          const explicitLvl = Math.max(0, parseInt(m[2], 10));
+          closeLevelsAbove(Math.max(0, explicitLvl - 1), i - 1);
+          openLevelsUpTo(explicitLvl, i);
+          currentLevel = explicitLvl;
+        } else {
+          currentLevel += 1;
+          openStarts.set(currentLevel, i);
+        }
+      } else {
+        // 종료 마커: endMarker[N]
+        if (m[3] && m[3].length > 0) {
+          const explicitLvl = Math.max(1, parseInt(m[3], 10));
+          closeLevelsAbove(explicitLvl - 1, i);
+          currentLevel = Math.max(0, explicitLvl - 1);
+        } else if (currentLevel > 0) {
+          const nextLvl = currentLevel - 1;
+          closeLevelsAbove(nextLvl, i);
+          currentLevel = nextLvl;
+        }
+      }
+    }
+  }
+
+  closeLevelsAbove(0, lines.length - 1);
+
+  const uniqueMap = new Map<string, FoldRange>();
+  for (const b of blocks) {
+    const key = `${b.startRow}-${b.endRow}`;
+    if (!uniqueMap.has(key)) {
+      uniqueMap.set(key, b);
+    }
+  }
+
+  return Array.from(uniqueMap.values()).sort((a, b) => a.startRow - b.startRow);
+}
+
+/**
+ * 중괄호({}) 또는 들여쓰기/표현식/마커 구조를 분석하여 버퍼 내 모든 접을 수 있는 블록 범위를 탐색합니다.
  */
 export function detectFoldBlocks(
   lines: string[],
   foldmethod = 'manual',
   shiftwidth = 2,
   foldexpr = '0',
-  state?: VimEditorState
+  state?: VimEditorState,
+  foldmarker = '{{{,}}}'
 ): FoldRange[] {
   if (foldmethod === 'indent') {
     return detectIndentFoldBlocks(lines, shiftwidth);
   }
   if (foldmethod === 'expr') {
     return detectExprFoldBlocks(lines, foldexpr, state);
+  }
+  if (foldmethod === 'marker') {
+    return detectMarkerFoldBlocks(lines, foldmarker);
   }
 
   const blocks: FoldRange[] = [];
@@ -318,7 +416,7 @@ export function findFoldForCursor(
   }
 
   // 4. 버퍼 분석을 통해 새롭게 감싸는 블록 탐색
-  const detected = detectFoldBlocks(lines, foldmethod, shiftwidth, foldexpr, state);
+  const detected = detectFoldBlocks(lines, foldmethod, shiftwidth, foldexpr, state, state?.options?.foldmarker);
   const matched = detected
     .filter(
       (b) =>
@@ -462,7 +560,8 @@ export function foldCloseAll(state: VimEditorState): VimEditorState {
     state.options?.foldmethod,
     state.options?.shiftwidth,
     state.options?.foldexpr,
-    state
+    state,
+    state.options?.foldmarker
   );
   const existingMap = new Map<string, FoldRange>();
 
@@ -660,7 +759,28 @@ export function createFold(
   const start = Math.max(0, Math.min(startRow, endRow));
   const end = Math.min(state.lines.length - 1, Math.max(startRow, endRow));
 
-  const existingFolds = [...(state.folds ?? [])];
+  let baseState = state;
+  let nextLines = state.lines;
+
+  if (state.options?.foldmethod === 'marker' && end > start) {
+    const [startMarker, endMarker] = parseFoldMarker(state.options?.foldmarker);
+    const cms = resolveCommentString(state);
+    const formatMarker = (marker: string) =>
+      cms.includes('%s') ? cms.replace('%s', marker) : `${cms} ${marker}`.trim();
+    const updatedLines = [...state.lines];
+    if (!(updatedLines[start] ?? '').includes(startMarker)) {
+      updatedLines[start] = `${updatedLines[start] ?? ''}${formatMarker(startMarker)}`;
+    }
+    if (!(updatedLines[end] ?? '').includes(endMarker)) {
+      updatedLines[end] = `${updatedLines[end] ?? ''}${formatMarker(endMarker)}`;
+    }
+    if (updatedLines[start] !== state.lines[start] || updatedLines[end] !== state.lines[end]) {
+      baseState = pushUndoSnapshot(state);
+      nextLines = updatedLines;
+    }
+  }
+
+  const existingFolds = [...(baseState.folds ?? [])];
   const idx = existingFolds.findIndex(
     (f) => f.startRow === start && f.endRow === end
   );
@@ -679,9 +799,10 @@ export function createFold(
   const sortedFolds = existingFolds.sort((a, b) => a.startRow - b.startRow);
 
   return {
-    ...state,
+    ...baseState,
+    lines: nextLines,
     folds: sortedFolds,
-    cursor: clampCursor(state.lines, { line: start, col: 0 }, 'NORMAL'),
+    cursor: clampCursor(nextLines, { line: start, col: 0 }, 'NORMAL'),
     pendingKeys: undefined,
   };
 }
@@ -770,4 +891,101 @@ export function generateFoldText(lines: string[], fold: FoldRange): string {
   const trimmed = firstLine.trim();
   const countStr = count < 10 ? ` ${count}` : `${count}`;
   return `+-- ${countStr} lines: ${trimmed} ----------------------------------------------------`.slice(0, 72);
+}
+
+function collectKnownFolds(state: VimEditorState): FoldRange[] {
+  const detected = detectFoldBlocks(
+    state.lines,
+    state.options?.foldmethod,
+    state.options?.shiftwidth,
+    state.options?.foldexpr,
+    state,
+    state.options?.foldmarker
+  );
+  const map = new Map<string, FoldRange>();
+  for (const d of detected) {
+    map.set(`${d.startRow}-${d.endRow}`, d);
+  }
+  for (const f of state.folds ?? []) {
+    map.set(`${f.startRow}-${f.endRow}`, f);
+  }
+  return Array.from(map.values()).sort((a, b) => a.startRow - b.startRow || b.endRow - a.endRow);
+}
+
+/**
+ * zj: 다음 폴드 시작 줄로 점프합니다.
+ */
+export function jumpToNextFold(state: VimEditorState, count = 1): VimEditorState {
+  const folds = collectKnownFolds(state);
+  let row = state.cursor.line;
+  const curFold = getClosedFoldStartingAt(state.folds, row);
+  let searchFrom = curFold ? curFold.endRow : row;
+
+  let target: FoldRange | undefined;
+  let moved = 0;
+  for (let i = 0; i < count; i++) {
+    const next = folds.find((f) => f.startRow > searchFrom);
+    if (!next) break;
+    target = next;
+    moved++;
+    searchFrom = next.closed ? next.endRow : next.startRow;
+  }
+  if (!target || moved === 0) {
+    return { ...state, bell: true, pendingKeys: undefined };
+  }
+  row = target.startRow;
+  return {
+    ...state,
+    cursor: clampCursor(state.lines, { line: row, col: 0 }, 'NORMAL'),
+    pendingKeys: undefined,
+  };
+}
+
+/**
+ * zk: 이전 폴드 끝 줄(닫혀 있으면 시작 줄)로 점프합니다.
+ */
+export function jumpToPrevFold(state: VimEditorState, count = 1): VimEditorState {
+  const folds = collectKnownFolds(state);
+  let searchBefore = state.cursor.line;
+  let target: FoldRange | undefined;
+  let moved = 0;
+
+  for (let i = 0; i < count; i++) {
+    const candidates = folds.filter((f) => f.endRow < searchBefore);
+    if (candidates.length === 0) break;
+    // endRow가 가장 큰 폴드 선택
+    target = candidates.reduce((best, cur) => (cur.endRow > best.endRow ? cur : best));
+    moved++;
+    searchBefore = target.startRow;
+  }
+  if (!target || moved === 0) {
+    return { ...state, bell: true, pendingKeys: undefined };
+  }
+  const destRow = target.closed ? target.startRow : target.endRow;
+  return {
+    ...state,
+    cursor: clampCursor(state.lines, { line: destRow, col: 0 }, 'NORMAL'),
+    pendingKeys: undefined,
+  };
+}
+
+/**
+ * [z / ]z: 현재 열려 있는 폴드의 시작([z) 또는 끝(]z) 줄로 점프합니다.
+ */
+export function jumpToFoldEdge(state: VimEditorState, edge: 'start' | 'end'): VimEditorState {
+  const folds = collectKnownFolds(state);
+  const row = state.cursor.line;
+  const enclosing = folds
+    .filter((f) => f.startRow <= row && row <= f.endRow && (edge === 'start' ? f.startRow < row : f.endRow > row))
+    .sort((a, b) => (a.endRow - a.startRow) - (b.endRow - b.startRow));
+
+  if (enclosing.length === 0) {
+    return { ...state, bell: true, pendingKeys: undefined };
+  }
+  const targetRow = edge === 'start' ? enclosing[0].startRow : enclosing[0].endRow;
+  return {
+    ...state,
+    cursor: clampCursor(state.lines, { line: targetRow, col: 0 }, 'NORMAL'),
+    pendingKeys: undefined,
+  };
 }

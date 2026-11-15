@@ -3,6 +3,7 @@ import {
   detectFoldBlocks,
   detectIndentFoldBlocks,
   detectExprFoldBlocks,
+  detectMarkerFoldBlocks,
   createFold,
   deleteFoldAtCursor,
   deleteAllFoldsAtCursor,
@@ -411,6 +412,110 @@ describe('코드 폴딩 모듈 (Folding Engine)', () => {
         { startRow: 0, endRow: 1, closed: true },
         { startRow: 2, endRow: 4, closed: true },
       ]);
+    });
+  });
+
+  describe('마커 폴딩 (:set fdm=marker, :set fmr=...) 및 zj/zk/[z/]z 이동', () => {
+    const typeKeys = (s: VimEditorState, keys: string[]): VimEditorState => {
+      let cur = s;
+      for (const k of keys) cur = handleKey(cur, k);
+      return cur;
+    };
+
+    const typeCmd = (s: VimEditorState, cmd: string): VimEditorState => {
+      let cur = handleKey(s, ':');
+      for (const ch of cmd) cur = handleKey(cur, ch);
+      return handleKey(cur, 'Enter');
+    };
+
+    it('detectMarkerFoldBlocks: 기본 {{{/}}} 및 중첩/레벨 마커 {{{1/}}}1 을 감지한다', () => {
+      const lines = [
+        '// Section 1 {{{',
+        'const a = 1;',
+        '// Nested {{{2',
+        'const b = 2;',
+        '// }}}2',
+        '// }}}',
+      ];
+      expect(detectMarkerFoldBlocks(lines)).toEqual([
+        { startRow: 0, endRow: 5, closed: false },
+        { startRow: 2, endRow: 4, closed: false },
+      ]);
+
+      const explicit = [
+        '// A {{{1',
+        'x',
+        '// B {{{1',
+        'y',
+        '// }}}1',
+      ];
+      expect(detectMarkerFoldBlocks(explicit)).toEqual([
+        { startRow: 0, endRow: 1, closed: false },
+        { startRow: 2, endRow: 4, closed: false },
+      ]);
+    });
+
+    it(':set fdm=marker fmr=<<<,>>> 후 zM / zo / zc 및 zj / zk / [z / ]z 가 동작한다', () => {
+      let state: VimEditorState = {
+        lines: [
+          'top',
+          '// First <<<',
+          'line1',
+          'line2',
+          '// >>>',
+          'middle',
+          '// Second <<<',
+          'line3',
+          'line4',
+          '// >>>',
+        ],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+      state = typeCmd(state, 'set fdm=marker fmr=<<<,>>>');
+      expect(state.options?.foldmethod).toBe('marker');
+      expect(state.options?.foldmarker).toBe('<<<,>>>');
+
+      // zM 으로 마커 폴드 전체 닫기
+      state = typeKeys(state, ['z', 'M']);
+      expect(state.folds).toEqual([
+        { startRow: 1, endRow: 4, closed: true },
+        { startRow: 6, endRow: 9, closed: true },
+      ]);
+
+      // zj 로 다음 폴드 시작으로 이동, zk 로 이전 폴드 끝으로 이동
+      state = typeKeys(state, ['z', 'j']);
+      expect(state.cursor.line).toBe(1);
+      state = typeKeys(state, ['z', 'j']);
+      expect(state.cursor.line).toBe(6);
+
+      // 현재 폴드 열기 (zo) 후 내부로 이동해 [z / ]z 테스트
+      state = typeKeys(state, ['z', 'o']);
+      expect(state.folds![1].closed).toBe(false);
+      state = typeKeys(state, ['j', 'j']);
+      expect(state.cursor.line).toBe(8);
+      state = typeKeys(state, ['[', 'z']);
+      expect(state.cursor.line).toBe(6);
+      state = typeKeys(state, [']', 'z']);
+      expect(state.cursor.line).toBe(9);
+
+      // zk 로 첫 번째 폴드(닫혀있으면 시작 줄 1)로 이동
+      state = typeKeys(state, ['z', 'k']);
+      expect(state.cursor.line).toBe(1);
+    });
+
+    it('fdm=marker 모드에서 zf 는 주석 마커를 삽입하고 폴드를 생성한다', () => {
+      let state: VimEditorState = {
+        lines: ['function demo() {', '  return 1;', '}'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+        primaryFilename: 'demo.ts',
+      };
+      state = typeCmd(state, 'set fdm=marker');
+      state = typeKeys(state, ['z', 'f', '2', 'j']);
+      expect(state.lines[0]).toBe('function demo() {// {{{');
+      expect(state.lines[2]).toBe('}// }}}');
+      expect(state.folds).toEqual([{ startRow: 0, endRow: 2, closed: true, manual: true }]);
     });
   });
 });

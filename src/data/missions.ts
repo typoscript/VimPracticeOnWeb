@@ -3363,4 +3363,60 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 90,
+    title: '레슨 90: 마커 폴딩(:set fdm=marker, :set fmr=...) & Insert 단발 노멀(Ctrl-o) 마스터',
+    description:
+      '코드에 직접 주석 마커({{{ / }}} 또는 사용자 정의 구분자)를 심어 폴드 구조를 고정하는 마커 폴딩(:set fdm=marker, zj/zk/[z/]z) 과, 입력 모드를 빠져나가지 않고 단발성 노멀/Ex/검색 명령을 실행한 뒤 자동으로 입력 모드로 복귀하는 Ctrl-o 를 익혀 보세요.\n\n1) 마커 폴딩 (:set fdm=marker, :set fmr={open},{close}) & 폴드 이동:\n   - 기본 마커는 {{{,}}} 이며 :set fmr=<<<,>>> 처럼 구분자를 바꿀 수 있습니다. {{{1 / }}}1 처럼 숫자로 중첩 레벨도 지정합니다.\n   - zf{motion} 을 실행하면 commentstring 에 맞춰 시작·끝 줄에 마커를 자동 삽입하고 폴드를 생성합니다.\n   - zj / zk 는 다음·이전 폴드로 점프하고, [z / ]z 는 현재 열린 폴드의 시작·끝 줄로 이동합니다.\n\n2) 입력 모드 단발 명령 (Ctrl-o):\n   - INSERT 모드에서 Ctrl-o 를 누르면 단일 명령용 NORMAL 모드로 진입합니다.\n   - $ / 2w 같은 모션뿐 아니라 Ctrl-o :s/.../.../<Enter> 나 Ctrl-o /pat<Enter> 도 실행 즉시 INSERT 모드로 자동 복귀합니다.\n\n미션:\n1. :set fdm=marker fmr=<<<,>>><Enter> 로 커스텀 마커 폴딩을 설정하고 zM 으로 두 블록을 모두 접으세요.\n2. zj 로 두 번째 블록(// Handlers <<<)으로 이동한 뒤 zo 로 펼치고, j 로 아래 줄(status = "draft";)로 내려가세요.\n3. i 로 입력 모드에 들어가 const 를 입력한 뒤 Ctrl-o :s/draft/ready<Enter> 로 치환하고, 계속 입력 모드에서 Ctrl-o $ 뒤 // ok (앞 공백 포함)를 붙여 Esc 로 마치세요!',
+    hint: ':set fdm=marker fmr=<<<,>>><Enter> → zM → zj → zo → j → iconst <Ctrl-o>:s/draft/ready<Enter><Ctrl-o>$ // ok<Esc>',
+    par: 68,
+    optimalKeys: [
+      ':', 's', 'e', 't', ' ', 'f', 'd', 'm', '=', 'm', 'a', 'r', 'k', 'e', 'r', ' ',
+      'f', 'm', 'r', '=', '<', '<', '<', ',', '>', '>', '>', 'Enter',
+      'z', 'M',
+      'z', 'j',
+      'z', 'o',
+      'j',
+      'i', 'c', 'o', 'n', 's', 't', ' ',
+      'Ctrl-o', ':', 's', '/', 'd', 'r', 'a', 'f', 't', '/', 'r', 'e', 'a', 'd', 'y', 'Enter',
+      'Ctrl-o', '$', ' ', '/', '/', ' ', 'o', 'k', 'Escape',
+    ],
+    initialLines: [
+      '// Config <<<',
+      'const port = 8080;',
+      '// >>>',
+      '// Handlers <<<',
+      'status = "draft";',
+      '// >>>',
+    ],
+    targetLines: [
+      '// Config <<<',
+      'const port = 8080;',
+      '// >>>',
+      '// Handlers <<<',
+      'const status = "ready"; // ok',
+      '// >>>',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const target = [
+        '// Config <<<',
+        'const port = 8080;',
+        '// >>>',
+        '// Handlers <<<',
+        'const status = "ready"; // ok',
+        '// >>>',
+      ];
+      return (
+        state.mode === 'NORMAL' &&
+        state.options?.foldmethod === 'marker' &&
+        state.options?.foldmarker === '<<<,>>>' &&
+        (state.folds?.length ?? 0) === 2 &&
+        state.folds![0].closed === true &&
+        state.folds![1].closed === false &&
+        state.lines.length === target.length &&
+        state.lines.every((l, idx) => l === target[idx])
+      );
+    },
+  },
 ];
