@@ -4,6 +4,8 @@ import { pushUndoSnapshot } from './operators';
 import { compileVimRegex } from './vimRegex';
 import { msg } from './messages';
 import { getRegisterContent, syncRegisters } from './registers';
+import { getOptions } from './setEngine';
+import { moveToFirstNonBlank } from './motions';
 import type { KeyRunner } from './exSubstitute';
 
 /**
@@ -412,5 +414,205 @@ export function executeAlignRange(
     commandBuffer: undefined,
     commandType: undefined,
     commandMessage: msg('{count}개 줄을 정렬했습니다 ({align})', { count, align }),
+  };
+}
+
+/**
+ * :[range]j[oin][!] [count]: 지정된 범위의 줄을 한 줄로 이어 붙입니다.
+ */
+export function executeJoinRange(
+  state: VimEditorState,
+  range: { startLine: number; endLine: number } | null,
+  hasRange: boolean,
+  bang: boolean,
+  count?: number
+): VimEditorState {
+  const maxIdx = Math.max(0, state.lines.length - 1);
+  let joinStart: number;
+  let joinEnd: number;
+
+  if (count !== undefined) {
+    joinStart = Math.max(0, Math.min(range ? range.endLine : state.cursor.line, maxIdx));
+    joinEnd = Math.min(maxIdx, joinStart + Math.max(1, count) - 1);
+  } else if (!hasRange || !range || range.startLine === range.endLine) {
+    joinStart = Math.max(0, Math.min(range ? range.startLine : state.cursor.line, maxIdx));
+    joinEnd = Math.min(maxIdx, joinStart + 1);
+  } else {
+    joinStart = Math.max(0, Math.min(range.startLine, range.endLine));
+    joinEnd = Math.min(maxIdx, Math.max(range.startLine, range.endLine));
+  }
+
+  if (joinEnd <= joinStart || state.lines.length <= 1) {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  const stateWithUndo = pushUndoSnapshot(state);
+  let joined = state.lines[joinStart] ?? '';
+  if (bang) {
+    joined = state.lines.slice(joinStart, joinEnd + 1).join('');
+  } else {
+    for (let i = joinStart + 1; i <= joinEnd; i++) {
+      const nextTrimmed = (state.lines[i] ?? '').trimStart();
+      if (nextTrimmed.length === 0) continue;
+      if (joined.length === 0) {
+        joined = nextTrimmed;
+      } else if (joined.endsWith(' ') || joined.endsWith('\t')) {
+        joined += nextTrimmed;
+      } else {
+        joined += ' ' + nextTrimmed;
+      }
+    }
+  }
+
+  const nextLines = [
+    ...state.lines.slice(0, joinStart),
+    joined,
+    ...state.lines.slice(joinEnd + 1),
+  ];
+  const nextCursor = moveToFirstNonBlank(nextLines, { line: joinStart, col: 0 });
+
+  return {
+    ...stateWithUndo,
+    lines: nextLines,
+    cursor: nextCursor,
+    mode: 'NORMAL',
+    visualAnchor: undefined,
+    commandBuffer: undefined,
+    commandType: undefined,
+    commandMessage: msg('{count}개 줄을 하나로 합쳤습니다', { count: joinEnd - joinStart + 1 }),
+  };
+}
+
+/**
+ * :[range]>[>] [count] / :[range]<[<] [count]: Ex 범위 들여쓰기/내어쓰기를 실행합니다.
+ */
+export function executeShiftRange(
+  state: VimEditorState,
+  range: { startLine: number; endLine: number } | null,
+  direction: 'in' | 'out',
+  shiftCount: number,
+  lineCount?: number
+): VimEditorState {
+  const maxIdx = Math.max(0, state.lines.length - 1);
+  let startLine: number;
+  let endLine: number;
+
+  if (lineCount !== undefined) {
+    startLine = Math.max(0, Math.min(range ? range.endLine : state.cursor.line, maxIdx));
+    endLine = Math.min(maxIdx, startLine + Math.max(1, lineCount) - 1);
+  } else {
+    const r = range ?? { startLine: state.cursor.line, endLine: state.cursor.line };
+    startLine = Math.max(0, Math.min(r.startLine, r.endLine));
+    endLine = Math.min(maxIdx, Math.max(r.startLine, r.endLine));
+  }
+
+  const opts = getOptions(state);
+  const sw = opts.shiftwidth || 2;
+  const et = opts.expandtab !== false;
+  const indentUnit = et ? ' '.repeat(sw) : '\t';
+  const times = Math.max(1, shiftCount);
+
+  const stateWithUndo = pushUndoSnapshot(state);
+  const nextLines = [...state.lines];
+
+  for (let i = startLine; i <= endLine; i++) {
+    let line = nextLines[i];
+    if (direction === 'in') {
+      if (line.length > 0) {
+        line = indentUnit.repeat(times) + line;
+      }
+    } else {
+      for (let t = 0; t < times; t++) {
+        if (line.startsWith(indentUnit)) {
+          line = line.slice(indentUnit.length);
+        } else if (line.startsWith('\t')) {
+          line = line.slice(1);
+        } else if (line.startsWith(' ')) {
+          let spaces = 0;
+          while (spaces < sw && line[spaces] === ' ') spaces++;
+          line = line.slice(spaces);
+        }
+      }
+    }
+    nextLines[i] = line;
+  }
+
+  const nextCursor = moveToFirstNonBlank(nextLines, { line: endLine, col: 0 });
+  const linesCount = endLine - startLine + 1;
+
+  return {
+    ...stateWithUndo,
+    lines: nextLines,
+    cursor: nextCursor,
+    mode: 'NORMAL',
+    visualAnchor: undefined,
+    commandBuffer: undefined,
+    commandType: undefined,
+    commandMessage: msg('{linesCount}개 줄을 {dir} {times}회 들여썼습니다', {
+      linesCount,
+      dir: direction === 'in' ? '>' : '<',
+      times,
+    }),
+  };
+}
+
+/**
+ * :[range]p[rint], :[range]nu[mber], :[range]#, :[range]l[ist] 줄 출력 명령을 실행합니다.
+ */
+export function executePrintRange(
+  state: VimEditorState,
+  range: { startLine: number; endLine: number } | null,
+  style: 'print' | 'number' | 'list',
+  count?: number
+): VimEditorState {
+  const maxIdx = Math.max(0, state.lines.length - 1);
+  let startLine: number;
+  let endLine: number;
+
+  if (count !== undefined) {
+    startLine = Math.max(0, Math.min(range ? range.endLine : state.cursor.line, maxIdx));
+    endLine = Math.min(maxIdx, startLine + Math.max(1, count) - 1);
+  } else {
+    const r = range ?? { startLine: state.cursor.line, endLine: state.cursor.line };
+    startLine = Math.max(0, Math.min(r.startLine, r.endLine));
+    endLine = Math.min(maxIdx, Math.max(r.startLine, r.endLine));
+  }
+
+  const out: string[] = [];
+  for (let i = startLine; i <= endLine; i++) {
+    const line = state.lines[i] ?? '';
+    if (style === 'print') {
+      out.push(line);
+    } else if (style === 'number') {
+      out.push(`${String(i + 1).padStart(6, ' ')}  ${line}`);
+    } else {
+      let escaped = '';
+      for (let c = 0; c < line.length; c++) {
+        const ch = line[c];
+        const code = line.charCodeAt(c);
+        if (ch === '\t') escaped += '^I';
+        else if (code < 32) escaped += `^${String.fromCharCode(code + 64)}`;
+        else escaped += ch;
+      }
+      out.push(`${escaped}$`);
+    }
+  }
+
+  const nextCursor = clampCursor(state.lines, { line: endLine, col: 0 }, 'NORMAL');
+
+  return {
+    ...state,
+    cursor: nextCursor,
+    mode: 'NORMAL',
+    visualAnchor: undefined,
+    commandBuffer: undefined,
+    commandType: undefined,
+    commandMessage: out.join('\n'),
   };
 }

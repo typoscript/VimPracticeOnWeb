@@ -43,6 +43,11 @@ import {
   parseKeyTokens,
   executeAlignRange,
 } from './exBufferOps';
+import {
+  executeJoinRange,
+  executeShiftRange,
+  executePrintRange,
+} from './exRangeOps';
 import { tryExecuteWorkspaceExCommand } from './exWorkspaceCommands';
 import { tryExecuteToolExCommand } from './exListAndToolCommands';
 
@@ -110,6 +115,7 @@ export function executeCommandLine(
   keyRunner?: KeyRunner,
   userCommandDepth = 0
 ): VimEditorState {
+  state = state.bell ? { ...state, bell: undefined } : state;
   const trimmed = commandStr.trimStart();
 
   // 0. :function 본문 입력 중이면 입력한 줄을 본문에 추가 (endfunction 에서 확정)
@@ -401,6 +407,38 @@ export function executeCommandLine(
   const leftMatch = cmdTrimmed.match(/^le(?:f(?:t)?)?(?:\s+(.*))?$/);
   if (leftMatch) {
     return executeAlignRange(state, range ?? currentLineRange, 'left', leftMatch[1]);
+  }
+
+  // 4-10. 줄 병합: :[range]j[oin][!] [count]
+  const joinMatch = cmdTrimmed.match(/^j(?:o(?:i(?:n)?)?)?(!)?(?:\s+(\d+))?$/);
+  if (joinMatch) {
+    const count = joinMatch[2] !== undefined ? parseInt(joinMatch[2], 10) : undefined;
+    return executeJoinRange(state, range, hasRange, joinMatch[1] === '!', count);
+  }
+
+  // 4-11. 범위 들여쓰기/내어쓰기: :[range]>[>] [count], :[range]<[<] [count]
+  const shiftMatch = cmdTrimmed.match(/^(>+|<+)(?:\s+(\d+))?$/);
+  if (shiftMatch) {
+    const dir = shiftMatch[1][0] === '>' ? 'in' : 'out';
+    const lineCount = shiftMatch[2] !== undefined ? parseInt(shiftMatch[2], 10) : undefined;
+    return executeShiftRange(state, range, dir, shiftMatch[1].length, lineCount);
+  }
+
+  // 4-12. 줄 출력: :[range]p[rint], :[range]nu[mber], :[range]#, :[range]l[ist]
+  const printMatch = cmdTrimmed.match(/^p(?:r(?:i(?:n(?:t)?)?)?)?(?:\s+(\d+))?$/);
+  if (printMatch) {
+    const count = printMatch[1] !== undefined ? parseInt(printMatch[1], 10) : undefined;
+    return executePrintRange(state, range, 'print', count);
+  }
+  const numberMatch = cmdTrimmed.match(/^(?:nu(?:m(?:b(?:e(?:r)?)?)?)?|#)(?:\s+(\d+))?$/);
+  if (numberMatch) {
+    const count = numberMatch[1] !== undefined ? parseInt(numberMatch[1], 10) : undefined;
+    return executePrintRange(state, range, 'number', count);
+  }
+  const listMatch = cmdTrimmed.match(/^l(?:i(?:s(?:t)?)?)?(?:\s+(\d+))?$/);
+  if (listMatch) {
+    const count = listMatch[1] !== undefined ? parseInt(listMatch[1], 10) : undefined;
+    return executePrintRange(state, range, 'list', count);
   }
 
   // 5. 알 수 없는 명령어는 에러 메시지와 함께 NORMAL 모드로 복귀

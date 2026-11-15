@@ -152,6 +152,8 @@ export interface VimBuffer {
   localOptions?: Partial<VimOptions>;
   /** 버퍼 파일타입 */
   filetype?: string;
+  /** 마지막 저장 시점 스냅샷 (수정 여부 판정용) */
+  savedLines?: string[];
 }
 
 export interface VimTabPage {
@@ -491,6 +493,8 @@ export interface VimEditorState {
   splitRatio?: number;
   /** 직전에 활성화되었던 창 인덱스 (Ctrl-w p 용) */
   previousPaneIndex?: number;
+  /** 현재 작업 디렉터리 (:pwd, :cd, :lcd 용, 기본값: '/workspace') */
+  cwd?: string;
   /** 주 창 파일명 (예: source.ts) */
   primaryFilename?: string;
   /** 보조 창 파일명 (예: target.ts) */

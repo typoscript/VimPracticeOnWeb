@@ -1,5 +1,5 @@
 import { VimEditorState } from './types';
-import { getWorkspaceFiles } from './vfs';
+import { getAvailableDirectories, getWorkspaceFiles } from './vfs';
 import { OPTION_ALIASES } from './setEngine';
 import { buildProjectTags } from './tagEngine';
 
@@ -20,10 +20,15 @@ export const AVAILABLE_COMMANDS: string[] = [
   'bprev',
   'bp',
   'bufdo',
+  'bunload',
+  'bw',
+  'bwipeout',
+  'cd',
   'cdo',
   'center',
   'cfdo',
   'changes',
+  'chdir',
   'close',
   'cclose',
   'cnext',
@@ -44,17 +49,29 @@ export const AVAILABLE_COMMANDS: string[] = [
   'di',
   'edit',
   'e',
+  'enew',
   'export',
   'Explore',
   'E',
+  'file',
   'global',
   'g',
+  'j',
+  'join',
   'jumps',
+  'l',
+  'lcd',
   'ldo',
   'left',
   'lfdo',
+  'list',
   'ls',
   'marks',
+  'nu',
+  'number',
+  'p',
+  'print',
+  'pwd',
   'right',
   'next',
   'n',
@@ -64,10 +81,13 @@ export const AVAILABLE_COMMANDS: string[] = [
   'pop',
   'po',
   'prev',
+  'qa',
+  'qall',
   'quit',
   'q',
   'registers',
   'reg',
+  'saveas',
   'set',
   'sort',
   'source',
@@ -91,10 +111,16 @@ export const AVAILABLE_COMMANDS: string[] = [
   'vimrc',
   'vsplit',
   'vsp',
+  'wa',
+  'wall',
   'write',
   'wq',
+  'wqa',
+  'wqall',
   'w',
   'x',
+  'xa',
+  'xall',
 ];
 
 /**
@@ -234,8 +260,17 @@ export function calculateCompletions(
     return { prefix, candidates: matched };
   }
 
-  // 2. 버퍼 관련 커맨드 (:b, :buffer, :bd, :bdelete, :bn, :bp 등)
-  if (cmd === 'b' || cmd === 'buffer' || cmd === 'bd' || cmd === 'bdelete') {
+  // 2. 버퍼 관련 커맨드 (:b, :buffer, :bd, :bdelete, :bunload, :bwipeout 등)
+  if (
+    cmd === 'b' ||
+    cmd === 'buffer' ||
+    cmd === 'bd' ||
+    cmd === 'bdelete' ||
+    cmd === 'bun' ||
+    cmd === 'bunload' ||
+    cmd === 'bw' ||
+    cmd === 'bwipeout'
+  ) {
     const prefix = `${cmd} `;
     const arg = rest.toLowerCase();
     const allBuffers = getAvailableBuffers(state);
@@ -248,7 +283,20 @@ export function calculateCompletions(
     return { prefix, candidates: matched };
   }
 
-  // 3. 파일 관련 커맨드 (:e, :edit, :sp, :split, :vsp, :vsplit, :so, :source)
+  // 2.5. 디렉터리 관련 커맨드 (:cd, :chdir, :lcd, :lchdir)
+  if (cmd === 'cd' || cmd === 'chdir' || cmd === 'lcd' || cmd === 'lchdir') {
+    const prefix = `${cmd} `;
+    const arg = rest.toLowerCase();
+    const allDirs = getAvailableDirectories(state);
+    let matched = allDirs.filter((d) => d.toLowerCase().startsWith(arg));
+    if (matched.length === 0 && arg) {
+      matched = allDirs.filter((d) => d.toLowerCase().includes(arg));
+    }
+    if (matched.length === 0) return null;
+    return { prefix, candidates: matched };
+  }
+
+  // 3. 파일 관련 커맨드 (:e, :edit, :sp, :split, :vsp, :vsplit, :so, :source, :saveas)
   if (
     cmd === 'e' ||
     cmd === 'edit' ||
@@ -258,6 +306,8 @@ export function calculateCompletions(
     cmd === 'vsplit' ||
     cmd === 'so' ||
     cmd === 'source' ||
+    cmd === 'saveas' ||
+    cmd === 'sav' ||
     cmd === 'diffs' ||
     cmd === 'diffsplit'
   ) {
@@ -368,5 +418,23 @@ export function acceptWildmenu(state: VimEditorState): VimEditorState {
   return {
     ...state,
     wildmenu: null,
+  };
+}
+
+/**
+ * Ctrl-d 입력 시 현재 커맨드라인 입력에 일치하는 자동완성 후보 목록을 표시합니다.
+ */
+export function listCmdlineCompletions(state: VimEditorState): VimEditorState {
+  const rawInput = state.commandBuffer ?? '';
+  const result = calculateCompletions(state, rawInput);
+  if (!result || result.candidates.length === 0) {
+    return {
+      ...state,
+      bell: true,
+    };
+  }
+  return {
+    ...state,
+    commandMessage: result.candidates.join('  '),
   };
 }

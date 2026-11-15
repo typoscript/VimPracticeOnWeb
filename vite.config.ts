@@ -44,6 +44,7 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'setEngine.ts',
       'registers.ts',
       'bufferEngine.ts',
+      'bufferLifecycle.ts',
       'tabEngine.ts',
       'splitWindow.ts',
       'diffEngine.ts',

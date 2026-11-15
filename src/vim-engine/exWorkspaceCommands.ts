@@ -40,6 +40,15 @@ import { openHelp, closeHelp } from './helpEngine';
 import { triggerAutocmd } from './autocmdEngine';
 import { recordFileSave } from './undoTreeEngine';
 import { lookupUserCommand } from './userCommandEngine';
+import { changeWorkingDirectory, getEffectiveCwd } from './vfs';
+import {
+  fileBufferCommand,
+  markCurrentBufferSaved,
+  newEmptyBuffer,
+  quitAllWindows,
+  renameBufferForSaveAs,
+  writeAllNamedBuffers,
+} from './bufferLifecycle';
 import { msg } from './messages';
 
 export type ExCommandRunner = (state: VimEditorState, cmd: string) => VimEditorState;
@@ -55,6 +64,14 @@ export function tryExecuteWorkspaceExCommand(
   trimmed: string,
   runEx: ExCommandRunner
 ): VimEditorState | null {
+  const finishEx = (res: VimEditorState): VimEditorState => ({
+    ...res,
+    mode: 'NORMAL',
+    visualAnchor: undefined,
+    commandBuffer: undefined,
+    commandType: undefined,
+  });
+
   const splitMatch = cleanCmdRaw.match(/^(sp|split|vsp|vsplit)(?:\s+(.+))?$/i);
   if (splitMatch) {
     const isVertical = splitMatch[1].toLowerCase().startsWith('v');
@@ -101,113 +118,49 @@ export function tryExecuteWorkspaceExCommand(
     const isVert = mod ? mod.startsWith('vert') : true; // 기본값 세로(vertical) 분할
     const targetFile = diffSplitMatch[3]?.trim();
     const res = startDiffSplit(state, targetFile, isVert ? 'vertical' : 'horizontal');
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(res);
   }
 
   // :diffthis, :difft
   if (cleanCmdRaw.toLowerCase() === 'diffthis' || cleanCmdRaw.toLowerCase() === 'difft') {
-    const res = diffThis(state);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(diffThis(state));
   }
 
   // :diffoff, :diffo, :diffoff!
   if (/^diffo(?:ff)?!?$/i.test(cleanCmdRaw)) {
-    const isAll = cleanCmdRaw.includes('!');
-    const res = diffOff(state, isAll);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(diffOff(state, cleanCmdRaw.includes('!')));
   }
 
   // :diffupdate, :diffu
   if (cleanCmdRaw.toLowerCase() === 'diffupdate' || cleanCmdRaw.toLowerCase() === 'diffu') {
-    const res = diffUpdate(state);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(diffUpdate(state));
   }
 
   // :diffget, :diffg (do)
   if (cleanCmdRaw.toLowerCase() === 'diffget' || cleanCmdRaw.toLowerCase() === 'diffg') {
-    const res = diffObtain(state);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(diffObtain(state));
   }
 
   // :diffput, :diffp (dp)
   if (cleanCmdRaw.toLowerCase() === 'diffput' || cleanCmdRaw.toLowerCase() === 'diffp') {
-    const res = diffPut(state);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(diffPut(state));
   }
 
   // 창 닫기: :close, :clo
   if (cleanCmd === 'close' || cleanCmd === 'clo') {
-    const res = closeSplitWindow(state);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(closeSplitWindow(state));
   }
 
   // 현재 창만 유지: :only, :on
   if (cleanCmd === 'only' || cleanCmd === 'on') {
-    const res = closeOtherPanes(state);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(closeOtherPanes(state));
   }
 
   // 창 제어 Ex 명령: :wincmd {arg}, :1wincmd w, :2wincmd w 등
   const wincmdMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?wincmd\s+(\S+)$/i);
   if (wincmdMatch) {
     const count = wincmdMatch[1] ? parseInt(wincmdMatch[1], 10) : undefined;
-    const arg = wincmdMatch[2];
-    const res = executeWincmd(state, arg, count);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(executeWincmd(state, wincmdMatch[2], count));
   }
 
   // 창 크기 조절: :res, :resize, :vertical res
@@ -261,6 +214,55 @@ export function tryExecuteWorkspaceExCommand(
     };
   }
 
+  // 작업 디렉터리 확인/변경: :pwd, :cd [dir], :lcd [dir]
+  if (cleanCmd === 'pwd') {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: getEffectiveCwd(state),
+    };
+  }
+  const cdMatch = cleanCmdRaw.match(/^(?:cd|chd|chdir|lcd|lchd|lchdir)(?:\s+(.*))?$/);
+  if (cdMatch) {
+    const res = changeWorkingDirectory(state, cdMatch[1]);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 새 빈 버퍼: :enew[!]
+  const enewMatch = cleanCmdRaw.match(/^ene(?:w)?(!)?$/i);
+  if (enewMatch) {
+    const res = newEmptyBuffer(state, enewMatch[1] === '!');
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
+  // 현재 버퍼 파일명 조회/변경: :f[ile] [name]
+  const fileMatch = cleanCmdRaw.match(/^(?:f|fi|fil|file)(?:\s+(.*))?$/);
+  if (fileMatch) {
+    const res = fileBufferCommand(state, fileMatch[1]);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
   // 버퍼 순회: :bn, :bnext, :bp, :bprev, :bprevious ([count] 지원)
   const bnMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?(bn|bnext|bp|bprev|bprevious)$/i);
   if (bnMatch) {
@@ -296,11 +298,14 @@ export function tryExecuteWorkspaceExCommand(
     };
   }
 
-  // 버퍼 삭제: :bd, :bdelete, :bdel
-  const bdMatch = cleanCmdRaw.match(/^(?:bd|bdelete|bdel)(?:\s+(.+))?$/i);
+  // 버퍼 삭제·언로드·완전 제거: :bd[!], :bunload[!], :bwipeout[!]
+  const bdMatch = cleanCmdRaw.match(/^(bd|bdelete|bdel|bun|bunload|bw|bwipe|bwipeout)(!)?(?:\s+(.+))?$/i);
   if (bdMatch) {
-    const target = bdMatch[1]?.trim();
-    const res = deleteBuffer(state, target);
+    const sub = bdMatch[1].toLowerCase();
+    const force = bdMatch[2] === '!';
+    const target = bdMatch[3]?.trim();
+    const kind = sub.startsWith('bun') ? 'unload' : sub.startsWith('bw') ? 'wipe' : 'delete';
+    const res = deleteBuffer(state, target, force, kind);
     return {
       ...res,
       mode: 'NORMAL',
@@ -361,42 +366,20 @@ export function tryExecuteWorkspaceExCommand(
         targetPath = parts.join('/');
       }
     }
-    const res = addNetrwBookmark(state, targetPath);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(addNetrwBookmark(state, targetPath));
   }
 
   // Netrw 북마크 이동: :gb [index]
   const gbMatch = cleanCmdRaw.match(/^gb(?:\s+(\d+))?$/i);
   if (gbMatch) {
     const idx = gbMatch[1] ? parseInt(gbMatch[1], 10) - 1 : undefined;
-    const res = goToNetrwBookmark(state, idx);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(goToNetrwBookmark(state, idx));
   }
 
   // 퍼지 파일 탐색: :find [filename], :fin [filename]
   const findMatch = cleanCmdRaw.match(/^(?:find|fin)(?:\s+(.*))?$/i);
   if (findMatch) {
-    const arg = (findMatch[1] ?? '').trim();
-    const res = executeFindFileCommand(state, arg);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(executeFindFileCommand(state, (findMatch[1] ?? '').trim()));
   }
 
   // 파일 열기/새 버퍼 생성: :e, :edit
@@ -404,25 +387,11 @@ export function tryExecuteWorkspaceExCommand(
   if (eMatch) {
     const filename = eMatch[1].trim();
     if (filename === '.' || filename === './') {
-      const res = openNetrw(state, '', 'current');
-      return {
-        ...res,
-        mode: 'NORMAL',
-        visualAnchor: undefined,
-        commandBuffer: undefined,
-        commandType: undefined,
-      };
+      return finishEx(openNetrw(state, '', 'current'));
     }
     const res = editBuffer(state, filename);
     const postRead = triggerAutocmd(res, 'BufReadPost', { filename }, runEx);
-    const entered = triggerAutocmd(postRead, 'BufEnter', { filename }, runEx);
-    return {
-      ...entered,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(triggerAutocmd(postRead, 'BufEnter', { filename }, runEx));
   }
 
   // 버퍼 전환: :b {target}, :buffer {target}
@@ -431,29 +400,14 @@ export function tryExecuteWorkspaceExCommand(
     const target = bMatch[1]?.trim();
     const leftState = triggerAutocmd(state, 'BufLeave', undefined, runEx);
     const res = target ? switchBuffer(leftState, target) : nextBuffer(leftState, 1);
-    const entered = triggerAutocmd(res, 'BufEnter', undefined, runEx);
-    return {
-      ...entered,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(triggerAutocmd(res, 'BufEnter', undefined, runEx));
   }
 
   // 버퍼 추가: :badd, :bad [+line] {file}
   const baddMatch = cleanCmdRaw.match(/^(?:badd|bad)(?:\s+\+(\d+))?\s+(\S+)$/i);
   if (baddMatch) {
     const lineNum = baddMatch[1] ? parseInt(baddMatch[1], 10) : undefined;
-    const file = baddMatch[2];
-    const res = addBuffer(state, file, lineNum);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(addBuffer(state, baddMatch[2], lineNum));
   }
 
   // 탭 생성: :tabnew, :tabedit, :tabe [filename]
@@ -581,46 +535,65 @@ export function tryExecuteWorkspaceExCommand(
       undefined,
       runEx
     );
-    return {
-      ...postSaved,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-      commandMessage: postSaved.commandMessage || msg('[가상 저장 완료] 변경사항이 안전하게 메모리에 저장되었습니다.'),
-    };
+    const marked = markCurrentBufferSaved(postSaved);
+    return finishEx({
+      ...marked,
+      commandMessage: marked.commandMessage || msg('[가상 저장 완료] 변경사항이 안전하게 메모리에 저장되었습니다.'),
+    });
   };
 
   const quitCurrentWindow = (curState: VimEditorState, force = false): VimEditorState => {
-    if (curState.helpSession?.isOpen) {
-      const closed = closeHelp(curState);
-      return {
-        ...closed,
-        mode: 'NORMAL',
-        visualAnchor: undefined,
-        commandBuffer: undefined,
-        commandType: undefined,
-      };
-    }
-    if (curState.splitDirection && curState.splitDirection !== 'none') {
-      const closed = closeSplitWindow(curState);
-      return {
-        ...closed,
-        mode: 'NORMAL',
-        visualAnchor: undefined,
-        commandBuffer: undefined,
-        commandType: undefined,
-      };
-    }
-    return {
+    if (curState.helpSession?.isOpen) return finishEx(closeHelp(curState));
+    if (curState.splitDirection && curState.splitDirection !== 'none') return finishEx(closeSplitWindow(curState));
+    return finishEx({
       ...curState,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
       commandMessage: curState.commandMessage || (force ? msg('단일 창 종료 무시 (:q!)') : msg('단일 창 상태입니다 (:q)')),
-    };
+    });
   };
+
+  // 다른 이름으로 저장: :saveas[!] {file}
+  const saveasMatch = cleanCmdRaw.match(/^sav(?:e(?:a(?:s)?)?)?(!)?(?:\s+(.*))?$/i);
+  if (saveasMatch) {
+    const prep = renameBufferForSaveAs(state, saveasMatch[2] ?? '', saveasMatch[1] === '!');
+    if (!prep.ok) return finishEx(prep.state);
+    const withVfs = {
+      ...prep.state,
+      virtualFiles: { ...(prep.state.virtualFiles ?? {}), [prep.filename]: [...prep.state.lines] },
+    };
+    const written = writeCurrentBuffer({ ...withVfs, commandMessage: undefined });
+    return finishEx({
+      ...written,
+      commandMessage: msg('"{filename}" [새로 저장됨] {count}줄', {
+        filename: prep.filename,
+        count: written.lines.length,
+      }),
+    });
+  }
+
+  // 전체 저장 / 전체 종료: :wa[!], :qa[!], :wqa[!], :xa[!]
+  const writeAllMatch = cleanCmdRaw.match(/^(?:wa|wal|wall)(!)?$/i);
+  if (writeAllMatch) {
+    const res = writeAllNamedBuffers(state);
+    if (!res.ok) return finishEx(res.state);
+    const recorded = recordFileSave(res.state);
+    return finishEx({
+      ...recorded,
+      commandMessage: msg('{count}개 버퍼를 모두 저장했습니다 (:wall)', { count: res.savedCount }),
+    });
+  }
+
+  const wqaMatch = cleanCmdRaw.match(/^(?:wqa|wqal|wqall|xa|xal|xall)(!)?$/i);
+  if (wqaMatch) {
+    const res = writeAllNamedBuffers(state);
+    if (!res.ok) return finishEx(res.state);
+    const recorded = recordFileSave(res.state);
+    return finishEx(quitAllWindows(recorded, true));
+  }
+
+  const qaMatch = cleanCmdRaw.match(/^(?:qa|qal|qall)(!)?$/i);
+  if (qaMatch) {
+    return finishEx(quitAllWindows(state, qaMatch[1] === '!'));
+  }
 
   if (
     (cleanCmd === 'w' || cleanCmd === 'write' || cleanCmd === 'update' || cleanCmdRaw === 'up') &&
@@ -639,28 +612,13 @@ export function tryExecuteWorkspaceExCommand(
   }
 
   if (cleanCmd === 'helpclose' || cleanCmd === 'hclose') {
-    const closed = closeHelp(state);
-    return {
-      ...closed,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(closeHelp(state));
   }
 
   // 순정 Vim 내장 도움말 (:help, :h [topic])
   const helpMatch = trimmed.match(/^:?\s*(?:help|h)(?:\s+(.+))?$/i);
   if (helpMatch) {
-    const topic = helpMatch[1]?.trim();
-    const opened = openHelp(state, topic);
-    return {
-      ...opened,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(openHelp(state, helpMatch[1]?.trim()));
   }
 
   return null;

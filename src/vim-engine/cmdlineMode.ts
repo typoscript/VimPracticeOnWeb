@@ -2,7 +2,7 @@ import { VimEditorState } from './types';
 import { evaluateVimExpression } from './expressionParser';
 import { executeCommandLine } from './commandLine';
 import { addHistory, navigateHistory, openCommandLineWindow } from './cmdlineWindow';
-import { handleTabCompletion, cancelWildmenu, acceptWildmenu } from './wildmenu';
+import { handleTabCompletion, cancelWildmenu, acceptWildmenu, listCmdlineCompletions } from './wildmenu';
 import { expandCmdlineAbbrev } from './abbrevEngine';
 import { cancelFunctionDraft } from './vimscriptEngine';
 import { insertTextAtCursor, RunHandleKeyFn } from './engineHelpers';
@@ -195,6 +195,11 @@ export function handleCommandLineModeKey(
   }
   if (key === 'ArrowDown' || key === 'Ctrl-n' || key === 'Ctrl+n' || key === 'ctrl-n') {
     return navigateHistory(state, 'down', ':');
+  }
+
+  // Ctrl-d: 가능한 커맨드라인 자동완성 후보 목록 표시 (:help c_CTRL-D)
+  if (key === 'Ctrl-d' || key === 'Ctrl+d' || key === 'ctrl-d' || key === '<C-d>') {
+    return listCmdlineCompletions(state);
   }
 
   // 와일드메뉴 자동완성 키 처리 (Tab / Shift-Tab 및 활성 상태에서의 ArrowLeft/ArrowRight)

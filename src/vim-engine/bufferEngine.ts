@@ -1,7 +1,8 @@
 import { VimBuffer, VimEditorState } from './types';
-import { getVfsFile } from './vfs';
+import { getVfsFile, resolveVfsFilename } from './vfs';
 import { msg } from './messages';
 import { getGlobalOptions } from './setEngine';
+import { areLinesEqual } from './undoTreeEngine';
 
 /**
  * 버퍼 목록이 초기화되어 있지 않은 경우, 기본 1번 버퍼(및 2번 보조 버퍼)를 구성합니다.
@@ -61,12 +62,37 @@ export function ensureBuffers(state: VimEditorState): VimEditorState {
 }
 
 /**
+ * 현재 활성 버퍼에 저장되지 않은 변경사항이 있는지 판정합니다.
+ */
+export function isCurrentBufferModified(state: VimEditorState): boolean {
+  const curBuf = state.buffers?.find((b) => b.id === (state.currentBufferId ?? 1));
+  if (curBuf?.savedLines !== undefined) {
+    return !areLinesEqual(curBuf.savedLines, state.lines);
+  }
+  if (state.undoTreeNodes && state.currentUndoSeq !== undefined) {
+    const curNode = state.undoTreeNodes[state.currentUndoSeq];
+    if (curNode) {
+      return (
+        curNode.saveNumber === undefined ||
+        curNode.saveNumber !== (state.saveCounter ?? 0) ||
+        !areLinesEqual(curNode.lines, state.lines)
+      );
+    }
+  }
+  if (curBuf?.isModified !== undefined) {
+    return curBuf.isModified || (state.undoStack?.length ?? 0) > 0;
+  }
+  return (state.undoStack?.length ?? 0) > 0;
+}
+
+/**
  * 현재 활성 버퍼의 변경 상태(lines, cursor, undoStack 등)를 버퍼 저장소에 동기화합니다.
  */
 export function syncCurrentBuffer(state: VimEditorState): VimEditorState {
   const s = ensureBuffers(state);
   const curId = s.currentBufferId ?? 1;
   const curLocal = s.bufferLocalOptions?.[curId];
+  const curModified = isCurrentBufferModified(s);
 
   const nextBuffers = s.buffers!.map((b) => {
     if (b.id === curId) {
@@ -77,6 +103,7 @@ export function syncCurrentBuffer(state: VimEditorState): VimEditorState {
         cursor: { ...s.cursor },
         undoStack: s.undoStack ? [...s.undoStack] : [],
         redoStack: s.redoStack ? [...s.redoStack] : [],
+        isModified: curModified,
         localOptions: curLocal ? { ...curLocal } : b.localOptions,
         filetype: s.options?.filetype || b.filetype,
       };
@@ -147,6 +174,11 @@ export function switchBuffer(state: VimEditorState, target: number | string): Vi
     cursor: { ...targetBuf.cursor },
     undoStack: targetBuf.undoStack ? [...targetBuf.undoStack] : [],
     redoStack: targetBuf.redoStack ? [...targetBuf.redoStack] : [],
+    undoTreeNodes: undefined,
+    currentUndoSeq: undefined,
+    maxUndoSeq: undefined,
+    undoTimeHistory: undefined,
+    undoTimeIndex: undefined,
     primaryFilename: targetBuf.name,
     alternateBufferId: curId,
     currentBufferId: targetBuf.id,
@@ -222,17 +254,18 @@ export function alternateBuffer(state: VimEditorState): VimEditorState {
  * 새 파일을 버퍼로 열거나 기존 파일 버퍼로 전환합니다 (:e {filename}).
  */
 export function editBuffer(state: VimEditorState, filename: string): VimEditorState {
-  const cleanName = filename.trim();
-  if (!cleanName) {
+  const rawName = filename.trim();
+  if (!rawName) {
     return {
       ...state,
       commandMessage: msg('E471: 인수가 필요합니다 (:e {filename})'),
     };
   }
+  const cleanName = resolveVfsFilename(state, rawName);
 
   const syncedState = syncCurrentBuffer(state);
   const buffers = syncedState.buffers!;
-  const existing = buffers.find((b) => b.name === cleanName);
+  const existing = buffers.find((b) => b.name === cleanName || b.name === rawName);
 
   if (existing) {
     return switchBuffer(syncedState, existing.id);
@@ -253,6 +286,7 @@ export function editBuffer(state: VimEditorState, filename: string): VimEditorSt
     undoStack: [],
     redoStack: [],
     isModified: false,
+    savedLines: vfsLines ? [...initialLines] : undefined,
   };
 
   const nextBuffers = [...buffers, newBuf];
@@ -264,6 +298,11 @@ export function editBuffer(state: VimEditorState, filename: string): VimEditorSt
     cursor: { line: 0, col: 0 },
     undoStack: [],
     redoStack: [],
+    undoTreeNodes: undefined,
+    currentUndoSeq: undefined,
+    maxUndoSeq: undefined,
+    undoTimeHistory: undefined,
+    undoTimeIndex: undefined,
     primaryFilename: cleanName,
     alternateBufferId: curId,
     currentBufferId: newId,
@@ -306,9 +345,14 @@ export function addBuffer(state: VimEditorState, filename: string, lineNum?: num
 }
 
 /**
- * 버퍼를 삭제하고 다른 버퍼로 복귀합니다 (:bd, :bdelete).
+ * 버퍼를 삭제·언로드·완전 제거합니다 (:bd, :bdelete, :bunload, :bwipeout).
  */
-export function deleteBuffer(state: VimEditorState, target?: number | string): VimEditorState {
+export function deleteBuffer(
+  state: VimEditorState,
+  target?: number | string,
+  force = true,
+  kind: 'delete' | 'unload' | 'wipe' = 'delete'
+): VimEditorState {
   const syncedState = syncCurrentBuffer(state);
   const buffers = syncedState.buffers!;
   const curId = syncedState.currentBufferId ?? 1;
@@ -331,8 +375,29 @@ export function deleteBuffer(state: VimEditorState, target?: number | string): V
     return {
       ...syncedState,
       commandMessage: msg('E94: 버퍼를 찾을 수 없습니다: {target}', { target }),
+      bell: true,
     };
   }
+
+  if (!force && targetBuf.isModified) {
+    return {
+      ...syncedState,
+      commandMessage: msg('E89: 버퍼 {id} 변경사항이 저장되지 않았습니다 (무시하려면 ! 추가)', { id: targetBuf.id }),
+      bell: true,
+    };
+  }
+
+  const nextLocalOpts =
+    kind === 'wipe' && syncedState.bufferLocalOptions
+      ? Object.fromEntries(Object.entries(syncedState.bufferLocalOptions).filter(([k]) => Number(k) !== targetBuf!.id))
+      : syncedState.bufferLocalOptions;
+
+  const doneMsg =
+    kind === 'unload'
+      ? msg('버퍼 {id} ("{name}")를 언로드했습니다', { id: targetBuf.id, name: targetBuf.name })
+      : kind === 'wipe'
+        ? msg('버퍼 {id} ("{name}")를 완전히 제거했습니다', { id: targetBuf.id, name: targetBuf.name })
+        : msg('버퍼 {id} ("{name}")를 삭제했습니다', { id: targetBuf.id, name: targetBuf.name });
 
   // 버퍼가 1개만 남았을 경우 빈 버퍼로 초기화
   if (buffers.length <= 1) {
@@ -352,10 +417,16 @@ export function deleteBuffer(state: VimEditorState, target?: number | string): V
       cursor: { line: 0, col: 0 },
       undoStack: [],
       redoStack: [],
+      undoTreeNodes: undefined,
+      currentUndoSeq: undefined,
+      maxUndoSeq: undefined,
+      undoTimeHistory: undefined,
+      undoTimeIndex: undefined,
+      bufferLocalOptions: nextLocalOpts,
       primaryFilename: '[No Name]',
       currentBufferId: 1,
       alternateBufferId: undefined,
-      commandMessage: msg('버퍼 1개를 초기화했습니다'),
+      commandMessage: kind === 'delete' ? msg('버퍼 1개를 초기화했습니다') : doneMsg,
     };
   }
 
@@ -367,8 +438,9 @@ export function deleteBuffer(state: VimEditorState, target?: number | string): V
     return {
       ...syncedState,
       buffers: nextBuffers,
+      bufferLocalOptions: nextLocalOpts,
       alternateBufferId: nextAlt,
-      commandMessage: msg('버퍼 {id} ("{name}")를 삭제했습니다', { id: targetBuf.id, name: targetBuf.name }),
+      commandMessage: doneMsg,
     };
   }
 
@@ -386,14 +458,20 @@ export function deleteBuffer(state: VimEditorState, target?: number | string): V
   return {
     ...syncedState,
     buffers: nextBuffers,
+    bufferLocalOptions: nextLocalOpts,
     lines: [...fallbackBuf.lines],
     cursor: { ...fallbackBuf.cursor },
     undoStack: fallbackBuf.undoStack ? [...fallbackBuf.undoStack] : [],
     redoStack: fallbackBuf.redoStack ? [...fallbackBuf.redoStack] : [],
+    undoTreeNodes: undefined,
+    currentUndoSeq: undefined,
+    maxUndoSeq: undefined,
+    undoTimeHistory: undefined,
+    undoTimeIndex: undefined,
     primaryFilename: fallbackBuf.name,
     currentBufferId: fallbackBuf.id,
     alternateBufferId: undefined,
-    commandMessage: msg('버퍼 {id} ("{name}")를 삭제했습니다', { id: targetBuf.id, name: targetBuf.name }),
+    commandMessage: doneMsg,
   };
 }
 

@@ -264,7 +264,7 @@ function executeSingleStage(
     case 'false':
       return { stdoutLines: [], exitCode: 1 };
     case 'pwd':
-      return { stdoutLines: ['/workspace'], exitCode: 0 };
+      return { stdoutLines: [state.cwd || '/workspace'], exitCode: 0 };
     case 'whoami':
       return { stdoutLines: ['vimuser'], exitCode: 0 };
     case 'uname':
