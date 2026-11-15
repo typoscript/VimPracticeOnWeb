@@ -104,7 +104,7 @@ flowchart TD
 
 ---
 
-## 🎯 튜토리얼 커리큘럼 (Lessons 1 ~ 96)
+## 🎯 튜토리얼 커리큘럼 (Lessons 1 ~ 97)
 
 ### 🟢 기초 이동 및 텍스트 편집 (레슨 1 ~ 10)
 1. **레슨 1**: 기본 방향 이동 (`h`, `j`, `k`, `l`)
@@ -210,7 +210,8 @@ flowchart TD
 93. **레슨 93**: 메서드 블록 점프(`]m`, `[m`, `]M`, `[M`), 입력 다이그래프(`Ctrl-k`), 직전 삽입 반복(`Ctrl-a`) & UTF-8 바이트 검사(`g8`) 마스터하기
 94. **레슨 94**: 커맨드라인 중간 편집(`Ctrl-b/e/w/u`, `ArrowLeft/Right`, `Ctrl-k`), 커스텀 `:digraphs` 등록 & `:ascii` 마스터하기
 95. **레슨 95**: 부분 검색(`g*`/`g#`), 전역 선언(`gD`), 줄 정렬(`:center`/`:right`/`:left`), Ex 반복(`@:`) & `Ctrl-v uXXXX` 마스터
-96. **레슨 96**: 수평 뷰포트 스크롤(`zh`/`zl`/`zH`/`zL`/`ze`/`zs`), 줄 바꿈 해제(`:set nowrap`) & `sidescroll`/`sidescrolloff` 마스터하기
+96. **레슨 96**: 수평 뷰포트 스크롤(`zh`/`zl`/`zH`/`zL`/`ze`/`zs`), 줄 바꿈 해제(`:set nowrap`) & `sidescroll`/`sidescrolloff` 마스터
+97. **레슨 97**: 특수 마크(`''`, `'.`, `'^`, `'[`/`']`, `'<`/`'>`) & `:set nrformats`(`hex`/`bin`/`octal`/`alpha`/`unsigned`) 마스터하기
 
 ---
 

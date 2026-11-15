@@ -328,4 +328,97 @@ describe('setEngine (:set Option System)', () => {
       expect(bad.commandMessage).toContain('E474');
     });
   });
+
+  describe('nrformats (nf) 옵션 및 Ctrl-a / Ctrl-x 진법·알파벳 증감', () => {
+    it(':set nf?, nf+=, nf-=, nf^=, nf&, E474 검증이 정상 동작한다', () => {
+      let state = createBaseState();
+      expect(getOptions(state).nrformats).toBe('bin,hex');
+
+      state = executeSetCommand(state, 'nf+=octal,alpha');
+      expect(state.options?.nrformats).toBe('bin,hex,octal,alpha');
+
+      state = executeSetCommand(state, 'nf-=bin');
+      expect(state.options?.nrformats).toBe('hex,octal,alpha');
+
+      state = executeSetCommand(state, 'nf^=unsigned');
+      expect(state.options?.nrformats).toBe('unsigned,hex,octal,alpha');
+
+      const query = executeSetCommand(state, 'nf?');
+      expect(query.commandMessage).toBe('nrformats=unsigned,hex,octal,alpha');
+
+      state = executeSetCommand(state, 'nf&');
+      expect(state.options?.nrformats).toBe('bin,hex');
+
+      const bad = executeSetCommand(state, 'nf+=unknown');
+      expect(bad.bell).toBe(true);
+      expect(bad.commandMessage).toContain('E474');
+    });
+
+    it('기본값 bin,hex 로 16진수(0x09→0x0a) 및 2진수(0b0101→0b0110)를 증감한다', () => {
+      let state: VimEditorState = {
+        lines: ['mask = 0x09;', 'bits = 0b0101;'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      // 0x09 -> 0x0a, 대문자 0x0F -> 0x10 테스트 포함
+      state = handleKey(state, 'Ctrl-a');
+      expect(state.lines[0]).toBe('mask = 0x0a;');
+
+      state = handleKey(state, '5');
+      state = handleKey(state, 'Ctrl-a');
+      expect(state.lines[0]).toBe('mask = 0x0f;');
+
+      // 다음 줄 2진수 0b0101 + 1 = 0b0110
+      state = handleKey(state, 'j');
+      state = handleKey(state, '0');
+      state = handleKey(state, 'Ctrl-a');
+      expect(state.lines[1]).toBe('bits = 0b0110;');
+    });
+
+    it('nrformats=octal,alpha,unsigned 에서 8진수·알파벳·부호없는 숫자와 Visual g Ctrl-a 를 처리한다', () => {
+      let state: VimEditorState = {
+        lines: ['perm = 07;', 'step a', 'foo-5', 'idx: 0x01', 'idx: 0x01'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      for (const ch of ':set nf=octal,unsigned') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+
+      // 8진수 07 -> Ctrl-a -> 010, Ctrl-x -> 07
+      state = handleKey(state, 'Ctrl-a');
+      expect(state.lines[0]).toBe('perm = 010;');
+      state = handleKey(state, 'Ctrl-x');
+      expect(state.lines[0]).toBe('perm = 07;');
+
+      // 알파벳 'a' -> nf+=alpha 후 2 Ctrl-a -> 'c'
+      for (const ch of ':set nf+=alpha') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+      state = handleKey(state, 'j');
+      state = handleKey(state, '$'); // 'a' 위
+      state = handleKey(state, '2');
+      state = handleKey(state, 'Ctrl-a');
+      expect(state.lines[1]).toBe('step c');
+
+      // unsigned: 'foo-5' 에서 '-' 무시하고 5 + 1 = 6 -> 'foo-6'
+      for (const ch of ':set nf-=alpha') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+      state = handleKey(state, 'j');
+      state = handleKey(state, '0');
+      state = handleKey(state, 'Ctrl-a');
+      expect(state.lines[2]).toBe('foo-6');
+
+      // :set nf& (bin,hex) 로 복구 후 Visual g Ctrl-a 로 16진수 계단식 증가 (0x01 -> 0x02, 0x03)
+      for (const ch of ':set nf&') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+      state = handleKey(state, 'j'); // line 3
+      state = handleKey(state, 'V');
+      state = handleKey(state, 'j'); // line 4
+      state = handleKey(state, 'g');
+      state = handleKey(state, 'Ctrl-a');
+      expect(state.lines[3]).toBe('idx: 0x02');
+      expect(state.lines[4]).toBe('idx: 0x03');
+    });
+  });
 });

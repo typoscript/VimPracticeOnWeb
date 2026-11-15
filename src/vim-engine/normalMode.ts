@@ -99,7 +99,7 @@ import {
   scrollLineUp,
   handleHorizontalViewportKey,
 } from './viewport';
-import { recordJump, jumpOlder, jumpNewer, setMark, jumpToMark, executeMarkOperator } from './marks';
+import { recordJump, jumpOlder, jumpNewer, setMark, jumpToMark, executeMarkOperator, isValidMarkJumpChar } from './marks';
 import {
   joinLines,
   toggleCaseChar,
@@ -822,12 +822,12 @@ export function handleNormalModeKey(
     };
   }
 
-  // 1-0-9. 마크 연산자 결합 (d'a, d`a, c'a, c`a, y'a, y`a, v'a, v`a)
+  // 1-0-9. 마크 연산자 결합 (d'a, d`a, d'., d`[, c'a, y'<, v'a 등 특수 마크 포함)
   const markOpMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([dcyv])(['`])$/);
   if (markOpMatch) {
     const op = markOpMatch[2] as 'd' | 'c' | 'y' | 'v';
     const quote = markOpMatch[3] as "'" | '`';
-    if (/^[a-zA-Z]$/.test(key)) {
+    if (isValidMarkJumpChar(key)) {
       const isLineWise = quote === "'";
       const res = executeMarkOperator(state, op, key, isLineWise);
       const synced = syncRegisters(state, res, op === 'y');
@@ -848,11 +848,11 @@ export function handleNormalModeKey(
     return { ...state, pendingKeys: undefined };
   }
 
-  // 1-0-10. 단독 마크 점프 ('{a-zA-Z}, `{a-zA-Z})
+  // 1-0-10. 단독 마크 점프 ('{a-zA-Z}, `{a-zA-Z} 및 특수 마크 '', ``, '., '^^, '[, '], '<, '>)
   const standaloneMarkMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?(['`])$/);
   if (standaloneMarkMatch) {
     const quote = standaloneMarkMatch[2];
-    if (/^[a-zA-Z]$/.test(key)) {
+    if (isValidMarkJumpChar(key)) {
       return jumpToMark(state, key, quote === "'");
     }
     return { ...state, pendingKeys: undefined };

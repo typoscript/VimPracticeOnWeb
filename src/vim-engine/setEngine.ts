@@ -27,6 +27,7 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   foldmarker: '{{{,}}}',
   foldlevel: 0,
   scrollbind: false,
+  nrformats: 'bin,hex',
 };
 
 export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
@@ -81,6 +82,8 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   grepprg: 'grepprg',
   scb: 'scrollbind',
   scrollbind: 'scrollbind',
+  nf: 'nrformats',
+  nrformats: 'nrformats',
 };
 
 /**
@@ -194,6 +197,10 @@ export function formatOptionsList(
 
   if (options.grepprg !== undefined && (showAll || options.grepprg !== DEFAULT_VIM_OPTIONS.grepprg)) {
     displayedItems.push(`grepprg=${options.grepprg}`);
+  }
+
+  if (options.nrformats !== undefined && (showAll || options.nrformats !== DEFAULT_VIM_OPTIONS.nrformats)) {
+    displayedItems.push(`nrformats=${options.nrformats}`);
   }
 
   const defaultHeader = showAll ? '--- All Options ---' : '--- Modified Options ---';
@@ -362,11 +369,36 @@ export function executeSetCommand(
       if (optKey === 'foldmarker' && val === undefined) {
         val = '{{{,}}}';
       }
+      if (optKey === 'nrformats' && val === undefined) {
+        val = 'bin,hex';
+      }
       if (typeof val === 'boolean') {
         queryMessages.push(val ? (optKey as string) : `no${optKey}`);
       } else {
         queryMessages.push(`${optKey}=${val}`);
       }
+      continue;
+    }
+
+    // 3b. 기본값 복원 (:set nrformats&)
+    if (token.endsWith('&')) {
+      const rawKey = token.slice(0, -1);
+      const optKey = OPTION_ALIASES[rawKey];
+      if (!optKey) {
+        return {
+          ...state,
+          bell: true,
+          commandMessage: msg('E518: 알 수 없는 옵션: {rawKey}', { rawKey }),
+        };
+      }
+      const defVal = (DEFAULT_VIM_OPTIONS as any)[optKey];
+      if (scope === 'local' || scope === 'both') {
+        (nextLocal as any)[optKey] = defVal;
+      }
+      if (scope === 'global' || scope === 'both') {
+        (nextGlobal as any)[optKey] = defVal;
+      }
+      appliedList.push(typeof defVal === 'boolean' ? (defVal ? (optKey as string) : `no${optKey}`) : `${optKey}=${defVal ?? ''}`);
       continue;
     }
 
@@ -381,6 +413,53 @@ export function executeSetCommand(
       const rawKey = mod ? rawKeyWithMod.slice(0, -1) : rawKeyWithMod;
       const rawVal = token.slice(eqIdx + 1);
       const optKey = OPTION_ALIASES[rawKey];
+      if (optKey === 'nrformats') {
+        const VALID_NRFORMATS = new Set(['bin', 'octal', 'hex', 'alpha', 'unsigned', 'blank']);
+        const parseParts = (s: string) =>
+          s
+            .split(',')
+            .map((p) => p.trim().toLowerCase())
+            .filter(Boolean);
+        const rawParts = parseParts(rawVal);
+        const invalidPart = rawParts.find((p) => !VALID_NRFORMATS.has(p));
+        if (invalidPart) {
+          return {
+            ...state,
+            bell: true,
+            commandMessage: msg('E474: 잘못된 인수입니다: {token}', { token }),
+          };
+        }
+        const curStr = (nextLocal.nrformats ?? nextGlobal.nrformats ?? DEFAULT_VIM_OPTIONS.nrformats ?? 'bin,hex');
+        const curParts = parseParts(curStr);
+        let nextParts: string[];
+        if (mod === '+') {
+          nextParts = [...curParts];
+          for (const p of rawParts) {
+            if (!nextParts.includes(p)) nextParts.push(p);
+          }
+        } else if (mod === '^') {
+          nextParts = [...rawParts];
+          for (const p of curParts) {
+            if (!nextParts.includes(p)) nextParts.push(p);
+          }
+        } else if (mod === '-') {
+          nextParts = curParts.filter((p) => !rawParts.includes(p));
+        } else {
+          nextParts = [];
+          for (const p of rawParts) {
+            if (!nextParts.includes(p)) nextParts.push(p);
+          }
+        }
+        const nextVal = nextParts.join(',');
+        if (scope === 'local' || scope === 'both') {
+          nextLocal.nrformats = nextVal;
+        }
+        if (scope === 'global' || scope === 'both') {
+          nextGlobal.nrformats = nextVal;
+        }
+        appliedList.push(`nrformats=${nextVal}`);
+        continue;
+      }
       if (optKey === 'errorformat' || optKey === 'grepprg') {
         const currentStr =
           (nextLocal[optKey] ?? nextGlobal[optKey]) ??

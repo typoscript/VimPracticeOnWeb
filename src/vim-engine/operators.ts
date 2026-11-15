@@ -93,11 +93,16 @@ export function yankLine(state: VimEditorState, count = 1): VimEditorState {
   const { line } = state.cursor;
   const yankCount = Math.min(Math.max(1, count), state.lines.length - line);
   const yankedLines = state.lines.slice(line, line + yankCount).join('\n');
+  const endRow = Math.min(state.lines.length - 1, line + yankCount - 1);
   return {
     ...state,
     clipboard: {
       type: 'line',
       content: yankedLines,
+    },
+    lastBracketMarks: {
+      start: { row: line, col: 0 },
+      end: { row: endRow, col: Math.max(0, (state.lines[endRow] ?? '').length - 1) },
     },
     pendingKeys: undefined,
   };

@@ -7,6 +7,150 @@ import { switchBuffer, ensureBuffers } from './bufferEngine';
 import { switchPaneFocus } from './splitWindow';
 import { msg } from './messages';
 
+export const SPECIAL_MARK_CHARS = new Set(["'", '`', '.', '^', '[', ']', '<', '>']);
+
+/**
+ * 마크 점프('/`) 대상 문자로 유효한지 판별합니다 (a-z, A-Z 및 특수 마크 ', `, ., ^, [, ], <, >).
+ */
+export function isValidMarkJumpChar(markChar: string): boolean {
+  return /^[a-zA-Z]$/.test(markChar) || SPECIAL_MARK_CHARS.has(markChar);
+}
+
+/**
+ * 사용자 마크(a-zA-Z) 및 특수 마크(', `, ., ^, [, ], <, >)의 좌표를 해석합니다.
+ */
+export function resolveMarkPosition(
+  state: VimEditorState,
+  markChar: string
+): MarkPosition | null {
+  if (/^[a-zA-Z]$/.test(markChar)) {
+    return state.marks?.[markChar] ?? null;
+  }
+  if (markChar === "'" || markChar === '`') {
+    return state.lastJumpPos ? { ...state.lastJumpPos } : { row: 0, col: 0 };
+  }
+  if (markChar === '.') {
+    if (state.lastChangeMark) {
+      return { ...state.lastChangeMark };
+    }
+    if (state.changeList && state.changeList.length > 0) {
+      const last = state.changeList[state.changeList.length - 1];
+      return { row: last.row, col: last.col };
+    }
+    return null;
+  }
+  if (markChar === '^') {
+    if (state.lastInsertPos) {
+      return { row: state.lastInsertPos.row, col: state.lastInsertPos.col };
+    }
+    return null;
+  }
+  if (markChar === '<' || markChar === '>') {
+    const vis = state.lastVisualSelection;
+    if (!vis) return null;
+    const isAnchorFirst =
+      vis.anchor.line < vis.cursor.line ||
+      (vis.anchor.line === vis.cursor.line && vis.anchor.col <= vis.cursor.col);
+    const pos =
+      markChar === '<'
+        ? isAnchorFirst
+          ? vis.anchor
+          : vis.cursor
+        : isAnchorFirst
+        ? vis.cursor
+        : vis.anchor;
+    return { row: pos.line, col: pos.col };
+  }
+  if (markChar === '[') {
+    return state.lastBracketMarks?.start ? { ...state.lastBracketMarks.start } : null;
+  }
+  if (markChar === ']') {
+    return state.lastBracketMarks?.end ? { ...state.lastBracketMarks.end } : null;
+  }
+  return null;
+}
+
+/**
+ * 버퍼 변경 시 특수 마크('., '[, '])를 불변 갱신합니다.
+ */
+export function computeSpecialMarksUpdate(
+  prevState: VimEditorState,
+  nextState: VimEditorState
+): { lastChangeMark: { row: number; col: number }; lastBracketMarks: { start: { row: number; col: number }; end: { row: number; col: number } } } | null {
+  const prevLines = prevState.lines ?? [];
+  const nextLines = nextState.lines ?? [];
+  if (prevLines === nextLines) return null;
+
+  const minLen = Math.min(prevLines.length, nextLines.length);
+  let firstDiff = 0;
+  while (firstDiff < minLen && prevLines[firstDiff] === nextLines[firstDiff]) {
+    firstDiff++;
+  }
+  if (firstDiff === minLen && prevLines.length === nextLines.length) {
+    return null;
+  }
+
+  let suffix = 0;
+  while (
+    suffix < minLen - firstDiff &&
+    prevLines[prevLines.length - 1 - suffix] === nextLines[nextLines.length - 1 - suffix]
+  ) {
+    suffix++;
+  }
+
+  const lastNextLine = Math.max(firstDiff, Math.min(nextLines.length - 1, nextLines.length - 1 - suffix));
+  let start: { row: number; col: number };
+  let end: { row: number; col: number };
+
+  if (firstDiff === lastNextLine && prevLines.length === nextLines.length) {
+    const oldLine = prevLines[firstDiff] ?? '';
+    const newLine = nextLines[firstDiff] ?? '';
+    const minCol = Math.min(oldLine.length, newLine.length);
+    let firstCol = 0;
+    while (firstCol < minCol && oldLine[firstCol] === newLine[firstCol]) {
+      firstCol++;
+    }
+    let sufCol = 0;
+    while (
+      sufCol < minCol - firstCol &&
+      oldLine[oldLine.length - 1 - sufCol] === newLine[newLine.length - 1 - sufCol]
+    ) {
+      sufCol++;
+    }
+    const maxValidCol = Math.max(0, newLine.length - 1);
+    const clampedStartCol = Math.min(firstCol, maxValidCol);
+    const rawEndCol = Math.max(clampedStartCol, newLine.length - 1 - sufCol);
+    const clampedEndCol = Math.min(rawEndCol, maxValidCol);
+    start = { row: firstDiff, col: clampedStartCol };
+    end = { row: firstDiff, col: clampedEndCol };
+
+    if (
+      prevState.mode === 'INSERT' &&
+      nextState.mode === 'INSERT' &&
+      prevState.lastBracketMarks &&
+      prevState.lastBracketMarks.start.row === firstDiff &&
+      prevState.lastBracketMarks.end.row === firstDiff &&
+      clampedStartCol >= prevState.lastBracketMarks.start.col &&
+      clampedStartCol <= prevState.lastBracketMarks.end.col + 1
+    ) {
+      start = { ...prevState.lastBracketMarks.start };
+    }
+  } else {
+    const safeFirst = Math.min(firstDiff, Math.max(0, nextLines.length - 1));
+    const safeLast = Math.min(lastNextLine, Math.max(0, nextLines.length - 1));
+    start = { row: safeFirst, col: 0 };
+    end = { row: safeLast, col: Math.max(0, (nextLines[safeLast] ?? '').length - 1) };
+  }
+
+  const changeRow = Math.max(0, Math.min(nextState.cursor.line, Math.max(0, nextLines.length - 1)));
+  const changeCol = Math.max(0, nextState.cursor.col);
+
+  return {
+    lastChangeMark: { row: changeRow, col: changeCol },
+    lastBracketMarks: { start, end },
+  };
+}
+
 /**
  * 점프 리스트에 현재(또는 지정된) 커서 위치를 기록합니다.
  * gg, G, [N]G, /, *, %, 'a 등 큰 점프가 일어나기 전 위치를 저장합니다.
@@ -18,6 +162,7 @@ export function recordJump(
   const pos = fromPos ?? state.cursor;
   const list = state.jumpList ? [...state.jumpList] : [];
   const currentIndex = state.jumpIndex ?? list.length;
+  const jumpMark = { row: pos.line, col: pos.col };
 
   const truncated = list.slice(0, Math.min(currentIndex, list.length));
   const last = truncated[truncated.length - 1];
@@ -26,6 +171,7 @@ export function recordJump(
       ...state,
       jumpList: truncated,
       jumpIndex: truncated.length,
+      lastJumpPos: jumpMark,
     };
   }
 
@@ -34,6 +180,7 @@ export function recordJump(
     ...state,
     jumpList: truncated,
     jumpIndex: truncated.length,
+    lastJumpPos: jumpMark,
   };
 }
 
@@ -164,7 +311,7 @@ export function jumpToMark(
   markChar: string,
   isLineWise: boolean
 ): VimEditorState {
-  const mark = state.marks?.[markChar];
+  const mark = resolveMarkPosition(state, markChar);
   if (!mark) {
     return {
       ...state,
@@ -241,7 +388,15 @@ export function jumpToMark(
  */
 export function formatMarksList(state: VimEditorState, filter?: string): string {
   const marks = state.marks ?? {};
-  const entries = Object.entries(marks);
+  const entries: [string, MarkPosition][] = Object.entries(marks);
+
+  for (const specialKey of ["'", '.', '^', '<', '>', '[', ']']) {
+    const pos = resolveMarkPosition(state, specialKey);
+    if (pos) {
+      entries.push([specialKey, pos]);
+    }
+  }
+
   if (entries.length === 0) {
     return 'mark line  col file/text';
   }
@@ -407,9 +562,9 @@ export function executeMarkOperator(
   markChar: string,
   isLineWise: boolean
 ): VimEditorState {
-  const mark = state.marks?.[markChar];
+  const mark = resolveMarkPosition(state, markChar);
   if (!mark) {
-    return { ...state, pendingKeys: undefined };
+    return { ...state, pendingKeys: undefined, commandMessage: 'E20: Mark not set', bell: true };
   }
 
   const startLine = state.cursor.line;
@@ -438,6 +593,10 @@ export function executeMarkOperator(
         clipboard: {
           type: 'line',
           content: yankedLines.join('\n'),
+        },
+        lastBracketMarks: {
+          start: { row: minLine, col: 0 },
+          end: { row: maxLine, col: Math.max(0, (state.lines[maxLine] ?? '').length - 1) },
         },
         pendingKeys: undefined,
       };

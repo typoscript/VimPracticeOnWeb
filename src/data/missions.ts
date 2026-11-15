@@ -3744,4 +3744,49 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 97,
+    title: "레슨 97: 특수 마크('', '., '^, '[, '], '<, '>) & :set nrformats (hex/bin/alpha) 마스터",
+    description:
+      "사용자가 직접 지정한 a~z 마크 외에도 Vim 은 점프·변경·삽입·복사·선택의 흔적을 특수 마크에 자동으로 기록합니다. 여기에 16진수(hex)·2진수(bin)·알파벳(alpha)까지 다루는 :set nrformats 를 결합해 보세요.\n\n1) 특수 마크 점프 (' / ` 접두어):\n   - '' / `` : 직전에 큰 점프(gg, G, / 등)를 하기 전 위치로 왕복 토글합니다.\n   - '. / `. : 마지막으로 텍스트를 수정한 위치로 이동합니다.\n   - '^ / `^ : 마지막으로 Insert 모드를 종료한 위치로 이동합니다.\n   - '[ / '] / `[ / `] : 마지막 변경·붙여넣기·복사(yank)된 구간의 시작과 끝 경계입니다.\n   - '< / '> / `< / `> : 마지막 Visual 선택 영역의 시작과 끝 경계입니다.\n\n2) :set nrformats (:set nf=...):\n   - 기본값 bin,hex 에서 Ctrl-a / Ctrl-x 는 0x09 → 0x0a, 0b0101 → 0b0110 을 그대로 증감합니다.\n   - :set nf+=alpha 를 추가하면 문자('a' → 'c')도 Ctrl-a / Ctrl-x 로 증감할 수 있습니다. (nf+=octal, nf+=unsigned 지원)\n\n미션:\n1. 1번째 줄의 0x09 에서 Ctrl-a 를 눌러 0x0a 로, j Ctrl-a 로 2번째 줄 0b0101 을 0b0110 으로 바꾸세요.\n2. j 로 3번째 줄로 내려간 뒤 :set nf+=alpha<Enter> 를 설정하고 0 f\" l 2Ctrl-a 로 \"a\" 를 \"c\" 로 올리세요.\n3. G f[ ci[ DONE<Esc> 로 마지막 줄을 [DONE] 으로 바꾼 뒤, gg 로 맨 위에 올라갔다가 `^ (또는 `.) 로 마지막 수정/삽입 위치(4번째 줄)로 복귀해 완료하세요!",
+    hint: 'Ctrl-a → j Ctrl-a → j :set nf+=alpha<Enter> → 0 f" l 2Ctrl-a → G f[ ci[ DONE<Esc> → gg `^',
+    par: 45,
+    optimalKeys: [
+      'Ctrl-a', 'j', 'Ctrl-a', 'j',
+      ':', 's', 'e', 't', ' ', 'n', 'f', '+', '=', 'a', 'l', 'p', 'h', 'a', 'Enter',
+      '0', 'f', '"', 'l', '2', 'Ctrl-a',
+      'G', 'f', '[', 'c', 'i', '[', 'D', 'O', 'N', 'E', 'Escape',
+      'g', 'g', '`', '^',
+    ],
+    primaryFilename: 'flags.ts',
+    initialLines: [
+      'const flags = 0x09;',
+      'const mask  = 0b0101;',
+      'const stage = "a";',
+      '// target: [TODO]',
+    ],
+    targetLines: [
+      'const flags = 0x0a;',
+      'const mask  = 0b0110;',
+      'const stage = "c";',
+      '// target: [DONE]',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const target = [
+        'const flags = 0x0a;',
+        'const mask  = 0b0110;',
+        'const stage = "c";',
+        '// target: [DONE]',
+      ];
+      return (
+        state.mode === 'NORMAL' &&
+        (state.options?.nrformats ?? '').includes('alpha') &&
+        state.cursor.line === 3 &&
+        state.lastJumpPos != null &&
+        state.lines.length === target.length &&
+        state.lines.every((l, idx) => l === target[idx])
+      );
+    },
+  },
 ];

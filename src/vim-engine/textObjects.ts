@@ -658,6 +658,10 @@ export function executeTextObjectOperator(
           type: 'text',
           content,
         },
+        lastBracketMarks: {
+          start: { row: startLine, col: startCol },
+          end: { row: endLine, col: endCol },
+        },
         pendingKeys: undefined,
       };
     }
@@ -883,6 +887,10 @@ export function executeLinewiseObjectOperator(
       ...state,
       cursor: { line: startLine, col: 0 },
       clipboard,
+      lastBracketMarks: {
+        start: { row: startLine, col: 0 },
+        end: { row: endLine, col: Math.max(0, (state.lines[endLine] ?? '').length - 1) },
+      },
       pendingKeys: undefined,
     };
   }

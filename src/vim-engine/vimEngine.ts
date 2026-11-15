@@ -10,6 +10,7 @@ import { handleHelpKey } from './helpEngine';
 import { syncLiveLspDiagnostics } from './lspEngine';
 import { handleSpellSuggestKey } from './spellEngine';
 import { recordUndoTreeChange } from './undoTreeEngine';
+import { computeSpecialMarksUpdate } from './marks';
 import { applyScrollbindDelta } from './splitWindow';
 import {
   adjustViewport,
@@ -238,6 +239,15 @@ export function rawHandleKey(
   // Undo tree 동기화: NORMAL 모드이고 대기 키가 없을 때 버퍼 내용 변경 감지 및 확정
   if (nextState.mode === 'NORMAL' && !nextState.pendingKeys) {
     nextState = recordUndoTreeChange(nextState);
+  }
+
+  // 특수 마크('., '[, ']) 자동 갱신 (버퍼 변경 시)
+  const specialMarksPatch = computeSpecialMarksUpdate(state, nextState);
+  if (specialMarksPatch) {
+    nextState = {
+      ...nextState,
+      ...specialMarksPatch,
+    };
   }
 
   // 실시간 LSP 진단 재계산 및 커서 이동/모드 전환 시 열린 LSP 호버 자동 닫기

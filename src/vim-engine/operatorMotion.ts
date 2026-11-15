@@ -116,6 +116,10 @@ function applyLinewise(state: VimEditorState, op: Operator, startLine: number, e
       ...state,
       cursor: clampCursor(state.lines, { line: startLine, col: state.cursor.col }, 'NORMAL'),
       clipboard,
+      lastBracketMarks: {
+        start: { row: startLine, col: 0 },
+        end: { row: endLine, col: Math.max(0, (state.lines[endLine] ?? '').length - 1) },
+      },
       pendingKeys: undefined,
     };
   }
@@ -170,10 +174,21 @@ function applyCharwise(
   const clipboard = { type: 'text' as const, content };
 
   if (op === 'y') {
+    const endCol =
+      realEnd.col > 0
+        ? realEnd.col - 1
+        : realEnd.line > start.line
+        ? Math.max(0, (lines[realEnd.line - 1] ?? '').length - 1)
+        : start.col;
+    const endRow = realEnd.col === 0 && realEnd.line > start.line ? realEnd.line - 1 : realEnd.line;
     return {
       ...state,
       cursor: clampCursor(lines, start, 'NORMAL'),
       clipboard,
+      lastBracketMarks: {
+        start: { row: start.line, col: start.col },
+        end: { row: endRow, col: Math.max(start.line === endRow ? start.col : 0, endCol) },
+      },
       pendingKeys: undefined,
     };
   }

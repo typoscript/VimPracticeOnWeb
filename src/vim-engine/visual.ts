@@ -174,6 +174,10 @@ export function yankVisualBlock(state: VimEditorState): VimEditorState {
       type: 'text',
       content: parts.join('\n'),
     },
+    lastBracketMarks: {
+      start: { row: minLine, col: minCol },
+      end: { row: maxLine, col: Math.max(minCol, isEol ? Math.max(0, (state.lines[maxLine] ?? '').length - 1) : maxCol) },
+    },
     pendingKeys: undefined,
   };
 }
@@ -405,6 +409,10 @@ export function yankVisualSelection(state: VimEditorState): VimEditorState {
         type: 'line',
         content,
       },
+      lastBracketMarks: {
+        start: { row: minLine, col: 0 },
+        end: { row: maxLine, col: Math.max(0, (state.lines[maxLine] ?? '').length - 1) },
+      },
       pendingKeys: undefined,
     };
   }
@@ -435,6 +443,10 @@ export function yankVisualSelection(state: VimEditorState): VimEditorState {
     clipboard: {
       type: 'text',
       content,
+    },
+    lastBracketMarks: {
+      start: { row: start.line, col: start.col },
+      end: { row: end.line, col: end.col },
     },
     pendingKeys: undefined,
   };

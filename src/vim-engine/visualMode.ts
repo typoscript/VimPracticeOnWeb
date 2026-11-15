@@ -44,7 +44,7 @@ import {
   scrollLineUp,
   handleHorizontalViewportKey,
 } from './viewport';
-import { setMark } from './marks';
+import { setMark, isValidMarkJumpChar, resolveMarkPosition } from './marks';
 import { joinLines, changeCaseVisual, indentVisual, modifyNumberVisual, formatIndentVisual } from './lineOperators';
 import { createFold } from './folding';
 import { findMatchingBracket } from './bracketMatch';
@@ -794,11 +794,11 @@ export function handleVisualModeKey(
     return { ...state, pendingKeys: 'm' };
   }
 
-  // 마크 점프 ('{a-zA-Z}, `{a-zA-Z}) - 선택 영역 확장
+  // 마크 점프 ('{a-zA-Z}, `{a-zA-Z} 및 특수 마크) - 선택 영역 확장
   if (state.pendingKeys === "'" || state.pendingKeys === '`') {
     const quote = state.pendingKeys;
-    if (/^[a-zA-Z]$/.test(key)) {
-      const mark = state.marks?.[key];
+    if (isValidMarkJumpChar(key)) {
+      const mark = resolveMarkPosition(state, key);
       if (mark) {
         const targetLine = Math.max(0, Math.min(mark.row, state.lines.length - 1));
         let targetCursor: CursorPosition;

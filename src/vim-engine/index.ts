@@ -141,6 +141,8 @@ export {
   jumpNewer,
   recordJump,
   executeMarkOperator,
+  isValidMarkJumpChar,
+  resolveMarkPosition,
 } from './marks';
 
 // ---- 순정 Vim 세션 관리자 (:mksession, :source Session.vim) ----

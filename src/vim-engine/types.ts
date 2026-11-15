@@ -283,6 +283,8 @@ export interface VimOptions {
   grepprg?: string;
   /** 분할 창 동기 스크롤 여부 (:set scb / noscb, :set scrollbind) */
   scrollbind?: boolean;
+  /** Ctrl-a / Ctrl-x 숫자 증감 시 인식할 진법/형식 (:set nrformats=bin,hex,octal,alpha,unsigned) */
+  nrformats?: string;
 }
 
 /** 맞춤법 검사기 오탈자 정보 */
@@ -537,9 +539,15 @@ export interface VimEditorState {
   completionSession?: CompletionSession | null;
   /** Insert 모드 Ctrl+x 자동완성 서브모드 활성 여부 (^X mode) */
   insertCtrlXMode?: boolean;
-  /** 마지막 INSERT 모드 종료 시점의 커서 위치 (gi용) */
+  /** 마지막 INSERT 모드 종료 시점의 커서 위치 (gi, '^, `^ 용) */
   lastInsertPos?: { row: number; col: number; line: number } | null;
-  /** 직전 비주얼 모드 선택 영역 정보 (gv 복구용) */
+  /** 직전 큰 점프 직전의 커서 위치 ('', `` 용) */
+  lastJumpPos?: { row: number; col: number } | null;
+  /** 마지막 버퍼 변경 위치 ('., `. 용) */
+  lastChangeMark?: { row: number; col: number } | null;
+  /** 마지막 변경 또는 복사(yank)된 텍스트의 시작/끝 경계 ('[, '], `[, `] 용) */
+  lastBracketMarks?: { start: { row: number; col: number }; end: { row: number; col: number } } | null;
+  /** 직전 비주얼 모드 선택 영역 정보 (gv, '<, '> 복구용) */
   lastVisualSelection?: LastVisualSelection | null;
   /** 버퍼 텍스트 변경 위치 히스토리 목록 (g;, g, 순회용) */
   changeList?: ChangeListItem[];

@@ -440,4 +440,139 @@ describe('Line and Character Operators (J, ~, >>, <<, ==, Ctrl-a, Ctrl-x)', () =
 
     expect(state.showMarksVisualizer).toBe(false);
   });
+
+  describe("특수 마크 ('', ``, '., `., '^, `^, '[, '], `[, `], '<, '>, `<, `>)", () => {
+    it("'' 와 `` 로 큰 점프 이전 위치와 현재 위치를 왕복 토글한다", () => {
+      let state: VimEditorState = {
+        lines: ['  first target', '  second line', '  third line', '  fourth end'],
+        cursor: { line: 1, col: 5 },
+        mode: 'NORMAL',
+      };
+
+      // G 로 마지막 줄(line 3)로 큰 점프
+      state = handleKey(state, 'G');
+      expect(state.cursor.line).toBe(3);
+
+      // `` 로 정확히 점프 직전 좌표 (1, 5) 복귀
+      state = handleKey(state, '`');
+      state = handleKey(state, '`');
+      expect(state.cursor).toEqual({ line: 1, col: 5 });
+
+      // '' 로 다시 (3, 첫 비공백) 왕복 토글
+      state = handleKey(state, "'");
+      state = handleKey(state, "'");
+      expect(state.cursor).toEqual({ line: 3, col: 2 });
+    });
+
+    it("'. / `. 과 '^ / `^ 는 마지막 변경 위치 및 마지막 Insert 종료 위치로 점프한다", () => {
+      let state: VimEditorState = {
+        lines: ['alpha beta', 'gamma delta', 'epsilon zeta'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      // 1번째 줄에서 Insert 입력 (col 6 에 'new ' 삽입 후 Esc -> '^ 와 '. 기록)
+      state = handleKey(state, 'w'); // col 6 ('b')
+      state = handleKey(state, 'i');
+      for (const ch of 'new ') state = handleKey(state, ch);
+      state = handleKey(state, 'Escape'); // cursor -> (0, 9), lastInsertPos=(0,9)
+
+      // 2번째 줄 끝으로 이동해 한 글자 삭제 (x -> '. 는 line 2 로 갱신, '^ 는 line 0 유지)
+      state = handleKey(state, '2');
+      state = handleKey(state, 'j');
+      state = handleKey(state, '$');
+      state = handleKey(state, 'x');
+      expect(state.lines[2]).toBe('epsilon zet');
+
+      // `^ 로 마지막 Insert 종료 위치 (0, 10 - 'b' 앞, gi 기준 좌표) 점프
+      state = handleKey(state, '`');
+      state = handleKey(state, '^');
+      expect(state.cursor).toEqual({ line: 0, col: 10 });
+
+      // `. 로 마지막 변경 위치 (2, 10) 점프
+      state = handleKey(state, '`');
+      state = handleKey(state, '.');
+      expect(state.cursor).toEqual({ line: 2, col: 10 });
+    });
+
+    it("'[ / '] / `[ / `] 는 마지막 변경·붙여넣기·복사 텍스트의 시작과 끝 경계로 점프하고 연산자와 결합된다", () => {
+      let state: VimEditorState = {
+        lines: ['hello world', 'foo bar baz', 'end line'],
+        cursor: { line: 1, col: 4 }, // 'b' of bar
+        mode: 'NORMAL',
+      };
+
+      // yi" 대신 yiw 로 'bar'(col 4..6) 복사 -> `[=(1,4), `]=(1,6)
+      state = handleKey(state, 'y');
+      state = handleKey(state, 'i');
+      state = handleKey(state, 'w');
+      expect(state.clipboard?.content).toBe('bar');
+
+      state = handleKey(state, 'j'); // (2, 4)
+      state = handleKey(state, '`');
+      state = handleKey(state, ']');
+      expect(state.cursor).toEqual({ line: 1, col: 6 });
+
+      state = handleKey(state, '`');
+      state = handleKey(state, '[');
+      expect(state.cursor).toEqual({ line: 1, col: 4 });
+
+      // 0번째 줄 끝에 p 로 붙여넣기 -> 'hello worldbar' -> `[=(0,11), `]=(0,13)
+      state = handleKey(state, 'k');
+      state = handleKey(state, '$');
+      state = handleKey(state, 'p');
+      expect(state.lines[0]).toBe('hello worldbar');
+
+      state = handleKey(state, '`');
+      state = handleKey(state, '[');
+      expect(state.cursor).toEqual({ line: 0, col: 11 });
+      state = handleKey(state, '`');
+      state = handleKey(state, ']');
+      expect(state.cursor).toEqual({ line: 0, col: 13 });
+
+      // 커서를 `[`(11)로 옮기고 d`] 로 방금 붙여넣은 'bar' 삭제
+      state = handleKey(state, '`');
+      state = handleKey(state, '[');
+      state = handleKey(state, 'd');
+      state = handleKey(state, '`');
+      state = handleKey(state, ']');
+      expect(state.lines[0]).toBe('hello world');
+    });
+
+    it("'< / '> / `< / `> 는 마지막 Visual 선택의 시작/끝으로 이동하고 Visual/연산자/미설정 E20·:marks 를 지원한다", () => {
+      let state: VimEditorState = {
+        lines: ['abcdefg', 'hijklmn', 'opqrstu'],
+        cursor: { line: 0, col: 2 },
+        mode: 'NORMAL',
+      };
+
+      // 아직 변경·Visual 이력이 없으므로 `> 와 `. 는 E20 + bell
+      state = handleKey(state, '`');
+      state = handleKey(state, '>');
+      expect(state.bell).toBe(true);
+      expect(state.commandMessage).toContain('E20');
+
+      // 역방향 Visual 선택 (col 5 -> col 1) 후 Esc
+      state = { ...state, cursor: { line: 0, col: 5 }, commandMessage: undefined };
+      state = handleKey(state, 'v');
+      state = handleKey(state, '4');
+      state = handleKey(state, 'h'); // col 1
+      state = handleKey(state, 'Escape');
+
+      // 역방향 선택이어도 `< 는 시작(0,1), `> 는 끝(0,5)
+      state = { ...state, cursor: { line: 2, col: 0 } };
+      state = handleKey(state, '`');
+      state = handleKey(state, '<');
+      expect(state.cursor).toEqual({ line: 0, col: 1 });
+      state = handleKey(state, '`');
+      state = handleKey(state, '>');
+      expect(state.cursor).toEqual({ line: 0, col: 5 });
+
+      // :marks 에 특수 마크 목록이 함께 표시됨
+      for (const ch of ':marks') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+      expect(state.commandMessage).toContain('<');
+      expect(state.commandMessage).toContain('>');
+    });
+  });
 });
