@@ -22,8 +22,6 @@ import { sandboxInitialLines } from './data/sandbox';
 import {
   loadProgress,
   saveLessonRecord,
-  loadActionTimelineSetting,
-  loadSpeedrunRecord,
   LessonProgress,
 } from './utils/storage';
 import { AntiPatternDetector } from './utils/antiPatternDetector';
@@ -31,7 +29,6 @@ import { useSoundEffects } from './utils/soundEffects';
 import {
   getChallengeFromUrl,
   createCustomMissionObject,
-  CustomMissionData,
 } from './utils/customMission';
 import {
   recordKeyInputStats,
@@ -40,7 +37,6 @@ import {
 import {
   buildMissionInitialState,
   buildCustomInitialState,
-  buildSandboxInitialState,
   resolveStatusFilename,
 } from './utils/missionInitialState';
 import { useEditorWorkspaceHandlers } from './hooks/useEditorWorkspaceHandlers';
@@ -49,6 +45,7 @@ import { useVimKeyboardInput } from './hooks/useVimKeyboardInput';
 import { useGhostReplay } from './hooks/useGhostReplay';
 import { useActionTimeline } from './hooks/useActionTimeline';
 import { useEditorViewSettings } from './hooks/useEditorViewSettings';
+import { useAppMissionHandlers } from './hooks/useAppMissionHandlers';
 import {
   useSpeedrunSession,
   SPEEDRUN_CANDIDATE_IDS,
@@ -340,122 +337,6 @@ export function App() {
     }
   }, [initialCustomMission]);
 
-  const resetSessionWithState = useCallback(
-    (initState: VimEditorState, message: string | null = null) => {
-      setEditorState(initState);
-      resetActionTimeline(initState);
-      setKeystrokeCount(0);
-      setRecentKeys([]);
-      setLastPressedKey(undefined);
-      setCoachingMessage(message);
-      antiPatternDetectorRef.current.reset();
-    },
-    [resetActionTimeline]
-  );
-
-  const handleSelectMission = useCallback(
-    (index: number) => {
-      if (index >= 0 && index < MISSIONS.length) {
-        handleStopGhostReplay();
-        setCurrentMissionIndex(index);
-        resetSessionWithState(getMissionInitialState(MISSIONS[index]));
-      }
-    },
-    [handleStopGhostReplay, getMissionInitialState, resetSessionWithState]
-  );
-
-  const handleResetMission = useCallback(() => {
-    handleStopGhostReplay();
-    resetSessionWithState(getMissionInitialState(currentMission));
-  }, [currentMission, handleStopGhostReplay, getMissionInitialState, resetSessionWithState]);
-
-  const handleResetSandbox = useCallback(() => {
-    handleStopGhostReplay();
-    resetSessionWithState(
-      buildSandboxInitialState({ activePresets, leaderKey, customKeymaps })
-    );
-  }, [handleStopGhostReplay, resetSessionWithState, activePresets, leaderKey, customKeymaps]);
-
-  const handleResetCustomMission = useCallback(() => {
-    if (!customMission) return;
-    handleStopGhostReplay();
-    resetSessionWithState(buildCustomInitialState(customMission));
-  }, [customMission, handleStopGhostReplay, resetSessionWithState]);
-
-  const handlePlayCustomMission = useCallback(
-    (data: CustomMissionData) => {
-      handleStopGhostReplay();
-      const newMission = createCustomMissionObject(data);
-      setCustomMission(newMission);
-      setCurrentTab('custom');
-      resetSessionWithState(
-        buildCustomInitialState(newMission),
-        t('⛳ 커스텀 미션 [{title}] 시작! 최소 타수로 완성을 노려보세요.', {
-          title: newMission.title,
-        })
-      );
-    },
-    [handleStopGhostReplay, resetSessionWithState]
-  );
-
-  const handlePlayBYOCMission = useCallback(
-    (missionData: {
-      title: string;
-      description: string;
-      initialText: string;
-      targetText: string;
-      par: number;
-      hint: string;
-    }) => {
-      handlePlayCustomMission({
-        title: missionData.title,
-        description: missionData.description,
-        initialText: missionData.initialText,
-        targetText: missionData.targetText,
-        par: missionData.par,
-      });
-      enableDiffView();
-      setCoachingMessage(
-        t('⛳ [BYOC] 리팩토링 미션 시작! 힌트: {hint}', { hint: missionData.hint })
-      );
-    },
-    [handlePlayCustomMission, enableDiffView]
-  );
-
-  const handleSwitchTab = useCallback(
-    (tab: AppTab) => {
-      handleStopGhostReplay();
-      setCurrentTab(tab);
-      setLastPressedKey(undefined);
-      setCoachingMessage(null);
-      antiPatternDetectorRef.current.reset();
-
-      if (tab === 'sandbox') {
-        handleResetSandbox();
-      } else if (tab === 'speedrun') {
-        resetSpeedrunReady();
-      } else if (tab === 'arcade' || tab === 'dungeon' || tab === 'dojo') {
-        // 게임 탭은 자체 상태를 갖습니다
-      } else if (tab === 'custom' && customMission) {
-        setEditorState(buildCustomInitialState(customMission));
-        setKeystrokeCount(0);
-        setRecentKeys([]);
-      } else {
-        setEditorState(getMissionInitialState(MISSIONS[currentMissionIndex]));
-        setKeystrokeCount(0);
-        setRecentKeys([]);
-      }
-    },
-    [
-      currentMissionIndex,
-      handleResetSandbox,
-      resetSpeedrunReady,
-      customMission,
-      handleStopGhostReplay,
-      getMissionInitialState,
-    ]
-  );
-
   const processKeyInput = useCallback(
     (key: string) => {
       if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(key)) {
@@ -519,13 +400,45 @@ export function App() {
     ]
   );
 
-  const handleRunMacroFromDebugger = useCallback(
-    (register: string, count: number = 1) => {
-      const keys = [...(count > 1 ? String(count).split('') : []), '@', register];
-      keys.forEach((k) => processKeyInput(k));
-    },
-    [processKeyInput]
-  );
+  const {
+    handleSelectMission,
+    handleResetMission,
+    handleResetSandbox,
+    handleResetCustomMission,
+    handlePlayCustomMission,
+    handlePlayBYOCMission,
+    handleSwitchTab,
+    handleRunMacroFromDebugger,
+    handleSelectLessonById,
+    handleRestoreBackup,
+  } = useAppMissionHandlers({
+    currentMission,
+    currentMissionIndex,
+    customMission,
+    activePresets,
+    leaderKey,
+    customKeymaps,
+    antiPatternDetectorRef,
+    getMissionInitialState,
+    resetActionTimeline,
+    resetSpeedrunReady,
+    handleStopGhostReplay,
+    enableDiffView,
+    reloadHardcoreAndKeymaps,
+    restoreViewSettings,
+    processKeyInput,
+    setCurrentTab,
+    setCurrentMissionIndex,
+    setCustomMission,
+    setEditorState,
+    setKeystrokeCount,
+    setRecentKeys,
+    setLastPressedKey,
+    setCoachingMessage,
+    setProgress,
+    setShowActionTimeline,
+    setSpeedrunBestRecord,
+  });
 
   const isModalOrGameBlocked =
     isAnyModalOpen ||
@@ -556,25 +469,6 @@ export function App() {
       : currentTab === 'speedrun' && speedrunStatus === 'running'
       ? activeSpeedrunMission
       : undefined;
-
-  const handleSelectLessonById = useCallback(
-    (missionId: number) => {
-      const idx = MISSIONS.findIndex((m) => m.id === missionId);
-      if (idx !== -1) {
-        handleSelectMission(idx);
-        setCurrentTab('course');
-      }
-    },
-    [handleSelectMission]
-  );
-
-  const handleRestoreBackup = useCallback(() => {
-    setProgress(loadProgress());
-    reloadHardcoreAndKeymaps();
-    restoreViewSettings();
-    setShowActionTimeline(loadActionTimelineSetting());
-    setSpeedrunBestRecord(loadSpeedrunRecord());
-  }, [reloadHardcoreAndKeymaps, restoreViewSettings, setShowActionTimeline, setSpeedrunBestRecord]);
 
   const statusFilename = resolveStatusFilename(
     displayEditorState,

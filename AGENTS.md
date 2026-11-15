@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 153개 테스트 파일, 1,924개 테스트 100% 통과 필수)*
+  *(현재 154개 테스트 파일, 1,925개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -159,6 +159,7 @@
 - **커스텀 훅 7종 단위 테스트 및 `App.tsx` 뷰 설정·미션 초기 상태 분리 (`src/hooks/*.test.ts`, `src/hooks/useEditorViewSettings.ts`, `src/utils/missionInitialState.ts`)**: `useGhostReplay`·`useSpeedrunSession`·`useActionTimeline`·`useHardcoreAndKeymaps`·`useVimKeyboardInput`·`useEditorWorkspaceHandlers`·`useEditorViewSettings` 및 `missionInitialState` 전용 단위 테스트(8개 파일, 19개 테스트)를 추가하고, `App.tsx`(1,187→977줄)에서 에디터 뷰 설정·모달 상태(`useEditorViewSettings`)와 미션/샌드박스 초기 상태 생성 헬퍼(`missionInitialState.ts`)를 추출했습니다.
 - **엔진 대형 핵심 모듈 4차 분해 (`normalMode.ts`, `textObjects.ts`)**: `normalMode.ts`(1,976→296줄)를 사용자 키매핑(`normalKeymaps.ts`), 연산자 대기(`normalOperatorPending.ts`), `d`/`c`/`y` 연산자(`normalDCYOperators.ts`), 매크로·뷰포트·단일 키 편집/모션(`normalStandaloneCommands.ts`)으로 분해하고, `textObjects.ts`(1,169→739줄)에서 인덴트·문단·문장 텍스트 객체를 `textObjectsExtended.ts`로 추출해 단방향 번들 계층(`vim-engine` 청크 500 kB 미만)을 유지했습니다.
 - **엔진 대형 모듈 5차 분해 (`shellBuiltins.ts`, `insertMode.ts`)**: `shellBuiltins.ts`(1,221→557줄)에서 스트림/구조화 필터 유틸(`runSed`, `runAwk`, `runHeadOrTail`, `runWc`, `runNl`, `runColumn`, `runJq`)을 `shellStreamFilters.ts`(666줄)로 분리하고, `insertMode.ts`(1,048→620줄)에서 특수 키 입력·Escape/블록 삽입 커밋·직전 삽입 재삽입(`insertSpecialKeys.ts`, 385줄)과 REPLACE 모드 핸들러(`replaceMode.ts`, 133줄, `insertMode.ts`에서 재수출 유지)를 분리해 모든 프로덕션 소스 파일을 1,000줄 미만으로 정돈했습니다.
+- **차상위 900줄대 코어·앱 파일 경량화 (`folding.ts`, `exBufferOps.ts`, `setEngine.ts`, `App.tsx`)**: `folding.ts`(991→632줄)에서 폴드 블록 감지 로직(`foldingDetection.ts`, 338줄, `dedupeSortedFolds`/`createLevelTrackers` 공통화)을, `exBufferOps.ts`(961→564줄)에서 `:g`/`:v`/범위 `d`·`y`·`put`·`norm`·정렬 명령(`exRangeOps.ts`, 416줄)을, `setEngine.ts`(951→599줄)에서 옵션 기본값·별칭·listchars 파서·조회/출력(`setOptionsCore.ts`, 361줄)을 비순환 분리(기존 경로 재수출 유지)했고, `App.tsx`(977→871줄)에서 미션/샌드박스/커스텀/BYOC/탭/백업 복구 핸들러(`src/hooks/useAppMissionHandlers.ts` 262줄 및 `.test.ts`)를 추출했습니다.
 
 ---
 
