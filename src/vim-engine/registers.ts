@@ -202,12 +202,20 @@ export function getRegisterContent(
     return null;
   }
 
-  // 특수 읽기 전용 레지스터 (%: 현재 파일명, /: 마지막 검색어)
+  // 특수 읽기 전용 레지스터 (%: 현재 파일명, #: 대안 파일명, /: 마지막 검색어)
   if (targetReg === '%') {
     return {
       type: 'text',
       content: state.primaryFilename ?? 'practice.txt',
     };
+  }
+  if (targetReg === '#') {
+    const altBuffer =
+      state.alternateBufferId !== undefined
+        ? state.buffers?.find((b) => b.id === state.alternateBufferId)
+        : undefined;
+    const altName = altBuffer?.name ?? state.secondaryFilename;
+    return altName ? { type: 'text', content: altName } : null;
   }
   if (targetReg === '/') {
     return {

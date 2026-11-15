@@ -18,6 +18,7 @@ import {
   insertTextIntoCmdline,
   deleteCmdlineCharBackward,
   handleCmdlineDigraphStep,
+  handleCmdlineCtrlRStep,
   handleCmdlineCommonEditKey,
   isBackspaceKey,
   isCmdlineCancelKey,
@@ -437,6 +438,13 @@ export function handleSearchModeKey(state: VimEditorState, key: string, isReplay
   const searchDigraph = handleCmdlineDigraphStep(state, key);
   if (searchDigraph) return searchDigraph;
 
+  const searchCtrlR = handleCmdlineCtrlRStep(
+    state,
+    key,
+    state.commandType === '?' ? '?' : '/'
+  );
+  if (searchCtrlR) return searchCtrlR;
+
   if (isCmdlineCancelKey(key)) {
     const returnCursor = state.searchOperator?.initialCursor ?? state.cursor;
     return {
@@ -447,6 +455,7 @@ export function handleSearchModeKey(state: VimEditorState, key: string, isReplay
       commandType: undefined,
       commandCursorCol: undefined,
       digraphPending: undefined,
+      insertRegisterPending: undefined,
       searchOperator: undefined,
     };
   }

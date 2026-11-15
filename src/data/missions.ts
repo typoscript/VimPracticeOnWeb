@@ -3789,4 +3789,42 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 98,
+    title: '레슨 98: 불가시 문자 시각화(:set list/listchars) & 명령행 커서 단어 삽입(<C-r><C-w>) 마스터',
+    description:
+      '겉으로 보이지 않는 탭(\\t)과 줄 끝 불필요한 공백(trailing space)을 화면에 드러내고, 명령행·검색줄에서 커서 아래 단어나 파일명을 타이핑 없이 한 방에 채워 넣는 실무 기술을 익혀 보세요.\n\n1) 불가시 문자 시각화 (:set list / :set listchars):\n   - :set list 는 탭·후행 공백·줄 끝 기호를 에디터에 표시합니다. (:set nolist 로 해제)\n   - :set listchars=tab:>-,trail:.,eol:$ (:set lcs=...) 로 탭·후행 공백·줄 끝·일반 공백(space:)·NBSP(nbsp:) 표시 문자를 원하는 대로 지정합니다. (+=, -= 지원)\n\n2) 명령행·검색줄 커서 컨텍스트 삽입 (Ctrl-r 접두어):\n   - : 또는 / / ? 입력 중 Ctrl-r Ctrl-w 를 누르면 커서 아래 단어(<cword>)가 명령행 커서 위치에 즉시 삽입됩니다.\n   - Ctrl-r Ctrl-a 는 공백 기준 큰 단어(<cWORD>), Ctrl-r Ctrl-l 은 현재 줄 전체, Ctrl-r Ctrl-f 는 커서 아래 파일명(<cfile>)을 삽입합니다.\n   - / 검색 프롬프트에서도 Ctrl-r {reg} 및 Ctrl-r = 계산식 삽입을 동일하게 쓸 수 있습니다.\n\n미션:\n1. :set list lcs=tab:>-,trail:.,eol:$<Enter> 로 탭과 줄 끝 공백을 눈에 보이게 켜세요.\n2. 2w 로 oldServiceHost 위로 커서를 옮긴 뒤, :%s/ 를 입력하고 Ctrl-r Ctrl-w 를 눌러 단어를 자동 삽입한 다음 /newServiceHost/g<Enter> 로 일괄 치환하세요.\n3. :%s/\\s\\+$//<Enter> 로 줄 끝 후행 공백을 모두 제거해 완료하세요!',
+    hint: ':set list lcs=tab:>-,trail:.,eol:$<Enter> → 2w → :%s/ Ctrl-r Ctrl-w /newServiceHost/g<Enter> → :%s/\\s\\+$//<Enter>',
+    par: 76,
+    optimalKeys: [
+      ':', 's', 'e', 't', ' ', 'l', 'i', 's', 't', ' ', 'l', 'c', 's', '=', 't', 'a', 'b', ':', '>', '-', ',', 't', 'r', 'a', 'i', 'l', ':', '.', ',', 'e', 'o', 'l', ':', '$', 'Enter',
+      'w', 'w',
+      ':', '%', 's', '/', 'Ctrl-r', 'Ctrl-w', '/', 'n', 'e', 'w', 'S', 'e', 'r', 'v', 'i', 'c', 'e', 'H', 'o', 's', 't', '/', 'g', 'Enter',
+      ':', '%', 's', '/', '\\', 's', '\\', '+', '$', '/', '/', 'Enter',
+    ],
+    primaryFilename: 'service.ts',
+    initialLines: [
+      '\tconst oldServiceHost = "v1";  ',
+      'let backupHost = oldServiceHost; ',
+    ],
+    targetLines: [
+      '\tconst newServiceHost = "v1";',
+      'let backupHost = newServiceHost;',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const target = [
+        '\tconst newServiceHost = "v1";',
+        'let backupHost = newServiceHost;',
+      ];
+      return (
+        state.mode === 'NORMAL' &&
+        state.options?.list === true &&
+        (state.options?.listchars ?? '').includes('trail:') &&
+        (state.options?.listchars ?? '').includes('eol:') &&
+        state.lines.length === target.length &&
+        state.lines.every((l, idx) => l === target[idx])
+      );
+    },
+  },
 ];

@@ -75,6 +75,10 @@ export function generateSessionScript(state: VimEditorState, sessionFile: string
   if (opts.hlsearch !== undefined) lines.push(opts.hlsearch ? 'set hls' : 'set nohls');
   if (opts.spell !== undefined) lines.push(opts.spell ? 'set spell' : 'set nospell');
   if (opts.wrap !== undefined) lines.push(opts.wrap ? 'set wrap' : 'set nowrap');
+  if (opts.list !== undefined) lines.push(opts.list ? 'set list' : 'set nolist');
+  if (opts.listchars !== undefined && opts.listchars !== 'tab:> ,trail:-,nbsp:+') {
+    lines.push(`set lcs=${opts.listchars.replace(/ /g, '\\ ')}`);
+  }
   if (opts.tabstop) lines.push(`set ts=${opts.tabstop}`);
   if (opts.shiftwidth) lines.push(`set sw=${opts.shiftwidth}`);
 

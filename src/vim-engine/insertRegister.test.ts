@@ -202,6 +202,61 @@ describe('Ctrl+r {reg} and Expression Register Ctrl+r =', () => {
       expect(state.commandType).toBe(':');
       expect(state.commandBuffer).toBe('echo 30');
     });
+
+    it('inserts <cword> (<C-r><C-w>), <cWORD> (<C-r><C-a>), current line (<C-r><C-l>), and <cfile> (<C-r><C-f>) into command line', () => {
+      let state = createInitialState({
+        lines: ['const targetName = foo-bar.baz;', 'import { pay } from "./services/payment.ts";'],
+        cursor: { line: 0, col: 6 },
+      });
+
+      // <C-r><C-w> -> targetName
+      state = runKeys(state, [':', '%', 's', '/', 'Ctrl-r', 'Ctrl-w', '/']);
+      expect(state.commandBuffer).toBe('%s/targetName/');
+      state = handleKey(state, 'Escape');
+
+      // 커서를 foo-bar.baz 위('f')로 이동 후 <C-r><C-a> -> foo-bar.baz;
+      state = runKeys(state, ['f', 'f', ':', 'e', 'c', 'h', 'o', ' ', 'Ctrl-r', 'Ctrl-a']);
+      expect(state.commandBuffer).toBe('echo foo-bar.baz;');
+      state = handleKey(state, 'Escape');
+
+      // <C-r><C-l> -> 현재 줄 전체
+      state = runKeys(state, [':', 'Ctrl-r', 'Ctrl-l']);
+      expect(state.commandBuffer).toBe('const targetName = foo-bar.baz;');
+      state = handleKey(state, 'Escape');
+
+      // 2번째 줄 경로 위로 이동 후 <C-r><C-f> -> ./services/payment.ts
+      state = runKeys(state, ['j', '0', 'f', '"', 'l', ':', 'e', ' ', 'Ctrl-r', 'Ctrl-f']);
+      expect(state.commandBuffer).toBe('e ./services/payment.ts');
+    });
+
+    it('supports Ctrl-r Ctrl-w, Ctrl-r {reg}, and Ctrl-r = inside SEARCH (/ and ?) prompts', () => {
+      let state = createInitialState({
+        lines: ['alpha betaGamma', 'betaGamma two'],
+        cursor: { line: 0, col: 6 },
+        registers: { a: { content: 'alpha', type: 'char' } },
+      });
+
+      // /<C-r><C-w><Enter> -> betaGamma 검색
+      state = runKeys(state, ['/', 'Ctrl-r', 'Ctrl-w']);
+      expect(state.mode).toBe('SEARCH');
+      expect(state.commandBuffer).toBe('betaGamma');
+      state = handleKey(state, 'Enter');
+      expect(state.lastSearchQuery).toBe('betaGamma');
+      expect(state.cursor.line).toBe(0);
+
+      // ?<C-r>a<Enter> -> 역방향 레지스터 검색
+      state = runKeys(state, ['?', 'Ctrl-r', 'a']);
+      expect(state.commandBuffer).toBe('alpha');
+      state = handleKey(state, 'Enter');
+      expect(state.lastSearchQuery).toBe('alpha');
+      expect(state.lastSearchDirection).toBe('backward');
+
+      // /pre_<C-r>=1+2<Enter> -> SEARCH 모드 커서 위치에 계산식 결과 삽입
+      state = runKeys(state, ['/', 'p', 'r', 'e', '_', 'Ctrl-r', '=', '1', '+', '2', 'Enter']);
+      expect(state.mode).toBe('SEARCH');
+      expect(state.commandType).toBe('/');
+      expect(state.commandBuffer).toBe('pre_3');
+    });
   });
 
   describe('Dot Repeat with Ctrl+r {reg}', () => {

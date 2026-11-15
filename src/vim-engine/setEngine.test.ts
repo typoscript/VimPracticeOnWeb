@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   getOptions,
   executeSetCommand,
+  parseListchars,
 } from './setEngine';
 import { VimEditorState } from './types';
 import { findMatches } from './search';
@@ -419,6 +420,54 @@ describe('setEngine (:set Option System)', () => {
       state = handleKey(state, 'Ctrl-a');
       expect(state.lines[3]).toBe('idx: 0x02');
       expect(state.lines[4]).toBe('idx: 0x03');
+    });
+  });
+
+  describe(':set list & :set listchars (lcs)', () => {
+    it(':set list / nolist 및 listchars = / += / -= / ^= / & 를 정상 처리한다', () => {
+      let state = createBaseState();
+      expect(getOptions(state).list).toBe(false);
+      expect(getOptions(state).listchars).toBe('tab:> ,trail:-,nbsp:+');
+
+      state = executeSetCommand(state, 'list lcs+=eol:$');
+      expect(getOptions(state).list).toBe(true);
+      expect(getOptions(state).listchars).toBe('tab:> ,trail:-,nbsp:+,eol:$');
+
+      state = executeSetCommand(state, 'lcs^=space:.');
+      expect(getOptions(state).listchars).toBe('space:.,tab:> ,trail:-,nbsp:+,eol:$');
+
+      state = executeSetCommand(state, 'lcs-=space:.');
+      expect(getOptions(state).listchars).toBe('tab:> ,trail:-,nbsp:+,eol:$');
+
+      state = executeSetCommand(state, 'lcs=tab:>-,trail:.,eol:$');
+      expect(parseListchars(getOptions(state).listchars)).toEqual({
+        tab: '>-',
+        trail: '.',
+        eol: '$',
+      });
+
+      const query = executeSetCommand(state, 'lcs?');
+      expect(query.commandMessage).toBe('listchars=tab:>-,trail:.,eol:$');
+
+      state = executeSetCommand(state, 'lcs& nolist');
+      expect(getOptions(state).list).toBe(false);
+      expect(getOptions(state).listchars).toBe('tab:> ,trail:-,nbsp:+');
+    });
+
+    it('잘못된 listchars 인수는 E474 / E1511 과 bell 을 발생시킨다', () => {
+      const base = createBaseState();
+
+      const badKey = executeSetCommand(base, 'lcs=unknown:x');
+      expect(badKey.bell).toBe(true);
+      expect(badKey.commandMessage).toContain('E474');
+
+      const badTabLen = executeSetCommand(base, 'lcs=tab:x');
+      expect(badTabLen.bell).toBe(true);
+      expect(badTabLen.commandMessage).toContain('E1511');
+
+      const badEolLen = executeSetCommand(base, 'lcs=eol:$$');
+      expect(badEolLen.bell).toBe(true);
+      expect(badEolLen.commandMessage).toContain('E1511');
     });
   });
 });

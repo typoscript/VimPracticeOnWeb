@@ -14,6 +14,7 @@ import {
   SupportedLanguage,
   LspDiagnostic,
   LspHoverState,
+  ParsedListchars,
 } from '../../vim-engine';
 import {
   isPositionSelected,
@@ -22,6 +23,7 @@ import {
   detectFiletype,
   tokenizeLine,
   getSyntaxTokensMap,
+  parseListchars,
 } from '../../vim-engine';
 import './Editor.css';
 import { t } from '../../i18n';
@@ -165,6 +167,9 @@ export const Editor: React.FC<EditorProps> = ({
   const showLineNumbers = options?.number ?? true;
   const isRelative = options?.relativenumber ?? relativeLineNumbers;
   const isHlSearch = options?.hlsearch ?? true;
+  const isListMode = options?.list ?? false;
+  const listcharsConfig = isListMode ? parseListchars(options?.listchars) : undefined;
+  const tabstop = Math.max(1, options?.tabstop ?? 2);
   const searchOpts = options ? { ignorecase: options.ignorecase, smartcase: options.smartcase } : undefined;
 
   // 전체 검색 일치 항목 수집
@@ -174,10 +179,11 @@ export const Editor: React.FC<EditorProps> = ({
 
   return (
     <div
-      className={`editor-container ${isWrap ? 'editor-wrap' : 'editor-nowrap'} ${!isFocused ? 'editor-unfocused' : ''} ${isBellFlashing ? 'editor-bell' : ''}`}
+      className={`editor-container ${isWrap ? 'editor-wrap' : 'editor-nowrap'} ${isListMode ? 'editor-list-mode' : ''} ${!isFocused ? 'editor-unfocused' : ''} ${isBellFlashing ? 'editor-bell' : ''}`}
       data-testid="editor-container"
       data-wrap={String(isWrap)}
       data-left-col={leftCol}
+      data-list={isListMode ? 'true' : undefined}
       onClick={onFocus}
     >
       {!isFocused && (
@@ -343,6 +349,9 @@ export const Editor: React.FC<EditorProps> = ({
                         lineDiagnostics,
                         syntaxLanguage: detectedLanguage,
                         isSyntaxEnabled,
+                        listMode: isListMode,
+                        listchars: listcharsConfig,
+                        tabstop,
                       })}
                       {primaryLineDiagnostic && (
                         <span
@@ -472,6 +481,9 @@ interface RenderLineOptions {
   lineDiagnostics?: LspDiagnostic[];
   syntaxLanguage?: SupportedLanguage;
   isSyntaxEnabled?: boolean;
+  listMode?: boolean;
+  listchars?: ParsedListchars;
+  tabstop?: number;
 }
 
 function renderSyntaxSpans(text: string, tokens: SyntaxToken[]): React.ReactNode {
@@ -513,6 +525,9 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     lineDiagnostics,
     syntaxLanguage,
     isSyntaxEnabled,
+    listMode,
+    listchars,
+    tabstop = 2,
   } = opts;
   const isCursorLine = cursor.line === lineIdx;
   const cursorCol = isCursorLine ? cursor.col : null;
@@ -538,17 +553,25 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     !hasSpellErrors &&
     !hasDiagnostics
   ) {
+    if (listMode && listchars?.eol) {
+      return (
+        <span className="vim-char listchar listchar-eol" data-testid="listchar-eol">
+          {listchars.eol}
+        </span>
+      );
+    }
     return <span className="empty-char">&nbsp;</span>;
   }
 
-  // 커서, 타겟, 비주얼 선택, 검색 매칭, 맞춤법/LSP 오류가 모두 없는 일반 줄
+  // 커서, 타겟, 비주얼 선택, 검색 매칭, 맞춤법/LSP 오류, 불가시 문자 표시가 모두 없는 일반 줄
   if (
     cursorCol === null &&
     targetCol === null &&
     !isLineInVisualRange &&
     !hasSearchMatches &&
     !hasSpellErrors &&
-    !hasDiagnostics
+    !hasDiagnostics &&
+    !listMode
   ) {
     if (!isSyntaxEnabled || !syntaxLanguage || syntaxLanguage === 'text' || text.length === 0) {
       return text;
@@ -565,6 +588,15 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
       ? getSyntaxTokensMap(text, syntaxLanguage)
       : null;
 
+  let trailingSpaceStart = text.length;
+  while (trailingSpaceStart > 0 && text[trailingSpaceStart - 1] === ' ') {
+    trailingSpaceStart--;
+  }
+  let leadingEnd = 0;
+  while (leadingEnd < text.length && text[leadingEnd] === ' ') {
+    leadingEnd++;
+  }
+
   // 커서 또는 타겟, 비주얼 선택, 검색 매치가 있는 줄 처리
   const chars = text.length === 0 ? [' '] : text.split('');
   const maxIdx = Math.max(
@@ -573,6 +605,7 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     targetCol !== null ? targetCol : 0
   );
 
+  let eolRenderedOnCursor = false;
   const elements: React.ReactNode[] = [];
   for (let i = 0; i <= maxIdx; i++) {
     const char = chars[i] !== undefined ? chars[i] : ' ';
@@ -591,11 +624,48 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
       i >= confirmSubstitute.currentMatch.col &&
       i < confirmSubstitute.currentMatch.col + confirmSubstitute.currentMatch.length;
 
+    let listCharClass = '';
+    let listCharDisplay: string | null = null;
+    if (listMode && listchars && !(insertRegisterPending && isCursor)) {
+      if (i < text.length) {
+        if (char === '\t' && listchars.tab) {
+          const fill = listchars.tab[1] ?? ' ';
+          const endChar = listchars.tab[2];
+          listCharDisplay =
+            listchars.tab[0] +
+            (endChar
+              ? fill.repeat(Math.max(0, tabstop - 2)) + endChar
+              : fill.repeat(Math.max(0, tabstop - 1)));
+          listCharClass = ' listchar listchar-tab';
+        } else if (char === ' ') {
+          if (i >= trailingSpaceStart && listchars.trail) {
+            listCharDisplay = listchars.trail;
+            listCharClass = ' listchar listchar-trail';
+          } else if (i < leadingEnd && listchars.lead) {
+            listCharDisplay = listchars.lead;
+            listCharClass = ' listchar listchar-space';
+          } else if (listchars.space) {
+            listCharDisplay = listchars.space;
+            listCharClass = ' listchar listchar-space';
+          }
+        } else if (char === '\u00A0' && listchars.nbsp) {
+          listCharDisplay = listchars.nbsp;
+          listCharClass = ' listchar listchar-nbsp';
+        }
+      } else if (i === text.length && listchars.eol) {
+        listCharDisplay = listchars.eol;
+        listCharClass = ' listchar listchar-eol';
+        eolRenderedOnCursor = true;
+      }
+    }
+
     // 빈 줄이거나 줄 끝 뒤의 가상 커서 위치에서는 공백 너비 유지를 위해 non-breaking space 사용
     // Ctrl+r 레지스터 대기 상태에서는 커서 위치에 " 표시
     const displayChar =
       insertRegisterPending && isCursor
         ? '"'
+        : listCharDisplay !== null
+        ? listCharDisplay
         : (text.length === 0 || isTrailingCursor) && char === ' '
         ? '\u00A0'
         : char;
@@ -616,6 +686,10 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
 
     if (tokenType) {
       classNames += ` syn-${tokenType}`;
+    }
+
+    if (listCharClass) {
+      classNames += listCharClass;
     }
 
     if (isSelected) {
@@ -661,6 +735,18 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
         }
       >
         {displayChar}
+      </span>
+    );
+  }
+
+  if (listMode && listchars?.eol && !eolRenderedOnCursor) {
+    elements.push(
+      <span
+        key="eol"
+        className="vim-char listchar listchar-eol"
+        data-testid="listchar-eol"
+      >
+        {listchars.eol}
       </span>
     );
   }

@@ -658,3 +658,30 @@
   color: var(--text-primary, #bac2de);
 }
 
+/* :set list / listchars 불가시 문자 시각화 */
+.listchar {
+  color: var(--text-muted, #6c7086);
+  opacity: 0.72;
+}
+
+.listchar-trail {
+  color: #f38ba8;
+  opacity: 0.9;
+}
+
+.listchar-tab {
+  color: #89b4fa;
+  opacity: 0.78;
+}
+
+.listchar-eol {
+  color: #585b70;
+  opacity: 0.75;
+}
+
+.listchar-nbsp {
+  color: #f9e2af;
+  opacity: 0.85;
+}
+
+

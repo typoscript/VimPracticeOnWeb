@@ -107,6 +107,7 @@ export const AVAILABLE_OPTIONS: string[] = [
   'hlsearch',
   'ignorecase',
   'list',
+  'listchars',
   'nocursorline',
   'noexpandtab',
   'nohlsearch',

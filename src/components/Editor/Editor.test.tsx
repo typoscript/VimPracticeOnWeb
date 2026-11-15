@@ -318,4 +318,52 @@ describe('Editor Component', () => {
     expect(container).toHaveAttribute('data-wrap', 'true');
     expect(scroller.scrollLeft).toBe(0);
   });
+
+  it('options.list=true 및 listchars 설정 시 탭·후행 공백·공백·EOL 불가시 문자를 렌더링한다', () => {
+    const { container, rerender } = render(
+      <Editor
+        lines={['\talpha  ', 'beta\u00A0gamma', '']}
+        cursor={{ line: 0, col: 1 }}
+        mode="NORMAL"
+        options={{
+          ...DEFAULT_VIM_OPTIONS,
+          list: true,
+          tabstop: 2,
+          listchars: 'tab:>-,trail:.,space:_,nbsp:+,eol:$',
+        }}
+        isFocused={true}
+        onFocus={vi.fn()}
+      />
+    );
+
+    const editorContainer = screen.getByTestId('editor-container');
+    expect(editorContainer).toHaveClass('editor-list-mode');
+    expect(editorContainer).toHaveAttribute('data-list', 'true');
+
+    expect(container.querySelector('.listchar-tab')?.textContent).toBe('>-');
+    expect(container.querySelectorAll('.listchar-trail').length).toBe(2);
+    expect(container.querySelector('.listchar-nbsp')?.textContent).toBe('+');
+    expect(container.querySelectorAll('[data-testid="listchar-eol"]').length).toBe(3);
+
+    // list=false 로 끄면 listchar 요소가 사라짐
+    rerender(
+      <Editor
+        lines={['\talpha  ', 'beta\u00A0gamma', '']}
+        cursor={{ line: 0, col: 1 }}
+        mode="NORMAL"
+        options={{
+          ...DEFAULT_VIM_OPTIONS,
+          list: false,
+          listchars: 'tab:>-,trail:.,eol:$',
+        }}
+        isFocused={true}
+        onFocus={vi.fn()}
+      />
+    );
+
+    expect(editorContainer).not.toHaveClass('editor-list-mode');
+    expect(container.querySelector('.listchar-tab')).toBeNull();
+    expect(container.querySelector('.listchar-trail')).toBeNull();
+    expect(container.querySelector('[data-testid="listchar-eol"]')).toBeNull();
+  });
 });

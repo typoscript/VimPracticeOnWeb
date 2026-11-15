@@ -187,9 +187,11 @@ export {
   getGlobalOptions,
   getLocalOptions,
   formatOptionsList,
+  parseListchars,
   DEFAULT_VIM_OPTIONS,
   OPTION_ALIASES,
 } from './setEngine';
+export type { ParsedListchars } from './setEngine';
 
 // ---- 순정 텍스트 폴딩 엔진 (Folding: za, zo, zc, zM, zR, zf, zd, zD, zE) ----
 export {

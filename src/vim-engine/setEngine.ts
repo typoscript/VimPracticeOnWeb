@@ -19,6 +19,7 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   sidescroll: 0,
   sidescrolloff: 0,
   list: false,
+  listchars: 'tab:> ,trail:-,nbsp:+',
   wildmenu: true,
   spell: false,
   syntax: true,
@@ -59,6 +60,8 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   siso: 'sidescrolloff',
   sidescrolloff: 'sidescrolloff',
   list: 'list',
+  lcs: 'listchars',
+  listchars: 'listchars',
   wmenu: 'wildmenu',
   wildmenu: 'wildmenu',
   spell: 'spell',
@@ -85,6 +88,114 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   nf: 'nrformats',
   nrformats: 'nrformats',
 };
+
+export interface ParsedListchars {
+  eol?: string;
+  tab?: string;
+  space?: string;
+  multispace?: string;
+  lead?: string;
+  leadmultispace?: string;
+  trail?: string;
+  extends?: string;
+  precedes?: string;
+  conceal?: string;
+  nbsp?: string;
+}
+
+const VALID_LISTCHARS_KEYS = new Set<keyof ParsedListchars>([
+  'eol',
+  'tab',
+  'space',
+  'multispace',
+  'lead',
+  'leadmultispace',
+  'trail',
+  'extends',
+  'precedes',
+  'conceal',
+  'nbsp',
+]);
+
+interface ListcharsEntry {
+  key: keyof ParsedListchars;
+  val: string;
+}
+
+function parseListcharsEntries(
+  raw: string,
+  fullToken = raw
+): { ok: true; entries: ListcharsEntry[] } | { ok: false; error: string } {
+  if (raw === '') {
+    return { ok: true, entries: [] };
+  }
+  const entries: ListcharsEntry[] = [];
+  for (const part of raw.split(',')) {
+    const colonIdx = part.indexOf(':');
+    if (colonIdx <= 0) {
+      return {
+        ok: false,
+        error: msg('E474: 잘못된 인수입니다: {token}', { token: fullToken }),
+      };
+    }
+    const key = part.slice(0, colonIdx) as keyof ParsedListchars;
+    const val = part.slice(colonIdx + 1);
+    if (!VALID_LISTCHARS_KEYS.has(key)) {
+      return {
+        ok: false,
+        error: msg('E474: 잘못된 인수입니다: {token}', { token: fullToken }),
+      };
+    }
+    if (key === 'tab') {
+      if (val.length < 2 || val.length > 3) {
+        return {
+          ok: false,
+          error: msg('E1511: "{field}" 필드의 문자 수가 잘못되었습니다: {token}', {
+            field: key,
+            token: fullToken,
+          }),
+        };
+      }
+    } else if (key === 'multispace' || key === 'leadmultispace') {
+      if (val.length < 1) {
+        return {
+          ok: false,
+          error: msg('E1511: "{field}" 필드의 문자 수가 잘못되었습니다: {token}', {
+            field: key,
+            token: fullToken,
+          }),
+        };
+      }
+    } else if (val.length !== 1) {
+      return {
+        ok: false,
+        error: msg('E1511: "{field}" 필드의 문자 수가 잘못되었습니다: {token}', {
+          field: key,
+          token: fullToken,
+        }),
+      };
+    }
+    entries.push({ key, val });
+  }
+  return { ok: true, entries };
+}
+
+/**
+ * listchars 문자열을 파싱해 키별 표시 문자를 반환합니다.
+ */
+export function parseListchars(raw?: string): ParsedListchars {
+  const effective = raw !== undefined ? raw : DEFAULT_VIM_OPTIONS.listchars ?? 'tab:> ,trail:-,nbsp:+';
+  const parsed: ParsedListchars = {};
+  if (!effective) return parsed;
+  for (const part of effective.split(',')) {
+    const colonIdx = part.indexOf(':');
+    if (colonIdx <= 0) continue;
+    const key = part.slice(0, colonIdx) as keyof ParsedListchars;
+    if (!VALID_LISTCHARS_KEYS.has(key)) continue;
+    parsed[key] = part.slice(colonIdx + 1);
+  }
+  return parsed;
+}
 
 /**
  * 전역 설정 옵션을 조회합니다. (:setglobal)
@@ -201,6 +312,10 @@ export function formatOptionsList(
 
   if (options.nrformats !== undefined && (showAll || options.nrformats !== DEFAULT_VIM_OPTIONS.nrformats)) {
     displayedItems.push(`nrformats=${options.nrformats}`);
+  }
+
+  if (options.listchars !== undefined && (showAll || options.listchars !== DEFAULT_VIM_OPTIONS.listchars)) {
+    displayedItems.push(`listchars=${options.listchars}`);
   }
 
   const defaultHeader = showAll ? '--- All Options ---' : '--- Modified Options ---';
@@ -372,6 +487,9 @@ export function executeSetCommand(
       if (optKey === 'nrformats' && val === undefined) {
         val = 'bin,hex';
       }
+      if (optKey === 'listchars' && val === undefined) {
+        val = DEFAULT_VIM_OPTIONS.listchars;
+      }
       if (typeof val === 'boolean') {
         queryMessages.push(val ? (optKey as string) : `no${optKey}`);
       } else {
@@ -413,6 +531,64 @@ export function executeSetCommand(
       const rawKey = mod ? rawKeyWithMod.slice(0, -1) : rawKeyWithMod;
       const rawVal = token.slice(eqIdx + 1);
       const optKey = OPTION_ALIASES[rawKey];
+      if (optKey === 'listchars') {
+        const curStr =
+          nextLocal.listchars ??
+          nextGlobal.listchars ??
+          DEFAULT_VIM_OPTIONS.listchars ??
+          'tab:> ,trail:-,nbsp:+';
+        const curParsed = parseListcharsEntries(curStr);
+        const curEntries = curParsed.ok ? curParsed.entries : [];
+        let nextEntries: ListcharsEntry[];
+
+        if (mod === '-') {
+          const removeParts = rawVal ? rawVal.split(',').filter(Boolean) : [];
+          nextEntries = curEntries.filter((entry) => {
+            for (const rem of removeParts) {
+              if (rem.includes(':')) {
+                if (`${entry.key}:${entry.val}` === rem) return false;
+              } else if (entry.key === rem) {
+                return false;
+              }
+            }
+            return true;
+          });
+        } else {
+          const parsedVal = parseListcharsEntries(rawVal, token);
+          if (!parsedVal.ok) {
+            return {
+              ...state,
+              bell: true,
+              commandMessage: parsedVal.error,
+            };
+          }
+          if (mod === '+' || mod === '^') {
+            const incomingKeys = new Set(parsedVal.entries.map((e) => e.key));
+            const remaining = curEntries.filter((e) => !incomingKeys.has(e.key));
+            nextEntries =
+              mod === '^'
+                ? [...parsedVal.entries, ...remaining]
+                : [...remaining, ...parsedVal.entries];
+          } else {
+            // 중복 키는 나중 항목으로 덮어쓰기
+            const map = new Map<keyof ParsedListchars, string>();
+            for (const entry of parsedVal.entries) {
+              map.set(entry.key, entry.val);
+            }
+            nextEntries = Array.from(map.entries()).map(([key, val]) => ({ key, val }));
+          }
+        }
+
+        const nextVal = nextEntries.map((e) => `${e.key}:${e.val}`).join(',');
+        if (scope === 'local' || scope === 'both') {
+          nextLocal.listchars = nextVal;
+        }
+        if (scope === 'global' || scope === 'both') {
+          nextGlobal.listchars = nextVal;
+        }
+        appliedList.push(`listchars=${nextVal}`);
+        continue;
+      }
       if (optKey === 'nrformats') {
         const VALID_NRFORMATS = new Set(['bin', 'octal', 'hex', 'alpha', 'unsigned', 'blank']);
         const parseParts = (s: string) =>

@@ -1,5 +1,4 @@
 import { VimEditorState } from './types';
-import { getRegisterContent } from './registers';
 import { evaluateVimExpression } from './expressionParser';
 import { executeCommandLine } from './commandLine';
 import { addHistory, navigateHistory, openCommandLineWindow } from './cmdlineWindow';
@@ -11,11 +10,45 @@ import {
   insertTextIntoCmdline,
   deleteCmdlineCharBackward,
   handleCmdlineDigraphStep,
+  handleCmdlineCtrlRStep,
   handleCmdlineCommonEditKey,
   isBackspaceKey,
   isCmdlineCancelKey,
 } from './cmdlineEdit';
 import { msg } from './messages';
+
+/** 표현식 레지스터(=) 프롬프트에서 원래 모드로 복귀할 때 상태 복원 */
+function restoreFromExpressionPrompt(
+  state: VimEditorState,
+  overrides: Partial<VimEditorState> = {}
+): VimEditorState {
+  const returnCtx = state.expressionReturnContext;
+  const returnMode = returnCtx?.mode ?? 'INSERT';
+  if (returnMode === 'COMMAND' || returnMode === 'SEARCH') {
+    return {
+      ...state,
+      mode: returnMode,
+      commandBuffer: returnCtx?.commandBuffer ?? '',
+      commandType: returnCtx?.commandType ?? (returnMode === 'COMMAND' ? ':' : '/'),
+      commandCursorCol: returnCtx?.commandCursorCol ?? returnCtx?.commandBuffer?.length,
+      digraphPending: undefined,
+      expressionReturnContext: undefined,
+      insertRegisterPending: undefined,
+      ...overrides,
+    };
+  }
+  return {
+    ...state,
+    mode: returnMode,
+    commandBuffer: undefined,
+    commandType: undefined,
+    commandCursorCol: undefined,
+    digraphPending: undefined,
+    expressionReturnContext: undefined,
+    insertRegisterPending: undefined,
+    ...overrides,
+  };
+}
 
 /**
  * COMMAND 모드(: 또는 =) 키 입력 처리
@@ -31,34 +64,14 @@ export function handleCommandLineModeKey(
     if (digraphRes) return digraphRes;
 
     if (isCmdlineCancelKey(key)) {
-      const returnMode = state.expressionReturnContext?.mode ?? 'INSERT';
-      return {
-        ...state,
-        mode: returnMode,
-        commandBuffer: undefined,
-        commandType: undefined,
-        commandCursorCol: undefined,
-        digraphPending: undefined,
-        expressionReturnContext: undefined,
-        insertRegisterPending: undefined,
-      };
+      return restoreFromExpressionPrompt(state);
     }
 
     if (isBackspaceKey(key)) {
       if (state.commandBuffer && state.commandBuffer.length > 0) {
         return deleteCmdlineCharBackward(state);
       }
-      const returnMode = state.expressionReturnContext?.mode ?? 'INSERT';
-      return {
-        ...state,
-        mode: returnMode,
-        commandBuffer: undefined,
-        commandType: undefined,
-        commandCursorCol: undefined,
-        digraphPending: undefined,
-        expressionReturnContext: undefined,
-        insertRegisterPending: undefined,
-      };
+      return restoreFromExpressionPrompt(state);
     }
 
     const commonEdit = handleCmdlineCommonEditKey(state, key);
@@ -70,16 +83,9 @@ export function handleCommandLineModeKey(
       const returnMode = returnCtx?.mode ?? 'INSERT';
 
       if (!evalRes.success) {
-        return {
-          ...state,
-          mode: returnMode,
-          commandBuffer: undefined,
-          commandType: undefined,
-          commandCursorCol: undefined,
-          digraphPending: undefined,
-          expressionReturnContext: undefined,
+        return restoreFromExpressionPrompt(state, {
           commandMessage: msg('E15: {v}', { v: evalRes.error ?? msg('잘못된 수식입니다') }),
-        };
+        });
       }
 
       // 성공 시 '=' 레지스터에 결과값 저장
@@ -91,45 +97,22 @@ export function handleCommandLineModeKey(
         },
       };
 
-      if (returnMode === 'COMMAND') {
-        const prevState: VimEditorState = {
-          ...state,
-          mode: 'COMMAND',
-          commandType: ':',
-          commandBuffer: returnCtx?.commandBuffer ?? '',
-          commandCursorCol: returnCtx?.commandBuffer?.length,
-          registers: newRegisters,
-          expressionReturnContext: undefined,
-          digraphPending: undefined,
-        };
+      if (returnMode === 'COMMAND' || returnMode === 'SEARCH') {
+        const prevState = restoreFromExpressionPrompt(state, { registers: newRegisters });
         return insertTextIntoCmdline(prevState, evalRes.result);
       } else if (returnMode === 'NORMAL') {
         // NORMAL 모드 복귀: '=' 레지스터 저장 및 activeRegister 를 '=' 로 설정 (바로 p 로 붙여넣기 가능)
-        return {
-          ...state,
-          mode: 'NORMAL',
+        return restoreFromExpressionPrompt(state, {
           registers: newRegisters,
           activeRegister: '=',
-          commandBuffer: undefined,
-          commandType: undefined,
-          commandCursorCol: undefined,
-          digraphPending: undefined,
-          expressionReturnContext: undefined,
           cursor: returnCtx?.cursor ?? state.cursor,
-        };
+        });
       } else {
         // INSERT 모드 복귀 및 계산 결과 즉시 삽입
-        const stateWithRegisters: VimEditorState = {
-          ...state,
-          mode: 'INSERT',
+        const stateWithRegisters = restoreFromExpressionPrompt(state, {
           registers: newRegisters,
-          commandBuffer: undefined,
-          commandType: undefined,
-          commandCursorCol: undefined,
-          digraphPending: undefined,
-          expressionReturnContext: undefined,
           cursor: returnCtx?.cursor ?? state.cursor,
-        };
+        });
 
         const insertedState = insertTextAtCursor(stateWithRegisters, evalRes.result);
         if (insertedState.currentChangeKeys) {
@@ -154,43 +137,10 @@ export function handleCommandLineModeKey(
     return state;
   }
 
-  // 2. 일반 COMMAND (:) 모드 내 Ctrl+r {reg} 처리
-  if (state.insertRegisterPending) {
-    if (key === 'Escape' || key === 'Ctrl-c' || key === 'Ctrl+c') {
-      return { ...state, insertRegisterPending: undefined };
-    }
-
-    if (key === '=') {
-      return {
-        ...state,
-        commandType: '=',
-        expressionReturnContext: {
-          mode: 'COMMAND',
-          commandBuffer: state.commandBuffer,
-        },
-        commandBuffer: '',
-        insertRegisterPending: undefined,
-      };
-    }
-
-    const regKey = key.length === 1 ? key : undefined;
-    if (regKey) {
-      const regClip = getRegisterContent(state, regKey);
-      const textToInsert = regClip?.content ?? '';
-      return insertTextIntoCmdline(
-        { ...state, insertRegisterPending: undefined },
-        textToInsert
-      );
-    }
-
-    return { ...state, insertRegisterPending: undefined };
-  }
-
-  if (key === 'Ctrl-r' || key === 'Ctrl+r' || key === 'ctrl-r' || key === '<C-r>') {
-    return {
-      ...state,
-      insertRegisterPending: true,
-    };
+  // 2. 일반 COMMAND (:) 모드 내 Ctrl+r ({reg}, =, <C-w>, <C-a>, <C-l>, <C-f>) 처리
+  const cmdCtrlR = handleCmdlineCtrlRStep(state, key, ':');
+  if (cmdCtrlR) {
+    return cmdCtrlR;
   }
 
   // 2.5. Ctrl-v 리터럴 다음 문자 (커맨드라인 약어 확장 억제)

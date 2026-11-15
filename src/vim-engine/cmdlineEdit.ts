@@ -1,5 +1,7 @@
 import { VimEditorState } from './types';
 import { lookupDigraph } from './digraphs';
+import { getRegisterContent } from './registers';
+import { extractFileTargetAtCursor } from './gotoFileEngine';
 
 /**
  * 현재 커맨드라인(:, =, /, ?) 내의 커서 열 인덱스를 반환합니다 (0 ~ commandBuffer.length).
@@ -190,4 +192,130 @@ export function isCmdlineCancelKey(key: string): boolean {
     key === 'ctrl-c' ||
     key === '<C-c>'
   );
+}
+
+/**
+ * 커서 위치(또는 오른쪽 첫 비공백 위치)에서 커맨드라인 <C-r><C-w> 용 단어(<cword>)를 추출합니다.
+ */
+export function extractCwordAtCursor(line: string, col: number): string {
+  if (!line) return '';
+  let idx = Math.max(0, Math.min(col, line.length - 1));
+  while (idx < line.length && /\s/.test(line[idx])) {
+    idx++;
+  }
+  if (idx >= line.length) return '';
+
+  const isIdent = /[A-Za-z0-9_]/.test(line[idx]);
+  const pattern = isIdent ? /[A-Za-z0-9_]/ : /[^\sA-Za-z0-9_]/;
+  let start = idx;
+  while (start > 0 && pattern.test(line[start - 1])) start--;
+  let end = idx;
+  while (end + 1 < line.length && pattern.test(line[end + 1])) end++;
+  return line.slice(start, end + 1);
+}
+
+/**
+ * 커서 위치(또는 오른쪽 첫 비공백 위치)에서 커맨드라인 <C-r><C-a> 용 WORD(<cWORD>)를 추출합니다.
+ */
+export function extractCWORDAtCursor(line: string, col: number): string {
+  if (!line) return '';
+  let idx = Math.max(0, Math.min(col, line.length - 1));
+  while (idx < line.length && /\s/.test(line[idx])) {
+    idx++;
+  }
+  if (idx >= line.length) return '';
+
+  let start = idx;
+  while (start > 0 && !/\s/.test(line[start - 1])) start--;
+  let end = idx;
+  while (end + 1 < line.length && !/\s/.test(line[end + 1])) end++;
+  return line.slice(start, end + 1);
+}
+
+/**
+ * 커서 위치(또는 오른쪽 첫 비공백 위치)에서 커맨드라인 <C-r><C-f> 용 파일명(<cfile>)을 추출합니다.
+ */
+export function extractCfileAtCursor(line: string, col: number): string {
+  if (!line) return '';
+  let target = extractFileTargetAtCursor(line, col, false);
+  if (!target && col < line.length && /\s/.test(line[col])) {
+    let idx = col;
+    while (idx < line.length && /\s/.test(line[idx])) idx++;
+    if (idx < line.length) {
+      target = extractFileTargetAtCursor(line, idx, false);
+    }
+  }
+  return target?.filename ?? '';
+}
+
+/**
+ * 커맨드라인(:, /, ?) 공통 Ctrl-r 대기 및 레지스터·컨텍스트(<C-w>/<C-a>/<C-l>/<C-f>/=) 삽입을 처리합니다.
+ * 해당 없으면 null을 반환합니다.
+ */
+export function handleCmdlineCtrlRStep(
+  state: VimEditorState,
+  key: string,
+  promptType: ':' | '/' | '?'
+): VimEditorState | null {
+  if (state.insertRegisterPending) {
+    if (isCmdlineCancelKey(key)) {
+      return { ...state, insertRegisterPending: undefined };
+    }
+
+    if (key === '=') {
+      return {
+        ...state,
+        mode: 'COMMAND',
+        commandType: '=',
+        expressionReturnContext: {
+          mode: promptType === ':' ? 'COMMAND' : 'SEARCH',
+          commandBuffer: state.commandBuffer,
+          commandType: promptType,
+          commandCursorCol: state.commandCursorCol,
+        },
+        commandBuffer: '',
+        commandCursorCol: undefined,
+        insertRegisterPending: undefined,
+      };
+    }
+
+    const curLine = state.lines[state.cursor.line] ?? '';
+    const curCol = state.cursor.col;
+
+    if (key === 'Ctrl-w' || key === 'Ctrl+w' || key === 'ctrl-w' || key === '<C-w>') {
+      const text = extractCwordAtCursor(curLine, curCol);
+      return insertTextIntoCmdline({ ...state, insertRegisterPending: undefined }, text);
+    }
+    if (key === 'Ctrl-a' || key === 'Ctrl+a' || key === 'ctrl-a' || key === '<C-a>') {
+      const text = extractCWORDAtCursor(curLine, curCol);
+      return insertTextIntoCmdline({ ...state, insertRegisterPending: undefined }, text);
+    }
+    if (key === 'Ctrl-l' || key === 'Ctrl+l' || key === 'ctrl-l' || key === '<C-l>') {
+      return insertTextIntoCmdline({ ...state, insertRegisterPending: undefined }, curLine);
+    }
+    if (key === 'Ctrl-f' || key === 'Ctrl+f' || key === 'ctrl-f' || key === '<C-f>') {
+      const text = extractCfileAtCursor(curLine, curCol);
+      return insertTextIntoCmdline({ ...state, insertRegisterPending: undefined }, text);
+    }
+
+    if (key.length === 1) {
+      const regClip = getRegisterContent(state, key);
+      const textToInsert = regClip?.content ?? '';
+      return insertTextIntoCmdline(
+        { ...state, insertRegisterPending: undefined },
+        textToInsert
+      );
+    }
+
+    return { ...state, insertRegisterPending: undefined };
+  }
+
+  if (key === 'Ctrl-r' || key === 'Ctrl+r' || key === 'ctrl-r' || key === '<C-r>') {
+    return {
+      ...state,
+      insertRegisterPending: true,
+    };
+  }
+
+  return null;
 }

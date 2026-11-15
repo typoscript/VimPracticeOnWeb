@@ -259,6 +259,8 @@ export interface VimOptions {
   sidescrolloff?: number;
   /** 탭/공백 특수문자 표시 (:set list / nolist) */
   list: boolean;
+  /** list 모드에서 불가시 문자 표기 형식 (:set listchars=eol:$,tab:▸\ ,trail:·) */
+  listchars?: string;
   /** 명령행 완성 와일드메뉴 표시 여부 (:set wildmenu / nowildmenu) */
   wildmenu: boolean;
   /** 맞춤법 검사기 활성화 여부 (:set spell / nospell) */
@@ -531,9 +533,11 @@ export interface VimEditorState {
   insertRegisterPending?: boolean;
   /** Ctrl+r = 또는 "= 표현식 레지스터 계산 완료 후 복귀할 컨텍스트 */
   expressionReturnContext?: {
-    mode: 'INSERT' | 'COMMAND' | 'NORMAL';
+    mode: 'INSERT' | 'COMMAND' | 'NORMAL' | 'SEARCH';
     cursor?: CursorPosition;
     commandBuffer?: string;
+    commandType?: ':' | '/' | '?';
+    commandCursorCol?: number;
   } | null;
   /** 버퍼 내 단어 자동완성 팝업 세션 (Ctrl+n, Ctrl+p) */
   completionSession?: CompletionSession | null;

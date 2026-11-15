@@ -195,6 +195,7 @@ export const EN_MESSAGES: Record<string, string> = {
   "이후 변경사항으로 이동했습니다 (#{targetSeq})": "Moved to the next change (#{targetSeq})",
   "E474: 잘못된 인수입니다: :earlier {arg}": "E474: Invalid argument: :earlier {arg}",
   "E474: 잘못된 인수입니다: {token}": "E474: Invalid argument: {token}",
+  "E1511: \"{field}\" 필드의 문자 수가 잘못되었습니다: {token}": "E1511: Wrong number of characters for field \"{field}\": {token}",
   "E487: 인수는 양수여야 합니다: {arg}": "E487: Argument must be positive: {arg}",
   "{count}회 이전 저장 상태로 복귀했습니다 (#{targetSeq})": "Went back {count} file writes (#{targetSeq})",
   "이미 가장 오래된 저장 상태입니다.": "Already at the oldest file write",
