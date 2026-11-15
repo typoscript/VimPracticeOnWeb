@@ -5,6 +5,7 @@ import { compileVimRegex } from './vimRegex';
 import { buildVfsMap, getVfsFile } from './vfs';
 import { executeReadShell } from './shellEngine';
 import { msg } from './messages';
+import { getRegisterContent, syncRegisters } from './registers';
 import { parseAddress } from './exRange';
 import type { KeyRunner } from './exSubstitute';
 
@@ -668,13 +669,32 @@ export function executeGlobalCommand(
   };
 }
 
+/** `:d x 3`, `:y 3` 의 [x] [count] 인자를 파싱합니다. 형식이 맞지 않으면 null */
+export function parseRegisterCountArgs(rest: string): { register?: string; count?: number } | null {
+  const m = rest.trim().match(/^([A-Za-z"_+*])?\s*(\d+)?$/);
+  if (!m) return null;
+  return { register: m[1], count: m[2] ? parseInt(m[2], 10) : undefined };
+}
+
+/** `:d [x] {count}` 는 범위의 마지막 줄부터 count 줄을 대상으로 합니다. */
+export function applyRangeCount(
+  range: { startLine: number; endLine: number },
+  count: number | undefined,
+  lineTotal: number
+): { startLine: number; endLine: number } {
+  if (count === undefined) return range;
+  const startLine = Math.min(range.endLine, lineTotal - 1);
+  return { startLine, endLine: Math.min(lineTotal - 1, startLine + Math.max(1, count) - 1) };
+}
+
 /**
- * :[range]d 줄 삭제를 실행합니다.
+ * :[range]d [x] [count] 줄 삭제를 실행합니다. (레지스터 x 에 저장, `_` 는 블랙홀, 대문자는 누적)
  */
 export function executeRangeDelete(
   state: VimEditorState,
   range: { startLine: number; endLine: number },
-  commandStr: string
+  commandStr: string,
+  register?: string
 ): VimEditorState {
   const stateWithUndo = pushUndoSnapshot(state);
   const yanked = state.lines.slice(range.startLine, range.endLine + 1);
@@ -689,7 +709,7 @@ export function executeRangeDelete(
     'NORMAL'
   );
 
-  return {
+  const res: VimEditorState = {
     ...stateWithUndo,
     lines: newLines,
     cursor: nextCursor,
@@ -704,17 +724,19 @@ export function executeRangeDelete(
     commandMessage: msg('{v}개 줄이 삭제되었습니다.', { v: range.endLine - range.startLine + 1 }),
     lastChangeKeys: [':', commandStr, 'Enter'],
   };
+  return register ? syncRegisters({ ...state, activeRegister: register }, res, false) : res;
 }
 
 /**
- * :[range]y 줄 복사를 실행합니다.
+ * :[range]y [x] [count] 줄 복사를 실행합니다.
  */
 export function executeRangeYank(
   state: VimEditorState,
-  range: { startLine: number; endLine: number }
+  range: { startLine: number; endLine: number },
+  register?: string
 ): VimEditorState {
   const yanked = state.lines.slice(range.startLine, range.endLine + 1);
-  return {
+  const res: VimEditorState = {
     ...state,
     mode: 'NORMAL',
     visualAnchor: undefined,
@@ -725,6 +747,48 @@ export function executeRangeYank(
     commandBuffer: undefined,
     commandType: undefined,
     commandMessage: msg('{v}개 줄이 복사되었습니다.', { v: range.endLine - range.startLine + 1 }),
+  };
+  return register ? syncRegisters({ ...state, activeRegister: register }, res, true) : res;
+}
+
+/**
+ * :[line]pu[t][!] [x] — 레지스터 내용을 항상 줄 단위로 줄 아래(`!` 는 위)에 삽입합니다.
+ * `insertAfterLine` 이 -1 이면 `:0put` (맨 위). 커서는 마지막으로 넣은 줄의 첫 비공백 문자로 갑니다.
+ */
+export function executeExPut(
+  state: VimEditorState,
+  insertAfterLine: number,
+  before: boolean,
+  register?: string
+): VimEditorState {
+  const reg = register ?? '"';
+  const clip = getRegisterContent(state, reg);
+  if (!clip || clip.content === undefined || clip.content === null) {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: msg('E353: 레지스터 {reg} 가 비어 있습니다', { reg }),
+      bell: true,
+    };
+  }
+  const content = Array.isArray(clip.content) ? clip.content.join('\n') : clip.content;
+  const inserted = content.replace(/\n$/, '').split('\n');
+  const idx = insertAfterLine < 0 ? 0 : before ? insertAfterLine : insertAfterLine + 1;
+  const newLines = [...state.lines.slice(0, idx), ...inserted, ...state.lines.slice(idx)];
+  const lastLine = idx + inserted.length - 1;
+  const firstNonBlank = (newLines[lastLine] ?? '').search(/\S/);
+  return {
+    ...pushUndoSnapshot(state),
+    lines: newLines,
+    cursor: clampCursor(newLines, { line: lastLine, col: Math.max(0, firstNonBlank) }, 'NORMAL'),
+    mode: 'NORMAL',
+    visualAnchor: undefined,
+    commandBuffer: undefined,
+    commandType: undefined,
+    commandMessage: undefined,
   };
 }
 

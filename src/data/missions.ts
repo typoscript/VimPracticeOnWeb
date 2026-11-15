@@ -3242,4 +3242,37 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 87,
+    title: '레슨 87: 레지스터 Ex 명령(:d {reg}, :y {reg}, :put, :put!, :0put) 마스터',
+    description:
+      'Ex 명령에도 레지스터를 지정할 수 있습니다. 줄 단위 이동·복제를 노멀 모드 키 없이 정확한 줄 번호로 처리할 때 유용합니다.\n\n1) 레지스터를 지정한 삭제·복사 (:[range]d [x] [count], :[range]y [x] [count]):\n   - :3d a 는 3번 줄을 지우며 a 레지스터에 담고, :2,4y b 는 2~4번 줄을 b 레지스터에 복사합니다.\n   - 대문자(A)는 기존 내용에 이어 붙이고, _ 는 블랙홀 레지스터라 아무 레지스터도 바꾸지 않습니다.\n   - 끝의 숫자는 개수입니다. :2d 3 은 2번 줄부터 3줄을 지웁니다.\n\n2) 레지스터 붙여넣기 (:[line]pu[t][!] [x]):\n   - :put a 는 현재 줄 아래에, :put! a 는 현재 줄 위에 붙입니다. 레지스터를 생략하면 무명 레지스터("")를 씁니다.\n   - :$put a 는 맨 끝, :0put a 는 맨 앞에 붙입니다. 문자 단위로 복사한 내용도 :put 은 항상 새 줄로 넣습니다.\n   - 붙인 뒤 커서는 마지막으로 넣은 줄에 놓이고, 한 번의 u 로 되돌릴 수 있습니다.\n\n미션:\n1. :3d h<Enter> 로 HEADER 줄을 지우면서 h 레지스터에 담으세요.\n2. :0put h<Enter> 로 h 레지스터의 HEADER 를 맨 위에 붙이세요.',
+    hint: ':3d h<Enter> → :0put h<Enter>',
+    par: 17,
+    optimalKeys: [
+      ':', '3', 'd', ' ', 'h', 'Enter', ':', '0', 'p', 'u', 't', ' ', 'h', 'Enter',
+    ],
+    primaryFilename: 'doc.txt',
+    initialLines: [
+      'body one',
+      'body two',
+      'HEADER',
+      'end',
+    ],
+    targetLines: [
+      'HEADER',
+      'body one',
+      'body two',
+      'end',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const target = ['HEADER', 'body one', 'body two', 'end'];
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines.length === target.length &&
+        state.lines.every((l, idx) => l === target[idx])
+      );
+    },
+  },
 ];

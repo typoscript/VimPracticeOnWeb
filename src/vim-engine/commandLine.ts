@@ -35,6 +35,9 @@ import {
   executeGlobalCommand,
   executeRangeDelete,
   executeRangeYank,
+  executeExPut,
+  parseRegisterCountArgs,
+  applyRangeCount,
   executeRangeNorm,
   executeNormalKeysOnLine,
   parseKeyTokens,
@@ -285,16 +288,31 @@ export function executeCommandLine(
     });
   }
 
-  // 4-3. 삭제: :[range]d, :d, :[range]delete
-  if (cmdTrimmed === 'd' || cmdTrimmed === 'delete') {
-    const targetRange = range ?? currentLineRange;
-    return executeRangeDelete(state, targetRange, trimmed);
+  // 4-3. 삭제: :[range]d [x] [count], :[range]delete
+  const delMatch = cmdTrimmed.match(/^d(?:e(?:l(?:e(?:t(?:e)?)?)?)?)?(?:\s+(.*))?$/);
+  const delArgs = delMatch ? parseRegisterCountArgs(delMatch[1] ?? '') : null;
+  if (delMatch && delArgs) {
+    const targetRange = applyRangeCount(range ?? currentLineRange, delArgs.count, state.lines.length);
+    return executeRangeDelete(state, targetRange, trimmed, delArgs.register);
   }
 
-  // 4-4. 복사: :[range]y, :y, :[range]yank
-  if (cmdTrimmed === 'y' || cmdTrimmed === 'yank') {
-    const targetRange = range ?? currentLineRange;
-    return executeRangeYank(state, targetRange);
+  // 4-4. 복사: :[range]y [x] [count], :[range]yank
+  const yankMatch = cmdTrimmed.match(/^y(?:a(?:n(?:k)?)?)?(?:\s+(.*))?$/);
+  const yankArgs = yankMatch ? parseRegisterCountArgs(yankMatch[1] ?? '') : null;
+  if (yankMatch && yankArgs) {
+    const targetRange = applyRangeCount(range ?? currentLineRange, yankArgs.count, state.lines.length);
+    return executeRangeYank(state, targetRange, yankArgs.register);
+  }
+
+  // 4-4-1. 레지스터 붙여넣기: :[line]pu[t][!] [x] (:0put, :$put, :put!, :put a)
+  const putMatch = cmdTrimmed.match(/^pu(?:t)?(!?)(?:\s+([A-Za-z0-9"_+*/%.:-]))?$/);
+  if (putMatch) {
+    const afterLine = hasRange
+      ? extracted.isLineZero
+        ? -1
+        : (range?.endLine ?? state.cursor.line)
+      : state.cursor.line;
+    return executeExPut(state, afterLine, putMatch[1] === '!', putMatch[2]);
   }
 
   // 4-5. Normal 모드 명령 실행: :[range]norm {keys}, :norm {keys}

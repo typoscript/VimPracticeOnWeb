@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 135개 테스트 파일, 1,750개 테스트 100% 통과 필수)*
+  *(현재 136개 테스트 파일, 1,760개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 86)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 87)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -136,10 +136,11 @@
 - **가상 POSIX 셸 파이프·필터링 (`:!cmd`, `:[range]!cmd`, `:r !cmd`, `:w !cmd`, `!!`, `!{motion}`, Visual `!`) (레슨 85, `src/vim-engine/shellEngine.ts`, `commandLine.ts`, `normalMode.ts`, `visualMode.ts`)**: 브라우저 안전 내장 POSIX 유틸 에뮬레이터(`echo`, `printf`, `cat`, `sort`, `uniq`, `grep`/`egrep`/`fgrep`, `cut`, `tr`, `sed`, `awk`, `head`, `tail`, `wc`, `nl`, `tac`, `rev`, `column`, `jq`, `ls` VFS 연동) 및 멀티 스테이지 `|` 파이프라인(`splitPipedCommands` Ex 셸 구문 보존), `%`/`#`/`!` 확장(`lastShellCommand`, `E34`/`E499`/`E194`), 필터링 후 첫 비공백 커서 정밀 이동·부분/전체 빈 출력 불변식·단일 undo 및 Normal `.` 반복(`filterOperatorKeys`)을 완성했습니다.
 - **Ex 커맨드라인 모듈 분리 & `:grep` / `'errorformat'` · `:caddexpr` 강화 (`src/vim-engine/commandLine.ts`, `errorformat.ts`, `exRange.ts`, `exSubstitute.ts`, `exBufferOps.ts`, `exWorkspaceCommands.ts`, `exListAndToolCommands.ts`)**: 기존 4,172줄이던 `commandLine.ts` 를 비순환 6개 모듈(`commandLine.ts` 383줄·`exRange.ts`·`exSubstitute.ts`·`exBufferOps.ts`·`exWorkspaceCommands.ts`·`exListAndToolCommands.ts`)로 분리하고 기존 공개 export 를 유지했습니다. 아울러 `'errorformat'`(`efm`, `+=`/`^=`/`-=`/`?`) 및 `'grepprg'`(`gp`) 옵션, `splitErrorformatEntries`/`compileErrorformatPattern`/`parseLinesWithErrorformat`, `:cexpr`/`:cgetexpr`/`:caddexpr`(`:cad`)·`:lexpr`/`:lgetexpr`/`:laddexpr`(`:lad`) 표현식 평가, VFS 기반 `:grep[!]`/`:grepadd`/`:lgrep[!]`/`:lgrepadd`(`-i`, `-w`, `-F`, `-v`, `E471`, `E480`)를 구현했습니다.
 - **검색 오프셋 · 역방향 `?` 검색 · 연산자 결합 (레슨 86, `src/vim-engine/search.ts`의 `parseSearchQuery`/`findSearchTarget`, `searchMode.ts`의 `executeSearchQuery`/`repeatSearch`)**: `/pat/e`, `/pat/e+1`, `/pat/b`·`s±N`, `/pat/±N`(줄 오프셋), 위쪽 검색 `?pat?{offset}`(구분자 `?`, `\?` 리터럴), 빈 패턴 `//e`·`??b`(직전 패턴 재사용, 없으면 E35), `d/c/y` + `/`·`?` 오프셋 결합(`e` 는 inclusive, 문자 오프셋은 exclusive, 줄 오프셋은 linewise, 연산 후 NORMAL 복귀, `.` 반복 키는 `?` 포함). `lastSearchDirection` 으로 `n`/`N` 이 `?` 방향을 따르고 `*`/`#` 은 오프셋을 초기화합니다. 오프셋이 있으면 도착 위치(줄 오프셋은 매치 시작)가 커서보다 엄격히 앞/뒤인 매치를 골라 `/pat/e` 후 `n` 이 같은 매치에 머물지 않습니다(실제 Neovim 으로 검증, `searchOffsetOperator.test.ts`). ⚠ 오프셋 없는 첫 `/pat` 은 기존 동작대로 커서 위치의 매치도 허용합니다.
+- **레지스터 Ex 명령 (레슨 87, `src/vim-engine/exBufferOps.ts`의 `executeRangeDelete`/`executeRangeYank`/`executeExPut`, `commandLine.ts`)**: `:[range]d [x] [count]`, `:[range]y [x] [count]`(대문자 누적, `_` 블랙홀, count 는 범위 마지막 줄부터), `:[line]pu[t][!] [x]`(`:0put`, `:$put`, `:put!`; 문자 단위 레지스터도 항상 줄 단위로 삽입, 빈 레지스터는 E353+bell, 한 번의 undo). 로드맵 '`:put!`, `:delete {reg}`' 부분을 구현했으며 `foldexpr`·커맨드라인 윈도우 강화는 남아 있습니다.
 
 ---
 
 ## 5. 다음 개발 로드맵 추천 후보
 에이전트에게 다음 작업을 지시할 때 아래 항목 중에서 지정하시면 됩니다:
-1. **고급 레지스터·폴드·매크로 실전 유틸리티 (`:put!`, `:delete {reg}`, `foldexpr`, `q: `/` / `?` 편집 실행 강화) + 레슨 87**: 레지스터 직접 삽입/삭제 명령, 표현식 폴딩(`:set fdm=expr`), 커맨드라인 윈도우 고급 워크플로우 확장.
+1. **폴드·커맨드라인 윈도우 실전 유틸리티 (`foldexpr`, `q: `/` / `?` 편집 실행 강화) + 레슨 88**: 표현식 폴딩(`:set fdm=expr`), 커맨드라인 윈도우 고급 워크플로우 확장.
 2. **멀티 윈도우 레이아웃 회전·일괄 제어(`Ctrl-w H/J/K/L`, `Ctrl-w r/R/x`, `:windo`, `:set scrollbind`)**: 분할 창 방향 전환·위치 교환, 전 창 일괄 Ex 실행(`:windo`), 동기 스크롤(`scrollbind`) 지원.
