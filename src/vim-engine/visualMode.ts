@@ -42,6 +42,7 @@ import {
   scrollFullPageUp,
   scrollLineDown,
   scrollLineUp,
+  handleHorizontalViewportKey,
 } from './viewport';
 import { setMark } from './marks';
 import { joinLines, changeCaseVisual, indentVisual, modifyNumberVisual, formatIndentVisual } from './lineOperators';
@@ -97,8 +98,10 @@ export function handleVisualModeKey(
     return { ...state, pendingKeys: 'S' };
   }
 
-  // Visual 모드 수동 폴드 생성 (zf)
+  // Visual 모드 수동 폴드 생성 (zf) 및 수평 스크롤 (zh, zl, zH, zL, ze, zs)
   if (state.pendingKeys === 'z') {
+    const horiz = handleHorizontalViewportKey(state, key, parsed.count1 ?? 1);
+    if (horiz) return horiz;
     if (key === 'f') {
       const anchorLine = state.visualAnchor?.line ?? state.cursor.line;
       const startRow = Math.min(anchorLine, state.cursor.line);

@@ -4,6 +4,7 @@ import { clampCursor } from './cursor';
 import { getOptions } from './setEngine';
 
 export const DEFAULT_VISIBLE_ROWS = 15;
+export const DEFAULT_VISIBLE_COLS = 80;
 
 /**
  * 상태에 저장된 뷰포트 정보 또는 기본 뷰포트 정보를 반환합니다.
@@ -20,6 +21,21 @@ export function getScrolloff(state: VimEditorState): number {
 }
 
 /**
+ * 상태의 sidescroll / sidescrolloff / wrap 옵션을 읽습니다.
+ */
+export function getSidescroll(state: VimEditorState): number {
+  return Math.max(0, getOptions(state).sidescroll ?? 0);
+}
+
+export function getSidescrolloff(state: VimEditorState): number {
+  return Math.max(0, getOptions(state).sidescrolloff ?? 0);
+}
+
+export function isWrapEnabled(state: VimEditorState): boolean {
+  return getOptions(state).wrap !== false;
+}
+
+/**
  * 화면 높이를 고려한 유효 scrolloff 값을 계산합니다.
  * scrolloff가 visibleRows / 2 이상이면 커서는 항상 화면 중앙에 머무릅니다.
  */
@@ -28,13 +44,17 @@ export function getEffectiveScrolloff(visibleRows: number, scrolloff = 0): numbe
 }
 
 /**
- * 커서 위치와 scrolloff 여백을 기준으로 뷰포트 topRow를 보정합니다.
+ * 커서 위치와 scrolloff / sidescrolloff 여백을 기준으로 뷰포트 topRow 및 (nowrap 시) leftCol을 보정합니다.
  */
 export function adjustViewport(
   viewport: ViewportState,
   cursorLine: number,
   totalLines: number,
-  scrolloff = 0
+  scrolloff = 0,
+  cursorCol = 0,
+  sidescroll = 0,
+  sidescrolloff = 0,
+  wrap = true
 ): ViewportState {
   let { topRow, visibleRows } = viewport;
   const effSo = getEffectiveScrolloff(visibleRows, scrolloff);
@@ -49,7 +69,35 @@ export function adjustViewport(
 
   const maxTop = Math.max(0, totalLines - 1);
   topRow = Math.max(0, Math.min(topRow, maxTop));
-  return { topRow, visibleRows };
+
+  let nextLeftCol = 0;
+  if (!wrap) {
+    const visCols = Math.max(1, viewport.visibleCols ?? DEFAULT_VISIBLE_COLS);
+    nextLeftCol = Math.max(0, viewport.leftCol ?? 0);
+    const effSiso = getEffectiveScrolloff(visCols, sidescrolloff);
+    if (cursorCol < nextLeftCol + effSiso) {
+      if (sidescroll > 0) {
+        const delta = nextLeftCol + effSiso - cursorCol;
+        nextLeftCol = Math.max(0, nextLeftCol - Math.ceil(delta / sidescroll) * sidescroll);
+      } else {
+        nextLeftCol = cursorCol <= effSiso ? 0 : Math.max(0, cursorCol - Math.floor(visCols / 2));
+      }
+    } else if (cursorCol >= nextLeftCol + visCols - effSiso) {
+      if (sidescroll > 0) {
+        const delta = cursorCol - (nextLeftCol + visCols - 1 - effSiso);
+        nextLeftCol = nextLeftCol + Math.ceil(delta / sidescroll) * sidescroll;
+      } else {
+        nextLeftCol = Math.max(0, cursorCol - Math.floor(visCols / 2));
+      }
+    }
+  }
+
+  return {
+    topRow,
+    visibleRows,
+    ...(nextLeftCol > 0 ? { leftCol: nextLeftCol } : {}),
+    ...(viewport.visibleCols !== undefined ? { visibleCols: viewport.visibleCols } : {}),
+  };
 }
 
 /**
@@ -310,4 +358,108 @@ export function scrollLineUp(state: VimEditorState, count = 1): VimEditorState {
     },
     pendingKeys: undefined,
   };
+}
+
+function buildUpdatedViewport(vp: ViewportState, leftCol: number): ViewportState {
+  const { leftCol: _ignored, ...rest } = vp;
+  return leftCol > 0 ? { ...rest, leftCol } : rest;
+}
+
+function scrollHorizontalBy(state: VimEditorState, deltaCols: number): VimEditorState {
+  if (isWrapEnabled(state)) {
+    return { ...state, pendingKeys: undefined };
+  }
+  const vp = getViewport(state);
+  const visCols = Math.max(1, vp.visibleCols ?? DEFAULT_VISIBLE_COLS);
+  const effSiso = getEffectiveScrolloff(visCols, getSidescrolloff(state));
+  const curLine = state.lines[state.cursor.line] ?? '';
+  const maxCol = Math.max(0, curLine.length - 1);
+  const curLeft = Math.max(0, vp.leftCol ?? 0);
+  const nextLeft = Math.max(0, Math.min(maxCol, curLeft + deltaCols));
+
+  let nextCol = state.cursor.col;
+  if (nextCol < nextLeft + effSiso) {
+    nextCol = Math.min(maxCol, nextLeft + effSiso);
+  } else if (nextCol >= nextLeft + visCols - effSiso) {
+    nextCol = Math.max(0, Math.min(maxCol, nextLeft + visCols - 1 - effSiso));
+  }
+
+  const mode = state.mode.startsWith('VISUAL') ? 'VISUAL' : 'NORMAL';
+  const clamped = clampCursor(state.lines, { line: state.cursor.line, col: nextCol }, mode);
+
+  return {
+    ...state,
+    cursor: clamped,
+    viewport: buildUpdatedViewport(vp, nextLeft),
+    pendingKeys: undefined,
+  };
+}
+
+/** zh: 화면을 왼쪽으로 count열 스크롤 (텍스트 오른쪽 이동, nowrap 전용) */
+export function scrollColsLeft(state: VimEditorState, count = 1): VimEditorState {
+  return scrollHorizontalBy(state, -Math.max(1, count));
+}
+
+/** zl: 화면을 오른쪽으로 count열 스크롤 (텍스트 왼쪽 이동, nowrap 전용) */
+export function scrollColsRight(state: VimEditorState, count = 1): VimEditorState {
+  return scrollHorizontalBy(state, Math.max(1, count));
+}
+
+/** zH: 화면을 왼쪽으로 반 화면(visibleCols / 2) 스크롤 (nowrap 전용) */
+export function scrollHalfColsLeft(state: VimEditorState, count = 1): VimEditorState {
+  const visCols = Math.max(1, getViewport(state).visibleCols ?? DEFAULT_VISIBLE_COLS);
+  return scrollHorizontalBy(state, -Math.max(1, count) * Math.max(1, Math.floor(visCols / 2)));
+}
+
+/** zL: 화면을 오른쪽으로 반 화면(visibleCols / 2) 스크롤 (nowrap 전용) */
+export function scrollHalfColsRight(state: VimEditorState, count = 1): VimEditorState {
+  const visCols = Math.max(1, getViewport(state).visibleCols ?? DEFAULT_VISIBLE_COLS);
+  return scrollHorizontalBy(state, Math.max(1, count) * Math.max(1, Math.floor(visCols / 2)));
+}
+
+/** ze: 현재 커서가 화면 오른쪽 끝(sidescrolloff 적용)에 오도록 수평 스크롤 */
+export function scrollCursorToRight(state: VimEditorState): VimEditorState {
+  if (isWrapEnabled(state)) {
+    return { ...state, pendingKeys: undefined };
+  }
+  const vp = getViewport(state);
+  const visCols = Math.max(1, vp.visibleCols ?? DEFAULT_VISIBLE_COLS);
+  const effSiso = getEffectiveScrolloff(visCols, getSidescrolloff(state));
+  const nextLeft = Math.max(0, state.cursor.col - (visCols - 1 - effSiso));
+  return {
+    ...state,
+    viewport: buildUpdatedViewport(vp, nextLeft),
+    pendingKeys: undefined,
+  };
+}
+
+/** zs: 현재 커서가 화면 왼쪽 끝(sidescrolloff 적용)에 오도록 수평 스크롤 */
+export function scrollCursorToLeft(state: VimEditorState): VimEditorState {
+  if (isWrapEnabled(state)) {
+    return { ...state, pendingKeys: undefined };
+  }
+  const vp = getViewport(state);
+  const visCols = Math.max(1, vp.visibleCols ?? DEFAULT_VISIBLE_COLS);
+  const effSiso = getEffectiveScrolloff(visCols, getSidescrolloff(state));
+  const nextLeft = Math.max(0, state.cursor.col - effSiso);
+  return {
+    ...state,
+    viewport: buildUpdatedViewport(vp, nextLeft),
+    pendingKeys: undefined,
+  };
+}
+
+/** Normal / Visual z-접두어 수평 스크롤 키(zh, zl, zH, zL, ze, zs) 공통 디스패처 */
+export function handleHorizontalViewportKey(
+  state: VimEditorState,
+  key: string,
+  count = 1
+): VimEditorState | null {
+  if (key === 'h' || key === 'ArrowLeft') return scrollColsLeft(state, count);
+  if (key === 'l' || key === 'ArrowRight') return scrollColsRight(state, count);
+  if (key === 'H') return scrollHalfColsLeft(state, count);
+  if (key === 'L') return scrollHalfColsRight(state, count);
+  if (key === 'e') return scrollCursorToRight(state);
+  if (key === 's') return scrollCursorToLeft(state);
+  return null;
 }

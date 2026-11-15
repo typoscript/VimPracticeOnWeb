@@ -150,12 +150,17 @@ export const Editor: React.FC<EditorProps> = ({
     };
   }, [bellSignal]);
 
+  const isWrap = options?.wrap ?? true;
+  const leftCol = viewport?.leftCol ?? 0;
+
   React.useEffect(() => {
     if (scrollerRef.current && viewport) {
       const rowHeight = 24;
+      const colWidth = 9;
       scrollerRef.current.scrollTop = viewport.topRow * rowHeight;
+      scrollerRef.current.scrollLeft = isWrap ? 0 : leftCol * colWidth;
     }
-  }, [viewport?.topRow]);
+  }, [viewport?.topRow, leftCol, isWrap]);
 
   const showLineNumbers = options?.number ?? true;
   const isRelative = options?.relativenumber ?? relativeLineNumbers;
@@ -169,8 +174,10 @@ export const Editor: React.FC<EditorProps> = ({
 
   return (
     <div
-      className={`editor-container ${!isFocused ? 'editor-unfocused' : ''} ${isBellFlashing ? 'editor-bell' : ''}`}
+      className={`editor-container ${isWrap ? 'editor-wrap' : 'editor-nowrap'} ${!isFocused ? 'editor-unfocused' : ''} ${isBellFlashing ? 'editor-bell' : ''}`}
       data-testid="editor-container"
+      data-wrap={String(isWrap)}
+      data-left-col={leftCol}
       onClick={onFocus}
     >
       {!isFocused && (

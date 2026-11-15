@@ -97,6 +97,7 @@ import {
   scrollFullPageUp,
   scrollLineDown,
   scrollLineUp,
+  handleHorizontalViewportKey,
 } from './viewport';
 import { recordJump, jumpOlder, jumpNewer, setMark, jumpToMark, executeMarkOperator } from './marks';
 import {
@@ -753,8 +754,10 @@ export function handleNormalModeKey(
     return { ...state, bell: true, pendingKeys: undefined };
   }
 
-  // zz, zt, zb: 뷰포트 정렬 및 zc, zo, za, zM, zR, zd, zD, zE, zf: 코드 폴딩
+  // zz, zt, zb, zh/zl/zH/zL/ze/zs: 뷰포트 정렬 및 zc, zo, za, zM, zR, zd, zD, zE, zf: 코드 폴딩
   if (state.pendingKeys === 'z' || parsed.operator === 'z') {
+    const horiz = handleHorizontalViewportKey(state, key, parsed.count1 ?? 1);
+    if (horiz) return horiz;
     if (key === 'z') return scrollToCenter(state);
     if (key === 't') return scrollToTop(state);
     if (key === 'b') return scrollToBottom(state);

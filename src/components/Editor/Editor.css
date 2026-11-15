@@ -186,6 +186,16 @@
   tab-size: 4;
 }
 
+.editor-wrap .line-content {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.editor-nowrap .line-content {
+  white-space: pre;
+  overflow-wrap: normal;
+}
+
 /* 순정 Vim 구문 강조 (Syntax Highlighting) */
 .syn-keyword {
   color: var(--accent-purple, #cba6f7);

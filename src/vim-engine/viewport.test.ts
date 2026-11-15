@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { handleKey } from './vimEngine';
+import { DEFAULT_VIM_OPTIONS } from './setEngine';
 import { VimEditorState } from './types';
 
 describe('Viewport and Screen Navigation (zz, zt, zb, H, M, L, Ctrl-d, Ctrl-u)', () => {
@@ -199,5 +200,134 @@ describe('Viewport and Screen Navigation (zz, zt, zb, H, M, L, Ctrl-d, Ctrl-u)',
     state = handleKey(state, 'Ctrl-b');
     expect(state.viewport?.topRow).toBe(58);
     expect(state.cursor.line).toBe(74);
+  });
+
+  describe('수평 뷰포트 스크롤 (zh, zl, zH, zL, ze, zs, :set nowrap, sidescroll/sidescrolloff)', () => {
+    const longLine = Array.from({ length: 120 }, (_, i) => String(i % 10)).join('');
+
+    function createWideState(opts?: { wrap?: boolean; sidescroll?: number; sidescrolloff?: number; visibleCols?: number }): VimEditorState {
+      return {
+        lines: [longLine],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+        viewport: { topRow: 0, visibleRows: 10, visibleCols: opts?.visibleCols ?? 20 },
+        options: {
+          ...DEFAULT_VIM_OPTIONS,
+          wrap: opts?.wrap ?? false,
+          sidescroll: opts?.sidescroll ?? 0,
+          sidescrolloff: opts?.sidescrolloff ?? 0,
+        },
+      };
+    }
+
+    it('wrap=true(기본)에서는 zh/zl/zH/zL/ze/zs 가 leftCol을 바꾸지 않고 cursor도 그대로 둔다', () => {
+      let state = createWideState({ wrap: true });
+      state = { ...state, cursor: { line: 0, col: 30 } };
+
+      for (const seq of ['zl', 'zh', 'zL', 'zH', 'ze', 'zs']) {
+        state = handleKey(state, seq[0]);
+        state = handleKey(state, seq[1]);
+        expect(state.viewport?.leftCol ?? 0).toBe(0);
+        expect(state.cursor.col).toBe(30);
+      }
+    });
+
+    it('zl / zh 및 count: nowrap 모드에서 수평 스크롤하고 커서를 화면 내에 유지한다', () => {
+      let state = createWideState({ wrap: false, visibleCols: 20 });
+
+      // 5zl -> leftCol=5, 커서도 leftCol(5) 이상으로 밀림
+      state = handleKey(state, '5');
+      state = handleKey(state, 'z');
+      state = handleKey(state, 'l');
+      expect(state.viewport?.leftCol).toBe(5);
+      expect(state.cursor.col).toBe(5);
+
+      // 3zh -> leftCol=2, 커서는 [2, 21] 범위이므로 5 유지
+      state = handleKey(state, '3');
+      state = handleKey(state, 'z');
+      state = handleKey(state, 'h');
+      expect(state.viewport?.leftCol).toBe(2);
+      expect(state.cursor.col).toBe(5);
+
+      // 끝 쪽(col 100)으로 이동 후 5zh -> leftCol 감소, 커서가 화면 우측(leftCol + 19)으로 밀림
+      state = { ...state, cursor: { line: 0, col: 50 }, viewport: { topRow: 0, visibleRows: 10, visibleCols: 20, leftCol: 31 } };
+      state = handleKey(state, '5');
+      state = handleKey(state, 'z');
+      state = handleKey(state, 'h');
+      expect(state.viewport?.leftCol).toBe(26);
+      expect(state.cursor.col).toBe(45);
+    });
+
+    it('zL / zH: visibleCols 의 절반 단위로 수평 스크롤한다', () => {
+      let state = createWideState({ wrap: false, visibleCols: 20 });
+
+      // zL -> half=10, leftCol=10, cursor.col=10
+      state = handleKey(state, 'z');
+      state = handleKey(state, 'L');
+      expect(state.viewport?.leftCol).toBe(10);
+      expect(state.cursor.col).toBe(10);
+
+      // 2zL -> +20 => leftCol=30
+      state = handleKey(state, '2');
+      state = handleKey(state, 'z');
+      state = handleKey(state, 'L');
+      expect(state.viewport?.leftCol).toBe(30);
+
+      // zH -> -10 => leftCol=20
+      state = handleKey(state, 'z');
+      state = handleKey(state, 'H');
+      expect(state.viewport?.leftCol).toBe(20);
+    });
+
+    it('zs / ze: 커서 위치를 화면 왼쪽 끝(zs) 또는 오른쪽 끝(ze)에 맞춘다 (sidescrolloff 반영)', () => {
+      let state = createWideState({ wrap: false, visibleCols: 20, sidescrolloff: 3 });
+      state = { ...state, cursor: { line: 0, col: 50 } };
+
+      // zs: leftCol = col - effSiso = 50 - 3 = 47
+      state = handleKey(state, 'z');
+      state = handleKey(state, 's');
+      expect(state.viewport?.leftCol).toBe(47);
+      expect(state.cursor.col).toBe(50);
+
+      // ze: leftCol = col - (visCols - 1 - effSiso) = 50 - (20 - 1 - 3) = 34
+      state = handleKey(state, 'z');
+      state = handleKey(state, 'e');
+      expect(state.viewport?.leftCol).toBe(34);
+      expect(state.cursor.col).toBe(50);
+    });
+
+    it(':set nowrap, :set ss=N, :set siso=N 으로 커서 이동 시 자동 수평 스크롤된다', () => {
+      let state = createWideState({ wrap: true, visibleCols: 20 });
+
+      for (const ch of ':set nowrap ss=5 siso=2') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+
+      expect(state.options?.wrap).toBe(false);
+      expect(state.options?.sidescroll).toBe(5);
+      expect(state.options?.sidescrolloff).toBe(2);
+
+      // $ 로 끝(col=119) 이동 -> leftCol 자동 스크롤되어 커서가 [leftCol+2, leftCol+17] 안에 있음
+      state = handleKey(state, '$');
+      expect(state.cursor.col).toBe(119);
+      const leftAfterDollar = state.viewport?.leftCol ?? 0;
+      expect(leftAfterDollar).toBeGreaterThanOrEqual(105);
+      expect(state.cursor.col).toBeLessThanOrEqual(leftAfterDollar + 19 - 2);
+
+      // 0 으로 맨 앞(col=0) 이동 -> leftCol=0 으로 복귀
+      state = handleKey(state, '0');
+      expect(state.cursor.col).toBe(0);
+      expect(state.viewport?.leftCol ?? 0).toBe(0);
+    });
+
+    it('Visual 모드에서도 zs / ze / zl 수평 스크롤이 동작한다', () => {
+      let state = createWideState({ wrap: false, visibleCols: 20 });
+      state = { ...state, cursor: { line: 0, col: 40 } };
+
+      state = handleKey(state, 'v');
+      state = handleKey(state, 'z');
+      state = handleKey(state, 's');
+      expect(state.mode).toBe('VISUAL');
+      expect(state.viewport?.leftCol).toBe(40);
+    });
   });
 });

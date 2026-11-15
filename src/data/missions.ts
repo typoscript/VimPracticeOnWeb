@@ -3707,4 +3707,41 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 96,
+    title: '레슨 96: 수평 뷰포트 스크롤(zh/zl/zH/zL/ze/zs), 줄 바꿈 해제(:set nowrap) & sidescroll 마스터',
+    description:
+      '아주 긴 단일 행 설정이나 URL, 로그를 다룰 때 줄 바꿈을 끄고(:set nowrap) 화면을 좌우로 정밀하게 스크롤하면 구조를 깨뜨리지 않고 오른쪽 끝을 탐색·수정할 수 있습니다.\n\n1) 수평 스크롤 옵션 (:set nowrap / sidescroll / sidescrolloff):\n   - :set nowrap 은 긴 줄을 다음 줄로 접지 않고 한 줄 그대로 펼쳐 좌우 스크롤을 활성화합니다. (복원은 :set wrap)\n   - :set sidescroll=N (:set ss=N) 은 커서가 화면 좌우 밖으로 나갈 때 한 번에 밀어주는 열 수입니다.\n   - :set sidescrolloff=N (:set siso=N) 은 커서 좌우에 항상 확보하는 여백 열 수입니다.\n\n2) 수평 뷰포트 스크롤 키 (zh, zl, zH, zL, ze, zs — nowrap 전용):\n   - zl / zh (및 [count]zl / [count]zh) 는 화면을 오른쪽/왼쪽으로 지정 열만큼 스크롤합니다.\n   - zL / zH 는 화면 너비(visibleCols)의 절반 단위로 크게 좌우 이동합니다.\n   - zs 는 커서가 화면 왼쪽 끝(sidescrolloff 적용)에, ze 는 커서가 화면 오른쪽 끝에 오도록 맞춥니다.\n\n미션:\n1. :set nowrap ss=5 siso=3<Enter> 로 줄 바꿈을 끄고 수평 스크롤 옵션(ss=5, siso=3)을 설정하세요.\n2. j 2f= l 로 긴 줄 오른쪽 끝의 TODO 위로 이동한 뒤 cw READY<Esc> 로 값을 바꾸세요.\n3. ze (또는 zs / zl) 로 수평 뷰포트 스크롤(leftCol > 0)을 적용해 오른쪽 끝 상태를 확인하고 완료하세요!',
+    hint: ':set nowrap ss=5 siso=3<Enter> → j 2f= l cw READY<Esc> → ze',
+    par: 45,
+    optimalKeys: [
+      ':', 's', 'e', 't', ' ', 'n', 'o', 'w', 'r', 'a', 'p', ' ', 's', 's', '=', '5', ' ', 's', 'i', 's', 'o', '=', '3', 'Enter',
+      'j', '2', 'f', '=', 'l', 'c', 'w', 'R', 'E', 'A', 'D', 'Y', 'Escape',
+      'z', 'e',
+    ],
+    primaryFilename: 'gateway.ts',
+    initialLines: [
+      '// :set nowrap 및 수평 스크롤(zl/zh/zL/zH/ze/zs)로 긴 한 줄의 오른쪽 끝 값을 점검하고 고치세요.',
+      'const endpoint = "https://edge-gateway.internal.example.com/v2/clusters/ap-northeast-2/tenants/prod/flag=TODO";',
+    ],
+    targetLines: [
+      '// :set nowrap 및 수평 스크롤(zl/zh/zL/zH/ze/zs)로 긴 한 줄의 오른쪽 끝 값을 점검하고 고치세요.',
+      'const endpoint = "https://edge-gateway.internal.example.com/v2/clusters/ap-northeast-2/tenants/prod/flag=READY";',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const target = [
+        '// :set nowrap 및 수평 스크롤(zl/zh/zL/zH/ze/zs)로 긴 한 줄의 오른쪽 끝 값을 점검하고 고치세요.',
+        'const endpoint = "https://edge-gateway.internal.example.com/v2/clusters/ap-northeast-2/tenants/prod/flag=READY";',
+      ];
+      return (
+        state.mode === 'NORMAL' &&
+        state.options?.wrap === false &&
+        (state.options?.sidescroll ?? 0) > 0 &&
+        (state.viewport?.leftCol ?? 0) > 0 &&
+        state.lines.length === target.length &&
+        state.lines.every((l, idx) => l === target[idx])
+      );
+    },
+  },
 ];

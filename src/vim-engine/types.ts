@@ -253,6 +253,10 @@ export interface VimOptions {
   textwidth?: number;
   /** 커서 위아래로 유지할 여유 줄 수 (:set so=5, :set scrolloff=5) */
   scrolloff?: number;
+  /** 수평 스크롤 시 한 번에 이동할 열 수 (:set ss=5, :set sidescroll=5) */
+  sidescroll?: number;
+  /** 커서 좌우로 유지할 여유 열 수 (:set siso=5, :set sidescrolloff=5) */
+  sidescrolloff?: number;
   /** 탭/공백 특수문자 표시 (:set list / nolist) */
   list: boolean;
   /** 명령행 완성 와일드메뉴 표시 여부 (:set wildmenu / nowildmenu) */
@@ -370,6 +374,8 @@ export interface ChangeListItem {
 export interface ViewportState {
   topRow: number;       // 현재 화면 최상단 행 번호 (0-indexed)
   visibleRows: number;  // 화면에 한 번에 표시되는 행 개수
+  leftCol?: number;     // 현재 화면 최좌단 열 번호 (0-indexed, nowrap 모드)
+  visibleCols?: number; // 화면에 한 번에 표시되는 열 개수 (기본 80)
 }
 
 export interface FoldRange {

@@ -11,7 +11,14 @@ import { syncLiveLspDiagnostics } from './lspEngine';
 import { handleSpellSuggestKey } from './spellEngine';
 import { recordUndoTreeChange } from './undoTreeEngine';
 import { applyScrollbindDelta } from './splitWindow';
-import { adjustViewport, getViewport, getScrolloff } from './viewport';
+import {
+  adjustViewport,
+  getViewport,
+  getScrolloff,
+  getSidescroll,
+  getSidescrolloff,
+  isWrapEnabled,
+} from './viewport';
 import {
   AbbrevReplayCtx,
   INITIAL_ABBREV_CTX,
@@ -203,15 +210,24 @@ export function rawHandleKey(
     };
   }
 
-  // 커서 이동 시 화면 뷰포트 자동 동기화 (커서가 화면 및 scrolloff 여백을 벗어나지 않도록 보정)
+  // 커서 이동 시 화면 뷰포트 자동 동기화 (커서가 화면 및 scrolloff/sidescrolloff 여백을 벗어나지 않도록 보정)
   if (nextState.cursor && nextState.lines) {
     const vp = adjustViewport(
       getViewport(nextState),
       nextState.cursor.line,
       nextState.lines.length,
-      getScrolloff(nextState)
+      getScrolloff(nextState),
+      nextState.cursor.col,
+      getSidescroll(nextState),
+      getSidescrolloff(nextState),
+      isWrapEnabled(nextState)
     );
-    if (!nextState.viewport || nextState.viewport.topRow !== vp.topRow || nextState.viewport.visibleRows !== vp.visibleRows) {
+    if (
+      !nextState.viewport ||
+      nextState.viewport.topRow !== vp.topRow ||
+      nextState.viewport.visibleRows !== vp.visibleRows ||
+      (nextState.viewport.leftCol ?? 0) !== (vp.leftCol ?? 0)
+    ) {
       nextState = {
         ...nextState,
         viewport: vp,

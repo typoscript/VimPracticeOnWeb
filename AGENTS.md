@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 141개 테스트 파일, 1,839개 테스트 100% 통과 필수)*
+  *(현재 141개 테스트 파일, 1,847개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 95)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 96)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -148,6 +148,7 @@
 - **순정 Vim 입력·탐색 누락 디테일 보강 (`]m`/`[m`/`]M`/`[M`, Insert `Ctrl-k` 다이그래프, `Ctrl-a`/`Ctrl-@`/`".` 레지스터, Normal `g8`) (레슨 93, `src/vim-engine/extraMotions.ts`, `digraphs.ts`, `insertMode.ts`, `normalMode.ts`, `visualMode.ts`, `engineHelpers.ts`, `registers.ts`)**: 노멀·비주얼·연산자 대기(`d`/`c`/`y`/`>`/`<`) 모드에서 메서드 시작/끝(`{`/`}`) 블록 점프(`]m`/`[m`/`]M`/`[M`) 및 `.` 반복, RFC1345 표준 Vim 다이그래프(`Ctrl-k {c1}{c2}`, 역순 비방향 지원, `Esc` 취소, 비주얼 블록·`.` 반복 지원), 직전 INSERT 세션 텍스트 재삽입(`Ctrl-a`, 삽입 후 즉시 복귀 `Ctrl-@`, `".` 레지스터 및 `Ctrl-o` 보존), 커서 위치 문자의 UTF-8 바이트 16진수 검사(`g8`)를 지원합니다.
 - **커맨드라인·검색줄 중간 편집(`Ctrl-b`/`Ctrl-e`/`Home`/`End`/`Arrow`/`Delete`/`Ctrl-w`/`Ctrl-u`/`Ctrl-c`/`Ctrl-k`) & `:digraphs` / `:ascii` (레슨 94, `src/vim-engine/cmdlineEdit.ts`, `cmdlineMode.ts`, `searchMode.ts`, `digraphs.ts`, `exListAndToolCommands.ts`, `StatusBar.tsx`)**: `:`, `=`, `/`, `?` 커맨드/검색 입력 줄 중간 이동(`ArrowLeft`/`ArrowRight`, `Ctrl-b`/`Home`, `Ctrl-e`/`End`)·삽입·삭제(`Delete`, `Backspace`/`Ctrl-h`, `Ctrl-w`, `Ctrl-u`, `Ctrl-c`)·커맨드라인 `Ctrl-k` 다이그래프 및 `StatusBar` `.prompt-cursor` 인라인 커서 렌더링을 구현했습니다. 또한 `:ascii`/`:as`(`ga` 동일 문자 코드 출력)와 `:digraphs`/`:dig`(목록 조회 및 `:dig {c1}{c2} {code}` 사용자 커스텀 다이그래프 `state.userDigraphs` 등록·우선 조회, `E474` 검증)를 완성했습니다.
 - **부분 검색(`g*`/`g#`), 전역 선언 점프(`gD`), 텍스트 정렬(`:center`/`:right`/`:left`), Ex 반복(`@:`/`":`) & Insert `Ctrl-v uXXXX` (레슨 95, `src/vim-engine/searchMode.ts`, `advancedMotions.ts`, `exBufferOps.ts`, `commandLine.ts`, `normalMode.ts`, `insertMode.ts`, `registers.ts`)**: 단어 경계 없이 부분 일치를 탐색하는 `g*`/`g#` (`executeWordSearch`), 최상위 전역 선언을 우선 탐색하는 `gD` (`goToDeclaration('global')`), `textwidth` 또는 지정 너비·들여쓰기로 정렬하는 `:[range]ce[nter]`/`:ri[ght]`/`:le[ft]` (단일 Undo, `E474`), 직전 Ex 명령을 재실행하는 `@:`/`@@`(`E30` 및 `":` 레지스터 조회), 그리고 Insert 모드에서 4/8자리 16진수 코드 포인트로 유니코드 문자를 직접 삽입하는 `Ctrl-v uXXXX` / `Ctrl-v UXXXXXXXX` (`.` 도트 반복 지원)를 완성했습니다.
+- **수평 뷰포트 스크롤(`zh`/`zl`/`zH`/`zL`/`ze`/`zs`), `:set nowrap` & `sidescroll`/`sidescrolloff` (레슨 96, `src/vim-engine/viewport.ts`, `setEngine.ts`, `vimEngine.ts`, `normalMode.ts`, `visualMode.ts`, `Editor.tsx`)**: `:set wrap`/`nowrap`, `:set sidescroll`(`ss`), `:set sidescrolloff`(`siso`) 옵션과 `nowrap` 전용 수평 스크롤 명령(`zh`/`zl`/`zH`/`zL`/`ze`/`zs`, Normal/Visual 및 `[count]` 지원)을 구현하고, `handleKey`의 `adjustViewport` 자동 수평 스크롤 동기화(`viewport.leftCol`, `visibleCols`)와 `Editor` 컴포넌트의 `editor-wrap`/`editor-nowrap` 클래스·`data-wrap`·`data-left-col`·`scrollLeft` 연동을 완성했습니다.
 
 ---
 

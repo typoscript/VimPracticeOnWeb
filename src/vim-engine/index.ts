@@ -347,6 +347,17 @@ export type { ShellExecResult } from './shellEngine';
 export { COMMON_DIGRAPHS, lookupDigraph, formatDigraphsList, executeDigraphCommand } from './digraphs';
 export { getCmdlineCursorCol } from './cmdlineEdit';
 export { describeCharAt, describeCharUtf8Bytes } from './engineHelpers';
+export {
+  DEFAULT_VISIBLE_ROWS,
+  DEFAULT_VISIBLE_COLS,
+  scrollColsLeft,
+  scrollColsRight,
+  scrollHalfColsLeft,
+  scrollHalfColsRight,
+  scrollCursorToRight,
+  scrollCursorToLeft,
+  handleHorizontalViewportKey,
+} from './viewport';
 
 // ---- 개발용 불변성 검사 ----
 export { withInvariantCheck, assertValidVimState, deepFreeze } from './invariants';

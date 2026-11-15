@@ -1898,8 +1898,31 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson95!.checkComplete(state)).toBe(true);
   });
 
-  it('모든 95개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(95);
+  it('레슨 96 (수평 뷰포트 스크롤 zh/zl/zH/zL/ze/zs, :set nowrap, sidescroll/sidescrolloff) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson96 = MISSIONS.find((m) => m.id === 96);
+    expect(lesson96).toBeDefined();
+
+    let state: VimEditorState = {
+      lines: [...lesson96!.initialLines],
+      cursor: { ...lesson96!.initialCursor },
+      mode: 'NORMAL',
+      primaryFilename: lesson96!.primaryFilename,
+    };
+
+    expect(lesson96!.checkComplete(state)).toBe(false);
+
+    for (const key of lesson96!.optimalKeys!) {
+      state = handleKey(state, key);
+    }
+    expect(state.options?.wrap).toBe(false);
+    expect(state.options?.sidescroll).toBe(5);
+    expect(state.options?.sidescrolloff).toBe(3);
+    expect((state.viewport?.leftCol ?? 0) > 0).toBe(true);
+    expect(lesson96!.checkComplete(state)).toBe(true);
+  });
+
+  it('모든 96개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(96);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();

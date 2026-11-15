@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { DEFAULT_VIM_OPTIONS } from '../../vim-engine';
 import { Editor } from './Editor';
 
 describe('Editor Component', () => {
@@ -277,5 +278,44 @@ describe('Editor Component', () => {
 
     screen.getByLabelText('호버 닫기').click();
     expect(onCloseHover).toHaveBeenCalled();
+  });
+
+  it('options.wrap=false 및 viewport.leftCol 변경 시 editor-nowrap 클래스와 scrollLeft 를 동기화한다', () => {
+    const { rerender } = render(
+      <Editor
+        lines={['abcdefghijklmnopqrstuvwxyz0123456789']}
+        cursor={{ line: 0, col: 15 }}
+        mode="NORMAL"
+        viewport={{ topRow: 0, visibleRows: 10, leftCol: 10, visibleCols: 20 }}
+        options={{ ...DEFAULT_VIM_OPTIONS, wrap: false }}
+        isFocused={true}
+        onFocus={vi.fn()}
+      />
+    );
+
+    const container = screen.getByTestId('editor-container');
+    expect(container).toHaveClass('editor-nowrap');
+    expect(container).toHaveAttribute('data-wrap', 'false');
+    expect(container).toHaveAttribute('data-left-col', '10');
+
+    const scroller = container.querySelector('.editor-scroller') as HTMLDivElement;
+    expect(scroller.scrollLeft).toBe(90);
+
+    // wrap=true 로 복원되면 editor-wrap 클래스 & scrollLeft=0
+    rerender(
+      <Editor
+        lines={['abcdefghijklmnopqrstuvwxyz0123456789']}
+        cursor={{ line: 0, col: 15 }}
+        mode="NORMAL"
+        viewport={{ topRow: 0, visibleRows: 10, leftCol: 10, visibleCols: 20 }}
+        options={{ ...DEFAULT_VIM_OPTIONS, wrap: true }}
+        isFocused={true}
+        onFocus={vi.fn()}
+      />
+    );
+
+    expect(container).toHaveClass('editor-wrap');
+    expect(container).toHaveAttribute('data-wrap', 'true');
+    expect(scroller.scrollLeft).toBe(0);
   });
 });

@@ -16,6 +16,8 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   expandtab: true,
   textwidth: 0,
   scrolloff: 0,
+  sidescroll: 0,
+  sidescrolloff: 0,
   list: false,
   wildmenu: true,
   spell: false,
@@ -51,6 +53,10 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   textwidth: 'textwidth',
   so: 'scrolloff',
   scrolloff: 'scrolloff',
+  ss: 'sidescroll',
+  sidescroll: 'sidescroll',
+  siso: 'sidescrolloff',
+  sidescrolloff: 'sidescrolloff',
   list: 'list',
   wmenu: 'wildmenu',
   wildmenu: 'wildmenu',
@@ -138,7 +144,7 @@ export function formatOptionsList(
     'scrollbind',
   ];
 
-  const numericKeys: (keyof VimOptions)[] = ['tabstop', 'shiftwidth', 'textwidth', 'scrolloff'];
+  const numericKeys: (keyof VimOptions)[] = ['tabstop', 'shiftwidth', 'textwidth', 'scrolloff', 'sidescroll', 'sidescrolloff'];
 
   const displayedItems: string[] = [];
 
@@ -508,7 +514,9 @@ export function executeSetCommand(
         (optKey !== 'tabstop' &&
           optKey !== 'shiftwidth' &&
           optKey !== 'textwidth' &&
-          optKey !== 'scrolloff')
+          optKey !== 'scrolloff' &&
+          optKey !== 'sidescroll' &&
+          optKey !== 'sidescrolloff')
       ) {
         return {
           ...state,
@@ -516,7 +524,12 @@ export function executeSetCommand(
         };
       }
       const numVal = parseInt(rawVal, 10);
-      if (isNaN(numVal) || numVal < (optKey === 'textwidth' || optKey === 'scrolloff' ? 0 : 1)) {
+      const allowsZero =
+        optKey === 'textwidth' ||
+        optKey === 'scrolloff' ||
+        optKey === 'sidescroll' ||
+        optKey === 'sidescrolloff';
+      if (isNaN(numVal) || numVal < (allowsZero ? 0 : 1)) {
         return {
           ...state,
           commandMessage: msg('E521: 잘못된 숫자 인수: {token}', { token }),
