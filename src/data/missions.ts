@@ -3318,4 +3318,49 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 89,
+    title: '레슨 89: 표현식 폴딩(:set fdm=expr, :set fde=...) & 커맨드라인 윈도우(q:) 검색·실행 마스터',
+    description:
+      '수식으로 폴드 계층을 동적으로 계산하는 foldexpr(:set fdm=expr) 과, 명령어 이력을 일반 버퍼처럼 검색(/pat, ?pat)·편집·재실행할 수 있는 커맨드라인 윈도우(q:, q/, q?) 를 결합해 보세요.\n\n1) 표현식 폴딩 (:set fdm=expr fde={expr}):\n   - 각 줄(v:lnum)마다 표현식을 평가해 0/1/2..., >N(폴드 시작), <N(끝), =(유지), aN/sN 을 반환합니다.\n   - 예: :set fdm=expr fde=getline(v:lnum)=~\'^#\'?\'>1\':\'=\' 는 # 제목 줄마다 새 레벨 1 폴드를 시작합니다.\n   - 설정 후 zM 을 누르면 모든 섹션이 한꺼번에 접히며 zo / zc / za 로 여닫을 수 있습니다.\n\n2) 커맨드라인 윈도우 고급 탐색·실행 (q:, q/, q?, :his):\n   - q: (또는 q/, q?) 로 이력 버퍼를 연 뒤, 내부에서 ?done<Enter> / /pat<Enter> 로 과거 명령을 검색하고 I/A/cw 로 수정하거나 Enter 로 즉시 실행할 수 있습니다.\n   - 창 내부에서 :q<Enter> 또는 Ctrl-c 를 누르면 실행 없이 안전하게 닫히고, :his 로 이력 목록을 조회할 수 있습니다.\n\n미션:\n1. :set fdm=expr fde=getline(v:lnum)=~\'^#\'?\'>1\':\'=\'<Enter> 로 # 헤더 기준 표현식 폴딩을 설정하세요.\n2. zM 을 눌러 두 섹션(# Section 1, # Section 2)을 모두 접으세요.\n3. q: 로 커맨드라인 윈도우를 열고 ?done<Enter> 로 과거 치환 명령(%s/draft/done/g)을 찾아 Enter 로 실행하세요!',
+    hint: ":set fdm=expr fde=getline(v:lnum)=~'^#'?'>1':'='<Enter> → zM → q: → ?done<Enter> → Enter",
+    par: 66,
+    optimalKeys: [
+      ':', 's', 'e', 't', ' ', 'f', 'd', 'm', '=', 'e', 'x', 'p', 'r', ' ',
+      'f', 'd', 'e', '=', 'g', 'e', 't', 'l', 'i', 'n', 'e', '(', 'v', ':', 'l', 'n', 'u', 'm', ')', '=', '~', "'", '^', '#', "'", '?', "'", '>', '1', "'", ':', "'", '=', "'", 'Enter',
+      'z', 'M',
+      'q', ':',
+      '?', 'd', 'o', 'n', 'e', 'Enter',
+      'Enter',
+    ],
+    initialCommandHistory: [
+      'set nu',
+      '%s/draft/done/g',
+    ],
+    initialLines: [
+      '# Section 1',
+      'status = draft',
+      '# Section 2',
+      'status = draft',
+    ],
+    targetLines: [
+      '# Section 1',
+      'status = done',
+      '# Section 2',
+      'status = done',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const target = ['# Section 1', 'status = done', '# Section 2', 'status = done'];
+      return (
+        state.mode === 'NORMAL' &&
+        state.cmdlineWindow == null &&
+        state.options?.foldmethod === 'expr' &&
+        (state.folds?.length ?? 0) === 2 &&
+        state.folds!.every((f) => f.closed) &&
+        state.lines.length === target.length &&
+        state.lines.every((l, idx) => l === target[idx])
+      );
+    },
+  },
 ];

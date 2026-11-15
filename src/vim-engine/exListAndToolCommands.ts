@@ -54,6 +54,7 @@ import {
   argdo,
 } from './argEngine';
 import { formatRegisters } from './registers';
+import { formatCommandHistory } from './cmdlineWindow';
 import { executeSetCommand } from './setEngine';
 import { sourceScript } from './sourceEngine';
 import { executeMakeSession } from './sessionEngine';
@@ -510,6 +511,19 @@ export function tryExecuteToolExCommand(
       visualAnchor: undefined,
       commandBuffer: undefined,
       commandType: undefined,
+    };
+  }
+
+  // 커맨드라인/검색 히스토리 조회: :his, :history [: | / | ? | all]
+  const hisMatch = cleanCmdRaw.match(/^his(?:t(?:o(?:r(?:y)?)?)?)?(?:\s+(.*))?$/);
+  if (hisMatch) {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: formatCommandHistory(state, hisMatch[1] ?? ''),
     };
   }
 

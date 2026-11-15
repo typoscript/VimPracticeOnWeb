@@ -21,6 +21,7 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   spell: false,
   syntax: true,
   foldmethod: 'manual',
+  foldexpr: '0',
   foldlevel: 0,
   scrollbind: false,
 };
@@ -59,6 +60,8 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   syntax: 'syntax',
   fdm: 'foldmethod',
   foldmethod: 'foldmethod',
+  fde: 'foldexpr',
+  foldexpr: 'foldexpr',
   fdl: 'foldlevel',
   foldlevel: 'foldlevel',
   cms: 'commentstring',
@@ -160,6 +163,14 @@ export function formatOptionsList(
     displayedItems.push(`filetype=${options.filetype}`);
   }
 
+  if (options.foldmethod !== undefined && (showAll || options.foldmethod !== DEFAULT_VIM_OPTIONS.foldmethod)) {
+    displayedItems.push(`foldmethod=${options.foldmethod}`);
+  }
+
+  if (options.foldexpr !== undefined && (showAll || options.foldexpr !== DEFAULT_VIM_OPTIONS.foldexpr)) {
+    displayedItems.push(`foldexpr=${options.foldexpr}`);
+  }
+
   if (options.commentstring !== undefined && (showAll || options.commentstring !== DEFAULT_VIM_OPTIONS.commentstring)) {
     displayedItems.push(`commentstring=${options.commentstring}`);
   }
@@ -193,8 +204,10 @@ function tokenizeSetArgs(rawArgs: string): string[] {
 
   for (let i = 0; i < rawArgs.length; i++) {
     const ch = rawArgs[i];
+    const preserveQuotes = current.startsWith('fde=') || current.startsWith('foldexpr=');
     if (quote) {
       if (ch === quote) {
+        if (preserveQuotes) current += ch;
         quote = null;
       } else {
         current += ch;
@@ -210,6 +223,7 @@ function tokenizeSetArgs(rawArgs: string): string[] {
       }
     }
     if (ch === '"' || ch === "'") {
+      if (preserveQuotes) current += ch;
       quote = ch;
       continue;
     }
@@ -329,6 +343,9 @@ export function executeSetCommand(
       if (optKey === 'grepprg' && val === undefined) {
         val = 'grep -n $* /dev/null';
       }
+      if (optKey === 'foldexpr' && val === undefined) {
+        val = '0';
+      }
       if (typeof val === 'boolean') {
         queryMessages.push(val ? (optKey as string) : `no${optKey}`);
       } else {
@@ -426,6 +443,17 @@ export function executeSetCommand(
           nextGlobal.foldmethod = method;
         }
         appliedList.push(`foldmethod=${method}`);
+        continue;
+      }
+      if (optKey === 'foldexpr') {
+        const exprVal = rawVal.length > 0 ? rawVal : '0';
+        if (scope === 'local' || scope === 'both') {
+          nextLocal.foldexpr = exprVal;
+        }
+        if (scope === 'global' || scope === 'both') {
+          nextGlobal.foldexpr = exprVal;
+        }
+        appliedList.push(`foldexpr=${exprVal}`);
         continue;
       }
       if (optKey === 'foldlevel') {

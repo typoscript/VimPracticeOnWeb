@@ -644,7 +644,13 @@ export function handleNormalModeKey(
       return ringBell({ ...state, pendingKeys: undefined });
     }
     if (key === '{' || key === '}' || key === 'B') {
-      const detected = detectFoldBlocks(state.lines, state.options?.foldmethod, state.options?.shiftwidth);
+      const detected = detectFoldBlocks(
+        state.lines,
+        state.options?.foldmethod,
+        state.options?.shiftwidth,
+        state.options?.foldexpr,
+        state
+      );
       const found = detected.find((b) => b.startRow <= state.cursor.line && state.cursor.line <= b.endRow);
       if (found) {
         return createFold(state, found.startRow, found.endRow);

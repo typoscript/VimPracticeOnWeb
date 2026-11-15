@@ -1,6 +1,8 @@
 import { FoldRange, VimEditorState } from './types';
 import { clampCursor } from './cursor';
 import { deleteLine, yankLine } from './operators';
+import { EvalContext, evaluateVimScript, toVimString } from './vimscriptEval';
+import { callUserFunction } from './vimscriptEngine';
 
 /**
  * 들여쓰기(indentation) 구조를 분석하여 버퍼 내 모든 접을 수 있는 블록 범위를 탐색합니다. (:set fdm=indent)
@@ -87,15 +89,139 @@ export function detectIndentFoldBlocks(lines: string[], shiftwidth = 2): FoldRan
 }
 
 /**
+ * 표현식(foldexpr)을 줄마다 평가하여 폴딩 블록 범위를 탐색합니다. (:set fdm=expr, :set fde=...)
+ * 지원 반환값: 0/1/2..., >N(시작), <N(끝), =(유지), aN(증가), sN(감소)
+ */
+export function detectExprFoldBlocks(
+  lines: string[],
+  foldexpr = '0',
+  state?: VimEditorState
+): FoldRange[] {
+  const expr = (foldexpr ?? '0').trim();
+  if (!expr || expr === '0' || lines.length <= 1) return [];
+
+  const blocks: FoldRange[] = [];
+  const openStarts = new Map<number, number>();
+  let prevLevel = 0;
+
+  const closeLevelsAbove = (targetLevel: number, endRow: number) => {
+    for (const [lvl, startRow] of Array.from(openStarts.entries())) {
+      if (lvl > targetLevel) {
+        openStarts.delete(lvl);
+        if (endRow > startRow) {
+          blocks.push({ startRow, endRow, closed: false });
+        }
+      }
+    }
+  };
+
+  const openLevelsUpTo = (targetLevel: number, startRow: number) => {
+    for (let lvl = 1; lvl <= targetLevel; lvl++) {
+      if (!openStarts.has(lvl)) {
+        openStarts.set(lvl, startRow);
+      }
+    }
+  };
+
+  const baseState: VimEditorState = state
+    ? { ...state, lines }
+    : { lines, cursor: { line: 0, col: 0 }, mode: 'NORMAL' };
+
+  for (let i = 0; i < lines.length; i++) {
+    let raw = '';
+    try {
+      const ctx: EvalContext = {
+        state: { ...baseState, cursor: { line: i, col: 0 } },
+        vvars: { lnum: i + 1 },
+        callUserFunction: (c, name, args) => {
+          const r = callUserFunction(c.state, name, args, (s) => s, 0, i + 1, i + 1);
+          if (r.error) throw new Error(r.error);
+          return r.value;
+        },
+      };
+      const val = evaluateVimScript(expr, ctx);
+      raw = typeof val === 'number' ? String(Math.floor(val)) : toVimString(val).trim();
+    } catch {
+      return [];
+    }
+
+    if (raw === '=' || raw === '' || raw === '-1') {
+      openLevelsUpTo(prevLevel, i);
+      continue;
+    }
+
+    const startMatch = raw.match(/^>(\d+)$/);
+    if (startMatch) {
+      const n = Math.max(0, parseInt(startMatch[1], 10));
+      closeLevelsAbove(Math.max(0, n - 1), i - 1);
+      openLevelsUpTo(n, i);
+      prevLevel = n;
+      continue;
+    }
+
+    const endMatch = raw.match(/^<(\d+)$/);
+    if (endMatch) {
+      const n = Math.max(1, parseInt(endMatch[1], 10));
+      closeLevelsAbove(Math.max(0, n - 1), i);
+      prevLevel = Math.max(0, n - 1);
+      continue;
+    }
+
+    const addMatch = raw.match(/^a(\d+)$/);
+    if (addMatch) {
+      const delta = Math.max(0, parseInt(addMatch[1], 10));
+      const target = prevLevel + delta;
+      openLevelsUpTo(target, i);
+      prevLevel = target;
+      continue;
+    }
+
+    const subMatch = raw.match(/^s(\d+)$/);
+    if (subMatch) {
+      const delta = Math.max(0, parseInt(subMatch[1], 10));
+      const target = Math.max(0, prevLevel - delta);
+      closeLevelsAbove(target, i);
+      prevLevel = target;
+      continue;
+    }
+
+    const numMatch = raw.match(/^-?\d+$/);
+    if (numMatch) {
+      const lvl = Math.max(0, parseInt(raw, 10));
+      closeLevelsAbove(lvl, i - 1);
+      openLevelsUpTo(lvl, i);
+      prevLevel = lvl;
+    }
+  }
+
+  closeLevelsAbove(0, lines.length - 1);
+
+  const uniqueMap = new Map<string, FoldRange>();
+  for (const b of blocks) {
+    const key = `${b.startRow}-${b.endRow}`;
+    if (!uniqueMap.has(key)) {
+      uniqueMap.set(key, b);
+    }
+  }
+
+  return Array.from(uniqueMap.values()).sort((a, b) => a.startRow - b.startRow);
+}
+
+/**
  * 중괄호({}) 또는 들여쓰기 구조를 분석하여 버퍼 내 모든 접을 수 있는 블록 범위를 탐색합니다.
  */
 export function detectFoldBlocks(
   lines: string[],
   foldmethod = 'manual',
-  shiftwidth = 2
+  shiftwidth = 2,
+  foldexpr = '0',
+  state?: VimEditorState
 ): FoldRange[] {
   if (foldmethod === 'indent') {
     return detectIndentFoldBlocks(lines, shiftwidth);
+  }
+  if (foldmethod === 'expr') {
+    return detectExprFoldBlocks(lines, foldexpr, state);
   }
 
   const blocks: FoldRange[] = [];
@@ -161,7 +287,9 @@ export function findFoldForCursor(
   lines: string[],
   cursorRow: number,
   foldmethod = 'manual',
-  shiftwidth = 2
+  shiftwidth = 2,
+  foldexpr = '0',
+  state?: VimEditorState
 ): { fold: FoldRange; index: number } | null {
   const currentFolds = folds ?? [];
 
@@ -190,7 +318,7 @@ export function findFoldForCursor(
   }
 
   // 4. 버퍼 분석을 통해 새롭게 감싸는 블록 탐색
-  const detected = detectFoldBlocks(lines, foldmethod, shiftwidth);
+  const detected = detectFoldBlocks(lines, foldmethod, shiftwidth, foldexpr, state);
   const matched = detected
     .filter(
       (b) =>
@@ -221,7 +349,9 @@ export function foldClose(state: VimEditorState): VimEditorState {
     state.lines,
     state.cursor.line,
     state.options?.foldmethod,
-    state.options?.shiftwidth
+    state.options?.shiftwidth,
+    state.options?.foldexpr,
+    state
   );
   if (!found) {
     return { ...state, pendingKeys: undefined };
@@ -261,7 +391,9 @@ export function foldOpen(state: VimEditorState): VimEditorState {
     state.lines,
     state.cursor.line,
     state.options?.foldmethod,
-    state.options?.shiftwidth
+    state.options?.shiftwidth,
+    state.options?.foldexpr,
+    state
   );
   if (!found || found.index < 0) {
     return { ...state, pendingKeys: undefined };
@@ -286,7 +418,9 @@ export function foldToggle(state: VimEditorState): VimEditorState {
     state.lines,
     state.cursor.line,
     state.options?.foldmethod,
-    state.options?.shiftwidth
+    state.options?.shiftwidth,
+    state.options?.foldexpr,
+    state
   );
   if (!found) {
     return { ...state, pendingKeys: undefined };
@@ -326,7 +460,9 @@ export function foldCloseAll(state: VimEditorState): VimEditorState {
   const detected = detectFoldBlocks(
     state.lines,
     state.options?.foldmethod,
-    state.options?.shiftwidth
+    state.options?.shiftwidth,
+    state.options?.foldexpr,
+    state
   );
   const existingMap = new Map<string, FoldRange>();
 

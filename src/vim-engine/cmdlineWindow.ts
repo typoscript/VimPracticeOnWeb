@@ -144,6 +144,7 @@ export function openCommandLineWindow(
   return {
     ...state,
     mode: 'NORMAL',
+    pendingKeys: undefined,
     commandBuffer: undefined,
     commandType: undefined,
     cmdlineWindow: session,
@@ -231,6 +232,37 @@ export function clearCommandLineHistory(
 }
 
 /**
+ * 커맨드라인 히스토리 목록을 Vim `:history` 형식으로 포맷합니다.
+ */
+export function formatCommandHistory(state: VimEditorState, rawArgs = ''): string {
+  const arg = rawArgs.trim().toLowerCase();
+  const showCmd = !arg || arg === ':' || arg === 'c' || arg === 'cmd' || arg === 'all' || arg === 'a';
+  const showSearch = arg === '/' || arg === '?' || arg === 's' || arg === 'search' || arg === 'all' || arg === 'a';
+
+  const sections: string[] = [];
+  if (showCmd) {
+    const cmds = state.commandHistory ?? [];
+    const lines = ['      #  cmd history'];
+    cmds.forEach((entry, idx) => {
+      const marker = idx === cmds.length - 1 ? '>' : ' ';
+      lines.push(`${marker}${String(idx + 1).padStart(4)}  ${entry}`);
+    });
+    sections.push(lines.join('\n'));
+  }
+  if (showSearch) {
+    const searches = state.searchHistory ?? [];
+    const lines = ['      #  search history'];
+    searches.forEach((entry, idx) => {
+      const marker = idx === searches.length - 1 ? '>' : ' ';
+      lines.push(`${marker}${String(idx + 1).padStart(4)}  ${entry}`);
+    });
+    sections.push(lines.join('\n'));
+  }
+
+  return sections.join('\n');
+}
+
+/**
  * 커맨드라인 윈도우의 현재 줄(Cursor) 내용을 실행합니다.
  */
 export function executeCommandLineWindow(
@@ -256,11 +288,11 @@ export function executeCommandLineWindow(
     return nextState;
   }
 
-  // 3. 커맨드 또는 검색 실행
+  // 3. 커맨드 또는 검색 실행 (? 검색 방향 유지)
   if (type === ':') {
     return executeEx(nextState, currentLine);
   } else {
-    return executeSearch(nextState, currentLine);
+    return executeSearch({ ...nextState, commandType: type }, currentLine);
   }
 }
 
@@ -277,26 +309,102 @@ export function handleCommandLineWindowKey(
   const session = state.cmdlineWindow;
   if (!session) return state;
 
-  // 1. Enter: 현재 커서 줄의 명령어 실행
-  if (key === 'Enter') {
+  const isCtrlC = key === 'Ctrl-c' || key === 'Ctrl+c' || key === 'ctrl-c';
+
+  // 1. 창 내부 서브 커맨드라인(:q, :2 등) 또는 검색(/pat, ?pat) 입력 중일 때의 Enter / Esc / Ctrl-c 처리
+  if (session.mode === 'COMMAND') {
+    if (key === 'Escape' || isCtrlC) {
+      return {
+        ...state,
+        cmdlineWindow: {
+          ...session,
+          mode: 'NORMAL',
+          commandBuffer: undefined,
+          commandType: undefined,
+          pendingKeys: undefined,
+        },
+      };
+    }
+    if (key === 'Enter') {
+      const subCmd = (session.commandBuffer ?? '').trim().replace(/^:/, '');
+      if (/^(?:q|q!|quit|quit!|clo|close|exit|x|wq|wq!)$/i.test(subCmd)) {
+        return closeCommandLineWindow(state);
+      }
+      if (/^\d+$/.test(subCmd)) {
+        const targetLine = Math.max(0, Math.min(session.lines.length - 1, parseInt(subCmd, 10) - 1));
+        return {
+          ...state,
+          cmdlineWindow: {
+            ...session,
+            mode: 'NORMAL',
+            cursor: { line: targetLine, col: 0 },
+            commandBuffer: undefined,
+            commandType: undefined,
+            pendingKeys: undefined,
+          },
+        };
+      }
+      return {
+        ...state,
+        cmdlineWindow: {
+          ...session,
+          mode: 'NORMAL',
+          commandBuffer: undefined,
+          commandType: undefined,
+          pendingKeys: undefined,
+        },
+      };
+    }
+  }
+
+  if (session.mode === 'SEARCH') {
+    if (key === 'Escape' || isCtrlC) {
+      return {
+        ...state,
+        cmdlineWindow: {
+          ...session,
+          mode: 'NORMAL',
+          commandBuffer: undefined,
+          commandType: undefined,
+          pendingKeys: undefined,
+        },
+      };
+    }
+  }
+
+  // 2. 일반/삽입/비주얼 모드에서 Enter: 현재 커서 줄의 명령어 실행
+  if (key === 'Enter' && session.mode !== 'SEARCH') {
     return executeCommandLineWindow(state, executeEx, executeSearch);
   }
 
-  // 2. NORMAL 모드에서 Escape 또는 Ctrl-c: 창 닫기 및 취소
-  if (
-    session.mode === 'NORMAL' &&
-    (key === 'Escape' || key === 'Ctrl-c' || key === 'Ctrl+c')
-  ) {
+  // 3. NORMAL 모드에서 Escape 또는 Ctrl-c: 창 닫기 및 취소
+  if (session.mode === 'NORMAL' && (key === 'Escape' || isCtrlC)) {
     return closeCommandLineWindow(state);
   }
 
-  // 3. 미니 VimEditorState를 구성하여 일반 Vim 키스트로크 실행 위임
+  // INSERT / VISUAL 모드에서 Ctrl-c는 NORMAL 모드로 복귀 (Vim cmdwin 동일)
+  if ((session.mode === 'INSERT' || session.mode === 'VISUAL' || session.mode === 'VISUAL_LINE' || session.mode === 'VISUAL_BLOCK') && isCtrlC) {
+    return {
+      ...state,
+      cmdlineWindow: {
+        ...session,
+        mode: 'NORMAL',
+        pendingKeys: undefined,
+      },
+    };
+  }
+
+  // 4. 미니 VimEditorState를 구성하여 일반 Vim 키스트로크 실행 위임
   const miniState: VimEditorState = {
     lines: [...session.lines],
     cursor: { ...session.cursor },
     mode: session.mode,
     visualAnchor: session.visualAnchor ? { ...session.visualAnchor } : undefined,
     pendingKeys: session.pendingKeys,
+    commandBuffer: session.commandBuffer,
+    commandType: session.commandType,
+    lastSearchQuery: session.lastSearchQuery,
+    lastSearchDirection: session.lastSearchDirection,
     undoStack: session.undoStack ? [...session.undoStack] : [],
     redoStack: session.redoStack ? [...session.redoStack] : [],
     registers: state.registers,
@@ -305,11 +413,6 @@ export function handleCommandLineWindowKey(
 
   const nextMiniState = rawKeyHandler(miniState, key);
 
-  // 미니 상태에서 :q 실행 등으로 창 닫기 요청이 발생한 경우
-  if (nextMiniState.commandBuffer === 'q' && key === 'Enter') {
-    return closeCommandLineWindow(state);
-  }
-
   const updatedSession: CommandLineWindowSession = {
     ...session,
     lines: nextMiniState.lines,
@@ -317,6 +420,10 @@ export function handleCommandLineWindowKey(
     mode: nextMiniState.mode,
     visualAnchor: nextMiniState.visualAnchor,
     pendingKeys: nextMiniState.pendingKeys,
+    commandBuffer: nextMiniState.commandBuffer,
+    commandType: nextMiniState.commandType,
+    lastSearchQuery: nextMiniState.lastSearchQuery,
+    lastSearchDirection: nextMiniState.lastSearchDirection,
     undoStack: nextMiniState.undoStack,
     redoStack: nextMiniState.redoStack,
   };

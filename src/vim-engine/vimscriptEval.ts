@@ -1172,6 +1172,23 @@ const BUILTINS: Record<string, Builtin> = {
       return start < 0 || end < start ? [] : ctx.state.lines.slice(start, end + 1);
     },
   },
+  indent: {
+    min: 1,
+    max: 1,
+    fn: (ctx, [a]) => {
+      const idx = resolveLineArg(ctx.state, a);
+      if (idx < 0) return -1;
+      const line = ctx.state.lines[idx] ?? '';
+      const ts = ctx.state.options?.tabstop ?? 8;
+      let cols = 0;
+      for (const ch of line) {
+        if (ch === ' ') cols += 1;
+        else if (ch === '\t') cols += ts - (cols % ts);
+        else break;
+      }
+      return cols;
+    },
+  },
   setline: {
     min: 2,
     max: 2,

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   detectFoldBlocks,
   detectIndentFoldBlocks,
+  detectExprFoldBlocks,
   createFold,
   deleteFoldAtCursor,
   deleteAllFoldsAtCursor,
@@ -327,6 +328,89 @@ describe('코드 폴딩 모듈 (Folding Engine)', () => {
 
       expect(text).toContain('+--  3 lines: function test() {');
       expect(text.startsWith('+--')).toBe(true);
+    });
+  });
+
+  describe('표현식 폴딩 (:set fdm=expr, :set fde=...)', () => {
+    const typeKeys = (s: VimEditorState, keys: string[]): VimEditorState => {
+      let cur = s;
+      for (const k of keys) cur = handleKey(cur, k);
+      return cur;
+    };
+
+    const typeCmd = (s: VimEditorState, cmd: string): VimEditorState => {
+      let cur = handleKey(s, ':');
+      for (const ch of cmd) cur = handleKey(cur, ch);
+      return handleKey(cur, 'Enter');
+    };
+
+    it('detectExprFoldBlocks: >1 / = 으로 마크다운 섹션 블록을 각각 분리한다', () => {
+      const md = ['# Intro', 'hello', '# Body', 'world', 'more', '# Tail'];
+      const folds = detectExprFoldBlocks(md, "getline(v:lnum)=~'^#'?'>1':'='");
+      expect(folds).toEqual([
+        { startRow: 0, endRow: 1, closed: false },
+        { startRow: 2, endRow: 4, closed: false },
+      ]);
+    });
+
+    it('detectExprFoldBlocks: a1 / s1 및 <1 표현식을 Vim 규칙대로 계산한다', () => {
+      const lines = ['top', 'start', 'mid', 'end', 'after'];
+      expect(detectExprFoldBlocks(lines, "v:lnum==2?'a1':(v:lnum==4?'s1':'=')")).toEqual([
+        { startRow: 1, endRow: 3, closed: false },
+      ]);
+      expect(detectExprFoldBlocks(lines, "v:lnum==2?'>1':(v:lnum==4?'<1':'=')")).toEqual([
+        { startRow: 1, endRow: 3, closed: false },
+      ]);
+    });
+
+    it('detectExprFoldBlocks: indent(v:lnum) 로 들여쓰기 수식 폴딩을 지원한다', () => {
+      const lines = ['root', '  child1', '  child2', '    grand1', '    grand2', 'root2'];
+      const folds = detectExprFoldBlocks(lines, 'indent(v:lnum)/2');
+      expect(folds).toEqual([
+        { startRow: 1, endRow: 4, closed: false },
+        { startRow: 3, endRow: 4, closed: false },
+      ]);
+    });
+
+    it(':set fdm=expr fde=... 후 zM / zo / zc / 사용자 함수 foldexpr 가 동작한다', () => {
+      let state: VimEditorState = {
+        lines: ['# A', 'line1', '# B', 'line2', 'line3'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+      state = typeCmd(state, "set fdm=expr fde=getline(v:lnum)=~'^#'?'>1':'='");
+      expect(state.options?.foldmethod).toBe('expr');
+      expect(state.options?.foldexpr).toBe("getline(v:lnum)=~'^#'?'>1':'='");
+
+      const query = typeCmd(state, 'set fde?');
+      expect(query.commandMessage).toBe("foldexpr=getline(v:lnum)=~'^#'?'>1':'='");
+
+      state = typeKeys(state, ['z', 'M']);
+      expect(state.folds).toEqual([
+        { startRow: 0, endRow: 1, closed: true },
+        { startRow: 2, endRow: 4, closed: true },
+      ]);
+
+      state = typeKeys(state, ['z', 'o']);
+      expect(state.folds![0].closed).toBe(false);
+      expect(state.folds![1].closed).toBe(true);
+
+      // 커스텀 Vimscript 함수 호출 foldexpr 테스트
+      const typeDraftLine = (curState: VimEditorState, line: string): VimEditorState => {
+        let next = curState;
+        for (const ch of line) next = handleKey(next, ch);
+        return handleKey(next, 'Enter');
+      };
+      state = typeCmd(state, 'function! MyFold(lnum)');
+      state = typeDraftLine(state, "return getline(a:lnum) =~ '^#' ? '>1' : '='");
+      state = typeDraftLine(state, 'endfunction');
+      state = typeCmd(state, 'set fde=MyFold(v:lnum)');
+      state = typeKeys(state, ['z', 'E']);
+      state = typeKeys(state, ['z', 'M']);
+      expect(state.folds).toEqual([
+        { startRow: 0, endRow: 1, closed: true },
+        { startRow: 2, endRow: 4, closed: true },
+      ]);
     });
   });
 });

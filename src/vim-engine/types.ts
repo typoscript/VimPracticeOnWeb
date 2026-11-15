@@ -183,6 +183,10 @@ export interface CommandLineWindowSession {
   /** VISUAL_BLOCK 모드에서 $ 로 줄 끝까지 확장 중인지 여부 */
   visualBlockEndOfLine?: boolean;
   pendingKeys?: string;
+  commandBuffer?: string;
+  commandType?: ':' | '/' | '?' | '=';
+  lastSearchQuery?: string;
+  lastSearchDirection?: 'forward' | 'backward';
   undoStack?: StateSnapshot[];
   redoStack?: StateSnapshot[];
 }
@@ -261,6 +265,8 @@ export interface VimOptions {
   syntax?: boolean | string;
   /** 폴딩 방식 (:set fdm=manual / indent / marker / syntax / expr, :set foldmethod=...) */
   foldmethod?: 'manual' | 'indent' | 'marker' | 'syntax' | 'expr';
+  /** 표현식 폴딩 수식 (:set fde=..., :set foldexpr=...) */
+  foldexpr?: string;
   /** 폴드 레벨 (:set fdl=0 / :set foldlevel=...) */
   foldlevel?: number;
   /** 주석 포맷 문자열 (:set cms=//\ %s, :set commentstring=#\ %s) */

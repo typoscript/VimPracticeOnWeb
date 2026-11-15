@@ -10,6 +10,7 @@ import {
   selectCommandLineWindowLine,
   switchCommandLineWindowType,
   clearCommandLineHistory,
+  formatCommandHistory,
 } from './cmdlineWindow';
 
 describe('cmdlineWindow & command line history module', () => {
@@ -305,6 +306,67 @@ describe('cmdlineWindow & command line history module', () => {
       expect(state.searchHistory).toEqual([]);
       expect(state.cmdlineWindow?.lines).toEqual(['']);
       expect(state.commandMessage).toContain('커맨드라인 히스토리 초기화됨');
+    });
+
+    it('커맨드라인 윈도우 내 검색(/pat + n)으로 이력을 찾아 편집 후 실행할 수 있다', () => {
+      let state = createBaseState();
+      state = handleKey(state, 'q');
+      state = handleKey(state, ':');
+      // line 0 ('%s/foo/bar/g'), line 1 ('s/hello/hi/'), line 2 ('%s/bar/qux/g'), line 3 ('')
+      expect(state.cmdlineWindow?.cursor.line).toBe(3);
+
+      // ?hello 로 이력 내부 역방향 검색 (cursor는 line 1 's/hello/hi/' 로 이동해야 함)
+      for (const k of ['?', 'h', 'e', 'l', 'l', 'o', 'Enter']) {
+        state = handleKey(state, k);
+      }
+      expect(state.cmdlineWindow).toBeDefined();
+      expect(state.cmdlineWindow?.mode).toBe('NORMAL');
+      expect(state.cmdlineWindow?.cursor.line).toBe(1);
+
+      // 현재 줄이 비어있지 않아도 :q<Enter> 는 현재 줄을 실행하지 않고 창만 닫는다
+      for (const k of [':', 'q', 'Enter']) {
+        state = handleKey(state, k);
+      }
+      expect(state.cmdlineWindow).toBeNull();
+      expect(state.lines[0]).toBe('hello vim world');
+    });
+
+    it('커맨드라인 윈도우에서 INSERT 중 Ctrl-c 는 NORMAL 로, NORMAL 중 Ctrl-c 는 창 닫기로 동작하며 q? 는 역방향 검색을 실행한다', () => {
+      let state: VimEditorState = {
+        ...createBaseState(),
+        cursor: { line: 2, col: 0 },
+        searchHistory: ['vim'],
+      };
+      // q? 열기 -> k 로 'vim' 선택 -> Enter -> 0번 줄 'hello vim world' 로 역방향 점프
+      state = handleKey(state, 'q');
+      state = handleKey(state, '?');
+      state = handleKey(state, 'k');
+      state = handleKey(state, 'Enter');
+      expect(state.cmdlineWindow).toBeNull();
+      expect(state.cursor.line).toBe(0);
+      expect(state.lastSearchDirection).toBe('backward');
+
+      // q: 열고 INSERT 모드 진입 후 Ctrl-c 두 번
+      state = handleKey(state, 'q');
+      state = handleKey(state, ':');
+      state = handleKey(state, 'i');
+      expect(state.cmdlineWindow?.mode).toBe('INSERT');
+      state = handleKey(state, 'Ctrl-c');
+      expect(state.cmdlineWindow?.mode).toBe('NORMAL');
+      state = handleKey(state, 'Ctrl-c');
+      expect(state.cmdlineWindow).toBeNull();
+    });
+
+    it(':history / :his Ex 명령으로 명령어와 검색 히스토리를 조회한다', () => {
+      let state = createBaseState();
+      for (const k of [':', 'h', 'i', 's', ' ', 'a', 'l', 'l', 'Enter']) {
+        state = handleKey(state, k);
+      }
+      expect(state.commandMessage).toContain('#  cmd history');
+      expect(state.commandMessage).toContain('%s/bar/qux/g');
+      expect(state.commandMessage).toContain('#  search history');
+      expect(formatCommandHistory(state, '')).not.toContain('search history');
+      expect(formatCommandHistory(state, '/')).toContain('search history');
     });
   });
 });

@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 138개 테스트 파일, 1,775개 테스트 100% 통과 필수)*
+  *(현재 138개 테스트 파일, 1,783개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 88)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 89)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -139,9 +139,10 @@
 - **레지스터 Ex 명령 (레슨 87, `src/vim-engine/exBufferOps.ts`의 `executeRangeDelete`/`executeRangeYank`/`executeExPut`, `commandLine.ts`)**: `:[range]d [x] [count]`, `:[range]y [x] [count]`(대문자 누적, `_` 블랙홀, count 는 범위 마지막 줄부터), `:[line]pu[t][!] [x]`(`:0put`, `:$put`, `:put!`; 문자 단위 레지스터도 항상 줄 단위로 삽입, 빈 레지스터는 E353+bell, 한 번의 undo). 로드맵 '`:put!`, `:delete {reg}`' 부분을 구현했으며 `foldexpr`·커맨드라인 윈도우 강화는 남아 있습니다.
 - **멀티 윈도우 레이아웃 회전·일괄 제어 (`Ctrl-w H/J/K/L`, `Ctrl-w r/R/x`, `:wincmd`, `:windo`, `:set scrollbind`, `:syncbind`) (레슨 88, `src/vim-engine/splitWindow.ts`, `setEngine.ts`, `vimEngine.ts`, `exListAndToolCommands.ts`, `exRange.ts`)**: `:windo[!] {cmd}`로 모든 분할 창에 Ex 명령(파이프 `|` 포함) 일괄 실행 및 `!` 미지정 시 에러 중단 제어, 창 로컬 `'scrollbind'`(`scb`/`noscb`/`scb!`/`scb?`) 옵션 및 `applyScrollbindDelta` 기반 `Ctrl-e/y/d/u/f/b`·`G/gg`·`zt/zz/zb` 상대 오프셋 동기 스크롤, `:syncbind` 강제 정렬, `:wincmd H/J/K/L/r/R/x/T/=/_/|/+/-/>/<` 대소문자 구분 및 카운트 리사이즈 지원을 완성했습니다.
 - **학습 진행도·설정 JSON 전체 백업 및 복원 (`src/utils/backupStorage.ts`, `ConfigExporterModal.tsx`, `App.tsx`)**: 20개 `localStorage` 키(`BACKUP_KEYS`) 일괄 내보내기·가져오기, 병합(`merge`) / 덮어쓰기(`replace`) 복원 모드, 스키마 검증 및 `App.tsx` 실시간 상태·테마 재동기화를 지원합니다.
+- **표현식 폴딩(`foldexpr`) & 커맨드라인 윈도우(`q:`, `q/`, `q?`) 고급 실행 (레슨 89, `src/vim-engine/folding.ts`, `setEngine.ts`, `vimscriptEval.ts`, `cmdlineWindow.ts`, `exListAndToolCommands.ts`)**: `:set fdm=expr` / `fde=...` (`v:lnum`, `getline()`, `indent()`, `>N`, `<N`, `=`, `aN`, `sN`, 사용자 함수 호출 지원)으로 동적 폴드 블록을 계산하고, `q:`/`q/`/`q?` 창 내부 검색(`/pat`, `?pat`), `:q`·`:{줄}` 서브 커맨드, `Ctrl-c` 모드 복귀, `q?` 역방향 검색 실행, `:history`/`:his` 이력 조회를 지원합니다.
 
 ---
 
 ## 5. 다음 개발 로드맵 추천 후보
 에이전트에게 다음 작업을 지시할 때 아래 항목 중에서 지정하시면 됩니다:
-1. **폴드·커맨드라인 윈도우 실전 유틸리티 (`foldexpr`, `q: `/` / `?` 편집 실행 강화) + 레슨 89**: 표현식 폴딩(`:set fdm=expr`), 커맨드라인 윈도우 고급 워크플로우 확장.
+1. **약점 분석 기반 SRS(간격 반복) 복습 추천 시스템**: `weaknessDrillAnalyzer.ts` · `antiPatternDetector.ts` · `storage.ts` 연동 개인화 복습 큐.
