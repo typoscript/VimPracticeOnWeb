@@ -70,4 +70,74 @@ describe('CustomMissionModal component', () => {
     );
     expect(onCloseMock).toHaveBeenCalled();
   });
+
+  it('applies preset templates and supports JSON/URL import with validation feedback', () => {
+    localStorage.clear();
+    render(
+      <CustomMissionModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onPlayMission={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId('preset-btn-regex-log-cleanup'));
+    expect((screen.getByTestId('custom-input-title') as HTMLInputElement).value).toBe('로그 태그 일괄 정규화');
+
+    const importInput = screen.getByTestId('custom-import-input') as HTMLInputElement;
+    fireEvent.change(importInput, { target: { value: '{broken' } });
+    fireEvent.click(screen.getByTestId('custom-import-btn'));
+    expect(screen.getByTestId('custom-import-feedback').textContent).toContain('올바른 공유 URL');
+
+    const payload = JSON.stringify({
+      title: 'JSON 임포트 테스트',
+      description: '설명',
+      initialText: 'foo',
+      targetText: 'bar',
+      par: 5,
+    });
+    fireEvent.change(importInput, { target: { value: payload } });
+    fireEvent.click(screen.getByTestId('custom-import-btn'));
+
+    expect(screen.getByTestId('custom-import-feedback').textContent).toContain('성공적으로 불러왔습니다');
+    expect((screen.getByTestId('custom-input-title') as HTMLInputElement).value).toBe('JSON 임포트 테스트');
+    expect((screen.getByTestId('custom-input-par') as HTMLInputElement).value).toBe('5');
+  });
+
+  it('saves custom missions to library, plays saved mission, deletes, and copies JSON', async () => {
+    localStorage.clear();
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText: writeTextMock } });
+
+    const onPlayMock = vi.fn();
+    const onCloseMock = vi.fn();
+
+    render(
+      <CustomMissionModal
+        isOpen={true}
+        onClose={onCloseMock}
+        onPlayMission={onPlayMock}
+      />
+    );
+
+    fireEvent.change(screen.getByTestId('custom-input-title'), {
+      target: { value: '저장 테스트 미션' },
+    });
+    fireEvent.click(screen.getByTestId('save-custom-mission-btn'));
+
+    const savedTitleEl = screen.getByText('저장 테스트 미션');
+    expect(savedTitleEl).toBeDefined();
+
+    fireEvent.click(screen.getByTestId('copy-json-btn'));
+    await waitFor(() => {
+      expect(writeTextMock).toHaveBeenCalledWith(expect.stringContaining('"title": "저장 테스트 미션"'));
+    });
+
+    const playSavedBtn = screen.getByText('플레이');
+    fireEvent.click(playSavedBtn);
+    expect(onPlayMock).toHaveBeenCalledWith(expect.objectContaining({ title: '저장 테스트 미션' }));
+
+    fireEvent.click(screen.getByText('삭제'));
+    expect(screen.queryByText('저장 테스트 미션')).toBeNull();
+  });
 });

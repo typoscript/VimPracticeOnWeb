@@ -99,4 +99,40 @@ describe('backupStorage (JSON 백업 / 복원)', () => {
       errorCode: 'EMPTY_BACKUP',
     });
   });
+
+  it('merge 모드에서 저장된 커스텀 미션 라이브러리도 중복 없이 병합한다', () => {
+    const existing = [
+      {
+        id: 'cm-local',
+        savedAt: '2026-01-01T00:00:00Z',
+        data: { title: 'Local', description: '', initialText: 'a', targetText: 'b', par: 5 },
+      },
+    ];
+    localStorage.setItem('vim_custom_missions_v1', JSON.stringify(existing));
+
+    const backup = JSON.stringify({
+      app: BACKUP_APP_ID,
+      version: 1,
+      entries: {
+        vim_custom_missions_v1: [
+          {
+            id: 'cm-remote-dup',
+            savedAt: '2026-01-02T00:00:00Z',
+            data: { title: 'Local', description: '', initialText: 'a', targetText: 'b', par: 5 },
+          },
+          {
+            id: 'cm-remote-new',
+            savedAt: '2026-01-03T00:00:00Z',
+            data: { title: 'Remote', description: '', initialText: 'x', targetText: 'y', par: 7 },
+          },
+        ],
+      },
+    });
+
+    const res = importBackupJson(backup, 'merge');
+    expect(res.ok).toBe(true);
+    const merged = JSON.parse(localStorage.getItem('vim_custom_missions_v1')!);
+    expect(merged).toHaveLength(2);
+    expect(merged.map((m: { id: string }) => m.id)).toEqual(['cm-local', 'cm-remote-new']);
+  });
 });

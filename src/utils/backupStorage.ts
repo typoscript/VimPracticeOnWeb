@@ -21,6 +21,10 @@ import {
   LEADER_KEY_STORAGE_KEY,
   CUSTOM_KEYMAPS_STORAGE_KEY,
 } from './keymapStorage';
+import {
+  CUSTOM_MISSIONS_STORAGE_KEY,
+  mergeSavedCustomMissions,
+} from './customMission';
 
 export const BACKUP_SCHEMA_VERSION = 1;
 export const BACKUP_APP_ID = 'VimPracticeOnWeb';
@@ -30,6 +34,7 @@ export const BACKUP_KEYS = [
   DUNGEON_STORAGE_KEY,
   ANALYTICS_STORAGE_KEY,
   SRS_STORAGE_KEY,
+  CUSTOM_MISSIONS_STORAGE_KEY,
   SPEEDRUN_RECORD_STORAGE_KEY,
   DOJO_HIGH_SCORES_STORAGE_KEY,
   DOJO_LEADERBOARD_STORAGE_KEY,
@@ -235,6 +240,16 @@ export function importBackupJson(
         localStorage.setItem(key, JSON.stringify(merged));
       } else if (mode === 'merge' && key === DUNGEON_STORAGE_KEY) {
         const merged = mergeDungeonSave(localStorage.getItem(key), value);
+        localStorage.setItem(key, JSON.stringify(merged));
+      } else if (mode === 'merge' && key === CUSTOM_MISSIONS_STORAGE_KEY) {
+        let existing: unknown = [];
+        try {
+          const rawExisting = localStorage.getItem(key);
+          if (rawExisting) existing = JSON.parse(rawExisting);
+        } catch {
+          existing = [];
+        }
+        const merged = mergeSavedCustomMissions(existing, value);
         localStorage.setItem(key, JSON.stringify(merged));
       } else {
         localStorage.setItem(key, serializeStoredValue(value));

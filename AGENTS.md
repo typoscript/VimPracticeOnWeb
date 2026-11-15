@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 139개 테스트 파일, 1,805개 테스트 100% 통과 필수)*
+  *(현재 139개 테스트 파일, 1,811개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -138,15 +138,15 @@
 - **검색 오프셋 · 역방향 `?` 검색 · 연산자 결합 (레슨 86, `src/vim-engine/search.ts`의 `parseSearchQuery`/`findSearchTarget`, `searchMode.ts`의 `executeSearchQuery`/`repeatSearch`)**: `/pat/e`, `/pat/e+1`, `/pat/b`·`s±N`, `/pat/±N`(줄 오프셋), 위쪽 검색 `?pat?{offset}`(구분자 `?`, `\?` 리터럴), 빈 패턴 `//e`·`??b`(직전 패턴 재사용, 없으면 E35), `d/c/y` + `/`·`?` 오프셋 결합(`e` 는 inclusive, 문자 오프셋은 exclusive, 줄 오프셋은 linewise, 연산 후 NORMAL 복귀, `.` 반복 키는 `?` 포함). `lastSearchDirection` 으로 `n`/`N` 이 `?` 방향을 따르고 `*`/`#` 은 오프셋을 초기화합니다. 오프셋이 있으면 도착 위치(줄 오프셋은 매치 시작)가 커서보다 엄격히 앞/뒤인 매치를 골라 `/pat/e` 후 `n` 이 같은 매치에 머물지 않습니다(실제 Neovim 으로 검증, `searchOffsetOperator.test.ts`). ⚠ 오프셋 없는 첫 `/pat` 은 기존 동작대로 커서 위치의 매치도 허용합니다.
 - **레지스터 Ex 명령 (레슨 87, `src/vim-engine/exBufferOps.ts`의 `executeRangeDelete`/`executeRangeYank`/`executeExPut`, `commandLine.ts`)**: `:[range]d [x] [count]`, `:[range]y [x] [count]`(대문자 누적, `_` 블랙홀, count 는 범위 마지막 줄부터), `:[line]pu[t][!] [x]`(`:0put`, `:$put`, `:put!`; 문자 단위 레지스터도 항상 줄 단위로 삽입, 빈 레지스터는 E353+bell, 한 번의 undo). 로드맵 '`:put!`, `:delete {reg}`' 부분을 구현했으며 `foldexpr`·커맨드라인 윈도우 강화는 남아 있습니다.
 - **멀티 윈도우 레이아웃 회전·일괄 제어 (`Ctrl-w H/J/K/L`, `Ctrl-w r/R/x`, `:wincmd`, `:windo`, `:set scrollbind`, `:syncbind`) (레슨 88, `src/vim-engine/splitWindow.ts`, `setEngine.ts`, `vimEngine.ts`, `exListAndToolCommands.ts`, `exRange.ts`)**: `:windo[!] {cmd}`로 모든 분할 창에 Ex 명령(파이프 `|` 포함) 일괄 실행 및 `!` 미지정 시 에러 중단 제어, 창 로컬 `'scrollbind'`(`scb`/`noscb`/`scb!`/`scb?`) 옵션 및 `applyScrollbindDelta` 기반 `Ctrl-e/y/d/u/f/b`·`G/gg`·`zt/zz/zb` 상대 오프셋 동기 스크롤, `:syncbind` 강제 정렬, `:wincmd H/J/K/L/r/R/x/T/=/_/|/+/-/>/<` 대소문자 구분 및 카운트 리사이즈 지원을 완성했습니다.
-- **학습 진행도·설정 JSON 전체 백업 및 복원 (`src/utils/backupStorage.ts`, `ConfigExporterModal.tsx`, `App.tsx`)**: 21개 `localStorage` 키(`BACKUP_KEYS`) 일괄 내보내기·가져오기, 병합(`merge`) / 덮어쓰기(`replace`) 복원 모드, 스키마 검증 및 `App.tsx` 실시간 상태·테마 재동기화를 지원합니다.
+- **학습 진행도·설정 JSON 전체 백업 및 복원 (`src/utils/backupStorage.ts`, `ConfigExporterModal.tsx`, `App.tsx`)**: 22개 `localStorage` 키(`BACKUP_KEYS`) 일괄 내보내기·가져오기, 병합(`merge`) / 덮어쓰기(`replace`) 복원 모드, 스키마 검증 및 `App.tsx` 실시간 상태·테마 재동기화를 지원합니다.
 - **표현식 폴딩(`foldexpr`) & 커맨드라인 윈도우(`q:`, `q/`, `q?`) 고급 실행 (레슨 89, `src/vim-engine/folding.ts`, `setEngine.ts`, `vimscriptEval.ts`, `cmdlineWindow.ts`, `exListAndToolCommands.ts`)**: `:set fdm=expr` / `fde=...` (`v:lnum`, `getline()`, `indent()`, `>N`, `<N`, `=`, `aN`, `sN`, 사용자 함수 호출 지원)으로 동적 폴드 블록을 계산하고, `q:`/`q/`/`q?` 창 내부 검색(`/pat`, `?pat`), `:q`·`:{줄}` 서브 커맨드, `Ctrl-c` 모드 복귀, `q?` 역방향 검색 실행, `:history`/`:his` 이력 조회를 지원합니다.
 - **약점 기반 간격 반복(SRS) 복습 큐 (`src/utils/srsScheduler.ts`, `AnalyticsModal.tsx`, `LessonSelectModal.tsx`, `App.tsx`)**: 레슨 완료 별점(1~3★)에 따른 SM-2 기반 복습 간격 계산(`vim_srs_schedule_v1`, `BACKUP_KEYS` 포함), `analyzeWeaknesses` 약점 카테고리 매핑·복습 도래 우선순위 큐 생성(`buildSrsReviewQueue`), `AnalyticsModal` 복습 카드 및 `LessonSelectModal` 퀵 복습 추천 배너에서 원클릭 레슨 점프를 지원합니다.
 - **마커 폴딩(`foldmarker`)·폴드 이동(`zj`/`zk`/`[z`/`]z`) & Insert 단발 `Ctrl-o` Ex/검색 완성 (레슨 90, `src/vim-engine/folding.ts`, `setEngine.ts`, `normalMode.ts`, `vimEngine.ts`)**: `:set fdm=marker` 및 `'foldmarker'`(`fmr`, 기본 `'{{{,}}}'`, `E474` 검증)로 기본/중첩/레벨 마커(`{{{`, `}}}`, `{{{N`, `}}}N`)를 감지(`detectMarkerFoldBlocks`)하고 `fdm=marker` 모드 `zf` 실행 시 `commentstring` 기반 주석 마커를 삽입·접기하며, `zj`/`zk`/`[z`/`]z` 폴드 탐색(`jumpToNextFold`, `jumpToPrevFold`, `jumpToFoldEdge`)을 지원합니다. 또한 Insert 모드 `Ctrl-o` 가 일반 모션뿐 아니라 `Ctrl-o :...<Enter>` / `Ctrl-o /...<Enter>` 실행 후에도 `finishInsertNormalSession` 으로 자동 `INSERT` 복귀하도록 완성했습니다.
 - **순정 Vim 누락 기능 일괄 보완 (`iW`/`aW`, `[[`/`]]`/`[]`/`][`, `gj`/`gk`/`g0`/`g$`/`gm`/`gM`/`gI`, `Ctrl-g`, `ZZ`/`ZQ`, Insert `Ctrl-t`/`Ctrl-d`/`Ctrl-y`/`Ctrl-e`, Neovim 0.11 `]`/`[` 탐색) (레슨 91, `textObjects.ts`, `extraMotions.ts`, `operatorMotion.ts`, `insertMode.ts`, `normalMode.ts`, `visualMode.ts`, `exWorkspaceCommands.ts`)**: WORD 텍스트 객체(`iW`/`aW`), 0열 `{`/`}` 섹션 이동(`[[`/`]]`/`[]`/`][`) 및 `d]]` 결합(Neovim 대조), 화면 줄 이동(`gj`/`gk`/`g0`/`g$`/`gm`/`gM`) 및 0열 삽입(`gI`), 단독 `Ctrl-g` 버퍼 상태 보고, `:wq`/`:q!` 기반 `ZZ`/`ZQ`, Insert `Ctrl-t`/`Ctrl-d` 들여쓰기 증감 및 팝업 미표시 시 `Ctrl-y`/`Ctrl-e` 인접 줄 문자 복사, Neovim 0.11 `]q`/`[q`/`]Q`/`[Q`·`]l`/`[l`·`]b`/`[b`·`]a`/`[a`·`]<Space>`/`[<Space>`(`.` 반복 지원)을 완성했습니다.
+- **커스텀 미션 라이브러리·URL/JSON 임포트 & 프리셋 (`src/utils/customMission.ts`, `CustomMissionModal.tsx`, `backupStorage.ts`)**: 4종 빠른 시작 프리셋(`CUSTOM_MISSION_PRESETS`), `?challenge=...` URL·Base64 토큰·JSON 문자열 통합 파서(`parseCustomMissionInput`) 및 JSON 내보내기 복사(`exportCustomMissionJson`), 로컬 라이브러리(`vim_custom_missions_v1`) 저장/수정/플레이/삭제 및 전체 JSON 백업(`mergeSavedCustomMissions` 중복 병합 포함)을 지원합니다.
 
 ---
 
 ## 5. 다음 개발 로드맵 추천 후보
 에이전트에게 다음 작업을 지시할 때 아래 항목 중에서 지정하시면 됩니다:
-1. **커스텀 미션 공유 URL / 코드 스니펫 임포트 (`CustomMissionModal`)**: 제작한 커스텀 레슨을 Base64/JSON 공유 링크로 주고받는 기능.
-2. **Neovim 스타일 LSP 호버·진단(Diagnostics) 튜토리얼 모드 (`K`, `[d`, `]d`, `:lopen`)**: 실전 코드 진단 탐색 및 가상 호버 팝업 연습.
+1. **Neovim 스타일 LSP 호버·진단(Diagnostics) 튜토리얼 모드 (`K`, `[d`, `]d`, `:lopen`)**: 실전 코드 진단 탐색 및 가상 호버 팝업 연습.

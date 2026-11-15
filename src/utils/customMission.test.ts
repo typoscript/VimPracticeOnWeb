@@ -1,10 +1,18 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   encodeCustomMission,
   decodeCustomMission,
   createCustomMissionObject,
   CustomMissionData,
   buildChallengeUrl,
+  parseCustomMissionInput,
+  exportCustomMissionJson,
+  loadSavedCustomMissions,
+  saveCustomMission,
+  deleteSavedCustomMission,
+  mergeSavedCustomMissions,
+  CUSTOM_MISSION_PRESETS,
+  CUSTOM_MISSIONS_STORAGE_KEY,
 } from './customMission';
 import { VimEditorState } from '../vim-engine';
 
@@ -65,5 +73,67 @@ describe('customMission utility', () => {
     expect(url).toContain('?challenge=');
     const param = url.split('?challenge=')[1];
     expect(decodeCustomMission(param)).toEqual(sampleMission);
+  });
+
+  describe('import/export & library storage', () => {
+    beforeEach(() => {
+      localStorage.removeItem(CUSTOM_MISSIONS_STORAGE_KEY);
+    });
+
+    it('parses challenge URLs, raw tokens, and JSON payloads', () => {
+      const url = buildChallengeUrl(sampleMission);
+      const token = encodeCustomMission(sampleMission);
+      const json = exportCustomMissionJson(sampleMission);
+
+      expect(parseCustomMissionInput(url)).toEqual(sampleMission);
+      expect(parseCustomMissionInput(`?challenge=${token}`)).toEqual(sampleMission);
+      expect(parseCustomMissionInput(token)).toEqual(sampleMission);
+      expect(parseCustomMissionInput(json)).toEqual(sampleMission);
+
+      expect(parseCustomMissionInput('')).toBeNull();
+      expect(parseCustomMissionInput('{invalid json')).toBeNull();
+      expect(parseCustomMissionInput('?challenge=bad-token')).toBeNull();
+    });
+
+    it('saves, updates, lists, and deletes custom missions in localStorage', () => {
+      expect(loadSavedCustomMissions()).toEqual([]);
+
+      const afterAdd = saveCustomMission(sampleMission);
+      expect(afterAdd).toHaveLength(1);
+      expect(afterAdd[0].data).toEqual(sampleMission);
+
+      const savedId = afterAdd[0].id;
+      const updatedData: CustomMissionData = { ...sampleMission, par: 9 };
+      const afterUpdate = saveCustomMission(updatedData, savedId);
+      expect(afterUpdate).toHaveLength(1);
+      expect(afterUpdate[0].data.par).toBe(9);
+
+      const afterDelete = deleteSavedCustomMission(savedId);
+      expect(afterDelete).toEqual([]);
+      expect(loadSavedCustomMissions()).toEqual([]);
+    });
+
+    it('exposes curated presets and deduplicates merged mission lists', () => {
+      expect(CUSTOM_MISSION_PRESETS.length).toBeGreaterThanOrEqual(4);
+      for (const preset of CUSTOM_MISSION_PRESETS) {
+        expect(preset.data.title.length).toBeGreaterThan(0);
+        expect(preset.data.par).toBeGreaterThan(0);
+      }
+
+      const existing = [
+        { id: 'a1', savedAt: '2026-01-01T00:00:00Z', data: sampleMission },
+      ];
+      const incoming = [
+        { id: 'dup-by-content', savedAt: '2026-01-02T00:00:00Z', data: sampleMission },
+        {
+          id: 'b2',
+          savedAt: '2026-01-02T00:00:00Z',
+          data: { ...sampleMission, title: '다른 미션' },
+        },
+      ];
+      const merged = mergeSavedCustomMissions(existing, incoming);
+      expect(merged).toHaveLength(2);
+      expect(merged.map((m) => m.id)).toEqual(['a1', 'b2']);
+    });
   });
 });
