@@ -152,4 +152,36 @@ describe('StatusBar Component', () => {
     expect(prompt).toHaveTextContent('함수 Add 본문 2번째 줄');
     expect(prompt).toHaveTextContent('endfunction');
   });
+
+  it('커맨드라인 중간 커서 위치와 Ctrl-k 다이그래프 대기(?) 커서를 정확히 렌더링한다', () => {
+    const { container, rerender } = render(
+      <StatusBar
+        mode="COMMAND"
+        cursor={{ line: 0, col: 0 }}
+        commandType=":"
+        commandBuffer="%s/foo/bar"
+        commandCursorCol={3}
+      />
+    );
+
+    const prompt = screen.getByTestId('commandline-prompt');
+    expect(prompt).toHaveTextContent(':%s/foo/bar');
+    const cursorEl = container.querySelector('.prompt-cursor');
+    expect(cursorEl).not.toBeNull();
+    expect(cursorEl?.textContent).toBe('f');
+
+    rerender(
+      <StatusBar
+        mode="SEARCH"
+        cursor={{ line: 0, col: 0 }}
+        commandType="/"
+        commandBuffer="ab"
+        commandCursorCol={1}
+        digraphPending="-"
+      />
+    );
+    const pendingCursor = container.querySelector('.prompt-cursor');
+    expect(pendingCursor?.textContent).toBe('?');
+    expect(screen.getByTestId('commandline-prompt')).toHaveTextContent('/a?b');
+  });
 });

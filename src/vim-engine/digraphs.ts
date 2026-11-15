@@ -1,3 +1,6 @@
+import { VimEditorState } from './types';
+import { msg } from './messages';
+
 /**
  * 순정 Vim RFC1345 다이그래프(Digraph) 테이블 & 조회 헬퍼 (`:help digraphs`, `Ctrl-k {c1}{c2}`)
  */
@@ -206,7 +209,15 @@ const DIRECTIONAL_DIGRAPHS = new Set([
  * 정확히 일치하는 조합이 우선이며, 비방향성 다이그래프는 역순 조합도 허용합니다.
  * 일치 항목이 없으면 두 번째 문자를 반환합니다 (:help i_CTRL-K).
  */
-export function lookupDigraph(c1: string, c2: string): { char: string; matched: boolean } {
+export function lookupDigraph(
+  c1: string,
+  c2: string,
+  userDigraphs?: Record<string, string>
+): { char: string; matched: boolean } {
+  const custom = userDigraphs?.[`${c1}${c2}`];
+  if (custom !== undefined) {
+    return { char: custom, matched: true };
+  }
   const direct = COMMON_DIGRAPHS[`${c1}${c2}`];
   if (direct !== undefined) {
     return { char: direct, matched: true };
@@ -219,4 +230,90 @@ export function lookupDigraph(c1: string, c2: string): { char: string; matched: 
     }
   }
   return { char: c2, matched: false };
+}
+
+const PREVIEW_KEYS = ['->', '<-', '!=', '=<', '>=', '+-', '*l', 'OK', 'XX', ',:'];
+
+/**
+ * :digraphs 출력용 요약 문자열을 포매팅합니다.
+ */
+export function formatDigraphsList(userDigraphs?: Record<string, string>): string {
+  const customEntries = Object.entries(userDigraphs ?? {}).map(([k, v]) => `${k} ${v}`);
+  const builtinEntries = PREVIEW_KEYS.map((k) => `${k} ${COMMON_DIGRAPHS[k]}`);
+  const merged = [...customEntries, ...builtinEntries];
+  const totalCount = Object.keys(COMMON_DIGRAPHS).length + customEntries.length;
+  return msg('다이그래프 ({count}종): {preview}', {
+    count: totalCount,
+    preview: merged.slice(0, 12).join('  '),
+  });
+}
+
+/**
+ * :dig[raphs] [{char1}{char2} {nr} ...] 명령을 실행합니다.
+ */
+export function executeDigraphCommand(state: VimEditorState, rawArgs: string): VimEditorState {
+  const trimmed = rawArgs.trim();
+  const baseReset = {
+    mode: 'NORMAL' as const,
+    visualAnchor: undefined,
+    commandBuffer: undefined,
+    commandType: undefined,
+    commandCursorCol: undefined,
+    digraphPending: undefined,
+  };
+
+  if (!trimmed) {
+    return {
+      ...state,
+      ...baseReset,
+      commandMessage: formatDigraphsList(state.userDigraphs),
+    };
+  }
+
+  const tokens = trimmed.split(/\s+/);
+  if (tokens.length % 2 !== 0) {
+    return {
+      ...state,
+      ...baseReset,
+      bell: true,
+      commandMessage: msg('E474: 잘못된 인수입니다: {token}', { token: tokens[tokens.length - 1] }),
+    };
+  }
+
+  const nextUserDigraphs = { ...(state.userDigraphs ?? {}) };
+  const added: string[] = [];
+
+  for (let i = 0; i < tokens.length; i += 2) {
+    const pair = tokens[i];
+    const codeStr = tokens[i + 1];
+    if (pair.length !== 2 || !/^(?:0x[0-9a-f]+|[0-9]+)$/i.test(codeStr)) {
+      return {
+        ...state,
+        ...baseReset,
+        bell: true,
+        commandMessage: msg('E474: 잘못된 인수입니다: {token}', { token: `${pair} ${codeStr}` }),
+      };
+    }
+    const code = codeStr.toLowerCase().startsWith('0x')
+      ? parseInt(codeStr, 16)
+      : parseInt(codeStr, 10);
+    if (!Number.isFinite(code) || code < 1 || code > 0x10ffff) {
+      return {
+        ...state,
+        ...baseReset,
+        bell: true,
+        commandMessage: msg('E474: 잘못된 인수입니다: {token}', { token: codeStr }),
+      };
+    }
+    const ch = String.fromCodePoint(code);
+    nextUserDigraphs[pair] = ch;
+    added.push(`${pair} ${ch}`);
+  }
+
+  return {
+    ...state,
+    ...baseReset,
+    userDigraphs: nextUserDigraphs,
+    commandMessage: msg('다이그래프 등록: {pairs}', { pairs: added.join('  ') }),
+  };
 }

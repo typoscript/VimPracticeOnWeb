@@ -9,6 +9,7 @@ import { buildProjectTags } from './tagEngine';
 export const AVAILABLE_COMMANDS: string[] = [
   'args',
   'argdo',
+  'ascii',
   'b',
   'buffer',
   'buffers',
@@ -37,6 +38,7 @@ export const AVAILABLE_COMMANDS: string[] = [
   'diffupdate',
   'diffget',
   'diffput',
+  'digraphs',
   'display',
   'di',
   'edit',
@@ -302,6 +304,7 @@ export function handleTabCompletion(
     return {
       ...state,
       commandBuffer: `${prefix}${nextCandidate}`,
+      commandCursorCol: undefined,
       wildmenu: {
         ...state.wildmenu,
         selectedIndex: nextIndex,
@@ -324,6 +327,7 @@ export function handleTabCompletion(
   return {
     ...state,
     commandBuffer: `${prefix}${initialCandidate}`,
+    commandCursorCol: undefined,
     wildmenu: {
       active: true,
       candidates,
@@ -347,6 +351,7 @@ export function cancelWildmenu(
   return {
     ...state,
     commandBuffer: original,
+    commandCursorCol: undefined,
     wildmenu: null,
   };
 }

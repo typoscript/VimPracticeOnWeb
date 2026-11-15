@@ -7,6 +7,14 @@ import { handleTabCompletion, cancelWildmenu, acceptWildmenu } from './wildmenu'
 import { expandCmdlineAbbrev } from './abbrevEngine';
 import { cancelFunctionDraft } from './vimscriptEngine';
 import { insertTextAtCursor, RunHandleKeyFn } from './engineHelpers';
+import {
+  insertTextIntoCmdline,
+  deleteCmdlineCharBackward,
+  handleCmdlineDigraphStep,
+  handleCmdlineCommonEditKey,
+  isBackspaceKey,
+  isCmdlineCancelKey,
+} from './cmdlineEdit';
 import { msg } from './messages';
 
 /**
@@ -19,24 +27,26 @@ export function handleCommandLineModeKey(
 ): VimEditorState {
   // 1. 표현식 레지스터(=) 프롬프트 처리
   if (state.commandType === '=') {
-    if (key === 'Escape' || key === 'Ctrl-c' || key === 'Ctrl+c') {
+    const digraphRes = handleCmdlineDigraphStep(state, key);
+    if (digraphRes) return digraphRes;
+
+    if (isCmdlineCancelKey(key)) {
       const returnMode = state.expressionReturnContext?.mode ?? 'INSERT';
       return {
         ...state,
         mode: returnMode,
         commandBuffer: undefined,
         commandType: undefined,
+        commandCursorCol: undefined,
+        digraphPending: undefined,
         expressionReturnContext: undefined,
         insertRegisterPending: undefined,
       };
     }
 
-    if (key === 'Backspace') {
+    if (isBackspaceKey(key)) {
       if (state.commandBuffer && state.commandBuffer.length > 0) {
-        return {
-          ...state,
-          commandBuffer: state.commandBuffer.slice(0, -1),
-        };
+        return deleteCmdlineCharBackward(state);
       }
       const returnMode = state.expressionReturnContext?.mode ?? 'INSERT';
       return {
@@ -44,10 +54,15 @@ export function handleCommandLineModeKey(
         mode: returnMode,
         commandBuffer: undefined,
         commandType: undefined,
+        commandCursorCol: undefined,
+        digraphPending: undefined,
         expressionReturnContext: undefined,
         insertRegisterPending: undefined,
       };
     }
+
+    const commonEdit = handleCmdlineCommonEditKey(state, key);
+    if (commonEdit) return commonEdit;
 
     if (key === 'Enter') {
       const evalRes = evaluateVimExpression(state.commandBuffer ?? '');
@@ -60,6 +75,8 @@ export function handleCommandLineModeKey(
           mode: returnMode,
           commandBuffer: undefined,
           commandType: undefined,
+          commandCursorCol: undefined,
+          digraphPending: undefined,
           expressionReturnContext: undefined,
           commandMessage: msg('E15: {v}', { v: evalRes.error ?? msg('잘못된 수식입니다') }),
         };
@@ -75,15 +92,17 @@ export function handleCommandLineModeKey(
       };
 
       if (returnMode === 'COMMAND') {
-        const prevCmd = returnCtx?.commandBuffer ?? '';
-        return {
+        const prevState: VimEditorState = {
           ...state,
           mode: 'COMMAND',
           commandType: ':',
-          commandBuffer: prevCmd + evalRes.result,
+          commandBuffer: returnCtx?.commandBuffer ?? '',
+          commandCursorCol: returnCtx?.commandBuffer?.length,
           registers: newRegisters,
           expressionReturnContext: undefined,
+          digraphPending: undefined,
         };
+        return insertTextIntoCmdline(prevState, evalRes.result);
       } else if (returnMode === 'NORMAL') {
         // NORMAL 모드 복귀: '=' 레지스터 저장 및 activeRegister 를 '=' 로 설정 (바로 p 로 붙여넣기 가능)
         return {
@@ -93,6 +112,8 @@ export function handleCommandLineModeKey(
           activeRegister: '=',
           commandBuffer: undefined,
           commandType: undefined,
+          commandCursorCol: undefined,
+          digraphPending: undefined,
           expressionReturnContext: undefined,
           cursor: returnCtx?.cursor ?? state.cursor,
         };
@@ -104,6 +125,8 @@ export function handleCommandLineModeKey(
           registers: newRegisters,
           commandBuffer: undefined,
           commandType: undefined,
+          commandCursorCol: undefined,
+          digraphPending: undefined,
           expressionReturnContext: undefined,
           cursor: returnCtx?.cursor ?? state.cursor,
         };
@@ -123,12 +146,9 @@ export function handleCommandLineModeKey(
       }
     }
 
-    // 일반 수식 문자 타이핑
+    // 일반 수식 문자 타이핑 (커서 위치 삽입)
     if (key.length === 1) {
-      return {
-        ...state,
-        commandBuffer: (state.commandBuffer ?? '') + key,
-      };
+      return insertTextIntoCmdline(state, key);
     }
 
     return state;
@@ -157,11 +177,10 @@ export function handleCommandLineModeKey(
     if (regKey) {
       const regClip = getRegisterContent(state, regKey);
       const textToInsert = regClip?.content ?? '';
-      return {
-        ...state,
-        commandBuffer: (state.commandBuffer ?? '') + textToInsert,
-        insertRegisterPending: undefined,
-      };
+      return insertTextIntoCmdline(
+        { ...state, insertRegisterPending: undefined },
+        textToInsert
+      );
     }
 
     return { ...state, insertRegisterPending: undefined };
@@ -179,11 +198,7 @@ export function handleCommandLineModeKey(
     if (key.length === 1 || key === 'Tab') {
       const ch = key === 'Tab' ? '\t' : key;
       const s = state.wildmenu?.active ? acceptWildmenu(state) : state;
-      return {
-        ...s,
-        commandBuffer: (s.commandBuffer ?? '') + ch,
-        literalNextPending: undefined,
-      };
+      return insertTextIntoCmdline({ ...s, literalNextPending: undefined }, ch);
     }
     state = { ...state, literalNextPending: undefined };
   }
@@ -195,6 +210,15 @@ export function handleCommandLineModeKey(
     };
   }
 
+  // 2.6. Ctrl-k 다이그래프 입력 (:help c_CTRL-K)
+  const cmdDigraph = handleCmdlineDigraphStep(
+    state.wildmenu?.active ? acceptWildmenu(state) : state,
+    key
+  );
+  if (cmdDigraph) {
+    return cmdDigraph;
+  }
+
   // Ctrl-] 수동 커맨드라인 약어 확장 (트리거 문자 삽입 없음)
   if (key === 'Ctrl-]' || key === 'Ctrl+]' || key === 'ctrl-]' || key === '<C-]>') {
     const s = state.wildmenu?.active ? acceptWildmenu(state) : state;
@@ -202,12 +226,17 @@ export function handleCommandLineModeKey(
     return {
       ...s,
       commandBuffer: expanded,
+      commandCursorCol: undefined,
     };
   }
 
   // Ctrl+f: 커맨드라인 윈도우(q:) 열기
   if (key === 'Ctrl-f' || key === 'Ctrl+f' || key === 'ctrl-f') {
-    return openCommandLineWindow(state, ':', state.commandBuffer);
+    return openCommandLineWindow(
+      { ...state, commandCursorCol: undefined, digraphPending: undefined },
+      ':',
+      state.commandBuffer
+    );
   }
 
   // 히스토리 순회 (↑/↓ 및 Ctrl+p/Ctrl+n)
@@ -234,12 +263,12 @@ export function handleCommandLineModeKey(
     }
   }
 
-  // 3. 기존 콜론 커맨드라인 키 처리
-  if (key === 'Escape') {
-    if (state.wildmenu?.active) {
+  // 3. 기존 콜론 커맨드라인 취소(Esc / Ctrl-c), 이동·편집, 실행
+  if (isCmdlineCancelKey(key)) {
+    if (key === 'Escape' && state.wildmenu?.active) {
       return cancelWildmenu(state, true);
     }
-    // :function 본문 입력 중 Esc: 정의 취소
+    // :function 본문 입력 중 Esc/Ctrl-c: 정의 취소
     if (state.functionDraft) {
       return cancelFunctionDraft(state);
     }
@@ -248,6 +277,8 @@ export function handleCommandLineModeKey(
       mode: 'NORMAL',
       commandBuffer: undefined,
       commandType: undefined,
+      commandCursorCol: undefined,
+      digraphPending: undefined,
       insertRegisterPending: undefined,
       literalNextPending: undefined,
       filterOperatorKeys: undefined,
@@ -255,13 +286,10 @@ export function handleCommandLineModeKey(
     };
   }
 
-  if (key === 'Backspace') {
+  if (isBackspaceKey(key)) {
     const s = state.wildmenu?.active ? cancelWildmenu(state, false) : state;
     if (s.commandBuffer && s.commandBuffer.length > 0) {
-      return {
-        ...s,
-        commandBuffer: s.commandBuffer.slice(0, -1),
-      };
+      return deleteCmdlineCharBackward(s);
     }
     // :function 본문 입력 중에는 빈 줄에서 Backspace 를 눌러도 커맨드라인을 떠나지 않음
     if (s.functionDraft) {
@@ -272,6 +300,8 @@ export function handleCommandLineModeKey(
       mode: 'NORMAL',
       commandBuffer: undefined,
       commandType: undefined,
+      commandCursorCol: undefined,
+      digraphPending: undefined,
       insertRegisterPending: undefined,
       literalNextPending: undefined,
       filterOperatorKeys: undefined,
@@ -279,12 +309,22 @@ export function handleCommandLineModeKey(
     };
   }
 
+  const baseForCommon = state.wildmenu?.active ? acceptWildmenu(state) : state;
+  const commonEdit = handleCmdlineCommonEditKey(baseForCommon, key);
+  if (commonEdit) {
+    return commonEdit;
+  }
+
   if (key === 'Enter') {
     const s = state.wildmenu?.active ? acceptWildmenu(state) : state;
     const rawCmd = s.commandBuffer ?? '';
     const cmd = expandCmdlineAbbrev(s, rawCmd, 'Enter');
     const nextState = addHistory(s, cmd, ':');
-    const res = executeCommandLine(nextState, cmd, runHandleKey);
+    const res = executeCommandLine(
+      { ...nextState, commandCursorCol: undefined, digraphPending: undefined },
+      cmd,
+      runHandleKey
+    );
     if (s.filterOperatorKeys && !res.bell) {
       const bangIdx = cmd.indexOf('!');
       if (bangIdx >= 0) {
@@ -298,19 +338,26 @@ export function handleCommandLineModeKey(
     }
     return {
       ...res,
+      commandCursorCol: undefined,
+      digraphPending: undefined,
       filterOperatorKeys: undefined,
     };
   }
 
-  // 일반 타이핑 문자 누적 (비단어 문자 입력 시 커맨드라인 약어 확장)
+  // 일반 타이핑 문자 누적 (비단어 문자 입력 시 커맨드라인 약어 확장, 중간 삽입 지원)
   if (key.length === 1) {
     const s = state.wildmenu?.active ? acceptWildmenu(state) : state;
     const rawBuf = s.commandBuffer ?? '';
-    const buf = !/\w/.test(key) ? expandCmdlineAbbrev(s, rawBuf, key) : rawBuf;
-    return {
-      ...s,
-      commandBuffer: buf + key,
-    };
+    const isAtEnd = s.commandCursorCol === undefined || s.commandCursorCol >= rawBuf.length;
+    if (isAtEnd) {
+      const buf = !/\w/.test(key) ? expandCmdlineAbbrev(s, rawBuf, key) : rawBuf;
+      return {
+        ...s,
+        commandBuffer: buf + key,
+        commandCursorCol: undefined,
+      };
+    }
+    return insertTextIntoCmdline(s, key);
   }
 
   return state;

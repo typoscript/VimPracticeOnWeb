@@ -14,6 +14,10 @@ export interface StatusBarProps {
   commandType?: ':' | '/' | '?' | '=';
   /** 커맨드라인 입력 문자열 */
   commandBuffer?: string;
+  /** 커맨드라인 내 커서 열 인덱스 */
+  commandCursorCol?: number;
+  /** Ctrl-k 다이그래프 입력 대기 상태 */
+  digraphPending?: string | null;
   /** 커맨드/검색 실행 결과 알림 메시지 */
   commandMessage?: string;
   /** Insert 모드 일회성 Normal 명령 실행 세션 (Ctrl+o) */
@@ -42,6 +46,8 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   recordingMacro,
   commandType,
   commandBuffer,
+  commandCursorCol,
+  digraphPending,
   commandMessage,
   insertNormalSession,
   insertRegisterPending,
@@ -109,8 +115,39 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         ) : isCommandLineActive ? (
           <div className="commandline-prompt" data-testid="commandline-prompt">
             <span className="prompt-prefix">{promptPrefix}</span>
-            <span className="prompt-text">{commandBuffer ?? ''}</span>
-            <span className="prompt-cursor">_</span>
+            {(() => {
+              const buf = commandBuffer ?? '';
+              const col = commandCursorCol !== undefined ? Math.max(0, Math.min(buf.length, commandCursorCol)) : buf.length;
+              const isDigraph = digraphPending !== undefined && digraphPending !== null;
+              if (col < buf.length) {
+                return (
+                  <span className="prompt-text">
+                    {buf.slice(0, col)}
+                    {isDigraph ? (
+                      <>
+                        <span className="prompt-cursor" data-testid="prompt-cursor">?</span>
+                        {buf.slice(col)}
+                      </>
+                    ) : (
+                      <>
+                        <span className="prompt-cursor" data-testid="prompt-cursor">
+                          {buf[col]}
+                        </span>
+                        {buf.slice(col + 1)}
+                      </>
+                    )}
+                  </span>
+                );
+              }
+              return (
+                <>
+                  <span className="prompt-text">{buf}</span>
+                  <span className="prompt-cursor" data-testid="prompt-cursor">
+                    {isDigraph ? '?' : '_'}
+                  </span>
+                </>
+              );
+            })()}
             <span className="prompt-hint">
               {functionDraft
                 ? t('(함수 {name} 본문 {v}번째 줄 • endfunction 으로 끝내기, Esc 취소)', { name: functionDraft.name, v: functionDraft.lines + 1 })

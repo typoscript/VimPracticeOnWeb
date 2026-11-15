@@ -12,6 +12,14 @@ import {
 } from './search';
 import { recordJump } from './marks';
 import { addHistory, navigateHistory, openCommandLineWindow } from './cmdlineWindow';
+import {
+  insertTextIntoCmdline,
+  deleteCmdlineCharBackward,
+  handleCmdlineDigraphStep,
+  handleCmdlineCommonEditKey,
+  isBackspaceKey,
+  isCmdlineCancelKey,
+} from './cmdlineEdit';
 import { msg } from './messages';
 
 /**
@@ -421,10 +429,13 @@ export function repeatSearch(state: VimEditorState, reverse: boolean): VimEditor
 }
 
 /**
- * SEARCH 모드(/) 키 입력 처리
+ * SEARCH 모드(/, ?) 키 입력 처리
  */
 export function handleSearchModeKey(state: VimEditorState, key: string, isReplayingDot = false): VimEditorState {
-  if (key === 'Escape') {
+  const searchDigraph = handleCmdlineDigraphStep(state, key);
+  if (searchDigraph) return searchDigraph;
+
+  if (isCmdlineCancelKey(key)) {
     const returnCursor = state.searchOperator?.initialCursor ?? state.cursor;
     return {
       ...state,
@@ -432,12 +443,18 @@ export function handleSearchModeKey(state: VimEditorState, key: string, isReplay
       cursor: returnCursor,
       commandBuffer: undefined,
       commandType: undefined,
+      commandCursorCol: undefined,
+      digraphPending: undefined,
       searchOperator: undefined,
     };
   }
 
   if (key === 'Ctrl-f' || key === 'Ctrl+f' || key === 'ctrl-f') {
-    return openCommandLineWindow(state, '/', state.commandBuffer);
+    return openCommandLineWindow(
+      { ...state, commandCursorCol: undefined, digraphPending: undefined },
+      '/',
+      state.commandBuffer
+    );
   }
 
   if (key === 'ArrowUp' || key === 'Ctrl-p' || key === 'Ctrl+p' || key === 'ctrl-p') {
@@ -448,12 +465,9 @@ export function handleSearchModeKey(state: VimEditorState, key: string, isReplay
     return navigateHistory(state, 'down', '/');
   }
 
-  if (key === 'Backspace') {
+  if (isBackspaceKey(key)) {
     if (state.commandBuffer && state.commandBuffer.length > 0) {
-      return {
-        ...state,
-        commandBuffer: state.commandBuffer.slice(0, -1),
-      };
+      return deleteCmdlineCharBackward(state);
     }
     const returnCursor = state.searchOperator?.initialCursor ?? state.cursor;
     return {
@@ -462,22 +476,28 @@ export function handleSearchModeKey(state: VimEditorState, key: string, isReplay
       cursor: returnCursor,
       commandBuffer: undefined,
       commandType: undefined,
+      commandCursorCol: undefined,
+      digraphPending: undefined,
       searchOperator: undefined,
     };
   }
 
+  const commonEdit = handleCmdlineCommonEditKey(state, key);
+  if (commonEdit) return commonEdit;
+
   if (key === 'Enter') {
     const rawQuery = state.commandBuffer ?? '';
-    const nextState = addHistory(state, rawQuery, '/');
+    const nextState = addHistory(
+      { ...state, commandCursorCol: undefined, digraphPending: undefined },
+      rawQuery,
+      '/'
+    );
     return executeSearchQuery(nextState, rawQuery, isReplayingDot);
   }
 
-  // 일반 타이핑 문자 누적
+  // 일반 타이핑 문자 삽입 (커서 위치 반영)
   if (key.length === 1) {
-    return {
-      ...state,
-      commandBuffer: (state.commandBuffer ?? '') + key,
-    };
+    return insertTextIntoCmdline(state, key);
   }
 
   return state;

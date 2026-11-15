@@ -388,4 +388,6 @@ export const EN_MESSAGES: Record<string, string> = {
   "LSP: \"{word}\"에 대한 호버 정보가 없습니다": "LSP: No hover information for \"{word}\"",
   "LSP: 커서 아래 심볼에 대한 호버 정보가 없습니다": "LSP: No hover information under cursor",
   "[LSP] {symbol}: {signature}": "[LSP] {symbol}: {signature}",
+  "다이그래프 ({count}종): {preview}": "Digraphs ({count}): {preview}",
+  "다이그래프 등록: {pairs}": "Digraphs registered: {pairs}",
 };

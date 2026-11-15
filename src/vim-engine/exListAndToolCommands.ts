@@ -80,6 +80,8 @@ import { registerKeymap, unregisterKeymap, formatKeymapsList } from './keymapEng
 import { executeAbbrevCommand } from './abbrevEngine';
 import { executeUserCommandDefinition } from './userCommandEngine';
 import { callUserFunction } from './vimscriptEngine';
+import { executeDigraphCommand } from './digraphs';
+import { describeCharAt } from './engineHelpers';
 import { msg } from './messages';
 import type { ExCommandRunner } from './exWorkspaceCommands';
 
@@ -1332,6 +1334,27 @@ export function tryExecuteToolExCommand(
   // 약어: :iabbrev, :cabbrev, :abbrev, :inoreabbrev, :cnoreabbrev, :noreabbrev, :unabbrev, :abclear 등
   const abbrevRes = executeAbbrevCommand(state, trimmed);
   if (abbrevRes) return abbrevRes;
+
+  // :ascii / :as — 커서 아래 문자 정보 출력 (ga 와 동일)
+  if (/^(?:as|ascii)$/i.test(cleanCmdRaw)) {
+    const curLine = state.lines[state.cursor.line] ?? '';
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandCursorCol: undefined,
+      digraphPending: undefined,
+      commandMessage: describeCharAt(curLine, state.cursor.col),
+    };
+  }
+
+  // :digraphs / :dig [{c1}{c2} {code} ...] — 다이그래프 목록 조회 및 커스텀 등록
+  const digMatch = cleanCmdRaw.match(/^(?:dig|digraph|digraphs)(?:!)?(?:\s+(.*))?$/i);
+  if (digMatch) {
+    return executeDigraphCommand(state, digMatch[1] ?? '');
+  }
 
   return null;
 }

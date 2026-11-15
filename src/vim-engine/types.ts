@@ -441,6 +441,10 @@ export interface VimEditorState {
   commandBuffer?: string;
   /** 커맨드라인 종류 (':' | '/' | '=') */
   commandType?: ':' | '/' | '?' | '=';
+  /** 커맨드라인(:) 또는 검색(/, ?) 내 커서 위치 (undefined 이면 버퍼 끝) */
+  commandCursorCol?: number;
+  /** 사용자 등록 다이그래프 테이블 (:digraph {c1}{c2} {code}) */
+  userDigraphs?: Record<string, string>;
   /** 마지막 검색어 ('n', 'N', '*' 재검색용) */
   lastSearchQuery?: string;
   /** 커맨드라인 또는 검색 실행 결과 피드백 메시지 (예: '10번째 줄로 이동', 'E492: 알 수 없는 명령어') */

@@ -3618,4 +3618,41 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 94,
+    title: '레슨 94: 커맨드라인 중간 편집(Ctrl-b/e/w/u, Arrow, Ctrl-k)과 :digraphs / :ascii 마스터',
+    description:
+      '명령줄(: / ? =) 입력 도중 커서를 자유롭게 옮겨 고치는 커맨드라인 고급 편집, 커맨드라인 다이그래프(Ctrl-k), 커스텀 다이그래프 등록(:digraphs), 그리고 커서 문자의 코드 포인트를 출력하는 :ascii 를 실전에서 결합해 보세요.\n\n1) 커맨드라인·검색줄 중간 편집 (:, /, ?, =):\n   - ArrowLeft / ArrowRight 로 명령줄 중간으로 커서를 옮겨 글자를 끼워 넣거나 Delete 로 앞의 글자를 지울 수 있습니다.\n   - Ctrl-b / Home (줄 맨 앞), Ctrl-e / End (줄 맨 끝), Ctrl-w (커서 앞 단어 삭제), Ctrl-u (커서 앞 전체 삭제), Ctrl-c (즉시 취소)를 지원합니다.\n   - 커맨드라인과 검색줄에서도 Ctrl-k {c1}{c2} 로 유니코드 다이그래프를 즉시 삽입할 수 있습니다.\n\n2) :digraphs (:dig) & :ascii (:as):\n   - :digraphs 는 내장 및 사용자 다이그래프 목록을 표시하고, :digraph {c1}{c2} {code} 로 새 다이그래프(예: :dig z1 9733 → ★)를 등록합니다.\n   - :ascii (:as) 는 ga 와 동일하게 커서 아래 문자의 십진수·16진수·8진수 코드 값을 출력합니다.\n\n미션:\n1. :dig z1 9733<Enter> 로 커스텀 다이그래프 z1(★)을 등록하세요.\n2. :%s/TODO/ 와 Ctrl-k z 1, ok / 입력 후 ArrowLeft 로 슬래시(/) 앞으로 커서를 옮겨 Ctrl-k - > 를 끼워 넣고 Enter 로 두 줄 모두 "★ ok →" 로 치환하세요.\n3. f" l 로 ★ 위에 커서를 두고 :as<Enter> 를 실행해 ASCII/유니코드 코드(9733, Hex 2605)를 확인하세요!',
+    hint: ':dig z1 9733<Enter> → :%s/TODO/ Ctrl-k z 1 ok / + ArrowLeft + Ctrl-k - ><Enter> → f" l :as<Enter>',
+    par: 44,
+    optimalKeys: [
+      ':', 'd', 'i', 'g', ' ', 'z', '1', ' ', '9', '7', '3', '3', 'Enter',
+      ':', '%', 's', '/', 'T', 'O', 'D', 'O', '/',
+      'Ctrl-k', 'z', '1', ' ', 'o', 'k', ' ', '/',
+      'ArrowLeft', 'Ctrl-k', '-', '>', 'Enter',
+      'f', '"', 'l', ':', 'a', 's', 'Enter',
+    ],
+    primaryFilename: 'symbols.ts',
+    initialLines: [
+      'const primary = "TODO";',
+      'const fallback = "TODO";',
+    ],
+    targetLines: [
+      'const primary = "★ ok →";',
+      'const fallback = "★ ok →";',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const target = [
+        'const primary = "★ ok →";',
+        'const fallback = "★ ok →";',
+      ];
+      return (
+        state.mode === 'NORMAL' &&
+        Object.keys(state.userDigraphs ?? {}).length > 0 &&
+        state.lines.length === target.length &&
+        state.lines.every((l, idx) => l === target[idx])
+      );
+    },
+  },
 ];

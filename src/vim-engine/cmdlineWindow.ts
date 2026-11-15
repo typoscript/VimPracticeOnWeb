@@ -84,6 +84,7 @@ export function navigateHistory(
       historyIndex: currentIdx,
       historyDraft: draft,
       commandBuffer: history[currentIdx],
+      commandCursorCol: undefined,
     };
   } else {
     // down (더 최신으로 이동)
@@ -97,6 +98,7 @@ export function navigateHistory(
         ...state,
         historyIndex: currentIdx,
         commandBuffer: history[currentIdx],
+        commandCursorCol: undefined,
       };
     } else {
       // 최신 항목을 넘어가면 원래 타이핑 중이던 draft 복구
@@ -104,6 +106,7 @@ export function navigateHistory(
         ...state,
         historyIndex: undefined,
         commandBuffer: draft,
+        commandCursorCol: undefined,
       };
     }
   }

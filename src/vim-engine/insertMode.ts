@@ -210,7 +210,7 @@ export function handleInsertModeKey(
     } else {
       const c1 = state.digraphPending;
       if (key.length === 1) {
-        const { char: ch } = lookupDigraph(c1, key);
+        const { char: ch } = lookupDigraph(c1, key, state.userDigraphs);
         const inserted = insertTextAtCursor({ ...state, digraphPending: undefined }, ch);
         const nextChangeKeys =
           !isReplayingDot && state.currentChangeKeys

@@ -1856,8 +1856,29 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson93!.checkComplete(state)).toBe(true);
   });
 
-  it('모든 93개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(93);
+  it('레슨 94 (커맨드라인 중간 편집·Ctrl-k 다이그래프, :digraphs 등록, :ascii) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson94 = MISSIONS.find((m) => m.id === 94);
+    expect(lesson94).toBeDefined();
+
+    let state: VimEditorState = {
+      lines: [...lesson94!.initialLines],
+      cursor: { ...lesson94!.initialCursor },
+      mode: 'NORMAL',
+      primaryFilename: lesson94!.primaryFilename,
+    };
+
+    expect(lesson94!.checkComplete(state)).toBe(false);
+
+    for (const key of lesson94!.optimalKeys!) {
+      state = handleKey(state, key);
+    }
+    expect(state.userDigraphs?.['z1']).toBe('★');
+    expect(state.commandMessage).toContain('9733');
+    expect(lesson94!.checkComplete(state)).toBe(true);
+  });
+
+  it('모든 94개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(94);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();

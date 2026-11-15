@@ -5,6 +5,9 @@ import {
   handleKey,
   lookupDigraph,
   describeCharUtf8Bytes,
+  runExCommand,
+  getCmdlineCursorCol,
+  formatDigraphsList,
 } from './index';
 
 describe(']m / [m / ]M / [M 메서드 블록 이동 및 연산자·비주얼 연동', () => {
@@ -214,5 +217,145 @@ describe('Normal 모드 g8 (UTF-8 바이트 16진수 검사)', () => {
 
     s = sendKeys(s, 'jg8');
     expect(s.commandMessage).toBe('NUL');
+  });
+});
+
+describe('커맨드라인·검색줄 중간 편집(Ctrl-b/e, ArrowLeft/Right, Delete, Ctrl-w/u, Ctrl-k, Ctrl-c)', () => {
+  it('COMMAND(:) 모드에서 중간 이동·삽입·Delete·Ctrl-w·Ctrl-u·Ctrl-c 가 정상 동작한다', () => {
+    let s = createVimState(['hello world']);
+    s = handleKey(s, ':');
+    for (const ch of '%s/foo/bar') s = handleKey(s, ch);
+    expect(getCmdlineCursorCol(s)).toBe(10);
+
+    // ArrowLeft 로 중간 이동 후 글자 수정
+    s = handleKey(s, 'ArrowLeft');
+    s = handleKey(s, 'ArrowLeft');
+    s = handleKey(s, 'ArrowLeft');
+    expect(getCmdlineCursorCol(s)).toBe(7); // '%s/foo/|bar'
+    s = handleKey(s, 'Delete'); // 'b' 삭제 -> '%s/foo/ar'
+    expect(s.commandBuffer).toBe('%s/foo/ar');
+    expect(getCmdlineCursorCol(s)).toBe(7);
+    s = handleKey(s, 'c'); // '%s/foo/car'
+    expect(s.commandBuffer).toBe('%s/foo/car');
+    expect(getCmdlineCursorCol(s)).toBe(8);
+
+    // Ctrl-b (줄 맨 앞) 및 Ctrl-e (줄 맨 끝)
+    s = handleKey(s, 'Ctrl-b');
+    expect(getCmdlineCursorCol(s)).toBe(0);
+    s = handleKey(s, ' ');
+    expect(s.commandBuffer).toBe(' %s/foo/car');
+    s = handleKey(s, 'Ctrl-b');
+    s = handleKey(s, 'Delete');
+    expect(s.commandBuffer).toBe('%s/foo/car');
+
+    s = handleKey(s, 'Ctrl-e');
+    expect(getCmdlineCursorCol(s)).toBe(10);
+
+    // Ctrl-w 로 커서 앞 단어 삭제
+    s = handleKey(s, 'Ctrl-w'); // 'car' 삭제
+    expect(s.commandBuffer).toBe('%s/foo/');
+    expect(getCmdlineCursorCol(s)).toBe(7);
+
+    // Ctrl-u 로 커서 앞 전체 삭제 (뒤쪽 텍스트는 유지)
+    s = handleKey(s, 'ArrowLeft');
+    s = handleKey(s, 'Ctrl-u');
+    expect(s.commandBuffer).toBe('/');
+    expect(getCmdlineCursorCol(s)).toBe(0);
+
+    // Ctrl-c 로 명령 입력 즉시 취소
+    s = handleKey(s, 'Ctrl-c');
+    expect(s.mode).toBe('NORMAL');
+    expect(s.commandBuffer).toBeUndefined();
+    expect(s.commandCursorCol).toBeUndefined();
+  });
+
+  it('COMMAND(:), = 표현식 모드, SEARCH(/, ?) 모드에서 Ctrl-k 다이그래프 및 중간 편집을 지원한다', () => {
+    // SEARCH 모드: '/a b' -> ArrowLeft -> Ctrl-k - > -> '/a→ b'
+    let s = createVimState(['prefix', 'a→ b']);
+    s = handleKey(s, '/');
+    s = handleKey(s, 'a');
+    s = handleKey(s, ' ');
+    s = handleKey(s, 'b');
+    s = handleKey(s, 'ArrowLeft');
+    s = handleKey(s, 'ArrowLeft');
+    s = handleKey(s, 'Ctrl-k');
+    expect(s.digraphPending).toBe('');
+    s = handleKey(s, '-');
+    expect(s.digraphPending).toBe('-');
+    s = handleKey(s, '>');
+    expect(s.digraphPending).toBeUndefined();
+    expect(s.commandBuffer).toBe('a→ b');
+    s = handleKey(s, 'Enter');
+    expect(s.mode).toBe('NORMAL');
+    expect(s.cursor).toEqual({ line: 1, col: 0 });
+
+    // = 표현식 레지스터 입력에서도 Ctrl-b / Backspace / Enter 동작
+    let eqState = createVimState(['val']);
+    eqState = sendKeys(eqState, '"=');
+    expect(eqState.mode).toBe('COMMAND');
+    expect(eqState.commandType).toBe('=');
+    eqState = handleKey(eqState, '2');
+    eqState = handleKey(eqState, '+');
+    eqState = handleKey(eqState, '9');
+    eqState = handleKey(eqState, 'Ctrl-h'); // '9' 삭제
+    eqState = handleKey(eqState, '3');
+    eqState = handleKey(eqState, 'Enter');
+    expect(eqState.mode).toBe('NORMAL');
+    expect(eqState.registers?.['=']).toEqual({ type: 'char', content: '5' });
+  });
+});
+
+describe(':ascii / :as 및 :digraphs / :dig 사용자 다이그래프 등록', () => {
+  it(':ascii (:as) 는 ga 와 동일한 커서 문자 정보를 출력한다', () => {
+    let s = createVimState(['A→']);
+    s = runExCommand(s, 'ascii');
+    expect(s.commandMessage).toContain('<A>');
+    expect(s.commandMessage).toContain('65');
+
+    s = sendKeys(s, 'l');
+    s = runExCommand(s, 'as');
+    expect(s.commandMessage).toContain('<→>');
+    expect(s.commandMessage).toContain('8594');
+  });
+
+  it(':digraphs 로 목록을 조회하고 :digraph {c1}{c2} {code} 로 커스텀 다이그래프를 등록해 Insert/Cmdline 에서 사용한다', () => {
+    let s = createVimState(['line1', 'line2']);
+
+    // 목록 조회
+    const preview = formatDigraphsList();
+    expect(preview).toContain('-> →');
+    s = runExCommand(s, 'dig');
+    expect(s.commandMessage).toContain('다이그래프');
+    expect(s.commandMessage).toContain('-> →');
+
+    // 잘못된 코드(E474)
+    const bad = runExCommand(s, 'digraph ab notanumber');
+    expect(bad.bell).toBe(true);
+    expect(bad.commandMessage).toContain('E474');
+
+    // 10진수 & 16진수 커스텀 다이그래프 등록 (:digraphs z1 9733 z2 0x2728)
+    s = runExCommand(s, 'digraphs z1 9733 z2 0x2728');
+    expect(s.userDigraphs?.['z1']).toBe('★');
+    expect(s.userDigraphs?.['z2']).toBe('✨');
+    expect(s.commandMessage).toContain('z1 ★');
+
+    // Insert 모드 Ctrl-k z 1 -> ★
+    s = handleKey(s, 'A');
+    s = handleKey(s, ' ');
+    s = handleKey(s, 'Ctrl-k');
+    s = handleKey(s, 'z');
+    s = handleKey(s, '1');
+    s = handleKey(s, 'Escape');
+    expect(s.lines[0]).toBe('line1 ★');
+
+    // Command(:) 치환식 중간에 Ctrl-k z 2 -> ✨ 적용
+    s = handleKey(s, ':');
+    for (const ch of '2s/line2/ok /') s = handleKey(s, ch);
+    s = handleKey(s, 'ArrowLeft'); // '2s/line2/ok |/'
+    s = handleKey(s, 'Ctrl-k');
+    s = handleKey(s, 'z');
+    s = handleKey(s, '2');
+    s = handleKey(s, 'Enter');
+    expect(s.lines[1]).toBe('ok ✨');
   });
 });

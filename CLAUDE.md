@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 141개 테스트 파일, 1,827개 테스트 100% 통과 필수)*
+  *(현재 141개 테스트 파일, 1,833개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 93)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 94)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -146,6 +146,7 @@
 - **커스텀 미션 라이브러리·URL/JSON 임포트 & 프리셋 (`src/utils/customMission.ts`, `CustomMissionModal.tsx`, `backupStorage.ts`)**: 4종 빠른 시작 프리셋(`CUSTOM_MISSION_PRESETS`), `?challenge=...` URL·Base64 토큰·JSON 문자열 통합 파서(`parseCustomMissionInput`) 및 JSON 내보내기 복사(`exportCustomMissionJson`), 로컬 라이브러리(`vim_custom_missions_v1`) 저장/수정/플레이/삭제 및 전체 JSON 백업(`mergeSavedCustomMissions` 중복 병합 포함)을 지원합니다.
 - **Neovim 스타일 LSP 호버·진단(Diagnostics) 튜토리얼 모드 (`K`, `[d`, `]d`, `[D`, `]D`, `:lopen`, `:diagnostics`) (레슨 92, `src/vim-engine/lspEngine.ts`, `Editor.tsx`, `missions.ts`)**: `lspSymbols` 활성 버퍼에서 `K` 로 타입 시그니처/문서 플로팅 호버 창(`lsp-hover-popup`)을 토글하고(`Esc`/`q`/커서 이동 시 자동 닫힘, 일반 버퍼는 기존 `:help` 폴백 유지), `]d`/`[d`/`]D`/`[D` 순환 진단 점프, 거터 `E`/`W`/`I` 사인, 물결 밑줄, EOL 가상 텍스트(`virtual_text`), `:lopen`/`:diagnostics` 연동 및 `rule.matchPattern` 기반 실시간 버그 수정 시 진단/로케이션 리스트 자동 해소를 지원합니다.
 - **순정 Vim 입력·탐색 누락 디테일 보강 (`]m`/`[m`/`]M`/`[M`, Insert `Ctrl-k` 다이그래프, `Ctrl-a`/`Ctrl-@`/`".` 레지스터, Normal `g8`) (레슨 93, `src/vim-engine/extraMotions.ts`, `digraphs.ts`, `insertMode.ts`, `normalMode.ts`, `visualMode.ts`, `engineHelpers.ts`, `registers.ts`)**: 노멀·비주얼·연산자 대기(`d`/`c`/`y`/`>`/`<`) 모드에서 메서드 시작/끝(`{`/`}`) 블록 점프(`]m`/`[m`/`]M`/`[M`) 및 `.` 반복, RFC1345 표준 Vim 다이그래프(`Ctrl-k {c1}{c2}`, 역순 비방향 지원, `Esc` 취소, 비주얼 블록·`.` 반복 지원), 직전 INSERT 세션 텍스트 재삽입(`Ctrl-a`, 삽입 후 즉시 복귀 `Ctrl-@`, `".` 레지스터 및 `Ctrl-o` 보존), 커서 위치 문자의 UTF-8 바이트 16진수 검사(`g8`)를 지원합니다.
+- **커맨드라인·검색줄 중간 편집(`Ctrl-b`/`Ctrl-e`/`Home`/`End`/`Arrow`/`Delete`/`Ctrl-w`/`Ctrl-u`/`Ctrl-c`/`Ctrl-k`) & `:digraphs` / `:ascii` (레슨 94, `src/vim-engine/cmdlineEdit.ts`, `cmdlineMode.ts`, `searchMode.ts`, `digraphs.ts`, `exListAndToolCommands.ts`, `StatusBar.tsx`)**: `:`, `=`, `/`, `?` 커맨드/검색 입력 줄 중간 이동(`ArrowLeft`/`ArrowRight`, `Ctrl-b`/`Home`, `Ctrl-e`/`End`)·삽입·삭제(`Delete`, `Backspace`/`Ctrl-h`, `Ctrl-w`, `Ctrl-u`, `Ctrl-c`)·커맨드라인 `Ctrl-k` 다이그래프 및 `StatusBar` `.prompt-cursor` 인라인 커서 렌더링을 구현했습니다. 또한 `:ascii`/`:as`(`ga` 동일 문자 코드 출력)와 `:digraphs`/`:dig`(목록 조회 및 `:dig {c1}{c2} {code}` 사용자 커스텀 다이그래프 `state.userDigraphs` 등록·우선 조회, `E474` 검증)를 완성했습니다.
 
 ---
 

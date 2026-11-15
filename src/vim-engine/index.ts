@@ -344,7 +344,8 @@ export {
 export type { ShellExecResult } from './shellEngine';
 
 // ---- 다이그래프(Ctrl-k) & UTF-8 바이트 조회(g8) ----
-export { COMMON_DIGRAPHS, lookupDigraph } from './digraphs';
+export { COMMON_DIGRAPHS, lookupDigraph, formatDigraphsList, executeDigraphCommand } from './digraphs';
+export { getCmdlineCursorCol } from './cmdlineEdit';
 export { describeCharAt, describeCharUtf8Bytes } from './engineHelpers';
 
 // ---- 개발용 불변성 검사 ----
