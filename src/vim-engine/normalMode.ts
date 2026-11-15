@@ -1,6 +1,5 @@
 import { VimEditorState } from './types';
 import { clampCursor, getMaxCol } from './cursor';
-import { starSearchPattern } from './vimRegex';
 import { OPERATOR_MOTION_KEYS } from './operatorMotion';
 import {
   moveToLineStart,
@@ -81,7 +80,7 @@ import {
 import { toggleCommentRange, getCommentTextObjectRange } from './commentEngine';
 import { formatRange } from './formatEngine';
 import { gotoFileUnderCursor } from './gotoFileEngine';
-import { findMatches, findNextMatch, findPrevMatch, getWordAtCursor } from './search';
+import { getWordAtCursor } from './search';
 import { executeCommandLine } from './commandLine';
 import { parseKeySequence } from './keymapEngine';
 import { executeDeleteSurround, executeChangeSurround, executeYouSurround, executeLineSurround } from './surroundEngine';
@@ -127,7 +126,7 @@ import {
   jumpToFoldEdge,
 } from './folding';
 import { msg } from './messages';
-import { executeGn, repeatSearch } from './searchMode';
+import { executeGn, repeatSearch, executeWordSearch } from './searchMode';
 import {
   parsePending,
   ringBell,
@@ -1252,11 +1251,13 @@ export function handleNormalModeKey(
     };
   }
 
-  // 1-2. 매크로 실행 (@{reg}, [count]@{reg}, @@)
+  // 1-2. 매크로 실행 (@{reg}, [count]@{reg}, @:, @@)
   if (parsed.operator === '@') {
     let targetReg: string | null = null;
     if (key === '@') {
       targetReg = state.lastPlayedMacro ?? null;
+    } else if (key === ':') {
+      targetReg = ':';
     } else if (/^[a-zA-Z0-9]$/.test(key)) {
       targetReg = key.toLowerCase();
     }
@@ -1265,6 +1266,31 @@ export function handleNormalModeKey(
       return {
         ...state,
         pendingKeys: undefined,
+      };
+    }
+
+    if (targetReg === ':') {
+      const lastCmd = state.commandHistory?.[state.commandHistory.length - 1];
+      if (!lastCmd) {
+        return {
+          ...ringBell(state),
+          pendingKeys: undefined,
+          commandMessage: msg('E30: 이전에 실행한 명령행이 없습니다'),
+        };
+      }
+      let curState: VimEditorState = {
+        ...state,
+        pendingKeys: undefined,
+        lastPlayedMacro: ':',
+      };
+      const repeatCount = parsed.totalCount;
+      for (let c = 0; c < repeatCount && !curState.bell; c++) {
+        if (macroDepth >= 100) break;
+        curState = executeCommandLine(curState, lastCmd, runHandleKey);
+      }
+      return {
+        ...curState,
+        lastPlayedMacro: ':',
       };
     }
 
@@ -1492,8 +1518,9 @@ export function handleNormalModeKey(
     };
   }
 
-  // gd, gi, gv, g;, g, 단일 키 입력 시 처리
-  if (key === 'gd') return goToDeclaration(state);
+  // gd, gD, gi, gv, g;, g, 단일 키 입력 시 처리
+  if (key === 'gd') return goToDeclaration(state, 'local');
+  if (key === 'gD') return goToDeclaration(state, 'global');
   if (key === 'gi') return goToLastInsert(state);
   if (key === 'gv') return reselectLastVisual(state);
   if (key === 'g;') return traverseChangeList(state, 'prev', parsed.totalCount);
@@ -1956,7 +1983,13 @@ export function handleNormalModeKey(
       };
     }
     if (key === 'd') {
-      return goToDeclaration(state);
+      return goToDeclaration(state, 'local');
+    }
+    if (key === 'D') {
+      return goToDeclaration(state, 'global');
+    }
+    if (key === '*' || key === '#') {
+      return executeWordSearch(state, key === '*' ? 'forward' : 'backward', false);
     }
     if (key === 'f') {
       return gotoFileUnderCursor(state, { withLineNumber: false });
@@ -2153,52 +2186,9 @@ export function handleNormalModeKey(
     return repeatSearch(state, key === 'N');
   }
 
-  // *: 커서 아래 단어로 검색어 설정 후 다음 결과로 점프
-  if (key === '*') {
-    const word = getWordAtCursor(currentLine, state.cursor.col);
-    if (word) {
-      const query = starSearchPattern(word);
-      const matches = findMatches(state.lines, query, state.options);
-      const nextMatch = findNextMatch(matches, state.cursor) ?? matches[0];
-      const matchIdx = nextMatch
-        ? matches.findIndex((m) => m.line === nextMatch.line && m.col === nextMatch.col)
-        : -1;
-      const stateWithJump = recordJump(state);
-      return {
-        ...stateWithJump,
-        cursor: nextMatch ? { line: nextMatch.line, col: nextMatch.col } : state.cursor,
-        lastSearchQuery: query,
-        lastSearchOffset: null,
-        lastSearchDirection: 'forward',
-        commandMessage: msg('단어 \'{word}\' 검색 ({v}/{matchesCount})', { word, v: matchIdx + 1, matchesCount: matches.length }),
-        pendingKeys: undefined,
-      };
-    }
-    return { ...ringBell(state), commandMessage: msg('E348: 커서 아래에 단어가 없습니다') };
-  }
-
-  // #: 커서 아래 단어로 검색어 설정 후 이전 결과로 점프
-  if (key === '#') {
-    const word = getWordAtCursor(currentLine, state.cursor.col);
-    if (word) {
-      const query = starSearchPattern(word);
-      const matches = findMatches(state.lines, query, state.options);
-      const prevMatch = findPrevMatch(matches, state.cursor) ?? matches[matches.length - 1];
-      const matchIdx = prevMatch
-        ? matches.findIndex((m) => m.line === prevMatch.line && m.col === prevMatch.col)
-        : -1;
-      const stateWithJump = recordJump(state);
-      return {
-        ...stateWithJump,
-        cursor: prevMatch ? { line: prevMatch.line, col: prevMatch.col } : state.cursor,
-        lastSearchQuery: query,
-        lastSearchOffset: null,
-        lastSearchDirection: 'backward',
-        commandMessage: msg('단어 \'{word}\' 역방향 검색 ({v}/{matchesCount})', { word, v: matchIdx + 1, matchesCount: matches.length }),
-        pendingKeys: undefined,
-      };
-    }
-    return { ...ringBell(state), commandMessage: msg('E348: 커서 아래에 단어가 없습니다') };
+  // * / #: 커서 아래 전체 단어로 검색어 설정 후 다음·이전 결과로 점프
+  if (key === '*' || key === '#') {
+    return executeWordSearch(state, key === '*' ? 'forward' : 'backward', true);
   }
 
 

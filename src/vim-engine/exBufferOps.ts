@@ -883,3 +883,79 @@ export function parseKeyTokens(keysStr: string): string[] {
 
   return tokens;
 }
+
+/**
+ * :[range]ce[nter] [width], :[range]ri[ght] [width], :[range]le[ft] [indent] 정렬 명령을 실행합니다.
+ */
+export function executeAlignRange(
+  state: VimEditorState,
+  range: { startLine: number; endLine: number },
+  align: 'center' | 'right' | 'left',
+  rawArg?: string
+): VimEditorState {
+  const minLine = Math.max(0, Math.min(range.startLine, range.endLine));
+  const maxLine = Math.min(state.lines.length - 1, Math.max(range.startLine, range.endLine));
+  if (minLine > maxLine || state.lines.length === 0) {
+    return { ...state, mode: 'NORMAL', visualAnchor: undefined, commandBuffer: undefined, commandType: undefined };
+  }
+
+  const trimmedArg = (rawArg ?? '').trim();
+  let widthOrIndent: number | undefined;
+  if (trimmedArg.length > 0) {
+    if (!/^\d+$/.test(trimmedArg)) {
+      return {
+        ...state,
+        mode: 'NORMAL',
+        visualAnchor: undefined,
+        commandBuffer: undefined,
+        commandType: undefined,
+        commandMessage: msg('E474: 잘못된 인수입니다: {token}', { token: trimmedArg }),
+        bell: true,
+      };
+    }
+    widthOrIndent = parseInt(trimmedArg, 10);
+  }
+
+  const tw = state.options?.textwidth && state.options.textwidth > 0 ? state.options.textwidth : 80;
+  const targetSize = align === 'left' ? (widthOrIndent ?? 0) : (widthOrIndent ?? tw);
+
+  const stateWithSnapshot = pushUndoSnapshot(state);
+  const nextLines = [...state.lines];
+
+  for (let i = minLine; i <= maxLine; i++) {
+    const trimmed = nextLines[i].trim();
+    if (trimmed.length === 0) {
+      nextLines[i] = '';
+      continue;
+    }
+    if (align === 'left') {
+      nextLines[i] = ' '.repeat(targetSize) + trimmed;
+    } else if (align === 'right') {
+      const pad = Math.max(0, targetSize - trimmed.length);
+      nextLines[i] = ' '.repeat(pad) + trimmed;
+    } else {
+      const pad = Math.max(0, Math.floor((targetSize - trimmed.length) / 2));
+      nextLines[i] = ' '.repeat(pad) + trimmed;
+    }
+  }
+
+  const count = maxLine - minLine + 1;
+  const cursorLine = Math.max(minLine, Math.min(maxLine, state.cursor.line));
+  const firstNonBlank = nextLines[cursorLine].search(/\S/);
+  const clamped = clampCursor(
+    nextLines,
+    { line: cursorLine, col: firstNonBlank >= 0 ? firstNonBlank : 0 },
+    'NORMAL'
+  );
+
+  return {
+    ...stateWithSnapshot,
+    lines: nextLines,
+    cursor: clamped,
+    mode: 'NORMAL',
+    visualAnchor: undefined,
+    commandBuffer: undefined,
+    commandType: undefined,
+    commandMessage: msg('{count}개 줄을 정렬했습니다 ({align})', { count, align }),
+  };
+}

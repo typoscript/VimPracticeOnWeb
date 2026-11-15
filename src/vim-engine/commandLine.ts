@@ -41,6 +41,7 @@ import {
   executeRangeNorm,
   executeNormalKeysOnLine,
   parseKeyTokens,
+  executeAlignRange,
 } from './exBufferOps';
 import { tryExecuteWorkspaceExCommand } from './exWorkspaceCommands';
 import { tryExecuteToolExCommand } from './exListAndToolCommands';
@@ -386,6 +387,20 @@ export function executeCommandLine(
   if (copyMatch) {
     const targetRange = range ?? currentLineRange;
     return executeCopy(state, targetRange, copyMatch[1]);
+  }
+
+  // 4-9. 텍스트 정렬: :[range]ce[nter] [width], :[range]ri[ght] [width], :[range]le[ft] [indent]
+  const centerMatch = cmdTrimmed.match(/^ce(?:n(?:t(?:er?)?)?)?(?:\s+(.*))?$/);
+  if (centerMatch) {
+    return executeAlignRange(state, range ?? currentLineRange, 'center', centerMatch[1]);
+  }
+  const rightMatch = cmdTrimmed.match(/^ri(?:g(?:ht?)?)?(?:\s+(.*))?$/);
+  if (rightMatch) {
+    return executeAlignRange(state, range ?? currentLineRange, 'right', rightMatch[1]);
+  }
+  const leftMatch = cmdTrimmed.match(/^le(?:f(?:t)?)?(?:\s+(.*))?$/);
+  if (leftMatch) {
+    return executeAlignRange(state, range ?? currentLineRange, 'left', leftMatch[1]);
   }
 
   // 5. 알 수 없는 명령어는 에러 메시지와 함께 NORMAL 모드로 복귀

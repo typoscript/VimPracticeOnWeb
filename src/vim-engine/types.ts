@@ -491,8 +491,8 @@ export interface VimEditorState {
   userKeymaps?: Record<string, string>;
   /** 사용자 정의 입력/명령행 약어 (:iabbrev, :cabbrev, :abbrev, 키: 'i:teh' | 'c:W') */
   abbreviations?: Record<string, AbbreviationEntry>;
-  /** Insert/Command 모드 Ctrl-v 직후 다음 키를 리터럴로 처리할지 여부 */
-  literalNextPending?: boolean;
+  /** Insert/Command 모드 Ctrl-v 리터럴 및 uXXXX/UXXXXXXXX 유니코드 입력 대기 상태 */
+  literalNextPending?: boolean | { kind: 'hex4' | 'hex8'; digits: string };
   /** Insert 모드 Ctrl-k 다이그래프 대기 상태 (null/undefined: 비활성, '': 1번째 키 대기, 'x': 2번째 키 대기) */
   digraphPending?: string | null;
   /** 현재 INSERT 세션 동안 입력된 텍스트 누적 (Ctrl-a / ". 레지스터용) */

@@ -380,7 +380,7 @@ export function escapeVimPattern(text: string): string {
   return text.replace(/[\\^$.*[\]~/]/g, '\\$&');
 }
 
-/** * / # 이 사용하는 검색 패턴: 키워드 단어는 \<word\> 로 단어 전체만, 그 밖에는 글자 그대로 (:help star) */
-export function starSearchPattern(word: string): string {
-  return /^\w+$/.test(word) ? `\\<${word}\\>` : escapeVimPattern(word);
+/** * / # / g* / g# 이 사용하는 검색 패턴: wholeWord면 \<word\> 로 단어 전체, 아니면 글자 그대로 (:help star / gstar) */
+export function starSearchPattern(word: string, wholeWord = true): string {
+  return wholeWord && /^\w+$/.test(word) ? `\\<${word}\\>` : escapeVimPattern(word);
 }

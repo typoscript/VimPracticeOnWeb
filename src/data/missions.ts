@@ -3655,4 +3655,56 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 95,
+    title: '레슨 95: 부분 검색(g*/g#), 전역 선언(gD), 줄 정렬(:center/:right), Ex 반복(@:) & Ctrl-v 유니코드 마스터',
+    description:
+      '단어 경계 없이 부분 일치를 찾는 g* / g#, 파일 최상단 전역 선언으로 점프하는 gD, 문단·제목을 지정 너비에 맞춰 정렬하는 :center / :right / :left, 직전 Ex 명령을 단 두 타로 재실행하는 @:, 그리고 Insert 모드에서 16진수 코드 포인트로 유니코드를 직접 입력하는 Ctrl-v uXXXX 를 결합해 보세요.\n\n1) 전역 선언(gD) & 부분 검색(g* / g#):\n   - gd 가 현재 함수 내부 선언을 우선한다면, gD 는 파일 맨 위 전역 선언으로 즉시 이동합니다.\n   - g* / g# 는 * / # 과 달리 단어 경계(\\<...\\>)를 두지 않아 badge 로 badgeName 같은 부분 문자열도 모두 찾습니다.\n\n2) 줄 정렬(:center / :right / :left) & Ex 반복(@:) & Ctrl-v uXXXX:\n   - Insert 모드 Ctrl-v u 뒤에 4자리 16진수(예: u2605 → ★)를 입력하면 코드 포인트가 즉시 문자로 삽입됩니다.\n   - :center 14 는 현재 줄 앞뒤 공백을 정리해 너비 14 기준 가운데 정렬하며, 다른 줄로 옮겨 @: 를 누르면 직전 Ex 명령을 그대로 다시 실행합니다.\n\n미션:\n1. 4번째 줄의 badge 에서 gD 를 눌러 전역 선언(1번째 줄)으로 점프한 뒤, "TODO" 를 Ctrl-v u2605 로 "★" 로 바꾸세요.\n2. 0 w g* n 으로 badgeName(4번째 줄)까지 부분 검색으로 이동한 뒤 2j 로 HEADER 줄에 내려오세요.\n3. :center 14<Enter> 로 HEADER 를 정렬한 다음 j @: 로 SUBTITLE 까지 일괄 가운데 정렬해 완료하세요!',
+    hint: 'gD → f" ci" Ctrl-v u 2 6 0 5<Esc> → 0 w g* n 2j → :center 14<Enter> → j @:',
+    par: 38,
+    optimalKeys: [
+      'g', 'D',
+      'f', '"', 'c', 'i', '"', 'Ctrl-v', 'u', '2', '6', '0', '5', 'Escape',
+      '0', 'w', 'g', '*', 'n', '2', 'j',
+      ':', 'c', 'e', 'n', 't', 'e', 'r', ' ', '1', '4', 'Enter',
+      'j', '@', ':',
+    ],
+    primaryFilename: 'banner.ts',
+    initialLines: [
+      'const badge = "TODO";',
+      'function render() {',
+      '  const badge = "WAIT";',
+      '  return badgeName(badge);',
+      '}',
+      'HEADER',
+      'SUBTITLE',
+    ],
+    targetLines: [
+      'const badge = "★";',
+      'function render() {',
+      '  const badge = "WAIT";',
+      '  return badgeName(badge);',
+      '}',
+      '    HEADER',
+      '   SUBTITLE',
+    ],
+    initialCursor: { line: 3, col: 19 },
+    checkComplete: (state) => {
+      const target = [
+        'const badge = "★";',
+        'function render() {',
+        '  const badge = "WAIT";',
+        '  return badgeName(badge);',
+        '}',
+        '    HEADER',
+        '   SUBTITLE',
+      ];
+      return (
+        state.mode === 'NORMAL' &&
+        state.lastPlayedMacro === ':' &&
+        state.lines.length === target.length &&
+        state.lines.every((l, idx) => l === target[idx])
+      );
+    },
+  },
 ];

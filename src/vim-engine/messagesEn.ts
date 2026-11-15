@@ -390,4 +390,6 @@ export const EN_MESSAGES: Record<string, string> = {
   "[LSP] {symbol}: {signature}": "[LSP] {symbol}: {signature}",
   "다이그래프 ({count}종): {preview}": "Digraphs ({count}): {preview}",
   "다이그래프 등록: {pairs}": "Digraphs registered: {pairs}",
+  "{count}개 줄을 정렬했습니다 ({align})": "Aligned {count} line(s) ({align})",
+  "E30: 이전에 실행한 명령행이 없습니다": "E30: No previous command line",
 };

@@ -160,29 +160,88 @@ export function handleInsertModeKey(
     };
   }
 
-  // Ctrl+v 다음 문자 리터럴 삽입 (약어 확장 억제)
+  const insertLiteralChar = (
+    targetState: VimEditorState,
+    ch: string,
+    extraChangeKeys: string[]
+  ): VimEditorState => {
+    const tLine = targetState.cursor.line;
+    const tCol = targetState.cursor.col;
+    const lineStr = targetState.lines[tLine] ?? '';
+    const nextBlock = targetState.blockInsertSession
+      ? { ...targetState.blockInsertSession, typedChars: [...targetState.blockInsertSession.typedChars, ch] }
+      : undefined;
+    const nextLines = [...targetState.lines];
+    nextLines[tLine] = lineStr.slice(0, tCol) + ch + lineStr.slice(tCol);
+    const nextChangeKeys =
+      !isReplayingDot && targetState.currentChangeKeys
+        ? [...targetState.currentChangeKeys, ...extraChangeKeys]
+        : targetState.currentChangeKeys;
+    return {
+      ...targetState,
+      lines: nextLines,
+      cursor: { line: tLine, col: tCol + ch.length },
+      literalNextPending: undefined,
+      blockInsertSession: nextBlock,
+      currentChangeKeys: nextChangeKeys,
+      currentInsertText: (targetState.currentInsertText ?? '') + ch,
+    };
+  };
+
+  // Ctrl+v 리터럴 삽입 및 uXXXX / UXXXXXXXX 유니코드 16진수 코드 포인트 입력
   if (state.literalNextPending) {
+    if (typeof state.literalNextPending === 'object') {
+      const { kind, digits } = state.literalNextPending;
+      const prefixKey = kind === 'hex4' ? 'u' : 'U';
+      const maxLen = kind === 'hex4' ? 4 : 8;
+      const decodeHex = (): string | null => {
+        if (!digits) return null;
+        const cp = parseInt(digits, 16);
+        if (Number.isNaN(cp) || cp <= 0 || cp > 0x10ffff || (cp >= 0xd800 && cp <= 0xdfff)) {
+          return null;
+        }
+        return String.fromCodePoint(cp);
+      };
+
+      if (/^[0-9a-fA-F]$/.test(key)) {
+        const nextDigits = digits + key;
+        if (nextDigits.length >= maxLen) {
+          const cp = parseInt(nextDigits, 16);
+          const ch =
+            !Number.isNaN(cp) && cp > 0 && cp <= 0x10ffff && (cp < 0xd800 || cp > 0xdfff)
+              ? String.fromCodePoint(cp)
+              : '';
+          return ch
+            ? insertLiteralChar(state, ch, ['Ctrl-v', prefixKey, ...nextDigits])
+            : { ...state, literalNextPending: undefined };
+        }
+        return {
+          ...state,
+          literalNextPending: { kind, digits: nextDigits },
+        };
+      }
+
+      const resolved = decodeHex();
+      let afterHex: VimEditorState = resolved
+        ? insertLiteralChar(state, resolved, ['Ctrl-v', prefixKey, ...digits, key === 'Enter' || key === ' ' ? key : ''].filter(Boolean))
+        : { ...state, literalNextPending: undefined };
+
+      // 16진수 조기 종료 후 Enter/Space가 아닌 키(예: Escape, 일반 문자)는 이어서 정상 처리
+      if (key === 'Enter' || key === ' ') {
+        return afterHex;
+      }
+      return handleInsertModeKey(afterHex, key, dispatchKey, isReplayingDot, macroDepth, abbrevCtx);
+    }
+
+    if (key === 'u') {
+      return { ...state, literalNextPending: { kind: 'hex4', digits: '' } };
+    }
+    if (key === 'U') {
+      return { ...state, literalNextPending: { kind: 'hex8', digits: '' } };
+    }
     if (key.length === 1 || key === 'Tab') {
       const ch = key === 'Tab' ? '\t' : key;
-      const nextBlock = state.blockInsertSession
-        ? { ...state.blockInsertSession, typedChars: [...state.blockInsertSession.typedChars, ch] }
-        : undefined;
-      const newLine = currentLine.slice(0, col) + ch + currentLine.slice(col);
-      const nextLines = [...state.lines];
-      nextLines[line] = newLine;
-      const nextChangeKeys =
-        !isReplayingDot && state.currentChangeKeys
-          ? [...state.currentChangeKeys, 'Ctrl-v', key]
-          : state.currentChangeKeys;
-      return {
-        ...state,
-        lines: nextLines,
-        cursor: { line, col: col + ch.length },
-        literalNextPending: undefined,
-        blockInsertSession: nextBlock,
-        currentChangeKeys: nextChangeKeys,
-        currentInsertText: (state.currentInsertText ?? '') + ch,
-      };
+      return insertLiteralChar(state, ch, ['Ctrl-v', key]);
     }
     state = { ...state, literalNextPending: undefined };
   }

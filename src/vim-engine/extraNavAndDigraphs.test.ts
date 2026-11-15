@@ -359,3 +359,138 @@ describe(':ascii / :as 및 :digraphs / :dig 사용자 다이그래프 등록', (
     expect(s.lines[1]).toBe('ok ✨');
   });
 });
+
+describe('g* / g# 부분 검색, gD 전역 선언 점프, :center/:right/:left, @: 반복, Insert Ctrl-v uXXXX', () => {
+  it('g* / g# 은 단어 경계(\\<...\\>) 없이 부분 일치 문자열을 순·역방향 검색하고 n/N 과 연동한다', () => {
+    const buf = ['const foo = 1;', 'foobar();', 'call(foo);', 'baz_foo();'];
+    let s = createVimState(buf, { line: 0, col: 6 }); // 'foo' 위
+
+    // 일반 * 는 'foobar' 를 건너뛰고 온전한 단어 'call(foo)' 로 이동
+    const exact = sendKeys(s, '*');
+    expect(exact.lastSearchQuery).toBe('\\<foo\\>');
+    expect(exact.cursor).toEqual({ line: 2, col: 5 });
+
+    // g* 는 'foobar' -> 'call(foo)' -> 'baz_foo' 모두 순회
+    s = sendKeys(s, 'g*');
+    expect(s.lastSearchQuery).toBe('foo');
+    expect(s.cursor).toEqual({ line: 1, col: 0 });
+    s = sendKeys(s, 'n');
+    expect(s.cursor).toEqual({ line: 2, col: 5 });
+    s = sendKeys(s, 'n');
+    expect(s.cursor).toEqual({ line: 3, col: 4 });
+
+    // 'call(foo)' 위에서 g# -> 바로 이전 부분 일치 'foobar' 로 역방향 점프
+    s = sendKeys(createVimState(buf, { line: 2, col: 5 }), 'g#');
+    expect(s.cursor).toEqual({ line: 1, col: 0 });
+    expect(s.lastSearchDirection).toBe('backward');
+
+    // 공백 위 g* 는 E348 bell
+    const noWord = sendKeys(createVimState(['  abc']), 'g*');
+    expect(noWord.bell).toBe(true);
+    expect(noWord.commandMessage).toContain('E348');
+  });
+
+  it('gD 는 현재 함수 로컬 선언보다 최상위 전역 선언을 우선 탐색해 점프한다', () => {
+    const code = [
+      'const port = 3000;',
+      'function run() {',
+      '  const port = 8080;',
+      '  return port;',
+      '}',
+    ];
+    // 4번째 줄 'port' 에서 시작
+    const start = createVimState(code, { line: 3, col: 9 });
+
+    // gd 는 현재 함수 내부 선언(2번째 줄)
+    const local = sendKeys(start, 'gd');
+    expect(local.cursor).toEqual({ line: 2, col: 8 });
+
+    // gD 는 최상위 전역 선언(0번째 줄)
+    const global = sendKeys(start, 'gD');
+    expect(global.cursor).toEqual({ line: 0, col: 6 });
+  });
+
+  it(':center / :right / :left 가 textwidth 또는 지정 너비로 정렬하고 단일 Undo 및 E474 를 처리한다', () => {
+    let s = createVimState(['  hello  ', '', '  world']);
+    s = runExCommand(s, '%center 11');
+    expect(s.lines).toEqual(['   hello', '', '   world']);
+
+    s = sendKeys(s, 'u'); // 단일 Undo
+    expect(s.lines).toEqual(['  hello  ', '', '  world']);
+
+    s = runExCommand(s, '1,3right 10');
+    expect(s.lines).toEqual(['     hello', '', '     world']);
+
+    s = runExCommand(s, '%left 2');
+    expect(s.lines).toEqual(['  hello', '', '  world']);
+
+    // textwidth 옵션 기본값 사용
+    s = runExCommand(s, 'set tw=10');
+    s = runExCommand(s, '1center');
+    expect(s.lines[0]).toBe('  hello');
+
+    // 잘못된 너비 -> E474 + bell
+    const bad = runExCommand(s, 'center abc');
+    expect(bad.bell).toBe(true);
+    expect(bad.commandMessage).toContain('E474');
+  });
+
+  it('@: 는 직전 Ex 명령을 재실행하고 @@ 로 반복하며 ":p 는 명령 문자열을 붙여넣는다', () => {
+    let s = createVimState(['a', 'b', 'c']);
+
+    // 이전 명령 없을 때 @: -> E30 + bell
+    const empty = sendKeys(s, '@:');
+    expect(empty.bell).toBe(true);
+    expect(empty.commandMessage).toContain('E30');
+
+    // 첫 줄에서 s/$/;/ 실행 후 j @: j @@ 로 연속 적용
+    s = runExCommand(s, 's/$/;/');
+    expect(s.lines[0]).toBe('a;');
+    s = sendKeys(s, 'j@:');
+    expect(s.lines[1]).toBe('b;');
+    expect(s.lastPlayedMacro).toBe(':');
+    s = sendKeys(s, 'j@@');
+    expect(s.lines[2]).toBe('c;');
+
+    // ":p 로 직전 Ex 명령 문자열 확인
+    let pasteState = createVimState(['cmd: ']);
+    pasteState = runExCommand(pasteState, 'set nu');
+    pasteState = sendKeys(pasteState, '$":p');
+    expect(pasteState.lines[0]).toBe('cmd: set nu');
+  });
+
+  it('Insert 모드 Ctrl-v uXXXX / UXXXXXXXX 로 유니코드 코드 포인트를 직접 삽입하고 . 반복한다', () => {
+    let s = createVimState(['a', 'b']);
+
+    // Ctrl-v u2605 (4자리 ★)
+    s = handleKey(s, 'A');
+    s = handleKey(s, ' ');
+    s = handleKey(s, 'Ctrl-v');
+    for (const k of ['u', '2', '6', '0', '5']) {
+      s = handleKey(s, k);
+    }
+    s = handleKey(s, 'Escape');
+    expect(s.lines[0]).toBe('a ★');
+
+    // . 반복으로 두 번째 줄에도 ' ★' 삽입
+    s = sendKeys(s, 'j.');
+    expect(s.lines[1]).toBe('b ★');
+
+    // 조기 종료(2자리 Ctrl-v u41 + Escape -> 'A') 및 8자리 Ctrl-v U0001f680 -> '🚀'
+    let uState = createVimState(['']);
+    uState = handleKey(uState, 'i');
+    uState = handleKey(uState, 'Ctrl-v');
+    for (const k of ['u', '4', '1', 'Escape']) {
+      uState = handleKey(uState, k);
+    }
+    expect(uState.mode).toBe('NORMAL');
+    expect(uState.lines[0]).toBe('A');
+
+    uState = handleKey(uState, 'A');
+    uState = handleKey(uState, 'Ctrl-v');
+    for (const k of ['U', '0', '0', '0', '1', 'f', '6', '8', '0', 'Escape']) {
+      uState = handleKey(uState, k);
+    }
+    expect(uState.lines[0]).toBe('A🚀');
+  });
+});

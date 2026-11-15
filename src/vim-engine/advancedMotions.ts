@@ -331,16 +331,61 @@ export function yankParagraph(
 }
 
 /**
- * 'gd' : Go to Local Declaration (로컬 선언부로 즉시 점프)
+ * 'gd' / 'gD' : 로컬(local) 또는 전역(global) 선언부로 즉시 점프합니다.
  */
-export function goToDeclaration(state: VimEditorState): VimEditorState {
+export function goToDeclaration(
+  state: VimEditorState,
+  scope: 'local' | 'global' = 'local'
+): VimEditorState {
   const currentLine = state.lines[state.cursor.line] ?? '';
   const word = getWordAtCursor(currentLine, state.cursor.col);
   if (!word) {
     return { ...state, pendingKeys: undefined };
   }
 
-  // 1. 현재 함수/블록의 시작 행 탐색
+  const escaped = escapeRegExp(word);
+  const declRegex = new RegExp(`\\b(?:export\\s+)?(?:const|let|var|function|class|type|interface)\\s+${escaped}\\b`);
+  const topLevelDeclRegex = new RegExp(`^(?:export\\s+)?(?:const|let|var|function|class|type|interface)\\s+${escaped}\\b`);
+  const wordRegex = new RegExp(`\\b${escaped}\\b`);
+
+  const jumpTo = (lineIdx: number, colIdx: number, fallback = false): VimEditorState => {
+    const stateWithJump = recordJump(state);
+    return {
+      ...stateWithJump,
+      cursor: clampCursor(state.lines, { line: lineIdx, col: Math.max(0, colIdx) }, 'NORMAL'),
+      commandMessage: fallback
+        ? msg('선언부(첫 등장)로 이동: {word} ({v}번째 줄)', { word, v: lineIdx + 1 })
+        : msg('선언부로 이동: {word} ({v}번째 줄)', { word, v: lineIdx + 1 }),
+      pendingKeys: undefined,
+    };
+  };
+
+  const scanLines = (fromLine: number, regex: RegExp, findWordCol: boolean): VimEditorState | null => {
+    for (let l = fromLine; l < state.lines.length; l++) {
+      const text = state.lines[l] ?? '';
+      const match = regex.exec(text);
+      if (match) {
+        const col = findWordCol ? text.indexOf(word, match.index) : match.index;
+        return jumpTo(l, col, !findWordCol);
+      }
+    }
+    return null;
+  };
+
+  if (scope === 'global') {
+    // gD: 0열 최상위 전역 선언 우선 탐색 -> 전체 파일 선언 탐색 -> 첫 등장 fallback
+    return (
+      scanLines(0, topLevelDeclRegex, true) ??
+      scanLines(0, declRegex, true) ??
+      scanLines(0, wordRegex, false) ?? {
+        ...state,
+        commandMessage: msg('E486: 선언부를 찾을 수 없습니다: {word}', { word }),
+        pendingKeys: undefined,
+      }
+    );
+  }
+
+  // gd: 현재 함수/블록 시작 행부터 탐색
   let functionStartLine = 0;
   for (let l = state.cursor.line; l >= 0; l--) {
     const lineText = state.lines[l] ?? '';
@@ -353,62 +398,15 @@ export function goToDeclaration(state: VimEditorState): VimEditorState {
     }
   }
 
-  // 선언 키워드 패턴 및 일반 단어 패턴
-  const declRegex = new RegExp(`\\b(const|let|var|function|class|type|interface)\\s+${escapeRegExp(word)}\\b`);
-  const wordRegex = new RegExp(`\\b${escapeRegExp(word)}\\b`);
-
-  // A. 먼저 현재 함수 블록 내에서 선언 키워드 우선 탐색
-  for (let l = functionStartLine; l < state.lines.length; l++) {
-    const text = state.lines[l] ?? '';
-    const match = declRegex.exec(text);
-    if (match) {
-      const col = text.indexOf(word, match.index);
-      const stateWithJump = recordJump(state);
-      return {
-        ...stateWithJump,
-        cursor: clampCursor(state.lines, { line: l, col: Math.max(0, col) }, 'NORMAL'),
-        commandMessage: msg('선언부로 이동: {word} ({v}번째 줄)', { word, v: l + 1 }),
-        pendingKeys: undefined,
-      };
+  return (
+    scanLines(functionStartLine, declRegex, true) ??
+    scanLines(0, declRegex, true) ??
+    scanLines(0, wordRegex, false) ?? {
+      ...state,
+      commandMessage: msg('E486: 선언부를 찾을 수 없습니다: {word}', { word }),
+      pendingKeys: undefined,
     }
-  }
-
-  // B. 파일 전체(0행부터)에서 선언 키워드 탐색
-  for (let l = 0; l < state.lines.length; l++) {
-    const text = state.lines[l] ?? '';
-    const match = declRegex.exec(text);
-    if (match) {
-      const col = text.indexOf(word, match.index);
-      const stateWithJump = recordJump(state);
-      return {
-        ...stateWithJump,
-        cursor: clampCursor(state.lines, { line: l, col: Math.max(0, col) }, 'NORMAL'),
-        commandMessage: msg('선언부로 이동: {word} ({v}번째 줄)', { word, v: l + 1 }),
-        pendingKeys: undefined,
-      };
-    }
-  }
-
-  // C. 선언 키워드가 없으면 파일 맨 위(0행)부터 최초 등장 위치로 점프 (순정 Vim fallback)
-  for (let l = 0; l < state.lines.length; l++) {
-    const text = state.lines[l] ?? '';
-    const match = wordRegex.exec(text);
-    if (match) {
-      const stateWithJump = recordJump(state);
-      return {
-        ...stateWithJump,
-        cursor: clampCursor(state.lines, { line: l, col: match.index }, 'NORMAL'),
-        commandMessage: msg('선언부(첫 등장)로 이동: {word} ({v}번째 줄)', { word, v: l + 1 }),
-        pendingKeys: undefined,
-      };
-    }
-  }
-
-  return {
-    ...state,
-    commandMessage: msg('E486: 선언부를 찾을 수 없습니다: {word}', { word }),
-    pendingKeys: undefined,
-  };
+  );
 }
 
 /**

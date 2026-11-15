@@ -1,6 +1,7 @@
 import { CursorPosition, VimEditorState, VimScriptValue } from './types';
 import { handleKey } from './vimEngine';
 import { executeCommandLine } from './commandLine';
+import { addHistory } from './cmdlineWindow';
 import { parseKeySequence } from './keymapEngine';
 import { callUserFunction } from './vimscriptEngine';
 import { EvalContext, VimScriptError, evaluateVimScript } from './vimscriptEval';
@@ -31,7 +32,9 @@ export function sendKeys(state: VimEditorState, keys: string | string[]): VimEdi
 
 /** Ex 명령을 실행합니다. (앞의 ':' 는 있어도 없어도 됩니다) 예: runExCommand(state, '%s/foo/bar/g') */
 export function runExCommand(state: VimEditorState, command: string): VimEditorState {
-  return executeCommandLine(state, command.replace(/^:/, ''), handleKey);
+  const clean = command.replace(/^:/, '');
+  const recorded = !state.functionDraft && clean.trim().length > 0 ? addHistory(state, clean, ':') : state;
+  return executeCommandLine(recorded, clean, handleKey);
 }
 
 /**

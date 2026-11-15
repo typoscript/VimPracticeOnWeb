@@ -220,6 +220,10 @@ export function getRegisterContent(
       ? { type: 'text', content: state.lastInsertedText }
       : null;
   }
+  if (targetReg === ':') {
+    const lastCmd = state.commandHistory?.[state.commandHistory.length - 1];
+    return lastCmd ? { type: 'text', content: lastCmd } : null;
+  }
 
   // 시스템 클립보드 ("+, "*) 조회
   if (targetReg === '+' || targetReg === '*') {

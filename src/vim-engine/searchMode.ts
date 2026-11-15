@@ -9,7 +9,9 @@ import {
   parseSearchQuery,
   findCurrentOrNextMatch,
   findSearchTarget,
+  getWordAtCursor,
 } from './search';
+import { starSearchPattern } from './vimRegex';
 import { recordJump } from './marks';
 import { addHistory, navigateHistory, openCommandLineWindow } from './cmdlineWindow';
 import {
@@ -501,4 +503,57 @@ export function handleSearchModeKey(state: VimEditorState, key: string, isReplay
   }
 
   return state;
+}
+
+/**
+ * * / # (wholeWord=true) 및 g* / g# (wholeWord=false) 커서 아래 단어 검색을 수행합니다.
+ */
+export function executeWordSearch(
+  state: VimEditorState,
+  direction: 'forward' | 'backward',
+  wholeWord = true
+): VimEditorState {
+  const currentLine = state.lines[state.cursor.line] ?? '';
+  const word = getWordAtCursor(currentLine, state.cursor.col);
+  if (!word) {
+    return { ...state, pendingKeys: undefined, bell: true, commandMessage: msg('E348: 커서 아래에 단어가 없습니다') };
+  }
+
+  const query = starSearchPattern(word, wholeWord);
+  const matches = findMatches(state.lines, query, state.options);
+  if (matches.length === 0) {
+    return {
+      ...state,
+      lastSearchQuery: query,
+      lastSearchOffset: null,
+      lastSearchDirection: direction,
+      hlsearchSuppressed: undefined,
+      pendingKeys: undefined,
+      bell: true,
+      commandMessage: msg('E486: 패턴을 찾을 수 없습니다: {lastSearchQuery}', { lastSearchQuery: query }),
+    };
+  }
+
+  const targetMatch =
+    direction === 'forward'
+      ? findNextMatch(matches, state.cursor) ?? matches[0]
+      : findPrevMatch(matches, state.cursor) ?? matches[matches.length - 1];
+  const matchIdx = targetMatch
+    ? matches.findIndex((m) => m.line === targetMatch.line && m.col === targetMatch.col)
+    : -1;
+  const stateWithJump = recordJump(state);
+
+  return {
+    ...stateWithJump,
+    cursor: targetMatch ? { line: targetMatch.line, col: targetMatch.col } : state.cursor,
+    lastSearchQuery: query,
+    lastSearchOffset: null,
+    lastSearchDirection: direction,
+    hlsearchSuppressed: undefined,
+    commandMessage:
+      direction === 'forward'
+        ? msg('단어 \'{word}\' 검색 ({v}/{matchesCount})', { word, v: matchIdx + 1, matchesCount: matches.length })
+        : msg('단어 \'{word}\' 역방향 검색 ({v}/{matchesCount})', { word, v: matchIdx + 1, matchesCount: matches.length }),
+    pendingKeys: undefined,
+  };
 }
