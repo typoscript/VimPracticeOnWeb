@@ -1,6 +1,13 @@
 import { VimEditorState } from './types';
 import { clampCursor } from './cursor';
-import { parseKeySequence } from './keymapEngine';
+import {
+  ResolvedKeymap,
+  applySilentKeymapResult,
+  evaluateExprKeymap,
+  isKeymapPrefix,
+  parseKeySequence,
+  resolveKeymapWithMeta,
+} from './keymapEngine';
 import { findMatchingAbbrev, isAbbrevTriggerKey } from './abbrevEngine';
 import {
   startOrCycleCompletion,
@@ -183,34 +190,34 @@ export function handleInsertModeKey(
   const regRes = handleInsertRegister(state, key, isReplayingDot);
   if (regRes) return regRes;
 
-  // 커스텀 키매핑 검사 (예: Insert 모드 jk 또는 jj -> <Esc>)
-  if (state.pendingKeys) {
-    const combined = `${state.pendingKeys}${key}`;
-    const mapped =
-      state.userKeymaps?.[`i:${combined}`] ||
-      state.userKeymaps?.[combined];
+  // 커스텀 키매핑 검사 (다중 키 jk/<Esc> 및 단일 키 <buffer>/<silent>/<expr>)
+  const executeInsertMapped = (resolved: ResolvedKeymap, stripPendingCount: number): VimEditorState => {
+    const prevMsg = state.commandMessage;
+    const rhs = resolved.expr ? evaluateExprKeymap(state, resolved.rhs) : resolved.rhs;
+    const baseLine = stripPendingCount > 0
+      ? currentLine.slice(0, Math.max(0, col - stripPendingCount)) + currentLine.slice(col)
+      : currentLine;
+    const nextLines = stripPendingCount > 0 ? [...state.lines] : state.lines;
+    if (stripPendingCount > 0) nextLines[line] = baseLine;
+    const baseCol = Math.max(0, col - stripPendingCount);
 
-    if (mapped === '<Esc>' || mapped === '<esc>' || mapped === 'Escape') {
-      // 직전에 입력되어 버퍼에 기록된 pendingKeys 문자(예: 'j')를 삭제
-      const cleanedLine =
-        currentLine.slice(0, Math.max(0, col - 1)) + currentLine.slice(col);
-      const nextLines = [...state.lines];
-      nextLines[line] = cleanedLine;
-      const nextCol = Math.max(0, col - 2);
-
+    if (rhs === '<Esc>' || rhs === '<esc>' || rhs === 'Escape') {
+      const nextCol = Math.max(0, baseCol - 1);
       let nextLastChange = state.lastChangeKeys;
       if (!isReplayingDot && state.currentChangeKeys) {
-        nextLastChange = [...state.currentChangeKeys.slice(0, -1), 'Escape'];
+        nextLastChange = [
+          ...(stripPendingCount > 0 ? state.currentChangeKeys.slice(0, -stripPendingCount) : state.currentChangeKeys),
+          'Escape',
+        ];
       }
-
       const lastPos = { line, col: nextCol, row: line };
       const changeRecord = recordChangePosition(state.changeList, { line, col: nextCol });
       const cleanedInsert =
-        state.pendingKeys && (state.currentInsertText ?? '').endsWith(state.pendingKeys)
+        stripPendingCount > 0 && state.pendingKeys && (state.currentInsertText ?? '').endsWith(state.pendingKeys)
           ? (state.currentInsertText ?? '').slice(0, -state.pendingKeys.length)
           : state.currentInsertText;
 
-      return {
+      return applySilentKeymapResult(prevMsg, {
         ...state,
         lines: nextLines,
         mode: 'NORMAL',
@@ -225,26 +232,33 @@ export function handleInsertModeKey(
         changeList: changeRecord.changeList,
         changeIndex: changeRecord.changeIndex,
         marks: { ...(state.marks ?? {}), '^': { row: line, col: nextCol } },
-      };
-    } else if (mapped) {
-      // 일반 Insert 모드 커스텀 키매핑 확장
-      const cleanedLine =
-        currentLine.slice(0, Math.max(0, col - 1)) + currentLine.slice(col);
-      const nextLines = [...state.lines];
-      nextLines[line] = cleanedLine;
-      const nextCol = Math.max(0, col - 1);
-      let s: VimEditorState = {
-        ...state,
-        lines: nextLines,
-        cursor: { line, col: nextCol },
-        pendingKeys: undefined,
-      };
-      const tokens = parseKeySequence(mapped, state.leaderKey || ' ');
-      for (const tok of tokens) {
-        s = dispatchKey(s, tok, isReplayingDot, 1);
-        if (s.bell) break;
-      }
-      return s;
+      }, resolved.silent);
+    }
+
+    let s: VimEditorState = {
+      ...state,
+      lines: nextLines,
+      cursor: { line, col: baseCol },
+      pendingKeys: undefined,
+    };
+    const tokens = parseKeySequence(rhs, state.leaderKey || ' ');
+    for (const tok of tokens) {
+      s = dispatchKey(s, tok, isReplayingDot, Math.max(1, macroDepth + 1));
+      if (s.bell) break;
+    }
+    return applySilentKeymapResult(prevMsg, s, resolved.silent);
+  };
+
+  if (state.pendingKeys) {
+    const combined = `${state.pendingKeys}${key}`;
+    const resolved = resolveKeymapWithMeta(state, 'i', combined);
+    if (resolved) {
+      return executeInsertMapped(resolved, state.pendingKeys.length);
+    }
+  } else if (macroDepth === 0) {
+    const resolved = resolveKeymapWithMeta(state, 'i', key);
+    if (resolved) {
+      return executeInsertMapped(resolved, 0);
     }
   }
 
@@ -599,10 +613,7 @@ export function handleInsertModeKey(
     const nextLines = [...state.lines];
     nextLines[line] = newLine;
     // 현재 입력된 문자가 Insert 모드 다중 키 매핑의 접두사인지 확인 (예: 'jk'의 'j')
-    const isMappingPrefix = Object.keys(state.userKeymaps ?? {}).some((k) => {
-      const from = k.startsWith('i:') ? k.slice(2) : k;
-      return from.length > 1 && from.startsWith(key);
-    });
+    const isMappingPrefix = isKeymapPrefix(state, 'i', key);
 
     return {
       ...state,

@@ -111,6 +111,7 @@ export function callUserFunction(
     state,
     locals: {},
     args: aArgs,
+    runEx,
     callUserFunction: (c, n, a) => {
       const r = callUserFunction(c.state, n, a, runEx, depth + 1);
       c.state = r.state;
@@ -505,6 +506,7 @@ function assignTargets(ctx: EvalContext, target: string, value: VimScriptValue):
 function topLevelContext(state: VimEditorState, runEx: ExRunner, firstline?: number, lastline?: number): EvalContext {
   return {
     state,
+    runEx,
     callUserFunction: (c, n, a) => {
       const r = callUserFunction(c.state, n, a, runEx, 0, firstline, lastline);
       c.state = r.state;
@@ -512,6 +514,16 @@ function topLevelContext(state: VimEditorState, runEx: ExRunner, firstline?: num
       return r.value;
     },
   };
+}
+
+/** 표현식을 상태 컨텍스트로 평가해 문자열로 반환합니다 (<expr> 키매핑용). */
+export function evaluateScriptExpression(
+  state: VimEditorState,
+  expr: string,
+  runEx: ExRunner = (s) => s
+): string {
+  const ctx = topLevelContext(state, runEx);
+  return toVimString(evaluateVimScript(expr, ctx));
 }
 
 /**

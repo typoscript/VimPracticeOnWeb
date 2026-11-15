@@ -13,7 +13,12 @@ import { replaceVisualChars } from './visualUtilities';
 import { moveFind } from './findChar';
 import { findMatches, findNextMatch, findPrevMatch, getWordAtCursor } from './search';
 import { starSearchPattern } from './vimRegex';
-import { parseKeySequence } from './keymapEngine';
+import {
+  applySilentKeymapResult,
+  evaluateExprKeymap,
+  parseKeySequence,
+  resolveKeymapWithMeta,
+} from './keymapEngine';
 import { executeVisualSurround } from './surroundEngine';
 import {
   cursorToHigh,
@@ -147,24 +152,26 @@ export function handleVisualModeKey(
     return alternateBuffer(state);
   }
 
-  // 비주얼 모드 커스텀 키매핑 (예: H -> ^, L -> $, Y -> y, <leader>y -> "+y 등)
+  // 비주얼 모드 커스텀 키매핑 (예: H -> ^, L -> $, Y -> y, <leader>y -> "+y, <buffer>, <silent>, <expr> 등)
   if (!state.pendingKeys && macroDepth === 0) {
-    const visualMapped =
-      state.userKeymaps?.[`v:${key}`] || state.userKeymaps?.[key];
-    if (visualMapped) {
-      if (visualMapped === '^') {
-        return { ...state, cursor: moveToFirstNonBlank(state.lines, state.cursor) };
+    const resolved = resolveKeymapWithMeta(state, 'v', key);
+    if (resolved) {
+      const prevMessage = state.commandMessage;
+      const rhs = resolved.expr ? evaluateExprKeymap(state, resolved.rhs) : resolved.rhs;
+      if (!rhs) return applySilentKeymapResult(prevMessage, state, resolved.silent);
+      if (rhs === '^') {
+        return applySilentKeymapResult(prevMessage, { ...state, cursor: moveToFirstNonBlank(state.lines, state.cursor) }, resolved.silent);
       }
-      if (visualMapped === '$') {
-        return { ...state, cursor: moveToLineEnd(state.lines, state.cursor) };
+      if (rhs === '$') {
+        return applySilentKeymapResult(prevMessage, { ...state, cursor: moveToLineEnd(state.lines, state.cursor) }, resolved.silent);
       }
-      const tokens = parseKeySequence(visualMapped, state.leaderKey || ' ');
+      const tokens = parseKeySequence(rhs, state.leaderKey || ' ');
       let s: VimEditorState = state;
       for (const tok of tokens) {
         s = dispatchKey(s, tok, false, macroDepth + 1);
         if (s.bell) break;
       }
-      return s;
+      return applySilentKeymapResult(prevMessage, s, resolved.silent);
     }
   }
 

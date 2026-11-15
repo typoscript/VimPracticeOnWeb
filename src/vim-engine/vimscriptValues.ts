@@ -41,6 +41,8 @@ export interface EvalContext {
   submatches?: string[];
   /** 사용자 함수 호출. ctx.state 를 갱신할 수 있습니다. */
   callUserFunction: (ctx: EvalContext, name: string, args: VimScriptValue[]) => VimScriptValue;
+  /** Ex 명령 실행기 (:execute, execute() 내장 함수용) */
+  runEx?: (state: VimEditorState, command: string) => VimEditorState;
 }
 
 // ---------------------------------------------------------------------------

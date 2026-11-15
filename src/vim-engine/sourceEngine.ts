@@ -1,15 +1,65 @@
 import { VimEditorState } from './types';
 import { executeSetCommand } from './setEngine';
 import { getVfsFile } from './vfs';
-import { registerKeymap } from './keymapEngine';
+import { registerKeymap, unregisterKeymap, parseMapRest, parseUnmapRest } from './keymapEngine';
 import { executeAbbrevCommand } from './abbrevEngine';
 import { executeUserCommandDefinition } from './userCommandEngine';
-import { defineFunctionFromLines, isEndFunctionLine, isFunctionHeaderLine } from './vimscriptEngine';
+import {
+  defineFunctionFromLines,
+  executeScriptBlock,
+  isEndFunctionLine,
+  isFunctionHeaderLine,
+} from './vimscriptEngine';
 import { isSessionScript, restoreSession } from './sessionEngine';
 import { msg } from './messages';
 
 /** 소싱 중 let / call / echo 등 Vim script 명령을 실행하기 위한 Ex 실행기 */
 export type SourceExRunner = (state: VimEditorState, command: string) => VimEditorState;
+
+const BLOCK_OPEN_RE = /^:?\s*(if|wh(?:i(?:le?)?)?|for|try)\b/;
+const BLOCK_CLOSE_RE = /^:?\s*(en(?:d(?:if?)?)?|endw(?:h(?:i(?:le?)?)?)?|endfo(?:r)?|endt(?:r(?:y)?)?)\b/;
+
+/** Vim script 줄 이음(\)과 인라인 연속 주석("\\)을 하나의 논리 줄로 결합합니다. */
+function joinLineContinuations(rawLines: string[]): string[] {
+  const joined: string[] = [];
+  for (const raw of rawLines) {
+    const trimmed = raw.trimStart();
+    if (trimmed.startsWith('"\\ ') || trimmed === '"\\') {
+      continue;
+    }
+    if (trimmed.startsWith('\\') && joined.length > 0) {
+      const piece = trimmed.slice(1).trimStart();
+      joined[joined.length - 1] = piece ? `${joined[joined.length - 1]} ${piece}` : joined[joined.length - 1];
+      continue;
+    }
+    joined.push(raw);
+  }
+  return joined;
+}
+
+/** 여러 줄에 걸친 제어문 블록(if/while/for/try)을 중첩 깊이에 맞춰 끝 줄까지 수집합니다. */
+function collectControlBlock(lines: string[], startIdx: number): { block: string[]; endIdx: number } {
+  const first = lines[startIdx].trim();
+  const block: string[] = [first];
+  // 한 줄 파이프 형태 (if x | ... | endif)는 블록 수집을 건너뜀
+  if (first.includes('|') && /\b(endif|en|endwhile|endw|endfor|endfo|endtry|endt)\b/.test(first)) {
+    return { block, endIdx: startIdx };
+  }
+  let depth = 1;
+  let end = startIdx;
+  while (end + 1 < lines.length && depth > 0) {
+    end++;
+    const cur = lines[end].trim();
+    block.push(cur);
+    if (!cur || cur.startsWith('"')) continue;
+    if (BLOCK_OPEN_RE.test(cur) && !(cur.includes('|') && BLOCK_CLOSE_RE.test(cur.split('|').pop() ?? ''))) {
+      depth++;
+    } else if (BLOCK_CLOSE_RE.test(cur)) {
+      depth--;
+    }
+  }
+  return { block, endIdx: end };
+}
 
 /**
  * .vimrc 또는 스크립트 파일을 한 줄씩 읽어 에디터 상태에 적용합니다 (:source, :so).
@@ -50,13 +100,14 @@ export function sourceScript(state: VimEditorState, targetFile = '%', runEx?: So
     return restoreSession(state, linesToRun, sourceName, runEx);
   }
 
+  const logicalLines = joinLineContinuations(linesToRun);
   const prevDepth = state.scriptSourcingDepth ?? 0;
   let curState: VimEditorState = { ...state, scriptSourcingDepth: prevDepth + 1, scriptFinished: false };
   let appliedCount = 0;
 
-  for (let idx = 0; idx < linesToRun.length; idx++) {
+  for (let idx = 0; idx < logicalLines.length; idx++) {
     if (curState.scriptFinished) break;
-    const line = linesToRun[idx].trim();
+    const line = logicalLines[idx].trim();
     if (!line || line.startsWith('"')) {
       // 주석 및 빈 줄 무시
       continue;
@@ -71,14 +122,25 @@ export function sourceScript(state: VimEditorState, targetFile = '%', runEx?: So
     if (isFunctionHeaderLine(line)) {
       const body: string[] = [];
       let end = idx + 1;
-      while (end < linesToRun.length && !isEndFunctionLine(linesToRun[end])) {
-        body.push(linesToRun[end]);
+      while (end < logicalLines.length && !isEndFunctionLine(logicalLines[end])) {
+        body.push(logicalLines[end]);
         end++;
       }
       curState = defineFunctionFromLines(curState, line, body);
       idx = end;
       appliedCount++;
       continue;
+    }
+
+    // 0.5. 다중 줄 제어문 블록 (if/while/for/try ... endif/endwhile/endfor/endtry)
+    if (BLOCK_OPEN_RE.test(line) && runEx) {
+      const { block, endIdx } = collectControlBlock(logicalLines, idx);
+      if (block.length > 1) {
+        curState = executeScriptBlock(curState, block, runEx);
+        idx = endIdx;
+        appliedCount++;
+        continue;
+      }
     }
 
     // 1. set 명령어 (:set ...)
@@ -88,15 +150,29 @@ export function sourceScript(state: VimEditorState, targetFile = '%', runEx?: So
       continue;
     }
 
-    // 2. 키매핑 명령어 (inoremap, nnoremap, vnoremap, nmap, imap, vmap, map, noremap 등)
-    const mapMatch = line.match(/^([a-zA-Z]+map|noremap)\s+(\S+)\s+(.+)$/i);
+    // 2. 키매핑 명령어 (inoremap, nnoremap, vnoremap, nmap, imap, vmap, map, noremap 및 <buffer>/<silent>/<expr>)
+    const mapMatch = line.match(/^([a-zA-Z]*map|noremap)\s+([\s\S]+)$/i);
     if (mapMatch) {
       const cmdType = mapMatch[1];
-      const fromKey = mapMatch[2];
-      const toKey = mapMatch[3].replace(/<CR>/gi, 'Enter').replace(/<Esc>/gi, 'Escape');
-      curState = registerKeymap(curState, cmdType, fromKey, toKey);
-      appliedCount++;
-      continue;
+      const lowerCmd = cmdType.toLowerCase();
+      if (lowerCmd.includes('unmap')) {
+        const parsedUnmap = parseUnmapRest(mapMatch[2]);
+        if (parsedUnmap) {
+          curState = unregisterKeymap(curState, cmdType, parsedUnmap.lhs, { buffer: parsedUnmap.buffer });
+          appliedCount++;
+          continue;
+        }
+      } else {
+        const parsed = parseMapRest(mapMatch[2]);
+        if (parsed) {
+          const rhs = parsed.modifiers.expr
+            ? parsed.rhs
+            : parsed.rhs.replace(/<CR>/gi, 'Enter').replace(/<Esc>/gi, 'Escape');
+          curState = registerKeymap(curState, cmdType, parsed.lhs, rhs, parsed.modifiers);
+          appliedCount++;
+          continue;
+        }
+      }
     }
 
     // 3. 사용자 정의 명령 (command! W w, delcommand W, comclear)

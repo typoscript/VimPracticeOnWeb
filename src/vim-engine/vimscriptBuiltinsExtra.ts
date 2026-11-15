@@ -349,6 +349,63 @@ export const EXTRA_BUILTINS: Record<string, ExtraBuiltin> = {
       executeBufferSearch(ctx, toVimString(pat), flags ? toVimString(flags) : '', stopline ? toNumber(stopline) : 0),
   },
 
+  // ---- Ex 실행 ----
+  execute: {
+    min: 1,
+    max: 2,
+    fn: (ctx, [cmdArg, silentArg]) => {
+      if (!ctx.runEx) return '';
+      const mode = silentArg === undefined ? 'silent' : toVimString(silentArg);
+      const silentBang = mode === 'silent!';
+      const silent = mode === 'silent' || silentBang;
+      const cmds = isList(cmdArg) ? cmdArg.map(toVimString) : toVimString(cmdArg).split(/\r?\n/);
+
+      const capKey = '__exec_cap__';
+      const prevRedir = ctx.state.redirSession;
+      const prevMsg = ctx.state.commandMessage;
+      const prevHadCap = ctx.state.globalVars ? capKey in ctx.state.globalVars : false;
+      const prevCapVal = prevHadCap ? ctx.state.globalVars?.[capKey] : undefined;
+
+      let work: VimEditorState = {
+        ...ctx.state,
+        bell: undefined,
+        redirSession: { target: capKey, append: false },
+        globalVars: { ...(ctx.state.globalVars ?? {}), [capKey]: '' },
+      };
+
+      let errMsg: string | undefined;
+      for (const raw of cmds) {
+        const cleaned = raw.replace(/^\s*:/, '').trim();
+        if (!cleaned) continue;
+        const step = ctx.runEx(work, cleaned);
+        work = step;
+        if (step.bell) {
+          errMsg = step.commandMessage ?? msg('E492: 명령 실행에 실패했습니다: {command}', { command: cleaned });
+          break;
+        }
+      }
+
+      const rawCap = work.globalVars?.[capKey];
+      const captured = typeof rawCap === 'string' ? rawCap : '';
+      const nextGlobals = { ...(work.globalVars ?? {}) };
+      if (prevHadCap && prevCapVal !== undefined) nextGlobals[capKey] = prevCapVal;
+      else delete nextGlobals[capKey];
+
+      ctx.state = {
+        ...work,
+        redirSession: prevRedir,
+        globalVars: nextGlobals,
+        bell: silentBang ? undefined : work.bell,
+        commandMessage: silent ? prevMsg : work.commandMessage,
+      };
+
+      if (errMsg && !silentBang) {
+        throw new VimScriptError(errMsg);
+      }
+      return captured;
+    },
+  },
+
   // ---- JSON ----
   json_encode: {
     min: 1,

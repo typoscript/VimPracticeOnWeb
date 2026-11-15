@@ -503,6 +503,12 @@ export interface VimEditorState {
   secondaryLines?: string[];
   /** 사용자 정의 키매핑 테이블 (예: { 'i:jk': '<Esc>', 'n:<leader>w': ':w' }) */
   userKeymaps?: Record<string, string>;
+  /** 버퍼별 로컬 키매핑 (:nmap <buffer> ...) */
+  bufferKeymaps?: Record<number, Record<string, string>>;
+  /** 키매핑 메타데이터 (<silent>, <expr>, noremap 여부) */
+  keymapMeta?: Record<string, { silent?: boolean; expr?: boolean; noremap?: boolean }>;
+  /** :normal! 실행 중 사용자 키매핑 우회 여부 */
+  keymapsDisabled?: boolean;
   /** 사용자 정의 입력/명령행 약어 (:iabbrev, :cabbrev, :abbrev, 키: 'i:teh' | 'c:W') */
   abbreviations?: Record<string, AbbreviationEntry>;
   /** Insert/Command 모드 Ctrl-v 리터럴 및 uXXXX/UXXXXXXXX 유니코드 입력 대기 상태 */

@@ -94,6 +94,7 @@ export function executeGlobalCommand(
   // 2. :g/pattern/norm {cmd} (매칭 줄마다 Normal 명령어 일괄 실행)
   const normMatch = action.match(/^(norm|normal)(!?)\s*(.*)$/);
   if (normMatch) {
+    const bang = normMatch[2] === '!';
     const normKeys = normMatch[3];
     let curState = pushUndoSnapshot(state);
 
@@ -102,7 +103,7 @@ export function executeGlobalCommand(
     const sortedIndices = isLineDelete ? [...matchedIndices].reverse() : matchedIndices;
 
     for (const idx of sortedIndices) {
-      curState = executeNormalKeysOnLine(curState, idx, normKeys, keyRunner);
+      curState = executeNormalKeysOnLine(curState, idx, normKeys, keyRunner, bang);
     }
 
     return {
@@ -257,13 +258,14 @@ export function executeRangeNorm(
   range: { startLine: number; endLine: number },
   normKeys: string,
   commandStr: string,
-  keyRunner?: KeyRunner
+  keyRunner?: KeyRunner,
+  bang = false
 ): VimEditorState {
   let curState = pushUndoSnapshot(state);
   const count = range.endLine - range.startLine + 1;
 
   for (let l = range.startLine; l <= range.endLine; l++) {
-    curState = executeNormalKeysOnLine(curState, l, normKeys, keyRunner);
+    curState = executeNormalKeysOnLine(curState, l, normKeys, keyRunner, bang);
   }
 
   return {
@@ -284,22 +286,25 @@ export function executeNormalKeysOnLine(
   state: VimEditorState,
   lineIdx: number,
   keysStr: string,
-  keyRunner?: KeyRunner
+  keyRunner?: KeyRunner,
+  bang = false
 ): VimEditorState {
   if (lineIdx < 0 || lineIdx >= state.lines.length) {
     return state;
   }
 
+  const prevDisabled = state.keymapsDisabled;
   let curState: VimEditorState = {
     ...state,
     cursor: { line: lineIdx, col: 0 },
     mode: 'NORMAL',
     pendingKeys: undefined,
+    ...(bang ? { keymapsDisabled: true } : {}),
   };
 
   const tokens = parseKeyTokens(keysStr);
   if (!keyRunner) {
-    return curState;
+    return { ...curState, keymapsDisabled: prevDisabled };
   }
 
   for (const token of tokens) {
@@ -313,7 +318,7 @@ export function executeNormalKeysOnLine(
     curState = keyRunner(curState, 'Escape', true);
   }
 
-  return curState;
+  return { ...curState, keymapsDisabled: prevDisabled };
 }
 
 /**

@@ -466,7 +466,7 @@ export function executeCommandLine(
   const normMatch = command.match(/^(?:norm|normal)(!?)\s+(.*)$/);
   if (normMatch) {
     const targetRange = range ?? currentLineRange;
-    return executeRangeNorm(state, targetRange, normMatch[2], trimmed, keyRunner);
+    return executeRangeNorm(state, targetRange, normMatch[2], trimmed, keyRunner, normMatch[1] === '!');
   }
 
   // 4-6. 정렬: :[range]sort[!] [i][u][n|f|x|o|b][r] [/{pattern}/]

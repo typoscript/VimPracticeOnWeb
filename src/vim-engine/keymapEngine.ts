@@ -1,10 +1,90 @@
 import { VimEditorState } from './types';
 import { msg } from './messages';
+import { evaluateScriptExpression, ExRunner } from './vimscriptEngine';
 
 export interface KeymapEntry {
   mode: string;
   lhs: string;
   rhs: string;
+}
+
+export interface KeymapModifiers {
+  buffer?: boolean;
+  silent?: boolean;
+  expr?: boolean;
+}
+
+export interface ResolvedKeymap {
+  rhs: string;
+  silent?: boolean;
+  expr?: boolean;
+  noremap?: boolean;
+  buffer?: boolean;
+}
+
+const MAP_FLAG_RE = /^<(buffer|silent|expr|nowait|unique)>$/i;
+
+/** :map / :nnoremap 뒤의 수식어(<buffer>, <silent>, <expr>)와 lhs / rhs 를 분리합니다. */
+export function parseMapRest(rawRest: string): { modifiers: KeymapModifiers; lhs: string; rhs: string } | null {
+  const modifiers: KeymapModifiers = {};
+  let rest = rawRest.trim();
+  for (;;) {
+    const m = rest.match(/^(\S+)\s+([\s\S]+)$/);
+    if (!m || !MAP_FLAG_RE.test(m[1])) break;
+    const flag = m[1].slice(1, -1).toLowerCase();
+    if (flag === 'buffer') modifiers.buffer = true;
+    else if (flag === 'silent') modifiers.silent = true;
+    else if (flag === 'expr') modifiers.expr = true;
+    rest = m[2].trimStart();
+  }
+  const body = rest.match(/^(\S+)\s+([\s\S]+)$/);
+  if (!body) return null;
+  return { modifiers, lhs: body[1], rhs: body[2].trim() };
+}
+
+/** :unmap 뒤의 <buffer> 수식어와 lhs 를 분리합니다. */
+export function parseUnmapRest(rawRest: string): { buffer: boolean; lhs: string } | null {
+  let rest = rawRest.trim();
+  let buffer = false;
+  if (/^<buffer>\s+/i.test(rest)) {
+    buffer = true;
+    rest = rest.replace(/^<buffer>\s+/i, '').trim();
+  }
+  return rest && !/\s/.test(rest) ? { buffer, lhs: rest } : null;
+}
+
+function getKeyVariants(lhs: string, leaderKey: string): string[] {
+  const variants = [lhs];
+  if (lhs.includes('<leader>')) {
+    variants.push(lhs.replace(/<leader>/gi, leaderKey));
+  } else if (lhs.startsWith(leaderKey)) {
+    variants.push('<leader>' + lhs.slice(leaderKey.length));
+  }
+  const lower = lhs.toLowerCase();
+  if (lower === 'tab' || lower === '<tab>') variants.push(lower === 'tab' ? '<Tab>' : 'Tab');
+  else if (lower === 'enter' || lower === '<cr>' || lower === '<enter>') variants.push('Enter', '<CR>');
+  else if (lower === 'escape' || lower === '<esc>') variants.push('Escape', '<Esc>');
+  else if (lower === 'backspace' || lower === '<bs>') variants.push('Backspace', '<BS>');
+  return variants;
+}
+
+/** <expr> 매핑의 RHS 표현식을 평가해 확장 키 문자열을 반환합니다. */
+export function evaluateExprKeymap(state: VimEditorState, expr: string, runEx?: ExRunner): string {
+  try {
+    return evaluateScriptExpression(state, expr, runEx);
+  } catch {
+    return '';
+  }
+}
+
+/** <silent> 매핑 실행 후 커맨드라인 메시지를 복원합니다 (에러 시 제외). */
+export function applySilentKeymapResult(
+  prevMessage: string | undefined,
+  nextState: VimEditorState,
+  silent?: boolean
+): VimEditorState {
+  if (!silent || nextState.bell) return nextState;
+  return { ...nextState, commandMessage: prevMessage };
 }
 
 /**
@@ -145,6 +225,41 @@ export function parseKeySequence(rhs: string, leaderKey = ' '): string[] {
 }
 
 /**
+ * Resolves a matching keymap + metadata for the given mode and key sequence.
+ */
+export function resolveKeymapWithMeta(
+  state: VimEditorState,
+  mode: 'n' | 'i' | 'v',
+  keySequence: string
+): ResolvedKeymap | null {
+  if (state.keymapsDisabled) return null;
+
+  const bufId = state.currentBufferId ?? 1;
+  const bufMaps = state.bufferKeymaps?.[bufId];
+  const userKeymaps = state.userKeymaps;
+  if (!bufMaps && !userKeymaps) return null;
+
+  const leaderKey = state.leaderKey || ' ';
+  const variants = getKeyVariants(keySequence, leaderKey);
+
+  const lookupIn = (map: Record<string, string> | undefined, isBuf: boolean): ResolvedKeymap | null => {
+    if (!map) return null;
+    for (const v of variants) {
+      for (const mapKey of [`${mode}:${v}`, v]) {
+        if (map[mapKey] !== undefined) {
+          const metaKey = isBuf ? `b:${bufId}:${mode}:${v}` : `${mode}:${v}`;
+          const meta = state.keymapMeta?.[metaKey] ?? state.keymapMeta?.[isBuf ? `b:${bufId}:${v}` : v];
+          return { rhs: map[mapKey], buffer: isBuf, ...meta };
+        }
+      }
+    }
+    return null;
+  };
+
+  return lookupIn(bufMaps, true) ?? lookupIn(userKeymaps, false);
+}
+
+/**
  * Resolves a matching keymap for the given mode and key sequence.
  */
 export function resolveKeymap(
@@ -152,28 +267,7 @@ export function resolveKeymap(
   mode: 'n' | 'i' | 'v',
   keySequence: string
 ): string | null {
-  const userKeymaps = state.userKeymaps;
-  if (!userKeymaps) return null;
-
-  const leaderKey = state.leaderKey || ' ';
-  const variants = [keySequence];
-
-  if (keySequence.includes('<leader>')) {
-    variants.push(keySequence.replace(/<leader>/gi, leaderKey));
-  } else if (keySequence.startsWith(leaderKey)) {
-    variants.push('<leader>' + keySequence.slice(leaderKey.length));
-  }
-
-  for (const v of variants) {
-    if (userKeymaps[`${mode}:${v}`] !== undefined) {
-      return userKeymaps[`${mode}:${v}`];
-    }
-    if (userKeymaps[v] !== undefined) {
-      return userKeymaps[v];
-    }
-  }
-
-  return null;
+  return resolveKeymapWithMeta(state, mode, keySequence)?.rhs ?? null;
 }
 
 /**
@@ -184,82 +278,89 @@ export function isKeymapPrefix(
   mode: 'n' | 'i' | 'v',
   keySequence: string
 ): boolean {
+  if (state.keymapsDisabled) return false;
+  const bufMaps = state.bufferKeymaps?.[state.currentBufferId ?? 1];
   const userKeymaps = state.userKeymaps;
-  if (!userKeymaps) return false;
+  if (!bufMaps && !userKeymaps) return false;
 
   const leaderKey = state.leaderKey || ' ';
-  const variants = [keySequence];
-  if (keySequence.includes('<leader>')) {
-    variants.push(keySequence.replace(/<leader>/gi, leaderKey));
-  } else if (keySequence.startsWith(leaderKey)) {
-    variants.push('<leader>' + keySequence.slice(leaderKey.length));
-  }
+  const variants = getKeyVariants(keySequence, leaderKey);
 
-  for (const [k] of Object.entries(userKeymaps)) {
-    let targetLhs = k;
-    let targetMode = 'all';
-    if (k.startsWith('n:')) {
-      targetMode = 'n';
-      targetLhs = k.slice(2);
-    } else if (k.startsWith('i:')) {
-      targetMode = 'i';
-      targetLhs = k.slice(2);
-    } else if (k.startsWith('v:')) {
-      targetMode = 'v';
-      targetLhs = k.slice(2);
-    }
-
-    if (targetMode !== 'all' && targetMode !== mode) continue;
-
-    for (const v of variants) {
-      if (targetLhs.length > v.length && targetLhs.startsWith(v)) {
-        return true;
+  const checkEntries = (map: Record<string, string> | undefined): boolean => {
+    if (!map) return false;
+    for (const [k] of Object.entries(map)) {
+      let targetLhs = k;
+      let targetMode = 'all';
+      if (k.startsWith('n:')) {
+        targetMode = 'n';
+        targetLhs = k.slice(2);
+      } else if (k.startsWith('i:')) {
+        targetMode = 'i';
+        targetLhs = k.slice(2);
+      } else if (k.startsWith('v:')) {
+        targetMode = 'v';
+        targetLhs = k.slice(2);
       }
-      if (targetLhs.includes('<leader>')) {
-        const expandedLhs = targetLhs.replace(/<leader>/gi, leaderKey);
-        if (expandedLhs.length > v.length && expandedLhs.startsWith(v)) {
+
+      if (targetMode !== 'all' && targetMode !== mode) continue;
+
+      for (const v of variants) {
+        if (targetLhs.length > v.length && targetLhs.startsWith(v)) {
           return true;
+        }
+        if (targetLhs.includes('<leader>')) {
+          const expandedLhs = targetLhs.replace(/<leader>/gi, leaderKey);
+          if (expandedLhs.length > v.length && expandedLhs.startsWith(v)) {
+            return true;
+          }
         }
       }
     }
-  }
+    return false;
+  };
 
-  return false;
+  return checkEntries(bufMaps) || checkEntries(userKeymaps);
 }
 
 /**
  * Formats user keymaps into a clean Vim-style list string.
  */
 export function formatKeymapsList(state: VimEditorState, modeFilter = 'all'): string {
+  const bufId = state.currentBufferId ?? 1;
+  const bufMaps = state.bufferKeymaps?.[bufId] ?? {};
   const userKeymaps = state.userKeymaps ?? {};
-  const entries: KeymapEntry[] = [];
+  const entries: Array<KeymapEntry & { buffer?: boolean }> = [];
   const seen = new Set<string>();
 
-  for (const [rawKey, rhs] of Object.entries(userKeymaps)) {
-    let mode = ' ';
-    let lhs = rawKey;
+  const collect = (source: Record<string, string>, isBuf: boolean) => {
+    for (const [rawKey, rhs] of Object.entries(source)) {
+      let mode = ' ';
+      let lhs = rawKey;
 
-    if (rawKey.startsWith('n:')) {
-      mode = 'n';
-      lhs = rawKey.slice(2);
-    } else if (rawKey.startsWith('i:')) {
-      mode = 'i';
-      lhs = rawKey.slice(2);
-    } else if (rawKey.startsWith('v:')) {
-      mode = 'v';
-      lhs = rawKey.slice(2);
+      if (rawKey.startsWith('n:')) {
+        mode = 'n';
+        lhs = rawKey.slice(2);
+      } else if (rawKey.startsWith('i:')) {
+        mode = 'i';
+        lhs = rawKey.slice(2);
+      } else if (rawKey.startsWith('v:')) {
+        mode = 'v';
+        lhs = rawKey.slice(2);
+      }
+
+      const keyId = `${isBuf ? '@' : ''}${mode}:${lhs}:${rhs}`;
+      if (seen.has(keyId)) continue;
+
+      if (modeFilter !== 'all' && modeFilter !== 'map') {
+        if (mode !== modeFilter && mode !== ' ') continue;
+      }
+
+      seen.add(keyId);
+      entries.push({ mode, lhs, rhs, buffer: isBuf });
     }
-
-    const keyId = `${mode}:${lhs}:${rhs}`;
-    if (seen.has(keyId)) continue;
-
-    if (modeFilter !== 'all' && modeFilter !== 'map') {
-      if (mode !== modeFilter && mode !== ' ') continue;
-    }
-
-    seen.add(keyId);
-    entries.push({ mode, lhs, rhs });
-  }
+  };
+  collect(bufMaps, true);
+  collect(userKeymaps, false);
 
   if (entries.length === 0) {
     const modeName =
@@ -282,7 +383,7 @@ export function formatKeymapsList(state: VimEditorState, modeFilter = 'all'): st
         ? 'Visual'
         : 'All' }),
     ...entries.map(
-      (e) => `${(e.mode === ' ' ? ' ' : e.mode).padEnd(2)} ${e.lhs.padEnd(12)} ${e.rhs}`
+      (e) => `${(e.mode === ' ' ? ' ' : e.mode).padEnd(2)} ${e.buffer ? '@' : ''}${e.lhs.padEnd(e.buffer ? 11 : 12)} ${e.rhs}`
     ),
   ];
 
@@ -296,36 +397,40 @@ export function registerKeymap(
   state: VimEditorState,
   cmdType: string,
   lhs: string,
-  rhs: string
+  rhs: string,
+  modifiers: KeymapModifiers = {}
 ): VimEditorState {
   const cmd = cmdType.toLowerCase();
   let modePrefix = 'all';
   if (cmd.startsWith('i')) modePrefix = 'i';
-  else if (cmd.startsWith('n')) modePrefix = 'n';
+  else if (cmd.startsWith('n') && !cmd.startsWith('nore')) modePrefix = 'n';
   else if (cmd.startsWith('v')) modePrefix = 'v';
+  const noremap = cmd.includes('nore');
 
-  const newKeymaps = { ...(state.userKeymaps ?? {}) };
   const leaderKey = state.leaderKey || ' ';
+  const variants = getKeyVariants(lhs, leaderKey);
+  const modes = modePrefix === 'all' ? ['n', 'i', 'v'] : [modePrefix];
+  const bufId = state.currentBufferId ?? 1;
 
-  const variants = [lhs];
-  if (lhs.includes('<leader>')) {
-    variants.push(lhs.replace(/<leader>/gi, leaderKey));
-  } else if (lhs.startsWith(leaderKey)) {
-    variants.push('<leader>' + lhs.slice(leaderKey.length));
-  }
+  const targetMap = modifiers.buffer
+    ? { ...(state.bufferKeymaps?.[bufId] ?? {}) }
+    : { ...(state.userKeymaps ?? {}) };
+  const nextMeta = { ...(state.keymapMeta ?? {}) };
+  const hasMeta = !!(modifiers.silent || modifiers.expr || noremap);
 
-  if (modePrefix === 'all') {
-    for (const v of variants) {
-      newKeymaps[`n:${v}`] = rhs;
-      newKeymaps[`i:${v}`] = rhs;
-      newKeymaps[`v:${v}`] = rhs;
-      newKeymaps[v] = rhs;
+  for (const v of variants) {
+    for (const m of modes) {
+      targetMap[`${m}:${v}`] = rhs;
+      if (hasMeta) {
+        const metaKey = modifiers.buffer ? `b:${bufId}:${m}:${v}` : `${m}:${v}`;
+        nextMeta[metaKey] = {
+          ...(modifiers.silent ? { silent: true } : {}),
+          ...(modifiers.expr ? { expr: true } : {}),
+          ...(noremap ? { noremap: true } : {}),
+        };
+      }
     }
-  } else {
-    for (const v of variants) {
-      newKeymaps[`${modePrefix}:${v}`] = rhs;
-      newKeymaps[v] = rhs;
-    }
+    targetMap[v] = rhs;
   }
 
   return {
@@ -334,7 +439,10 @@ export function registerKeymap(
     visualAnchor: undefined,
     commandBuffer: undefined,
     commandType: undefined,
-    userKeymaps: newKeymaps,
+    ...(modifiers.buffer
+      ? { bufferKeymaps: { ...(state.bufferKeymaps ?? {}), [bufId]: targetMap } }
+      : { userKeymaps: targetMap }),
+    ...(hasMeta ? { keymapMeta: nextMeta } : {}),
     commandMessage: msg('[키매핑 등록] {cmd}: {lhs} -> {rhs}', { cmd, lhs, rhs }),
   };
 }
@@ -345,7 +453,8 @@ export function registerKeymap(
 export function unregisterKeymap(
   state: VimEditorState,
   cmdType: string,
-  lhs: string
+  lhs: string,
+  options: { buffer?: boolean } = {}
 ): VimEditorState {
   const cmd = cmdType.toLowerCase();
   let modePrefix = 'all';
@@ -353,43 +462,29 @@ export function unregisterKeymap(
   else if (cmd.startsWith('n')) modePrefix = 'n';
   else if (cmd.startsWith('v')) modePrefix = 'v';
 
-  const newKeymaps = { ...(state.userKeymaps ?? {}) };
+  const bufId = state.currentBufferId ?? 1;
+  const targetMap = options.buffer
+    ? { ...(state.bufferKeymaps?.[bufId] ?? {}) }
+    : { ...(state.userKeymaps ?? {}) };
+  const nextMeta = state.keymapMeta ? { ...state.keymapMeta } : undefined;
   const leaderKey = state.leaderKey || ' ';
-  const variants = [lhs];
-  if (lhs.includes('<leader>')) {
-    variants.push(lhs.replace(/<leader>/gi, leaderKey));
-  } else if (lhs.startsWith(leaderKey)) {
-    variants.push('<leader>' + lhs.slice(leaderKey.length));
-  }
+  const variants = getKeyVariants(lhs, leaderKey);
+  const modes = modePrefix === 'all' ? ['n', 'i', 'v'] : [modePrefix];
 
   let deletedCount = 0;
   for (const v of variants) {
-    if (modePrefix === 'all') {
-      if (newKeymaps[`n:${v}`]) {
-        delete newKeymaps[`n:${v}`];
+    for (const m of modes) {
+      if (targetMap[`${m}:${v}`]) {
+        delete targetMap[`${m}:${v}`];
         deletedCount++;
       }
-      if (newKeymaps[`i:${v}`]) {
-        delete newKeymaps[`i:${v}`];
-        deletedCount++;
+      if (nextMeta) {
+        delete nextMeta[options.buffer ? `b:${bufId}:${m}:${v}` : `${m}:${v}`];
       }
-      if (newKeymaps[`v:${v}`]) {
-        delete newKeymaps[`v:${v}`];
-        deletedCount++;
-      }
-      if (newKeymaps[v]) {
-        delete newKeymaps[v];
-        deletedCount++;
-      }
-    } else {
-      if (newKeymaps[`${modePrefix}:${v}`]) {
-        delete newKeymaps[`${modePrefix}:${v}`];
-        deletedCount++;
-      }
-      if (newKeymaps[v]) {
-        delete newKeymaps[v];
-        deletedCount++;
-      }
+    }
+    if (targetMap[v]) {
+      delete targetMap[v];
+      deletedCount++;
     }
   }
 
@@ -409,7 +504,10 @@ export function unregisterKeymap(
     visualAnchor: undefined,
     commandBuffer: undefined,
     commandType: undefined,
-    userKeymaps: newKeymaps,
+    ...(options.buffer
+      ? { bufferKeymaps: { ...(state.bufferKeymaps ?? {}), [bufId]: targetMap } }
+      : { userKeymaps: targetMap }),
+    ...(nextMeta ? { keymapMeta: nextMeta } : {}),
     commandMessage: msg('[키매핑 해제] {cmd}: {lhs}', { cmd, lhs }),
   };
 }

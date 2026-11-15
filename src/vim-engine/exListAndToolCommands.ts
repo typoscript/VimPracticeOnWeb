@@ -23,7 +23,7 @@ import {
   tjumpTag,
   cycleTagMatch,
 } from './tagEngine';
-import { registerKeymap, unregisterKeymap, formatKeymapsList } from './keymapEngine';
+import { registerKeymap, unregisterKeymap, formatKeymapsList, parseMapRest, parseUnmapRest } from './keymapEngine';
 import { executeAbbrevCommand } from './abbrevEngine';
 import { executeUserCommandDefinition } from './userCommandEngine';
 import { executeDigraphCommand } from './digraphs';
@@ -535,13 +535,14 @@ export function tryExecuteToolExCommand(
 
   // 커스텀 키매핑 등록: :imap, :inoremap, :nmap, :nnoremap, :vmap, :vnoremap, :map, :noremap
   const mapMatch = trimmed.match(
-    /^:?\s*(nmap|nnoremap|imap|inoremap|vmap|vnoremap|map|noremap)\s+(\S+)\s+(.+)$/i
+    /^:?\s*(nmap|nnoremap|imap|inoremap|vmap|vnoremap|map|noremap)\s+([\s\S]+)$/i
   );
   if (mapMatch) {
     const cmdType = mapMatch[1];
-    const from = mapMatch[2];
-    const to = mapMatch[3].trim();
-    return registerKeymap(state, cmdType, from, to);
+    const parsed = parseMapRest(mapMatch[2]);
+    if (parsed) {
+      return registerKeymap(state, cmdType, parsed.lhs, parsed.rhs, parsed.modifiers);
+    }
   }
 
   // 사용자 정의 명령 등록·삭제·목록: :command[!], :delcommand, :comclear
@@ -551,11 +552,13 @@ export function tryExecuteToolExCommand(
   }
 
   // 키매핑 해제: :unmap, :nunmap, :iunmap, :vunmap
-  const unmapMatch = trimmed.match(/^:?\s*(unmap|nunmap|iunmap|vunmap)\s+(\S+)$/i);
+  const unmapMatch = trimmed.match(/^:?\s*(unmap|nunmap|iunmap|vunmap)\s+([\s\S]+)$/i);
   if (unmapMatch) {
     const cmdType = unmapMatch[1];
-    const from = unmapMatch[2];
-    return unregisterKeymap(state, cmdType, from);
+    const parsed = parseUnmapRest(unmapMatch[2]);
+    if (parsed) {
+      return unregisterKeymap(state, cmdType, parsed.lhs, { buffer: parsed.buffer });
+    }
   }
 
   // 약어: :iabbrev, :cabbrev, :abbrev, :inoreabbrev, :cnoreabbrev, :noreabbrev, :unabbrev, :abclear 등
