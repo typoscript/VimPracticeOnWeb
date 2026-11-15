@@ -614,6 +614,210 @@ const GOLDEN_DEFINITIONS: RawGoldenDefinition[] = [
     startCursor: { row: 0, col: 2 }, // on 'c'
     keys: 'x',
   },
+
+  // ==========================================
+  // 10. Visual Replace & Lessons 80-100 Features
+  // ==========================================
+  {
+    id: 'visual-replace-charwise',
+    category: 'visual-replace',
+    description: 'viwro replaces inner word characters with o',
+    initialText: 'hello world',
+    startCursor: { row: 0, col: 0 },
+    keys: 'viwro',
+  },
+  {
+    id: 'visual-replace-multiline',
+    category: 'visual-replace',
+    description: 'charwise visual selection across lines replaces non-newline chars with #',
+    initialText: 'abc\ndef',
+    startCursor: { row: 0, col: 1 },
+    keys: 'vjlr#',
+  },
+  {
+    id: 'visual-line-replace',
+    category: 'visual-replace',
+    description: 'Vjr* replaces 2 full lines with *',
+    initialText: 'abc\ndefg\nhi',
+    startCursor: { row: 0, col: 0 },
+    keys: 'Vjr*',
+  },
+  {
+    id: 'visual-block-replace',
+    category: 'visual-replace',
+    description: '<C-v>jllrX replaces 2x3 block with X',
+    initialText: 'abcdef\nghijkl\nmnopqr',
+    startCursor: { row: 0, col: 1 },
+    keys: '<C-v>jllrx',
+  },
+  {
+    id: 'visual-block-replace-short-line',
+    category: 'visual-replace',
+    description: '<C-v>2j3lr_ skips padding shorter middle line',
+    initialText: 'abcdef\nhi\nmnopqr',
+    startCursor: { row: 0, col: 1 },
+    keys: '<C-v>2j3lr_',
+  },
+  {
+    id: 'format-gqq-textwidth',
+    category: 'format',
+    description: ':set tw=25 gqq wraps current paragraph line',
+    initialText: 'alpha beta gamma delta epsilon zeta',
+    startCursor: { row: 0, col: 0 },
+    keys: ':set tw=25<CR>gqq',
+  },
+  {
+    id: 'format-gqip-multiline',
+    category: 'format',
+    description: ':set tw=30 gqip joins and wraps paragraph',
+    initialText: 'first line here\nsecond line here\nthird short\n\nafter blank',
+    startCursor: { row: 0, col: 0 },
+    keys: ':set tw=30<CR>gqip',
+  },
+  {
+    id: 'format-gwap-keeps-cursor',
+    category: 'format',
+    description: ':set tw=25 gwip formats while keeping cursor word',
+    initialText: 'one two three four five six seven',
+    startCursor: { row: 0, col: 8 },
+    keys: ':set tw=20<CR>gwip',
+  },
+  {
+    id: 'retab-tabs-to-spaces',
+    category: 'retab',
+    description: ':set ts=2 et | retab expands leading tabs into spaces',
+    initialText: '\t\tconst x = 1;\n\treturn x;',
+    startCursor: { row: 0, col: 0 },
+    keys: ':set ts=2 et<CR>:retab<CR>^',
+  },
+  {
+    id: 'retab-bang-spaces-to-tabs',
+    category: 'retab',
+    description: ':set noet ts=4 | retab! collapses spaces into tabs',
+    initialText: '    const a = 1;\n        const b = 2;',
+    startCursor: { row: 0, col: 0 },
+    keys: ':set noet ts=4<CR>:retab!<CR>',
+  },
+  {
+    id: 'align-center-width',
+    category: 'align',
+    description: ':center 15 centers line within width 15',
+    initialText: 'hello',
+    startCursor: { row: 0, col: 0 },
+    keys: ':set et ts=2<CR>:center 15<CR>',
+  },
+  {
+    id: 'align-right-width',
+    category: 'align',
+    description: ':right 12 right-aligns line within width 12',
+    initialText: 'hello',
+    startCursor: { row: 0, col: 0 },
+    keys: ':set et ts=2<CR>:right 12<CR>',
+  },
+  {
+    id: 'align-left-indent',
+    category: 'align',
+    description: ':left 2 normalizes leading indent to 2 spaces',
+    initialText: '      hello',
+    startCursor: { row: 0, col: 0 },
+    keys: ':left 2<CR>',
+  },
+  {
+    id: 'motion-method-next-start',
+    category: 'motion-method',
+    description: ']m jumps to next method opening brace',
+    initialText: 'class Foo {\n  bar() {\n    return 1;\n  }\n}',
+    startCursor: { row: 0, col: 0 },
+    keys: ']m]m',
+  },
+  {
+    id: 'search-partial-g-star',
+    category: 'search',
+    description: 'g* searches partial word match without word boundaries',
+    initialText: 'foo foobar barfoo',
+    startCursor: { row: 0, col: 0 },
+    keys: 'g*',
+  },
+  {
+    id: 'decl-global-gD',
+    category: 'motion',
+    description: 'gD jumps to first global occurrence',
+    initialText: 'const x = 1;\nfunction run() {\n  return x;\n}',
+    startCursor: { row: 2, col: 9 },
+    keys: 'gD',
+  },
+  {
+    id: 'nrformats-hex-increment',
+    category: 'nrformats',
+    description: ':set nf=hex <C-a> increments hex number',
+    initialText: '0x0f',
+    startCursor: { row: 0, col: 0 },
+    keys: ':set nf=hex<CR><C-a>',
+  },
+  {
+    id: 'nrformats-bin-increment',
+    category: 'nrformats',
+    description: ':set nf=bin <C-a> increments binary number',
+    initialText: '0b101',
+    startCursor: { row: 0, col: 0 },
+    keys: ':set nf=bin<CR><C-a>',
+  },
+  {
+    id: 'nrformats-alpha-increment',
+    category: 'nrformats',
+    description: ':set nf=alpha <C-a> increments alphabet character',
+    initialText: 'item a',
+    startCursor: { row: 0, col: 5 },
+    keys: ':set nf=alpha<CR><C-a>',
+  },
+  {
+    id: 'special-mark-last-insert',
+    category: 'special-marks',
+    description: '`^ jumps back to last insert exit position',
+    initialText: 'hello world\nsecond line',
+    startCursor: { row: 0, col: 5 },
+    keys: 'a!<Esc>j0`^',
+  },
+  {
+    id: 'special-mark-bracket-change',
+    category: 'special-marks',
+    description: '`[ jumps to start of last yanked text',
+    initialText: 'alpha beta gamma\nnext line',
+    startCursor: { row: 0, col: 6 },
+    keys: 'yiwj0`[',
+  },
+  {
+    id: 'paste-gp-cursor-after',
+    category: 'paste',
+    description: 'gp places cursor right after pasted characterwise text',
+    initialText: 'hello world',
+    startCursor: { row: 0, col: 0 },
+    keys: 'yiw$gp',
+  },
+  {
+    id: 'paste-indent-right-bracket-p',
+    category: 'paste',
+    description: ']p adjusts pasted linewise indent to current line indent',
+    initialText: '  src\n      dst',
+    startCursor: { row: 0, col: 0 },
+    keys: ':set et ts=2<CR>yyj]p',
+  },
+  {
+    id: 'ex-repeat-at-colon',
+    category: 'ex-repeat',
+    description: '@: repeats the last Ex command on next line',
+    initialText: 'foo 1\nfoo 2',
+    startCursor: { row: 0, col: 0 },
+    keys: ':s/foo/bar/<CR><Step>j@:',
+  },
+  {
+    id: 'insert-ctrl-v-unicode',
+    category: 'insert-special',
+    description: 'Insert <C-v>u0041 inserts uppercase A',
+    initialText: 'prefix ',
+    startCursor: { row: 0, col: 6 },
+    keys: 'a<C-v>u0041<Esc>',
+  },
 ];
 
 function findNeovimBinary(): string {
@@ -693,9 +897,12 @@ for _, case in ipairs(cases) do
   local startCol = math.max(0, case.startCursor.col)
   vim.api.nvim_win_set_cursor(0, { startRow, startCol })
 
-  -- Translate keys (e.g. <Esc> -> \\x1b)
-  local feedStr = vim.api.nvim_replace_termcodes(case.keys, true, false, true)
-  vim.api.nvim_feedkeys(feedStr, "nx", false)
+  -- Translate keys chunk by chunk (split on <Step> so Neovim records typed command history between turns)
+  local parts = vim.split(case.keys, "<Step>", { plain = true })
+  for _, part in ipairs(parts) do
+    local feedStr = vim.api.nvim_replace_termcodes(part, true, false, true)
+    vim.api.nvim_feedkeys(feedStr, "ntx", false)
+  end
 
   local outLines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
   local cur = vim.api.nvim_win_get_cursor(0)

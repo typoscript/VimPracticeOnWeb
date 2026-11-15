@@ -31,6 +31,24 @@ export function parseVimKeyTokens(keySequence: string): string[] {
           tokens.push(' ');
           i = closeIdx + 1;
           continue;
+        } else if (tag === '<tab>') {
+          tokens.push('Tab');
+          i = closeIdx + 1;
+          continue;
+        } else if (tag === '<bs>') {
+          tokens.push('Backspace');
+          i = closeIdx + 1;
+          continue;
+        } else if (tag === '<step>') {
+          i = closeIdx + 1;
+          continue;
+        } else {
+          const ctrlMatch = tag.match(/^<c-([a-z[\]\\^])>$/);
+          if (ctrlMatch) {
+            tokens.push(`Ctrl+${ctrlMatch[1]}`);
+            i = closeIdx + 1;
+            continue;
+          }
         }
       }
     }

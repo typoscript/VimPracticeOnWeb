@@ -1,0 +1,108 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
+import { AppModals } from './AppModals';
+import { VimEditorState } from '../../vim-engine';
+import { setLocale } from '../../i18n';
+
+function createBaseState(overrides: Partial<VimEditorState> = {}): VimEditorState {
+  return {
+    lines: ['hello world'],
+    cursor: { line: 0, col: 0 },
+    mode: 'NORMAL',
+    undoStack: [],
+    redoStack: [],
+    ...overrides,
+  };
+}
+
+function createProps(overrides: Partial<React.ComponentProps<typeof AppModals>> = {}) {
+  return {
+    editorState: createBaseState(),
+    currentMissionId: 1,
+    progress: {},
+    isModalOpen: false,
+    onCloseLessonModal: vi.fn(),
+    onSelectLessonById: vi.fn(),
+    isCustomModalOpen: false,
+    onCloseCustomModal: vi.fn(),
+    onPlayCustomMission: vi.fn(),
+    isAnalyticsModalOpen: false,
+    onCloseAnalyticsModal: vi.fn(),
+    onOpenDailyFromAnalytics: vi.fn(),
+    onStartWeaknessDrill: vi.fn(),
+    isDailyModalOpen: false,
+    onCloseDailyModal: vi.fn(),
+    playKeySound: vi.fn(),
+    playSuccessSound: vi.fn(),
+    isConfigModalOpen: false,
+    onCloseConfigModal: vi.fn(),
+    relativeLineNumbers: true,
+    currentTheme: 'tokyo-night' as const,
+    leaderKey: ' ',
+    activePresets: {},
+    onTogglePreset: vi.fn(),
+    onChangeLeaderKey: vi.fn(),
+    customKeymaps: [],
+    onAddCustomKeymap: vi.fn(),
+    onDeleteCustomKeymap: vi.fn(),
+    onRestoreBackup: vi.fn(),
+    isBYOCModalOpen: false,
+    onCloseBYOCModal: vi.fn(),
+    onPlayBYOCMission: vi.fn(),
+    onSelectFuzzyFinderAction: vi.fn(),
+    onSelectFuzzyItemIndex: vi.fn(),
+    onCloseFuzzyFinder: vi.fn(),
+    onJumpHelpTag: vi.fn(),
+    onPopHelpTag: vi.fn(),
+    onCloseHelp: vi.fn(),
+    ...overrides,
+  };
+}
+
+describe('AppModals', () => {
+  beforeEach(() => {
+    setLocale('ko');
+  });
+
+  it('초기 닫힘 상태에서는 지연 모달/퍼지 파인더/도움말을 마운트하지 않으며 레슨 모달을 열고 닫는다', () => {
+    const { rerender } = render(<AppModals {...createProps()} />);
+
+    expect(screen.queryByTestId('fuzzy-finder-modal')).toBeNull();
+    expect(screen.queryByTestId('help-viewer-window')).toBeNull();
+
+    const onClose = vi.fn();
+    rerender(<AppModals {...createProps({ isModalOpen: true, onCloseLessonModal: onClose })} />);
+    expect(screen.getByTestId('lesson-modal-content')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('modal-close-btn'));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('isDailyModalOpen 활성화 시 지연 로딩된 데일리 챌린지 모달을 마운트한다', async () => {
+    render(<AppModals {...createProps({ isDailyModalOpen: true })} />);
+    expect(await screen.findByTestId('daily-modal')).toBeInTheDocument();
+  });
+
+  it('fuzzyFinder 와 helpSession 이 열려 있으면 오버레이를 렌더링한다', () => {
+    const state = createBaseState({
+      fuzzyFinder: {
+        isOpen: true,
+        mode: 'files',
+        query: '',
+        selectedIndex: 0,
+      },
+      helpSession: {
+        isOpen: true,
+        topic: 'motion',
+        title: 'motion.txt',
+        lines: ['h j k l'],
+        cursor: { line: 0, col: 0 },
+        tagStack: [],
+      },
+    });
+    render(<AppModals {...createProps({ editorState: state })} />);
+
+    expect(screen.getByTestId('fuzzy-finder-modal')).toBeInTheDocument();
+    expect(screen.getByTestId('help-viewer-window')).toBeInTheDocument();
+  });
+});

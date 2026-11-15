@@ -1,1436 +1,1962 @@
 [
   {
-    "keys": "l",
-    "initialText": "hello world",
-    "startCursor": {
-      "row": 0,
-      "col": 0
-    },
-    "category": "motion",
-    "description": "l moves cursor right one character",
     "id": "motion-l-single",
+    "description": "l moves cursor right one character",
+    "initialText": "hello world",
     "expected": {
+      "lines": [
+        "hello world"
+      ],
       "cursor": {
         "row": 0,
         "col": 1
-      },
-      "lines": [
-        "hello world"
-      ]
-    }
-  },
-  {
-    "keys": "3l",
-    "initialText": "hello world",
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 0
     },
-    "category": "motion",
-    "description": "3l moves cursor right 3 characters",
+    "keys": "l",
+    "category": "motion"
+  },
+  {
     "id": "motion-l-count",
+    "description": "3l moves cursor right 3 characters",
+    "initialText": "hello world",
     "expected": {
+      "lines": [
+        "hello world"
+      ],
       "cursor": {
         "row": 0,
         "col": 3
-      },
-      "lines": [
-        "hello world"
-      ]
-    }
-  },
-  {
-    "keys": "h",
-    "initialText": "hello world",
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 0
     },
-    "category": "motion",
-    "description": "h at col 0 stays at col 0",
+    "keys": "3l",
+    "category": "motion"
+  },
+  {
     "id": "motion-h-boundary",
+    "description": "h at col 0 stays at col 0",
+    "initialText": "hello world",
     "expected": {
+      "lines": [
+        "hello world"
+      ],
       "cursor": {
         "row": 0,
         "col": 0
-      },
-      "lines": [
-        "hello world"
-      ]
-    }
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "h",
+    "category": "motion"
   },
   {
-    "keys": "2h",
+    "id": "motion-h-mid",
+    "description": "h moves left from middle",
     "initialText": "hello world",
+    "expected": {
+      "lines": [
+        "hello world"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 4
     },
-    "category": "motion",
-    "description": "h moves left from middle",
-    "id": "motion-h-mid",
-    "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 2
-      },
-      "lines": [
-        "hello world"
-      ]
-    }
+    "keys": "2h",
+    "category": "motion"
   },
   {
-    "keys": "j",
+    "id": "motion-j-down",
+    "description": "j moves down one line",
     "initialText": "first line\nsecond line\nthird line",
+    "expected": {
+      "lines": [
+        "first line",
+        "second line",
+        "third line"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 3
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 3
     },
-    "category": "motion",
-    "description": "j moves down one line",
-    "id": "motion-j-down",
+    "keys": "j",
+    "category": "motion"
+  },
+  {
+    "id": "motion-j-count",
+    "description": "2j moves down 2 lines",
+    "initialText": "first line\nsecond line\nthird line",
     "expected": {
-      "cursor": {
-        "row": 1,
-        "col": 3
-      },
       "lines": [
         "first line",
         "second line",
         "third line"
-      ]
-    }
-  },
-  {
-    "keys": "2j",
-    "initialText": "first line\nsecond line\nthird line",
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 2
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 2
     },
-    "category": "motion",
-    "description": "2j moves down 2 lines",
-    "id": "motion-j-count",
+    "keys": "2j",
+    "category": "motion"
+  },
+  {
+    "id": "motion-k-up",
+    "description": "k moves up one line",
+    "initialText": "first line\nsecond line\nthird line",
     "expected": {
-      "cursor": {
-        "row": 2,
-        "col": 2
-      },
       "lines": [
         "first line",
         "second line",
         "third line"
-      ]
-    }
-  },
-  {
-    "keys": "k",
-    "initialText": "first line\nsecond line\nthird line",
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 3
+      }
+    },
     "startCursor": {
       "row": 2,
       "col": 3
     },
-    "category": "motion",
-    "description": "k moves up one line",
-    "id": "motion-k-up",
-    "expected": {
-      "cursor": {
-        "row": 1,
-        "col": 3
-      },
-      "lines": [
-        "first line",
-        "second line",
-        "third line"
-      ]
-    }
+    "keys": "k",
+    "category": "motion"
   },
   {
-    "keys": "w",
-    "initialText": "const totalCount = 100;",
-    "startCursor": {
-      "row": 0,
-      "col": 0
-    },
-    "category": "motion",
-    "description": "w jumps to next word start",
     "id": "motion-w-word-jump",
+    "description": "w jumps to next word start",
+    "initialText": "const totalCount = 100;",
     "expected": {
+      "lines": [
+        "const totalCount = 100;"
+      ],
       "cursor": {
         "row": 0,
         "col": 6
-      },
-      "lines": [
-        "const totalCount = 100;"
-      ]
-    }
-  },
-  {
-    "keys": "3w",
-    "initialText": "const totalCount = 100;",
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 0
     },
-    "category": "motion",
-    "description": "3w jumps 3 words forward",
+    "keys": "w",
+    "category": "motion"
+  },
+  {
     "id": "motion-w-count",
+    "description": "3w jumps 3 words forward",
+    "initialText": "const totalCount = 100;",
     "expected": {
+      "lines": [
+        "const totalCount = 100;"
+      ],
       "cursor": {
         "row": 0,
         "col": 19
-      },
-      "lines": [
-        "const totalCount = 100;"
-      ]
-    }
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "3w",
+    "category": "motion"
   },
   {
-    "keys": "b",
+    "id": "motion-b-word-back",
+    "description": "b jumps to previous word start",
     "initialText": "const totalCount = 100;",
+    "expected": {
+      "lines": [
+        "const totalCount = 100;"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 6
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 17
     },
-    "category": "motion",
-    "description": "b jumps to previous word start",
-    "id": "motion-b-word-back",
-    "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 6
-      },
-      "lines": [
-        "const totalCount = 100;"
-      ]
-    }
+    "keys": "b",
+    "category": "motion"
   },
   {
-    "keys": "e",
+    "id": "motion-e-word-end",
+    "description": "e jumps to end of current word",
     "initialText": "const totalCount = 100;",
+    "expected": {
+      "lines": [
+        "const totalCount = 100;"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 0
     },
-    "category": "motion",
-    "description": "e jumps to end of current word",
-    "id": "motion-e-word-end",
-    "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 4
-      },
-      "lines": [
-        "const totalCount = 100;"
-      ]
-    }
+    "keys": "e",
+    "category": "motion"
   },
   {
-    "keys": "0",
+    "id": "motion-0-line-start",
+    "description": "0 jumps to absolute line start (col 0)",
     "initialText": "    const indented = true;",
+    "expected": {
+      "lines": [
+        "    const indented = true;"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 12
     },
-    "category": "motion",
-    "description": "0 jumps to absolute line start (col 0)",
-    "id": "motion-0-line-start",
-    "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 0
-      },
-      "lines": [
-        "    const indented = true;"
-      ]
-    }
+    "keys": "0",
+    "category": "motion"
   },
   {
-    "keys": "^",
+    "id": "motion-caret-first-non-ws",
+    "description": "^ jumps to first non-whitespace character",
     "initialText": "    const indented = true;",
+    "expected": {
+      "lines": [
+        "    const indented = true;"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 18
     },
-    "category": "motion",
-    "description": "^ jumps to first non-whitespace character",
-    "id": "motion-caret-first-non-ws",
-    "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 4
-      },
-      "lines": [
-        "    const indented = true;"
-      ]
-    }
+    "keys": "^",
+    "category": "motion"
   },
   {
-    "keys": "$",
+    "id": "motion-dollar-line-end",
+    "description": "$ jumps to last character of line",
     "initialText": "console.log(\"hello\");",
+    "expected": {
+      "lines": [
+        "console.log(\"hello\");"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 20
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 0
     },
-    "category": "motion",
-    "description": "$ jumps to last character of line",
-    "id": "motion-dollar-line-end",
-    "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 20
-      },
-      "lines": [
-        "console.log(\"hello\");"
-      ]
-    }
+    "keys": "$",
+    "category": "motion"
   },
   {
-    "keys": "gg",
+    "id": "motion-gg-first-line",
+    "description": "gg jumps to buffer start",
     "initialText": "line 1\nline 2\nline 3\nline 4",
+    "expected": {
+      "lines": [
+        "line 1",
+        "line 2",
+        "line 3",
+        "line 4"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      }
+    },
     "startCursor": {
       "row": 3,
       "col": 2
     },
-    "category": "motion",
-    "description": "gg jumps to buffer start",
-    "id": "motion-gg-first-line",
+    "keys": "gg",
+    "category": "motion"
+  },
+  {
+    "id": "motion-G-last-line",
+    "description": "G jumps to last line",
+    "initialText": "line 1\nline 2\nline 3\nline 4",
     "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 2
-      },
       "lines": [
         "line 1",
         "line 2",
         "line 3",
         "line 4"
-      ]
-    }
-  },
-  {
-    "keys": "G",
-    "initialText": "line 1\nline 2\nline 3\nline 4",
-    "startCursor": {
-      "row": 0,
-      "col": 0
-    },
-    "category": "motion",
-    "description": "G jumps to last line",
-    "id": "motion-G-last-line",
-    "expected": {
+      ],
       "cursor": {
         "row": 3,
         "col": 0
-      },
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "G",
+    "category": "motion"
+  },
+  {
+    "id": "motion-3gg-target-line",
+    "description": "3gg jumps directly to line 3",
+    "initialText": "line 1\nline 2\nline 3\nline 4",
+    "expected": {
       "lines": [
         "line 1",
         "line 2",
         "line 3",
         "line 4"
-      ]
-    }
-  },
-  {
-    "keys": "3gg",
-    "initialText": "line 1\nline 2\nline 3\nline 4",
-    "startCursor": {
-      "row": 0,
-      "col": 0
-    },
-    "category": "motion",
-    "description": "3gg jumps directly to line 3",
-    "id": "motion-3gg-target-line",
-    "expected": {
+      ],
       "cursor": {
         "row": 2,
         "col": 0
-      },
-      "lines": [
-        "line 1",
-        "line 2",
-        "line 3",
-        "line 4"
-      ]
-    }
-  },
-  {
-    "keys": "fa",
-    "initialText": "foo bar baz qux",
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 0
     },
-    "category": "findChar",
-    "description": "fa jumps forward onto character a",
+    "keys": "3gg",
+    "category": "motion"
+  },
+  {
     "id": "find-f-forward",
+    "description": "fa jumps forward onto character a",
+    "initialText": "foo bar baz qux",
     "expected": {
+      "lines": [
+        "foo bar baz qux"
+      ],
       "cursor": {
         "row": 0,
         "col": 5
-      },
-      "lines": [
-        "foo bar baz qux"
-      ]
-    }
-  },
-  {
-    "keys": "2fa",
-    "initialText": "foo bar baz qux",
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 0
     },
-    "category": "findChar",
-    "description": "2fa jumps forward onto second character a",
+    "keys": "fa",
+    "category": "findChar"
+  },
+  {
     "id": "find-f-count",
+    "description": "2fa jumps forward onto second character a",
+    "initialText": "foo bar baz qux",
     "expected": {
+      "lines": [
+        "foo bar baz qux"
+      ],
       "cursor": {
         "row": 0,
         "col": 9
-      },
-      "lines": [
-        "foo bar baz qux"
-      ]
-    }
-  },
-  {
-    "keys": "tb",
-    "initialText": "foo bar baz qux",
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 0
     },
-    "category": "findChar",
-    "description": "tb jumps forward till character b (one before b)",
+    "keys": "2fa",
+    "category": "findChar"
+  },
+  {
     "id": "find-t-till",
+    "description": "tb jumps forward till character b (one before b)",
+    "initialText": "foo bar baz qux",
     "expected": {
+      "lines": [
+        "foo bar baz qux"
+      ],
       "cursor": {
         "row": 0,
         "col": 3
-      },
-      "lines": [
-        "foo bar baz qux"
-      ]
-    }
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "tb",
+    "category": "findChar"
   },
   {
-    "keys": "Fa",
+    "id": "find-F-backward",
+    "description": "Fa jumps backward onto character a",
     "initialText": "foo bar baz qux",
+    "expected": {
+      "lines": [
+        "foo bar baz qux"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 9
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 10
     },
-    "category": "findChar",
-    "description": "Fa jumps backward onto character a",
-    "id": "find-F-backward",
+    "keys": "Fa",
+    "category": "findChar"
+  },
+  {
+    "id": "find-semicolon-repeat",
+    "description": "; repeats last char search forward",
+    "initialText": "foo bar baz qux",
     "expected": {
+      "lines": [
+        "foo bar baz qux"
+      ],
       "cursor": {
         "row": 0,
         "col": 9
-      },
-      "lines": [
-        "foo bar baz qux"
-      ]
-    }
-  },
-  {
-    "keys": "fa;",
-    "initialText": "foo bar baz qux",
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 0
     },
-    "category": "findChar",
-    "description": "; repeats last char search forward",
-    "id": "find-semicolon-repeat",
-    "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 9
-      },
-      "lines": [
-        "foo bar baz qux"
-      ]
-    }
+    "keys": "fa;",
+    "category": "findChar"
   },
   {
-    "keys": "%",
+    "id": "bracket-percent-match",
+    "description": "% jumps to matching bracket",
     "initialText": "if (x > 10 && (y < 20)) { return true; }",
+    "expected": {
+      "lines": [
+        "if (x > 10 && (y < 20)) { return true; }"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 22
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 3
     },
-    "category": "bracket",
-    "description": "% jumps to matching bracket",
-    "id": "bracket-percent-match",
-    "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 22
-      },
-      "lines": [
-        "if (x > 10 && (y < 20)) { return true; }"
-      ]
-    }
+    "keys": "%",
+    "category": "bracket"
   },
   {
-    "keys": "x",
-    "initialText": "hello world",
-    "startCursor": {
-      "row": 0,
-      "col": 0
-    },
-    "category": "delete",
-    "description": "x deletes single character under cursor",
     "id": "delete-x-single",
+    "description": "x deletes single character under cursor",
+    "initialText": "hello world",
     "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 0
-      },
       "lines": [
         "ello world"
-      ]
-    }
-  },
-  {
-    "keys": "3x",
-    "initialText": "hello world",
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 0
     },
-    "category": "delete",
-    "description": "3x deletes 3 characters under cursor",
+    "keys": "x",
+    "category": "delete"
+  },
+  {
     "id": "delete-x-count",
+    "description": "3x deletes 3 characters under cursor",
+    "initialText": "hello world",
     "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 0
-      },
       "lines": [
         "lo world"
-      ]
-    }
-  },
-  {
-    "keys": "dw",
-    "initialText": "hello beautiful world",
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 0
     },
-    "category": "delete",
-    "description": "dw deletes word and trailing space",
+    "keys": "3x",
+    "category": "delete"
+  },
+  {
     "id": "delete-dw-word",
+    "description": "dw deletes word and trailing space",
+    "initialText": "hello beautiful world",
     "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 0
-      },
       "lines": [
         "beautiful world"
-      ]
-    }
-  },
-  {
-    "keys": "2dw",
-    "initialText": "one two three four",
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 0
     },
-    "category": "delete",
-    "description": "2dw deletes 2 words",
+    "keys": "dw",
+    "category": "delete"
+  },
+  {
     "id": "delete-2dw-words",
+    "description": "2dw deletes 2 words",
+    "initialText": "one two three four",
     "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 0
-      },
       "lines": [
         "three four"
-      ]
-    }
-  },
-  {
-    "keys": "de",
-    "initialText": "hello world",
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 0
     },
-    "category": "delete",
-    "description": "de deletes to end of word without space",
+    "keys": "2dw",
+    "category": "delete"
+  },
+  {
     "id": "delete-de-end-of-word",
+    "description": "de deletes to end of word without space",
+    "initialText": "hello world",
     "expected": {
+      "lines": [
+        " world"
+      ],
       "cursor": {
         "row": 0,
         "col": 0
-      },
-      "lines": [
-        " world"
-      ]
-    }
-  },
-  {
-    "keys": "d$",
-    "initialText": "const value = 42; // comment",
+      }
+    },
     "startCursor": {
       "row": 0,
-      "col": 18
+      "col": 0
     },
-    "category": "delete",
-    "description": "d$ deletes from cursor to line end",
+    "keys": "de",
+    "category": "delete"
+  },
+  {
     "id": "delete-d-dollar-to-eol",
+    "description": "d$ deletes from cursor to line end",
+    "initialText": "const value = 42; // comment",
     "expected": {
+      "lines": [
+        "const value = 42; "
+      ],
       "cursor": {
         "row": 0,
         "col": 17
-      },
-      "lines": [
-        "const value = 42; "
-      ]
-    }
-  },
-  {
-    "keys": "D",
-    "initialText": "const value = 42; // comment",
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 18
     },
-    "category": "delete",
-    "description": "D is synonym for d$",
+    "keys": "d$",
+    "category": "delete"
+  },
+  {
     "id": "delete-D-alias",
+    "description": "D is synonym for d$",
+    "initialText": "const value = 42; // comment",
     "expected": {
+      "lines": [
+        "const value = 42; "
+      ],
       "cursor": {
         "row": 0,
         "col": 17
-      },
-      "lines": [
-        "const value = 42; "
-      ]
-    }
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 18
+    },
+    "keys": "D",
+    "category": "delete"
   },
   {
-    "keys": "d0",
+    "id": "delete-d0-to-bol",
+    "description": "d0 deletes from cursor to beginning of line",
     "initialText": "prefix_content_suffix",
+    "expected": {
+      "lines": [
+        "content_suffix"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 7
     },
-    "category": "delete",
-    "description": "d0 deletes from cursor to beginning of line",
-    "id": "delete-d0-to-bol",
-    "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 0
-      },
-      "lines": [
-        "content_suffix"
-      ]
-    }
+    "keys": "d0",
+    "category": "delete"
   },
   {
-    "keys": "dd",
-    "initialText": "line 1\nline 2\nline 3",
-    "startCursor": {
-      "row": 1,
-      "col": 0
-    },
-    "category": "delete",
-    "description": "dd deletes current line",
     "id": "delete-dd-line",
+    "description": "dd deletes current line",
+    "initialText": "line 1\nline 2\nline 3",
     "expected": {
-      "cursor": {
-        "row": 1,
-        "col": 0
-      },
       "lines": [
         "line 1",
         "line 3"
-      ]
-    }
-  },
-  {
-    "keys": "2dd",
-    "initialText": "line 1\nline 2\nline 3\nline 4",
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      }
+    },
     "startCursor": {
       "row": 1,
       "col": 0
     },
-    "category": "delete",
-    "description": "2dd deletes 2 lines",
+    "keys": "dd",
+    "category": "delete"
+  },
+  {
     "id": "delete-2dd-lines",
+    "description": "2dd deletes 2 lines",
+    "initialText": "line 1\nline 2\nline 3\nline 4",
     "expected": {
-      "cursor": {
-        "row": 1,
-        "col": 0
-      },
       "lines": [
         "line 1",
         "line 4"
-      ]
-    }
-  },
-  {
-    "keys": "cwpear<Esc>",
-    "initialText": "apple banana cherry",
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      }
+    },
     "startCursor": {
-      "row": 0,
+      "row": 1,
       "col": 0
     },
-    "category": "change",
-    "description": "cw changes word and leaves in insert mode",
+    "keys": "2dd",
+    "category": "delete"
+  },
+  {
     "id": "change-cw-word",
+    "description": "cw changes word and leaves in insert mode",
+    "initialText": "apple banana cherry",
     "expected": {
+      "lines": [
+        "pear banana cherry"
+      ],
       "cursor": {
         "row": 0,
         "col": 3
-      },
-      "lines": [
-        "pear banana cherry"
-      ]
-    }
-  },
-  {
-    "keys": "ceorange<Esc>",
-    "initialText": "apple banana cherry",
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 0
     },
-    "category": "change",
-    "description": "ce changes to end of word",
+    "keys": "cwpear<Esc>",
+    "category": "change"
+  },
+  {
     "id": "change-ce-word-end",
+    "description": "ce changes to end of word",
+    "initialText": "apple banana cherry",
     "expected": {
+      "lines": [
+        "orange banana cherry"
+      ],
       "cursor": {
         "row": 0,
         "col": 5
-      },
-      "lines": [
-        "orange banana cherry"
-      ]
-    }
-  },
-  {
-    "keys": "c$\"new string\";<Esc>",
-    "initialText": "const message = \"old string\";",
+      }
+    },
     "startCursor": {
       "row": 0,
-      "col": 16
+      "col": 0
     },
-    "category": "change",
-    "description": "c$ changes from cursor to end of line",
+    "keys": "ceorange<Esc>",
+    "category": "change"
+  },
+  {
     "id": "change-c-dollar-to-eol",
+    "description": "c$ changes from cursor to end of line",
+    "initialText": "const message = \"old string\";",
     "expected": {
+      "lines": [
+        "const message = \"new string\";"
+      ],
       "cursor": {
         "row": 0,
         "col": 28
-      },
-      "lines": [
-        "const message = \"new string\";"
-      ]
-    }
-  },
-  {
-    "keys": "C\"new string\";<Esc>",
-    "initialText": "const message = \"old string\";",
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 16
     },
-    "category": "change",
-    "description": "C changes to end of line",
+    "keys": "c$\"new string\";<Esc>",
+    "category": "change"
+  },
+  {
     "id": "change-C-alias",
+    "description": "C changes to end of line",
+    "initialText": "const message = \"old string\";",
     "expected": {
+      "lines": [
+        "const message = \"new string\";"
+      ],
       "cursor": {
         "row": 0,
         "col": 28
-      },
-      "lines": [
-        "const message = \"new string\";"
-      ]
-    }
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 16
+    },
+    "keys": "C\"new string\";<Esc>",
+    "category": "change"
   },
   {
-    "keys": "c0head_<Esc>",
+    "id": "change-c0-to-bol",
+    "description": "c0 changes from cursor to beginning of line",
     "initialText": "prefix_suffix",
+    "expected": {
+      "lines": [
+        "head__suffix"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 6
     },
-    "category": "change",
-    "description": "c0 changes from cursor to beginning of line",
-    "id": "change-c0-to-bol",
-    "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 4
-      },
-      "lines": [
-        "head__suffix"
-      ]
-    }
+    "keys": "c0head_<Esc>",
+    "category": "change"
   },
   {
-    "keys": "ccnew line 2<Esc>",
-    "initialText": "line 1\nline 2\nline 3",
-    "startCursor": {
-      "row": 1,
-      "col": 2
-    },
-    "category": "change",
-    "description": "cc clears line and enters insert mode",
     "id": "change-cc-line",
+    "description": "cc clears line and enters insert mode",
+    "initialText": "line 1\nline 2\nline 3",
     "expected": {
-      "cursor": {
-        "row": 1,
-        "col": 9
-      },
       "lines": [
         "line 1",
         "new line 2",
         "line 3"
-      ]
-    }
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 9
+      }
+    },
+    "startCursor": {
+      "row": 1,
+      "col": 2
+    },
+    "keys": "ccnew line 2<Esc>",
+    "category": "change"
   },
   {
-    "keys": "rl",
+    "id": "replace-r-single-char",
+    "description": "r replaces character under cursor and returns to normal mode",
     "initialText": "heLlo world",
+    "expected": {
+      "lines": [
+        "hello world"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 2
     },
-    "category": "change",
-    "description": "r replaces character under cursor and returns to normal mode",
-    "id": "replace-r-single-char",
-    "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 2
-      },
-      "lines": [
-        "hello world"
-      ]
-    }
+    "keys": "rl",
+    "category": "change"
   },
   {
-    "keys": "se<Esc>",
+    "id": "substitute-s-single-char",
+    "description": "s substitutes char with new text",
     "initialText": "hXllo",
+    "expected": {
+      "lines": [
+        "hello"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 1
     },
-    "category": "change",
-    "description": "s substitutes char with new text",
-    "id": "substitute-s-single-char",
-    "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 1
-      },
-      "lines": [
-        "hello"
-      ]
-    }
+    "keys": "se<Esc>",
+    "category": "change"
   },
   {
-    "keys": "diw",
-    "initialText": "const targetWord = 42;",
-    "startCursor": {
-      "row": 0,
-      "col": 8
-    },
-    "category": "textObject",
-    "description": "diw deletes inner word under cursor",
     "id": "textobj-diw-inner-word",
+    "description": "diw deletes inner word under cursor",
+    "initialText": "const targetWord = 42;",
     "expected": {
+      "lines": [
+        "const  = 42;"
+      ],
       "cursor": {
         "row": 0,
         "col": 6
-      },
-      "lines": [
-        "const  = 42;"
-      ]
-    }
-  },
-  {
-    "keys": "ciwreplacement<Esc>",
-    "initialText": "const targetWord = 42;",
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 8
     },
-    "category": "textObject",
-    "description": "ciw changes inner word under cursor",
+    "keys": "diw",
+    "category": "textObject"
+  },
+  {
     "id": "textobj-ciw-inner-word",
+    "description": "ciw changes inner word under cursor",
+    "initialText": "const targetWord = 42;",
     "expected": {
+      "lines": [
+        "const replacement = 42;"
+      ],
       "cursor": {
         "row": 0,
         "col": 16
-      },
-      "lines": [
-        "const replacement = 42;"
-      ]
-    }
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 8
+    },
+    "keys": "ciwreplacement<Esc>",
+    "category": "textObject"
   },
   {
-    "keys": "daw",
+    "id": "textobj-daw-around-word",
+    "description": "daw deletes word and trailing space",
     "initialText": "one two three",
+    "expected": {
+      "lines": [
+        "one three"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 4
     },
-    "category": "textObject",
-    "description": "daw deletes word and trailing space",
-    "id": "textobj-daw-around-word",
-    "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 4
-      },
-      "lines": [
-        "one three"
-      ]
-    }
+    "keys": "daw",
+    "category": "textObject"
   },
   {
-    "keys": "di\"",
+    "id": "textobj-di-quote",
+    "description": "di\" deletes inside double quotes",
     "initialText": "const msg = \"delete this inside\";",
+    "expected": {
+      "lines": [
+        "const msg = \"\";"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 13
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 15
     },
-    "category": "textObject",
-    "description": "di\" deletes inside double quotes",
-    "id": "textobj-di-quote",
-    "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 13
-      },
-      "lines": [
-        "const msg = \"\";"
-      ]
-    }
+    "keys": "di\"",
+    "category": "textObject"
   },
   {
-    "keys": "da\"",
+    "id": "textobj-da-quote",
+    "description": "da\" deletes quotes and their content",
     "initialText": "[\"delete all\"]",
+    "expected": {
+      "lines": [
+        "[]"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 4
     },
-    "category": "textObject",
-    "description": "da\" deletes quotes and their content",
-    "id": "textobj-da-quote",
-    "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 1
-      },
-      "lines": [
-        "[]"
-      ]
-    }
+    "keys": "da\"",
+    "category": "textObject"
   },
   {
-    "keys": "ci\"new<Esc>",
+    "id": "textobj-ci-quote",
+    "description": "ci\" replaces text inside quotes",
     "initialText": "const msg = \"old\";",
+    "expected": {
+      "lines": [
+        "const msg = \"new\";"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 15
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 14
     },
-    "category": "textObject",
-    "description": "ci\" replaces text inside quotes",
-    "id": "textobj-ci-quote",
-    "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 15
-      },
-      "lines": [
-        "const msg = \"new\";"
-      ]
-    }
+    "keys": "ci\"new<Esc>",
+    "category": "textObject"
   },
   {
-    "keys": "di(",
-    "initialText": "function run(arg1, arg2) { return; }",
-    "startCursor": {
-      "row": 0,
-      "col": 15
-    },
-    "category": "textObject",
-    "description": "di( deletes inside parentheses",
     "id": "textobj-di-paren",
+    "description": "di( deletes inside parentheses",
+    "initialText": "function run(arg1, arg2) { return; }",
     "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 13
-      },
       "lines": [
         "function run() { return; }"
-      ]
-    }
-  },
-  {
-    "keys": "da(",
-    "initialText": "function run(arg1, arg2) { return; }",
-    "startCursor": {
-      "row": 0,
-      "col": 15
-    },
-    "category": "textObject",
-    "description": "da( deletes parentheses along with content",
-    "id": "textobj-da-paren",
-    "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 12
-      },
-      "lines": [
-        "function run { return; }"
-      ]
-    }
-  },
-  {
-    "keys": "di{",
-    "initialText": "const obj = { key: \"value\" };",
-    "startCursor": {
-      "row": 0,
-      "col": 15
-    },
-    "category": "textObject",
-    "description": "di{ deletes inside curly braces",
-    "id": "textobj-di-brace",
-    "expected": {
+      ],
       "cursor": {
         "row": 0,
         "col": 13
-      },
-      "lines": [
-        "const obj = {};"
-      ]
-    }
-  },
-  {
-    "keys": "ywwp",
-    "initialText": "alpha beta",
+      }
+    },
     "startCursor": {
       "row": 0,
-      "col": 0
+      "col": 15
     },
-    "category": "register",
-    "description": "yw yanks word and p pastes after cursor",
-    "id": "yank-yw-and-put",
+    "keys": "di(",
+    "category": "textObject"
+  },
+  {
+    "id": "textobj-da-paren",
+    "description": "da( deletes parentheses along with content",
+    "initialText": "function run(arg1, arg2) { return; }",
     "expected": {
+      "lines": [
+        "function run { return; }"
+      ],
       "cursor": {
         "row": 0,
         "col": 12
-      },
-      "lines": [
-        "alpha balpha eta"
-      ]
-    }
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 15
+    },
+    "keys": "da(",
+    "category": "textObject"
   },
   {
-    "keys": "yyp",
-    "initialText": "first line\nsecond line",
+    "id": "textobj-di-brace",
+    "description": "di{ deletes inside curly braces",
+    "initialText": "const obj = { key: \"value\" };",
+    "expected": {
+      "lines": [
+        "const obj = {};"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 13
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 15
+    },
+    "keys": "di{",
+    "category": "textObject"
+  },
+  {
+    "id": "yank-yw-and-put",
+    "description": "yw yanks word and p pastes after cursor",
+    "initialText": "alpha beta",
+    "expected": {
+      "lines": [
+        "alpha balpha eta"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 12
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 0
     },
-    "category": "register",
-    "description": "yy yanks line and p pastes below",
+    "keys": "ywwp",
+    "category": "register"
+  },
+  {
     "id": "yank-yy-and-put-linewise",
+    "description": "yy yanks line and p pastes below",
+    "initialText": "first line\nsecond line",
     "expected": {
-      "cursor": {
-        "row": 1,
-        "col": 0
-      },
       "lines": [
         "first line",
         "first line",
         "second line"
-      ]
-    }
-  },
-  {
-    "keys": "yyP",
-    "initialText": "first line\nsecond line",
-    "startCursor": {
-      "row": 1,
-      "col": 0
-    },
-    "category": "register",
-    "description": "yy yanks line and P pastes above",
-    "id": "yank-yy-and-put-above",
-    "expected": {
+      ],
       "cursor": {
         "row": 1,
         "col": 0
-      },
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "yyp",
+    "category": "register"
+  },
+  {
+    "id": "yank-yy-and-put-above",
+    "description": "yy yanks line and P pastes above",
+    "initialText": "first line\nsecond line",
+    "expected": {
       "lines": [
         "first line",
         "second line",
         "second line"
-      ]
-    }
-  },
-  {
-    "keys": "\"ayiww\"ap",
-    "initialText": "apple orange",
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      }
+    },
     "startCursor": {
-      "row": 0,
+      "row": 1,
       "col": 0
     },
-    "category": "register",
-    "description": "\"ayiw yanks word into register a and \"ap pastes it",
+    "keys": "yyP",
+    "category": "register"
+  },
+  {
     "id": "register-named-a-yank-and-put",
+    "description": "\"ayiw yanks word into register a and \"ap pastes it",
+    "initialText": "apple orange",
     "expected": {
+      "lines": [
+        "apple oapplerange"
+      ],
       "cursor": {
         "row": 0,
         "col": 11
-      },
-      "lines": [
-        "apple oapplerange"
-      ]
-    }
-  },
-  {
-    "keys": "\"bddj\"bp",
-    "initialText": "line 1\nline 2\nline 3",
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 0
     },
-    "category": "register",
-    "description": "\"bdd cuts line into register b and \"bp pastes it",
+    "keys": "\"ayiww\"ap",
+    "category": "register"
+  },
+  {
     "id": "register-named-b-dd-and-put",
+    "description": "\"bdd cuts line into register b and \"bp pastes it",
+    "initialText": "line 1\nline 2\nline 3",
     "expected": {
-      "cursor": {
-        "row": 2,
-        "col": 0
-      },
       "lines": [
         "line 2",
         "line 3",
         "line 1"
-      ]
-    }
-  },
-  {
-    "keys": "yyj\"_ddp",
-    "initialText": "line to keep\nline to burn\nthird line",
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 0
     },
-    "category": "register",
-    "description": "\"_dd deletes to blackhole register preserving default clipboard",
+    "keys": "\"bddj\"bp",
+    "category": "register"
+  },
+  {
     "id": "register-blackhole-dd",
+    "description": "\"_dd deletes to blackhole register preserving default clipboard",
+    "initialText": "line to keep\nline to burn\nthird line",
     "expected": {
-      "cursor": {
-        "row": 2,
-        "col": 0
-      },
       "lines": [
         "line to keep",
         "third line",
         "line to keep"
-      ]
-    }
-  },
-  {
-    "keys": "dwu",
-    "initialText": "hello world",
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 0
     },
-    "category": "history",
-    "description": "dw then u restores deleted word",
+    "keys": "yyj\"_ddp",
+    "category": "register"
+  },
+  {
     "id": "undo-dw",
+    "description": "dw then u restores deleted word",
+    "initialText": "hello world",
     "expected": {
+      "lines": [
+        "hello world"
+      ],
       "cursor": {
         "row": 0,
         "col": 0
-      },
-      "lines": [
-        "hello world"
-      ]
-    }
-  },
-  {
-    "keys": "ddu",
-    "initialText": "line 1\nline 2\nline 3",
+      }
+    },
     "startCursor": {
-      "row": 1,
+      "row": 0,
       "col": 0
     },
-    "category": "history",
-    "description": "dd then u restores deleted line",
+    "keys": "dwu",
+    "category": "history"
+  },
+  {
     "id": "undo-dd",
+    "description": "dd then u restores deleted line",
+    "initialText": "line 1\nline 2\nline 3",
     "expected": {
-      "cursor": {
-        "row": 1,
-        "col": 0
-      },
       "lines": [
         "line 1",
         "line 2",
         "line 3"
-      ]
-    }
-  },
-  {
-    "keys": "xu",
-    "initialText": "hello world",
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      }
+    },
     "startCursor": {
-      "row": 0,
+      "row": 1,
       "col": 0
     },
-    "category": "history",
-    "description": "x then u restores deleted char",
+    "keys": "ddu",
+    "category": "history"
+  },
+  {
     "id": "undo-x",
+    "description": "x then u restores deleted char",
+    "initialText": "hello world",
     "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 0
-      },
       "lines": [
         "hello world"
-      ]
-    }
-  },
-  {
-    "keys": "dw.",
-    "initialText": "one two three four",
-    "startCursor": {
-      "row": 0,
-      "col": 0
-    },
-    "category": "history",
-    "description": ". repeats dw delete operation",
-    "id": "repeat-dot-dw",
-    "expected": {
+      ],
       "cursor": {
         "row": 0,
         "col": 0
-      },
-      "lines": [
-        "three four"
-      ]
-    }
-  },
-  {
-    "keys": "cwfruit<Esc>w.",
-    "initialText": "apple banana cherry",
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 0
     },
-    "category": "history",
-    "description": ". repeats cw change operation on next word",
-    "id": "repeat-dot-change",
+    "keys": "xu",
+    "category": "history"
+  },
+  {
+    "id": "repeat-dot-dw",
+    "description": ". repeats dw delete operation",
+    "initialText": "one two three four",
     "expected": {
+      "lines": [
+        "three four"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "dw.",
+    "category": "history"
+  },
+  {
+    "id": "repeat-dot-change",
+    "description": ". repeats cw change operation on next word",
+    "initialText": "apple banana cherry",
+    "expected": {
+      "lines": [
+        "fruit fruit cherry"
+      ],
       "cursor": {
         "row": 0,
         "col": 10
-      },
-      "lines": [
-        "fruit fruit cherry"
-      ]
-    }
-  },
-  {
-    "keys": "x..",
-    "initialText": "abcdefgh",
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 0
     },
-    "category": "history",
-    "description": ". repeats single character delete x",
+    "keys": "cwfruit<Esc>w.",
+    "category": "history"
+  },
+  {
     "id": "repeat-dot-x",
+    "description": ". repeats single character delete x",
+    "initialText": "abcdefgh",
     "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 0
-      },
       "lines": [
         "defgh"
-      ]
-    }
-  },
-  {
-    "keys": "ved",
-    "initialText": "alpha beta gamma",
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 0
     },
-    "category": "visual",
-    "description": "v selection followed by d deletes selected text",
+    "keys": "x..",
+    "category": "history"
+  },
+  {
     "id": "visual-v-motion-delete",
+    "description": "v selection followed by d deletes selected text",
+    "initialText": "alpha beta gamma",
     "expected": {
+      "lines": [
+        " beta gamma"
+      ],
       "cursor": {
         "row": 0,
         "col": 0
-      },
-      "lines": [
-        " beta gamma"
-      ]
-    }
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "ved",
+    "category": "visual"
   },
   {
-    "keys": "Vd",
+    "id": "visual-line-V-delete",
+    "description": "V selection followed by d deletes entire line",
     "initialText": "line 1\nline 2\nline 3",
+    "expected": {
+      "lines": [
+        "line 1",
+        "line 3"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 2
+      }
+    },
     "startCursor": {
       "row": 1,
       "col": 2
     },
-    "category": "visual",
-    "description": "V selection followed by d deletes entire line",
-    "id": "visual-line-V-delete",
-    "expected": {
-      "cursor": {
-        "row": 1,
-        "col": 2
-      },
-      "lines": [
-        "line 1",
-        "line 3"
-      ]
-    }
+    "keys": "Vd",
+    "category": "visual"
   },
   {
-    "keys": "Vjd",
+    "id": "visual-line-V-2lines-delete",
+    "description": "V selection with j deletes 2 lines",
     "initialText": "line 1\nline 2\nline 3\nline 4",
+    "expected": {
+      "lines": [
+        "line 1",
+        "line 4"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      }
+    },
     "startCursor": {
       "row": 1,
       "col": 0
     },
-    "category": "visual",
-    "description": "V selection with j deletes 2 lines",
-    "id": "visual-line-V-2lines-delete",
-    "expected": {
-      "cursor": {
-        "row": 1,
-        "col": 0
-      },
-      "lines": [
-        "line 1",
-        "line 4"
-      ]
-    }
+    "keys": "Vjd",
+    "category": "visual"
   },
   {
-    "keys": "vey$p",
-    "initialText": "hello world",
-    "startCursor": {
-      "row": 0,
-      "col": 0
-    },
-    "category": "visual",
-    "description": "v selection yanked with y and pasted with p",
     "id": "visual-y-and-p",
+    "description": "v selection yanked with y and pasted with p",
+    "initialText": "hello world",
     "expected": {
+      "lines": [
+        "hello worldhello"
+      ],
       "cursor": {
         "row": 0,
         "col": 15
-      },
-      "lines": [
-        "hello worldhello"
-      ]
-    }
-  },
-  {
-    "keys": "$j",
-    "initialText": "short\na much longer line here",
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 0
     },
-    "category": "boundary",
-    "description": "$ on short line moves to end, j preserves end of longer line",
+    "keys": "vey$p",
+    "category": "visual"
+  },
+  {
     "id": "boundary-dollar-j-sticky-eol",
+    "description": "$ on short line moves to end, j preserves end of longer line",
+    "initialText": "short\na much longer line here",
     "expected": {
-      "cursor": {
-        "row": 1,
-        "col": 22
-      },
       "lines": [
         "short",
         "a much longer line here"
-      ]
-    }
-  },
-  {
-    "keys": "j",
-    "initialText": "first line here\n\nthird line here",
-    "startCursor": {
-      "row": 0,
-      "col": 6
-    },
-    "category": "boundary",
-    "description": "moving down onto an empty line clamps col to 0",
-    "id": "boundary-move-down-past-empty-line",
-    "expected": {
+      ],
       "cursor": {
         "row": 1,
-        "col": 0
-      },
+        "col": 22
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "$j",
+    "category": "boundary"
+  },
+  {
+    "id": "boundary-move-down-past-empty-line",
+    "description": "moving down onto an empty line clamps col to 0",
+    "initialText": "first line here\n\nthird line here",
+    "expected": {
       "lines": [
         "first line here",
         "",
         "third line here"
-      ]
-    }
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 6
+    },
+    "keys": "j",
+    "category": "boundary"
   },
   {
-    "keys": "cwLAST<Esc>",
+    "id": "boundary-cw-last-word-of-line",
+    "description": "cw on the last word of line deletes to end of line only",
     "initialText": "first second third",
+    "expected": {
+      "lines": [
+        "first second LAST"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 16
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 13
     },
-    "category": "boundary",
-    "description": "cw on the last word of line deletes to end of line only",
-    "id": "boundary-cw-last-word-of-line",
-    "expected": {
-      "cursor": {
-        "row": 0,
-        "col": 16
-      },
-      "lines": [
-        "first second LAST"
-      ]
-    }
+    "keys": "cwLAST<Esc>",
+    "category": "boundary"
   },
   {
-    "keys": "x",
+    "id": "boundary-x-on-eol-clamps-col",
+    "description": "x on end of line deletes char and shifts cursor left",
     "initialText": "abc",
+    "expected": {
+      "lines": [
+        "ab"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      }
+    },
     "startCursor": {
       "row": 0,
       "col": 2
     },
-    "category": "boundary",
-    "description": "x on end of line deletes char and shifts cursor left",
-    "id": "boundary-x-on-eol-clamps-col",
+    "keys": "x",
+    "category": "boundary"
+  },
+  {
+    "id": "visual-replace-charwise",
+    "description": "viwro replaces inner word characters with o",
+    "initialText": "hello world",
     "expected": {
+      "lines": [
+        "ooooo world"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "viwro",
+    "category": "visual-replace"
+  },
+  {
+    "id": "visual-replace-multiline",
+    "description": "charwise visual selection across lines replaces non-newline chars with #",
+    "initialText": "abc\ndef",
+    "expected": {
+      "lines": [
+        "a##",
+        "###"
+      ],
       "cursor": {
         "row": 0,
         "col": 1
-      },
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "vjlr#",
+    "category": "visual-replace"
+  },
+  {
+    "id": "visual-line-replace",
+    "description": "Vjr* replaces 2 full lines with *",
+    "initialText": "abc\ndefg\nhi",
+    "expected": {
       "lines": [
-        "ab"
-      ]
-    }
+        "***",
+        "****",
+        "hi"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "Vjr*",
+    "category": "visual-replace"
+  },
+  {
+    "id": "visual-block-replace",
+    "description": "<C-v>jllrX replaces 2x3 block with X",
+    "initialText": "abcdef\nghijkl\nmnopqr",
+    "expected": {
+      "lines": [
+        "axxxef",
+        "gxxxkl",
+        "mnopqr"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "<C-v>jllrx",
+    "category": "visual-replace"
+  },
+  {
+    "id": "visual-block-replace-short-line",
+    "description": "<C-v>2j3lr_ skips padding shorter middle line",
+    "initialText": "abcdef\nhi\nmnopqr",
+    "expected": {
+      "lines": [
+        "a____f",
+        "h_",
+        "m____r"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "<C-v>2j3lr_",
+    "category": "visual-replace"
+  },
+  {
+    "id": "format-gqq-textwidth",
+    "description": ":set tw=25 gqq wraps current paragraph line",
+    "initialText": "alpha beta gamma delta epsilon zeta",
+    "expected": {
+      "lines": [
+        "alpha beta gamma delta",
+        "epsilon zeta"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": ":set tw=25<CR>gqq",
+    "category": "format"
+  },
+  {
+    "id": "format-gqip-multiline",
+    "description": ":set tw=30 gqip joins and wraps paragraph",
+    "initialText": "first line here\nsecond line here\nthird short\n\nafter blank",
+    "expected": {
+      "lines": [
+        "first line here second line",
+        "here third short",
+        "",
+        "after blank"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": ":set tw=30<CR>gqip",
+    "category": "format"
+  },
+  {
+    "id": "format-gwap-keeps-cursor",
+    "description": ":set tw=25 gwip formats while keeping cursor word",
+    "initialText": "one two three four five six seven",
+    "expected": {
+      "lines": [
+        "one two three four",
+        "five six seven"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 8
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 8
+    },
+    "keys": ":set tw=20<CR>gwip",
+    "category": "format"
+  },
+  {
+    "id": "retab-tabs-to-spaces",
+    "description": ":set ts=2 et | retab expands leading tabs into spaces",
+    "initialText": "\t\tconst x = 1;\n\treturn x;",
+    "expected": {
+      "lines": [
+        "    const x = 1;",
+        "  return x;"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": ":set ts=2 et<CR>:retab<CR>^",
+    "category": "retab"
+  },
+  {
+    "id": "retab-bang-spaces-to-tabs",
+    "description": ":set noet ts=4 | retab! collapses spaces into tabs",
+    "initialText": "    const a = 1;\n        const b = 2;",
+    "expected": {
+      "lines": [
+        "\tconst a = 1;",
+        "\t\tconst b = 2;"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": ":set noet ts=4<CR>:retab!<CR>",
+    "category": "retab"
+  },
+  {
+    "id": "align-center-width",
+    "description": ":center 15 centers line within width 15",
+    "initialText": "hello",
+    "expected": {
+      "lines": [
+        "     hello"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 5
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": ":set et ts=2<CR>:center 15<CR>",
+    "category": "align"
+  },
+  {
+    "id": "align-right-width",
+    "description": ":right 12 right-aligns line within width 12",
+    "initialText": "hello",
+    "expected": {
+      "lines": [
+        "       hello"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 7
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": ":set et ts=2<CR>:right 12<CR>",
+    "category": "align"
+  },
+  {
+    "id": "align-left-indent",
+    "description": ":left 2 normalizes leading indent to 2 spaces",
+    "initialText": "      hello",
+    "expected": {
+      "lines": [
+        "  hello"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": ":left 2<CR>",
+    "category": "align"
+  },
+  {
+    "id": "motion-method-next-start",
+    "description": "]m jumps to next method opening brace",
+    "initialText": "class Foo {\n  bar() {\n    return 1;\n  }\n}",
+    "expected": {
+      "lines": [
+        "class Foo {",
+        "  bar() {",
+        "    return 1;",
+        "  }",
+        "}"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 8
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "]m]m",
+    "category": "motion-method"
+  },
+  {
+    "id": "search-partial-g-star",
+    "description": "g* searches partial word match without word boundaries",
+    "initialText": "foo foobar barfoo",
+    "expected": {
+      "lines": [
+        "foo foobar barfoo"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "g*",
+    "category": "search"
+  },
+  {
+    "id": "decl-global-gD",
+    "description": "gD jumps to first global occurrence",
+    "initialText": "const x = 1;\nfunction run() {\n  return x;\n}",
+    "expected": {
+      "lines": [
+        "const x = 1;",
+        "function run() {",
+        "  return x;",
+        "}"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 6
+      }
+    },
+    "startCursor": {
+      "row": 2,
+      "col": 9
+    },
+    "keys": "gD",
+    "category": "motion"
+  },
+  {
+    "id": "nrformats-hex-increment",
+    "description": ":set nf=hex <C-a> increments hex number",
+    "initialText": "0x0f",
+    "expected": {
+      "lines": [
+        "0x10"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": ":set nf=hex<CR><C-a>",
+    "category": "nrformats"
+  },
+  {
+    "id": "nrformats-bin-increment",
+    "description": ":set nf=bin <C-a> increments binary number",
+    "initialText": "0b101",
+    "expected": {
+      "lines": [
+        "0b110"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": ":set nf=bin<CR><C-a>",
+    "category": "nrformats"
+  },
+  {
+    "id": "nrformats-alpha-increment",
+    "description": ":set nf=alpha <C-a> increments alphabet character",
+    "initialText": "item a",
+    "expected": {
+      "lines": [
+        "item b"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 5
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 5
+    },
+    "keys": ":set nf=alpha<CR><C-a>",
+    "category": "nrformats"
+  },
+  {
+    "id": "special-mark-last-insert",
+    "description": "`^ jumps back to last insert exit position",
+    "initialText": "hello world\nsecond line",
+    "expected": {
+      "lines": [
+        "hello !world",
+        "second line"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 7
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 5
+    },
+    "keys": "a!<Esc>j0`^",
+    "category": "special-marks"
+  },
+  {
+    "id": "special-mark-bracket-change",
+    "description": "`[ jumps to start of last yanked text",
+    "initialText": "alpha beta gamma\nnext line",
+    "expected": {
+      "lines": [
+        "alpha beta gamma",
+        "next line"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 6
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 6
+    },
+    "keys": "yiwj0`[",
+    "category": "special-marks"
+  },
+  {
+    "id": "paste-gp-cursor-after",
+    "description": "gp places cursor right after pasted characterwise text",
+    "initialText": "hello world",
+    "expected": {
+      "lines": [
+        "hello worldhello"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 15
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "yiw$gp",
+    "category": "paste"
+  },
+  {
+    "id": "paste-indent-right-bracket-p",
+    "description": "]p adjusts pasted linewise indent to current line indent",
+    "initialText": "  src\n      dst",
+    "expected": {
+      "lines": [
+        "  src",
+        "      dst",
+        "      src"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 6
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": ":set et ts=2<CR>yyj]p",
+    "category": "paste"
+  },
+  {
+    "id": "ex-repeat-at-colon",
+    "description": "@: repeats the last Ex command on next line",
+    "initialText": "foo 1\nfoo 2",
+    "expected": {
+      "lines": [
+        "bar 1",
+        "bar 2"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": ":s/foo/bar/<CR><Step>j@:",
+    "category": "ex-repeat"
+  },
+  {
+    "id": "insert-ctrl-v-unicode",
+    "description": "Insert <C-v>u0041 inserts uppercase A",
+    "initialText": "prefix ",
+    "expected": {
+      "lines": [
+        "prefix A"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 7
+      }
+    },
+    "startCursor": {
+      "row": 0,
+      "col": 6
+    },
+    "keys": "a<C-v>u0041<Esc>",
+    "category": "insert-special"
   }
 ]
