@@ -1,6 +1,6 @@
 import { VimEditorState } from './types';
 import { executeSetCommand } from './setEngine';
-import { getVfsFile } from './vfs';
+import { buildVfsMap, getVfsFile, resolveVfsFilename } from './vfs';
 import { registerKeymap, unregisterKeymap, parseMapRest, parseUnmapRest } from './keymapEngine';
 import { executeAbbrevCommand } from './abbrevEngine';
 import { executeUserCommandDefinition } from './userCommandEngine';
@@ -219,4 +219,82 @@ export function sourceScript(state: VimEditorState, targetFile = '%', runEx?: So
     scriptFinished: undefined,
     commandMessage: msg('"{sourceName}" {appliedCount}개 설정 적용 완료 (sourced successfully)', { sourceName, appliedCount }),
   };
+}
+
+/** :runtime 패턴(*, **, ?)을 VFS 경로 매칭용 정규식으로 변환합니다. */
+function compileRuntimeGlob(pattern: string): RegExp {
+  const clean = pattern.trim().replace(/^\.\//, '').replace(/^\/workspace\//, '');
+  let regex = '';
+  for (let i = 0; i < clean.length; i++) {
+    const ch = clean[i];
+    if (ch === '*') {
+      if (clean[i + 1] === '*') {
+        if (clean[i + 2] === '/') {
+          regex += '(?:.*/)?';
+          i += 2;
+        } else {
+          regex += '.*';
+          i += 1;
+        }
+      } else {
+        regex += '[^/]*';
+      }
+    } else if (ch === '?') {
+      regex += '[^/]';
+    } else {
+      regex += ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+  }
+  return new RegExp(`^${regex}$`);
+}
+
+/**
+ * VFS·버퍼에서 패턴과 일치하는 Vim 스크립트를 찾아 실행합니다 (:runtime[!] {pattern}).
+ * ! 없으면 첫 일치 파일만, ! 있으면 일치하는 모든 파일을 순서대로 소싱합니다.
+ */
+export function runtimeScript(
+  state: VimEditorState,
+  rawArgs: string,
+  bang = false,
+  runEx?: SourceExRunner
+): VimEditorState {
+  const patterns = rawArgs.trim().split(/\s+/).filter(Boolean);
+  if (patterns.length === 0) {
+    return { ...state, commandMessage: '' };
+  }
+
+  const vfs = buildVfsMap(state);
+  const candidateNames = new Set<string>(Object.keys(vfs));
+  for (const buf of state.buffers ?? []) {
+    if (buf.name && buf.name !== '[No Name]') candidateNames.add(buf.name);
+  }
+  const sortedPaths = Array.from(candidateNames).sort((a, b) => a.localeCompare(b));
+
+  const targets: string[] = [];
+  const seen = new Set<string>();
+
+  for (const pat of patterns) {
+    const resolvedExact = resolveVfsFilename(state, pat);
+    const re = compileRuntimeGlob(pat);
+    const matches = sortedPaths.filter(
+      (p) => p === pat || p === resolvedExact || re.test(p)
+    );
+    const picked = bang ? matches : matches.slice(0, 1);
+    for (const p of picked) {
+      if (!seen.has(p)) {
+        seen.add(p);
+        targets.push(p);
+      }
+    }
+  }
+
+  if (targets.length === 0) {
+    return { ...state, commandMessage: '' };
+  }
+
+  let cur = state;
+  for (const target of targets) {
+    cur = sourceScript(cur, target, runEx);
+  }
+  return cur;
 }

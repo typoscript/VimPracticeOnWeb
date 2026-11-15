@@ -41,6 +41,7 @@ export function ensureTabPages(state: VimEditorState): VimEditorState {
     secondaryFilename: state.secondaryFilename,
     currentBufferId: state.currentBufferId,
     alternateBufferId: state.alternateBufferId,
+    cwd: state.globalCwd && state.globalCwd !== state.cwd ? state.cwd : undefined,
   };
 
   return {
@@ -153,6 +154,7 @@ export function switchTab(state: VimEditorState, targetId: number): VimEditorSta
     currentBufferId: targetTab.currentBufferId,
     alternateBufferId: targetTab.alternateBufferId,
     currentTabId: targetTab.id,
+    cwd: targetTab.cwd ?? syncedState.globalCwd ?? syncedState.cwd,
     commandMessage: msg('탭 {id}: {filename}', { id: targetTab.id, filename: targetTab.filename }),
   };
 }
@@ -213,6 +215,7 @@ export function openNewTab(state: VimEditorState, filename?: string): VimEditorS
     splitPanes: undefined,
     primaryFilename: tabName,
     secondaryFilename: undefined,
+    cwd: syncedState.globalCwd ?? syncedState.cwd,
     commandMessage: msg('"{tabName}" [새 탭 {nextId}]', { tabName, nextId }),
   };
 }
@@ -288,6 +291,7 @@ export function closeTab(state: VimEditorState, targetIdx?: number): VimEditorSt
     secondaryFilename: fallbackTab.secondaryFilename,
     currentBufferId: fallbackTab.currentBufferId,
     alternateBufferId: fallbackTab.alternateBufferId,
+    cwd: fallbackTab.cwd ?? syncedState.globalCwd ?? syncedState.cwd,
     commandMessage: msg('탭 {id} 닫힘 -> 탭 {id2}: {filename}', { id: closingTab.id, id2: fallbackTab.id, filename: fallbackTab.filename }),
   };
 }

@@ -145,38 +145,46 @@ export function resolveVfsFilename(state: VimEditorState, filename: string): str
 }
 
 /**
- * :cd / :lcd 명령으로 가상 작업 디렉터리를 변경합니다.
+ * :cd / :lcd / :tcd 명령으로 가상 작업 디렉터리를 변경합니다.
  */
-export function changeWorkingDirectory(state: VimEditorState, rawDir?: string): VimEditorState {
+export function changeWorkingDirectory(
+  state: VimEditorState,
+  rawDir?: string,
+  scope: 'global' | 'tab' = 'global'
+): VimEditorState {
   const arg = rawDir?.trim();
-  if (!arg) {
-    return {
-      ...state,
-      cwd: DEFAULT_VFS_CWD,
-      commandMessage: DEFAULT_VFS_CWD,
-    };
+  const prevGlobal = state.globalCwd ?? getEffectiveCwd(state);
+  const nextCwd = !arg ? DEFAULT_VFS_CWD : normalizeVirtualCwd(getEffectiveCwd(state), arg);
+
+  if (arg) {
+    let exists = nextCwd === '/' || nextCwd === DEFAULT_VFS_CWD;
+
+    if (!exists && nextCwd.startsWith(`${DEFAULT_VFS_CWD}/`)) {
+      const relDir = nextCwd.slice(DEFAULT_VFS_CWD.length + 1);
+      const allDirs = getAvailableDirectories(state);
+      exists = allDirs.includes(relDir);
+    }
+
+    if (!exists) {
+      return {
+        ...state,
+        commandMessage: msg('E344: cdpath에서 "{dir}" 디렉터리를 찾을 수 없습니다', { dir: arg }),
+        bell: true,
+      };
+    }
   }
 
-  const nextCwd = normalizeVirtualCwd(getEffectiveCwd(state), arg);
-  let exists = nextCwd === '/' || nextCwd === DEFAULT_VFS_CWD;
-
-  if (!exists && nextCwd.startsWith(`${DEFAULT_VFS_CWD}/`)) {
-    const relDir = nextCwd.slice(DEFAULT_VFS_CWD.length + 1);
-    const allDirs = getAvailableDirectories(state);
-    exists = allDirs.includes(relDir);
-  }
-
-  if (!exists) {
-    return {
-      ...state,
-      commandMessage: msg('E344: cdpath에서 "{dir}" 디렉터리를 찾을 수 없습니다', { dir: arg }),
-      bell: true,
-    };
-  }
+  const nextTabPages = state.tabPages?.map((tab) =>
+    tab.id === (state.currentTabId ?? 1)
+      ? { ...tab, cwd: scope === 'tab' ? nextCwd : undefined }
+      : tab
+  );
 
   return {
     ...state,
     cwd: nextCwd,
+    globalCwd: scope === 'tab' ? prevGlobal : nextCwd,
+    ...(nextTabPages ? { tabPages: nextTabPages } : {}),
     commandMessage: nextCwd,
   };
 }

@@ -14,10 +14,11 @@ import { moveFind } from './findChar';
 import { findMatches, findNextMatch, findPrevMatch, getWordAtCursor } from './search';
 import { starSearchPattern } from './vimRegex';
 import {
-  applySilentKeymapResult,
-  evaluateExprKeymap,
+  MAX_REMAP_DEPTH,
+  isKeymapPrefix,
   parseKeySequence,
   resolveKeymapWithMeta,
+  runKeymapTokens,
 } from './keymapEngine';
 import { executeVisualSurround } from './surroundEngine';
 import {
@@ -72,6 +73,7 @@ export function handleVisualModeKey(
       visualAnchor: undefined,
       visualBlockEndOfLine: undefined,
       pendingKeys: undefined,
+      pendingKeymapPrefix: undefined,
       activeRegister: undefined,
       lastVisualSelection: state.visualAnchor
         ? {
@@ -152,26 +154,54 @@ export function handleVisualModeKey(
     return alternateBuffer(state);
   }
 
-  // 비주얼 모드 커스텀 키매핑 (예: H -> ^, L -> $, Y -> y, <leader>y -> "+y, <buffer>, <silent>, <expr> 등)
-  if (!state.pendingKeys && macroDepth === 0) {
-    const resolved = resolveKeymapWithMeta(state, 'v', key);
+  // 비주얼 모드 커스텀 키매핑 (:xmap/:xnoremap 우선, :vmap/:vnoremap 폴백, 다중 키 및 재귀 *map 지원)
+  if (!state.keymapsDisabled && !state.pendingKeys && macroDepth <= MAX_REMAP_DEPTH) {
+    const leaderKey = state.leaderKey || ' ';
+    const prefix = state.pendingKeymapPrefix ?? '';
+    const isLeader = !prefix && (key === leaderKey || (leaderKey === ' ' && (key === ' ' || key === 'Space')));
+    const combined = isLeader ? '<leader>' : `${prefix}${key}`;
+    const resolved =
+      resolveKeymapWithMeta(state, 'x', combined) ??
+      resolveKeymapWithMeta(state, 'v', combined);
     if (resolved) {
-      const prevMessage = state.commandMessage;
-      const rhs = resolved.expr ? evaluateExprKeymap(state, resolved.rhs) : resolved.rhs;
-      if (!rhs) return applySilentKeymapResult(prevMessage, state, resolved.silent);
-      if (rhs === '^') {
-        return applySilentKeymapResult(prevMessage, { ...state, cursor: moveToFirstNonBlank(state.lines, state.cursor) }, resolved.silent);
-      }
-      if (rhs === '$') {
-        return applySilentKeymapResult(prevMessage, { ...state, cursor: moveToLineEnd(state.lines, state.cursor) }, resolved.silent);
-      }
-      const tokens = parseKeySequence(rhs, state.leaderKey || ' ');
-      let s: VimEditorState = state;
-      for (const tok of tokens) {
-        s = dispatchKey(s, tok, false, macroDepth + 1);
+      return runKeymapTokens(
+        { ...state, pendingKeymapPrefix: undefined },
+        resolved,
+        macroDepth,
+        (runState, rhs, isNoremap, nextDepth) => {
+          if (isNoremap && rhs === '^') {
+            return { ...runState, cursor: moveToFirstNonBlank(runState.lines, runState.cursor) };
+          }
+          if (isNoremap && rhs === '$') {
+            return { ...runState, cursor: moveToLineEnd(runState.lines, runState.cursor) };
+          }
+          const tokens = parseKeySequence(rhs, leaderKey);
+          let s: VimEditorState = runState;
+          for (const tok of tokens) {
+            s = dispatchKey(s, tok, false, nextDepth);
+            if (s.bell) break;
+          }
+          return s;
+        }
+      );
+    }
+    if (
+      isKeymapPrefix(state, 'x', combined) ||
+      isKeymapPrefix(state, 'v', combined) ||
+      (isLeader && (isKeymapPrefix(state, 'x', leaderKey) || isKeymapPrefix(state, 'v', leaderKey)))
+    ) {
+      return { ...state, pendingKeymapPrefix: combined };
+    }
+    if (prefix) {
+      const prevDisabled = state.keymapsDisabled;
+      const flushTokens = parseKeySequence(prefix, leaderKey);
+      let s: VimEditorState = { ...state, pendingKeymapPrefix: undefined, keymapsDisabled: true };
+      for (const tok of flushTokens) {
+        s = dispatchKey(s, tok, false, macroDepth);
         if (s.bell) break;
       }
-      return applySilentKeymapResult(prevMessage, s, resolved.silent);
+      const restored = s.keymapsDisabled === prevDisabled ? s : { ...s, keymapsDisabled: prevDisabled };
+      return dispatchKey(restored, key, false, macroDepth);
     }
   }
 

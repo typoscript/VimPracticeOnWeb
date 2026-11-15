@@ -69,6 +69,7 @@ export function handleNormalModeKey(
     return {
       ...state,
       pendingKeys: undefined,
+      pendingKeymapPrefix: undefined,
       activeRegister: undefined,
       lspHover: state.lspHover?.isOpen ? null : state.lspHover,
     };

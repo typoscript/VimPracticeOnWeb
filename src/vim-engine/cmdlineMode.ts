@@ -5,7 +5,14 @@ import { addHistory, navigateHistory, openCommandLineWindow } from './cmdlineWin
 import { handleTabCompletion, cancelWildmenu, acceptWildmenu, listCmdlineCompletions } from './wildmenu';
 import { expandCmdlineAbbrev } from './abbrevEngine';
 import { cancelFunctionDraft } from './vimscriptEngine';
-import { insertTextAtCursor, RunHandleKeyFn } from './engineHelpers';
+import { DispatchKeyFn, insertTextAtCursor, RunHandleKeyFn } from './engineHelpers';
+import {
+  MAX_REMAP_DEPTH,
+  isKeymapPrefix,
+  parseKeySequence,
+  resolveKeymapWithMeta,
+  runKeymapTokens,
+} from './keymapEngine';
 import {
   insertTextIntoCmdline,
   deleteCmdlineCharBackward,
@@ -56,7 +63,9 @@ function restoreFromExpressionPrompt(
 export function handleCommandLineModeKey(
   state: VimEditorState,
   key: string,
-  runHandleKey: RunHandleKeyFn
+  runHandleKey: RunHandleKeyFn,
+  dispatchKey?: DispatchKeyFn,
+  macroDepth = 0
 ): VimEditorState {
   // 1. 표현식 레지스터(=) 프롬프트 처리
   if (state.commandType === '=') {
@@ -135,6 +144,77 @@ export function handleCommandLineModeKey(
     }
 
     return state;
+  }
+
+  // 1.5. 명령행 모드 키매핑 (:cmap / :cnoremap)
+  if (
+    !state.keymapsDisabled &&
+    !state.literalNextPending &&
+    state.digraphPending === undefined &&
+    !state.insertRegisterPending &&
+    !state.confirmSubstitute &&
+    macroDepth <= MAX_REMAP_DEPTH
+  ) {
+    const leaderKey = state.leaderKey || ' ';
+    const prefix = state.pendingKeymapPrefix ?? '';
+    if (prefix && isCmdlineCancelKey(key)) {
+      return handleCommandLineModeKey(
+        { ...state, pendingKeymapPrefix: undefined },
+        key,
+        runHandleKey,
+        dispatchKey,
+        macroDepth
+      );
+    }
+    const combined = `${prefix}${key}`;
+    const resolved = resolveKeymapWithMeta(state, 'c', combined);
+    if (resolved) {
+      const cleanState: VimEditorState = { ...state, pendingKeymapPrefix: undefined };
+      const runEx = (s: VimEditorState, cmd: string) => executeCommandLine(s, cmd, runHandleKey);
+      return runKeymapTokens(
+        cleanState,
+        resolved,
+        macroDepth,
+        (runState, rhs, _isNoremap, nextDepth) => {
+          const tokens = parseKeySequence(rhs, leaderKey);
+          let s: VimEditorState = runState;
+          for (const tok of tokens) {
+            s =
+              s.mode === 'COMMAND'
+                ? handleCommandLineModeKey(s, tok, runHandleKey, dispatchKey, nextDepth)
+                : dispatchKey
+                ? dispatchKey(s, tok, false, nextDepth)
+                : runHandleKey(s, tok);
+            if (s.bell) break;
+          }
+          return s;
+        },
+        runEx
+      );
+    }
+    if (isKeymapPrefix(state, 'c', combined)) {
+      return { ...state, pendingKeymapPrefix: combined };
+    }
+    if (prefix) {
+      const prevDisabled = state.keymapsDisabled;
+      const flushTokens = parseKeySequence(prefix, leaderKey);
+      let s: VimEditorState = { ...state, pendingKeymapPrefix: undefined, keymapsDisabled: true };
+      for (const tok of flushTokens) {
+        s =
+          s.mode === 'COMMAND'
+            ? handleCommandLineModeKey(s, tok, runHandleKey, dispatchKey, macroDepth)
+            : dispatchKey
+            ? dispatchKey(s, tok, false, macroDepth)
+            : runHandleKey(s, tok);
+        if (s.bell) break;
+      }
+      const restored = s.keymapsDisabled === prevDisabled ? s : { ...s, keymapsDisabled: prevDisabled };
+      return restored.mode === 'COMMAND'
+        ? handleCommandLineModeKey(restored, key, runHandleKey, dispatchKey, macroDepth)
+        : dispatchKey
+        ? dispatchKey(restored, key, false, macroDepth)
+        : runHandleKey(restored, key);
+    }
   }
 
   // 2. 일반 COMMAND (:) 모드 내 Ctrl+r ({reg}, =, <C-w>, <C-a>, <C-l>, <C-f>) 처리
@@ -236,6 +316,7 @@ export function handleCommandLineModeKey(
       digraphPending: undefined,
       insertRegisterPending: undefined,
       literalNextPending: undefined,
+      pendingKeymapPrefix: undefined,
       filterOperatorKeys: undefined,
       wildmenu: null,
     };
@@ -259,6 +340,7 @@ export function handleCommandLineModeKey(
       digraphPending: undefined,
       insertRegisterPending: undefined,
       literalNextPending: undefined,
+      pendingKeymapPrefix: undefined,
       filterOperatorKeys: undefined,
       wildmenu: null,
     };
@@ -295,6 +377,7 @@ export function handleCommandLineModeKey(
       ...res,
       commandCursorCol: undefined,
       digraphPending: undefined,
+      pendingKeymapPrefix: undefined,
       filterOperatorKeys: undefined,
     };
   }

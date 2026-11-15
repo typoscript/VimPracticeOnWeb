@@ -174,6 +174,8 @@ export interface VimTabPage {
   secondaryFilename?: string;
   currentBufferId?: number;
   alternateBufferId?: number;
+  /** 탭 로컬 작업 디렉터리 (:tcd) */
+  cwd?: string;
 }
 
 export interface CommandLineWindowSession {
@@ -493,8 +495,10 @@ export interface VimEditorState {
   splitRatio?: number;
   /** 직전에 활성화되었던 창 인덱스 (Ctrl-w p 용) */
   previousPaneIndex?: number;
-  /** 현재 작업 디렉터리 (:pwd, :cd, :lcd 용, 기본값: '/workspace') */
+  /** 현재 작업 디렉터리 (:pwd, :cd, :lcd, :tcd 용, 기본값: '/workspace') */
   cwd?: string;
+  /** 전역 작업 디렉터리 (:cd 기준, 탭 전환 시 탭 로컬 :tcd가 없는 탭에 복원) */
+  globalCwd?: string;
   /** 주 창 파일명 (예: source.ts) */
   primaryFilename?: string;
   /** 보조 창 파일명 (예: target.ts) */
@@ -509,6 +513,8 @@ export interface VimEditorState {
   keymapMeta?: Record<string, { silent?: boolean; expr?: boolean; noremap?: boolean }>;
   /** :normal! 실행 중 사용자 키매핑 우회 여부 */
   keymapsDisabled?: boolean;
+  /** 다중 키 키매핑(:omap/:xmap/:cmap 등) 중간 입력 접두 버퍼 */
+  pendingKeymapPrefix?: string;
   /** 사용자 정의 입력/명령행 약어 (:iabbrev, :cabbrev, :abbrev, 키: 'i:teh' | 'c:W') */
   abbreviations?: Record<string, AbbreviationEntry>;
   /** Insert/Command 모드 Ctrl-v 리터럴 및 uXXXX/UXXXXXXXX 유니코드 입력 대기 상태 */

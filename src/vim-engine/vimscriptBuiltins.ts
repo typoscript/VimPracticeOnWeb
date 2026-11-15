@@ -52,10 +52,69 @@ function asDict(value: VimScriptValue, fn: string): VimScriptDict {
   return value;
 }
 
-/** line('.'), getline('$') 등 줄 지정 인자를 0-based 줄 번호로 변환합니다. (범위 밖이면 -1) */
+/** Vimscript 마크 문자열('a, '<, '>, '., '^, '[, '], '')의 0-based 좌표를 해석합니다. */
+function resolveScriptMarkPosition(
+  state: VimEditorState,
+  markChar: string
+): { row: number; col: number } | null {
+  if (/^[a-zA-Z]$/.test(markChar)) {
+    return state.marks?.[markChar] ?? null;
+  }
+  if (markChar === "'" || markChar === '`') {
+    return state.lastJumpPos ? { ...state.lastJumpPos } : { row: 0, col: 0 };
+  }
+  if (markChar === '.') {
+    if (state.lastChangeMark) return { ...state.lastChangeMark };
+    if (state.changeList && state.changeList.length > 0) {
+      const last = state.changeList[state.changeList.length - 1];
+      return { row: last.row, col: last.col };
+    }
+    return state.marks?.['.'] ?? null;
+  }
+  if (markChar === '^') {
+    if (state.lastInsertPos) return { row: state.lastInsertPos.row, col: state.lastInsertPos.col };
+    return state.marks?.['^'] ?? null;
+  }
+  if (markChar === '<' || markChar === '>') {
+    const vis = state.lastVisualSelection;
+    if (vis) {
+      const isAnchorFirst =
+        vis.anchor.line < vis.cursor.line ||
+        (vis.anchor.line === vis.cursor.line && vis.anchor.col <= vis.cursor.col);
+      const pos =
+        markChar === '<'
+          ? isAnchorFirst
+            ? vis.anchor
+            : vis.cursor
+          : isAnchorFirst
+          ? vis.cursor
+          : vis.anchor;
+      return { row: pos.line, col: pos.col };
+    }
+    return state.marks?.[markChar] ?? null;
+  }
+  if (markChar === '[') {
+    return state.lastBracketMarks?.start ? { ...state.lastBracketMarks.start } : state.marks?.['['] ?? null;
+  }
+  if (markChar === ']') {
+    return state.lastBracketMarks?.end ? { ...state.lastBracketMarks.end } : state.marks?.[']'] ?? null;
+  }
+  return null;
+}
+
+/** line('.'), line("'<"), getline('$') 등 줄 지정 인자를 0-based 줄 번호로 변환합니다. (범위 밖이면 -1) */
 function resolveLineArg(state: VimEditorState, arg: VimScriptValue): number {
   if (arg === '.') return state.cursor.line;
   if (arg === '$') return state.lines.length - 1;
+  if (arg === 'v') {
+    const isVisual =
+      state.mode === 'VISUAL' || state.mode === 'VISUAL_LINE' || state.mode === 'VISUAL_BLOCK';
+    return isVisual && state.visualAnchor ? state.visualAnchor.line : state.cursor.line;
+  }
+  if (typeof arg === 'string' && arg.length === 2 && arg[0] === "'") {
+    const pos = resolveScriptMarkPosition(state, arg[1]);
+    return pos && pos.row >= 0 && pos.row < state.lines.length ? pos.row : -1;
+  }
   const n = toNumber(arg);
   return n >= 1 && n <= state.lines.length ? n - 1 : -1;
 }
@@ -72,7 +131,8 @@ const KNOWN_BUILTIN_COMMANDS = new Set([
   'wq', 'wqa', 'wqall', 'x', 'xa', 'xall', 'saveas', 'sav', 'f', 'file', 'files', 'finish',
   'ls', 'buffers', 'b', 'buffer', 'bn', 'bnext', 'bp', 'bprev', 'bd', 'bdelete',
   'bun', 'bunload', 'bw', 'bwipeout', 'sp', 'split', 'vsp', 'vsplit', 'tabnew',
-  'cd', 'chdir', 'lcd', 'lchdir', 'pwd', 'set', 'se', 'setlocal', 'setglobal',
+  'cd', 'chd', 'chdir', 'lcd', 'lchd', 'lchdir', 'tcd', 'tchd', 'tchdir', 'pwd', 'set', 'se', 'setlocal', 'setglobal',
+  'ru', 'runtime', 'so', 'source',
   'let', 'unlet', 'ec', 'echo', 'echom', 'echomsg', 'execute', 'exe', 'call',
   'function', 'redir', 'mes', 'messages', 'silent', 'keeppatterns', 'noautocmd',
   's', 'substitute', 'g', 'global', 'v', 'vglobal', 'j', 'join', 'p', 'print',
@@ -261,8 +321,30 @@ export function createBuiltinRegistry(
     col: {
       min: 1,
       max: 1,
-      fn: (ctx, [a]) =>
-        a === '.' ? ctx.state.cursor.col + 1 : a === '$' ? (ctx.state.lines[ctx.state.cursor.line] ?? '').length + 1 : 0,
+      fn: (ctx, [a]) => {
+        const s = ctx.state;
+        if (a === '.') return s.cursor.col + 1;
+        if (a === '$') return (s.lines[s.cursor.line] ?? '').length + 1;
+        if (a === 'v') {
+          const isVisual =
+            s.mode === 'VISUAL' || s.mode === 'VISUAL_LINE' || s.mode === 'VISUAL_BLOCK';
+          const col = isVisual && s.visualAnchor ? s.visualAnchor.col : s.cursor.col;
+          return col + 1;
+        }
+        if (typeof a === 'string' && a.length === 2 && a[0] === "'") {
+          const pos = resolveScriptMarkPosition(s, a[1]);
+          return pos ? pos.col + 1 : 0;
+        }
+        if (Array.isArray(a) && a.length >= 2) {
+          const row = resolveLineArg(s, a[0]);
+          if (row < 0) return 0;
+          const lineLen = (s.lines[row] ?? '').length;
+          if (a[1] === '$') return lineLen + 1;
+          const colNum = toNumber(a[1]);
+          return colNum >= 1 ? Math.min(colNum, lineLen + 1) : 0;
+        }
+        return 0;
+      },
     },
     getline: {
       min: 1,

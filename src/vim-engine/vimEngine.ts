@@ -163,7 +163,7 @@ export function rawHandleKey(
       nextState = finishInsertNormalSession(nextState);
     }
   } else if (state.mode === 'COMMAND') {
-    nextState = handleCommandLineModeKey(state, key, handleKey);
+    nextState = handleCommandLineModeKey(state, key, handleKey, rawHandleKey, macroDepth);
     if (state.insertNormalSession && nextState.mode === 'NORMAL') {
       nextState = finishInsertNormalSession(nextState);
     }

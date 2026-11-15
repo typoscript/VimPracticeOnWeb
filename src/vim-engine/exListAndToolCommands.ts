@@ -4,7 +4,7 @@ import { formatMarksList, formatJumpsList, clearJumps, deleteMarks } from './mar
 import { formatRegisters } from './registers';
 import { formatCommandHistory } from './cmdlineWindow';
 import { executeSetCommand } from './setEngine';
-import { sourceScript } from './sourceEngine';
+import { runtimeScript, sourceScript } from './sourceEngine';
 import { executeMakeSession } from './sessionEngine';
 import {
   executeAutocmdCommand,
@@ -283,6 +283,19 @@ export function tryExecuteToolExCommand(
     };
   }
 
+  // 런타임 스크립트 실행: :runtime[!] {pattern}
+  const runtimeMatch = cleanCmdRaw.match(/^(?:runtime|ru)(!)?(?:\s+(.*))?$/i);
+  if (runtimeMatch) {
+    const res = runtimeScript(state, runtimeMatch[2] ?? '', Boolean(runtimeMatch[1]), runEx);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
   // 세션 파일 저장: :mksession, :mks [file]
   const mksessionMatch = cleanCmdRaw.match(/^(?:mksession|mks)(!?)(?:\s+(.*))?$/i);
   if (mksessionMatch) {
@@ -512,16 +525,19 @@ export function tryExecuteToolExCommand(
     };
   }
 
-  // 3-x. 키매핑 목록 조회: :map, :nmap, :imap, :vmap, :noremap, :nnoremap, :inoremap, :vnoremap (인자 없음)
+  // 3-x. 키매핑 목록 조회: :map, :nmap, :imap, :vmap, :xmap, :omap, :cmap 등 (인자 없음)
   const listMatch = trimmed.match(
-    /^:?\s*(map|nmap|imap|vmap|noremap|nnoremap|inoremap|vnoremap)$/i
+    /^:?\s*(map|nmap|imap|vmap|xmap|omap|cmap|noremap|nnoremap|inoremap|vnoremap|xnoremap|onoremap|cnoremap)$/i
   );
   if (listMatch) {
     const cmd = listMatch[1].toLowerCase();
     let modeFilter = 'all';
     if (cmd.startsWith('i')) modeFilter = 'i';
-    else if (cmd.startsWith('n')) modeFilter = 'n';
+    else if (cmd.startsWith('n') && !cmd.startsWith('nore')) modeFilter = 'n';
     else if (cmd.startsWith('v')) modeFilter = 'v';
+    else if (cmd.startsWith('x')) modeFilter = 'x';
+    else if (cmd.startsWith('o')) modeFilter = 'o';
+    else if (cmd.startsWith('c')) modeFilter = 'c';
 
     return {
       ...state,
@@ -533,9 +549,9 @@ export function tryExecuteToolExCommand(
     };
   }
 
-  // 커스텀 키매핑 등록: :imap, :inoremap, :nmap, :nnoremap, :vmap, :vnoremap, :map, :noremap
+  // 커스텀 키매핑 등록: :imap, :inoremap, :nmap, :nnoremap, :vmap, :vnoremap, :xmap, :xnoremap, :omap, :onoremap, :cmap, :cnoremap, :map, :noremap
   const mapMatch = trimmed.match(
-    /^:?\s*(nmap|nnoremap|imap|inoremap|vmap|vnoremap|map|noremap)\s+([\s\S]+)$/i
+    /^:?\s*(nmap|nnoremap|imap|inoremap|vmap|vnoremap|xmap|xnoremap|omap|onoremap|cmap|cnoremap|map|noremap)\s+([\s\S]+)$/i
   );
   if (mapMatch) {
     const cmdType = mapMatch[1];
@@ -551,8 +567,8 @@ export function tryExecuteToolExCommand(
     return userCmdDef;
   }
 
-  // 키매핑 해제: :unmap, :nunmap, :iunmap, :vunmap
-  const unmapMatch = trimmed.match(/^:?\s*(unmap|nunmap|iunmap|vunmap)\s+([\s\S]+)$/i);
+  // 키매핑 해제: :unmap, :nunmap, :iunmap, :vunmap, :xunmap, :ounmap, :cunmap
+  const unmapMatch = trimmed.match(/^:?\s*(unmap|nunmap|iunmap|vunmap|xunmap|ounmap|cunmap)\s+([\s\S]+)$/i);
   if (unmapMatch) {
     const cmdType = unmapMatch[1];
     const parsed = parseUnmapRest(unmapMatch[2]);

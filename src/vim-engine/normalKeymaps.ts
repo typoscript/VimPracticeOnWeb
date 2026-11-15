@@ -3,15 +3,34 @@ import { moveToLineEnd, moveToFirstNonBlank } from './motions';
 import { switchPaneFocus } from './splitWindow';
 import { executeCommandLine } from './commandLine';
 import {
+  MAX_REMAP_DEPTH,
   ResolvedKeymap,
-  applySilentKeymapResult,
-  evaluateExprKeymap,
   isKeymapPrefix,
   parseKeySequence,
   resolveKeymapWithMeta,
+  runKeymapTokens,
 } from './keymapEngine';
-import { DispatchKeyFn, RunHandleKeyFn } from './engineHelpers';
+import { DispatchKeyFn, RunHandleKeyFn, parsePending } from './engineHelpers';
 import { PrefixStepResult } from './normalGPrefix';
+
+const OPERATOR_PENDING_OPS = new Set([
+  'd', 'c', 'y', '>', '<', '=', '!', 'gu', 'gU', 'g~', 'gc', 'gq', 'gw', 'g?',
+]);
+
+function executeNormalTokens(
+  state: VimEditorState,
+  tokens: string[],
+  dispatchKey: DispatchKeyFn,
+  isReplayingDot: boolean,
+  depth: number
+): VimEditorState {
+  let s = state;
+  for (const tok of tokens) {
+    s = dispatchKey(s, tok, isReplayingDot, depth);
+    if (s.bell) break;
+  }
+  return s;
+}
 
 function runResolvedNormalMapping(
   state: VimEditorState,
@@ -21,40 +40,43 @@ function runResolvedNormalMapping(
   isReplayingDot: boolean,
   macroDepth: number
 ): VimEditorState {
-  const prevMessage = state.commandMessage;
   const leaderKey = state.leaderKey || ' ';
   const runEx = (s: VimEditorState, cmd: string) => executeCommandLine(s, cmd, runHandleKey);
-  const rhs = resolved.expr ? evaluateExprKeymap(state, resolved.rhs, runEx) : resolved.rhs;
-  if (!rhs) return applySilentKeymapResult(prevMessage, state, resolved.silent);
-
-  if (rhs === '^') {
-    return applySilentKeymapResult(prevMessage, { ...state, cursor: moveToFirstNonBlank(state.lines, state.cursor) }, resolved.silent);
-  }
-  if (rhs === '$') {
-    return applySilentKeymapResult(prevMessage, { ...state, cursor: moveToLineEnd(state.lines, state.cursor) }, resolved.silent);
-  }
-  if (rhs === 'Ctrl-w h' || rhs === 'Ctrl-w k') {
-    return applySilentKeymapResult(prevMessage, switchPaneFocus(state, 0), resolved.silent);
-  }
-  if (rhs === 'Ctrl-w l' || rhs === 'Ctrl-w j') {
-    return applySilentKeymapResult(prevMessage, switchPaneFocus(state, 1), resolved.silent);
-  }
-  if (rhs.startsWith(':')) {
-    const cmd = rhs.slice(1).replace(/<(?:CR|Enter)>$/i, '').replace(/Enter$/, '');
-    return applySilentKeymapResult(prevMessage, runEx(state, cmd), resolved.silent);
-  }
-
-  let s: VimEditorState = state;
-  const tokens = parseKeySequence(rhs, leaderKey);
-  for (const tok of tokens) {
-    s = dispatchKey(s, tok, isReplayingDot, macroDepth + 1);
-    if (s.bell) break;
-  }
-  return applySilentKeymapResult(prevMessage, s, resolved.silent);
+  return runKeymapTokens(
+    state,
+    resolved,
+    macroDepth,
+    (runState, rhs, isNoremap, nextDepth) => {
+      if (isNoremap && rhs === '^') {
+        return { ...runState, cursor: moveToFirstNonBlank(runState.lines, runState.cursor) };
+      }
+      if (isNoremap && rhs === '$') {
+        return { ...runState, cursor: moveToLineEnd(runState.lines, runState.cursor) };
+      }
+      if (isNoremap && (rhs === 'Ctrl-w h' || rhs === 'Ctrl-w k')) {
+        return switchPaneFocus(runState, 0);
+      }
+      if (isNoremap && (rhs === 'Ctrl-w l' || rhs === 'Ctrl-w j')) {
+        return switchPaneFocus(runState, 1);
+      }
+      if (rhs.startsWith(':')) {
+        const cmd = rhs.slice(1).replace(/<(?:CR|Enter)>$/i, '').replace(/Enter$/, '');
+        return runEx(runState, cmd);
+      }
+      return executeNormalTokens(
+        runState,
+        parseKeySequence(rhs, leaderKey),
+        dispatchKey,
+        isReplayingDot,
+        nextDepth
+      );
+    },
+    runEx
+  );
 }
 
 /**
- * NORMAL 모드 사용자 커스텀 키매핑 및 리더 키(<leader>) 조합을 처리합니다.
+ * NORMAL 및 연산자 대기(Operator-pending) 모드 사용자 커스텀 키매핑과 리더 키 조합을 처리합니다.
  */
 export function handleNormalUserKeymap(
   state: VimEditorState,
@@ -66,6 +88,50 @@ export function handleNormalUserKeymap(
 ): PrefixStepResult | null {
   if (state.keymapsDisabled) return null;
   const leaderKey = state.leaderKey || ' ';
+
+  // 0. 연산자 대기 모드 (:omap / :onoremap) 키매핑 처리
+  const parsedOp = parsePending(state.pendingKeys).operator;
+  if (parsedOp && OPERATOR_PENDING_OPS.has(parsedOp) && macroDepth <= MAX_REMAP_DEPTH) {
+    const prefix = state.pendingKeymapPrefix ?? '';
+    const combined = `${prefix}${key}`;
+    const opResolved = resolveKeymapWithMeta(state, 'o', combined);
+    if (opResolved) {
+      const cleanState: VimEditorState = { ...state, pendingKeymapPrefix: undefined };
+      const runEx = (s: VimEditorState, cmd: string) => executeCommandLine(s, cmd, runHandleKey);
+      return {
+        handled: true,
+        state: runKeymapTokens(
+          cleanState,
+          opResolved,
+          macroDepth,
+          (runState, rhs, _isNoremap, nextDepth) =>
+            executeNormalTokens(runState, parseKeySequence(rhs, leaderKey), dispatchKey, isReplayingDot, nextDepth),
+          runEx
+        ),
+      };
+    }
+    if (isKeymapPrefix(state, 'o', combined)) {
+      return {
+        handled: true,
+        state: { ...state, pendingKeymapPrefix: combined },
+      };
+    }
+    if (prefix) {
+      const prevDisabled = state.keymapsDisabled;
+      const flushed = executeNormalTokens(
+        { ...state, pendingKeymapPrefix: undefined, keymapsDisabled: true },
+        parseKeySequence(prefix, leaderKey),
+        dispatchKey,
+        isReplayingDot,
+        macroDepth
+      );
+      const restored = flushed.keymapsDisabled === prevDisabled ? flushed : { ...flushed, keymapsDisabled: prevDisabled };
+      return {
+        handled: true,
+        state: dispatchKey(restored, key, isReplayingDot, macroDepth),
+      };
+    }
+  }
 
   // 1. 대기 중인 리더 키('<leader>') 조합 처리
   if (state.pendingKeys === '<leader>' || state.pendingKeys === leaderKey) {
@@ -106,13 +172,43 @@ export function handleNormalUserKeymap(
     }
   }
 
-  // 3. 단일 키 매핑 처리 (H -> ^, L -> $, Ctrl-h -> Ctrl-w h, Y -> y$, <expr>, <silent>, <buffer> 등)
-  if (!state.pendingKeys && macroDepth === 0) {
-    const singleResolved = resolveKeymapWithMeta(state, 'n', key);
-    if (singleResolved) {
+  // 3. 일반 모드 단일/다중 키 매핑 처리 (재귀 *map 및 noremap 구분)
+  if (!state.pendingKeys && macroDepth <= MAX_REMAP_DEPTH) {
+    const prefix = state.pendingKeymapPrefix ?? '';
+    const combined = `${prefix}${key}`;
+    const resolved = resolveKeymapWithMeta(state, 'n', combined);
+    if (resolved) {
       return {
         handled: true,
-        state: runResolvedNormalMapping(state, singleResolved, dispatchKey, runHandleKey, isReplayingDot, macroDepth),
+        state: runResolvedNormalMapping(
+          { ...state, pendingKeymapPrefix: undefined },
+          resolved,
+          dispatchKey,
+          runHandleKey,
+          isReplayingDot,
+          macroDepth
+        ),
+      };
+    }
+    if ((!isLeaderKey || prefix) && isKeymapPrefix(state, 'n', combined)) {
+      return {
+        handled: true,
+        state: { ...state, pendingKeymapPrefix: combined },
+      };
+    }
+    if (prefix) {
+      const prevDisabled = state.keymapsDisabled;
+      const flushed = executeNormalTokens(
+        { ...state, pendingKeymapPrefix: undefined, keymapsDisabled: true },
+        parseKeySequence(prefix, leaderKey),
+        dispatchKey,
+        isReplayingDot,
+        macroDepth
+      );
+      const restored = flushed.keymapsDisabled === prevDisabled ? flushed : { ...flushed, keymapsDisabled: prevDisabled };
+      return {
+        handled: true,
+        state: dispatchKey(restored, key, isReplayingDot, macroDepth),
       };
     }
   }

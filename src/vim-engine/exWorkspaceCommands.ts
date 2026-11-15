@@ -225,9 +225,10 @@ export function tryExecuteWorkspaceExCommand(
       commandMessage: getEffectiveCwd(state),
     };
   }
-  const cdMatch = cleanCmdRaw.match(/^(?:cd|chd|chdir|lcd|lchd|lchdir)(?:\s+(.*))?$/);
+  const cdMatch = cleanCmdRaw.match(/^(cd|chd|chdir|lcd|lchd|lchdir|tcd|tchd|tchdir)(?:\s+(.*))?$/);
   if (cdMatch) {
-    const res = changeWorkingDirectory(state, cdMatch[1]);
+    const scope = cdMatch[1].startsWith('t') ? 'tab' : 'global';
+    const res = changeWorkingDirectory(state, cdMatch[2], scope);
     return {
       ...res,
       mode: 'NORMAL',

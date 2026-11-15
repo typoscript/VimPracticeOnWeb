@@ -1,12 +1,14 @@
 import { VimEditorState } from './types';
 import { clampCursor } from './cursor';
 import {
+  MAX_REMAP_DEPTH,
   ResolvedKeymap,
   applySilentKeymapResult,
   evaluateExprKeymap,
   isKeymapPrefix,
   parseKeySequence,
   resolveKeymapWithMeta,
+  runKeymapTokens,
 } from './keymapEngine';
 import { findMatchingAbbrev, isAbbrevTriggerKey } from './abbrevEngine';
 import {
@@ -235,27 +237,35 @@ export function handleInsertModeKey(
       }, resolved.silent);
     }
 
-    let s: VimEditorState = {
+    const startBase: VimEditorState = {
       ...state,
       lines: nextLines,
       cursor: { line, col: baseCol },
       pendingKeys: undefined,
     };
-    const tokens = parseKeySequence(rhs, state.leaderKey || ' ');
-    for (const tok of tokens) {
-      s = dispatchKey(s, tok, isReplayingDot, Math.max(1, macroDepth + 1));
-      if (s.bell) break;
-    }
-    return applySilentKeymapResult(prevMsg, s, resolved.silent);
+    return runKeymapTokens(
+      startBase,
+      resolved,
+      macroDepth,
+      (runState, evalRhs, _isNoremap, _nextDepth) => {
+        const tokens = parseKeySequence(evalRhs, state.leaderKey || ' ');
+        let s: VimEditorState = runState;
+        for (const tok of tokens) {
+          s = dispatchKey(s, tok, isReplayingDot, Math.max(1, macroDepth + 1));
+          if (s.bell) break;
+        }
+        return s;
+      }
+    );
   };
 
-  if (state.pendingKeys) {
+  if (!state.keymapsDisabled && state.pendingKeys && macroDepth <= MAX_REMAP_DEPTH) {
     const combined = `${state.pendingKeys}${key}`;
     const resolved = resolveKeymapWithMeta(state, 'i', combined);
     if (resolved) {
       return executeInsertMapped(resolved, state.pendingKeys.length);
     }
-  } else if (macroDepth === 0) {
+  } else if (!state.keymapsDisabled && macroDepth <= MAX_REMAP_DEPTH) {
     const resolved = resolveKeymapWithMeta(state, 'i', key);
     if (resolved) {
       return executeInsertMapped(resolved, 0);
