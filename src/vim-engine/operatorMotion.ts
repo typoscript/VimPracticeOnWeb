@@ -17,9 +17,10 @@ import { EXTRA_MOTION_KEYS, evaluateExtraMotion } from './extraMotions';
  */
 
 export const OPERATOR_MOTION_KEYS = new Set([
-  'j', 'k', 'G', 'ArrowDown', 'ArrowUp',
+  'j', 'k', 'gj', 'gk', 'G', 'ArrowDown', 'ArrowUp',
   'h', 'l', 'b', 'B', '^', 'ArrowLeft', 'ArrowRight',
   '(', ')', '+', '-', 'Enter', '|',
+  '[[', ']]', '[]', '][', 'g0', 'g$', 'gm', 'gM',
 ]);
 
 type Operator = 'd' | 'c' | 'y';
@@ -53,11 +54,13 @@ export function executeOperatorMotion(
 
   switch (motionKey) {
     case 'j':
+    case 'gj':
     case 'ArrowDown':
       if (cursor.line >= lastLine) return null;
       return applyLinewise(state, op, cursor.line, Math.min(lastLine, cursor.line + n));
 
     case 'k':
+    case 'gk':
     case 'ArrowUp':
       if (cursor.line <= 0) return null;
       return applyLinewise(state, op, Math.max(0, cursor.line - n), cursor.line);

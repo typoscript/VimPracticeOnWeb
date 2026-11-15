@@ -7,6 +7,7 @@ import { moveToFirstNonBlank } from './motions';
 export type TextObjectModifier = 'i' | 'a';
 export type TextObjectTarget =
   | 'w'
+  | 'W'
   | '"'
   | "'"
   | '`'
@@ -58,29 +59,34 @@ export function getTextObjectRange(
 
   const col = Math.min(cursor.col, Math.max(0, lineText.length - 1));
 
-  // 1. 단어: iw, aw
-  if (objectType === 'iw' || objectType === 'aw') {
+  // 1. 단어 / WORD: iw, aw, iW, aW
+  if (objectType === 'iw' || objectType === 'aw' || objectType === 'iW' || objectType === 'aW') {
     if (lineText.length === 0) return null;
-    const targetClass = getCharClass(lineText[col]);
+    const isBigWord = objectType[1] === 'W';
+    const clsAt = (ch: string | undefined): CharClass => {
+      const c = getCharClass(ch);
+      return isBigWord ? (c === 'space' ? 'space' : 'word') : c;
+    };
+    const targetClass = clsAt(lineText[col]);
 
     let startCol = col;
-    while (startCol > 0 && getCharClass(lineText[startCol - 1]) === targetClass) {
+    while (startCol > 0 && clsAt(lineText[startCol - 1]) === targetClass) {
       startCol--;
     }
 
     let endCol = col;
-    while (endCol < lineText.length - 1 && getCharClass(lineText[endCol + 1]) === targetClass) {
+    while (endCol < lineText.length - 1 && clsAt(lineText[endCol + 1]) === targetClass) {
       endCol++;
     }
 
-    if (objectType === 'iw') {
+    if (objectType[0] === 'i') {
       return { startCol, endCol };
     }
 
-    // aw: around word (단어 + 뒤 공백 또는 앞 공백)
+    // aw / aW: around word/WORD (뒤 공백 또는 앞 공백 포함)
     if (targetClass !== 'space') {
       let newEndCol = endCol;
-      while (newEndCol < lineText.length - 1 && getCharClass(lineText[newEndCol + 1]) === 'space') {
+      while (newEndCol < lineText.length - 1 && clsAt(lineText[newEndCol + 1]) === 'space') {
         newEndCol++;
       }
 
@@ -89,15 +95,15 @@ export function getTextObjectRange(
       }
 
       let newStartCol = startCol;
-      while (newStartCol > 0 && getCharClass(lineText[newStartCol - 1]) === 'space') {
+      while (newStartCol > 0 && clsAt(lineText[newStartCol - 1]) === 'space') {
         newStartCol--;
       }
       return { startCol: newStartCol, endCol };
     } else {
       let newEndCol = endCol;
       if (newEndCol < lineText.length - 1) {
-        const nextClass = getCharClass(lineText[newEndCol + 1]);
-        while (newEndCol < lineText.length - 1 && getCharClass(lineText[newEndCol + 1]) === nextClass) {
+        const nextClass = clsAt(lineText[newEndCol + 1]);
+        while (newEndCol < lineText.length - 1 && clsAt(lineText[newEndCol + 1]) === nextClass) {
           newEndCol++;
         }
       }

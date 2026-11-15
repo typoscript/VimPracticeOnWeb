@@ -121,3 +121,122 @@ describe('연산자·VISUAL 과 함께 쓰기', () => {
     expect(evaluateExtraMotion(CODE, { line: 0, col: 0 }, '+')?.kind).toBe('linewise');
   });
 });
+
+describe('섹션 이동([[ ]] [] ][), 화면 줄 이동(gj/gk/g0/g$/gm/gM/gI), Ctrl-g, ZZ/ZQ 및 [ ] 네비게이션', () => {
+  it('[[ / ]] / [] / ][ 는 열 0의 { / } 섹션 경계를 오간다', () => {
+    const lines = ['{', '  a', '}', '', '{', '  b', '}'];
+    let s = createState(lines, { line: 0, col: 0 });
+    s = press(s, [']', ']']);
+    expect(s.cursor).toEqual({ line: 4, col: 0 });
+    s = press(s, [']', '[']);
+    expect(s.cursor).toEqual({ line: 6, col: 0 });
+    s = press(s, ['[', '[']);
+    expect(s.cursor).toEqual({ line: 4, col: 0 });
+    s = press(s, ['[', ']']);
+    expect(s.cursor).toEqual({ line: 2, col: 0 });
+
+    // d]] 연산자 결합 (Neovim 과 동일하게 다음 섹션 앞의 빈 줄 보존)
+    const deleted = press(createState(lines, { line: 0, col: 0 }), ['d', ']', ']']);
+    expect(deleted.lines).toEqual(['', '{', '  b', '}']);
+  });
+
+  it('gj / gk / g0 / g$ / gM / gm / gI 가 Normal 및 Visual/연산자에서 동작한다', () => {
+    const lines = ['  0123456789', '  second'];
+    let s = press(createState(lines, { line: 0, col: 2 }), ['g', 'M']);
+    expect(s.cursor).toEqual({ line: 0, col: 6 });
+    s = press(s, ['g', '0']);
+    expect(s.cursor).toEqual({ line: 0, col: 0 });
+    s = press(s, ['g', '$']);
+    expect(s.cursor).toEqual({ line: 0, col: 11 });
+    s = press(s, ['g', 'j']);
+    expect(s.cursor.line).toBe(1);
+    s = press(s, ['g', 'k']);
+    expect(s.cursor.line).toBe(0);
+
+    // gI 는 들여쓰기 무시하고 열 0에서 INSERT 진입
+    const gi = press(createState(lines, { line: 0, col: 5 }), ['g', 'I', '!', 'Escape']);
+    expect(gi.lines[0]).toBe('!  0123456789');
+
+    // dg$ 는 줄 끝까지 삭제
+    const dgDollar = press(createState(['hello world'], { line: 0, col: 5 }), ['d', 'g', '$']);
+    expect(dgDollar.lines[0]).toBe('hello');
+  });
+
+  it('Ctrl-g 는 현재 버퍼 파일명·수정 여부·줄 수·위치를 보고한다', () => {
+    const s: VimEditorState = {
+      lines: ['a', 'b', 'c', 'd'],
+      cursor: { line: 1, col: 0 },
+      mode: 'NORMAL',
+      primaryFilename: 'app.ts',
+      undoStack: [{ lines: ['a'], cursor: { line: 0, col: 0 } }],
+    };
+    const next = press(s, ['Ctrl-g']);
+    expect(next.commandMessage).toContain('"app.ts"');
+    expect(next.commandMessage).toContain('4');
+    expect(next.commandMessage).toContain('50%');
+  });
+
+  it('ZZ / ZQ 는 분할 창을 저장 후 닫기(:wq) 또는 저장 없이 닫기(:q!) 처리한다', () => {
+    const splitBase: VimEditorState = {
+      lines: ['edited'],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+      primaryFilename: 'main.ts',
+      virtualFiles: { 'main.ts': ['old'], 'other.ts': ['x'] },
+      splitDirection: 'vertical',
+      splitPanes: [
+        { filename: 'main.ts', lines: ['edited'], cursor: { line: 0, col: 0 }, mode: 'NORMAL' },
+        { filename: 'other.ts', lines: ['x'], cursor: { line: 0, col: 0 }, mode: 'NORMAL' },
+      ],
+      activePaneIndex: 0,
+    };
+    const zz = press(splitBase, ['Z', 'Z']);
+    expect(zz.splitDirection).toBe('none');
+    expect(zz.virtualFiles?.['main.ts']).toEqual(['edited']);
+
+    const zq = press(splitBase, ['Z', 'Q']);
+    expect(zq.splitDirection).toBe('none');
+    expect(zq.virtualFiles?.['main.ts']).toEqual(['old']);
+  });
+
+  it('Neovim 0.11 스타일 ]q/[q, ]l/[l, ]b/[b, ]a/[a, ]<Space>/[<Space> 가 동작한다', () => {
+    let s: VimEditorState = {
+      lines: ['line1', 'line2'],
+      cursor: { line: 0, col: 1 },
+      mode: 'NORMAL',
+      quickfix: {
+        items: [
+          { filename: 'a.ts', line: 1, col: 1, text: 'e1' },
+          { filename: 'a.ts', line: 2, col: 1, text: 'e2' },
+        ],
+        currentIndex: 0,
+        isOpen: false,
+      },
+      buffers: [
+        { id: 1, name: 'a.ts', lines: ['line1', 'line2'], cursor: { line: 0, col: 0 } },
+        { id: 2, name: 'b.ts', lines: ['buf2'], cursor: { line: 0, col: 0 } },
+      ],
+      currentBufferId: 1,
+    };
+
+    s = press(s, [']', 'q']);
+    expect(s.quickfix?.currentIndex).toBe(1);
+    s = press(s, ['[', 'q']);
+    expect(s.quickfix?.currentIndex).toBe(0);
+
+    s = press(s, [']', 'b']);
+    expect(s.currentBufferId).toBe(2);
+    s = press(s, ['[', 'b']);
+    expect(s.currentBufferId).toBe(1);
+
+    // ]<Space> / [<Space> + . 반복
+    let blank = press(createState(['first', 'second'], { line: 0, col: 2 }), [']', ' ']);
+    expect(blank.lines).toEqual(['first', '', 'second']);
+    expect(blank.cursor).toEqual({ line: 0, col: 2 });
+    blank = press(blank, ['.']);
+    expect(blank.lines).toEqual(['first', '', '', 'second']);
+    blank = press(createState(['first', 'second'], { line: 1, col: 2 }), ['[', ' ']);
+    expect(blank.lines).toEqual(['first', '', 'second']);
+    expect(blank.cursor).toEqual({ line: 2, col: 2 });
+  });
+});

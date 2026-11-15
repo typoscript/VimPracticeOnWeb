@@ -4,6 +4,7 @@ import {
   executeTextObjectOperator,
 } from './textObjects';
 import { VimEditorState } from './types';
+import { handleKey } from './vimEngine';
 
 describe('textObjects module (iw, i", i(, i))', () => {
   describe('getTextObjectRange', () => {
@@ -322,6 +323,48 @@ describe('textObjects module (iw, i", i(, i))', () => {
       const next = executeTextObjectOperator(state, '=', 'it');
       expect(next.lines[1]).toBe('  <h1>Title</h1>');
       expect(next.mode).toBe('NORMAL');
+    });
+  });
+
+  describe('WORD 텍스트 객체 (iW / aW)', () => {
+    it('diW / daW: 공백이 아닌 비공백 연속 문자열(WORD)을 정확히 삭제한다', () => {
+      const base: VimEditorState = {
+        lines: ['  abc-def.ghi   next'],
+        cursor: { line: 0, col: 6 }, // '.' 위
+        mode: 'NORMAL',
+      };
+
+      const inner = executeTextObjectOperator(base, 'd', 'iW');
+      expect(inner.lines[0]).toBe('     next');
+      expect(inner.clipboard?.content).toBe('abc-def.ghi');
+
+      const around = executeTextObjectOperator(base, 'd', 'aW');
+      expect(around.lines[0]).toBe('  next');
+      expect(around.clipboard?.content).toBe('abc-def.ghi   ');
+    });
+
+    it('handleKey 로 ciW / viW 가 Normal 및 Visual 모드에서 동작한다', () => {
+      let state: VimEditorState = {
+        lines: ['url=https://foo.bar/baz ok'],
+        cursor: { line: 0, col: 10 },
+        mode: 'NORMAL',
+      };
+      for (const k of ['c', 'i', 'W', 'x', 'Escape']) {
+        state = handleKey(state, k);
+      }
+      expect(state.lines[0]).toBe('x ok');
+
+      let vState: VimEditorState = {
+        lines: ['  foo-bar baz'],
+        cursor: { line: 0, col: 4 },
+        mode: 'NORMAL',
+      };
+      for (const k of ['v', 'i', 'W']) {
+        vState = handleKey(vState, k);
+      }
+      expect(vState.mode).toBe('VISUAL');
+      expect(vState.visualAnchor).toEqual({ line: 0, col: 2 });
+      expect(vState.cursor).toEqual({ line: 0, col: 8 });
     });
   });
 });

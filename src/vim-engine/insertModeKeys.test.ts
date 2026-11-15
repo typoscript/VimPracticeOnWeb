@@ -183,4 +183,32 @@ describe('Insert Mode Control Keys (Ctrl+h, Ctrl+w, Ctrl+u, Ctrl+o, Ctrl+n/p)', 
       expect(state.completionSession).toBeNull();
     });
   });
+
+  describe('Ctrl-t / Ctrl-d (Indent) and Ctrl-y / Ctrl-e (Copy Adjacent Line Char)', () => {
+    it('Ctrl-t / Ctrl-d indent and dedent the current line in INSERT mode respecting shiftwidth', () => {
+      let state = createInsertState(['hello'], 0, 2);
+      state = handleKey(state, 'Ctrl-t');
+      expect(state.lines[0]).toBe('  hello');
+      expect(state.cursor).toEqual({ line: 0, col: 4 });
+
+      state = handleKey(state, 'Ctrl-t');
+      expect(state.lines[0]).toBe('    hello');
+      expect(state.cursor).toEqual({ line: 0, col: 6 });
+
+      state = handleKey(state, 'Ctrl-d');
+      expect(state.lines[0]).toBe('  hello');
+      expect(state.cursor).toEqual({ line: 0, col: 4 });
+    });
+
+    it('Ctrl-y / Ctrl-e copy characters from the line above or below when completion menu is closed', () => {
+      let state = createInsertState(['above', '', 'below'], 1, 0);
+      state = handleKey(state, 'Ctrl-y');
+      expect(state.lines[1]).toBe('a');
+      expect(state.cursor).toEqual({ line: 1, col: 1 });
+
+      state = handleKey(state, 'Ctrl-e');
+      expect(state.lines[1]).toBe('ae');
+      expect(state.cursor).toEqual({ line: 1, col: 2 });
+    });
+  });
 });

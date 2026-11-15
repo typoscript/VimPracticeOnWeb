@@ -568,11 +568,8 @@ export function tryExecuteWorkspaceExCommand(
   }
 
 
-  if (
-    (cleanCmd === 'w' || cleanCmd === 'write' || cleanCmd === 'update' || cleanCmdRaw === 'up') &&
-    !(state.userCommands && lookupUserCommand(state, cleanCmdRaw).kind === 'found')
-  ) {
-    const preSaved = triggerAutocmd(state, 'BufWritePre', undefined, runEx);
+  const writeCurrentBuffer = (curState: VimEditorState): VimEditorState => {
+    const preSaved = triggerAutocmd(curState, 'BufWritePre', undefined, runEx);
     const savedState = recordFileSave(preSaved);
     const syncedVirtualFiles =
       savedState.virtualFiles && savedState.primaryFilename
@@ -592,11 +589,11 @@ export function tryExecuteWorkspaceExCommand(
       commandType: undefined,
       commandMessage: postSaved.commandMessage || msg('[가상 저장 완료] 변경사항이 안전하게 메모리에 저장되었습니다.'),
     };
-  }
+  };
 
-  if (cleanCmd === 'q' || cleanCmd === 'quit') {
-    if (state.helpSession?.isOpen) {
-      const closed = closeHelp(state);
+  const quitCurrentWindow = (curState: VimEditorState, force = false): VimEditorState => {
+    if (curState.helpSession?.isOpen) {
+      const closed = closeHelp(curState);
       return {
         ...closed,
         mode: 'NORMAL',
@@ -605,8 +602,8 @@ export function tryExecuteWorkspaceExCommand(
         commandType: undefined,
       };
     }
-    if (state.splitDirection && state.splitDirection !== 'none') {
-      const closed = closeSplitWindow(state);
+    if (curState.splitDirection && curState.splitDirection !== 'none') {
+      const closed = closeSplitWindow(curState);
       return {
         ...closed,
         mode: 'NORMAL',
@@ -616,13 +613,29 @@ export function tryExecuteWorkspaceExCommand(
       };
     }
     return {
-      ...state,
+      ...curState,
       mode: 'NORMAL',
       visualAnchor: undefined,
       commandBuffer: undefined,
       commandType: undefined,
-      commandMessage: msg('단일 창 상태입니다 (:q)'),
+      commandMessage: curState.commandMessage || (force ? msg('단일 창 종료 무시 (:q!)') : msg('단일 창 상태입니다 (:q)')),
     };
+  };
+
+  if (
+    (cleanCmd === 'w' || cleanCmd === 'write' || cleanCmd === 'update' || cleanCmdRaw === 'up') &&
+    !(state.userCommands && lookupUserCommand(state, cleanCmdRaw).kind === 'found')
+  ) {
+    return writeCurrentBuffer(state);
+  }
+
+  if (cleanCmd === 'wq' || cleanCmd === 'x' || cleanCmd === 'exit' || cleanCmdRaw === 'wq!') {
+    const written = writeCurrentBuffer(state);
+    return quitCurrentWindow(written, cleanCmdRaw.endsWith('!'));
+  }
+
+  if (cleanCmd === 'q' || cleanCmd === 'quit' || cleanCmdRaw === 'q!' || cleanCmdRaw === 'quit!') {
+    return quitCurrentWindow(state, cleanCmdRaw.endsWith('!'));
   }
 
   if (cleanCmd === 'helpclose' || cleanCmd === 'hclose') {

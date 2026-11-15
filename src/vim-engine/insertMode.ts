@@ -19,6 +19,47 @@ import {
   insertTextAtCursor,
 } from './engineHelpers';
 
+/**
+ * Insert 모드에서 현재 줄의 선행 들여쓰기를 shiftwidth 단위로 증감합니다 (Ctrl-t / Ctrl-d).
+ */
+function adjustInsertLineIndent(
+  state: VimEditorState,
+  currentLine: string,
+  deltaSign: 1 | -1,
+  nextChangeKeys?: string[]
+): VimEditorState {
+  const { line, col } = state.cursor;
+  const opts = getOptions(state);
+  const sw = Math.max(1, opts.shiftwidth || 2);
+  const ts = Math.max(1, opts.tabstop || 2);
+  const et = opts.expandtab !== false;
+  const match = currentLine.match(/^[ \t]*/);
+  const oldLeading = match ? match[0] : '';
+  let width = 0;
+  for (const ch of oldLeading) {
+    width += ch === '\t' ? ts - (width % ts) : 1;
+  }
+  const targetWidth =
+    deltaSign > 0
+      ? Math.floor(width / sw + 1) * sw
+      : width === 0
+        ? 0
+        : Math.max(0, Math.ceil(width / sw - 1) * sw);
+  const newLeading = et
+    ? ' '.repeat(targetWidth)
+    : '\t'.repeat(Math.floor(targetWidth / ts)) + ' '.repeat(targetWidth % ts);
+  const newLine = newLeading + currentLine.slice(oldLeading.length);
+  const nextLines = [...state.lines];
+  nextLines[line] = newLine;
+  const deltaLen = newLeading.length - oldLeading.length;
+  return {
+    ...state,
+    lines: nextLines,
+    cursor: { line, col: Math.max(0, Math.min(newLine.length, col + deltaLen)) },
+    currentChangeKeys: nextChangeKeys,
+  };
+}
+
 export function applyInsertAbbrev(
   state: VimEditorState,
   triggerKey: string,
@@ -291,11 +332,21 @@ export function handleInsertModeKey(
     if (state.completionSession) {
       return cancelCompletion(state);
     }
+    const belowLine = state.lines[line + 1];
+    if (belowLine !== undefined && col < belowLine.length) {
+      return insertTextAtCursor(state, belowLine[col]);
+    }
+    return state;
   }
   if (key === 'Ctrl-y' || key === 'Ctrl+y' || (key === 'Enter' && state.completionSession)) {
     if (state.completionSession) {
       return acceptCompletion(state);
     }
+    const aboveLine = state.lines[line - 1];
+    if (aboveLine !== undefined && col < aboveLine.length) {
+      return insertTextAtCursor(state, aboveLine[col]);
+    }
+    return state;
   }
 
   if (state.completionSession) {
@@ -423,6 +474,14 @@ export function handleInsertModeKey(
     if (isReplayingDot || !state.currentChangeKeys) return state.currentChangeKeys;
     return [...state.currentChangeKeys, k];
   };
+
+  // Ctrl+t / Ctrl+d: 현재 줄 들여쓰기 증가 / 감소 (shiftwidth 단위)
+  if (key === 'Ctrl-t' || key === 'Ctrl+t' || key === 'Alt-t' || key === 'Alt+t') {
+    return adjustInsertLineIndent(state, currentLine, 1, appendCurrentChange('Ctrl-t'));
+  }
+  if (key === 'Ctrl-d' || key === 'Ctrl+d' || key === 'Alt-d' || key === 'Alt+d') {
+    return adjustInsertLineIndent(state, currentLine, -1, appendCurrentChange('Ctrl-d'));
+  }
 
   // Ctrl+w: 커서 앞의 단어 하나 즉시 삭제
   if (key === 'Ctrl-w' || key === 'Ctrl+w' || key === 'Alt-w' || key === 'Alt+w') {

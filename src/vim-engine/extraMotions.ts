@@ -20,7 +20,10 @@ export interface MotionResult {
   kind: MotionKind;
 }
 
-export const EXTRA_MOTION_KEYS = new Set(['(', ')', '+', '-', 'Enter', '|', 'ge', 'gE', 'g_', '[(', '[{', '])', ']}']);
+export const EXTRA_MOTION_KEYS = new Set([
+  '(', ')', '+', '-', 'Enter', '|', 'ge', 'gE', 'g_', '[(', '[{', '])', ']}',
+  '[[', ']]', '[]', '][', 'g0', 'g$', 'gm', 'gM',
+]);
 
 function firstNonBlankCol(text: string): number {
   const m = text.match(/^\s*/);
@@ -196,6 +199,48 @@ export function evaluateExtraMotion(
       const close = open === '(' ? ')' : '}';
       const target = findUnmatched(lines, cursor, open, close, key[0] === ']', n);
       return target ? { target, kind: 'exclusive' } : null;
+    }
+    case '[[':
+    case ']]':
+    case '[]':
+    case '][': {
+      const targetChar = key === '[[' || key === ']]' ? '{' : '}';
+      const forward = key === ']]' || key === '][';
+      let found = 0;
+      if (forward) {
+        for (let line = cursor.line + 1; line <= last; line++) {
+          if ((lines[line] ?? '').startsWith(targetChar) && ++found === n) {
+            return { target: { line, col: 0 }, kind: 'exclusive' };
+          }
+        }
+        if (cursor.line === last && cursor.col === 0) return null;
+        return { target: { line: last, col: 0 }, kind: 'exclusive' };
+      }
+      if (cursor.col > 0 && (lines[cursor.line] ?? '').startsWith(targetChar) && ++found === n) {
+        return { target: { line: cursor.line, col: 0 }, kind: 'exclusive' };
+      }
+      for (let line = cursor.line - 1; line >= 0; line--) {
+        if ((lines[line] ?? '').startsWith(targetChar) && ++found === n) {
+          return { target: { line, col: 0 }, kind: 'exclusive' };
+        }
+      }
+      if (cursor.line === 0 && cursor.col === 0) return null;
+      return { target: { line: 0, col: 0 }, kind: 'exclusive' };
+    }
+    case 'g0':
+      return { target: { line: cursor.line, col: 0 }, kind: 'exclusive' };
+    case 'g$': {
+      const len = (lines[cursor.line] ?? '').length;
+      return { target: { line: cursor.line, col: Math.max(0, len - 1) }, kind: 'inclusive' };
+    }
+    case 'gm': {
+      const len = (lines[cursor.line] ?? '').length;
+      const halfScreenCol = Math.max(0, 40 * n - 1);
+      return { target: { line: cursor.line, col: Math.min(Math.max(0, len - 1), halfScreenCol) }, kind: 'exclusive' };
+    }
+    case 'gM': {
+      const len = (lines[cursor.line] ?? '').length;
+      return { target: { line: cursor.line, col: Math.min(Math.max(0, len - 1), Math.floor(len / 2)) }, kind: 'exclusive' };
     }
   }
   return null;

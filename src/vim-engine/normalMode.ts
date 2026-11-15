@@ -30,7 +30,21 @@ import {
   getCharType,
 } from './operators';
 import { syncRegisters, parseMacroStringToKeys } from './registers';
-import { alternateBuffer } from './bufferEngine';
+import {
+  alternateBuffer,
+  nextBuffer,
+  prevBuffer,
+  firstBuffer,
+  lastBuffer,
+} from './bufferEngine';
+import { nextQuickfix, prevQuickfix, firstQuickfix, lastQuickfix } from './quickfixEngine';
+import {
+  nextLocationList,
+  prevLocationList,
+  firstLocationList,
+  lastLocationList,
+} from './locationListEngine';
+import { nextArg, prevArg, firstArg, lastArg } from './argEngine';
 import { nextTab, prevTab } from './tabEngine';
 import { openCommandLineWindow } from './cmdlineWindow';
 import { openHelp } from './helpEngine';
@@ -159,9 +173,20 @@ export function handleNormalModeKey(
     const op = gnMatch[2];
     return executeGn(state, key === 'n', op, isReplayingDot);
   }
-  // dge / dgE / dg_ (cge, yg_ ...)
+  // dge / dgE / dg_ / dgj / dgk / dg0 / dg$ / dgm / dgM (cge, yg_ ...)
   const gMotionOpMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([cdy])([1-9][0-9]*)?g$/);
-  if (gMotionOpMatch && (key === 'e' || key === 'E' || key === '_')) {
+  if (
+    gMotionOpMatch &&
+    (key === 'e' ||
+      key === 'E' ||
+      key === '_' ||
+      key === 'j' ||
+      key === 'k' ||
+      key === '0' ||
+      key === '$' ||
+      key === 'm' ||
+      key === 'M')
+  ) {
     const op = gMotionOpMatch[2] as 'd' | 'c' | 'y';
     const total = (gMotionOpMatch[1] ? parseInt(gMotionOpMatch[1], 10) : 1) * (gMotionOpMatch[3] ? parseInt(gMotionOpMatch[3], 10) : 1);
     return applyOperatorMotion(state, op, `g${key}`, { operator: op, count1: total > 1 ? total : undefined, totalCount: total }, isReplayingDot);
@@ -581,6 +606,27 @@ export function handleNormalModeKey(
   }
   if ((key === 'Ctrl-i' || key === 'Ctrl+i' || key === 'ctrl-i') && !parsed.operator) {
     return jumpNewer(state);
+  }
+
+  // Ctrl-g: 현재 버퍼 파일명·수정 여부·줄 수·커서 비율(%) 출력
+  if ((key === 'Ctrl-g' || key === 'Ctrl+g' || key === 'ctrl-g' || key === '<C-g>') && !parsed.operator && !state.pendingKeys) {
+    const filename = state.primaryFilename || msg('[이름 없음]');
+    const isModified = (state.undoStack?.length ?? 0) > 0;
+    const mod = isModified ? msg('[수정됨] ') : '';
+    const lineCount = state.lines.length;
+    if (lineCount === 0) {
+      return { ...state, commandMessage: msg('"{filename}" [버퍼에 줄 없음]', { filename }) };
+    }
+    const percent = Math.floor(((state.cursor.line + 1) * 100) / lineCount);
+    return {
+      ...state,
+      commandMessage: msg('"{filename}" {mod}{lineCount}줄 --{percent}%--', {
+        filename,
+        mod,
+        lineCount,
+        percent,
+      }),
+    };
   }
 
   // 1-0-6. Ctrl-a / Ctrl-x: 커서 위치 숫자 증감
@@ -1047,6 +1093,78 @@ export function handleNormalModeKey(
     if ((bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'))) {
       return moveByExtraMotion(state, `${bracket}${key}`, bCount);
     }
+    // [[ ]] [] ][: 섹션 시작/끝 블록 점프
+    if (key === '[' || key === ']') {
+      return moveByExtraMotion(state, `${bracket}${key}`, bCount);
+    }
+    // ]q [q ]Q [Q: 퀵픽스 탐색
+    if (key === 'q' || key === 'Q') {
+      const res =
+        key === 'Q'
+          ? bracket === ']'
+            ? lastQuickfix(state)
+            : firstQuickfix(state)
+          : bracket === ']'
+            ? nextQuickfix(state, bCount)
+            : prevQuickfix(state, bCount);
+      return { ...res, pendingKeys: undefined };
+    }
+    // ]l [l ]L [L: 로케이션 리스트 탐색
+    if (key === 'l' || key === 'L') {
+      const res =
+        key === 'L'
+          ? bracket === ']'
+            ? lastLocationList(state)
+            : firstLocationList(state)
+          : bracket === ']'
+            ? nextLocationList(state, bCount)
+            : prevLocationList(state, bCount);
+      return { ...res, pendingKeys: undefined };
+    }
+    // ]b [b ]B [B: 버퍼 탐색
+    if (key === 'b' || key === 'B') {
+      const res =
+        key === 'B'
+          ? bracket === ']'
+            ? lastBuffer(state)
+            : firstBuffer(state)
+          : bracket === ']'
+            ? nextBuffer(state, bCount)
+            : prevBuffer(state, bCount);
+      return { ...res, pendingKeys: undefined };
+    }
+    // ]a [a ]A [A: 아규먼트 리스트 탐색
+    if (key === 'a' || key === 'A') {
+      const res =
+        key === 'A'
+          ? bracket === ']'
+            ? lastArg(state)
+            : firstArg(state)
+          : bracket === ']'
+            ? nextArg(state, bCount)
+            : prevArg(state, bCount);
+      return { ...res, pendingKeys: undefined };
+    }
+    // ]<Space> [<Space>: 커서 줄 위/아래에 빈 줄 삽입 (커서 위치 유지)
+    if (key === ' ' || key === 'Space') {
+      const stateWithUndo = pushUndoSnapshot(state);
+      const insertAt = bracket === '[' ? state.cursor.line : state.cursor.line + 1;
+      const blanks = Array.from({ length: bCount }, () => '');
+      const nextLines = [
+        ...state.lines.slice(0, insertAt),
+        ...blanks,
+        ...state.lines.slice(insertAt),
+      ];
+      const nextLine = bracket === '[' ? state.cursor.line + bCount : state.cursor.line;
+      const spaceKeys = bCount > 1 ? [String(bCount), bracket, ' '] : [bracket, ' '];
+      return {
+        ...stateWithUndo,
+        lines: nextLines,
+        cursor: { line: nextLine, col: state.cursor.col },
+        pendingKeys: undefined,
+        lastChangeKeys: isReplayingDot ? state.lastChangeKeys : spaceKeys,
+      };
+    }
     // ]s, [s, ]S, [S: 맞춤법 오류 점프
     if (key === 's' || key === 'S') {
       const res = bracket === ']' ? jumpToNextSpellError(state) : jumpToPrevSpellError(state);
@@ -1073,11 +1191,13 @@ export function handleNormalModeKey(
     state = { ...state, pendingKeys: undefined };
   }
 
-  // 연산자 + 괄호 모션 (d[(, c]}, y[{ ...)
+  // 연산자 + 괄호/섹션 모션 (d[(, c]}, y[{, d]], c[[ ...)
   const opBracketMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([cdy])([1-9][0-9]*)?([\]\[])$/);
   if (opBracketMatch) {
     const bracket = opBracketMatch[4];
-    if ((bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'))) {
+    const isPaired = (bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'));
+    const isSection = key === '[' || key === ']';
+    if (isPaired || isSection) {
       const op = opBracketMatch[2] as 'd' | 'c' | 'y';
       const total = (opBracketMatch[1] ? parseInt(opBracketMatch[1], 10) : 1) * (opBracketMatch[3] ? parseInt(opBracketMatch[3], 10) : 1);
       return applyOperatorMotion(state, op, `${bracket}${key}`, { operator: op, count1: total > 1 ? total : undefined, totalCount: total }, isReplayingDot);
@@ -1234,7 +1354,7 @@ export function handleNormalModeKey(
       return synced;
     }
 
-    const validTargets = ['w', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't', 's', '<', '>'];
+    const validTargets = ['w', 'W', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't', 's', '<', '>'];
     if (validTargets.includes(key)) {
       let targetChar = key;
       if (key === 'b' || key === ')') targetChar = '(';
@@ -1833,6 +1953,30 @@ export function handleNormalModeKey(
     if (key === 'i') {
       return goToLastInsert(state);
     }
+    if (key === 'I') {
+      const stateWithSnapshot = pushUndoSnapshot(state);
+      return {
+        ...stateWithSnapshot,
+        mode: 'INSERT',
+        cursor: { line: state.cursor.line, col: 0 },
+        pendingKeys: undefined,
+        currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['g', 'I'],
+      };
+    }
+    if (key === 'j' || key === 'k') {
+      const target = evaluateMotionWithCount(state.lines, state.cursor, key, parsed.totalCount, state.folds);
+      if (!target || target.line === state.cursor.line) return ringBell(state);
+      return {
+        ...state,
+        cursor: target,
+        stickyDollar: false,
+        pendingKeys: undefined,
+      };
+    }
+    if (key === '0' || key === '$' || key === 'm' || key === 'M') {
+      const moved = moveByExtraMotion(state, `g${key}`, parsed.totalCount);
+      return key === '$' ? { ...moved, stickyDollar: true } : moved;
+    }
     if (key === 'v') {
       return reselectLastVisual(state);
     }
@@ -1902,11 +2046,22 @@ export function handleNormalModeKey(
     return executeGCtrlG(state);
   }
 
-  // 9. 연산자 및 매크로 키 등록 (d, c, r, g, y, f, F, t, T, @, q, m, ', `, >, <, =, !, z, ], [)
+  // ZZ / ZQ: 저장 후 닫기(:wq) / 저장 없이 닫기(:q!)
+  if (state.pendingKeys === 'Z') {
+    if (key === 'Z') {
+      return executeCommandLine({ ...state, pendingKeys: undefined }, 'wq', runHandleKey);
+    }
+    if (key === 'Q') {
+      return executeCommandLine({ ...state, pendingKeys: undefined }, 'q!', runHandleKey);
+    }
+    return { ...state, pendingKeys: undefined };
+  }
+
+  // 9. 연산자 및 매크로 키 등록 (d, c, r, g, y, f, F, t, T, @, q, m, ', `, >, <, =, !, z, ], [, Z)
   if (
     key === 'd' || key === 'c' || key === 'r' || key === 'g' || key === 'y' ||
     key === '@' || key === '>' || key === '<' || key === '=' || key === '!' ||
-    key === 'm' || key === "'" || key === '`' || key === 'z' || key === ']' || key === '['
+    key === 'm' || key === "'" || key === '`' || key === 'z' || key === ']' || key === '[' || key === 'Z'
   ) {
     return {
       ...state,

@@ -3419,4 +3419,61 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 91,
+    title: '레슨 91: WORD 객체(iW/aW), 섹션 점프([[/]]), 화면·빈 줄([<Space>, gI) & Insert 들여쓰기(Ctrl-t/d) 마스터',
+    description:
+      'URL 이나 점(.)/슬래시(/)가 섞인 토큰을 공백 기준으로 통째 편집하는 iW/aW 객체, 블록 경계 섹션 이동([[ / ]] / [] / ][), 그리고 커서를 0열/들여쓰기 기준으로 다듬는 gI · Ctrl-t/d · [<Space>/]<Space> 를 실전에서 익혀 보세요.\n\n1) WORD 텍스트 객체 (iW / aW) & 섹션 이동 ([[ / ]] / [] / ][):\n   - ciW / diW / vaW 는 구두점이 섞여 있어도 공백(whitespace) 기준의 큰 단어 전체를 선택합니다. (URL·경로 치환에 최적)\n   - ]] / [[ 는 열 0의 { 로 시작하는 다음·이전 섹션으로, ][ / [] 는 } 로 이동합니다.\n\n2) gI · Insert 들여쓰기(Ctrl-t / Ctrl-d) · 빈 줄 삽입([<Space> / ]<Space>):\n   - gI 는 선행 들여쓰기를 건너뛰는 I 와 달리 항상 0열에서 INSERT 모드를 시작합니다.\n   - 입력 모드 중 Ctrl-t / Ctrl-d 를 누르면 shiftwidth 단위로 현재 줄을 들여쓰기·내어쓰기합니다. (Ctrl-y/Ctrl-e 는 위·아래 줄 문자 복사)\n   - 노멀 모드 [<Space> / ]<Space> 는 커서 줄 위·아래에 빈 줄을 깔끔히 끼워 넣습니다.\n\n미션:\n1. ]] 를 눌러 두 번째 { 블록(4번째 줄)으로 점프한 뒤 j f: ciW 로 URL(old://dev.api/v1;) 전체를 https://prod.api/v2; 로 교체하고 Esc 를 누르세요.\n2. j 로 ready = true; 줄로 내려가 gI Ctrl-t 를 누른 뒤 const 를 입력하고 Esc 를 누르세요.\n3. 마지막으로 [<Space> ([ 뒤 Space)를 눌러 ready 줄 바로 위에 빈 줄을 추가해 완료하세요!',
+    hint: ']] → j → f: → ciWhttps://prod.api/v2;<Esc> → j → gI<Ctrl-t>const <Esc> → [<Space>',
+    par: 44,
+    optimalKeys: [
+      ']', ']',
+      'j',
+      'f', ':',
+      'c', 'i', 'W',
+      'h', 't', 't', 'p', 's', ':', '/', '/', 'p', 'r', 'o', 'd', '.', 'a', 'p', 'i', '/', 'v', '2', ';', 'Escape',
+      'j',
+      'g', 'I',
+      'Ctrl-t',
+      'c', 'o', 'n', 's', 't', ' ', 'Escape',
+      '[', ' ',
+    ],
+    initialLines: [
+      '{',
+      '  const base = "ok";',
+      '}',
+      '{',
+      '  let url = old://dev.api/v1;',
+      'ready = true;',
+      '}',
+    ],
+    targetLines: [
+      '{',
+      '  const base = "ok";',
+      '}',
+      '{',
+      '  let url = https://prod.api/v2;',
+      '',
+      '  const ready = true;',
+      '}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    checkComplete: (state) => {
+      const target = [
+        '{',
+        '  const base = "ok";',
+        '}',
+        '{',
+        '  let url = https://prod.api/v2;',
+        '',
+        '  const ready = true;',
+        '}',
+      ];
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines.length === target.length &&
+        state.lines.every((l, idx) => l === target[idx])
+      );
+    },
+  },
 ];

@@ -117,7 +117,7 @@ export function handleVisualModeKey(
     return { ...state, pendingKeys: 'z' };
   }
 
-  // Visual 모드 내 gn / gN (다음/이전 검색 매치로 선택 영역 확장) 및 gt / gT (탭 전환)
+  // Visual 모드 내 gn / gN (다음/이전 검색 매치로 선택 영역 확장), gt / gT (탭 전환), gj/gk/g0/g$/gm/gM
   if (state.pendingKeys === 'g') {
     if (key === 'n' || key === 'N') {
       return executeGn(state, key === 'n');
@@ -127,6 +127,18 @@ export function handleVisualModeKey(
     }
     if (key === 'T') {
       return { ...prevTab(state), pendingKeys: undefined };
+    }
+    if (key === 'j' || key === 'k') {
+      const target = evaluateMotionWithCount(state.lines, state.cursor, key, parsed.totalCount, state.folds);
+      if (!target || target.line === state.cursor.line) return ringBell(state);
+      return {
+        ...state,
+        cursor: target,
+        pendingKeys: undefined,
+      };
+    }
+    if (key === '0' || key === '$' || key === 'm' || key === 'M') {
+      return moveByExtraMotion(state, `g${key}`, parsed.totalCount);
     }
   }
 
@@ -623,7 +635,7 @@ export function handleVisualModeKey(
     if (key === 'p') {
       return executeParagraphObjectOperator(state, 'v', `${modifier}p` as ParagraphObjectType, count) ?? ringBell(state);
     }
-    const validTargets = ['w', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't', 's', '<', '>'];
+    const validTargets = ['w', 'W', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't', 's', '<', '>'];
     if (validTargets.includes(key)) {
       let targetChar = key;
       if (key === 'b' || key === ')') targetChar = '(';
@@ -810,12 +822,15 @@ export function handleVisualModeKey(
     return moveByExtraMotion(state, key, parsed.totalCount);
   }
 
-  // VISUAL 모드 괄호 모션 [( [{ ]) ]}
+  // VISUAL 모드 괄호·섹션 모션 [( [{ ]) ]} [[ ]] [] ][
   const visualBracket = state.pendingKeys?.match(/^([1-9][0-9]*)?([\[\]])$/);
   if (visualBracket) {
     const bracket = visualBracket[2];
-    const valid = (bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'));
-    if (valid) return moveByExtraMotion(state, `${bracket}${key}`, visualBracket[1] ? parseInt(visualBracket[1], 10) : 1);
+    const isPaired = (bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'));
+    const isSection = key === '[' || key === ']';
+    if (isPaired || isSection) {
+      return moveByExtraMotion(state, `${bracket}${key}`, visualBracket[1] ? parseInt(visualBracket[1], 10) : 1);
+    }
     return { ...state, pendingKeys: undefined };
   }
   if ((key === '[' || key === ']') && (!state.pendingKeys || /^[1-9][0-9]*$/.test(state.pendingKeys))) {

@@ -378,4 +378,9 @@ export const EN_MESSAGES: Record<string, string> = {
   "!{cmd} 출력 없음 (0줄 삽입)": "!{cmd} returned no output (0 lines inserted)",
   "\"!{cmd}\" {count}줄 읽음": "\"!{cmd}\" {count} lines read",
   "셸 파이프 실패: {cmd}": "shell pipe failed: {cmd}",
+  "단일 창 종료 무시 (:q!)": "Single window quit ignored (:q!)",
+  "\"{filename}\" {mod}{lineCount}줄 --{percent}%--": "\"{filename}\" {mod}{lineCount} lines --{percent}%--",
+  "[이름 없음]": "[No Name]",
+  "[수정됨] ": "[Modified] ",
+  "\"{filename}\" [버퍼에 줄 없음]": "\"{filename}\" --No lines in buffer--",
 };
