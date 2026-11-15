@@ -1,19 +1,9 @@
-import { useEffect, useState, useCallback, useRef, lazy, Suspense, Dispatch, SetStateAction } from 'react';
-import { MissionPanel, calculateStars } from './components/MissionPanel/MissionPanel';
-import { Keycaster } from './components/Keycaster/Keycaster';
+import { useEffect, useState, useCallback, useRef, Dispatch, SetStateAction } from 'react';
+import { calculateStars } from './components/MissionPanel/MissionPanel';
 import { CoachingToast } from './components/CoachingToast/CoachingToast';
-import { DiffViewer } from './components/DiffViewer/DiffViewer';
-import { VirtualKeyboard } from './components/VirtualKeyboard/VirtualKeyboard';
-import { SpeedrunPanel } from './components/SpeedrunPanel/SpeedrunPanel';
-import { StatusBar } from './components/StatusBar/StatusBar';
-import { RegisterInspector } from './components/RegisterInspector/RegisterInspector';
-import { MarksJumpVisualizer } from './components/MarksJumpVisualizer/MarksJumpVisualizer';
-import { MacroDebugger } from './components/MacroDebugger/MacroDebugger';
-import { VimGrammarASTViewer } from './components/VimGrammarASTViewer/VimGrammarASTViewer';
-import { ActionTimelinePanel } from './components/ActionTimelinePanel/ActionTimelinePanel';
 import { AppHeader, AppTab } from './components/AppHeader/AppHeader';
-import { EditorViewport } from './components/EditorViewport/EditorViewport';
 import { AppModals } from './components/AppModals/AppModals';
+import { AppMainWorkspace } from './components/AppMainWorkspace/AppMainWorkspace';
 import { VimEditorState, handleKey } from './vim-engine';
 import { Mission } from './types/mission';
 import { recordLessonSrsReview } from './utils/srsScheduler';
@@ -55,18 +45,6 @@ import './App.css';
 import { t, useLocale } from './i18n';
 
 export { SPEEDRUN_CANDIDATE_IDS, generateSpeedrunStages };
-
-// 첫 화면에 필요 없는 게임 탭 화면은 처음 열 때 별도 청크로 불러옵니다 (초기 번들 크기 절감)
-const ArcadeSurvival = lazy(() => import('./components/ArcadeSurvival/ArcadeSurvival').then((m) => ({ default: m.ArcadeSurvival })));
-const DungeonRPG = lazy(() => import('./components/DungeonRPG/DungeonRPG').then((m) => ({ default: m.DungeonRPG })));
-const HardcoreDojo = lazy(() => import('./components/HardcoreDojo/HardcoreDojo').then((m) => ({ default: m.HardcoreDojo })));
-
-/** 지연 로딩되는 탭 화면을 불러오는 동안 보여줄 자리 표시 */
-const TAB_LOADING_FALLBACK = (
-  <div className="lazy-tab-loading" data-testid="lazy-tab-loading">
-    {t('불러오는 중…')}
-  </div>
-);
 
 export function App() {
   const initialChallenge = useRef(getChallengeFromUrl()).current;
@@ -542,277 +520,107 @@ export function App() {
         locale={locale}
       />
 
-      <main className="editor-wrapper">
-        {showGrammarAST && currentTab !== 'arcade' && currentTab !== 'dungeon' && currentTab !== 'dojo' && (
-          <VimGrammarASTViewer
-            currentKeySequence={editorState.pendingKeys || ''}
-            activeRegister={editorState.activeRegister}
-            onSelectCandidate={(token) => {
-              for (const ch of token) {
-                processKeyInput(ch);
-              }
-            }}
-            onClose={() => setShowGrammarAST(false)}
-          />
-        )}
-
-        {currentTab === 'arcade' ? (
-          <Suspense fallback={TAB_LOADING_FALLBACK}>
-            <ArcadeSurvival
-              onPlayKeySound={playKeySound}
-              onPlaySuccessSound={playSuccessSound}
-              isMuted={isMuted}
-            />
-          </Suspense>
-        ) : currentTab === 'dungeon' ? (
-          <Suspense fallback={TAB_LOADING_FALLBACK}>
-            <DungeonRPG
-              onPlayKeySound={playKeySound}
-              onPlaySuccessSound={playSuccessSound}
-              isMuted={isMuted}
-            />
-          </Suspense>
-        ) : currentTab === 'dojo' ? (
-          <Suspense fallback={TAB_LOADING_FALLBACK}>
-            <HardcoreDojo
-              onBackToCourse={() => handleSwitchTab('course')}
-              playKeySound={playKeySound}
-              playSuccessSound={playSuccessSound}
-              initialDrill={dojoInitialDrill}
-              analyticsProgress={progress}
-            />
-          </Suspense>
-        ) : (
-          <>
-            {currentTab === 'course' && (
-              <MissionPanel
-                mission={currentMission}
-                missionIndex={currentMissionIndex}
-                totalMissions={MISSIONS.length}
-                isCompleted={isCompleted}
-                keystrokeCount={keystrokeCount}
-                onSelectMission={handleSelectMission}
-                onResetMission={handleResetMission}
-                onStartGhostReplay={handleStartGhostReplay}
-                onStopGhostReplay={handleStopGhostReplay}
-                isGhostReplaying={isGhostReplaying}
-                ghostReplayProgress={ghostReplayProgress}
-              />
-            )}
-
-            {currentTab === 'custom' && customMission && (
-              <MissionPanel
-                mission={customMission}
-                missionIndex={0}
-                totalMissions={1}
-                isCompleted={isCompleted}
-                keystrokeCount={keystrokeCount}
-                onSelectMission={() => {}}
-                onResetMission={handleResetCustomMission}
-              />
-            )}
-
-            {currentTab === 'sandbox' && (
-              <div className="sandbox-panel" data-testid="sandbox-panel">
-                <div className="sandbox-info">
-                  <span className="sandbox-badge">🧪 SANDBOX</span>
-                  <span className="sandbox-desc">
-                    {t('미션 제약 없이 모든 Vim 키보드 명령어를 자유롭게 실험해 볼 수 있습니다.')}
-                  </span>
-                </div>
-                <div className="sandbox-actions">
-                  <button
-                    className="sandbox-byoc-btn"
-                    onClick={() => setIsBYOCModalOpen(true)}
-                    data-testid="open-byoc-modal-btn"
-                    title={t('내 실제 업무 코드를 붙여넣어 자동 리팩토링 미션 생성')}
-                  >
-                    {t('✨ 내 코드로 리팩토링 미션 생성 (BYOC)')}
-                  </button>
-                  <button
-                    className="sandbox-reset-btn"
-                    onClick={handleResetSandbox}
-                    data-testid="sandbox-reset-btn"
-                  >
-                    {t('🔄 코드 초기화')}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {currentTab === 'speedrun' && (
-              <SpeedrunPanel
-                status={speedrunStatus}
-                currentStageIndex={speedrunCurrentStage}
-                totalStages={speedrunStages.length}
-                currentMissionTitle={activeSpeedrunMission ? t(activeSpeedrunMission.title) : undefined}
-                elapsedSeconds={speedrunElapsedSeconds}
-                totalKeystrokes={speedrunKeystrokes}
-                bestRecord={speedrunBestRecord}
-                isNewRecord={speedrunIsNewRecord}
-                onStart={handleStartSpeedrun}
-                onRestart={handleStartSpeedrun}
-              />
-            )}
-
-            <EditorViewport
-              editorState={editorState}
-              displayEditorState={displayEditorState}
-              targetPosition={
-                currentTab === 'course'
-                  ? currentMission.targetCursor
-                  : activeSpeedrunMission?.targetCursor
-              }
-              fallbackPrimaryFilename={
-                currentTab === 'course' ? currentMission.primaryFilename : undefined
-              }
-              isEditorShaking={isEditorShaking}
-              isEditorFocused={isEditorFocused}
-              relativeLineNumbers={relativeLineNumbers}
-              bellCount={bellCount}
-              onFocusEditor={() => setIsEditorFocused(true)}
-              onEditorAreaClick={handleEditorAreaClick}
-              onSwitchPane={handleSwitchPane}
-              onSelectCompletionCandidate={handleSelectCompletionCandidate}
-              onSwitchBuffer={handleSwitchBuffer}
-              onSwitchTabPage={handleSwitchTabPage}
-              onCloseTabPage={handleCloseTabPage}
-              onNewTabPage={handleNewTabPage}
-              onJumpToMark={handleJumpToMark}
-              onCloseLspHover={handleCloseLspHover}
-              onJumpQuickfixItem={handleJumpQuickfixItem}
-              onCloseQuickfixWindow={handleCloseQuickfixWindow}
-              onJumpLocationListItem={handleJumpLocationListItem}
-              onCloseLocationListWindow={handleCloseLocationListWindow}
-              onSwitchCommandLineWindowType={handleSwitchCommandLineWindowType}
-              onClearCommandLineHistory={handleClearCommandLineHistory}
-              onCloseCommandLineWindow={handleCloseCommandLineWindow}
-              onSelectCommandLineWindowLine={handleSelectCommandLineWindowLine}
-              onExecuteCommandLineWindowLine={handleExecuteCommandLineWindowLine}
-            />
-
-            <Keycaster recentKeys={recentKeys} />
-            <StatusBar
-              mode={displayEditorState.mode}
-              cursor={displayEditorState.cursor}
-              insertNormalSession={displayEditorState.insertNormalSession}
-              insertRegisterPending={displayEditorState.insertRegisterPending}
-              insertCtrlXMode={displayEditorState.insertCtrlXMode}
-              confirmSubstitute={displayEditorState.confirmSubstitute}
-              filename={statusFilename}
-              pendingKeys={displayEditorState.pendingKeys}
-              recordingMacro={displayEditorState.recordingMacro}
-              commandType={displayEditorState.commandType}
-              commandBuffer={displayEditorState.commandBuffer}
-              commandCursorCol={displayEditorState.commandCursorCol}
-              digraphPending={displayEditorState.digraphPending}
-              commandMessage={displayEditorState.commandMessage}
-              wildmenu={displayEditorState.wildmenu}
-              showWildmenuBar={displayEditorState.options?.wildmenu ?? true}
-              spellActive={displayEditorState.options?.spell}
-              functionDraft={
-                displayEditorState.functionDraft
-                  ? {
-                      name: displayEditorState.functionDraft.name,
-                      lines: displayEditorState.functionDraft.body.length,
-                    }
-                  : null
-              }
-            />
-
-            <RegisterInspector
-              isOpen={showRegisterInspector}
-              onToggle={handleToggleRegisterInspector}
-              registers={editorState.registers}
-              activeRegister={editorState.activeRegister}
-              clipboard={editorState.clipboard}
-              recordingMacro={editorState.recordingMacro}
-              onRunMacro={handleRunMacroFromDebugger}
-              onOpenMacroDebugger={handleOpenMacroDebugger}
-              onUpdateRegister={handleUpdateRegister}
-              onDeleteRegister={handleDeleteRegister}
-            />
-
-            <MarksJumpVisualizer
-              isOpen={showMarksVisualizer}
-              onClose={handleToggleMarksVisualizer}
-              marks={displayEditorState.marks}
-              jumpList={displayEditorState.jumpList}
-              jumpIndex={displayEditorState.jumpIndex}
-              lines={displayEditorState.lines}
-              currentCursor={displayEditorState.cursor}
-              primaryFilename={displayEditorState.primaryFilename}
-              onJumpToMark={handleJumpToMark}
-              onDeleteMark={handleDeleteMark}
-              onDeleteAllLocalMarks={handleDeleteAllLocalMarks}
-              onJumpToIndex={handleJumpToIndex}
-              onJumpOlder={handleJumpOlder}
-              onJumpNewer={handleJumpNewer}
-              onClearJumps={handleClearJumps}
-              onSetMark={handleSetMark}
-              onJumpToLine={handleJumpToLine}
-            />
-
-            <MacroDebugger
-              isOpen={showMacroDebugger}
-              onToggle={handleToggleMacroDebugger}
-              baseState={timelineBaseState}
-              onPreviewFrame={setMacroPreviewState}
-              onRunMacro={handleRunMacroFromDebugger}
-            />
-
-            {showDiffView && activeMissionForDiff && (
-              <DiffViewer
-                currentLines={displayEditorState.lines}
-                targetLines={activeMissionForDiff.targetLines}
-                isCompleted={currentTab === 'course' || currentTab === 'custom' ? isCompleted : false}
-              />
-            )}
-
-            {showVirtualKeyboard && (
-              <VirtualKeyboard
-                mode={editorState.mode}
-                lastPressedKey={lastPressedKey}
-                onKeyPress={processKeyInput}
-              />
-            )}
-
-            {showActionTimeline && (
-              <ActionTimelinePanel
-                steps={timelineSteps}
-                previewStepIndex={previewStepIndex}
-                editorState={displayEditorState}
-                missionTitle={
-                  currentTab === 'course'
-                    ? currentMission.title
-                    : currentTab === 'custom' && customMission
-                    ? customMission.title
-                    : undefined
-                }
-                initialText={
-                  currentTab === 'course'
-                    ? currentMission.initialLines.join('\n')
-                    : currentTab === 'custom' && customMission
-                    ? customMission.initialLines.join('\n')
-                    : sandboxInitialLines().join('\n')
-                }
-                initialCursor={
-                  currentTab === 'course'
-                    ? currentMission.initialCursor
-                    : currentTab === 'custom' && customMission
-                    ? customMission.initialCursor
-                    : { line: 0, col: 0 }
-                }
-                allKeysSoFar={allKeysSoFar}
-                onSelectStep={handleSelectTimelineStep}
-                onBranchFromStep={handleBranchFromStep}
-                onCancelPreview={handleCancelPreview}
-                onClose={handleToggleActionTimeline}
-              />
-            )}
-          </>
-        )}
-      </main>
+      <AppMainWorkspace
+        currentTab={currentTab}
+        onSwitchTab={handleSwitchTab}
+        showGrammarAST={showGrammarAST}
+        onCloseGrammarAST={() => setShowGrammarAST(false)}
+        editorState={editorState}
+        displayEditorState={displayEditorState}
+        processKeyInput={processKeyInput}
+        playKeySound={playKeySound}
+        playSuccessSound={playSuccessSound}
+        isMuted={isMuted}
+        dojoInitialDrill={dojoInitialDrill}
+        progress={progress}
+        currentMission={currentMission}
+        currentMissionIndex={currentMissionIndex}
+        totalMissions={MISSIONS.length}
+        customMission={customMission}
+        isCompleted={isCompleted}
+        keystrokeCount={keystrokeCount}
+        onSelectMission={handleSelectMission}
+        onResetMission={handleResetMission}
+        onResetCustomMission={handleResetCustomMission}
+        onStartGhostReplay={handleStartGhostReplay}
+        onStopGhostReplay={handleStopGhostReplay}
+        isGhostReplaying={isGhostReplaying}
+        ghostReplayProgress={ghostReplayProgress}
+        onOpenBYOCModal={() => setIsBYOCModalOpen(true)}
+        onResetSandbox={handleResetSandbox}
+        speedrunStatus={speedrunStatus}
+        speedrunCurrentStage={speedrunCurrentStage}
+        speedrunTotalStages={speedrunStages.length}
+        activeSpeedrunMission={activeSpeedrunMission}
+        speedrunElapsedSeconds={speedrunElapsedSeconds}
+        speedrunKeystrokes={speedrunKeystrokes}
+        speedrunBestRecord={speedrunBestRecord}
+        speedrunIsNewRecord={speedrunIsNewRecord}
+        onStartSpeedrun={handleStartSpeedrun}
+        isEditorShaking={isEditorShaking}
+        isEditorFocused={isEditorFocused}
+        relativeLineNumbers={relativeLineNumbers}
+        bellCount={bellCount}
+        onFocusEditor={() => setIsEditorFocused(true)}
+        onEditorAreaClick={handleEditorAreaClick}
+        viewportHandlers={{
+          onSwitchPane: handleSwitchPane,
+          onSelectCompletionCandidate: handleSelectCompletionCandidate,
+          onSwitchBuffer: handleSwitchBuffer,
+          onSwitchTabPage: handleSwitchTabPage,
+          onCloseTabPage: handleCloseTabPage,
+          onNewTabPage: handleNewTabPage,
+          onJumpToMark: handleJumpToMark,
+          onCloseLspHover: handleCloseLspHover,
+          onJumpQuickfixItem: handleJumpQuickfixItem,
+          onCloseQuickfixWindow: handleCloseQuickfixWindow,
+          onJumpLocationListItem: handleJumpLocationListItem,
+          onCloseLocationListWindow: handleCloseLocationListWindow,
+          onSwitchCommandLineWindowType: handleSwitchCommandLineWindowType,
+          onClearCommandLineHistory: handleClearCommandLineHistory,
+          onCloseCommandLineWindow: handleCloseCommandLineWindow,
+          onSelectCommandLineWindowLine: handleSelectCommandLineWindowLine,
+          onExecuteCommandLineWindowLine: handleExecuteCommandLineWindowLine,
+        }}
+        recentKeys={recentKeys}
+        statusFilename={statusFilename}
+        showRegisterInspector={showRegisterInspector}
+        onToggleRegisterInspector={handleToggleRegisterInspector}
+        onRunMacroFromDebugger={handleRunMacroFromDebugger}
+        onOpenMacroDebugger={handleOpenMacroDebugger}
+        onUpdateRegister={handleUpdateRegister}
+        onDeleteRegister={handleDeleteRegister}
+        showMarksVisualizer={showMarksVisualizer}
+        onToggleMarksVisualizer={handleToggleMarksVisualizer}
+        marksHandlers={{
+          onJumpToMark: handleJumpToMark,
+          onDeleteMark: handleDeleteMark,
+          onDeleteAllLocalMarks: handleDeleteAllLocalMarks,
+          onJumpToIndex: handleJumpToIndex,
+          onJumpOlder: handleJumpOlder,
+          onJumpNewer: handleJumpNewer,
+          onClearJumps: handleClearJumps,
+          onSetMark: handleSetMark,
+          onJumpToLine: handleJumpToLine,
+        }}
+        showMacroDebugger={showMacroDebugger}
+        onToggleMacroDebugger={handleToggleMacroDebugger}
+        timelineBaseState={timelineBaseState}
+        onPreviewMacroFrame={setMacroPreviewState}
+        showDiffView={showDiffView}
+        activeMissionForDiff={activeMissionForDiff}
+        showVirtualKeyboard={showVirtualKeyboard}
+        lastPressedKey={lastPressedKey}
+        showActionTimeline={showActionTimeline}
+        timelineSteps={timelineSteps}
+        previewStepIndex={previewStepIndex}
+        sandboxInitialText={sandboxInitialLines().join('\n')}
+        allKeysSoFar={allKeysSoFar}
+        onSelectTimelineStep={handleSelectTimelineStep}
+        onBranchFromStep={handleBranchFromStep}
+        onCancelTimelinePreview={handleCancelPreview}
+        onToggleActionTimeline={handleToggleActionTimeline}
+      />
 
       <footer className="app-footer">
         <span>{t('VimPracticeOnWeb • 키보드로 미션을 완료하며 자연스럽게 Vim을 마스터하세요')}</span>

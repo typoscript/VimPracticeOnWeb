@@ -13,7 +13,7 @@ export function resolveManualChunk(id: string): string | undefined {
   if (/node_modules\/(react|react-dom|scheduler)\//.test(normalized)) return 'react-vendor';
   if (/\/src\/vim-engine\/(spellData|helpData|messagesEn)\.ts$/.test(normalized)) return 'vim-engine-data';
   if (
-    /\/src\/vim-engine\/(config|types|messages|cursor|vimRegex|vimscriptValues|vimscriptBuiltins|vimscriptEval|vimscriptEngine|operators|undoTreeEngine|expressionParser|digraphs|invariants|bracketMatch|wordMotion|vfs)\.ts$/.test(
+    /\/src\/vim-engine\/(config|types|messages|cursor|vimRegex|vimscriptValues|vimscriptBuiltins|vimscriptEval|vimscriptFunctions|vimscriptEngine|operators|undoTreeEngine|expressionParser|digraphs|invariants|bracketMatch|wordMotion|vfs)\.ts$/.test(
       normalized
     )
   ) {

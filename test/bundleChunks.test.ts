@@ -14,6 +14,7 @@ const ENGINE_CORE_FILES = [
   'vimscriptValues.ts',
   'vimscriptBuiltins.ts',
   'vimscriptEval.ts',
+  'vimscriptFunctions.ts',
   'vimscriptEngine.ts',
   'operators.ts',
   'undoTreeEngine.ts',

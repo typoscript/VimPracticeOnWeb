@@ -1,34 +1,16 @@
 import { VimEditorState, CursorPosition } from './types';
-import { getMaxCol } from './cursor';
 import { moveToLineStart, moveToLineEnd, moveToFirstNonBlank } from './motions';
 import { syncRegisters, putFromRegister } from './registers';
 import { alternateBuffer } from './bufferEngine';
-import { nextTab, prevTab } from './tabEngine';
+import { reselectLastVisual } from './advancedMotions';
 import {
   deleteVisualSelection,
   yankVisualSelection,
   startVisualBlockInsert,
   swapVisualCursorAnchor,
-  executeGCtrlG,
   replaceVisualChars,
 } from './visual';
-import {
-  goToDeclaration,
-  reselectLastVisual,
-  traverseChangeList,
-} from './advancedMotions';
 import { moveFind } from './findChar';
-import {
-  executeTextObjectOperator,
-  TextObjectType,
-  executeIndentObjectOperator,
-  IndentObjectType,
-  executeParagraphObjectOperator,
-  ParagraphObjectType,
-} from './textObjects';
-import { toggleCommentRange } from './commentEngine';
-import { formatRange } from './formatEngine';
-import { gotoFileUnderCursor } from './gotoFileEngine';
 import { findMatches, findNextMatch, findPrevMatch, getWordAtCursor } from './search';
 import { starSearchPattern } from './vimRegex';
 import { parseKeySequence } from './keymapEngine';
@@ -43,13 +25,10 @@ import {
   scrollFullPageUp,
   scrollLineDown,
   scrollLineUp,
-  handleHorizontalViewportKey,
 } from './viewport';
 import { setMark, isValidMarkJumpChar, resolveMarkPosition } from './marks';
 import { joinLines, changeCaseVisual, indentVisual, modifyNumberVisual, formatIndentVisual } from './lineOperators';
-import { createFold } from './folding';
 import { findMatchingBracket } from './bracketMatch';
-import { executeGn } from './searchMode';
 import {
   parsePending,
   ringBell,
@@ -61,6 +40,14 @@ import {
   getOppositeMotion,
   DispatchKeyFn,
 } from './engineHelpers';
+import {
+  handleVisualZPrefix,
+  handleVisualGImmediate,
+  handleVisualGSubcommand,
+  handleVisualDirectGCombo,
+  handleVisualTextObject,
+  handleVisualBracketPrefix,
+} from './visualPrefixes';
 
 /**
  * VISUAL / VISUAL_LINE / VISUAL_BLOCK 모드 키 입력 처리
@@ -106,51 +93,12 @@ export function handleVisualModeKey(
   }
 
   // Visual 모드 수동 폴드 생성 (zf) 및 수평 스크롤 (zh, zl, zH, zL, ze, zs)
-  if (state.pendingKeys === 'z') {
-    const horiz = handleHorizontalViewportKey(state, key, parsed.count1 ?? 1);
-    if (horiz) return horiz;
-    if (key === 'f') {
-      const anchorLine = state.visualAnchor?.line ?? state.cursor.line;
-      const startRow = Math.min(anchorLine, state.cursor.line);
-      const endRow = Math.max(anchorLine, state.cursor.line);
-      const folded = createFold(state, startRow, endRow);
-      return {
-        ...folded,
-        mode: 'NORMAL',
-        visualAnchor: undefined,
-        pendingKeys: undefined,
-      };
-    }
-    return { ...state, pendingKeys: undefined };
-  }
-  if (key === 'z' && !state.pendingKeys) {
-    return { ...state, pendingKeys: 'z' };
-  }
+  const zRes = handleVisualZPrefix(state, key, parsed.count1);
+  if (zRes) return zRes;
 
   // Visual 모드 내 gn / gN (다음/이전 검색 매치로 선택 영역 확장), gt / gT (탭 전환), gj/gk/g0/g$/gm/gM
-  if (state.pendingKeys === 'g') {
-    if (key === 'n' || key === 'N') {
-      return executeGn(state, key === 'n');
-    }
-    if (key === 't') {
-      return { ...nextTab(state), pendingKeys: undefined };
-    }
-    if (key === 'T') {
-      return { ...prevTab(state), pendingKeys: undefined };
-    }
-    if (key === 'j' || key === 'k') {
-      const target = evaluateMotionWithCount(state.lines, state.cursor, key, parsed.totalCount, state.folds);
-      if (!target || target.line === state.cursor.line) return ringBell(state);
-      return {
-        ...state,
-        cursor: target,
-        pendingKeys: undefined,
-      };
-    }
-    if (key === '0' || key === '$' || key === 'm' || key === 'M') {
-      return moveByExtraMotion(state, `g${key}`, parsed.totalCount);
-    }
-  }
+  const gImmRes = handleVisualGImmediate(state, key, parsed);
+  if (gImmRes) return gImmRes;
 
   // 명명된 레지스터 지정 ("{register})
   if (state.pendingKeys === '"') {
@@ -245,152 +193,12 @@ export function handleVisualModeKey(
   }
 
   // 'g' 접두사 대기 상태 (gg, gv, gd, g;, g,, g Ctrl-a, g Ctrl-x 등)
-  if (state.pendingKeys?.endsWith('g') || parsed.operator === 'g') {
-    if (key === 'g') {
-      const targetLine = parsed.count1 !== undefined
-        ? Math.max(0, Math.min(parsed.count1 - 1, state.lines.length - 1))
-        : 0;
-      return {
-        ...state,
-        cursor: { line: targetLine, col: Math.min(state.cursor.col, getMaxCol(state.lines[targetLine], 'VISUAL')) },
-        pendingKeys: undefined,
-      };
-    }
-    if (key === 'v') {
-      return reselectLastVisual(state);
-    }
-    // ge / gE / g_: VISUAL 선택 영역을 보조 모션으로 확장
-    if (key === 'e' || key === 'E' || key === '_') {
-      return moveByExtraMotion(state, `g${key}`, parsed.totalCount);
-    }
-    // g?: 선택 영역 ROT13 변환
-    if (key === '?') {
-      return changeCaseVisual(state, 'rot13');
-    }
-    // gc: 선택 영역 주석 토글
-    if (key === 'c') {
-      if (!state.visualAnchor) return { ...state, mode: 'NORMAL', pendingKeys: undefined };
-      const minLine = Math.min(state.visualAnchor.line, state.cursor.line);
-      const maxLine = Math.max(state.visualAnchor.line, state.cursor.line);
-      return toggleCommentRange(state, minLine, maxLine);
-    }
-    // gq / gw: 선택 영역 텍스트 포매팅 (textwidth 기준 리플로우)
-    if (key === 'q' || key === 'w') {
-      if (!state.visualAnchor) return { ...state, mode: 'NORMAL', pendingKeys: undefined };
-      const minLine = Math.min(state.visualAnchor.line, state.cursor.line);
-      const maxLine = Math.max(state.visualAnchor.line, state.cursor.line);
-      return formatRange(state, minLine, maxLine, key === 'w');
-    }
-    // gf / gF: 선택된 파일 경로로 이동
-    if (key === 'f') {
-      return gotoFileUnderCursor(state, { withLineNumber: false });
-    }
-    if (key === 'F') {
-      return gotoFileUnderCursor(state, { withLineNumber: true });
-    }
-    if (key === 'd') {
-      return goToDeclaration(state);
-    }
-    if (key === 'p' || key === 'P') {
-      const snap = state.visualAnchor
-        ? {
-            mode: state.mode as 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK',
-            anchor: { ...state.visualAnchor },
-            cursor: { ...state.cursor },
-          }
-        : state.lastVisualSelection;
-      const delRes = deleteVisualSelection(state);
-      const synced = syncRegisters(state, delRes, false);
-      const res = putFromRegister(synced, state.activeRegister, false, 1, { leaveCursorAfter: true });
-      return { ...res, lastVisualSelection: snap };
-    }
-    if (key === ';') {
-      return traverseChangeList(state, 'prev', parsed.totalCount);
-    }
-    if (key === ',') {
-      return traverseChangeList(state, 'next', parsed.totalCount);
-    }
-    if (
-      key === 'Ctrl-a' ||
-      key === 'Ctrl+a' ||
-      key === 'ctrl-a' ||
-      key === '<C-a>'
-    ) {
-      return modifyNumberVisual(state, true, true, parsed.totalCount);
-    }
-    if (
-      key === 'Ctrl-x' ||
-      key === 'Ctrl+x' ||
-      key === 'ctrl-x' ||
-      key === '<C-x>'
-    ) {
-      return modifyNumberVisual(state, false, true, parsed.totalCount);
-    }
-    if (
-      key === 'Ctrl-g' ||
-      key === 'Ctrl+g' ||
-      key === 'ctrl-g' ||
-      key === '<C-g>'
-    ) {
-      return executeGCtrlG(state);
-    }
-    if (key === 'J') {
-      if (!state.visualAnchor) {
-        return { ...state, mode: 'NORMAL', visualBlockEndOfLine: undefined, pendingKeys: undefined };
-      }
-      const snap = {
-        mode: state.mode as 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK',
-        anchor: { ...state.visualAnchor },
-        cursor: { ...state.cursor },
-      };
-      const minLine = Math.min(state.visualAnchor.line, state.cursor.line);
-      const maxLine = Math.max(state.visualAnchor.line, state.cursor.line);
-      const joinCount = Math.max(1, maxLine - minLine);
-      const tempState: VimEditorState = {
-        ...state,
-        cursor: { line: minLine, col: 0 },
-        mode: 'NORMAL',
-        visualAnchor: undefined,
-        visualBlockEndOfLine: undefined,
-        pendingKeys: undefined,
-      };
-      const joined = joinLines(tempState, joinCount, false);
-      const changed = joined.lines !== state.lines;
-      const gKeys = joinCount > 1 ? [String(joinCount), 'g', 'J'] : ['g', 'J'];
-      return {
-        ...joined,
-        lastVisualSelection: snap,
-        lastChangeKeys: changed ? gKeys : state.lastChangeKeys,
-      };
-    }
-    return { ...state, pendingKeys: undefined };
-  }
+  const gSubRes = handleVisualGSubcommand(state, key, parsed);
+  if (gSubRes) return gSubRes;
 
   // 복합 키 표현 (g<Ctrl-a>, g<C-a>, g Ctrl-a, g Ctrl+a, g<Ctrl-x>, g<C-x>, g Ctrl-x, g Ctrl+x, g<Ctrl-g>)
-  if (
-    key === 'g<Ctrl-a>' ||
-    key === 'g<C-a>' ||
-    key === 'g Ctrl-a' ||
-    key === 'g Ctrl+a'
-  ) {
-    return modifyNumberVisual(state, true, true, parsed.totalCount);
-  }
-  if (
-    key === 'g<Ctrl-x>' ||
-    key === 'g<C-x>' ||
-    key === 'g Ctrl-x' ||
-    key === 'g Ctrl+x'
-  ) {
-    return modifyNumberVisual(state, false, true, parsed.totalCount);
-  }
-  if (
-    key === 'g<Ctrl-g>' ||
-    key === 'g<C-g>' ||
-    key === 'g Ctrl-g' ||
-    key === 'g Ctrl+g'
-  ) {
-    return executeGCtrlG(state);
-  }
+  const gComboRes = handleVisualDirectGCombo(state, key, parsed.totalCount);
+  if (gComboRes) return gComboRes;
 
   // VISUAL 모드 직접 Ctrl-a / Ctrl-x (모든 선택 숫자 일괄 증감)
   if (
@@ -638,38 +446,8 @@ export function handleVisualModeKey(
   }
 
   // 텍스트 객체 선택 (i 또는 a 대기 상태: iw, aw, i", a", i(, a(, i{, a{ 등)
-  const visualObjMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([ia])$/);
-  if (visualObjMatch) {
-    const count = visualObjMatch[1] ? parseInt(visualObjMatch[1], 10) : 1;
-    const modifier = visualObjMatch[2] as 'i' | 'a';
-    // 인덴트 텍스트 객체 (vii, vai, vaI): 줄 단위 VISUAL LINE 선택
-    if (key === 'i' || key === 'I') {
-      return executeIndentObjectOperator(state, 'v', `${modifier}${key}` as IndentObjectType, count);
-    }
-    // 문단 텍스트 객체 (vip, vap): 줄 단위 VISUAL LINE 선택
-    if (key === 'p') {
-      return executeParagraphObjectOperator(state, 'v', `${modifier}p` as ParagraphObjectType, count) ?? ringBell(state);
-    }
-    const validTargets = ['w', 'W', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't', 's', '<', '>'];
-    if (validTargets.includes(key)) {
-      let targetChar = key;
-      if (key === 'b' || key === ')') targetChar = '(';
-      else if (key === 'B' || key === '}') targetChar = '{';
-      else if (key === ']') targetChar = '[';
-      else if (key === '>') targetChar = '<';
-
-      const objType: TextObjectType = `${modifier}${targetChar}` as TextObjectType;
-      return executeTextObjectOperator(state, 'v', objType, count);
-    }
-    return { ...state, pendingKeys: undefined };
-  }
-
-  if (key === 'i' || key === 'a') {
-    return {
-      ...state,
-      pendingKeys: (state.pendingKeys ?? '') + key,
-    };
-  }
+  const objRes = handleVisualTextObject(state, key);
+  if (objRes) return objRes;
 
   // 문자 탐색 대기 상태 (f, F, t, T)
   const visualFindMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([ftFT])$/);
@@ -838,20 +616,8 @@ export function handleVisualModeKey(
   }
 
   // VISUAL 모드 괄호·섹션·메서드 모션 [( [{ ]) ]} [[ ]] [] ][ ]m [m ]M [M
-  const visualBracket = state.pendingKeys?.match(/^([1-9][0-9]*)?([\[\]])$/);
-  if (visualBracket) {
-    const bracket = visualBracket[2];
-    const isPaired = (bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'));
-    const isSection = key === '[' || key === ']';
-    const isMethod = key === 'm' || key === 'M';
-    if (isPaired || isSection || isMethod) {
-      return moveByExtraMotion(state, `${bracket}${key}`, visualBracket[1] ? parseInt(visualBracket[1], 10) : 1);
-    }
-    return { ...state, pendingKeys: undefined };
-  }
-  if ((key === '[' || key === ']') && (!state.pendingKeys || /^[1-9][0-9]*$/.test(state.pendingKeys))) {
-    return { ...state, pendingKeys: (state.pendingKeys ?? '') + key };
-  }
+  const bracketRes = handleVisualBracketPrefix(state, key);
+  if (bracketRes) return bracketRes;
 
   // VISUAL 모드 내 커서 이동 (모션 평가 및 카운트 반영)
   const motionCursor = evaluateMotionWithCount(

@@ -1,7 +1,6 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ConfigPlatform,
-  DEFAULT_KEYMAP_PRESETS,
   generateVimrc,
   generateInitLua,
   generateVSCodeSettings,
@@ -10,14 +9,10 @@ import {
 } from '../../utils/configGenerator';
 import { copyTextToClipboard } from '../../utils/dailyChallenge';
 import { CustomKeymapItem } from '../../utils/keymapStorage';
-import {
-  BackupRestoreMode,
-  exportBackupJson,
-  getBackupSummary,
-  importBackupJson,
-} from '../../utils/backupStorage';
 import './ConfigExporterModal.css';
 import { t } from '../../i18n';
+import { ConfigExporterKeymapsTab } from './ConfigExporterKeymapsTab';
+import { ConfigExporterBackupTab } from './ConfigExporterBackupTab';
 
 export interface ConfigExporterModalProps {
   isOpen: boolean;
@@ -34,26 +29,6 @@ export interface ConfigExporterModalProps {
   options?: Partial<import('../../vim-engine').VimOptions>;
   onRestoreBackup?: () => void;
 }
-
-const TEMPLATE_SUGGESTIONS = [
-  { mode: 'normal' as const, from: 'Y', to: 'y$', desc: '줄 끝까지 복사' },
-  { mode: 'normal' as const, from: '<leader>p', to: '"+p', desc: '클립보드 붙여넣기' },
-  { mode: 'normal' as const, from: '<leader>y', to: '"+y', desc: '클립보드 복사' },
-  { mode: 'insert' as const, from: 'fd', to: '<Esc>', desc: '빠른 노멀 모드 복귀' },
-  { mode: 'normal' as const, from: '<leader>h', to: ':noh<CR>', desc: '검색 하이라이트 끄기' },
-];
-
-const SPECIAL_KEY_CHIPS = [
-  '<leader>',
-  '<Esc>',
-  '<CR>',
-  '<Space>',
-  '<Tab>',
-  '<C-w>',
-  '"+',
-  '"_',
-  'Ctrl-',
-];
 
 export const ConfigExporterModal: React.FC<ConfigExporterModalProps> = ({
   isOpen,
@@ -73,24 +48,6 @@ export const ConfigExporterModal: React.FC<ConfigExporterModalProps> = ({
   const [activeMainTab, setActiveMainTab] = useState<'keymaps' | 'exporter' | 'backup'>('keymaps');
   const [activeTab, setActiveTab] = useState<ConfigPlatform>('vimrc');
   const [copied, setCopied] = useState(false);
-  const [backupCopied, setBackupCopied] = useState(false);
-  const [importText, setImportText] = useState('');
-  const [restoreMode, setRestoreMode] = useState<BackupRestoreMode>('merge');
-  const [backupStatus, setBackupStatus] = useState<{ kind: 'ok' | 'err'; text: string } | null>(null);
-  const [summaryVersion, setSummaryVersion] = useState(0);
-  const backupFileInputRef = useRef<HTMLInputElement>(null);
-
-  // 커스텀 키매핑 입력 폼 상태
-  const [newMode, setNewMode] = useState<'normal' | 'insert' | 'visual'>('normal');
-  const [newLhs, setNewLhs] = useState('');
-  const [newRhs, setNewRhs] = useState('');
-  const [newDesc, setNewDesc] = useState('');
-  const [formError, setFormError] = useState<string | null>(null);
-  const [filterMode, setFilterMode] = useState<'all' | 'normal' | 'insert' | 'visual'>('all');
-  const [lastFocusedField, setLastFocusedField] = useState<'lhs' | 'rhs'>('rhs');
-
-  const lhsInputRef = useRef<HTMLInputElement>(null);
-  const rhsInputRef = useRef<HTMLInputElement>(null);
 
   const exportOptions = useMemo(
     () => ({
@@ -161,128 +118,8 @@ export const ConfigExporterModal: React.FC<ConfigExporterModalProps> = ({
     downloadConfigFile(configFilename, configContent);
   };
 
-  // 특수키 칩 클릭 시 활성 필드에 삽입
-  const handleInsertToken = (token: string) => {
-    if (lastFocusedField === 'lhs') {
-      setNewLhs((prev) => prev + token);
-      lhsInputRef.current?.focus();
-    } else {
-      setNewRhs((prev) => prev + token);
-      rhsInputRef.current?.focus();
-    }
-  };
-
-  // 템플릿 추천 클릭 시 폼에 채우기
-  const handleApplyTemplate = (tmpl: { mode: 'normal' | 'insert' | 'visual'; from: string; to: string; desc: string }) => {
-    setNewMode(tmpl.mode);
-    setNewLhs(tmpl.from);
-    setNewRhs(tmpl.to);
-    setNewDesc(tmpl.desc);
-    setFormError(null);
-  };
-
-  // 신규 커스텀 키매핑 등록
-  const handleAddSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanLhs = newLhs.trim();
-    const cleanRhs = newRhs.trim();
-
-    if (!cleanLhs || !cleanRhs) {
-      setFormError(t('단축키(LHS)와 실행 동작(RHS)을 모두 입력해주세요.'));
-      return;
-    }
-
-    const isDuplicate = customKeymaps.some(
-      (m) => m.mode === newMode && m.from.toLowerCase() === cleanLhs.toLowerCase()
-    );
-
-    if (isDuplicate) {
-      setFormError(t('이미 등록된 단축키입니다.'));
-      return;
-    }
-
-    onAddCustomKeymap?.({
-      mode: newMode,
-      from: cleanLhs,
-      to: cleanRhs,
-      description: newDesc.trim() || undefined,
-      noremap: true,
-    });
-
-    setNewLhs('');
-    setNewRhs('');
-    setNewDesc('');
-    setFormError(null);
-  };
-
-  const filteredCustomKeymaps = useMemo(() => {
-    if (filterMode === 'all') return customKeymaps;
-    return customKeymaps.filter((m) => m.mode === filterMode);
-  }, [customKeymaps, filterMode]);
-
   const activePresetsCount = Object.values(activePresets).filter(Boolean).length;
   const totalActiveKeymapsCount = activePresetsCount + customKeymaps.length;
-
-  const backupSummary = useMemo(
-    () => getBackupSummary(),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isOpen, activeMainTab, summaryVersion]
-  );
-
-  const handleCopyBackup = async () => {
-    const ok = await copyTextToClipboard(exportBackupJson());
-    if (ok) {
-      setBackupCopied(true);
-      setTimeout(() => setBackupCopied(false), 2000);
-    }
-  };
-
-  const handleDownloadBackup = () => {
-    const dateTag = new Date().toISOString().slice(0, 10);
-    downloadConfigFile(`vim-practice-backup-${dateTag}.json`, exportBackupJson());
-  };
-
-  const handleBackupFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === 'string') {
-        setImportText(reader.result);
-        setBackupStatus(null);
-      }
-    };
-    reader.readAsText(file);
-    e.target.value = '';
-  };
-
-  const handleApplyBackup = () => {
-    const raw = importText.trim();
-    if (!raw) {
-      setBackupStatus({ kind: 'err', text: t('복원할 JSON 백업 내용을 입력하거나 파일을 선택해주세요.') });
-      return;
-    }
-    const result = importBackupJson(raw, restoreMode);
-    if (!result.ok) {
-      const msgText =
-        result.errorCode === 'INVALID_JSON'
-          ? t('유효한 JSON 형식이 아닙니다.')
-          : result.errorCode === 'EMPTY_BACKUP'
-          ? t('복원할 유효한 학습 데이터가 백업에 포함되어 있지 않습니다.')
-          : t('지원되지 않는 백업 파일 형식입니다.');
-      setBackupStatus({ kind: 'err', text: msgText });
-      return;
-    }
-    setSummaryVersion((v) => v + 1);
-    setBackupStatus({
-      kind: 'ok',
-      text: t('백업 복원 완료: {keys}개 항목 · 완료 레슨 {lessons}개', {
-        keys: result.restoredKeys.length,
-        lessons: result.completedLessons,
-      }),
-    });
-    onRestoreBackup?.();
-  };
 
   if (!isOpen) return null;
 
@@ -347,259 +184,17 @@ export const ConfigExporterModal: React.FC<ConfigExporterModalProps> = ({
           </button>
         </div>
 
-        {/* 1. 키매핑 프리셋 섹션 */}
-        <section
-          className={`presets-section ${activeMainTab !== 'keymaps' ? 'is-hidden' : ''}`}
-          data-testid="presets-section"
-        >
-          <div className="presets-header">
-            <h3 className="section-label">{t('⚡ 실무 인기 키매핑 프리셋')}</h3>
-            <div className="leader-picker">
-              <label htmlFor="leader-select">{t('리더 키 (Leader):')}</label>
-              <select
-                id="leader-select"
-                value={leaderKey}
-                onChange={(e) => onChangeLeaderKey(e.target.value)}
-                data-testid="leader-select"
-              >
-                <option value=" ">{t('Space (공백)')}</option>
-                <option value="\">Backslash (\)</option>
-                <option value=",">Comma (,)</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="presets-grid" data-testid="presets-grid">
-            {DEFAULT_KEYMAP_PRESETS.map((preset) => {
-              const checked = !!activePresets[preset.id];
-              return (
-                <label
-                  key={preset.id}
-                  className={`preset-card ${checked ? 'active' : ''}`}
-                  data-testid={`preset-card-${preset.id}`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={() => onTogglePreset(preset.id)}
-                    data-testid={`preset-checkbox-${preset.id}`}
-                  />
-                  <div className="preset-info">
-                    <span className="preset-title">{preset.title}</span>
-                    <span className="preset-desc">{preset.description}</span>
-                  </div>
-                </label>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* 2. 나만의 커스텀 키바인딩 관리기 섹션 */}
-        <section
-          className={`custom-keymaps-section ${activeMainTab !== 'keymaps' ? 'is-hidden' : ''}`}
-          data-testid="custom-keymaps-section"
-        >
-          <div className="custom-keymaps-header">
-            <div className="custom-header-title">
-              <h3 className="section-label">⌨️ {t('나만의 커스텀 키바인딩 (Custom Keymaps)')}</h3>
-              <span className="count-badge">
-                {customKeymaps.length}
-                {t('개 등록됨')}
-              </span>
-            </div>
-          </div>
-
-          {/* 신규 키매핑 추가 폼 */}
-          <form className="custom-keymap-form" onSubmit={handleAddSubmit} data-testid="custom-keymap-form">
-            <div className="form-row">
-              <div className="form-group mode-select-group">
-                <label htmlFor="custom-mode-select">{t('모드:')}</label>
-                <select
-                  id="custom-mode-select"
-                  value={newMode}
-                  onChange={(e) => setNewMode(e.target.value as any)}
-                  data-testid="custom-keymap-mode-select"
-                >
-                  <option value="normal">{t('일반 모드 (Normal)')}</option>
-                  <option value="insert">{t('입력 모드 (Insert)')}</option>
-                  <option value="visual">{t('비주얼 모드 (Visual)')}</option>
-                </select>
-              </div>
-
-              <div className="form-group lhs-group">
-                <label htmlFor="custom-lhs-input">{t('단축키 (LHS):')}</label>
-                <input
-                  ref={lhsInputRef}
-                  id="custom-lhs-input"
-                  type="text"
-                  placeholder={t('예: Y, <leader>w, jk')}
-                  value={newLhs}
-                  onChange={(e) => setNewLhs(e.target.value)}
-                  onFocus={() => setLastFocusedField('lhs')}
-                  data-testid="custom-keymap-lhs-input"
-                />
-              </div>
-
-              <div className="form-arrow">➔</div>
-
-              <div className="form-group rhs-group">
-                <label htmlFor="custom-rhs-input">{t('실행 동작 (RHS):')}</label>
-                <input
-                  ref={rhsInputRef}
-                  id="custom-rhs-input"
-                  type="text"
-                  placeholder={t('예: y$, :w<CR>, <Esc>')}
-                  value={newRhs}
-                  onChange={(e) => setNewRhs(e.target.value)}
-                  onFocus={() => setLastFocusedField('rhs')}
-                  data-testid="custom-keymap-rhs-input"
-                />
-              </div>
-
-              <div className="form-group desc-group">
-                <label htmlFor="custom-desc-input">{t('설명 (선택):')}</label>
-                <input
-                  id="custom-desc-input"
-                  type="text"
-                  placeholder={t('예: 줄 끝까지 복사')}
-                  value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
-                  data-testid="custom-keymap-desc-input"
-                />
-              </div>
-
-              <button
-                type="submit"
-                className="add-keymap-btn"
-                data-testid="custom-keymap-add-btn"
-              >
-                {t('➕ 키매핑 등록')}
-              </button>
-            </div>
-
-            {formError && <div className="form-error-msg" data-testid="custom-form-error">{formError}</div>}
-
-            {/* 빠른 특수키 칩 & 추천 템플릿 바 */}
-            <div className="chips-and-templates-bar">
-              <div className="quick-chips-group">
-                <span className="chips-label">{t('빠른 특수키 칩:')}</span>
-                <div className="chips-container">
-                  {SPECIAL_KEY_CHIPS.map((chip) => (
-                    <button
-                      key={chip}
-                      type="button"
-                      className="quick-chip"
-                      onClick={() => handleInsertToken(chip)}
-                      title={t('{chip} 삽입', { chip })}
-                      data-testid={`quick-chip-${chip}`}
-                    >
-                      {chip}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="templates-group">
-                <span className="chips-label">{t('추천 템플릿:')}</span>
-                <div className="templates-container">
-                  {TEMPLATE_SUGGESTIONS.map((tmpl, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      className="template-chip"
-                      onClick={() => handleApplyTemplate(tmpl)}
-                      title={tmpl.desc}
-                      data-testid={`template-chip-${idx}`}
-                    >
-                      <span className="tmpl-mode">{tmpl.mode[0].toUpperCase()}</span>
-                      <span className="tmpl-keys">{tmpl.from} ➔ {tmpl.to}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </form>
-
-          {/* 등록된 커스텀 키매핑 목록 */}
-          <div className="registered-keymaps-wrapper">
-            <div className="filter-and-count-bar">
-              <span className="sub-title">{t('등록된 커스텀 키바인딩 목록')}</span>
-              <div className="filter-pills" role="radiogroup">
-                <button
-                  type="button"
-                  className={`filter-pill ${filterMode === 'all' ? 'active' : ''}`}
-                  onClick={() => setFilterMode('all')}
-                  data-testid="filter-pill-all"
-                >
-                  {t('전체')} ({customKeymaps.length})
-                </button>
-                <button
-                  type="button"
-                  className={`filter-pill ${filterMode === 'normal' ? 'active' : ''}`}
-                  onClick={() => setFilterMode('normal')}
-                  data-testid="filter-pill-normal"
-                >
-                  {t('일반 모드 (Normal)')}
-                </button>
-                <button
-                  type="button"
-                  className={`filter-pill ${filterMode === 'insert' ? 'active' : ''}`}
-                  onClick={() => setFilterMode('insert')}
-                  data-testid="filter-pill-insert"
-                >
-                  {t('입력 모드 (Insert)')}
-                </button>
-                <button
-                  type="button"
-                  className={`filter-pill ${filterMode === 'visual' ? 'active' : ''}`}
-                  onClick={() => setFilterMode('visual')}
-                  data-testid="filter-pill-visual"
-                >
-                  {t('비주얼 모드 (Visual)')}
-                </button>
-              </div>
-            </div>
-
-            {filteredCustomKeymaps.length === 0 ? (
-              <div className="empty-keymaps-notice" data-testid="empty-keymaps-notice">
-                <span className="empty-icon">⌨️</span>
-                <p>{t('아직 등록된 커스텀 키바인딩이 없습니다. 위 폼을 통해 나만의 단축키를 등록해보세요!')}</p>
-              </div>
-            ) : (
-              <div className="keymaps-cards-grid" data-testid="custom-keymaps-grid">
-                {filteredCustomKeymaps.map((item) => (
-                  <div key={item.id} className="custom-keymap-card" data-testid={`keymap-card-${item.id}`}>
-                    <div className="card-top">
-                      <span className={`keymap-mode-badge ${item.mode}`}>
-                        {item.mode.toUpperCase()}
-                      </span>
-                      <button
-                        type="button"
-                        className="delete-keymap-btn"
-                        onClick={() => onDeleteCustomKeymap?.(item.id)}
-                        title={t('삭제')}
-                        aria-label={t('삭제')}
-                        data-testid={`delete-keymap-${item.id}`}
-                      >
-                        🗑️
-                      </button>
-                    </div>
-
-                    <div className="keymap-mapping-row">
-                      <code className="key-code lhs">{item.from}</code>
-                      <span className="key-arrow">➔</span>
-                      <code className="key-code rhs">{item.to}</code>
-                    </div>
-
-                    {item.description && (
-                      <div className="keymap-desc-text">{item.description}</div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
+        {/* 1~2. 키매핑 프리셋 & 커스텀 키바인딩 */}
+        <ConfigExporterKeymapsTab
+          activeMainTab={activeMainTab}
+          leaderKey={leaderKey}
+          activePresets={activePresets}
+          onTogglePreset={onTogglePreset}
+          onChangeLeaderKey={onChangeLeaderKey}
+          customKeymaps={customKeymaps}
+          onAddCustomKeymap={onAddCustomKeymap}
+          onDeleteCustomKeymap={onDeleteCustomKeymap}
+        />
 
         {/* 3. 플랫폼별 설정 코드 뷰어 섹션 */}
         <section
@@ -657,124 +252,11 @@ export const ConfigExporterModal: React.FC<ConfigExporterModalProps> = ({
         </section>
 
         {/* 4. 학습 진도 & 설정 JSON 백업/복원 섹션 */}
-        <section
-          className={`backup-section ${activeMainTab !== 'backup' ? 'is-hidden' : ''}`}
-          data-testid="backup-section"
-        >
-          <div className="backup-card">
-            <div className="backup-card-header">
-              <h3 className="section-label">📤 {t('현재 학습 진도 JSON 내보내기')}</h3>
-              <span className="backup-summary-badge" data-testid="backup-summary-badge">
-                {t('완료 레슨 {lessons}개 · 저장 항목 {keys}개', {
-                  lessons: backupSummary.completedLessons,
-                  keys: backupSummary.keyCount,
-                })}
-              </span>
-            </div>
-            <p className="backup-desc">
-              {t('레슨 별점, 던전 진행도, 도장/스피드런 기록, 분석 통계, 커스텀 키매핑과 환경 설정을 한 번에 JSON으로 백업합니다.')}
-            </p>
-            <div className="backup-actions-row">
-              <button
-                type="button"
-                className={`action-btn copy-btn ${backupCopied ? 'copied' : ''}`}
-                onClick={handleCopyBackup}
-                data-testid="copy-backup-btn"
-              >
-                {backupCopied ? t('✅ JSON 복사 완료!') : t('📋 백업 JSON 복사')}
-              </button>
-              <button
-                type="button"
-                className="action-btn download-btn"
-                onClick={handleDownloadBackup}
-                data-testid="download-backup-btn"
-              >
-                💾 {t('백업 파일 다운로드 (.json)')}
-              </button>
-            </div>
-          </div>
-
-          <div className="backup-card">
-            <div className="backup-card-header">
-              <h3 className="section-label">📥 {t('JSON 백업에서 복원하기')}</h3>
-              <div className="backup-mode-select" role="group" aria-label={t('복원 방식')}>
-                <label className="backup-mode-option">
-                  <input
-                    type="radio"
-                    name="restoreMode"
-                    value="merge"
-                    checked={restoreMode === 'merge'}
-                    onChange={() => setRestoreMode('merge')}
-                    data-testid="restore-mode-merge"
-                  />
-                  {t('진도 병합 (최고 기록 유지)')}
-                </label>
-                <label className="backup-mode-option">
-                  <input
-                    type="radio"
-                    name="restoreMode"
-                    value="replace"
-                    checked={restoreMode === 'replace'}
-                    onChange={() => setRestoreMode('replace')}
-                    data-testid="restore-mode-replace"
-                  />
-                  {t('완전 덮어쓰기')}
-                </label>
-              </div>
-            </div>
-
-            <div className="backup-file-row">
-              <input
-                ref={backupFileInputRef}
-                type="file"
-                accept=".json,application/json"
-                onChange={handleBackupFileChange}
-                className="backup-file-input"
-                data-testid="import-backup-file-input"
-              />
-              <button
-                type="button"
-                className="action-btn"
-                onClick={() => backupFileInputRef.current?.click()}
-                data-testid="pick-backup-file-btn"
-              >
-                📂 {t('.json 파일 불러오기')}
-              </button>
-            </div>
-
-            <textarea
-              className="backup-textarea"
-              rows={5}
-              value={importText}
-              onChange={(e) => {
-                setImportText(e.target.value);
-                setBackupStatus(null);
-              }}
-              placeholder={t('백업한 JSON 내용을 붙여넣거나 위 버튼으로 .json 파일을 선택하세요.')}
-              data-testid="import-backup-textarea"
-            />
-
-            {backupStatus && (
-              <div
-                className={`backup-status-msg ${backupStatus.kind === 'ok' ? 'is-ok' : 'is-err'}`}
-                data-testid="backup-status-msg"
-              >
-                {backupStatus.text}
-              </div>
-            )}
-
-            <div className="backup-actions-row">
-              <button
-                type="button"
-                className="action-btn download-btn"
-                onClick={handleApplyBackup}
-                data-testid="apply-backup-btn"
-              >
-                📥 {t('백업 복원 적용')}
-              </button>
-            </div>
-          </div>
-        </section>
+        <ConfigExporterBackupTab
+          isOpen={isOpen}
+          activeMainTab={activeMainTab}
+          onRestoreBackup={onRestoreBackup}
+        />
 
         {/* 하단: 액션 버튼 */}
         <footer className="config-modal-footer">
