@@ -3476,4 +3476,90 @@ export const MISSIONS: Mission[] = [
       );
     },
   },
+  {
+    id: 92,
+    title: '레슨 92: Neovim LSP 호버(K)·진단 탐색([d, ]d)과 :lopen 버그 수정 마스터',
+    description:
+      'Neovim 내장 LSP 클라이언트처럼 타입 시그니처 문서 호버 창(K), 실시간 진단 점프(]d / [d / ]D / [D), 그리고 창 로컬 진단 목록(:lopen)을 결합해 코드 버그를 정확히 진단하고 수정해 보세요.\n\n1) LSP 호버 플로팅 팝업 (K):\n   - 심볼 위에서 K 를 누르면 시그니처와 문서를 담은 플로팅 호버 창이 열립니다. (Esc / q / 커서 이동으로 닫기)\n\n2) 진단(Diagnostic) 탐색 (]d / [d / ]D / [D) & :lopen:\n   - ]d / [d 는 파일 내 다음·이전 에러/경고 위치로 즉시 이동합니다. (]D / [D 는 마지막·첫 번째 진단)\n   - :lopen (:diagnostics) 은 모든 진단 항목을 하단 Location List 분할 창에 띄우며, 코드에서 버그를 고치면 진단과 목록이 실시간으로 자동 해소됩니다.\n\n미션:\n1. 1번째 줄의 parsePort 위에서 K 를 눌러 LSP 호버 창으로 타입 시그니처를 확인하세요.\n2. :lopen<Enter> 로 진단 목록 창을 여세요.\n3. ]d 와 [d 로 두 개의 TS2322 타입 오류("8080", "300")를 탐색한 뒤 따옴표를 제거(x f" x)하여 모두 숫자 타입으로 고쳐 모든 진단을 0개로 해소하세요!',
+    hint: 'K(호버) → :lopen<Enter>(진단 목록) → ]d / [d(오류 이동) → x f" x(따옴표 제거)',
+    par: 26,
+    optimalKeys: [
+      'K',
+      ':', 'l', 'o', 'p', 'e', 'n', 'Enter',
+      ']', 'd',
+      ']', 'd',
+      '[', 'd',
+      'x', 'f', '"', 'x',
+      ']', 'd',
+      'x', 'f', '"', 'x',
+    ],
+    primaryFilename: 'service.ts',
+    initialLines: [
+      'function parsePort(raw: string): number {',
+      '  const port: number = "8080";',
+      '  return port;',
+      '}',
+      'const timeout: number = "300";',
+      'const active = parsePort("8080");',
+    ],
+    targetLines: [
+      'function parsePort(raw: string): number {',
+      '  const port: number = 8080;',
+      '  return port;',
+      '}',
+      'const timeout: number = 300;',
+      'const active = parsePort("8080");',
+    ],
+    initialCursor: { line: 0, col: 9 },
+    initialLspSymbols: {
+      parsePort: {
+        symbol: 'parsePort',
+        kind: 'function',
+        signature: 'function parsePort(raw: string): number',
+        documentation: 'Parses a port configuration string into a numeric TCP port.',
+        source: 'service.ts',
+      },
+    },
+    initialLspDiagnostics: [
+      {
+        id: 'ts-2322-port',
+        line: 1,
+        col: 23,
+        endCol: 29,
+        severity: 'error',
+        code: 'TS2322',
+        source: 'ts',
+        message: "Type 'string' is not assignable to type 'number'.",
+        rule: { matchPattern: 'port: number = ("8080")', highlightGroup: 1 },
+      },
+      {
+        id: 'ts-2322-timeout',
+        line: 4,
+        col: 24,
+        endCol: 29,
+        severity: 'error',
+        code: 'TS2322',
+        source: 'ts',
+        message: "Type 'string' is not assignable to type 'number'.",
+        rule: { matchPattern: 'timeout: number = ("300")', highlightGroup: 1 },
+      },
+    ],
+    checkComplete: (state) => {
+      const target = [
+        'function parsePort(raw: string): number {',
+        '  const port: number = 8080;',
+        '  return port;',
+        '}',
+        'const timeout: number = 300;',
+        'const active = parsePort("8080");',
+      ];
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines.length === target.length &&
+        state.lines.every((l, idx) => l === target[idx]) &&
+        (state.lspDiagnostics?.length ?? 0) === 0 &&
+        Boolean(state.locationList?.isOpen)
+      );
+    },
+  },
 ];

@@ -490,3 +490,161 @@
   text-underline-offset: 3px;
 }
 
+/* Neovim 스타일 LSP 진단 (Diagnostic Signs, Squiggly Underlines, Virtual Text & Hover) */
+.gutter-diag-sign {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+  border-radius: 3px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.gutter-diag-sign.diag-error {
+  background-color: rgba(243, 139, 168, 0.22);
+  color: #f38ba8;
+}
+
+.gutter-diag-sign.diag-warning {
+  background-color: rgba(249, 226, 175, 0.2);
+  color: #f9e2af;
+}
+
+.gutter-diag-sign.diag-info,
+.gutter-diag-sign.diag-hint {
+  background-color: rgba(137, 180, 250, 0.2);
+  color: #89b4fa;
+}
+
+.lsp-diag-error {
+  text-decoration: underline wavy #f38ba8;
+  text-underline-offset: 3px;
+}
+
+.lsp-diag-warning {
+  text-decoration: underline wavy #f9e2af;
+  text-underline-offset: 3px;
+}
+
+.lsp-diag-info {
+  text-decoration: underline wavy #89b4fa;
+  text-underline-offset: 3px;
+}
+
+.lsp-diag-hint {
+  text-decoration: underline dotted #94e2d5;
+  text-underline-offset: 3px;
+}
+
+.lsp-virtual-text {
+  margin-left: 1.5ch;
+  font-size: 0.8em;
+  font-style: italic;
+  opacity: 0.88;
+  user-select: none;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.lsp-virtual-text.diag-error {
+  color: #f38ba8;
+}
+
+.lsp-virtual-text.diag-warning {
+  color: #f9e2af;
+}
+
+.lsp-virtual-text.diag-info {
+  color: #89b4fa;
+}
+
+.lsp-virtual-text.diag-hint {
+  color: #94e2d5;
+}
+
+.lsp-hover-popup {
+  position: absolute;
+  top: calc(100% + 4px);
+  z-index: 45;
+  min-width: 280px;
+  max-width: 480px;
+  background-color: var(--bg-editor, #181825);
+  border: 1px solid var(--accent-primary, #89b4fa);
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  box-shadow: 0 10px 26px rgba(0, 0, 0, 0.55);
+  white-space: normal;
+  font-family: inherit;
+}
+
+.lsp-hover-popup.open-upward {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.lsp-hover-header {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-bottom: 0.45rem;
+  font-size: 0.75rem;
+}
+
+.lsp-hover-kind {
+  background-color: rgba(203, 166, 247, 0.18);
+  color: #cba6f7;
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.lsp-hover-symbol {
+  color: var(--text-primary, #cdd6f4);
+  font-weight: 700;
+  font-family: monospace;
+}
+
+.lsp-hover-source {
+  color: var(--text-muted, #6c7086);
+  margin-left: auto;
+  font-size: 0.7rem;
+}
+
+.lsp-hover-close {
+  background: none;
+  border: 1px solid var(--border-color, #45475a);
+  color: var(--text-muted, #a6adc8);
+  border-radius: 4px;
+  padding: 0.08rem 0.35rem;
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+
+.lsp-hover-close:hover {
+  border-color: var(--accent-primary, #89b4fa);
+  color: var(--text-primary, #cdd6f4);
+}
+
+.lsp-hover-signature {
+  margin: 0 0 0.45rem 0;
+  padding: 0.4rem 0.55rem;
+  background-color: var(--bg-surface, #1e1e2e);
+  border-radius: 5px;
+  border: 1px solid var(--border-color, #313244);
+  font-family: 'Fira Code', 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  color: #89b4fa;
+  overflow-x: auto;
+}
+
+.lsp-hover-doc {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--text-primary, #bac2de);
+}
+

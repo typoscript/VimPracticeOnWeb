@@ -48,6 +48,7 @@ import { nextArg, prevArg, firstArg, lastArg } from './argEngine';
 import { nextTab, prevTab } from './tabEngine';
 import { openCommandLineWindow } from './cmdlineWindow';
 import { openHelp } from './helpEngine';
+import { openLspHover, closeLspHover, jumpToDiagnostic } from './lspEngine';
 import { jumpDiffHunk, diffObtain, diffPut } from './diffEngine';
 import { jumpToNextSpellError, jumpToPrevSpellError, startSpellSuggest, addSpellGoodWord, addSpellWrongWord } from './spellEngine';
 import { travelUndoTime } from './undoTreeEngine';
@@ -158,13 +159,19 @@ export function handleNormalModeKey(
   const currentLine = state.lines[state.cursor.line] ?? '';
   const parsed = parsePending(state.pendingKeys);
 
-  // 1. ESC 또는 타임아웃: 대기 중인 모든 키 시퀀스 취소
+  // 1. ESC 또는 타임아웃: 대기 중인 모든 키 시퀀스 및 열린 LSP 호버 닫기
   if (key === 'Escape' || key === 'Timeout') {
     return {
       ...state,
       pendingKeys: undefined,
       activeRegister: undefined,
+      lspHover: state.lspHover?.isOpen ? null : state.lspHover,
     };
+  }
+
+  // LSP 호버 창이 열린 상태에서 q 를 누르면 매크로 녹화 대신 호버 팝업을 닫음
+  if (key === 'q' && state.lspHover?.isOpen && !state.pendingKeys) {
+    return closeLspHover(state);
   }
 
   // gn / gN (검색 매치 텍스트 객체 및 cgn, dgn, ygn 결합)
@@ -778,10 +785,14 @@ export function handleNormalModeKey(
     return { ...openHelp(state), pendingKeys: undefined };
   }
 
-  // 1-0-6-3. K: 커서 위치 단어 도움말 열기 (:help <cword>)
+  // 1-0-6-3. K: LSP 호버 창 열기(lspSymbols 활성 시) 또는 커서 위치 단어 도움말 열기(:help <cword>)
   if (key === 'K' && !parsed.operator && !state.pendingKeys) {
     const curLine = state.lines[state.cursor.line] ?? '';
     const word = getWordAtCursor(curLine, state.cursor.col);
+    const lspResult = openLspHover(state, word);
+    if (lspResult !== null) {
+      return { ...lspResult, pendingKeys: undefined };
+    }
     return { ...openHelp(state, word ?? undefined), pendingKeys: undefined };
   }
 
@@ -1096,6 +1107,13 @@ export function handleNormalModeKey(
     // [[ ]] [] ][: 섹션 시작/끝 블록 점프
     if (key === '[' || key === ']') {
       return moveByExtraMotion(state, `${bracket}${key}`, bCount);
+    }
+    // ]d [d ]D [D: Neovim 스타일 진단(Diagnostic) 탐색
+    if (key === 'd' || key === 'D') {
+      const dir = key === 'D'
+        ? (bracket === ']' ? 'last' : 'first')
+        : (bracket === ']' ? 'next' : 'prev');
+      return jumpToDiagnostic(state, dir, bCount);
     }
     // ]q [q ]Q [Q: 퀵픽스 탐색
     if (key === 'q' || key === 'Q') {

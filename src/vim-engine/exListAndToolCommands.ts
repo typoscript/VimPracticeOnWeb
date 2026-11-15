@@ -40,6 +40,7 @@ import {
   ldo,
   lfdo,
 } from './locationListEngine';
+import { syncDiagnosticsToLocationList } from './lspEngine';
 import { formatChangeList } from './advancedMotions';
 import { formatMarksList, formatJumpsList, clearJumps, deleteMarks } from './marks';
 import {
@@ -303,12 +304,27 @@ export function tryExecuteToolExCommand(
     };
   }
 
+  // --- LSP 진단(Diagnostics) 로케이션 리스트 열기: :diagnostics, :diag ---
+  if (cleanCmd === 'diagnostics' || cleanCmd === 'diagnostic' || cleanCmd === 'diag') {
+    const res = syncDiagnosticsToLocationList(state, true);
+    return {
+      ...res,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
   // --- 로케이션 리스트 (Location List) Ex 명령 ---
   // 로케이션 리스트 창 열기: :lopen [height], :lope [height]
   const lopenMatch = cleanCmdRaw.match(/^(?:lopen|lope)(?:\s+(\d+))?$/i);
   if (lopenMatch) {
     const height = lopenMatch[1] ? parseInt(lopenMatch[1], 10) : undefined;
-    const res = openLocationListWindow(state, height);
+    const baseState = state.lspDiagnostics && !state.locationList
+      ? syncDiagnosticsToLocationList(state, false)
+      : state;
+    const res = openLocationListWindow(baseState, height);
     return {
       ...res,
       mode: 'NORMAL',

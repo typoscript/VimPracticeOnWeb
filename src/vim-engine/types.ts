@@ -641,6 +641,49 @@ export interface VimEditorState {
   lastShellCommand?: string;
   /** Normal !{motion} / !! 에서 COMMAND 모드로 넘어갈 때 . 반복을 위해 보관하는 연산자 키 시퀀스 */
   filterOperatorKeys?: string[];
+  /** Neovim 스타일 LSP 진단 목록 ([d, ]d, [D, ]D, :lopen 연계) */
+  lspDiagnostics?: LspDiagnostic[];
+  /** 커서 호버 문서 심볼 사전 (K) */
+  lspSymbols?: Record<string, LspHoverSymbol>;
+  /** 현재 열린 LSP 호버 플로팅 창 (K) */
+  lspHover?: LspHoverState | null;
+}
+
+export type LspDiagnosticSeverity = 'error' | 'warning' | 'info' | 'hint';
+
+export interface LspDiagnostic {
+  id: string;
+  line: number;
+  col: number;
+  endCol: number;
+  severity: LspDiagnosticSeverity;
+  code?: string;
+  source?: string;
+  message: string;
+  /** 줄 텍스트 기반 실시간 재평가 규칙 (수정 시 자동으로 진단 해제) */
+  rule?: {
+    matchPattern: string;
+    highlightGroup?: number;
+  };
+}
+
+export interface LspHoverSymbol {
+  symbol: string;
+  kind: string;
+  signature: string;
+  documentation: string;
+  source?: string;
+}
+
+export interface LspHoverState {
+  isOpen: boolean;
+  symbol: string;
+  kind: string;
+  signature: string;
+  documentation: string;
+  source?: string;
+  line: number;
+  col: number;
 }
 
 /** 순정 Vim 도움말 세션 (:help, K, F1) */

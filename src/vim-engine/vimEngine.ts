@@ -7,6 +7,7 @@ import { handleCommandLineWindowKey } from './cmdlineWindow';
 import { handleNetrwKey } from './netrwEngine';
 import { handleFuzzyFinderKey } from './fuzzyFinder';
 import { handleHelpKey } from './helpEngine';
+import { syncLiveLspDiagnostics } from './lspEngine';
 import { handleSpellSuggestKey } from './spellEngine';
 import { recordUndoTreeChange } from './undoTreeEngine';
 import { applyScrollbindDelta } from './splitWindow';
@@ -212,6 +213,18 @@ export function rawHandleKey(
   // Undo tree 동기화: NORMAL 모드이고 대기 키가 없을 때 버퍼 내용 변경 감지 및 확정
   if (nextState.mode === 'NORMAL' && !nextState.pendingKeys) {
     nextState = recordUndoTreeChange(nextState);
+  }
+
+  // 실시간 LSP 진단 재계산 및 커서 이동/모드 전환 시 열린 LSP 호버 자동 닫기
+  nextState = syncLiveLspDiagnostics(state, nextState);
+  if (
+    state.lspHover?.isOpen &&
+    nextState.lspHover?.isOpen &&
+    (nextState.cursor.line !== state.cursor.line ||
+      nextState.cursor.col !== state.cursor.col ||
+      nextState.mode !== 'NORMAL')
+  ) {
+    nextState = { ...nextState, lspHover: null };
   }
 
   return applyScrollbindDelta(prevTopRow, prevActivePaneIndex, prevSplitPanes, nextState);

@@ -104,7 +104,7 @@ flowchart TD
 
 ---
 
-## 🎯 튜토리얼 커리큘럼 (Lessons 1 ~ 91)
+## 🎯 튜토리얼 커리큘럼 (Lessons 1 ~ 92)
 
 ### 🟢 기초 이동 및 텍스트 편집 (레슨 1 ~ 10)
 1. **레슨 1**: 기본 방향 이동 (`h`, `j`, `k`, `l`)
@@ -206,6 +206,7 @@ flowchart TD
 89. **레슨 89**: 표현식 폴딩(`:set fdm=expr`, `:set fde=...`) & 커맨드라인 윈도우(`q:`, `:history`) 고급 활용 마스터하기
 90. **레슨 90**: 마커 폴딩(`:set fdm=marker`, `:set fmr=...`, `zj`/`zk`/`[z`/`]z`) & Insert 단발 노멀(`Ctrl-o`) 마스터하기
 91. **레슨 91**: WORD 객체(`iW`/`aW`), 섹션 점프(`[[`/`]]`/`[]`/`][`), 화면·빈 줄(`[<Space>`/`]<Space>`, `gI`, `gj`/`gk`, `Ctrl-g`) & Insert 들여쓰기(`Ctrl-t`/`Ctrl-d`/`Ctrl-y`/`Ctrl-e`) 마스터하기
+92. **레슨 92**: Neovim LSP 호버(`K`), 진단 탐색(`[d`, `]d`, `[D`, `]D`) & `:lopen` 버그 수정 마스터하기
 
 ---
 

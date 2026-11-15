@@ -1,4 +1,4 @@
-import { ClipboardRegister, StateSnapshot, VimEditorState, QuickfixItem, ChangeListItem, UndoTreeNode, FoldRange, RegisterEntry } from '../vim-engine';
+import { ClipboardRegister, StateSnapshot, VimEditorState, QuickfixItem, ChangeListItem, UndoTreeNode, FoldRange, RegisterEntry, LspDiagnostic, LspHoverSymbol } from '../vim-engine';
 
 export interface Mission {
   id: number;
@@ -48,5 +48,9 @@ export interface Mission {
   initialFolds?: FoldRange[];
   /** 초기 가상 파일 시스템 맵 (Netrw / 프로젝트 탐색 미션용) */
   initialVirtualFiles?: Record<string, string[]>;
+  /** Neovim 스타일 LSP 초기 진단 목록 ([d, ]d, :lopen 연계) */
+  initialLspDiagnostics?: LspDiagnostic[];
+  /** Neovim 스타일 LSP 호버 심볼 사전 (K) */
+  initialLspSymbols?: Record<string, LspHoverSymbol>;
   checkComplete: (state: VimEditorState) => boolean;
 }

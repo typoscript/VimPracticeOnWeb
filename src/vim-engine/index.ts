@@ -40,6 +40,15 @@ export {
 export { closeQuickfixWindow, jumpToQuickfixItem, cdo, cfdo, cexprQuickfix, grepToQuickfix, parseQuickfixErrorLines } from './quickfixEngine';
 export { closeLocationListWindow, jumpToLocationListItem, ldo, lfdo, lexprLocationList, grepToLocationList } from './locationListEngine';
 export {
+  sortDiagnostics,
+  diagnosticsToQuickfixItems,
+  jumpToDiagnostic,
+  syncDiagnosticsToLocationList,
+  syncLiveLspDiagnostics,
+  openLspHover,
+  closeLspHover,
+} from './lspEngine';
+export {
   DEFAULT_ERRORFORMAT,
   splitErrorformatEntries,
   compileErrorformatPattern,

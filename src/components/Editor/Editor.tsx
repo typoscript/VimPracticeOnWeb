@@ -12,6 +12,8 @@ import {
   SpellError,
   SyntaxToken,
   SupportedLanguage,
+  LspDiagnostic,
+  LspHoverState,
 } from '../../vim-engine';
 import {
   isPositionSelected,
@@ -77,6 +79,12 @@ export interface EditorProps {
   primaryFilename?: string;
   /** 명시적 파일타입 (:set ft=... / :set syntax=...) */
   filetype?: string;
+  /** Neovim 스타일 LSP 진단 목록 */
+  lspDiagnostics?: LspDiagnostic[];
+  /** Neovim 스타일 LSP 호버 플로팅 창 */
+  lspHover?: LspHoverState | null;
+  /** LSP 호버 창 닫기 콜백 */
+  onCloseLspHover?: () => void;
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -109,6 +117,9 @@ export const Editor: React.FC<EditorProps> = ({
   onSelectCompletionItem,
   primaryFilename,
   filetype,
+  lspDiagnostics,
+  lspHover,
+  onCloseLspHover,
 }) => {
   const explicitFt =
     options?.filetype ||
@@ -218,6 +229,10 @@ export const Editor: React.FC<EditorProps> = ({
             const jumpsOnLine = jumpList
               ? jumpList.filter((j) => j.row === lineIdx)
               : [];
+            const lineDiagnostics = lspDiagnostics
+              ? lspDiagnostics.filter((d) => d.line === lineIdx)
+              : [];
+            const primaryLineDiagnostic = lineDiagnostics[0] ?? null;
             const hasCurrentJumpPointer =
               jumpList &&
               jumpIndex !== undefined &&
@@ -275,6 +290,21 @@ export const Editor: React.FC<EditorProps> = ({
                       {hasCurrentJumpPointer ? '▶' : '•'}
                     </span>
                   )}
+                  {primaryLineDiagnostic && (
+                    <span
+                      className={`gutter-diag-sign diag-${primaryLineDiagnostic.severity}`}
+                      data-testid={`diag-sign-${lineIdx + 1}`}
+                      title={primaryLineDiagnostic.message}
+                    >
+                      {primaryLineDiagnostic.severity === 'error'
+                        ? 'E'
+                        : primaryLineDiagnostic.severity === 'warning'
+                        ? 'W'
+                        : primaryLineDiagnostic.severity === 'info'
+                        ? 'I'
+                        : 'H'}
+                    </span>
+                  )}
                   <span className="line-num-text">{lineNumberDisplay}</span>
                 </div>
                 <div className="line-content">
@@ -303,9 +333,46 @@ export const Editor: React.FC<EditorProps> = ({
                         spellErrors: options?.spell
                           ? findSpellErrorsInLine(lineText, lineIdx, { spellGoodWords, spellWrongWords } as any)
                           : undefined,
+                        lineDiagnostics,
                         syntaxLanguage: detectedLanguage,
                         isSyntaxEnabled,
                       })}
+                      {primaryLineDiagnostic && (
+                        <span
+                          className={`lsp-virtual-text diag-${primaryLineDiagnostic.severity}`}
+                          data-testid={`diag-virtual-${lineIdx + 1}`}
+                        >
+                          {'  ■ '}
+                          {primaryLineDiagnostic.code ? `[${primaryLineDiagnostic.code}] ` : ''}
+                          {primaryLineDiagnostic.message}
+                        </span>
+                      )}
+                      {lspHover?.isOpen && lspHover.line === lineIdx && (
+                        <div
+                          className={`lsp-hover-popup ${lines.length - 1 - lineIdx < 6 && lineIdx >= 4 ? 'open-upward' : ''}`}
+                          data-testid="lsp-hover-popup"
+                          style={{ left: `calc(${Math.min(cursor.col, 36)} * 1ch)` }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="lsp-hover-header">
+                            <span className="lsp-hover-kind">{lspHover.kind}</span>
+                            <span className="lsp-hover-symbol">{lspHover.symbol}</span>
+                            {lspHover.source && (
+                              <span className="lsp-hover-source">{lspHover.source}</span>
+                            )}
+                            <button
+                              type="button"
+                              className="lsp-hover-close"
+                              onClick={() => onCloseLspHover?.()}
+                              aria-label={t('호버 닫기')}
+                            >
+                              Esc
+                            </button>
+                          </div>
+                          <pre className="lsp-hover-signature">{lspHover.signature}</pre>
+                          <p className="lsp-hover-doc">{lspHover.documentation}</p>
+                        </div>
+                      )}
                       {isCursorLine &&
                         completionSession &&
                         completionSession.candidates.length > 0 && (
@@ -395,6 +462,7 @@ interface RenderLineOptions {
   insertRegisterPending?: boolean;
   confirmSubstitute?: ConfirmSubstituteSession | null;
   spellErrors?: SpellError[];
+  lineDiagnostics?: LspDiagnostic[];
   syntaxLanguage?: SupportedLanguage;
   isSyntaxEnabled?: boolean;
 }
@@ -435,6 +503,7 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     insertRegisterPending,
     confirmSubstitute,
     spellErrors,
+    lineDiagnostics,
     syntaxLanguage,
     isSyntaxEnabled,
   } = opts;
@@ -451,6 +520,7 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
 
   const hasSearchMatches = lineMatches.length > 0;
   const hasSpellErrors = (spellErrors?.length ?? 0) > 0;
+  const hasDiagnostics = (lineDiagnostics?.length ?? 0) > 0;
 
   if (
     text.length === 0 &&
@@ -458,18 +528,20 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     targetCol === null &&
     !isLineInVisualRange &&
     !hasSearchMatches &&
-    !hasSpellErrors
+    !hasSpellErrors &&
+    !hasDiagnostics
   ) {
     return <span className="empty-char">&nbsp;</span>;
   }
 
-  // 커서, 타겟, 비주얼 선택, 검색 매칭, 맞춤법 오류가 모두 없는 일반 줄
+  // 커서, 타겟, 비주얼 선택, 검색 매칭, 맞춤법/LSP 오류가 모두 없는 일반 줄
   if (
     cursorCol === null &&
     targetCol === null &&
     !isLineInVisualRange &&
     !hasSearchMatches &&
-    !hasSpellErrors
+    !hasSpellErrors &&
+    !hasDiagnostics
   ) {
     if (!isSyntaxEnabled || !syntaxLanguage || syntaxLanguage === 'text' || text.length === 0) {
       return text;
@@ -554,6 +626,11 @@ function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     const isSpell = spellErrors?.some((e) => i >= e.startCol && i < e.endCol);
     if (isSpell) {
       classNames += ' spell-error';
+    }
+
+    const diagAtChar = lineDiagnostics?.find((d) => i >= d.col && i < d.endCol);
+    if (diagAtChar) {
+      classNames += ` lsp-diag-${diagAtChar.severity}`;
     }
 
     if (isTarget) {

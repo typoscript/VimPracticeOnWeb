@@ -383,4 +383,9 @@ export const EN_MESSAGES: Record<string, string> = {
   "[이름 없음]": "[No Name]",
   "[수정됨] ": "[Modified] ",
   "\"{filename}\" [버퍼에 줄 없음]": "\"{filename}\" --No lines in buffer--",
+  "{label} {message} ({idx}/{total})": "{label} {message} ({idx}/{total})",
+  "진단(Diagnostic) 항목이 없습니다": "No diagnostics found",
+  "LSP: \"{word}\"에 대한 호버 정보가 없습니다": "LSP: No hover information for \"{word}\"",
+  "LSP: 커서 아래 심볼에 대한 호버 정보가 없습니다": "LSP: No hover information under cursor",
+  "[LSP] {symbol}: {signature}": "[LSP] {symbol}: {signature}",
 };

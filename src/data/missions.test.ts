@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { MISSIONS } from './missions';
 import { VimEditorState, SplitPaneState } from '../vim-engine';
-import { handleKey } from '../vim-engine';
+import { handleKey, diagnosticsToQuickfixItems } from '../vim-engine';
 import { computeDiffHunks } from '../vim-engine';
 
 describe('MISSIONS 10 ~ 12 validation', () => {
@@ -1792,8 +1792,44 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     expect(lesson91!.checkComplete(state)).toBe(true);
   });
 
-  it('모든 91개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(91);
+  it('레슨 92 (Neovim LSP 호버 K, 진단 [d/]d, :lopen 버그 수정) 설정 및 완료 조건이 정상 동작한다', () => {
+    const lesson92 = MISSIONS.find((m) => m.id === 92);
+    expect(lesson92).toBeDefined();
+    expect(lesson92?.initialLspDiagnostics?.length).toBe(2);
+    expect(lesson92?.initialLspSymbols?.parsePort).toBeDefined();
+
+    let state: VimEditorState = {
+      lines: [...lesson92!.initialLines],
+      cursor: { ...lesson92!.initialCursor },
+      mode: 'NORMAL',
+      primaryFilename: lesson92!.primaryFilename,
+      lspDiagnostics: lesson92!.initialLspDiagnostics!.map((d) => ({ ...d })),
+      lspSymbols: { ...lesson92!.initialLspSymbols! },
+      locationList: {
+        items: diagnosticsToQuickfixItems(
+          lesson92!.primaryFilename || 'service.ts',
+          lesson92!.initialLspDiagnostics!
+        ),
+        currentIndex: 0,
+        isOpen: false,
+      },
+    };
+
+    expect(lesson92!.checkComplete(state)).toBe(false);
+
+    // K 로 호버 팝업 열림 검증
+    state = handleKey(state, 'K');
+    expect(state.lspHover?.isOpen).toBe(true);
+    expect(state.lspHover?.symbol).toBe('parsePort');
+
+    for (const key of lesson92!.optimalKeys!.slice(1)) {
+      state = handleKey(state, key);
+    }
+    expect(lesson92!.checkComplete(state)).toBe(true);
+  });
+
+  it('모든 92개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(92);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();
@@ -1846,7 +1882,20 @@ describe('MISSIONS 10 ~ 12 validation', () => {
           : undefined,
         locationList: m.initialLocationListItems
           ? { items: [...m.initialLocationListItems], currentIndex: 0, isOpen: false }
+          : m.initialLspDiagnostics
+          ? {
+              items: diagnosticsToQuickfixItems(
+                m.primaryFilename || `lesson_${m.id}.ts`,
+                m.initialLspDiagnostics
+              ),
+              currentIndex: 0,
+              isOpen: false,
+            }
           : undefined,
+        lspDiagnostics: m.initialLspDiagnostics
+          ? m.initialLspDiagnostics.map((d) => ({ ...d }))
+          : undefined,
+        lspSymbols: m.initialLspSymbols ? { ...m.initialLspSymbols } : undefined,
         changeList: m.initialChangeList ? [...m.initialChangeList] : undefined,
         changeIndex: m.initialChangeList ? m.initialChangeList.length : undefined,
         argList: m.initialArgs

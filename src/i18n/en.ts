@@ -1308,4 +1308,5 @@ export const EN: Record<string, string> = {
   "플레이": "Play",
   "✅ 저장됨!": "✅ Saved!",
   "💾 라이브러리 저장": "💾 Save to Library",
+  "호버 닫기": "Close Hover",
 };

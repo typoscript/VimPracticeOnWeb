@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 139개 테스트 파일, 1,811개 테스트 100% 통과 필수)*
+  *(현재 140개 테스트 파일, 1,817개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 91)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 92)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -144,9 +144,9 @@
 - **마커 폴딩(`foldmarker`)·폴드 이동(`zj`/`zk`/`[z`/`]z`) & Insert 단발 `Ctrl-o` Ex/검색 완성 (레슨 90, `src/vim-engine/folding.ts`, `setEngine.ts`, `normalMode.ts`, `vimEngine.ts`)**: `:set fdm=marker` 및 `'foldmarker'`(`fmr`, 기본 `'{{{,}}}'`, `E474` 검증)로 기본/중첩/레벨 마커(`{{{`, `}}}`, `{{{N`, `}}}N`)를 감지(`detectMarkerFoldBlocks`)하고 `fdm=marker` 모드 `zf` 실행 시 `commentstring` 기반 주석 마커를 삽입·접기하며, `zj`/`zk`/`[z`/`]z` 폴드 탐색(`jumpToNextFold`, `jumpToPrevFold`, `jumpToFoldEdge`)을 지원합니다. 또한 Insert 모드 `Ctrl-o` 가 일반 모션뿐 아니라 `Ctrl-o :...<Enter>` / `Ctrl-o /...<Enter>` 실행 후에도 `finishInsertNormalSession` 으로 자동 `INSERT` 복귀하도록 완성했습니다.
 - **순정 Vim 누락 기능 일괄 보완 (`iW`/`aW`, `[[`/`]]`/`[]`/`][`, `gj`/`gk`/`g0`/`g$`/`gm`/`gM`/`gI`, `Ctrl-g`, `ZZ`/`ZQ`, Insert `Ctrl-t`/`Ctrl-d`/`Ctrl-y`/`Ctrl-e`, Neovim 0.11 `]`/`[` 탐색) (레슨 91, `textObjects.ts`, `extraMotions.ts`, `operatorMotion.ts`, `insertMode.ts`, `normalMode.ts`, `visualMode.ts`, `exWorkspaceCommands.ts`)**: WORD 텍스트 객체(`iW`/`aW`), 0열 `{`/`}` 섹션 이동(`[[`/`]]`/`[]`/`][`) 및 `d]]` 결합(Neovim 대조), 화면 줄 이동(`gj`/`gk`/`g0`/`g$`/`gm`/`gM`) 및 0열 삽입(`gI`), 단독 `Ctrl-g` 버퍼 상태 보고, `:wq`/`:q!` 기반 `ZZ`/`ZQ`, Insert `Ctrl-t`/`Ctrl-d` 들여쓰기 증감 및 팝업 미표시 시 `Ctrl-y`/`Ctrl-e` 인접 줄 문자 복사, Neovim 0.11 `]q`/`[q`/`]Q`/`[Q`·`]l`/`[l`·`]b`/`[b`·`]a`/`[a`·`]<Space>`/`[<Space>`(`.` 반복 지원)을 완성했습니다.
 - **커스텀 미션 라이브러리·URL/JSON 임포트 & 프리셋 (`src/utils/customMission.ts`, `CustomMissionModal.tsx`, `backupStorage.ts`)**: 4종 빠른 시작 프리셋(`CUSTOM_MISSION_PRESETS`), `?challenge=...` URL·Base64 토큰·JSON 문자열 통합 파서(`parseCustomMissionInput`) 및 JSON 내보내기 복사(`exportCustomMissionJson`), 로컬 라이브러리(`vim_custom_missions_v1`) 저장/수정/플레이/삭제 및 전체 JSON 백업(`mergeSavedCustomMissions` 중복 병합 포함)을 지원합니다.
+- **Neovim 스타일 LSP 호버·진단(Diagnostics) 튜토리얼 모드 (`K`, `[d`, `]d`, `[D`, `]D`, `:lopen`, `:diagnostics`) (레슨 92, `src/vim-engine/lspEngine.ts`, `Editor.tsx`, `missions.ts`)**: `lspSymbols` 활성 버퍼에서 `K` 로 타입 시그니처/문서 플로팅 호버 창(`lsp-hover-popup`)을 토글하고(`Esc`/`q`/커서 이동 시 자동 닫힘, 일반 버퍼는 기존 `:help` 폴백 유지), `]d`/`[d`/`]D`/`[D` 순환 진단 점프, 거터 `E`/`W`/`I` 사인, 물결 밑줄, EOL 가상 텍스트(`virtual_text`), `:lopen`/`:diagnostics` 연동 및 `rule.matchPattern` 기반 실시간 버그 수정 시 진단/로케이션 리스트 자동 해소를 지원합니다.
 
 ---
 
 ## 5. 다음 개발 로드맵 추천 후보
-에이전트에게 다음 작업을 지시할 때 아래 항목 중에서 지정하시면 됩니다:
-1. **Neovim 스타일 LSP 호버·진단(Diagnostics) 튜토리얼 모드 (`K`, `[d`, `]d`, `:lopen`)**: 실전 코드 진단 탐색 및 가상 호버 팝업 연습.
+현재 로드맵 항목이 모두 완료되었습니다. 새 기능 추가 시 이곳에 후보를 갱신합니다.

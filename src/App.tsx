@@ -41,6 +41,7 @@ import { closeQuickfixWindow, jumpToQuickfixItem } from './vim-engine';
 import { selectFuzzyFinderItem, closeFuzzyFinder } from './vim-engine';
 import { jumpHelpTag, popHelpTag, closeHelp } from './vim-engine';
 import { closeLocationListWindow, jumpToLocationListItem } from './vim-engine';
+import { diagnosticsToQuickfixItems, closeLspHover } from './vim-engine';
 import { computeDiffHunks } from './vim-engine';
 import { selectCompletionCandidate } from './vim-engine';
 import {
@@ -141,7 +142,7 @@ const TAB_LOADING_FALLBACK = (
 /** 스피드런 챌린지 후보 미션 ID 목록 (리팩토링/편집 미션) */
 export const SPEEDRUN_CANDIDATE_IDS = [
   4, 6, 7, 9, 10, 11, 12, 13, 14, 15, 17, 18, 19, 21, 23, 25, 26, 28, 29, 30, 31, 32, 43, 44,
-  47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91,
+  47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92,
 ];
 
 export function generateSpeedrunStages(): Mission[] {
@@ -416,6 +417,11 @@ export function App() {
     setIsEditorFocused(true);
   }, []);
 
+  const handleCloseLspHover = useCallback(() => {
+    setEditorState((prevState) => closeLspHover(prevState));
+    setIsEditorFocused(true);
+  }, []);
+
   const handleSelectFuzzyFinderAction = useCallback((action: 'open' | 'vsplit' | 'split' | 'tab') => {
     setEditorState((prevState) => selectFuzzyFinderItem(prevState, action));
     setIsEditorFocused(true);
@@ -532,7 +538,21 @@ export function App() {
         : undefined,
       locationList: m.initialLocationListItems
         ? { items: [...m.initialLocationListItems], currentIndex: 0, isOpen: false }
+        : m.initialLspDiagnostics
+        ? {
+            items: diagnosticsToQuickfixItems(
+              m.primaryFilename || `lesson_${m.id}.ts`,
+              m.initialLspDiagnostics
+            ),
+            currentIndex: 0,
+            isOpen: false,
+          }
         : undefined,
+      lspDiagnostics: m.initialLspDiagnostics
+        ? m.initialLspDiagnostics.map((d) => ({ ...d }))
+        : undefined,
+      lspSymbols: m.initialLspSymbols ? { ...m.initialLspSymbols } : undefined,
+      lspHover: null,
       changeList: m.initialChangeList ? [...m.initialChangeList] : undefined,
       changeIndex: m.initialChangeList ? m.initialChangeList.length : undefined,
       argList: m.initialArgs
@@ -2154,6 +2174,9 @@ export function App() {
                   bellSignal={bellCount}
                   onSelectCompletionItem={handleSelectCompletionCandidate}
                   primaryFilename={displayEditorState.primaryFilename || (currentTab === 'course' ? currentMission.primaryFilename : undefined)}
+                  lspDiagnostics={displayEditorState.lspDiagnostics}
+                  lspHover={displayEditorState.lspHover}
+                  onCloseLspHover={handleCloseLspHover}
                 />
               )}
 

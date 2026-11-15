@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { Editor } from './Editor';
 
@@ -231,5 +231,51 @@ describe('Editor Component', () => {
 
     const keywordSpan = container.querySelector('.syn-keyword');
     expect(keywordSpan).toBeNull();
+  });
+
+  it('renders Neovim-style LSP diagnostic signs, squiggly underlines, EOL virtual text, and floating hover popup', () => {
+    const onCloseHover = vi.fn();
+    const { container } = render(
+      <Editor
+        lines={['function parsePort() {}', 'const port: number = "8080";']}
+        cursor={{ line: 0, col: 9 }}
+        mode="NORMAL"
+        primaryFilename="service.ts"
+        lspDiagnostics={[
+          {
+            id: 'd1',
+            line: 1,
+            col: 21,
+            endCol: 27,
+            severity: 'error',
+            code: 'TS2322',
+            message: "Type 'string' is not assignable to type 'number'.",
+          },
+        ]}
+        lspHover={{
+          isOpen: true,
+          symbol: 'parsePort',
+          kind: 'function',
+          signature: 'function parsePort(): void',
+          documentation: 'Parses port configuration.',
+          source: 'service.ts',
+          line: 0,
+          col: 9,
+        }}
+        onCloseLspHover={onCloseHover}
+      />
+    );
+
+    expect(screen.getByTestId('diag-sign-2').textContent).toBe('E');
+    expect(screen.getByTestId('diag-virtual-2').textContent).toContain('TS2322');
+    expect(container.querySelector('.lsp-diag-error')).toBeInTheDocument();
+
+    const popup = screen.getByTestId('lsp-hover-popup');
+    expect(popup).toBeInTheDocument();
+    expect(popup.textContent).toContain('function parsePort(): void');
+    expect(popup.textContent).toContain('Parses port configuration.');
+
+    screen.getByLabelText('호버 닫기').click();
+    expect(onCloseHover).toHaveBeenCalled();
   });
 });
