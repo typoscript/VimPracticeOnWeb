@@ -13,7 +13,7 @@ export function resolveManualChunk(id: string): string | undefined {
   if (/node_modules\/(react|react-dom|scheduler)\//.test(normalized)) return 'react-vendor';
   if (/\/src\/vim-engine\/(spellData|helpData|messagesEn)\.ts$/.test(normalized)) return 'vim-engine-data';
   if (
-    /\/src\/vim-engine\/(config|types|messages|cursor|vimRegex|vimscriptEval|vimscriptEngine|operators|undoTreeEngine|expressionParser|digraphs|invariants|bracketMatch|wordMotion|vfs)\.ts$/.test(
+    /\/src\/vim-engine\/(config|types|messages|cursor|vimRegex|vimscriptValues|vimscriptBuiltins|vimscriptEval|vimscriptEngine|operators|undoTreeEngine|expressionParser|digraphs|invariants|bracketMatch|wordMotion|vfs)\.ts$/.test(
       normalized
     )
   ) {
@@ -23,7 +23,7 @@ export function resolveManualChunk(id: string): string | undefined {
   // 영어 사전은 영어 모드 진입 시에만 지연 로딩되는 별도 청크로 분리합니다
   if (/\/src\/i18n\/en(Content)?\.ts$/.test(normalized)) return 'i18n-en';
   // 레슨 커리큘럼 데이터는 앱 로직과 별도 캐시 청크로 분리합니다
-  if (/\/src\/data\/missions\.ts$/.test(normalized)) return 'curriculum';
+  if (/\/src\/data\/missions(?:\/.*)?\.ts$/.test(normalized)) return 'curriculum';
   return undefined;
 }
 

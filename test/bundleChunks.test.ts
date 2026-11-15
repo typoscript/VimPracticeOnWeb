@@ -11,6 +11,8 @@ const ENGINE_CORE_FILES = [
   'messages.ts',
   'cursor.ts',
   'vimRegex.ts',
+  'vimscriptValues.ts',
+  'vimscriptBuiltins.ts',
   'vimscriptEval.ts',
   'vimscriptEngine.ts',
   'operators.ts',
@@ -69,6 +71,7 @@ describe('Vite 번들 청크 분리 규칙 (resolveManualChunk)', () => {
     expect(resolveManualChunk('/repo/src/i18n/en.ts')).toBe('i18n-en');
     expect(resolveManualChunk('/repo/src/i18n/enContent.ts')).toBe('i18n-en');
     expect(resolveManualChunk('/repo/src/data/missions.ts')).toBe('curriculum');
+    expect(resolveManualChunk('/repo/src/data/missions/part1Basics.ts')).toBe('curriculum');
     expect(resolveManualChunk('/repo/src/App.tsx')).toBeUndefined();
   });
 });
