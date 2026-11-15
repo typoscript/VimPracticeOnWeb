@@ -2486,6 +2486,24 @@ export function App() {
             onAddCustomKeymap={handleAddCustomKeymap}
             onDeleteCustomKeymap={handleDeleteCustomKeymap}
             options={editorState.options}
+            onRestoreBackup={() => {
+              setProgress(loadProgress());
+              setActivePresets(loadActivePresets());
+              setLeaderKey(loadLeaderKey());
+              setCustomKeymaps(loadCustomKeymaps());
+              setHardcoreMode(loadHardcoreMode());
+              setRelativeLineNumbers(loadRelativeLineSetting());
+              setShowVirtualKeyboard(loadVirtualKeyboardSetting());
+              setShowDiffView(loadDiffViewSetting());
+              setShowRegisterInspector(loadRegisterInspectorSetting());
+              setShowMarksVisualizer(loadMarksVisualizerSetting());
+              setShowGrammarAST(loadGrammarASTSetting());
+              setShowActionTimeline(loadActionTimelineSetting());
+              setSpeedrunBestRecord(loadSpeedrunRecord());
+              const restoredTheme = loadThemeSetting();
+              setCurrentTheme(restoredTheme);
+              applyTheme(restoredTheme);
+            }}
           />
         )}
 

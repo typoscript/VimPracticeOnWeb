@@ -354,5 +354,44 @@ describe('ConfigExporterModal 컴포넌트', () => {
       const exporterSection = screen.getByTestId('exporter-viewer-section');
       expect(exporterSection.className).not.toContain('is-hidden');
     });
+
+    it('진도 백업/복원 탭에서 JSON 백업 복원을 실행하면 상태가 갱신되고 콜백을 호출한다', () => {
+      localStorage.clear();
+      const onRestoreBackup = vi.fn();
+      render(
+        <ConfigExporterModal
+          isOpen={true}
+          onClose={onClose}
+          relativenumber={true}
+          theme="tokyo-night"
+          leaderKey=" "
+          activePresets={{}}
+          onTogglePreset={onTogglePreset}
+          onChangeLeaderKey={onChangeLeaderKey}
+          customKeymaps={[]}
+          onRestoreBackup={onRestoreBackup}
+        />
+      );
+
+      fireEvent.click(screen.getByTestId('nav-backup-btn'));
+      expect(screen.getByTestId('backup-section').className).not.toContain('is-hidden');
+
+      const sampleBackup = JSON.stringify({
+        app: 'VimPracticeOnWeb',
+        version: 1,
+        entries: {
+          vim_practice_progress_v1: {
+            1: { completed: true, bestStars: 3, minKeystrokes: 8 },
+          },
+        },
+      });
+      fireEvent.change(screen.getByTestId('import-backup-textarea'), {
+        target: { value: sampleBackup },
+      });
+      fireEvent.click(screen.getByTestId('apply-backup-btn'));
+
+      expect(screen.getByTestId('backup-status-msg').textContent).toContain('완료 레슨 1개');
+      expect(onRestoreBackup).toHaveBeenCalledTimes(1);
+    });
   });
 });

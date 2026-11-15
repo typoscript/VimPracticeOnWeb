@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 137개 테스트 파일, 1,770개 테스트 100% 통과 필수)*
+  *(현재 138개 테스트 파일, 1,775개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -138,6 +138,7 @@
 - **검색 오프셋 · 역방향 `?` 검색 · 연산자 결합 (레슨 86, `src/vim-engine/search.ts`의 `parseSearchQuery`/`findSearchTarget`, `searchMode.ts`의 `executeSearchQuery`/`repeatSearch`)**: `/pat/e`, `/pat/e+1`, `/pat/b`·`s±N`, `/pat/±N`(줄 오프셋), 위쪽 검색 `?pat?{offset}`(구분자 `?`, `\?` 리터럴), 빈 패턴 `//e`·`??b`(직전 패턴 재사용, 없으면 E35), `d/c/y` + `/`·`?` 오프셋 결합(`e` 는 inclusive, 문자 오프셋은 exclusive, 줄 오프셋은 linewise, 연산 후 NORMAL 복귀, `.` 반복 키는 `?` 포함). `lastSearchDirection` 으로 `n`/`N` 이 `?` 방향을 따르고 `*`/`#` 은 오프셋을 초기화합니다. 오프셋이 있으면 도착 위치(줄 오프셋은 매치 시작)가 커서보다 엄격히 앞/뒤인 매치를 골라 `/pat/e` 후 `n` 이 같은 매치에 머물지 않습니다(실제 Neovim 으로 검증, `searchOffsetOperator.test.ts`). ⚠ 오프셋 없는 첫 `/pat` 은 기존 동작대로 커서 위치의 매치도 허용합니다.
 - **레지스터 Ex 명령 (레슨 87, `src/vim-engine/exBufferOps.ts`의 `executeRangeDelete`/`executeRangeYank`/`executeExPut`, `commandLine.ts`)**: `:[range]d [x] [count]`, `:[range]y [x] [count]`(대문자 누적, `_` 블랙홀, count 는 범위 마지막 줄부터), `:[line]pu[t][!] [x]`(`:0put`, `:$put`, `:put!`; 문자 단위 레지스터도 항상 줄 단위로 삽입, 빈 레지스터는 E353+bell, 한 번의 undo). 로드맵 '`:put!`, `:delete {reg}`' 부분을 구현했으며 `foldexpr`·커맨드라인 윈도우 강화는 남아 있습니다.
 - **멀티 윈도우 레이아웃 회전·일괄 제어 (`Ctrl-w H/J/K/L`, `Ctrl-w r/R/x`, `:wincmd`, `:windo`, `:set scrollbind`, `:syncbind`) (레슨 88, `src/vim-engine/splitWindow.ts`, `setEngine.ts`, `vimEngine.ts`, `exListAndToolCommands.ts`, `exRange.ts`)**: `:windo[!] {cmd}`로 모든 분할 창에 Ex 명령(파이프 `|` 포함) 일괄 실행 및 `!` 미지정 시 에러 중단 제어, 창 로컬 `'scrollbind'`(`scb`/`noscb`/`scb!`/`scb?`) 옵션 및 `applyScrollbindDelta` 기반 `Ctrl-e/y/d/u/f/b`·`G/gg`·`zt/zz/zb` 상대 오프셋 동기 스크롤, `:syncbind` 강제 정렬, `:wincmd H/J/K/L/r/R/x/T/=/_/|/+/-/>/<` 대소문자 구분 및 카운트 리사이즈 지원을 완성했습니다.
+- **학습 진행도·설정 JSON 전체 백업 및 복원 (`src/utils/backupStorage.ts`, `ConfigExporterModal.tsx`, `App.tsx`)**: 20개 `localStorage` 키(`BACKUP_KEYS`) 일괄 내보내기·가져오기, 병합(`merge`) / 덮어쓰기(`replace`) 복원 모드, 스키마 검증 및 `App.tsx` 실시간 상태·테마 재동기화를 지원합니다.
 
 ---
 

@@ -762,3 +762,100 @@
   background: #b4befe;
 }
 
+.backup-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1rem 1.25rem;
+  overflow-y: auto;
+}
+
+.backup-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.backup-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.backup-summary-badge {
+  font-size: 0.78rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(137, 180, 250, 0.15);
+  color: #89b4fa;
+  font-weight: 600;
+}
+
+.backup-desc {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-secondary, #bac2de);
+  line-height: 1.45;
+}
+
+.backup-actions-row {
+  display: flex;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.backup-mode-select {
+  display: flex;
+  gap: 0.85rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #bac2de);
+}
+
+.backup-mode-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+}
+
+.backup-file-input {
+  display: none;
+}
+
+.backup-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(17, 17, 27, 0.75);
+  color: var(--text-primary, #cdd6f4);
+  font-family: var(--font-mono, monospace);
+  font-size: 0.78rem;
+  padding: 0.6rem 0.75rem;
+  resize: vertical;
+}
+
+.backup-status-msg {
+  font-size: 0.82rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 6px;
+}
+
+.backup-status-msg.is-ok {
+  background: rgba(166, 227, 161, 0.14);
+  color: #a6e3a1;
+  border: 1px solid rgba(166, 227, 161, 0.35);
+}
+
+.backup-status-msg.is-err {
+  background: rgba(243, 139, 168, 0.14);
+  color: #f38ba8;
+  border: 1px solid rgba(243, 139, 168, 0.35);
+}
+
