@@ -12,7 +12,7 @@ import {
   reselectLastVisual,
   traverseChangeList,
 } from './advancedMotions';
-import { executeGCtrlG } from './visual';
+import { executeGCtrlG } from './visualUtilities';
 import { executeCommandLine } from './commandLine';
 import { msg } from './messages';
 import {

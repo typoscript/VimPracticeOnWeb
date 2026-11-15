@@ -2,12 +2,12 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Editor } from '../Editor/Editor';
 import { StatusBar } from '../StatusBar/StatusBar';
 import { Keycaster } from '../Keycaster/Keycaster';
-import { ArcadeBugMission } from '../../types/game';
 import { VimEditorState, VimMode } from '../../vim-engine';
 import { handleKey } from '../../vim-engine';
 import { saveArcadeRecord, loadUserAnalytics, recordKeyInputStats } from '../../utils/analyticsStorage';
 import './ArcadeSurvival.css';
-import { t, localized } from '../../i18n';
+import { t } from '../../i18n';
+import { ARCADE_MISSIONS } from './arcadeMissions';
 
 export interface ArcadeSurvivalProps {
   onPlayKeySound: (key: string, mode: VimMode) => void;
@@ -20,142 +20,6 @@ export interface ArcadePowerUps {
   bomb: number;
   shield: number;
 }
-
-const ARCADE_MISSIONS: ArcadeBugMission[] = localized([
-  {
-    id: 1,
-    title: 'Wave 1: 버그 블록 처치',
-    instruction: 'f🐛 -> df/ 또는 d% 로 주석 버그 블록을 제거하세요!',
-    initialLines: ['const status = "ready"; /*🐛BUG*/'],
-    targetLines: ['const status = "ready"; '],
-    initialCursor: { line: 0, col: 0 },
-    par: 5,
-    timeLimit: 15,
-    bugType: 'block',
-  },
-  {
-    id: 2,
-    title: 'Wave 2: 오타 기호 박멸',
-    instruction: 'f# 로 이동하여 x 로 오타 기호 #를 제거하세요!',
-    initialLines: ['let portNumber = #3000;'],
-    targetLines: ['let portNumber = 3000;'],
-    initialCursor: { line: 0, col: 0 },
-    par: 3,
-    timeLimit: 13,
-    bugType: 'typo',
-  },
-  {
-    id: 3,
-    title: 'Wave 3: 오염된 버그 줄 일괄 삭제',
-    instruction: 'j -> dd 로 오염된 중간 줄을 통째로 삭제하세요!',
-    initialLines: [
-      'function bootstrap() {',
-      '  // 🐛CORRUPTED LINE TO DELETE',
-      '  return true;',
-      '}',
-    ],
-    targetLines: [
-      'function bootstrap() {',
-      '  return true;',
-      '}',
-    ],
-    initialCursor: { line: 0, col: 0 },
-    par: 3,
-    timeLimit: 12,
-    bugType: 'line',
-  },
-  {
-    id: 4,
-    title: 'Wave 4: 텍스트 객체 따옴표 비우기',
-    instruction: 'ci" 로 따옴표 안 버그 문자열을 비우세요 (Escape로 완료)!',
-    initialLines: ['const token = "🐛CRASH_TOKEN";'],
-    targetLines: ['const token = "";'],
-    initialCursor: { line: 0, col: 16 },
-    par: 4,
-    timeLimit: 11,
-    bugType: 'quote',
-  },
-  {
-    id: 5,
-    title: 'Wave 5: [👑 MINI-BOSS] 거대 메모리 누수',
-    instruction: 'dd 로 침식 헤더를 삭제하고, di[ 로 누수 배열을 비우세요!',
-    initialLines: [
-      '// 👑 GIGANTIC_MEMORY_LEAK_DETECTED',
-      'const memoryPool = [🐛LEAK_A, 🐛LEAK_B];',
-    ],
-    targetLines: [
-      'const memoryPool = [];',
-    ],
-    initialCursor: { line: 0, col: 0 },
-    par: 5,
-    timeLimit: 14,
-    bugType: 'boss',
-    isBoss: true,
-    bossName: 'GIGANTIC_MEMORY_LEAK',
-  },
-  {
-    id: 6,
-    title: 'Wave 6: 괄호 안 버그 파괴',
-    instruction: 'di( 로 괄호 안의 버그 인자를 깔끔하게 지우세요!',
-    initialLines: ['executeHandler(🐛BAD_ARGUMENT);'],
-    targetLines: ['executeHandler();'],
-    initialCursor: { line: 0, col: 17 },
-    par: 3,
-    timeLimit: 10,
-    bugType: 'tag',
-  },
-  {
-    id: 7,
-    title: 'Wave 7: 줄 끝 버그 삭제 (D)',
-    instruction: 'f/ -> D 로 줄 끝에 붙은 버그 주석을 한 번에 날려버리세요!',
-    initialLines: ['const maxLimit = 100; // 🐛JUNK_COMMENT'],
-    targetLines: ['const maxLimit = 100; '],
-    initialCursor: { line: 0, col: 0 },
-    par: 3,
-    timeLimit: 9,
-    bugType: 'line',
-  },
-  {
-    id: 8,
-    title: 'Wave 8: 버그 단어 교체 (cw)',
-    instruction: 'ciw 로 🐛ERROR 단어를 SUCCESS 로 수정하세요!',
-    initialLines: ['const result = "🐛ERROR";'],
-    targetLines: ['const result = "SUCCESS";'],
-    initialCursor: { line: 0, col: 16 },
-    par: 11,
-    timeLimit: 9,
-    bugType: 'quote',
-  },
-  {
-    id: 9,
-    title: 'Wave 9: 태그 안 버그 정리 (cit)',
-    instruction: 'cit 로 태그 안의 버그 문자열을 비우세요 (Escape로 완료)!',
-    initialLines: ['const view = <div>🐛CORRUPT_TAG</div>;'],
-    targetLines: ['const view = <div></div>;'],
-    initialCursor: { line: 0, col: 19 },
-    par: 4,
-    timeLimit: 9,
-    bugType: 'tag',
-  },
-  {
-    id: 10,
-    title: 'Wave 10: [👾 MEGA-BOSS] 타이탄 커널 패닉',
-    instruction: 'dd 로 패닉 로그를 삭제하고, ci" 로 상태를 STABLE 로 변경하세요 (Escape)!',
-    initialLines: [
-      '// 👾 TITAN_KERNEL_PANIC_WAVE_10',
-      'let systemStatus = "🔥OVERHEAT_PANIC";',
-    ],
-    targetLines: [
-      'let systemStatus = "STABLE";',
-    ],
-    initialCursor: { line: 0, col: 0 },
-    par: 12,
-    timeLimit: 16,
-    bugType: 'boss',
-    isBoss: true,
-    bossName: 'TITAN_KERNEL_PANIC',
-  },
-]);
 
 export const ArcadeSurvival: React.FC<ArcadeSurvivalProps> = ({
   onPlayKeySound,

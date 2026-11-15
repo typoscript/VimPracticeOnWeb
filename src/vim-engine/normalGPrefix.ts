@@ -7,7 +7,7 @@ import { nextTab, prevTab } from './tabEngine';
 import { travelUndoTime } from './undoTreeEngine';
 import { tjumpTag } from './tagEngine';
 import { recordJump } from './marks';
-import { executeGCtrlG } from './visual';
+import { executeGCtrlG } from './visualUtilities';
 import {
   goToDeclaration,
   goToLastInsert,

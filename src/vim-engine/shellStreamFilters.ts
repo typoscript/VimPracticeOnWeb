@@ -1,5 +1,5 @@
 import { VimEditorState } from './types';
-import { utf8ByteLength } from './visual';
+import { utf8ByteLength } from './visualUtilities';
 import { msg } from './messages';
 import { readFilesOrStdin, unescapeControlSeq } from './shellBuiltins';
 

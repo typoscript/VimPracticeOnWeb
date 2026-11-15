@@ -8,8 +8,8 @@ import {
   yankVisualSelection,
   startVisualBlockInsert,
   swapVisualCursorAnchor,
-  replaceVisualChars,
 } from './visual';
+import { replaceVisualChars } from './visualUtilities';
 import { moveFind } from './findChar';
 import { findMatches, findNextMatch, findPrevMatch, getWordAtCursor } from './search';
 import { starSearchPattern } from './vimRegex';

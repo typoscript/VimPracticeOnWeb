@@ -13,6 +13,7 @@ const ENGINE_CORE_FILES = [
   'vimRegex.ts',
   'vimscriptValues.ts',
   'vimscriptBuiltins.ts',
+  'vimscriptLexer.ts',
   'vimscriptEval.ts',
   'vimscriptFunctions.ts',
   'vimscriptEngine.ts',

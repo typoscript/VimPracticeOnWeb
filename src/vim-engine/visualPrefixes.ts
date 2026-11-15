@@ -2,7 +2,8 @@ import { VimEditorState } from './types';
 import { getMaxCol } from './cursor';
 import { syncRegisters, putFromRegister } from './registers';
 import { nextTab, prevTab } from './tabEngine';
-import { deleteVisualSelection, executeGCtrlG } from './visual';
+import { deleteVisualSelection } from './visual';
+import { executeGCtrlG } from './visualUtilities';
 import { goToDeclaration, reselectLastVisual, traverseChangeList } from './advancedMotions';
 import {
   executeTextObjectOperator,
