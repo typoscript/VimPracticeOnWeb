@@ -473,4 +473,81 @@ describe('Named Registers & Black Hole Register ("a~"z, "0, "_)', () => {
       expect(state.lines).toEqual(['XX111', 'YY222']);
     });
   });
+
+  describe('Numbered Delete History ("1~"9), Small Delete ("-), and "1p + . redo-register', () => {
+    it('줄 단위 삭제(dd, :d) 시 "1 ~ "9 번호 레지스터가 차례로 시프트된다', () => {
+      let state: VimEditorState = {
+        lines: ['first', 'second', 'third', 'fourth'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      // 1) first 삭제 -> "1 = first
+      state = handleKey(state, 'd');
+      state = handleKey(state, 'd');
+      expect(state.registers?.['1']?.content).toBe('first');
+
+      // 2) second 삭제 -> "1 = second, "2 = first
+      state = handleKey(state, 'd');
+      state = handleKey(state, 'd');
+      expect(state.registers?.['1']?.content).toBe('second');
+      expect(state.registers?.['2']?.content).toBe('first');
+
+      // 3) :d 로 third 삭제 -> "1 = third, "2 = second, "3 = first
+      state = executeCommandLine(state, 'd');
+      expect(state.registers?.['1']?.content).toBe('third');
+      expect(state.registers?.['2']?.content).toBe('second');
+      expect(state.registers?.['3']?.content).toBe('first');
+    });
+
+    it('한 줄 미만 소규모 삭제(dw, x, D)는 "- 에 기록되고 "1~"9 는 시프트하지 않는다', () => {
+      let state: VimEditorState = {
+        lines: ['keepLine', 'hello world'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      // 먼저 첫 줄 dd -> "1 = keepLine
+      state = handleKey(state, 'd');
+      state = handleKey(state, 'd');
+      expect(state.registers?.['1']?.content).toBe('keepLine');
+
+      // hello world 에서 dw -> "- = 'hello ', "1 은 여전히 keepLine 유지!
+      state = handleKey(state, 'd');
+      state = handleKey(state, 'w');
+      expect(state.registers?.['-']).toEqual({ type: 'char', content: 'hello ' });
+      expect(state.registers?.['1']?.content).toBe('keepLine');
+      expect(state.registers?.['2']).toBeUndefined();
+
+      // "-P 로 방금 지운 작은 단어 복원
+      state = handleKey(state, '"');
+      state = handleKey(state, '-');
+      state = handleKey(state, 'P');
+      expect(state.lines[0]).toBe('hello world');
+    });
+
+    it('"1p 실행 후 . (또는 u.) 반복 시 "2 -> "3 순서로 삭제 이력을 순회 붙여넣는다', () => {
+      let state: VimEditorState = {
+        lines: ['lineA', 'lineB', 'lineC', 'base'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      // 3줄 연속 dd -> "1=lineC, "2=lineB, "3=lineA
+      for (let i = 0; i < 3; i++) {
+        state = handleKey(state, 'd');
+        state = handleKey(state, 'd');
+      }
+      expect(state.lines).toEqual(['base']);
+
+      // "1p -> lineC 붙여넣기, 이어서 . -> "2(lineB), 이어서 . -> "3(lineA)
+      state = handleKey(state, '"');
+      state = handleKey(state, '1');
+      state = handleKey(state, 'p');
+      state = handleKey(state, '.');
+      state = handleKey(state, '.');
+
+      expect(state.lines).toEqual(['base', 'lineC', 'lineB', 'lineA']);
+    });
+  });
 });

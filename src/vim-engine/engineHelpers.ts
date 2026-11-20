@@ -527,7 +527,7 @@ export function emptyRegisterBell(state: VimEditorState): VimEditorState {
   return { ...ringBell(state), activeRegister: undefined, commandMessage: msg('E353: 레지스터 {reg} 가 비어 있습니다', { reg }) };
 }
 
-/** p / P / ]p / [p / gp / gP 공통 실행기 (빈 레지스터 검사 + . 반복 기록 포함) */
+/** p / P / ]p / [p / gp / gP 공통 실행기 (빈 레지스터 검사 + . 반복 키 및 레지스터 접두사 기록 포함) */
 export function executePutVariant(
   state: VimEditorState,
   isBefore: boolean,
@@ -538,7 +538,9 @@ export function executePutVariant(
 ): VimEditorState {
   const res = putFromRegister(state, state.activeRegister, isBefore, count, options);
   if (isEmptyPut(state, res)) return emptyRegisterBell(state);
-  const keys = count > 1 ? [String(count), ...baseKeys] : baseKeys;
+  const regPrefix = state.activeRegister ? ['"', state.activeRegister] : [];
+  const countAndBase = count > 1 ? [String(count), ...baseKeys] : baseKeys;
+  const keys = [...regPrefix, ...countAndBase];
   return {
     ...res,
     lastChangeKeys: isReplayingDot ? state.lastChangeKeys : keys,

@@ -104,6 +104,29 @@ export function syncRegisters(
       content: clip.content,
       ...blockWidthProp,
     };
+  } else {
+    // 삭제/변경(d, c, x, s, D, C 등) 연산:
+    // 1) 줄 단위(line)이거나 개행(\n)을 포함하는 다중 줄 삭제는 "1 ~ "9 번호 레지스터를 시프트하여 "1 에 기록
+    const isMultiOrLineDelete = regType === 'line' || clip.content.includes('\n');
+    if (isMultiOrLineDelete) {
+      for (let i = 9; i >= 2; i--) {
+        const prevEntry = newRegisters[String(i - 1)];
+        if (prevEntry) {
+          newRegisters[String(i)] = prevEntry;
+        }
+      }
+      newRegisters['1'] = {
+        type: regType,
+        content: clip.content,
+        ...blockWidthProp,
+      };
+    } else if ((!reg || reg === '"') && clip.content.length > 0) {
+      // 2) 명명된 레지스터 지정이 없는 1줄 미만 소규모 삭제는 "- (small delete register)에 기록
+      newRegisters['-'] = {
+        type: 'char',
+        content: clip.content,
+      };
+    }
   }
 
   return {

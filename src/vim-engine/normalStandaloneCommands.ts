@@ -147,12 +147,19 @@ export function handleNormalMacroAndDot(
     return { ...curState, lastPlayedMacro: targetReg };
   }
 
-  // 2. 직전 변경 반복 ('.' Dot Repeat)
+  // 2. 직전 변경 반복 ('.' Dot Repeat — "1p ~ "8p 후 . 반복 시 번호 레지스터를 1씩 자동 증가)
   if (key === '.' && !state.pendingKeys) {
     if (!state.lastChangeKeys || state.lastChangeKeys.length === 0) {
       return state;
     }
     const replayKeys = [...state.lastChangeKeys];
+    if (
+      replayKeys.length >= 3 &&
+      replayKeys[0] === '"' &&
+      /^[1-8]$/.test(replayKeys[1])
+    ) {
+      replayKeys[1] = String(Number(replayKeys[1]) + 1);
+    }
     let curState: VimEditorState = { ...state, pendingKeys: undefined };
     for (const rk of replayKeys) {
       curState = runHandleKey(curState, rk, true);

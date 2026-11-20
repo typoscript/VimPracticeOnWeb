@@ -182,7 +182,7 @@ export function executeRangeDelete(
     commandMessage: msg('{v}개 줄이 삭제되었습니다.', { v: range.endLine - range.startLine + 1 }),
     lastChangeKeys: [':', commandStr, 'Enter'],
   };
-  return register ? syncRegisters({ ...state, activeRegister: register }, res, false) : res;
+  return syncRegisters({ ...state, activeRegister: register ?? undefined }, res, false);
 }
 
 /**
@@ -206,7 +206,7 @@ export function executeRangeYank(
     commandType: undefined,
     commandMessage: msg('{v}개 줄이 복사되었습니다.', { v: range.endLine - range.startLine + 1 }),
   };
-  return register ? syncRegisters({ ...state, activeRegister: register }, res, true) : res;
+  return syncRegisters({ ...state, activeRegister: register ?? undefined }, res, true);
 }
 
 /**
