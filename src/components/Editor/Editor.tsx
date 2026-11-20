@@ -337,7 +337,7 @@ export const Editor: React.FC<EditorProps> = ({
                         insertRegisterPending,
                         confirmSubstitute,
                         spellErrors: options?.spell
-                          ? findSpellErrorsInLine(lineText, lineIdx, { spellGoodWords, spellWrongWords } as any)
+                          ? findSpellErrorsInLine(lineText, lineIdx, { spellGoodWords, spellWrongWords })
                           : undefined,
                         lineDiagnostics,
                         syntaxLanguage: detectedLanguage,

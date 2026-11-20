@@ -1,7 +1,10 @@
+import { VimEditorState } from './types';
 import { msg } from './messages';
+import { evaluateVimScript, toVimString } from './vimscriptEval';
+
 /**
- * 순정 Vim 표현식 레지스터(=) 안전한 산술 계산기 파서
- * eval() 또는 Function()을 일체 사용하지 않고 안전한 재귀 하강(Recursive Descent) AST 파서로 수식을 계산합니다.
+ * 순정 Vim 표현식 레지스터(=) 안전한 산술 계산기 파서 + Vim script 폴백 평가기
+ * eval() 또는 Function()을 일체 사용하지 않고 재귀 하강(Recursive Descent) 파서와 vimscriptEval 로 수식을 계산합니다.
  */
 
 export interface EvalResult {
@@ -10,10 +13,9 @@ export interface EvalResult {
   error?: string;
 }
 
-type TokenType =
-  | 'NUMBER'
-  | 'STRING'
-  | 'IDENT'
+type ExprValue = number | string;
+
+type OperatorTokenType =
   | 'PLUS'
   | 'MINUS'
   | 'STAR_STAR'
@@ -24,14 +26,18 @@ type TokenType =
   | 'DOT'
   | 'LPAREN'
   | 'RPAREN'
-  | 'COMMA'
-  | 'EOF';
+  | 'COMMA';
 
-interface Token {
-  type: TokenType;
-  value: any;
-  pos: number;
-}
+type TokenType = 'NUMBER' | 'STRING' | 'IDENT' | OperatorTokenType | 'EOF';
+
+type Token =
+  | { type: 'NUMBER'; value: number; pos: number }
+  | { type: 'STRING'; value: string; pos: number }
+  | { type: 'IDENT'; value: string; pos: number }
+  | { type: OperatorTokenType; value: string; pos: number }
+  | { type: 'EOF'; value: null; pos: number };
+
+class ArithmeticRuntimeError extends Error {}
 
 class Lexer {
   private pos = 0;
@@ -53,7 +59,6 @@ class Lexer {
       if (ch === '0' && this.pos + 1 < this.input.length) {
         const next = this.input[this.pos + 1].toLowerCase();
         if (next === 'x') {
-          // Hexadecimal: 0xff
           this.pos += 2;
           const hexStart = this.pos;
           while (this.pos < this.input.length && /[0-9a-fA-F]/.test(this.input[this.pos])) {
@@ -64,11 +69,14 @@ class Lexer {
             throw new Error(msg('올바르지 않은 16진수 표기입니다 at pos {startPos}', { startPos }));
           }
           return { type: 'NUMBER', value: parseInt(hexStr, 16), pos: startPos };
-        } else if (next === 'b') {
-          // Binary: 0b1010
+        }
+        if (next === 'b') {
           this.pos += 2;
           const binStart = this.pos;
-          while (this.pos < this.input.length && (this.input[this.pos] === '0' || this.input[this.pos] === '1')) {
+          while (
+            this.pos < this.input.length &&
+            (this.input[this.pos] === '0' || this.input[this.pos] === '1')
+          ) {
             this.pos++;
           }
           const binStr = this.input.slice(binStart, this.pos);
@@ -76,8 +84,8 @@ class Lexer {
             throw new Error(msg('올바르지 않은 2진수 표기입니다 at pos {startPos}', { startPos }));
           }
           return { type: 'NUMBER', value: parseInt(binStr, 2), pos: startPos };
-        } else if (next === 'o') {
-          // Octal: 0o77
+        }
+        if (next === 'o') {
           this.pos += 2;
           const octStart = this.pos;
           while (this.pos < this.input.length && /[0-7]/.test(this.input[this.pos])) {
@@ -91,12 +99,15 @@ class Lexer {
         }
       }
 
-      // 일반 10진수 숫자 (정수 또는 부동소수점)
       while (this.pos < this.input.length && /[0-9]/.test(this.input[this.pos])) {
         this.pos++;
       }
-      if (this.pos < this.input.length && this.input[this.pos] === '.' && /[0-9]/.test(this.input[this.pos + 1] ?? '')) {
-        this.pos++; // skip '.'
+      if (
+        this.pos < this.input.length &&
+        this.input[this.pos] === '.' &&
+        /[0-9]/.test(this.input[this.pos + 1] ?? '')
+      ) {
+        this.pos++;
         while (this.pos < this.input.length && /[0-9]/.test(this.input[this.pos])) {
           this.pos++;
         }
@@ -108,7 +119,7 @@ class Lexer {
     // 문자열 리터럴 ("..." 또는 '...')
     if (ch === '"' || ch === "'") {
       const quote = ch;
-      this.pos++; // skip opening quote
+      this.pos++;
       let str = '';
       while (this.pos < this.input.length && this.input[this.pos] !== quote) {
         if (this.input[this.pos] === '\\' && this.pos + 1 < this.input.length) {
@@ -126,7 +137,7 @@ class Lexer {
       if (this.pos >= this.input.length) {
         throw new Error(msg('문자열 따옴표가 닫히지 않았습니다 at pos {startPos}', { startPos }));
       }
-      this.pos++; // skip closing quote
+      this.pos++;
       return { type: 'STRING', value: str, pos: startPos };
     }
 
@@ -149,41 +160,21 @@ class Lexer {
       return { type: 'STAR', value: '*', pos: startPos };
     }
 
-    if (ch === '+') {
+    const singleCharOps: Record<string, OperatorTokenType> = {
+      '+': 'PLUS',
+      '-': 'MINUS',
+      '/': 'SLASH',
+      '%': 'PERCENT',
+      '^': 'CARET',
+      '.': 'DOT',
+      '(': 'LPAREN',
+      ')': 'RPAREN',
+      ',': 'COMMA',
+    };
+    const opType = singleCharOps[ch];
+    if (opType) {
       this.pos++;
-      return { type: 'PLUS', value: '+', pos: startPos };
-    }
-    if (ch === '-') {
-      this.pos++;
-      return { type: 'MINUS', value: '-', pos: startPos };
-    }
-    if (ch === '/') {
-      this.pos++;
-      return { type: 'SLASH', value: '/', pos: startPos };
-    }
-    if (ch === '%') {
-      this.pos++;
-      return { type: 'PERCENT', value: '%', pos: startPos };
-    }
-    if (ch === '^') {
-      this.pos++;
-      return { type: 'CARET', value: '^', pos: startPos };
-    }
-    if (ch === '.') {
-      this.pos++;
-      return { type: 'DOT', value: '.', pos: startPos };
-    }
-    if (ch === '(') {
-      this.pos++;
-      return { type: 'LPAREN', value: '(', pos: startPos };
-    }
-    if (ch === ')') {
-      this.pos++;
-      return { type: 'RPAREN', value: ')', pos: startPos };
-    }
-    if (ch === ',') {
-      this.pos++;
-      return { type: 'COMMA', value: ',', pos: startPos };
+      return { type: opType, value: ch, pos: startPos };
     }
 
     throw new Error(msg('알 수 없는 기호입니다: \'{ch}\' at pos {startPos}', { ch, startPos }));
@@ -205,23 +196,30 @@ class Parser {
 
   private eat(type: TokenType): Token {
     if (this.current.type !== type) {
-      throw new Error(msg('기대하지 않은 토큰입니다: {type} (기대값: {type2})', { type: this.current.type, type2: type }));
+      throw new Error(
+        msg('기대하지 않은 토큰입니다: {type} (기대값: {type2})', {
+          type: this.current.type,
+          type2: type,
+        })
+      );
     }
     const token = this.current;
     this.current = this.lexer.nextToken();
     return token;
   }
 
-  public parse(): any {
+  public parse(): ExprValue {
     const result = this.parseExpression();
     if (this.current.type !== 'EOF') {
-      throw new Error(msg('수식 끝에 불필요한 문자가 남아있습니다 at pos {pos}', { pos: this.current.pos }));
+      throw new Error(
+        msg('수식 끝에 불필요한 문자가 남아있습니다 at pos {pos}', { pos: this.current.pos })
+      );
     }
     return result;
   }
 
   // 1. 표현식 (+, -, .)
-  private parseExpression(): any {
+  private parseExpression(): ExprValue {
     let node = this.parseMultiplicative();
 
     while (
@@ -241,7 +239,7 @@ class Parser {
         }
       } else if (op === 'MINUS') {
         node = Number(node) - Number(right);
-      } else if (op === 'DOT') {
+      } else {
         // Vim 문자열 연결 연산자 (.)
         node = String(node) + String(right);
       }
@@ -251,7 +249,7 @@ class Parser {
   }
 
   // 2. 곱셈, 나눗셈, 나머지 (*, /, %)
-  private parseMultiplicative(): any {
+  private parseMultiplicative(): ExprValue {
     let node = this.parsePower();
 
     while (
@@ -267,12 +265,12 @@ class Parser {
         node = Number(node) * Number(right);
       } else if (op === 'SLASH') {
         if (Number(right) === 0) {
-          throw new Error(msg('0으로 나눌 수 없습니다.'));
+          throw new ArithmeticRuntimeError(msg('0으로 나눌 수 없습니다.'));
         }
         node = Number(node) / Number(right);
-      } else if (op === 'PERCENT') {
+      } else {
         if (Number(right) === 0) {
-          throw new Error(msg('0으로 나눈 나머지를 구할 수 없습니다.'));
+          throw new ArithmeticRuntimeError(msg('0으로 나눈 나머지를 구할 수 없습니다.'));
         }
         node = Number(node) % Number(right);
       }
@@ -282,7 +280,7 @@ class Parser {
   }
 
   // 3. 거듭제곱 (** 또는 ^, 우측 결합)
-  private parsePower(): any {
+  private parsePower(): ExprValue {
     let node = this.parseUnary();
 
     if (this.current.type === 'STAR_STAR' || this.current.type === 'CARET') {
@@ -295,7 +293,7 @@ class Parser {
   }
 
   // 4. 단항 연산 (+, -)
-  private parseUnary(): any {
+  private parseUnary(): ExprValue {
     if (this.current.type === 'PLUS') {
       this.eat('PLUS');
       return +Number(this.parseUnary());
@@ -308,7 +306,7 @@ class Parser {
   }
 
   // 5. 기본 리터럴, 괄호, 함수 호출
-  private parsePrimary(): any {
+  private parsePrimary(): ExprValue {
     const token = this.current;
 
     if (token.type === 'NUMBER') {
@@ -334,7 +332,7 @@ class Parser {
 
       if (this.current.type === 'LPAREN') {
         this.eat('LPAREN');
-        const args: any[] = [];
+        const args: ExprValue[] = [];
         if ((this.current.type as TokenType) !== 'RPAREN') {
           args.push(this.parseExpression());
           while ((this.current.type as TokenType) === 'COMMA') {
@@ -352,7 +350,7 @@ class Parser {
     throw new Error(msg('올바르지 않은 수식 구문입니다 at pos {pos}', { pos: token.pos }));
   }
 
-  private callFunction(name: string, args: any[]): any {
+  private callFunction(name: string, args: ExprValue[]): ExprValue {
     switch (name) {
       case 'len':
       case 'strlen': {
@@ -381,10 +379,19 @@ class Parser {
   }
 }
 
+function formatEvalValue(val: ExprValue): string {
+  if (typeof val === 'number') {
+    return Number.isInteger(val) ? val.toString() : parseFloat(val.toFixed(10)).toString();
+  }
+  return val;
+}
+
 /**
  * Vim 표현식 문자열을 파싱하고 안전하게 평가하여 결과를 문자열로 반환합니다.
+ * state 가 전달되면 산술 계산기 문법 밖의 Vim script 표현식(g:var, @r, &opt, line('.'), toupper() 등)도
+ * vimscriptEval 로 폴백 평가합니다.
  */
-export function evaluateVimExpression(exprStr: string): EvalResult {
+export function evaluateVimExpression(exprStr: string, state?: VimEditorState): EvalResult {
   const trimmed = exprStr.trim();
   if (trimmed.length === 0) {
     return { success: false, result: '', error: msg('수식이 비어 있습니다.') };
@@ -394,21 +401,24 @@ export function evaluateVimExpression(exprStr: string): EvalResult {
     const lexer = new Lexer(trimmed);
     const parser = new Parser(lexer);
     const val = parser.parse();
-
-    let formatted: string;
-    if (typeof val === 'number') {
-      if (Number.isInteger(val)) {
-        formatted = val.toString();
-      } else {
-        // 소수점 유효 자리 정리
-        formatted = parseFloat(val.toFixed(10)).toString();
+    return { success: true, result: formatEvalValue(val) };
+  } catch (err: unknown) {
+    if (state && !(err instanceof ArithmeticRuntimeError)) {
+      try {
+        const scriptVal = evaluateVimScript(trimmed, {
+          state,
+          callUserFunction: (_ctx, name) => {
+            throw new Error(msg('지원하지 않는 내장 함수입니다: {name}', { name }));
+          },
+        });
+        const result =
+          typeof scriptVal === 'number' ? formatEvalValue(scriptVal) : toVimString(scriptVal);
+        return { success: true, result };
+      } catch {
+        // Vim script 폴백도 실패하면 원래 파서 오류를 반환
       }
-    } else {
-      formatted = String(val);
     }
-
-    return { success: true, result: formatted };
-  } catch (err: any) {
-    return { success: false, result: '', error: err.message || msg('수식 파싱 오류') };
+    const errorMsg = err instanceof Error && err.message ? err.message : msg('수식 파싱 오류');
+    return { success: false, result: '', error: errorMsg };
   }
 }

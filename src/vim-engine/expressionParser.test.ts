@@ -58,4 +58,23 @@ describe('Safe Vim Expression Parser (Ctrl+r =)', () => {
     expect(unknownFunc.success).toBe(false);
     expect(unknownFunc.error).toContain('지원하지 않는 내장 함수');
   });
+
+  it('state 가 전달되면 Vim script 변수·레지스터·옵션·내장 함수 표현식도 폴백 평가한다', () => {
+    const state = {
+      lines: ['alpha', 'beta'],
+      cursor: { line: 1, col: 0 },
+      mode: 'NORMAL' as const,
+      globalVars: { count: 7 },
+      registers: { a: { type: 'char' as const, content: 'vim' } },
+      options: { tabstop: 4 } as never,
+    };
+
+    expect(evaluateVimExpression('g:count * 6', state)).toEqual({ success: true, result: '42' });
+    expect(evaluateVimExpression('toupper(@a)', state)).toEqual({ success: true, result: 'VIM' });
+    expect(evaluateVimExpression('&tabstop', state)).toEqual({ success: true, result: '4' });
+    expect(evaluateVimExpression("line('.')", state)).toEqual({ success: true, result: '2' });
+    expect(evaluateVimExpression('getline(1)', state)).toEqual({ success: true, result: 'alpha' });
+    // 0으로 나누기 같은 산술 런타임 에러는 폴백하지 않고 에러를 유지한다
+    expect(evaluateVimExpression('10 / 0', state).success).toBe(false);
+  });
 });

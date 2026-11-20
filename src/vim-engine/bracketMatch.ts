@@ -1,8 +1,7 @@
 import { CursorPosition } from './types';
 
-const OPEN_BRACKETS = ['(', '[', '{'] as const;
-const CLOSE_BRACKETS = [')', ']', '}'] as const;
-const ALL_BRACKETS = [...OPEN_BRACKETS, ...CLOSE_BRACKETS];
+const OPEN_BRACKETS: ReadonlySet<string> = new Set(['(', '[', '{']);
+const ALL_BRACKETS: ReadonlySet<string> = new Set(['(', '[', '{', ')', ']', '}']);
 
 const MATCH_MAP: Record<string, string> = {
   '(': ')',
@@ -30,10 +29,10 @@ export function findMatchingBracket(
   let targetBracket = currentLine[bracketCol];
 
   // 커서 위치가 괄호가 아니라면, 현재 줄에서 커서 이후의 첫 괄호를 탐색
-  if (!targetBracket || !ALL_BRACKETS.includes(targetBracket as any)) {
+  if (!targetBracket || !ALL_BRACKETS.has(targetBracket)) {
     let found = false;
     for (let c = cursor.col; c < currentLine.length; c++) {
-      if (ALL_BRACKETS.includes(currentLine[c] as any)) {
+      if (ALL_BRACKETS.has(currentLine[c])) {
         bracketCol = c;
         targetBracket = currentLine[c];
         found = true;
@@ -45,7 +44,7 @@ export function findMatchingBracket(
     }
   }
 
-  const isOpening = OPEN_BRACKETS.includes(targetBracket as any);
+  const isOpening = OPEN_BRACKETS.has(targetBracket);
   const partnerBracket = MATCH_MAP[targetBracket];
 
   if (isOpening) {

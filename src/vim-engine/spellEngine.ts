@@ -3,13 +3,15 @@ import { DEFAULT_SPELL_WORDS } from './spellData';
 import { msg } from './messages';
 import { pushUndoSnapshot } from './operators';
 
+export type SpellWordContext = Pick<VimEditorState, 'spellGoodWords' | 'spellWrongWords'>;
+
 /**
  * 단어가 오탈자인지 판정합니다.
  * - 1글자 단어나 숫자가 섞인 단어는 스펠 검사 대상에서 제외합니다.
  * - spellWrongWords에 등록된 단어는 항상 오탈자로 판정합니다.
  * - spellGoodWords 또는 DEFAULT_SPELL_WORDS에 등록된 단어는 정상으로 판정합니다.
  */
-export function isWordMisspelled(word: string, state?: VimEditorState): boolean {
+export function isWordMisspelled(word: string, state?: SpellWordContext): boolean {
   if (!word || word.length < 2) return false;
   // 알파벳으로만 구성된 단어만 검사
   if (!/^[a-zA-Z]+$/.test(word)) return false;
@@ -35,7 +37,7 @@ export function isWordMisspelled(word: string, state?: VimEditorState): boolean 
 export function findSpellErrorsInLine(
   line: string,
   lineIndex: number,
-  state?: VimEditorState
+  state?: SpellWordContext
 ): SpellError[] {
   const errors: SpellError[] = [];
   const regex = /\b[a-zA-Z]+\b/g;

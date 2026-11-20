@@ -87,7 +87,7 @@ export function handleCommandLineModeKey(
     if (commonEdit) return commonEdit;
 
     if (key === 'Enter') {
-      const evalRes = evaluateVimExpression(state.commandBuffer ?? '');
+      const evalRes = evaluateVimExpression(state.commandBuffer ?? '', state);
       const returnCtx = state.expressionReturnContext;
       const returnMode = returnCtx?.mode ?? 'INSERT';
 
