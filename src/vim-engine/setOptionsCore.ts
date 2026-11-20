@@ -402,12 +402,19 @@ export function readOptionForScript(state: VimEditorState, raw: string): number 
   if (!parsed) return null;
   const { scope, key } = parsed;
   const curId = state.currentBufferId ?? 1;
+  const isSplit = Boolean(state.splitPanes && state.splitDirection && state.splitDirection !== 'none');
+  const paneScb =
+    key === 'scrollbind' && scope !== 'g' && isSplit
+      ? state.splitPanes?.[state.activePaneIndex ?? 0]?.scrollbind
+      : undefined;
   const rawVal =
-    scope === 'l'
-      ? state.bufferLocalOptions?.[curId]?.[key] ?? state.options?.[key] ?? DEFAULT_VIM_OPTIONS[key]
-      : scope === 'g'
-        ? state.globalOptions?.[key] ?? state.options?.[key] ?? DEFAULT_VIM_OPTIONS[key]
-        : state.options?.[key] ?? state.globalOptions?.[key] ?? DEFAULT_VIM_OPTIONS[key];
+    paneScb !== undefined
+      ? paneScb
+      : scope === 'l'
+        ? state.bufferLocalOptions?.[curId]?.[key] ?? state.options?.[key] ?? DEFAULT_VIM_OPTIONS[key]
+        : scope === 'g'
+          ? state.globalOptions?.[key] ?? state.options?.[key] ?? DEFAULT_VIM_OPTIONS[key]
+          : state.options?.[key] ?? state.globalOptions?.[key] ?? DEFAULT_VIM_OPTIONS[key];
 
   if (BOOLEAN_OPTION_KEYS.has(key)) {
     return rawVal ? 1 : 0;
@@ -436,6 +443,15 @@ export function writeOptionForScript(
   const baseGlobal = { ...DEFAULT_VIM_OPTIONS, ...(state.globalOptions ?? state.options ?? {}) };
   const baseEffective = { ...DEFAULT_VIM_OPTIONS, ...(state.options ?? {}) };
   const curId = state.currentBufferId ?? 1;
+  const isSplit = Boolean(state.splitPanes && state.splitDirection && state.splitDirection !== 'none');
+  const activePaneIdx = state.activePaneIndex ?? 0;
+
+  const nextSplitPanes =
+    key === 'scrollbind' && scope !== 'g' && isSplit && state.splitPanes
+      ? state.splitPanes.map((pane, idx) =>
+          idx === activePaneIdx ? { ...pane, scrollbind: Boolean(nextVal) } : pane
+        )
+      : state.splitPanes;
 
   if (scope === 'g') {
     const nextGlobal = { ...baseGlobal, [key]: nextVal };
@@ -443,9 +459,23 @@ export function writeOptionForScript(
   }
   if (scope === 'l') {
     const prevLocal = state.bufferLocalOptions?.[curId] ?? {};
+    const nextLocal = { ...prevLocal, [key]: nextVal };
+    const nextBuffers = state.buffers
+      ? state.buffers.map((b) =>
+          b.id === curId
+            ? {
+                ...b,
+                localOptions: nextLocal,
+                ...(key === 'filetype' ? { filetype: String(nextVal) } : {}),
+              }
+            : b
+        )
+      : undefined;
     return {
       ...state,
-      bufferLocalOptions: { ...(state.bufferLocalOptions ?? {}), [curId]: { ...prevLocal, [key]: nextVal } },
+      bufferLocalOptions: { ...(state.bufferLocalOptions ?? {}), [curId]: nextLocal },
+      buffers: nextBuffers,
+      splitPanes: nextSplitPanes,
       options: { ...baseEffective, [key]: nextVal },
     };
   }
@@ -453,6 +483,7 @@ export function writeOptionForScript(
   return {
     ...state,
     globalOptions: { ...baseGlobal, [key]: nextVal },
+    splitPanes: nextSplitPanes,
     options: { ...baseEffective, [key]: nextVal },
   };
 }

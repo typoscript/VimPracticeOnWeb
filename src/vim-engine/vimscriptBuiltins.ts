@@ -1,4 +1,5 @@
 import { VimEditorState, VimScriptDict, VimScriptFuncref, VimScriptValue } from './types';
+import { clampCursor } from './cursor';
 import { msg } from './messages';
 import {
   VimScriptError,
@@ -302,6 +303,90 @@ const BUFFER_AND_CURSOR_BUILTINS: Record<string, Builtin> = {
       const lines = [...ctx.state.lines.slice(0, n), ...newLines, ...ctx.state.lines.slice(n)];
       ctx.state = { ...ctx.state, lines };
       return 0;
+    },
+  },
+  cursor: {
+    min: 1,
+    max: 3,
+    fn: (ctx, args) => {
+      let lnum: number;
+      let colNum: number;
+      if (isList(args[0])) {
+        if (args[0].length < 2) return -1;
+        lnum = Math.trunc(toNumber(args[0][0]));
+        colNum = Math.trunc(toNumber(args[0][1]));
+      } else {
+        if (args.length < 2) return -1;
+        lnum = Math.trunc(toNumber(args[0]));
+        colNum = Math.trunc(toNumber(args[1]));
+      }
+      const nextRow = lnum > 0 ? lnum - 1 : ctx.state.cursor.line;
+      const nextCol = colNum > 0 ? colNum - 1 : ctx.state.cursor.col;
+      const clamped = clampCursor(ctx.state.lines, { line: nextRow, col: nextCol }, ctx.state.mode);
+      ctx.state = { ...ctx.state, cursor: clamped };
+      return 0;
+    },
+  },
+  getpos: {
+    min: 1,
+    max: 1,
+    fn: (ctx, [expr]) => {
+      const s = ctx.state;
+      const key = toVimString(expr);
+      if (key === '.') return [0, s.cursor.line + 1, s.cursor.col + 1, 0];
+      if (key === '$') return [0, s.lines.length, 1, 0];
+      if (key === "'<" || key === "'>") {
+        const sel = s.lastVisualSelection;
+        if (!sel) return [0, 0, 0, 0];
+        const a = sel.anchor;
+        const b = sel.cursor;
+        const first = a.line < b.line || (a.line === b.line && a.col <= b.col) ? a : b;
+        const last = first === a ? b : a;
+        const p = key === "'<" ? first : last;
+        return [0, p.line + 1, p.col + 1, 0];
+      }
+      if (key.startsWith("'") && key.length === 2) {
+        const mark = s.marks?.[key[1]];
+        if (!mark) return [0, 0, 0, 0];
+        return [mark.bufferId ?? 0, mark.row + 1, mark.col + 1, 0];
+      }
+      return [0, 0, 0, 0];
+    },
+  },
+  setpos: {
+    min: 2,
+    max: 2,
+    fn: (ctx, [expr, posVal]) => {
+      if (!isList(posVal) || posVal.length < 3) return -1;
+      const key = toVimString(expr);
+      const lnum = Math.max(1, Math.trunc(toNumber(posVal[1])));
+      const colNum = Math.max(1, Math.trunc(toNumber(posVal[2])));
+      const clamped = clampCursor(
+        ctx.state.lines,
+        { line: lnum - 1, col: colNum - 1 },
+        ctx.state.mode
+      );
+      if (key === '.') {
+        ctx.state = { ...ctx.state, cursor: clamped };
+        return 0;
+      }
+      if (key.startsWith("'") && key.length === 2 && /^[a-zA-Z]$/.test(key[1])) {
+        const markChar = key[1];
+        const bufId = Math.trunc(toNumber(posVal[0])) || ctx.state.currentBufferId;
+        ctx.state = {
+          ...ctx.state,
+          marks: {
+            ...(ctx.state.marks ?? {}),
+            [markChar]: {
+              row: clamped.line,
+              col: clamped.col,
+              ...(bufId ? { bufferId: bufId } : {}),
+            },
+          },
+        };
+        return 0;
+      }
+      return -1;
     },
   },
   submatch: {
@@ -780,6 +865,76 @@ export function createBuiltinRegistry(
             )
           : asList(container, 'filter').filter((v, i) => isTruthy(evalWithItem(ctx, expr, v, i)));
         return { value: updated, updated };
+      },
+    },
+    uniq: {
+      min: 1,
+      max: 2,
+      mutates: true,
+      fn: (ctx, [l, how]) => {
+        const list = asList(l, 'uniq');
+        const cmp = how !== undefined ? compareForSort(ctx, how) : null;
+        const updated: VimScriptValue[] = [];
+        for (const item of list) {
+          if (updated.length === 0) {
+            updated.push(item);
+            continue;
+          }
+          const prev = updated[updated.length - 1];
+          const same = cmp ? cmp(prev, item) === 0 : valuesEqual(prev, item, false);
+          if (!same) updated.push(item);
+        }
+        return { value: updated, updated };
+      },
+    },
+    reduce: {
+      min: 2,
+      max: 3,
+      fn: (ctx, [container, func, initial]) => {
+        const items: VimScriptValue[] = isList(container)
+          ? container
+          : typeof container === 'string'
+            ? [...container]
+            : isDict(container)
+              ? Object.values(container.items)
+              : [];
+        const hasInitial = initial !== undefined;
+        if (items.length === 0) {
+          return hasInitial ? initial : 0;
+        }
+        let acc: VimScriptValue = hasInitial ? initial : items[0];
+        const startIdx = hasInitial ? 0 : 1;
+        for (let i = startIdx; i < items.length; i++) {
+          const item = items[i];
+          if (isFuncref(func)) {
+            acc = invokeFuncref(ctx, func, [acc, item]);
+          } else {
+            const inner: EvalContext = { ...ctx, vvars: { ...(ctx.vvars ?? {}), acc, val: item } };
+            acc = evaluateExpr(toVimString(func), inner);
+            ctx.state = inner.state;
+          }
+        }
+        return acc;
+      },
+    },
+    flattennew: {
+      min: 1,
+      max: 2,
+      fn: (_ctx, [l, maxDepthArg]) => {
+        const list = asList(l, 'flattennew');
+        const maxDepth = maxDepthArg === undefined ? Infinity : Math.max(0, Math.trunc(toNumber(maxDepthArg)));
+        const flatten = (arr: VimScriptValue[], depth: number): VimScriptValue[] => {
+          const out: VimScriptValue[] = [];
+          for (const item of arr) {
+            if (isList(item) && depth > 0) {
+              out.push(...flatten(item, depth - 1));
+            } else {
+              out.push(item);
+            }
+          }
+          return out;
+        };
+        return flatten(list, maxDepth);
       },
     },
   };

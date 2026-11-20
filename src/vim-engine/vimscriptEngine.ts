@@ -426,8 +426,12 @@ function runScriptCommand(ctx: EvalContext, line: string, runEx: ExRunner): bool
   }
 
   if (cmd === 'cal' || cmd === 'call') {
-    if (!/^[\w:#]+\s*\(.*\)$/.test(rest)) throw new VimScriptError(msg('E129: 함수 이름이 필요합니다: {rest}', { rest }));
-    evaluateVimScript(rest, ctx);
+    const trimmedRest = rest.trim();
+    const isValidCall =
+      /^[\w:#]+\s*\(.*\)$/.test(trimmedRest) ||
+      (/\)\s*$/.test(trimmedRest) && (trimmedRest.includes('->') || /^[\w:#.]+\s*\(/.test(trimmedRest)));
+    if (!isValidCall) throw new VimScriptError(msg('E129: 함수 이름이 필요합니다: {rest}', { rest }));
+    evaluateVimScript(trimmedRest, ctx);
     return true;
   }
 
@@ -650,9 +654,14 @@ export function executeCallCommand(
   range: { startLine: number; endLine: number } | null,
   runEx: ExRunner
 ): VimEditorState {
-  const m = expression.trim().match(/^(?:g:)?([\w:#]+)\s*\((.*)\)$/);
-  if (!m) return finish(state, msg('E129: 함수 이름이 필요합니다: {expression}', { expression }), true);
-  const name = m[1];
+  const trimmedExpr = expression.trim();
+  const directMatch = trimmedExpr.match(/^(?:g:)?([\w:#]+)\s*\((.*)\)$/);
+  const isMethodOrChainCall =
+    /\)\s*$/.test(trimmedExpr) && (trimmedExpr.includes('->') || /^[\w:#.]+\s*\(/.test(trimmedExpr));
+  if (!directMatch && !isMethodOrChainCall) {
+    return finish(state, msg('E129: 함수 이름이 필요합니다: {expression}', { expression }), true);
+  }
+  const name = directMatch ? directMatch[1] : '';
 
   const fn = state.userFunctions?.[name];
   const start = range?.startLine ?? state.cursor.line;

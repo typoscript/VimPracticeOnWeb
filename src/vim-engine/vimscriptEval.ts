@@ -322,13 +322,19 @@ class Evaluator {
     return this.postfix();
   }
 
-  /** 인덱스 x[i], 슬라이스 x[a:b], 멤버 d.key, 함수/람다 호출 () */
+  /** 인덱스 x[i], 슬라이스 x[a:b], 멤버 d.key, 함수/람다 호출 (), 메서드 체이닝 ->func() */
   private postfix(): VimScriptValue {
+    const startTok = this.peek();
+    const startPos = this.pos;
     let value = this.primary();
+    let rootVarName: string | null =
+      startTok.type === 'name' && this.pos === startPos + 1 ? startTok.value : null;
+
     for (;;) {
       if (this.isOp('[') && !this.peek().space) {
         this.pos++;
         value = this.subscript(value);
+        rootVarName = null;
       } else if (
         this.isOp('.') && !this.peek().space && isDict(value) &&
         this.peek(1).type === 'name' && !this.peek(1).space
@@ -342,6 +348,7 @@ class Evaluator {
         } else {
           value = member;
         }
+        rootVarName = null;
       } else if (this.isOp('(') && !this.peek().space && (isFuncref(value) || typeof value === 'string')) {
         this.pos++;
         const args: VimScriptValue[] = [];
@@ -357,6 +364,50 @@ class Evaluator {
           value = invokeFuncref(this.ctx, value, args);
         } else {
           value = this.call(value, args, null);
+        }
+        rootVarName = null;
+      } else if (this.isOp('->')) {
+        this.pos++;
+        const targetTok = this.peek();
+        if (targetTok.space) {
+          throw this.invalid();
+        }
+        let methodFn: string | VimScriptFuncref;
+        if (targetTok.type === 'name') {
+          methodFn = targetTok.value;
+          this.pos++;
+        } else if (targetTok.type === 'op' && targetTok.value === '(') {
+          this.pos++;
+          const fnVal = this.ternary();
+          this.expectOp(')');
+          if (isFuncref(fnVal)) methodFn = fnVal;
+          else if (typeof fnVal === 'string') methodFn = fnVal;
+          else throw this.invalid();
+        } else if (targetTok.type === 'op' && targetTok.value === '{' && this.isLambdaAhead()) {
+          methodFn = this.parseLambda();
+        } else {
+          throw this.invalid();
+        }
+        if (!this.isOp('(') || this.peek().space) {
+          throw this.invalid();
+        }
+        this.pos++;
+        const args: VimScriptValue[] = [value];
+        if (!this.isOp(')')) {
+          args.push(this.ternary());
+          while (this.isOp(',')) {
+            this.pos++;
+            args.push(this.ternary());
+          }
+        }
+        this.expectOp(')');
+        if (typeof methodFn === 'string') {
+          const isMutatingBuiltin = Boolean(BUILTINS[methodFn]?.mutates);
+          value = this.call(methodFn, args, isMutatingBuiltin ? rootVarName : null);
+          if (!isMutatingBuiltin) rootVarName = null;
+        } else {
+          value = invokeFuncref(this.ctx, methodFn, args);
+          rootVarName = null;
         }
       } else {
         return value;

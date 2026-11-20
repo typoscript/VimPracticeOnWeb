@@ -1,5 +1,7 @@
 import { VimEditorState, VimScriptValue } from './types';
+import { clampCursor } from './cursor';
 import { msg } from './messages';
+import { readOptionForScript, writeOptionForScript } from './setOptionsCore';
 import {
   VimScriptError,
   EvalContext,
@@ -63,6 +65,94 @@ function resolveBuffer(state: VimEditorState, expr: VimScriptValue | undefined):
   if (exact) return { id: exact.id, name: exact.name };
   const partial = list.find((b) => b.name.includes(needle));
   return partial ? { id: partial.id, name: partial.name } : null;
+}
+
+function resolveBufferLines(
+  state: VimEditorState,
+  expr: VimScriptValue | undefined
+): { id: number; name: string; isCurrent: boolean; lines: string[] } | null {
+  const resolved = resolveBuffer(state, expr);
+  if (!resolved) return null;
+  const curId = state.currentBufferId ?? 1;
+  const isCurrent = resolved.id === curId;
+  if (isCurrent) {
+    return { ...resolved, isCurrent: true, lines: state.lines };
+  }
+  const buf = state.buffers?.find((b) => b.id === resolved.id);
+  if (!buf) return null;
+  return { ...resolved, isCurrent: false, lines: buf.lines };
+}
+
+function writeBufferLines(
+  state: VimEditorState,
+  target: { id: number; name: string; isCurrent: boolean },
+  nextLinesRaw: string[]
+): VimEditorState {
+  const nextLines = nextLinesRaw.length > 0 ? nextLinesRaw : [''];
+  const nextBuffers = state.buffers
+    ? state.buffers.map((b) =>
+        b.id === target.id
+          ? {
+              ...b,
+              lines: [...nextLines],
+              cursor: clampCursor(nextLines, b.cursor, 'NORMAL'),
+              isModified: true,
+            }
+          : b
+      )
+    : undefined;
+
+  const nextSplitPanes = state.splitPanes
+    ? state.splitPanes.map((pane) => {
+        const matches =
+          pane.bufferId !== undefined
+            ? pane.bufferId === target.id
+            : Boolean(target.name && pane.filename === target.name);
+        if (!matches) return pane;
+        return {
+          ...pane,
+          lines: [...nextLines],
+          cursor: clampCursor(nextLines, pane.cursor, pane.mode),
+          visualAnchor: pane.visualAnchor
+            ? clampCursor(nextLines, pane.visualAnchor, pane.mode)
+            : undefined,
+        };
+      })
+    : undefined;
+
+  if (target.isCurrent) {
+    return {
+      ...state,
+      lines: [...nextLines],
+      cursor: clampCursor(nextLines, state.cursor, state.mode),
+      buffers: nextBuffers,
+      splitPanes: nextSplitPanes,
+    };
+  }
+
+  return {
+    ...state,
+    buffers: nextBuffers,
+    splitPanes: nextSplitPanes,
+  };
+}
+
+function parseBufLineIndex(linesLen: number, arg: VimScriptValue, allowZero = false): number {
+  if (arg === '$') return linesLen;
+  const n = Math.trunc(toNumber(arg));
+  if (allowZero && n === 0) return 0;
+  return n;
+}
+
+function resolveWindowIndex(state: VimEditorState, nrArg: VimScriptValue): number {
+  const nr = Math.trunc(toNumber(nrArg));
+  const isSplit = Boolean(
+    state.splitDirection && state.splitDirection !== 'none' && state.splitPanes && state.splitPanes.length >= 2
+  );
+  if (nr === 0) return isSplit ? (state.activePaneIndex ?? 0) : 0;
+  const maxWin = isSplit ? state.splitPanes!.length : 1;
+  if (nr < 1 || nr > maxWin) return -1;
+  return nr - 1;
 }
 
 function normalizeVfsLookupKey(state: VimEditorState, raw: string): string {
@@ -218,6 +308,186 @@ export const EXTRA_BUILTINS: Record<string, ExtraBuiltin> = {
     min: 1,
     max: 1,
     fn: (ctx, [expr]) => (resolveBuffer(ctx.state, expr) ? 1 : 0),
+  },
+  getbufline: {
+    min: 2,
+    max: 3,
+    fn: (ctx, [expr, lnumArg, endArg]) => {
+      const target = resolveBufferLines(ctx.state, expr);
+      if (!target) return [];
+      const start = parseBufLineIndex(target.lines.length, lnumArg);
+      const end = endArg === undefined ? start : parseBufLineIndex(target.lines.length, endArg);
+      if (start < 1 || end < start || start > target.lines.length) return [];
+      return target.lines.slice(start - 1, Math.min(end, target.lines.length));
+    },
+  },
+  setbufline: {
+    min: 3,
+    max: 3,
+    fn: (ctx, [expr, lnumArg, text]) => {
+      const target = resolveBufferLines(ctx.state, expr);
+      if (!target) return 1;
+      const start = parseBufLineIndex(target.lines.length, lnumArg);
+      if (start < 1 || start > target.lines.length + 1) return 1;
+      const incoming = isList(text) ? text.map(toVimString) : [toVimString(text)];
+      const nextLines = [...target.lines];
+      incoming.forEach((line, idx) => {
+        nextLines[start - 1 + idx] = line;
+      });
+      ctx.state = writeBufferLines(ctx.state, target, nextLines);
+      return 0;
+    },
+  },
+  appendbufline: {
+    min: 3,
+    max: 3,
+    fn: (ctx, [expr, lnumArg, text]) => {
+      const target = resolveBufferLines(ctx.state, expr);
+      if (!target) return 1;
+      const n = parseBufLineIndex(target.lines.length, lnumArg, true);
+      if (n < 0 || n > target.lines.length) return 1;
+      const incoming = isList(text) ? text.map(toVimString) : [toVimString(text)];
+      const nextLines = [...target.lines.slice(0, n), ...incoming, ...target.lines.slice(n)];
+      ctx.state = writeBufferLines(ctx.state, target, nextLines);
+      return 0;
+    },
+  },
+  deletebufline: {
+    min: 2,
+    max: 3,
+    fn: (ctx, [expr, firstArg, lastArg]) => {
+      const target = resolveBufferLines(ctx.state, expr);
+      if (!target) return 1;
+      const first = parseBufLineIndex(target.lines.length, firstArg);
+      const last = lastArg === undefined ? first : parseBufLineIndex(target.lines.length, lastArg);
+      if (first < 1 || last < first || first > target.lines.length) return 1;
+      const clampedLast = Math.min(last, target.lines.length);
+      const nextLines = [
+        ...target.lines.slice(0, first - 1),
+        ...target.lines.slice(clampedLast),
+      ];
+      ctx.state = writeBufferLines(ctx.state, target, nextLines);
+      return 0;
+    },
+  },
+  getbufvar: {
+    min: 2,
+    max: 3,
+    fn: (ctx, [bufExpr, varNameArg, defVal]) => {
+      const fallback = defVal !== undefined ? defVal : '';
+      const resolved = resolveBuffer(ctx.state, bufExpr);
+      if (!resolved) return fallback;
+      const varName = toVimString(varNameArg);
+      if (varName === '') {
+        return makeDict({ ...(ctx.state.bufferVars?.[resolved.id] ?? {}) });
+      }
+      if (varName.startsWith('&')) {
+        const val = readOptionForScript(
+          { ...ctx.state, currentBufferId: resolved.id },
+          `&l:${varName.slice(1).replace(/^[gl]:/, '')}`
+        );
+        return val !== null ? val : fallback;
+      }
+      const store = ctx.state.bufferVars?.[resolved.id];
+      return store && varName in store ? store[varName] : fallback;
+    },
+  },
+  setbufvar: {
+    min: 3,
+    max: 3,
+    fn: (ctx, [bufExpr, varNameArg, val]) => {
+      const resolved = resolveBuffer(ctx.state, bufExpr);
+      if (!resolved) return 0;
+      const varName = toVimString(varNameArg);
+      if (varName.startsWith('&')) {
+        const optName = `&l:${varName.slice(1).replace(/^[gl]:/, '')}`;
+        const prevCurId = ctx.state.currentBufferId;
+        const updated = writeOptionForScript(
+          { ...ctx.state, currentBufferId: resolved.id },
+          optName,
+          { num: toNumber(val), str: toVimString(val), truthy: isTruthy(val) }
+        );
+        if (updated) {
+          ctx.state = { ...updated, currentBufferId: prevCurId };
+        }
+        return 0;
+      }
+      const prev = ctx.state.bufferVars?.[resolved.id] ?? {};
+      ctx.state = {
+        ...ctx.state,
+        bufferVars: {
+          ...(ctx.state.bufferVars ?? {}),
+          [resolved.id]: { ...prev, [varName]: val },
+        },
+      };
+      return 0;
+    },
+  },
+  getwinvar: {
+    min: 2,
+    max: 3,
+    fn: (ctx, [nrArg, varNameArg, defVal]) => {
+      const fallback = defVal !== undefined ? defVal : '';
+      const winIdx = resolveWindowIndex(ctx.state, nrArg);
+      if (winIdx < 0) return fallback;
+      const varName = toVimString(varNameArg);
+      if (varName === '') {
+        return makeDict({ ...(ctx.state.windowVars?.[winIdx] ?? {}) });
+      }
+      if (varName.startsWith('&')) {
+        const cleanOpt = varName.slice(1).replace(/^[gl]:/, '');
+        if ((cleanOpt === 'scb' || cleanOpt === 'scrollbind') && ctx.state.splitPanes?.[winIdx]) {
+          return ctx.state.splitPanes[winIdx].scrollbind ? 1 : 0;
+        }
+        const val = readOptionForScript(ctx.state, varName);
+        return val !== null ? val : fallback;
+      }
+      const store = ctx.state.windowVars?.[winIdx];
+      return store && varName in store ? store[varName] : fallback;
+    },
+  },
+  setwinvar: {
+    min: 3,
+    max: 3,
+    fn: (ctx, [nrArg, varNameArg, val]) => {
+      const winIdx = resolveWindowIndex(ctx.state, nrArg);
+      if (winIdx < 0) return 0;
+      const varName = toVimString(varNameArg);
+      if (varName.startsWith('&')) {
+        const cleanOpt = varName.slice(1).replace(/^[gl]:/, '');
+        if ((cleanOpt === 'scb' || cleanOpt === 'scrollbind') && ctx.state.splitPanes?.[winIdx]) {
+          const nextScb = isTruthy(val);
+          const nextPanes = ctx.state.splitPanes.map((p, i) =>
+            i === winIdx ? { ...p, scrollbind: nextScb } : p
+          );
+          const isCurrent = (ctx.state.activePaneIndex ?? 0) === winIdx;
+          ctx.state = {
+            ...ctx.state,
+            splitPanes: nextPanes,
+            ...(isCurrent && ctx.state.options
+              ? { options: { ...ctx.state.options, scrollbind: nextScb } }
+              : {}),
+          };
+          return 0;
+        }
+        const updated = writeOptionForScript(ctx.state, varName, {
+          num: toNumber(val),
+          str: toVimString(val),
+          truthy: isTruthy(val),
+        });
+        if (updated) ctx.state = updated;
+        return 0;
+      }
+      const prev = ctx.state.windowVars?.[winIdx] ?? {};
+      ctx.state = {
+        ...ctx.state,
+        windowVars: {
+          ...(ctx.state.windowVars ?? {}),
+          [winIdx]: { ...prev, [varName]: val },
+        },
+      };
+      return 0;
+    },
   },
   winnr: {
     min: 0,

@@ -189,4 +189,118 @@ describe('Vimscript extra builtins (#1) & variable scopes / $ENV / :finish (#2)'
       expect(s.globalVars?.count_runs).toBe(1);
     });
   });
+
+  describe('Method call chaining (->), &option sync, functional & buffer/window APIs', () => {
+    it('supports method call chaining (->) with builtins, lambdas, funcrefs, and :call in-place mutations', () => {
+      let s = createVimState(['hello']);
+
+      // Builtin chain with sort, uniq, filter, map, join
+      s = runExCommand(
+        s,
+        "echo [3, 1, 2, 2, 1, 4]->filter('v:val > 1')->sort('n')->uniq()->map({_, v -> v * 10})->join('-')"
+      );
+      expect(s.commandMessage).toBe('20-30-40');
+
+      // String method chain + lambda & parenthesized funcref method calls
+      s = runExCommand(s, "let g:Double = {x -> x * 2} | echo '  vim  '->trim()->toupper() .. ':' .. 21->(g:Double)() .. ':' .. 5->{x -> x + 7}()");
+      expect(s.commandMessage).toBe('VIM:42:12');
+
+      // :call with -> mutates target list variable in place
+      s = runExCommand(s, 'let g:nums = [3, 1, 2] | call g:nums->add(2)->sort("n")->uniq() | echo g:nums');
+      expect(s.commandMessage).toBe('[1, 2, 3]');
+
+      // Whitespace between -> and method name raises E15
+      const bad = runExCommand(s, 'echo "abc"-> toupper()');
+      expect(bad.bell).toBe(true);
+    });
+
+    it('supports reduce(), uniq(), and flattennew() standalone and via -> chaining', () => {
+      let s = createVimState(['']);
+
+      s = runExCommand(s, 'echo [1, 2, 3, 4]->reduce({acc, val -> acc + val}, 0)');
+      expect(s.commandMessage).toBe('10');
+
+      s = runExCommand(s, "echo [2, 3, 4]->reduce('v:acc * v:val')");
+      expect(s.commandMessage).toBe('24');
+
+      s = runExCommand(s, 'echo [[1, [2, 3]], [4], 5]->flattennew()');
+      expect(s.commandMessage).toBe('[1, 2, 3, 4, 5]');
+
+      s = runExCommand(s, 'echo [[1, [2, 3]], [4]]->flattennew(1)');
+      expect(s.commandMessage).toBe('[1, [2, 3], 4]');
+
+      s = runExCommand(s, "echo ['a', 'A', 'b', 'B']->uniq('i')");
+      expect(s.commandMessage).toBe("['a', 'b']");
+    });
+
+    it('supports cursor(), getpos(), and setpos() for cursor movement and marks', () => {
+      let s = createVimState(['alpha', 'beta gamma', 'delta']);
+
+      // cursor(lnum, col) and cursor([lnum, col])
+      s = runExCommand(s, 'call cursor(2, 6)');
+      expect(s.cursor).toEqual({ line: 1, col: 5 });
+
+      s = runExCommand(s, 'echo getpos(".")');
+      expect(s.commandMessage).toBe('[0, 2, 6, 0]');
+
+      // Keep current line with lnum=0, move col to 1
+      s = runExCommand(s, 'call cursor([0, 1])');
+      expect(s.cursor).toEqual({ line: 1, col: 0 });
+
+      // setpos() on mark 'm and reading back with getpos("'m")
+      s = runExCommand(s, `call setpos("'m", [0, 3, 4, 0]) | echo getpos("'m")`);
+      expect(s.marks?.m?.row).toBe(2);
+      expect(s.marks?.m?.col).toBe(3);
+      expect(s.commandMessage).toBe('[0, 3, 4, 0]');
+
+      // setpos('.', ...) moves cursor safely clamped
+      s = runExCommand(s, 'call setpos(".", [0, 99, 99, 0])');
+      expect(s.cursor).toEqual({ line: 2, col: 4 });
+    });
+
+    it('supports getbufline(), setbufline(), appendbufline(), and deletebufline() across buffers', () => {
+      let s = createVimState(['a1', 'a2', 'a3'], { line: 2, col: 0 }, { primaryFilename: 'a.ts' });
+      s = runExCommand(s, 'e b.ts');
+      s = runExCommand(s, 'call setline(1, ["b1", "b2"])');
+
+      // Read lines from inactive buffer a.ts (buffer 1)
+      s = runExCommand(s, 'echo getbufline("a.ts", 1, "$")');
+      expect(s.commandMessage).toBe("['a1', 'a2', 'a3']");
+
+      // Mutate inactive buffer a.ts via setbufline / appendbufline / deletebufline
+      s = runExCommand(s, 'call setbufline("a.ts", 2, "A2") | call appendbufline("a.ts", "$", "a4") | call deletebufline("a.ts", 1)');
+      s = runExCommand(s, 'echo getbufline("a.ts", 1, "$")');
+      expect(s.commandMessage).toBe("['A2', 'a3', 'a4']");
+
+      // Delete all lines in current buffer b.ts -> safely leaves [''] with cursor clamped
+      s = runExCommand(s, 'call deletebufline("%", 1, "$")');
+      expect(s.lines).toEqual(['']);
+      expect(s.cursor).toEqual({ line: 0, col: 0 });
+    });
+
+    it('supports &option / &l:scb pane sync and getbufvar()/setbufvar()/getwinvar()/setwinvar()', () => {
+      let s = createVimState(['one'], { line: 0, col: 0 }, {
+        primaryFilename: 'a.ts',
+        virtualFiles: { 'b.ts': ['two'] },
+      });
+
+      // &option read/write + += + exists('&tabstop')
+      s = runExCommand(s, 'let &tabstop = 4 | let &tabstop += 2 | echo [&tabstop, exists("&tabstop"), exists("&no_such_opt")]');
+      expect(s.commandMessage).toBe('[6, 1, 0]');
+
+      // Multi-window scrollbind via &l:scb and getwinvar/setwinvar
+      s = runExCommand(s, 'vsp b.ts');
+      s = runExCommand(s, 'let &l:scb = 1 | call setwinvar(2, "&scb", 1) | call setwinvar(2, "tag", "right")');
+      expect(s.splitPanes![0].scrollbind).toBe(true);
+      expect(s.splitPanes![1].scrollbind).toBe(true);
+
+      s = runExCommand(s, 'echo [&scb, getwinvar(2, "&scb"), getwinvar(2, "tag"), getwinvar(2, "missing", "fallback")]');
+      expect(s.commandMessage).toBe("[1, 1, 'right', 'fallback']");
+
+      // getbufvar / setbufvar for both b:var and buffer-local &option
+      s = runExCommand(s, 'call setbufvar("%", "owner", "core") | call setbufvar("%", "&sw", 8)');
+      s = runExCommand(s, 'echo [getbufvar("%", "owner"), getbufvar("%", "&sw"), getbufvar("%", "none", 99)]');
+      expect(s.commandMessage).toBe("['core', 8, 99]");
+    });
+  });
 });
