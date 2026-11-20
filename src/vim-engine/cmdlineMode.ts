@@ -57,6 +57,202 @@ function restoreFromExpressionPrompt(
   };
 }
 
+/** 일반 COMMAND(:) 모드를 취소하고 NORMAL 모드로 복귀합니다. */
+function exitCommandLineToNormal(state: VimEditorState): VimEditorState {
+  return {
+    ...state,
+    mode: 'NORMAL',
+    commandBuffer: undefined,
+    commandType: undefined,
+    commandCursorCol: undefined,
+    digraphPending: undefined,
+    insertRegisterPending: undefined,
+    literalNextPending: undefined,
+    pendingKeymapPrefix: undefined,
+    filterOperatorKeys: undefined,
+    wildmenu: null,
+  };
+}
+
+/** 표현식 레지스터(=) 프롬프트 키 입력 처리 */
+function handleExpressionRegisterKey(state: VimEditorState, key: string): VimEditorState {
+  const digraphRes = handleCmdlineDigraphStep(state, key);
+  if (digraphRes) return digraphRes;
+
+  if (isCmdlineCancelKey(key)) {
+    return restoreFromExpressionPrompt(state);
+  }
+
+  if (isBackspaceKey(key)) {
+    return state.commandBuffer && state.commandBuffer.length > 0
+      ? deleteCmdlineCharBackward(state)
+      : restoreFromExpressionPrompt(state);
+  }
+
+  const commonEdit = handleCmdlineCommonEditKey(state, key);
+  if (commonEdit) return commonEdit;
+
+  if (key === 'Enter') {
+    const evalRes = evaluateVimExpression(state.commandBuffer ?? '', state);
+    const returnCtx = state.expressionReturnContext;
+    const returnMode = returnCtx?.mode ?? 'INSERT';
+
+    if (!evalRes.success) {
+      return restoreFromExpressionPrompt(state, {
+        commandMessage: msg('E15: {v}', { v: evalRes.error ?? msg('잘못된 수식입니다') }),
+      });
+    }
+
+    const newRegisters = {
+      ...(state.registers ?? {}),
+      '=': { type: 'char' as const, content: evalRes.result },
+    };
+
+    if (returnMode === 'COMMAND' || returnMode === 'SEARCH') {
+      const prevState = restoreFromExpressionPrompt(state, { registers: newRegisters });
+      return insertTextIntoCmdline(prevState, evalRes.result);
+    }
+    if (returnMode === 'NORMAL') {
+      return restoreFromExpressionPrompt(state, {
+        registers: newRegisters,
+        activeRegister: '=',
+        cursor: returnCtx?.cursor ?? state.cursor,
+      });
+    }
+
+    const stateWithRegisters = restoreFromExpressionPrompt(state, {
+      registers: newRegisters,
+      cursor: returnCtx?.cursor ?? state.cursor,
+    });
+    const insertedState = insertTextAtCursor(stateWithRegisters, evalRes.result);
+    if (insertedState.currentChangeKeys) {
+      insertedState.currentChangeKeys = [
+        ...insertedState.currentChangeKeys,
+        'Ctrl-r',
+        '=',
+        ...(state.commandBuffer?.split('') ?? []),
+        'Enter',
+      ];
+    }
+    return insertedState;
+  }
+
+  return key.length === 1 ? insertTextIntoCmdline(state, key) : state;
+}
+
+/** 명령행 모드 키매핑(:cmap / :cnoremap) 해석 및 접두어 플러시 처리 */
+function tryHandleCmdlineKeymap(
+  state: VimEditorState,
+  key: string,
+  runHandleKey: RunHandleKeyFn,
+  dispatchKey: DispatchKeyFn | undefined,
+  macroDepth: number
+): VimEditorState | null {
+  if (
+    state.keymapsDisabled ||
+    state.literalNextPending ||
+    state.digraphPending !== undefined ||
+    state.insertRegisterPending ||
+    state.confirmSubstitute ||
+    macroDepth > MAX_REMAP_DEPTH
+  ) {
+    return null;
+  }
+
+  const leaderKey = state.leaderKey || ' ';
+  const prefix = state.pendingKeymapPrefix ?? '';
+  if (prefix && isCmdlineCancelKey(key)) {
+    return handleCommandLineModeKey(
+      { ...state, pendingKeymapPrefix: undefined },
+      key,
+      runHandleKey,
+      dispatchKey,
+      macroDepth
+    );
+  }
+
+  const stepToken = (s: VimEditorState, tok: string, depth: number) =>
+    s.mode === 'COMMAND'
+      ? handleCommandLineModeKey(s, tok, runHandleKey, dispatchKey, depth)
+      : dispatchKey
+        ? dispatchKey(s, tok, false, depth)
+        : runHandleKey(s, tok);
+
+  const combined = `${prefix}${key}`;
+  const resolved = resolveKeymapWithMeta(state, 'c', combined);
+  if (resolved) {
+    const cleanState: VimEditorState = { ...state, pendingKeymapPrefix: undefined };
+    const runEx = (s: VimEditorState, cmd: string) => executeCommandLine(s, cmd, runHandleKey);
+    return runKeymapTokens(
+      cleanState,
+      resolved,
+      macroDepth,
+      (runState, rhs, _isNoremap, nextDepth) => {
+        const tokens = parseKeySequence(rhs, leaderKey);
+        let s: VimEditorState = runState;
+        for (const tok of tokens) {
+          s = stepToken(s, tok, nextDepth);
+          if (s.bell) break;
+        }
+        return s;
+      },
+      runEx
+    );
+  }
+
+  if (isKeymapPrefix(state, 'c', combined)) {
+    return { ...state, pendingKeymapPrefix: combined };
+  }
+
+  if (prefix) {
+    const prevDisabled = state.keymapsDisabled;
+    const flushTokens = parseKeySequence(prefix, leaderKey);
+    let s: VimEditorState = { ...state, pendingKeymapPrefix: undefined, keymapsDisabled: true };
+    for (const tok of flushTokens) {
+      s = stepToken(s, tok, macroDepth);
+      if (s.bell) break;
+    }
+    const restored = s.keymapsDisabled === prevDisabled ? s : { ...s, keymapsDisabled: prevDisabled };
+    return stepToken(restored, key, macroDepth);
+  }
+
+  return null;
+}
+
+/** COMMAND 모드(:) Enter 실행 및 필터 도트 반복 키 기록 */
+function handleCommandLineEnter(
+  state: VimEditorState,
+  runHandleKey: RunHandleKeyFn
+): VimEditorState {
+  const s = state.wildmenu?.active ? acceptWildmenu(state) : state;
+  const rawCmd = s.commandBuffer ?? '';
+  const cmd = expandCmdlineAbbrev(s, rawCmd, 'Enter');
+  const nextState = addHistory(s, cmd, ':');
+  const res = executeCommandLine(
+    { ...nextState, commandCursorCol: undefined, digraphPending: undefined },
+    cmd,
+    runHandleKey
+  );
+  if (s.filterOperatorKeys && !res.bell) {
+    const bangIdx = cmd.indexOf('!');
+    if (bangIdx >= 0) {
+      const shellTail = cmd.slice(bangIdx + 1);
+      return {
+        ...res,
+        filterOperatorKeys: undefined,
+        lastChangeKeys: [...s.filterOperatorKeys, ...shellTail.split(''), 'Enter'],
+      };
+    }
+  }
+  return {
+    ...res,
+    commandCursorCol: undefined,
+    digraphPending: undefined,
+    pendingKeymapPrefix: undefined,
+    filterOperatorKeys: undefined,
+  };
+}
+
 /**
  * COMMAND 모드(: 또는 =) 키 입력 처리
  */
@@ -69,159 +265,16 @@ export function handleCommandLineModeKey(
 ): VimEditorState {
   // 1. 표현식 레지스터(=) 프롬프트 처리
   if (state.commandType === '=') {
-    const digraphRes = handleCmdlineDigraphStep(state, key);
-    if (digraphRes) return digraphRes;
-
-    if (isCmdlineCancelKey(key)) {
-      return restoreFromExpressionPrompt(state);
-    }
-
-    if (isBackspaceKey(key)) {
-      if (state.commandBuffer && state.commandBuffer.length > 0) {
-        return deleteCmdlineCharBackward(state);
-      }
-      return restoreFromExpressionPrompt(state);
-    }
-
-    const commonEdit = handleCmdlineCommonEditKey(state, key);
-    if (commonEdit) return commonEdit;
-
-    if (key === 'Enter') {
-      const evalRes = evaluateVimExpression(state.commandBuffer ?? '', state);
-      const returnCtx = state.expressionReturnContext;
-      const returnMode = returnCtx?.mode ?? 'INSERT';
-
-      if (!evalRes.success) {
-        return restoreFromExpressionPrompt(state, {
-          commandMessage: msg('E15: {v}', { v: evalRes.error ?? msg('잘못된 수식입니다') }),
-        });
-      }
-
-      // 성공 시 '=' 레지스터에 결과값 저장
-      const newRegisters = {
-        ...(state.registers ?? {}),
-        '=': {
-          type: 'char' as const,
-          content: evalRes.result,
-        },
-      };
-
-      if (returnMode === 'COMMAND' || returnMode === 'SEARCH') {
-        const prevState = restoreFromExpressionPrompt(state, { registers: newRegisters });
-        return insertTextIntoCmdline(prevState, evalRes.result);
-      } else if (returnMode === 'NORMAL') {
-        // NORMAL 모드 복귀: '=' 레지스터 저장 및 activeRegister 를 '=' 로 설정 (바로 p 로 붙여넣기 가능)
-        return restoreFromExpressionPrompt(state, {
-          registers: newRegisters,
-          activeRegister: '=',
-          cursor: returnCtx?.cursor ?? state.cursor,
-        });
-      } else {
-        // INSERT 모드 복귀 및 계산 결과 즉시 삽입
-        const stateWithRegisters = restoreFromExpressionPrompt(state, {
-          registers: newRegisters,
-          cursor: returnCtx?.cursor ?? state.cursor,
-        });
-
-        const insertedState = insertTextAtCursor(stateWithRegisters, evalRes.result);
-        if (insertedState.currentChangeKeys) {
-          insertedState.currentChangeKeys = [
-            ...insertedState.currentChangeKeys,
-            'Ctrl-r',
-            '=',
-            ...(state.commandBuffer?.split('') ?? []),
-            'Enter',
-          ];
-        }
-
-        return insertedState;
-      }
-    }
-
-    // 일반 수식 문자 타이핑 (커서 위치 삽입)
-    if (key.length === 1) {
-      return insertTextIntoCmdline(state, key);
-    }
-
-    return state;
+    return handleExpressionRegisterKey(state, key);
   }
 
   // 1.5. 명령행 모드 키매핑 (:cmap / :cnoremap)
-  if (
-    !state.keymapsDisabled &&
-    !state.literalNextPending &&
-    state.digraphPending === undefined &&
-    !state.insertRegisterPending &&
-    !state.confirmSubstitute &&
-    macroDepth <= MAX_REMAP_DEPTH
-  ) {
-    const leaderKey = state.leaderKey || ' ';
-    const prefix = state.pendingKeymapPrefix ?? '';
-    if (prefix && isCmdlineCancelKey(key)) {
-      return handleCommandLineModeKey(
-        { ...state, pendingKeymapPrefix: undefined },
-        key,
-        runHandleKey,
-        dispatchKey,
-        macroDepth
-      );
-    }
-    const combined = `${prefix}${key}`;
-    const resolved = resolveKeymapWithMeta(state, 'c', combined);
-    if (resolved) {
-      const cleanState: VimEditorState = { ...state, pendingKeymapPrefix: undefined };
-      const runEx = (s: VimEditorState, cmd: string) => executeCommandLine(s, cmd, runHandleKey);
-      return runKeymapTokens(
-        cleanState,
-        resolved,
-        macroDepth,
-        (runState, rhs, _isNoremap, nextDepth) => {
-          const tokens = parseKeySequence(rhs, leaderKey);
-          let s: VimEditorState = runState;
-          for (const tok of tokens) {
-            s =
-              s.mode === 'COMMAND'
-                ? handleCommandLineModeKey(s, tok, runHandleKey, dispatchKey, nextDepth)
-                : dispatchKey
-                ? dispatchKey(s, tok, false, nextDepth)
-                : runHandleKey(s, tok);
-            if (s.bell) break;
-          }
-          return s;
-        },
-        runEx
-      );
-    }
-    if (isKeymapPrefix(state, 'c', combined)) {
-      return { ...state, pendingKeymapPrefix: combined };
-    }
-    if (prefix) {
-      const prevDisabled = state.keymapsDisabled;
-      const flushTokens = parseKeySequence(prefix, leaderKey);
-      let s: VimEditorState = { ...state, pendingKeymapPrefix: undefined, keymapsDisabled: true };
-      for (const tok of flushTokens) {
-        s =
-          s.mode === 'COMMAND'
-            ? handleCommandLineModeKey(s, tok, runHandleKey, dispatchKey, macroDepth)
-            : dispatchKey
-            ? dispatchKey(s, tok, false, macroDepth)
-            : runHandleKey(s, tok);
-        if (s.bell) break;
-      }
-      const restored = s.keymapsDisabled === prevDisabled ? s : { ...s, keymapsDisabled: prevDisabled };
-      return restored.mode === 'COMMAND'
-        ? handleCommandLineModeKey(restored, key, runHandleKey, dispatchKey, macroDepth)
-        : dispatchKey
-        ? dispatchKey(restored, key, false, macroDepth)
-        : runHandleKey(restored, key);
-    }
-  }
+  const mappedRes = tryHandleCmdlineKeymap(state, key, runHandleKey, dispatchKey, macroDepth);
+  if (mappedRes) return mappedRes;
 
   // 2. 일반 COMMAND (:) 모드 내 Ctrl+r ({reg}, =, <C-w>, <C-a>, <C-l>, <C-f>) 처리
   const cmdCtrlR = handleCmdlineCtrlRStep(state, key, ':');
-  if (cmdCtrlR) {
-    return cmdCtrlR;
-  }
+  if (cmdCtrlR) return cmdCtrlR;
 
   // 2.5. Ctrl-v 리터럴 다음 문자 (커맨드라인 약어 확장 억제)
   if (state.literalNextPending) {
@@ -232,12 +285,8 @@ export function handleCommandLineModeKey(
     }
     state = { ...state, literalNextPending: undefined };
   }
-
   if (key === 'Ctrl-v' || key === 'Ctrl+v' || key === 'ctrl-v' || key === '<C-v>') {
-    return {
-      ...state,
-      literalNextPending: true,
-    };
+    return { ...state, literalNextPending: true };
   }
 
   // 2.6. Ctrl-k 다이그래프 입력 (:help c_CTRL-K)
@@ -245,17 +294,14 @@ export function handleCommandLineModeKey(
     state.wildmenu?.active ? acceptWildmenu(state) : state,
     key
   );
-  if (cmdDigraph) {
-    return cmdDigraph;
-  }
+  if (cmdDigraph) return cmdDigraph;
 
-  // Ctrl-] 수동 커맨드라인 약어 확장 (트리거 문자 삽입 없음)
+  // Ctrl-] 수동 커맨드라인 약어 확장
   if (key === 'Ctrl-]' || key === 'Ctrl+]' || key === 'ctrl-]' || key === '<C-]>') {
     const s = state.wildmenu?.active ? acceptWildmenu(state) : state;
-    const expanded = expandCmdlineAbbrev(s, s.commandBuffer ?? '', 'Ctrl-]');
     return {
       ...s,
-      commandBuffer: expanded,
+      commandBuffer: expandCmdlineAbbrev(s, s.commandBuffer ?? '', 'Ctrl-]'),
       commandCursorCol: undefined,
     };
   }
@@ -269,117 +315,43 @@ export function handleCommandLineModeKey(
     );
   }
 
-  // 히스토리 순회 (↑/↓ 및 Ctrl+p/Ctrl+n)
+  // 히스토리 순회 및 와일드메뉴 자동완성
   if (key === 'ArrowUp' || key === 'Ctrl-p' || key === 'Ctrl+p' || key === 'ctrl-p') {
     return navigateHistory(state, 'up', ':');
   }
   if (key === 'ArrowDown' || key === 'Ctrl-n' || key === 'Ctrl+n' || key === 'ctrl-n') {
     return navigateHistory(state, 'down', ':');
   }
-
-  // Ctrl-d: 가능한 커맨드라인 자동완성 후보 목록 표시 (:help c_CTRL-D)
   if (key === 'Ctrl-d' || key === 'Ctrl+d' || key === 'ctrl-d' || key === '<C-d>') {
     return listCmdlineCompletions(state);
   }
-
-  // 와일드메뉴 자동완성 키 처리 (Tab / Shift-Tab 및 활성 상태에서의 ArrowLeft/ArrowRight)
-  if (key === 'Tab') {
-    return handleTabCompletion(state, false);
-  }
-  if (key === 'Shift-Tab' || key === '<S-Tab>') {
-    return handleTabCompletion(state, true);
-  }
+  if (key === 'Tab') return handleTabCompletion(state, false);
+  if (key === 'Shift-Tab' || key === '<S-Tab>') return handleTabCompletion(state, true);
   if (state.wildmenu?.active) {
-    if (key === 'ArrowRight') {
-      return handleTabCompletion(state, false);
-    }
-    if (key === 'ArrowLeft') {
-      return handleTabCompletion(state, true);
-    }
+    if (key === 'ArrowRight') return handleTabCompletion(state, false);
+    if (key === 'ArrowLeft') return handleTabCompletion(state, true);
   }
 
-  // 3. 기존 콜론 커맨드라인 취소(Esc / Ctrl-c), 이동·편집, 실행
+  // 3. 커맨드라인 취소(Esc / Ctrl-c), Backspace, 공통 편집, Enter 실행
   if (isCmdlineCancelKey(key)) {
-    if (key === 'Escape' && state.wildmenu?.active) {
-      return cancelWildmenu(state, true);
-    }
-    // :function 본문 입력 중 Esc/Ctrl-c: 정의 취소
-    if (state.functionDraft) {
-      return cancelFunctionDraft(state);
-    }
-    return {
-      ...state,
-      mode: 'NORMAL',
-      commandBuffer: undefined,
-      commandType: undefined,
-      commandCursorCol: undefined,
-      digraphPending: undefined,
-      insertRegisterPending: undefined,
-      literalNextPending: undefined,
-      pendingKeymapPrefix: undefined,
-      filterOperatorKeys: undefined,
-      wildmenu: null,
-    };
+    if (key === 'Escape' && state.wildmenu?.active) return cancelWildmenu(state, true);
+    if (state.functionDraft) return cancelFunctionDraft(state);
+    return exitCommandLineToNormal(state);
   }
 
   if (isBackspaceKey(key)) {
     const s = state.wildmenu?.active ? cancelWildmenu(state, false) : state;
-    if (s.commandBuffer && s.commandBuffer.length > 0) {
-      return deleteCmdlineCharBackward(s);
-    }
-    // :function 본문 입력 중에는 빈 줄에서 Backspace 를 눌러도 커맨드라인을 떠나지 않음
-    if (s.functionDraft) {
-      return s;
-    }
-    return {
-      ...s,
-      mode: 'NORMAL',
-      commandBuffer: undefined,
-      commandType: undefined,
-      commandCursorCol: undefined,
-      digraphPending: undefined,
-      insertRegisterPending: undefined,
-      literalNextPending: undefined,
-      pendingKeymapPrefix: undefined,
-      filterOperatorKeys: undefined,
-      wildmenu: null,
-    };
+    if (s.commandBuffer && s.commandBuffer.length > 0) return deleteCmdlineCharBackward(s);
+    if (s.functionDraft) return s;
+    return exitCommandLineToNormal(s);
   }
 
   const baseForCommon = state.wildmenu?.active ? acceptWildmenu(state) : state;
   const commonEdit = handleCmdlineCommonEditKey(baseForCommon, key);
-  if (commonEdit) {
-    return commonEdit;
-  }
+  if (commonEdit) return commonEdit;
 
   if (key === 'Enter') {
-    const s = state.wildmenu?.active ? acceptWildmenu(state) : state;
-    const rawCmd = s.commandBuffer ?? '';
-    const cmd = expandCmdlineAbbrev(s, rawCmd, 'Enter');
-    const nextState = addHistory(s, cmd, ':');
-    const res = executeCommandLine(
-      { ...nextState, commandCursorCol: undefined, digraphPending: undefined },
-      cmd,
-      runHandleKey
-    );
-    if (s.filterOperatorKeys && !res.bell) {
-      const bangIdx = cmd.indexOf('!');
-      if (bangIdx >= 0) {
-        const shellTail = cmd.slice(bangIdx + 1);
-        return {
-          ...res,
-          filterOperatorKeys: undefined,
-          lastChangeKeys: [...s.filterOperatorKeys, ...shellTail.split(''), 'Enter'],
-        };
-      }
-    }
-    return {
-      ...res,
-      commandCursorCol: undefined,
-      digraphPending: undefined,
-      pendingKeymapPrefix: undefined,
-      filterOperatorKeys: undefined,
-    };
+    return handleCommandLineEnter(state, runHandleKey);
   }
 
   // 일반 타이핑 문자 누적 (비단어 문자 입력 시 커맨드라인 약어 확장, 중간 삽입 지원)
@@ -389,11 +361,7 @@ export function handleCommandLineModeKey(
     const isAtEnd = s.commandCursorCol === undefined || s.commandCursorCol >= rawBuf.length;
     if (isAtEnd) {
       const buf = !/\w/.test(key) ? expandCmdlineAbbrev(s, rawBuf, key) : rawBuf;
-      return {
-        ...s,
-        commandBuffer: buf + key,
-        commandCursorCol: undefined,
-      };
+      return { ...s, commandBuffer: buf + key, commandCursorCol: undefined };
     }
     return insertTextIntoCmdline(s, key);
   }
