@@ -3,8 +3,9 @@ import { UserAnalyticsData } from '../types/game';
 import { LessonProgress } from './storage';
 import { analyzeWeaknesses, WeaknessCategoryId, WeaknessFocus } from './weaknessDrillAnalyzer';
 import { i18nKey } from '../i18n';
+import { STORAGE_KEYS, readStorageJson, writeStorageJson } from './localStorageClient';
 
-export const SRS_STORAGE_KEY = 'vim_srs_schedule_v1';
+export const SRS_STORAGE_KEY = STORAGE_KEYS.SRS_SCHEDULE;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -50,23 +51,13 @@ const WEAKNESS_TO_LESSON_IDS: Record<WeaknessCategoryId, number[]> = {
 };
 
 export function loadSrsSchedule(): SrsScheduleMap {
-  try {
-    const raw = localStorage.getItem(SRS_STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
-    return parsed as SrsScheduleMap;
-  } catch {
-    return {};
-  }
+  const parsed = readStorageJson<unknown>(SRS_STORAGE_KEY, null);
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+  return parsed as SrsScheduleMap;
 }
 
 export function saveSrsSchedule(schedule: SrsScheduleMap): void {
-  try {
-    localStorage.setItem(SRS_STORAGE_KEY, JSON.stringify(schedule));
-  } catch {
-    // 저장 공간 부족 등 예외 무시
-  }
+  writeStorageJson(SRS_STORAGE_KEY, schedule);
 }
 
 /**

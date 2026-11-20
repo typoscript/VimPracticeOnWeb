@@ -1,7 +1,8 @@
 import { DungeonSaveData, DungeonRecord } from '../types/dungeon';
 import { t } from '../i18n';
+import { STORAGE_KEYS, readStorageJson, writeStorageJson } from './localStorageClient';
 
-export const DUNGEON_STORAGE_KEY = 'vim_dungeon_save_v1';
+export const DUNGEON_STORAGE_KEY = STORAGE_KEYS.DUNGEON_SAVE;
 
 export function getDefaultDungeonSave(): DungeonSaveData {
   return {
@@ -13,25 +14,12 @@ export function getDefaultDungeonSave(): DungeonSaveData {
 }
 
 export function loadDungeonSave(): DungeonSaveData {
-  try {
-    const raw = localStorage.getItem(DUNGEON_STORAGE_KEY);
-    if (!raw) return getDefaultDungeonSave();
-    const parsed = JSON.parse(raw);
-    return {
-      ...getDefaultDungeonSave(),
-      ...parsed,
-    };
-  } catch {
-    return getDefaultDungeonSave();
-  }
+  const parsed = readStorageJson<Partial<DungeonSaveData> | null>(DUNGEON_STORAGE_KEY, null);
+  return parsed ? { ...getDefaultDungeonSave(), ...parsed } : getDefaultDungeonSave();
 }
 
 export function saveDungeonSave(data: DungeonSaveData): void {
-  try {
-    localStorage.setItem(DUNGEON_STORAGE_KEY, JSON.stringify(data));
-  } catch {
-    // 저장 실패 무시
-  }
+  writeStorageJson(DUNGEON_STORAGE_KEY, data);
 }
 
 /**

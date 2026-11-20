@@ -1,57 +1,39 @@
+import { LessonProgress, LessonRecord } from './storage';
+import { mergeSavedCustomMissions } from './customMission';
 import {
-  PROGRESS_STORAGE_KEY,
-  RELATIVE_LINE_STORAGE_KEY,
-  VIRTUAL_KEYBOARD_STORAGE_KEY,
-  DIFF_VIEW_STORAGE_KEY,
-  REGISTER_INSPECTOR_STORAGE_KEY,
-  MARKS_VISUALIZER_STORAGE_KEY,
-  GRAMMAR_AST_STORAGE_KEY,
-  SPEEDRUN_RECORD_STORAGE_KEY,
-  HARDCORE_MODE_STORAGE_KEY,
-  DOJO_HIGH_SCORES_STORAGE_KEY,
-  DOJO_LEADERBOARD_STORAGE_KEY,
-  LessonProgress,
-  LessonRecord,
-} from './storage';
-import { DUNGEON_STORAGE_KEY } from './dungeonStorage';
-import { ANALYTICS_STORAGE_KEY } from './analyticsStorage';
-import { SRS_STORAGE_KEY } from './srsScheduler';
-import {
-  KEYMAP_PRESETS_STORAGE_KEY,
-  LEADER_KEY_STORAGE_KEY,
-  CUSTOM_KEYMAPS_STORAGE_KEY,
-} from './keymapStorage';
-import {
-  CUSTOM_MISSIONS_STORAGE_KEY,
-  mergeSavedCustomMissions,
-} from './customMission';
+  STORAGE_KEYS,
+  readStorageRaw,
+  writeStorageRaw,
+  removeStorageItem,
+  readStorageJson,
+} from './localStorageClient';
 
 export const BACKUP_SCHEMA_VERSION = 1;
 export const BACKUP_APP_ID = 'VimPracticeOnWeb';
 
 export const BACKUP_KEYS = [
-  PROGRESS_STORAGE_KEY,
-  DUNGEON_STORAGE_KEY,
-  ANALYTICS_STORAGE_KEY,
-  SRS_STORAGE_KEY,
-  CUSTOM_MISSIONS_STORAGE_KEY,
-  SPEEDRUN_RECORD_STORAGE_KEY,
-  DOJO_HIGH_SCORES_STORAGE_KEY,
-  DOJO_LEADERBOARD_STORAGE_KEY,
-  KEYMAP_PRESETS_STORAGE_KEY,
-  LEADER_KEY_STORAGE_KEY,
-  CUSTOM_KEYMAPS_STORAGE_KEY,
-  HARDCORE_MODE_STORAGE_KEY,
-  RELATIVE_LINE_STORAGE_KEY,
-  VIRTUAL_KEYBOARD_STORAGE_KEY,
-  DIFF_VIEW_STORAGE_KEY,
-  REGISTER_INSPECTOR_STORAGE_KEY,
-  MARKS_VISUALIZER_STORAGE_KEY,
-  GRAMMAR_AST_STORAGE_KEY,
-  'vim_practice_action_timeline_enabled',
-  'vim_selected_theme',
-  'vim_sound_muted',
-  'vim_locale_v1',
+  STORAGE_KEYS.PROGRESS,
+  STORAGE_KEYS.DUNGEON_SAVE,
+  STORAGE_KEYS.ANALYTICS,
+  STORAGE_KEYS.SRS_SCHEDULE,
+  STORAGE_KEYS.CUSTOM_MISSIONS,
+  STORAGE_KEYS.SPEEDRUN_RECORD,
+  STORAGE_KEYS.DOJO_HIGH_SCORES,
+  STORAGE_KEYS.DOJO_LEADERBOARD,
+  STORAGE_KEYS.KEYMAP_PRESETS,
+  STORAGE_KEYS.LEADER_KEY,
+  STORAGE_KEYS.CUSTOM_KEYMAPS,
+  STORAGE_KEYS.HARDCORE_MODE,
+  STORAGE_KEYS.RELATIVE_LINE,
+  STORAGE_KEYS.VIRTUAL_KEYBOARD,
+  STORAGE_KEYS.DIFF_VIEW,
+  STORAGE_KEYS.REGISTER_INSPECTOR,
+  STORAGE_KEYS.MARKS_VISUALIZER,
+  STORAGE_KEYS.GRAMMAR_AST,
+  STORAGE_KEYS.ACTION_TIMELINE,
+  STORAGE_KEYS.THEME,
+  STORAGE_KEYS.SOUND_MUTED,
+  STORAGE_KEYS.LOCALE,
 ] as const;
 
 const BACKUP_KEY_SET = new Set<string>(BACKUP_KEYS);
@@ -161,15 +143,11 @@ function mergeDungeonSave(existingRaw: string | null, incoming: unknown): unknow
  */
 export function exportBackupPayload(): VimBackupPayload {
   const entries: Record<string, unknown> = {};
-  try {
-    for (const key of BACKUP_KEYS) {
-      const raw = localStorage.getItem(key);
-      if (raw !== null) {
-        entries[key] = tryParseStoredValue(raw);
-      }
+  for (const key of BACKUP_KEYS) {
+    const raw = readStorageRaw(key);
+    if (raw !== null) {
+      entries[key] = tryParseStoredValue(raw);
     }
-  } catch {
-    // ignore storage errors
   }
   return {
     app: BACKUP_APP_ID,
@@ -188,7 +166,7 @@ export function getBackupSummary(): { keyCount: number; completedLessons: number
   const keys = Object.keys(payload.entries);
   return {
     keyCount: keys.length,
-    completedLessons: countCompletedLessons(payload.entries[PROGRESS_STORAGE_KEY]),
+    completedLessons: countCompletedLessons(payload.entries[STORAGE_KEYS.PROGRESS]),
   };
 }
 
@@ -225,47 +203,32 @@ export function importBackupJson(
 
   const entryMap = new Map(validEntries);
 
-  try {
-    if (mode === 'replace') {
-      for (const key of BACKUP_KEYS) {
-        if (!entryMap.has(key)) {
-          localStorage.removeItem(key);
-        }
+  if (mode === 'replace') {
+    for (const key of BACKUP_KEYS) {
+      if (!entryMap.has(key) && !removeStorageItem(key)) {
+        return { ok: false, errorCode: 'INVALID_FORMAT' };
       }
     }
+  }
 
-    for (const [key, value] of validEntries) {
-      if (mode === 'merge' && key === PROGRESS_STORAGE_KEY) {
-        const merged = mergeLessonProgress(localStorage.getItem(key), value);
-        localStorage.setItem(key, JSON.stringify(merged));
-      } else if (mode === 'merge' && key === DUNGEON_STORAGE_KEY) {
-        const merged = mergeDungeonSave(localStorage.getItem(key), value);
-        localStorage.setItem(key, JSON.stringify(merged));
-      } else if (mode === 'merge' && key === CUSTOM_MISSIONS_STORAGE_KEY) {
-        let existing: unknown = [];
-        try {
-          const rawExisting = localStorage.getItem(key);
-          if (rawExisting) existing = JSON.parse(rawExisting);
-        } catch {
-          existing = [];
-        }
-        const merged = mergeSavedCustomMissions(existing, value);
-        localStorage.setItem(key, JSON.stringify(merged));
-      } else {
-        localStorage.setItem(key, serializeStoredValue(value));
-      }
+  for (const [key, value] of validEntries) {
+    let serialized: string;
+    if (mode === 'merge' && key === STORAGE_KEYS.PROGRESS) {
+      serialized = JSON.stringify(mergeLessonProgress(readStorageRaw(key), value));
+    } else if (mode === 'merge' && key === STORAGE_KEYS.DUNGEON_SAVE) {
+      serialized = JSON.stringify(mergeDungeonSave(readStorageRaw(key), value));
+    } else if (mode === 'merge' && key === STORAGE_KEYS.CUSTOM_MISSIONS) {
+      const existing = readStorageJson<unknown>(key, []);
+      serialized = JSON.stringify(mergeSavedCustomMissions(existing, value));
+    } else {
+      serialized = serializeStoredValue(value);
     }
-  } catch {
-    return { ok: false, errorCode: 'INVALID_FORMAT' };
+    if (!writeStorageRaw(key, serialized)) {
+      return { ok: false, errorCode: 'INVALID_FORMAT' };
+    }
   }
 
-  let completedLessons = 0;
-  try {
-    const rawProgress = localStorage.getItem(PROGRESS_STORAGE_KEY);
-    if (rawProgress) completedLessons = countCompletedLessons(JSON.parse(rawProgress));
-  } catch {
-    completedLessons = 0;
-  }
+  const completedLessons = countCompletedLessons(readStorageJson<unknown>(STORAGE_KEYS.PROGRESS, null));
 
   return {
     ok: true,

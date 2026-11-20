@@ -1,24 +1,15 @@
 import { useState, useCallback } from 'react';
 import { VimMode } from '../vim-engine';
+import { STORAGE_KEYS, readStorageBoolean, writeStorageBoolean } from './localStorageClient';
 
 export type SoundEffectType = 'click' | 'thock' | 'mode' | 'success';
 
-const MUTE_STORAGE_KEY = 'vim_sound_muted';
-
 export function loadMuteSetting(): boolean {
-  try {
-    return localStorage.getItem(MUTE_STORAGE_KEY) === 'true';
-  } catch {
-    return false;
-  }
+  return readStorageBoolean(STORAGE_KEYS.SOUND_MUTED, false);
 }
 
 export function saveMuteSetting(muted: boolean): void {
-  try {
-    localStorage.setItem(MUTE_STORAGE_KEY, muted ? 'true' : 'false');
-  } catch {
-    // Ignore storage errors
-  }
+  writeStorageBoolean(STORAGE_KEYS.SOUND_MUTED, muted);
 }
 
 let audioContext: AudioContext | null = null;

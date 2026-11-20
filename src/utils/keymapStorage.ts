@@ -1,8 +1,15 @@
 import { DEFAULT_KEYMAP_PRESETS } from './configGenerator';
+import {
+  STORAGE_KEYS,
+  readStorageRaw,
+  writeStorageRaw,
+  readStorageJson,
+  writeStorageJson,
+} from './localStorageClient';
 
-export const KEYMAP_PRESETS_STORAGE_KEY = 'vim_keymap_presets_v1';
-export const LEADER_KEY_STORAGE_KEY = 'vim_leader_key_v1';
-export const CUSTOM_KEYMAPS_STORAGE_KEY = 'vim_custom_keymaps_v1';
+export const KEYMAP_PRESETS_STORAGE_KEY = STORAGE_KEYS.KEYMAP_PRESETS;
+export const LEADER_KEY_STORAGE_KEY = STORAGE_KEYS.LEADER_KEY;
+export const CUSTOM_KEYMAPS_STORAGE_KEY = STORAGE_KEYS.CUSTOM_KEYMAPS;
 
 export interface CustomKeymapItem {
   id: string;
@@ -22,59 +29,29 @@ export function getDefaultActivePresets(): Record<string, boolean> {
 }
 
 export function loadActivePresets(): Record<string, boolean> {
-  try {
-    const raw = localStorage.getItem(KEYMAP_PRESETS_STORAGE_KEY);
-    if (!raw) return getDefaultActivePresets();
-    return {
-      ...getDefaultActivePresets(),
-      ...JSON.parse(raw),
-    };
-  } catch {
-    return getDefaultActivePresets();
-  }
+  const parsed = readStorageJson<Record<string, boolean> | null>(KEYMAP_PRESETS_STORAGE_KEY, null);
+  return parsed ? { ...getDefaultActivePresets(), ...parsed } : getDefaultActivePresets();
 }
 
 export function saveActivePresets(presets: Record<string, boolean>): void {
-  try {
-    localStorage.setItem(KEYMAP_PRESETS_STORAGE_KEY, JSON.stringify(presets));
-  } catch {
-    // 예외 무시
-  }
+  writeStorageJson(KEYMAP_PRESETS_STORAGE_KEY, presets);
 }
 
 export function loadLeaderKey(): string {
-  try {
-    return localStorage.getItem(LEADER_KEY_STORAGE_KEY) || ' ';
-  } catch {
-    return ' ';
-  }
+  return readStorageRaw(LEADER_KEY_STORAGE_KEY) || ' ';
 }
 
 export function saveLeaderKey(key: string): void {
-  try {
-    localStorage.setItem(LEADER_KEY_STORAGE_KEY, key);
-  } catch {
-    // 예외 무시
-  }
+  writeStorageRaw(LEADER_KEY_STORAGE_KEY, key);
 }
 
 export function loadCustomKeymaps(): CustomKeymapItem[] {
-  try {
-    const raw = localStorage.getItem(CUSTOM_KEYMAPS_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+  const parsed = readStorageJson<unknown>(CUSTOM_KEYMAPS_STORAGE_KEY, []);
+  return Array.isArray(parsed) ? (parsed as CustomKeymapItem[]) : [];
 }
 
 export function saveCustomKeymaps(keymaps: CustomKeymapItem[]): void {
-  try {
-    localStorage.setItem(CUSTOM_KEYMAPS_STORAGE_KEY, JSON.stringify(keymaps));
-  } catch {
-    // 예외 무시
-  }
+  writeStorageJson(CUSTOM_KEYMAPS_STORAGE_KEY, keymaps);
 }
 
 /**

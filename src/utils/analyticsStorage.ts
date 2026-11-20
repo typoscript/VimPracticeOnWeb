@@ -1,8 +1,9 @@
 import { UserAnalyticsData, ProficiencyAxes, CommandFrequency, DailyRecord } from '../types/game';
 import { LessonProgress } from './storage';
 import { t, i18nKey } from '../i18n';
+import { STORAGE_KEYS, readStorageJson, writeStorageJson } from './localStorageClient';
 
-export const ANALYTICS_STORAGE_KEY = 'vim_user_analytics_v1';
+export const ANALYTICS_STORAGE_KEY = STORAGE_KEYS.ANALYTICS;
 
 export function getDefaultAnalytics(): UserAnalyticsData {
   return {
@@ -20,25 +21,12 @@ export function getDefaultAnalytics(): UserAnalyticsData {
 }
 
 export function loadUserAnalytics(): UserAnalyticsData {
-  try {
-    const raw = localStorage.getItem(ANALYTICS_STORAGE_KEY);
-    if (!raw) return getDefaultAnalytics();
-    const parsed = JSON.parse(raw);
-    return {
-      ...getDefaultAnalytics(),
-      ...parsed,
-    };
-  } catch {
-    return getDefaultAnalytics();
-  }
+  const parsed = readStorageJson<Partial<UserAnalyticsData> | null>(ANALYTICS_STORAGE_KEY, null);
+  return parsed ? { ...getDefaultAnalytics(), ...parsed } : getDefaultAnalytics();
 }
 
 export function saveUserAnalytics(data: UserAnalyticsData): void {
-  try {
-    localStorage.setItem(ANALYTICS_STORAGE_KEY, JSON.stringify(data));
-  } catch {
-    // 저장 공간 부족 등 예외 무시
-  }
+  writeStorageJson(ANALYTICS_STORAGE_KEY, data);
 }
 
 /**

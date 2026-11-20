@@ -1,3 +1,5 @@
+import { STORAGE_KEYS, readStorageRaw, writeStorageRaw } from './localStorageClient';
+
 export type VimTheme = 'tokyo-night' | 'catppuccin-mocha' | 'gruvbox-dark' | 'one-dark';
 
 export interface ThemeOption {
@@ -14,27 +16,18 @@ export const THEME_OPTIONS: ThemeOption[] = [
   { id: 'one-dark', name: 'One Dark', icon: '💻', accentColor: '#61afef' },
 ];
 
-const STORAGE_KEY = 'vim_selected_theme';
 export const DEFAULT_THEME: VimTheme = 'tokyo-night';
 
 export function loadThemeSetting(): VimTheme {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY) as VimTheme | null;
-    if (saved && THEME_OPTIONS.some((t) => t.id === saved)) {
-      return saved;
-    }
-  } catch (e) {
-    // ignore
+  const saved = readStorageRaw(STORAGE_KEYS.THEME) as VimTheme | null;
+  if (saved && THEME_OPTIONS.some((t) => t.id === saved)) {
+    return saved;
   }
   return DEFAULT_THEME;
 }
 
 export function saveThemeSetting(theme: VimTheme): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, theme);
-  } catch (e) {
-    // ignore
-  }
+  writeStorageRaw(STORAGE_KEYS.THEME, theme);
 }
 
 export function applyTheme(theme: VimTheme): void {

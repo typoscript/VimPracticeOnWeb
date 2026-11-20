@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { configureVimEngine } from '../vim-engine';
+import { STORAGE_KEYS, readStorageRaw, writeStorageRaw } from '../utils/localStorageClient';
 
 /**
  * 한/영 전환 (i18n)
@@ -14,15 +15,11 @@ import { configureVimEngine } from '../vim-engine';
 
 export type Locale = 'ko' | 'en';
 
-export const LOCALE_STORAGE_KEY = 'vim_locale_v1';
+export const LOCALE_STORAGE_KEY = STORAGE_KEYS.LOCALE;
 
 function detectLocale(): Locale {
-  try {
-    const saved = localStorage.getItem(LOCALE_STORAGE_KEY);
-    if (saved === 'ko' || saved === 'en') return saved;
-  } catch {
-    // 저장소를 쓸 수 없는 환경
-  }
+  const saved = readStorageRaw(LOCALE_STORAGE_KEY);
+  if (saved === 'ko' || saved === 'en') return saved;
   const lang = typeof navigator !== 'undefined' ? navigator.language ?? '' : '';
   return /^ko\b/i.test(lang) ? 'ko' : 'en';
 }
@@ -84,11 +81,7 @@ export function getLocale(): Locale {
 /** 언어를 바꿉니다. persist 가 false 면 저장하지 않습니다 (테스트용). */
 export function setLocale(locale: Locale, options: { persist?: boolean } = {}): void {
   if (options.persist !== false) {
-    try {
-      localStorage.setItem(LOCALE_STORAGE_KEY, locale);
-    } catch {
-      // 저장소를 쓸 수 없는 환경
-    }
+    writeStorageRaw(LOCALE_STORAGE_KEY, locale);
   }
   if (locale === 'en' && !enLoaded) {
     void ensureLocaleDictionaries('en');

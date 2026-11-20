@@ -1,7 +1,8 @@
 import { Mission } from '../types/mission';
 import { localized, t } from '../i18n';
+import { STORAGE_KEYS, readStorageJson, writeStorageJson } from './localStorageClient';
 
-export const CUSTOM_MISSIONS_STORAGE_KEY = 'vim_custom_missions_v1';
+export const CUSTOM_MISSIONS_STORAGE_KEY = STORAGE_KEYS.CUSTOM_MISSIONS;
 
 export interface CustomMissionData {
   title: string;
@@ -215,25 +216,15 @@ function normalizeSavedMissionItem(raw: unknown): SavedCustomMission | null {
 }
 
 export function loadSavedCustomMissions(): SavedCustomMission[] {
-  try {
-    const raw = localStorage.getItem(CUSTOM_MISSIONS_STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed
-      .map(normalizeSavedMissionItem)
-      .filter((item): item is SavedCustomMission => item !== null);
-  } catch {
-    return [];
-  }
+  const parsed = readStorageJson<unknown>(CUSTOM_MISSIONS_STORAGE_KEY, []);
+  if (!Array.isArray(parsed)) return [];
+  return parsed
+    .map(normalizeSavedMissionItem)
+    .filter((item): item is SavedCustomMission => item !== null);
 }
 
 function persistSavedCustomMissions(list: SavedCustomMission[]): void {
-  try {
-    localStorage.setItem(CUSTOM_MISSIONS_STORAGE_KEY, JSON.stringify(list));
-  } catch {
-    // ignore storage quota errors
-  }
+  writeStorageJson(CUSTOM_MISSIONS_STORAGE_KEY, list);
 }
 
 export function saveCustomMission(

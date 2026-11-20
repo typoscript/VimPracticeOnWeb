@@ -1,3 +1,11 @@
+import {
+  STORAGE_KEYS,
+  readStorageBoolean,
+  writeStorageBoolean,
+  readStorageJson,
+  writeStorageJson,
+} from './localStorageClient';
+
 export interface LessonRecord {
   completed: boolean;
   bestStars: number; // 1, 2, 3
@@ -6,14 +14,17 @@ export interface LessonRecord {
 
 export type LessonProgress = Record<number, LessonRecord>;
 
-export const PROGRESS_STORAGE_KEY = 'vim_practice_progress_v1';
-export const RELATIVE_LINE_STORAGE_KEY = 'vim_relative_line_numbers_v1';
-export const VIRTUAL_KEYBOARD_STORAGE_KEY = 'vim_virtual_keyboard_v1';
-export const DIFF_VIEW_STORAGE_KEY = 'vim_diff_view_v1';
-export const REGISTER_INSPECTOR_STORAGE_KEY = 'vim_register_inspector_v1';
-export const MARKS_VISUALIZER_STORAGE_KEY = 'vim_marks_visualizer_v1';
-export const GRAMMAR_AST_STORAGE_KEY = 'vim_grammar_ast_v1';
-export const SPEEDRUN_RECORD_STORAGE_KEY = 'vim_speedrun_record_v1';
+export const PROGRESS_STORAGE_KEY = STORAGE_KEYS.PROGRESS;
+export const RELATIVE_LINE_STORAGE_KEY = STORAGE_KEYS.RELATIVE_LINE;
+export const VIRTUAL_KEYBOARD_STORAGE_KEY = STORAGE_KEYS.VIRTUAL_KEYBOARD;
+export const DIFF_VIEW_STORAGE_KEY = STORAGE_KEYS.DIFF_VIEW;
+export const REGISTER_INSPECTOR_STORAGE_KEY = STORAGE_KEYS.REGISTER_INSPECTOR;
+export const MARKS_VISUALIZER_STORAGE_KEY = STORAGE_KEYS.MARKS_VISUALIZER;
+export const GRAMMAR_AST_STORAGE_KEY = STORAGE_KEYS.GRAMMAR_AST;
+export const SPEEDRUN_RECORD_STORAGE_KEY = STORAGE_KEYS.SPEEDRUN_RECORD;
+export const HARDCORE_MODE_STORAGE_KEY = STORAGE_KEYS.HARDCORE_MODE;
+export const DOJO_HIGH_SCORES_STORAGE_KEY = STORAGE_KEYS.DOJO_HIGH_SCORES;
+export const DOJO_LEADERBOARD_STORAGE_KEY = STORAGE_KEYS.DOJO_LEADERBOARD;
 
 export interface SpeedrunRecord {
   /** 총 소요 시간 (초, 소수점 1자리) */
@@ -28,13 +39,7 @@ export interface SpeedrunRecord {
  * localStorage에서 사용자의 레슨 진도 및 최고 기록을 불러옵니다.
  */
 export function loadProgress(): LessonProgress {
-  try {
-    const raw = localStorage.getItem(PROGRESS_STORAGE_KEY);
-    if (!raw) return {};
-    return JSON.parse(raw) as LessonProgress;
-  } catch {
-    return {};
-  }
+  return readStorageJson<LessonProgress>(PROGRESS_STORAGE_KEY, {});
 }
 
 /**
@@ -62,189 +67,62 @@ export function saveLessonRecord(
     },
   };
 
-  try {
-    localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(updated));
-  } catch {
-    // 저장 실패 시 무시
-  }
-
+  writeStorageJson(PROGRESS_STORAGE_KEY, updated);
   return updated;
 }
 
-/**
- * 상대 라인 번호 설정값을 불러옵니다.
- */
-export function loadRelativeLineSetting(): boolean {
-  try {
-    const raw = localStorage.getItem(RELATIVE_LINE_STORAGE_KEY);
-    return raw === 'true';
-  } catch {
-    return false;
-  }
-}
+/** 상대 라인 번호 설정값 조회/저장 */
+export const loadRelativeLineSetting = (): boolean =>
+  readStorageBoolean(RELATIVE_LINE_STORAGE_KEY, false);
+export const saveRelativeLineSetting = (enabled: boolean): void => {
+  writeStorageBoolean(RELATIVE_LINE_STORAGE_KEY, enabled);
+};
 
-/**
- * 상대 라인 번호 설정값을 저장합니다.
- */
-export function saveRelativeLineSetting(enabled: boolean): void {
-  try {
-    localStorage.setItem(RELATIVE_LINE_STORAGE_KEY, enabled ? 'true' : 'false');
-  } catch {
-    // 저장 실패 시 무시
-  }
-}
+/** 가상 키보드 패널 표시 여부 조회/저장 (기본값: true) */
+export const loadVirtualKeyboardSetting = (): boolean =>
+  readStorageBoolean(VIRTUAL_KEYBOARD_STORAGE_KEY, true);
+export const saveVirtualKeyboardSetting = (enabled: boolean): void => {
+  writeStorageBoolean(VIRTUAL_KEYBOARD_STORAGE_KEY, enabled);
+};
 
-/**
- * 가상 키보드 패널 표시 여부 설정값을 불러옵니다. (기본값: true)
- */
-export function loadVirtualKeyboardSetting(): boolean {
-  try {
-    const raw = localStorage.getItem(VIRTUAL_KEYBOARD_STORAGE_KEY);
-    return raw !== null ? raw === 'true' : true;
-  } catch {
-    return true;
-  }
-}
+/** 목표 Diff 비교 뷰 패널 표시 여부 조회/저장 (기본값: true) */
+export const loadDiffViewSetting = (): boolean =>
+  readStorageBoolean(DIFF_VIEW_STORAGE_KEY, true);
+export const saveDiffViewSetting = (enabled: boolean): void => {
+  writeStorageBoolean(DIFF_VIEW_STORAGE_KEY, enabled);
+};
 
-/**
- * 가상 키보드 패널 표시 여부 설정값을 저장합니다.
- */
-export function saveVirtualKeyboardSetting(enabled: boolean): void {
-  try {
-    localStorage.setItem(VIRTUAL_KEYBOARD_STORAGE_KEY, enabled ? 'true' : 'false');
-  } catch {
-    // 무시
-  }
-}
+/** 레지스터 인스펙터 패널 표시 여부 조회/저장 (기본값: true) */
+export const loadRegisterInspectorSetting = (): boolean =>
+  readStorageBoolean(REGISTER_INSPECTOR_STORAGE_KEY, true);
+export const saveRegisterInspectorSetting = (enabled: boolean): void => {
+  writeStorageBoolean(REGISTER_INSPECTOR_STORAGE_KEY, enabled);
+};
 
-/**
- * 목표 Diff 비교 뷰 패널 표시 여부 설정값을 불러옵니다. (기본값: true)
- */
-export function loadDiffViewSetting(): boolean {
-  try {
-    const raw = localStorage.getItem(DIFF_VIEW_STORAGE_KEY);
-    return raw !== null ? raw === 'true' : true;
-  } catch {
-    return true;
-  }
-}
+/** 마크 & 점프 리스트 비주얼 맵 패널 표시 여부 조회/저장 (기본값: false) */
+export const loadMarksVisualizerSetting = (): boolean =>
+  readStorageBoolean(MARKS_VISUALIZER_STORAGE_KEY, false);
+export const saveMarksVisualizerSetting = (enabled: boolean): void => {
+  writeStorageBoolean(MARKS_VISUALIZER_STORAGE_KEY, enabled);
+};
 
-/**
- * 목표 Diff 비교 뷰 패널 표시 여부 설정값을 저장합니다.
- */
-export function saveDiffViewSetting(enabled: boolean): void {
-  try {
-    localStorage.setItem(DIFF_VIEW_STORAGE_KEY, enabled ? 'true' : 'false');
-  } catch {
-    // 무시
-  }
-}
+/** Vim 문법 AST 인스펙터 패널 표시 여부 조회/저장 (기본값: false) */
+export const loadGrammarASTSetting = (): boolean =>
+  readStorageBoolean(GRAMMAR_AST_STORAGE_KEY, false);
+export const saveGrammarASTSetting = (enabled: boolean): void => {
+  writeStorageBoolean(GRAMMAR_AST_STORAGE_KEY, enabled);
+};
 
-/**
- * 레지스터 인스펙터 패널 표시 여부 설정값을 불러옵니다. (기본값: true)
- */
-export function loadRegisterInspectorSetting(): boolean {
-  try {
-    const raw = localStorage.getItem(REGISTER_INSPECTOR_STORAGE_KEY);
-    return raw !== null ? raw === 'true' : true;
-  } catch {
-    return true;
-  }
-}
+/** 실시간 명령 복기 타임라인 & Vim X-Ray 패널 표시 여부 조회/저장 (기본값: true) */
+export const loadActionTimelineSetting = (): boolean =>
+  readStorageBoolean(STORAGE_KEYS.ACTION_TIMELINE, true);
+export const saveActionTimelineSetting = (enabled: boolean): void => {
+  writeStorageBoolean(STORAGE_KEYS.ACTION_TIMELINE, enabled);
+};
 
-/**
- * 레지스터 인스펙터 패널 표시 여부 설정값을 저장합니다.
- */
-export function saveRegisterInspectorSetting(enabled: boolean): void {
-  try {
-    localStorage.setItem(REGISTER_INSPECTOR_STORAGE_KEY, enabled ? 'true' : 'false');
-  } catch {
-    // 무시
-  }
-}
-
-/**
- * 마크 & 점프 리스트 비주얼 맵 패널 표시 여부 설정값을 불러옵니다. (기본값: false)
- */
-export function loadMarksVisualizerSetting(): boolean {
-  try {
-    const raw = localStorage.getItem(MARKS_VISUALIZER_STORAGE_KEY);
-    return raw !== null ? raw === 'true' : false;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * 마크 & 점프 리스트 비주얼 맵 패널 표시 여부 설정값을 저장합니다.
- */
-export function saveMarksVisualizerSetting(enabled: boolean): void {
-  try {
-    localStorage.setItem(MARKS_VISUALIZER_STORAGE_KEY, enabled ? 'true' : 'false');
-  } catch {
-    // 무시
-  }
-}
-
-/**
- * Vim 문법 AST 인스펙터 패널 표시 여부 설정값을 불러옵니다. (기본값: false)
- */
-export function loadGrammarASTSetting(): boolean {
-  try {
-    const raw = localStorage.getItem(GRAMMAR_AST_STORAGE_KEY);
-    return raw !== null ? raw === 'true' : false;
-  } catch {
-    return false;
-  }
-}
-
-/**
- * Vim 문법 AST 인스펙터 패널 표시 여부 설정값을 저장합니다.
- */
-export function saveGrammarASTSetting(enabled: boolean): void {
-  try {
-    localStorage.setItem(GRAMMAR_AST_STORAGE_KEY, enabled ? 'true' : 'false');
-  } catch {
-    // 무시
-  }
-}
-
-const ACTION_TIMELINE_STORAGE_KEY = 'vim_practice_action_timeline_enabled';
-
-/**
- * 실시간 명령 복기 타임라인 & Vim X-Ray 패널 표시 여부 설정값을 불러옵니다 (기본값: true).
- */
-export function loadActionTimelineSetting(): boolean {
-  try {
-    const raw = localStorage.getItem(ACTION_TIMELINE_STORAGE_KEY);
-    return raw !== null ? raw === 'true' : true;
-  } catch {
-    return true;
-  }
-}
-
-/**
- * 실시간 명령 복기 타임라인 & Vim X-Ray 패널 표시 여부 설정값을 저장합니다.
- */
-export function saveActionTimelineSetting(enabled: boolean): void {
-  try {
-    localStorage.setItem(ACTION_TIMELINE_STORAGE_KEY, enabled ? 'true' : 'false');
-  } catch {
-    // 무시
-  }
-}
-
-/**
- * 스피드런 최고 기록을 불러옵니다.
- */
+/** 스피드런 최고 기록 조회 */
 export function loadSpeedrunRecord(): SpeedrunRecord | null {
-  try {
-    const raw = localStorage.getItem(SPEEDRUN_RECORD_STORAGE_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw) as SpeedrunRecord;
-  } catch {
-    return null;
-  }
+  return readStorageJson<SpeedrunRecord | null>(SPEEDRUN_RECORD_STORAGE_KEY, null);
 }
 
 /**
@@ -255,15 +133,10 @@ export function saveSpeedrunRecord(
   keystrokes: number
 ): { record: SpeedrunRecord; isNewRecord: boolean } {
   const current = loadSpeedrunRecord();
-  let isNewRecord = false;
-
-  if (!current) {
-    isNewRecord = true;
-  } else if (timeSeconds < current.bestTimeSeconds) {
-    isNewRecord = true;
-  } else if (timeSeconds === current.bestTimeSeconds && keystrokes < current.minKeystrokes) {
-    isNewRecord = true;
-  }
+  const isNewRecord =
+    !current ||
+    timeSeconds < current.bestTimeSeconds ||
+    (timeSeconds === current.bestTimeSeconds && keystrokes < current.minKeystrokes);
 
   const recordToSave: SpeedrunRecord = isNewRecord
     ? {
@@ -271,20 +144,11 @@ export function saveSpeedrunRecord(
         minKeystrokes: keystrokes,
         completedAt: new Date().toISOString(),
       }
-    : current!;
+    : current;
 
-  try {
-    localStorage.setItem(SPEEDRUN_RECORD_STORAGE_KEY, JSON.stringify(recordToSave));
-  } catch {
-    // 무시
-  }
-
+  writeStorageJson(SPEEDRUN_RECORD_STORAGE_KEY, recordToSave);
   return { record: recordToSave, isNewRecord };
 }
-
-export const HARDCORE_MODE_STORAGE_KEY = 'vim_hardcore_mode_v1';
-export const DOJO_HIGH_SCORES_STORAGE_KEY = 'vim_dojo_high_scores_v1';
-export const DOJO_LEADERBOARD_STORAGE_KEY = 'vim_dojo_leaderboard_v1';
 
 export interface DojoLeaderboardEntry {
   id: string;
@@ -311,56 +175,26 @@ export interface DojoHighScore {
   completedAt: string;
 }
 
-/**
- * 하드코어 모드 활성화 여부를 불러옵니다 (기본값: false).
- */
-export function loadHardcoreMode(): boolean {
-  try {
-    const raw = localStorage.getItem(HARDCORE_MODE_STORAGE_KEY);
-    return raw === 'true';
-  } catch {
-    return false;
-  }
-}
+/** 하드코어 모드 활성화 여부 조회/저장 (기본값: false) */
+export const loadHardcoreMode = (): boolean =>
+  readStorageBoolean(HARDCORE_MODE_STORAGE_KEY, false);
+export const saveHardcoreMode = (enabled: boolean): void => {
+  writeStorageBoolean(HARDCORE_MODE_STORAGE_KEY, enabled);
+};
 
-/**
- * 하드코어 모드 활성화 여부를 저장합니다.
- */
-export function saveHardcoreMode(enabled: boolean): void {
-  try {
-    localStorage.setItem(HARDCORE_MODE_STORAGE_KEY, enabled ? 'true' : 'false');
-  } catch {
-    // 무시
-  }
-}
-
-/**
- * 도장(Dojo) 미니 드릴 최고 기록 목록을 불러옵니다.
- */
+/** 도장(Dojo) 미니 드릴 최고 기록 목록 조회 */
 export function loadDojoHighScores(): Record<string, DojoHighScore> {
-  try {
-    const raw = localStorage.getItem(DOJO_HIGH_SCORES_STORAGE_KEY);
-    if (!raw) return {};
-    return JSON.parse(raw);
-  } catch {
-    return {};
-  }
+  return readStorageJson<Record<string, DojoHighScore>>(DOJO_HIGH_SCORES_STORAGE_KEY, {});
 }
 
-/**
- * 특정 드릴의 최고 기록을 저장하고 갱신 여부를 반환합니다.
- */
+/** 특정 드릴의 최고 기록을 저장하고 갱신 여부를 반환합니다. */
 export function saveDojoHighScore(
   drillId: string,
   record: { score: number; targetsHit: number; spm: number; apm: number }
 ): { isNewRecord: boolean; currentBest: DojoHighScore } {
   const all = loadDojoHighScores();
   const existing = all[drillId];
-  let isNewRecord = false;
-
-  if (!existing || record.score > existing.score) {
-    isNewRecord = true;
-  }
+  const isNewRecord = !existing || record.score > existing.score;
 
   const updatedRecord: DojoHighScore = isNewRecord
     ? {
@@ -370,38 +204,24 @@ export function saveDojoHighScore(
         apm: record.apm,
         completedAt: new Date().toISOString(),
       }
-    : existing!;
+    : existing;
 
   all[drillId] = updatedRecord;
-
-  try {
-    localStorage.setItem(DOJO_HIGH_SCORES_STORAGE_KEY, JSON.stringify(all));
-  } catch {
-    // 무시
-  }
-
+  writeStorageJson(DOJO_HIGH_SCORES_STORAGE_KEY, all);
   return { isNewRecord, currentBest: updatedRecord };
 }
 
-/**
- * 도장 서든데스 명예의 전당 (Leaderboard) 랭킹 목록을 불러옵니다.
- */
+/** 도장 서든데스 명예의 전당 (Leaderboard) 랭킹 목록 조회 */
 export function loadDojoLeaderboard(): DojoLeaderboardEntry[] {
-  try {
-    const raw = localStorage.getItem(DOJO_LEADERBOARD_STORAGE_KEY);
-    if (!raw) return DEFAULT_DOJO_LEADERBOARD;
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_DOJO_LEADERBOARD;
-    return parsed;
-  } catch {
-    return DEFAULT_DOJO_LEADERBOARD;
-  }
+  const parsed = readStorageJson<unknown>(DOJO_LEADERBOARD_STORAGE_KEY, null);
+  if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_DOJO_LEADERBOARD;
+  return parsed as DojoLeaderboardEntry[];
 }
 
-/**
- * 서든데스 클리어 기록을 랭킹에 저장하고 순위를 반환합니다.
- */
-export function saveDojoLeaderboardEntry(entry: Omit<DojoLeaderboardEntry, 'id' | 'completedAt'>): {
+/** 서든데스 클리어 기록을 랭킹에 저장하고 순위를 반환합니다. */
+export function saveDojoLeaderboardEntry(
+  entry: Omit<DojoLeaderboardEntry, 'id' | 'completedAt'>
+): {
   leaderboard: DojoLeaderboardEntry[];
   rank: number;
 } {
@@ -414,14 +234,7 @@ export function saveDojoLeaderboardEntry(entry: Omit<DojoLeaderboardEntry, 'id' 
 
   const updated = [...current, newEntry].sort((a, b) => a.clearTime - b.clearTime).slice(0, 10);
   const rank = updated.findIndex((e) => e.id === newEntry.id) + 1;
-
-  try {
-    localStorage.setItem(DOJO_LEADERBOARD_STORAGE_KEY, JSON.stringify(updated));
-  } catch {
-    // 무시
-  }
+  writeStorageJson(DOJO_LEADERBOARD_STORAGE_KEY, updated);
 
   return { leaderboard: updated, rank: rank > 0 ? rank : updated.length + 1 };
 }
-
-
