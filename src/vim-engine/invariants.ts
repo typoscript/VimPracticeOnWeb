@@ -1,4 +1,5 @@
 import { VimEditorState, CursorPosition, VimMode, SplitPaneState } from './types';
+import { collectLeafIndices } from './windowTree';
 
 export class VimInvariantViolationError extends Error {
   constructor(
@@ -188,7 +189,7 @@ export function assertValidVimState(
     nextState
   );
 
-  // 2. 분할 창(Split Panes)이 존재하는 경우 각 창 상태도 동일하게 검증
+  // 2. 분할 창(Split Panes)이 존재하는 경우 각 창 상태 및 윈도우 트리 일관성 검증
   if (nextState.splitPanes && Array.isArray(nextState.splitPanes)) {
     nextState.splitPanes.forEach((pane: SplitPaneState, idx: number) => {
       assertBufferAndCursor(
@@ -201,6 +202,30 @@ export function assertValidVimState(
         nextState
       );
     });
+    if (
+      nextState.activePaneIndex !== undefined &&
+      (nextState.activePaneIndex < 0 || nextState.activePaneIndex >= nextState.splitPanes.length)
+    ) {
+      throw new VimInvariantViolationError(
+        'ACTIVE_PANE_OUT_OF_BOUNDS',
+        `activePaneIndex ${nextState.activePaneIndex} is out of bounds for ${nextState.splitPanes.length} panes`,
+        key,
+        prevState,
+        nextState
+      );
+    }
+    if (nextState.windowLayout) {
+      const leaves = collectLeafIndices(nextState.windowLayout);
+      if (leaves.length !== nextState.splitPanes.length) {
+        throw new VimInvariantViolationError(
+          'WINDOW_TREE_LEAF_MISMATCH',
+          `windowLayout leaf count (${leaves.length}) does not match splitPanes length (${nextState.splitPanes.length})`,
+          key,
+          prevState,
+          nextState
+        );
+      }
+    }
   }
 
   // 3. Undo ('u') 검증 (NORMAL 모드에서 대기 키 없이 'u' 입력 시에만 실행됨)

@@ -209,15 +209,29 @@ export function gotoFileUnderCursor(
 
   if (options.split) {
     const synced = syncCurrentBuffer(jumpedState);
+    const prevWinIds = new Set(
+      (synced.splitPanes ?? []).map((p, idx) => p.winId ?? 1000 + idx)
+    );
     const splitState = splitWindow(synced, 'horizontal', resolved.lines, resolved.filename);
-    const focused = switchPaneFocus(splitState, 1);
+    const newPaneIdx = splitState.splitPanes
+      ? Math.max(
+          0,
+          splitState.splitPanes.findIndex(
+            (p, idx) => !prevWinIds.has(p.winId ?? 1000 + idx) && p.filename === resolved.filename
+          )
+        )
+      : 1;
+    const targetIdx =
+      splitState.splitPanes && newPaneIdx > 0
+        ? newPaneIdx
+        : Math.min(1, (splitState.splitPanes?.length ?? 1) - 1);
+    const focused = switchPaneFocus(splitState, targetIdx);
     const targetRow = target.targetLine ? target.targetLine - 1 : 0;
     const nextCursor = clampCursor(resolved.lines, { line: targetRow, col: 0 }, 'NORMAL');
     const nextPanes = focused.splitPanes
-      ? ([
-          focused.splitPanes[0],
-          { ...focused.splitPanes[1], cursor: nextCursor },
-        ] as typeof focused.splitPanes)
+      ? focused.splitPanes.map((pane, idx) =>
+          idx === targetIdx ? { ...pane, cursor: nextCursor } : pane
+        )
       : undefined;
 
     return {

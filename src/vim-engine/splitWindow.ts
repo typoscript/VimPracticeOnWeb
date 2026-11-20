@@ -1,7 +1,21 @@
-import { SplitPaneState, VimEditorState } from './types';
+import { SplitPaneState, VimEditorState, WindowLayoutNode } from './types';
 import { openNewTab } from './tabEngine';
 import { msg } from './messages';
 import { getGlobalOptions, getOptions } from './setEngine';
+import {
+  allocateNextWinId,
+  exchangeLeafInTree,
+  findNeighborPane,
+  getEffectiveWindowTree,
+  getPaneWinId,
+  moveLeafToEdgeInTree,
+  normalizeWindowLayout,
+  removeLeafFromTree,
+  resizeLeafInTree,
+  rotateSiblingsInTree,
+  splitLeafInTree,
+  switchPaneFocusCore,
+} from './windowTree';
 
 function withPaneScrollbindOption(
   state: VimEditorState,
@@ -12,8 +26,28 @@ function withPaneScrollbindOption(
   return { ...base, scrollbind: scrollbind ?? base.scrollbind ?? false };
 }
 
+function loadPaneIntoTopLevel(
+  state: VimEditorState,
+  pane: SplitPaneState
+): Partial<VimEditorState> {
+  return {
+    lines: [...pane.lines],
+    cursor: { ...pane.cursor },
+    mode: pane.mode ?? 'NORMAL',
+    visualAnchor: pane.visualAnchor,
+    visualBlockEndOfLine: pane.visualBlockEndOfLine,
+    viewport: pane.viewport,
+    undoStack: pane.undoStack ? [...pane.undoStack] : [],
+    redoStack: pane.redoStack ? [...pane.redoStack] : [],
+    pendingKeys: undefined,
+    locationList: pane.locationList,
+    options: withPaneScrollbindOption(state, pane.scrollbind),
+  };
+}
+
 /**
  * 에디터 창을 가로(:sp, :new) 또는 세로(:vsp, :vnew)로 분할합니다.
+ * 이미 분할된 상태에서도 현재 활성 창을 중첩 분할하여 3개 이상의 멀티 윈도우 트리를 구성합니다.
  */
 export function splitWindow(
   state: VimEditorState,
@@ -21,11 +55,63 @@ export function splitWindow(
   secondaryLines?: string[],
   secondaryFilename?: string
 ): VimEditorState {
-  if (state.splitDirection && state.splitDirection !== 'none' && state.splitPanes) {
-    // 이미 분할된 상태인 경우 분할 방향 전환
+  const isAlreadySplit = Boolean(
+    state.splitDirection &&
+      state.splitDirection !== 'none' &&
+      state.splitPanes &&
+      state.splitPanes.length >= 2
+  );
+
+  if (isAlreadySplit) {
+    const synced = syncActivePane(state);
+    const existingPanes = synced.splitPanes!;
+    const curIdx = synced.activePaneIndex ?? 0;
+    const curPane = existingPanes[curIdx];
+    const baseTree = getEffectiveWindowTree(synced)!;
+
+    const panesWithIds = existingPanes.map((p, i) =>
+      p.winId !== undefined ? p : { ...p, winId: 1000 + i }
+    );
+    const newWinId = allocateNextWinId(panesWithIds, synced.nextWindowId);
+    const curScb = curPane.scrollbind ?? getOptions(synced).scrollbind ?? false;
+    const newWinScb = secondaryLines ? (getGlobalOptions(synced).scrollbind ?? false) : curScb;
+
+    const newPane: SplitPaneState = {
+      winId: newWinId,
+      filename: secondaryFilename || curPane.filename || 'source.ts',
+      lines: secondaryLines ? [...secondaryLines] : [...curPane.lines],
+      cursor: { line: 0, col: 0 },
+      mode: 'NORMAL',
+      viewport: { topRow: 0, visibleRows: curPane.viewport?.visibleRows ?? 10 },
+      undoStack: [],
+      redoStack: [],
+      scrollbind: newWinScb,
+    };
+
+    const nextRawPanes = [...panesWithIds, newPane];
+    const newRawIdx = panesWithIds.length;
+    const nextTree = splitLeafInTree(baseTree, curIdx, newRawIdx, direction);
+
+    const normalized = normalizeWindowLayout({
+      tree: nextTree,
+      panes: nextRawPanes,
+      activeOriginalIndex: curIdx,
+      prevOriginalIndex: synced.previousPaneIndex,
+      windowVars: synced.windowVars,
+    });
+
     return {
-      ...state,
-      splitDirection: direction,
+      ...synced,
+      splitDirection: normalized.splitDirection,
+      splitPanes: normalized.splitPanes,
+      windowLayout: normalized.windowLayout,
+      splitRatio: normalized.splitRatio,
+      activePaneIndex: normalized.activePaneIndex,
+      previousPaneIndex: normalized.previousPaneIndex,
+      windowVars: normalized.windowVars,
+      nextWindowId: newWinId + 1,
+      primaryFilename: normalized.splitPanes?.[0]?.filename ?? synced.primaryFilename,
+      secondaryFilename: normalized.splitPanes?.[1]?.filename ?? synced.secondaryFilename,
       commandMessage:
         direction === 'vertical'
           ? msg('창을 세로로 분할했습니다 (:vsp)')
@@ -39,12 +125,17 @@ export function splitWindow(
   const curScb = getOptions(state).scrollbind ?? false;
   const newWinScb = secondaryLines ? (getGlobalOptions(state).scrollbind ?? false) : curScb;
 
+  const winId0 = 1000;
+  const winId1 = allocateNextWinId([{ winId: winId0 } as SplitPaneState], state.nextWindowId);
+
   const pane0: SplitPaneState = {
+    winId: winId0,
     filename: primaryName,
     lines: [...state.lines],
     cursor: { ...state.cursor },
     mode: state.mode,
     visualAnchor: state.visualAnchor,
+    visualBlockEndOfLine: state.visualBlockEndOfLine,
     viewport: state.viewport,
     undoStack: state.undoStack ? [...state.undoStack] : [],
     redoStack: state.redoStack ? [...state.redoStack] : [],
@@ -56,6 +147,7 @@ export function splitWindow(
 
   const p1Lines = secondaryLines ?? state.secondaryLines ?? [...state.lines];
   const pane1: SplitPaneState = {
+    winId: winId1,
     filename: secondaryName,
     lines: [...p1Lines],
     cursor: { line: 0, col: 0 },
@@ -66,12 +158,24 @@ export function splitWindow(
     scrollbind: newWinScb,
   };
 
+  const initialTree: WindowLayoutNode = {
+    kind: 'split',
+    direction,
+    children: [
+      { kind: 'leaf', paneIndex: 0 },
+      { kind: 'leaf', paneIndex: 1 },
+    ],
+    weights: [50, 50],
+  };
+
   return {
     ...state,
     splitDirection: direction,
     activePaneIndex: 0,
     previousPaneIndex: undefined,
     splitPanes: [pane0, pane1],
+    windowLayout: initialTree,
+    nextWindowId: winId1 + 1,
     splitRatio: 50,
     primaryFilename: primaryName,
     secondaryFilename: secondaryName,
@@ -86,7 +190,12 @@ export function splitWindow(
  * 현재 활성화된 분할 창을 닫습니다 (:close, :clo, :q, Ctrl+w c, Ctrl+w q).
  */
 export function closeSplitWindow(state: VimEditorState): VimEditorState {
-  if (!state.splitDirection || state.splitDirection === 'none' || !state.splitPanes) {
+  if (
+    !state.splitDirection ||
+    state.splitDirection === 'none' ||
+    !state.splitPanes ||
+    state.splitPanes.length < 2
+  ) {
     return {
       ...state,
       commandMessage: msg('E444: 마지막 창을 닫을 수 없습니다 (:close)'),
@@ -94,49 +203,58 @@ export function closeSplitWindow(state: VimEditorState): VimEditorState {
   }
 
   const curIdx = state.activePaneIndex ?? 0;
+  const panes = state.splitPanes;
 
-  if (curIdx === 1) {
-    // 보조 창(1) 닫기: 주 창(0)으로 복귀
-    const p0 = state.splitPanes[0];
+  if (panes.length === 2) {
+    const keepIdx = curIdx === 1 ? 0 : 1;
+    const kept = panes[keepIdx];
+    const keptVars =
+      state.windowVars && state.windowVars[keepIdx]
+        ? { 0: state.windowVars[keepIdx] }
+        : undefined;
     return {
       ...state,
-      lines: [...p0.lines],
-      cursor: { ...p0.cursor },
-      mode: p0.mode,
-      visualAnchor: p0.visualAnchor,
-      viewport: p0.viewport,
-      undoStack: p0.undoStack ? [...p0.undoStack] : [],
-      redoStack: p0.redoStack ? [...p0.redoStack] : [],
+      ...loadPaneIntoTopLevel(state, kept),
+      ...(curIdx === 0 ? { primaryFilename: kept.filename } : {}),
       splitDirection: 'none',
       activePaneIndex: 0,
       previousPaneIndex: undefined,
       splitPanes: undefined,
+      windowLayout: undefined,
       splitRatio: undefined,
-      locationList: p0.locationList,
-      options: withPaneScrollbindOption(state, p0.scrollbind),
+      windowVars: keptVars,
       commandMessage: msg('분할 창을 닫았습니다 (:close)'),
     };
   }
 
-  // 주 창(0) 닫기: 보조 창(1)이 단일 창으로 승격
-  const p1 = state.splitPanes[1];
+  // 3개 이상 분할 창: 현재 창만 트리에서 제거하고 남은 트리 정규화
+  const tree = getEffectiveWindowTree(state)!;
+  const reducedTree = removeLeafFromTree(tree, curIdx);
+  const nextActiveOriginal = curIdx + 1 < panes.length ? curIdx + 1 : curIdx - 1;
+
+  const normalized = normalizeWindowLayout({
+    tree: reducedTree,
+    panes,
+    activeOriginalIndex: nextActiveOriginal,
+    prevOriginalIndex: state.previousPaneIndex,
+    windowVars: state.windowVars,
+  });
+
+  const nextActivePane =
+    normalized.splitPanes?.[normalized.activePaneIndex] ?? panes[nextActiveOriginal];
+
   return {
     ...state,
-    lines: [...p1.lines],
-    cursor: { ...p1.cursor },
-    mode: p1.mode,
-    visualAnchor: p1.visualAnchor,
-    viewport: p1.viewport,
-    undoStack: p1.undoStack ? [...p1.undoStack] : [],
-    redoStack: p1.redoStack ? [...p1.redoStack] : [],
-    primaryFilename: p1.filename,
-    splitDirection: 'none',
-    activePaneIndex: 0,
-    previousPaneIndex: undefined,
-    splitPanes: undefined,
-    splitRatio: undefined,
-    locationList: p1.locationList,
-    options: withPaneScrollbindOption(state, p1.scrollbind),
+    ...loadPaneIntoTopLevel(state, nextActivePane),
+    splitDirection: normalized.splitDirection,
+    splitPanes: normalized.splitPanes,
+    windowLayout: normalized.windowLayout,
+    splitRatio: normalized.splitRatio,
+    activePaneIndex: normalized.activePaneIndex,
+    previousPaneIndex: normalized.previousPaneIndex,
+    windowVars: normalized.windowVars,
+    primaryFilename: normalized.splitPanes?.[0]?.filename ?? nextActivePane.filename,
+    secondaryFilename: normalized.splitPanes?.[1]?.filename,
     commandMessage: msg('분할 창을 닫았습니다 (:close)'),
   };
 }
@@ -154,6 +272,10 @@ export function closeOtherPanes(state: VimEditorState): VimEditorState {
 
   const curIdx = state.activePaneIndex ?? 0;
   const activePane = state.splitPanes[curIdx];
+  const keptVars =
+    state.windowVars && state.windowVars[curIdx]
+      ? { 0: state.windowVars[curIdx] }
+      : undefined;
 
   return {
     ...state,
@@ -169,7 +291,9 @@ export function closeOtherPanes(state: VimEditorState): VimEditorState {
     activePaneIndex: 0,
     previousPaneIndex: undefined,
     splitPanes: undefined,
+    windowLayout: undefined,
     splitRatio: undefined,
+    windowVars: keptVars,
     commandMessage: msg('현재 창만 유지되었습니다 (:only)'),
   };
 }
@@ -181,134 +305,121 @@ export function switchPaneFocus(
   state: VimEditorState,
   targetPaneIndex: number
 ): VimEditorState {
-  if (!state.splitDirection || state.splitDirection === 'none' || !state.splitPanes) {
-    return state;
-  }
-
-  const curIdx = state.activePaneIndex ?? 0;
-  if (curIdx === targetPaneIndex) {
-    return state;
-  }
-
-  // 1. 현재 활성 창의 작업 상태를 splitPanes에 저장
-  const currentPane: SplitPaneState = {
-    filename:
-      curIdx === 0
-        ? state.primaryFilename || 'source.ts'
-        : state.secondaryFilename || 'target.ts',
-    lines: [...state.lines],
-    cursor: { ...state.cursor },
-    mode: state.mode,
-    visualAnchor: state.visualAnchor,
-    viewport: state.viewport,
-    undoStack: state.undoStack ? [...state.undoStack] : [],
-    redoStack: state.redoStack ? [...state.redoStack] : [],
-    pendingKeys: state.pendingKeys,
-    blockInsertSession: state.blockInsertSession,
-    locationList: state.locationList,
-    scrollbind: state.splitPanes[curIdx]?.scrollbind ?? getOptions(state).scrollbind ?? false,
-    diff: state.splitPanes[curIdx]?.diff,
-  };
-
-  const newPanes: [SplitPaneState, SplitPaneState] = [
-    state.splitPanes[0],
-    state.splitPanes[1],
-  ];
-  newPanes[curIdx] = currentPane;
-
-  // 2. 대상 창 상태를 최상위 버퍼로 로드
-  const targetPane = newPanes[targetPaneIndex];
-  return {
-    ...state,
-    lines: [...targetPane.lines],
-    cursor: { ...targetPane.cursor },
-    mode: targetPane.mode ?? 'NORMAL',
-    visualAnchor: targetPane.visualAnchor,
-    viewport: targetPane.viewport,
-    undoStack: targetPane.undoStack ? [...targetPane.undoStack] : [],
-    redoStack: targetPane.redoStack ? [...targetPane.redoStack] : [],
-    pendingKeys: undefined,
-    activePaneIndex: targetPaneIndex,
-    previousPaneIndex: curIdx,
-    splitPanes: newPanes,
-    locationList: targetPane.locationList,
-    options: withPaneScrollbindOption(state, targetPane.scrollbind),
-  };
+  return switchPaneFocusCore(state, targetPaneIndex);
 }
 
 /**
- * 두 분할 창의 위치와 내용을 서로 맞바꿉니다 (Ctrl+w x).
+ * 중첩 윈도우 트리의 기하학적 위치 기준으로 h/j/k/l 방향 이웃 창으로 포커스를 이동합니다.
  */
-export function exchangePanes(state: VimEditorState): VimEditorState {
+export function moveFocusByDirection(
+  state: VimEditorState,
+  dir: 'h' | 'j' | 'k' | 'l'
+): VimEditorState {
+  const tree = getEffectiveWindowTree(state);
+  if (!tree || !state.splitPanes) return state;
+  const curIdx = state.activePaneIndex ?? 0;
+  const targetIdx = findNeighborPane(tree, curIdx, dir);
+  if (targetIdx === null) return state;
+  return switchPaneFocus(state, targetIdx);
+}
+
+/**
+ * Ctrl-w w / Ctrl-w W / [count]Ctrl-w w 순환 이동을 처리합니다.
+ */
+export function cyclePaneFocus(
+  state: VimEditorState,
+  delta: 1 | -1,
+  count?: number
+): VimEditorState {
+  if (!state.splitDirection || state.splitDirection === 'none' || !state.splitPanes) {
+    return state;
+  }
+  const n = state.splitPanes.length;
+  if (count !== undefined && count >= 1) {
+    return switchPaneFocus(state, Math.min(n - 1, count - 1));
+  }
+  const curIdx = state.activePaneIndex ?? 0;
+  const nextIdx = (curIdx + delta + n) % n;
+  return switchPaneFocus(state, nextIdx);
+}
+
+/**
+ * 분할 창의 위치와 내용을 인접 형제 창과 맞바꿉니다 (Ctrl+w x).
+ */
+export function exchangePanes(state: VimEditorState, count?: number): VimEditorState {
   const synced = syncActivePane(state);
-  if (!synced.splitDirection || synced.splitDirection === 'none' || !synced.splitPanes) {
+  const tree = getEffectiveWindowTree(synced);
+  if (!tree || !synced.splitPanes) {
     return synced;
   }
 
   const curIdx = synced.activePaneIndex ?? 0;
-  const p0 = synced.splitPanes[0];
-  const p1 = synced.splitPanes[1];
+  const swappedTree = exchangeLeafInTree(tree, curIdx, count);
+  const normalized = normalizeWindowLayout({
+    tree: swappedTree,
+    panes: synced.splitPanes,
+    activeOriginalIndex: curIdx,
+    prevOriginalIndex: synced.previousPaneIndex,
+    windowVars: synced.windowVars,
+  });
 
-  const swappedPanes: [SplitPaneState, SplitPaneState] = [p1, p0];
-  const newActive = swappedPanes[curIdx];
+  // 기존 VimPracticeOnWeb 규약: Ctrl-w x 후 포커스 슬롯(curIdx)에 들어온 창을 활성화
+  const targetSlot = Math.min(curIdx, (normalized.splitPanes?.length ?? 1) - 1);
+  const newActive = normalized.splitPanes![targetSlot];
 
   return {
     ...synced,
-    lines: [...newActive.lines],
-    cursor: { ...newActive.cursor },
-    mode: newActive.mode ?? 'NORMAL',
-    visualAnchor: newActive.visualAnchor,
-    viewport: newActive.viewport,
-    undoStack: newActive.undoStack ? [...newActive.undoStack] : [],
-    redoStack: newActive.redoStack ? [...newActive.redoStack] : [],
-    primaryFilename: swappedPanes[0].filename,
-    secondaryFilename: swappedPanes[1].filename,
-    previousPaneIndex:
-      synced.previousPaneIndex !== undefined ? 1 - synced.previousPaneIndex : undefined,
-    splitPanes: swappedPanes,
-    locationList: newActive.locationList,
-    options: withPaneScrollbindOption(synced, newActive.scrollbind),
+    ...loadPaneIntoTopLevel(synced, newActive),
+    splitDirection: normalized.splitDirection,
+    splitPanes: normalized.splitPanes,
+    windowLayout: normalized.windowLayout,
+    splitRatio: normalized.splitRatio,
+    activePaneIndex: targetSlot,
+    previousPaneIndex: normalized.previousPaneIndex,
+    windowVars: normalized.windowVars,
+    primaryFilename: normalized.splitPanes![0].filename,
+    secondaryFilename: normalized.splitPanes![1]?.filename,
     commandMessage: msg('두 창의 위치를 맞바꿨습니다 (Ctrl-w x)'),
   };
 }
 
 /**
- * 분할 창을 시계 방향 또는 반시계 방향으로 회전합니다 (Ctrl+w r / Ctrl+w R).
+ * 현재 창이 속한 분할 컨테이너의 창들을 시계/반시계 방향으로 회전합니다 (Ctrl+w r / Ctrl+w R).
  */
 export function rotatePanes(
   state: VimEditorState,
   counterClockwise = false
 ): VimEditorState {
   const synced = syncActivePane(state);
-  if (!synced.splitDirection || synced.splitDirection === 'none' || !synced.splitPanes) {
+  const tree = getEffectiveWindowTree(synced);
+  if (!tree || !synced.splitPanes) {
     return synced;
   }
 
   const curIdx = synced.activePaneIndex ?? 0;
-  const p0 = synced.splitPanes[0];
-  const p1 = synced.splitPanes[1];
+  const rotatedTree = rotateSiblingsInTree(tree, curIdx, counterClockwise);
+  const normalized = normalizeWindowLayout({
+    tree: rotatedTree,
+    panes: synced.splitPanes,
+    activeOriginalIndex: curIdx,
+    prevOriginalIndex: synced.previousPaneIndex,
+    windowVars: synced.windowVars,
+  });
 
-  const rotatedPanes: [SplitPaneState, SplitPaneState] = [p1, p0];
-  const nextActiveIdx = (curIdx + 1) % 2;
-  const newActive = rotatedPanes[nextActiveIdx];
+  const newActive = normalized.splitPanes![normalized.activePaneIndex];
 
   return {
     ...synced,
-    lines: [...newActive.lines],
-    cursor: { ...newActive.cursor },
-    mode: newActive.mode ?? 'NORMAL',
-    visualAnchor: newActive.visualAnchor,
-    viewport: newActive.viewport,
-    undoStack: newActive.undoStack ? [...newActive.undoStack] : [],
-    redoStack: newActive.redoStack ? [...newActive.redoStack] : [],
-    primaryFilename: rotatedPanes[0].filename,
-    secondaryFilename: rotatedPanes[1].filename,
-    activePaneIndex: nextActiveIdx,
-    previousPaneIndex:
-      synced.previousPaneIndex !== undefined ? 1 - synced.previousPaneIndex : undefined,
-    splitPanes: rotatedPanes,
-    locationList: newActive.locationList,
-    options: withPaneScrollbindOption(synced, newActive.scrollbind),
+    ...loadPaneIntoTopLevel(synced, newActive),
+    splitDirection: normalized.splitDirection,
+    splitPanes: normalized.splitPanes,
+    windowLayout: normalized.windowLayout,
+    splitRatio: normalized.splitRatio,
+    activePaneIndex: normalized.activePaneIndex,
+    previousPaneIndex: normalized.previousPaneIndex,
+    windowVars: normalized.windowVars,
+    primaryFilename: normalized.splitPanes![0].filename,
+    secondaryFilename: normalized.splitPanes![1]?.filename,
     commandMessage: counterClockwise
       ? msg('창을 반시계 방향으로 회전했습니다 (Ctrl-w R)')
       : msg('창을 시계 방향으로 회전했습니다 (Ctrl-w r)'),
@@ -316,56 +427,48 @@ export function rotatePanes(
 }
 
 /**
- * 현재 창을 지정된 방향의 끝으로 이동하고 레이아웃을 전환합니다 (Ctrl+w H / J / K / L).
- * H: 수직 분할로 변경 후 현재 창을 맨 왼쪽(0)으로 이동
- * L: 수직 분할로 변경 후 현재 창을 맨 오른쪽(1)으로 이동
- * K: 수평 분할로 변경 후 현재 창을 맨 위쪽(0)으로 이동
- * J: 수평 분할로 변경 후 현재 창을 맨 아래쪽(1)으로 이동
+ * 현재 창을 지정된 방향의 끝(루트 가장자리)으로 이동하고 레이아웃을 재배치합니다 (Ctrl+w H / J / K / L).
  */
 export function movePaneToDirection(
   state: VimEditorState,
   dir: 'H' | 'J' | 'K' | 'L'
 ): VimEditorState {
   const synced = syncActivePane(state);
-  if (!synced.splitDirection || synced.splitDirection === 'none' || !synced.splitPanes) {
+  const tree = getEffectiveWindowTree(synced);
+  if (!tree || !synced.splitPanes) {
     return synced;
   }
 
   const curIdx = synced.activePaneIndex ?? 0;
   const isVertical = dir === 'H' || dir === 'L';
-  const targetIndex = dir === 'H' || dir === 'K' ? 0 : 1;
+  const movedTree = moveLeafToEdgeInTree(tree, curIdx, dir);
 
-  let panes = synced.splitPanes;
-  if (curIdx !== targetIndex) {
-    panes = [panes[1], panes[0]];
-  }
+  const normalized = normalizeWindowLayout({
+    tree: movedTree,
+    panes: synced.splitPanes,
+    activeOriginalIndex: curIdx,
+    prevOriginalIndex: synced.previousPaneIndex,
+    windowVars: synced.windowVars,
+  });
 
-  const activePane = panes[targetIndex];
-  const prevIdx =
-    synced.previousPaneIndex !== undefined
-      ? curIdx !== targetIndex
-        ? 1 - synced.previousPaneIndex
-        : synced.previousPaneIndex
-      : undefined;
+  const activePane = normalized.splitPanes![normalized.activePaneIndex];
 
   return {
     ...synced,
-    splitDirection: isVertical ? 'vertical' : 'horizontal',
-    activePaneIndex: targetIndex,
-    previousPaneIndex: prevIdx,
-    splitPanes: panes,
-    primaryFilename: panes[0].filename,
-    secondaryFilename: panes[1].filename,
-    lines: [...activePane.lines],
-    cursor: { ...activePane.cursor },
-    mode: activePane.mode ?? 'NORMAL',
-    visualAnchor: activePane.visualAnchor,
-    viewport: activePane.viewport,
-    undoStack: activePane.undoStack ? [...activePane.undoStack] : [],
-    redoStack: activePane.redoStack ? [...activePane.redoStack] : [],
-    locationList: activePane.locationList,
-    options: withPaneScrollbindOption(synced, activePane.scrollbind),
-    commandMessage: msg('창 레이아웃을 {v}로 재배치했습니다 (Ctrl-w {dir})', { v: isVertical ? msg('세로') : msg('가로'), dir }),
+    ...loadPaneIntoTopLevel(synced, activePane),
+    splitDirection: normalized.splitDirection,
+    activePaneIndex: normalized.activePaneIndex,
+    previousPaneIndex: normalized.previousPaneIndex,
+    splitPanes: normalized.splitPanes,
+    windowLayout: normalized.windowLayout,
+    splitRatio: normalized.splitRatio,
+    windowVars: normalized.windowVars,
+    primaryFilename: normalized.splitPanes![0].filename,
+    secondaryFilename: normalized.splitPanes![1]?.filename,
+    commandMessage: msg('창 레이아웃을 {v}로 재배치했습니다 (Ctrl-w {dir})', {
+      v: isVertical ? msg('세로') : msg('가로'),
+      dir,
+    }),
   };
 }
 
@@ -374,41 +477,64 @@ export function movePaneToDirection(
  */
 export function resizeSplit(
   state: VimEditorState,
-  delta: number | '=' | '_' | '|'
+  delta: number | '=' | '_' | '|',
+  axis: 'horizontal' | 'vertical' | 'any' = 'any'
 ): VimEditorState {
-  if (!state.splitDirection || state.splitDirection === 'none' || !state.splitPanes) {
+  const tree = getEffectiveWindowTree(state);
+  if (!tree || !state.splitPanes) {
     return state;
-  }
-
-  if (delta === '=') {
-    return {
-      ...state,
-      splitRatio: 50,
-      commandMessage: msg('창 크기를 균등하게 맞췄습니다 (Ctrl-w =)'),
-    };
   }
 
   const curIdx = state.activePaneIndex ?? 0;
 
-  if (delta === '_' || delta === '|') {
-    const maxRatio = curIdx === 0 ? 80 : 20;
+  if (delta === '=') {
+    const { tree: nextTree } = resizeLeafInTree(tree, curIdx, 'any', 'equal');
+    const splitRatio =
+      nextTree.kind === 'split' && nextTree.children.length === 2 ? 50 : undefined;
     return {
       ...state,
-      splitRatio: maxRatio,
+      windowLayout: nextTree,
+      splitRatio,
+      commandMessage: msg('창 크기를 균등하게 맞췄습니다 (Ctrl-w =)'),
+    };
+  }
+
+  if (delta === '_' || delta === '|') {
+    const maxAxis = axis !== 'any' ? axis : delta === '_' ? 'horizontal' : 'vertical';
+    const { tree: nextTree } = resizeLeafInTree(tree, curIdx, maxAxis, 'max');
+    const splitRatio =
+      nextTree.kind === 'split' && nextTree.children.length === 2
+        ? Math.round(nextTree.weights[0])
+        : state.splitRatio;
+    return {
+      ...state,
+      windowLayout: nextTree,
+      splitRatio,
       commandMessage: msg('현재 창을 최대화했습니다'),
     };
   }
 
-  // 숫자 증감
-  const currentRatio = state.splitRatio ?? 50;
-  // 주 창(0) 기준이면 + 시 ratio 증가, 보조 창(1) 기준이면 + 시 ratio 감소 (창 확대)
-  const effectiveDelta = curIdx === 0 ? delta : -delta;
-  const newRatio = Math.max(20, Math.min(80, currentRatio + effectiveDelta));
+  const { tree: nextTree, resizedPercent } = resizeLeafInTree(
+    tree,
+    curIdx,
+    axis,
+    'delta',
+    delta
+  );
+  const splitRatio =
+    nextTree.kind === 'split' && nextTree.children.length === 2
+      ? Math.round(nextTree.weights[0])
+      : state.splitRatio;
+  const shownRatio = splitRatio ?? resizedPercent;
 
   return {
     ...state,
-    splitRatio: newRatio,
-    commandMessage: msg('창 크기 조절: {newRatio}% / {v}%', { newRatio, v: 100 - newRatio }),
+    windowLayout: nextTree,
+    splitRatio,
+    commandMessage: msg('창 크기 조절: {newRatio}% / {v}%', {
+      newRatio: shownRatio,
+      v: 100 - shownRatio,
+    }),
   };
 }
 
@@ -416,34 +542,24 @@ export function resizeSplit(
  * 현재 활성 분할 창을 독립된 새 탭 페이지로 떼어냅니다 (Ctrl+w T).
  */
 export function moveWindowToNewTab(state: VimEditorState): VimEditorState {
-  if (!state.splitDirection || state.splitDirection === 'none' || !state.splitPanes) {
+  if (
+    !state.splitDirection ||
+    state.splitDirection === 'none' ||
+    !state.splitPanes ||
+    state.splitPanes.length < 2
+  ) {
     return {
       ...state,
       commandMessage: msg('E444: 이미 단일 창입니다 (Ctrl-w T)'),
     };
   }
 
-  const curIdx = state.activePaneIndex ?? 0;
-  const activePane = state.splitPanes[curIdx];
-  const otherPane = state.splitPanes[curIdx === 0 ? 1 : 0];
+  const synced = syncActivePane(state);
+  const curIdx = synced.activePaneIndex ?? 0;
+  const activePane = synced.splitPanes![curIdx];
 
-  // 1. 현재 탭에서는 나머지 창을 단일 창으로 유지
-  const remainingState: VimEditorState = {
-    ...state,
-    lines: [...otherPane.lines],
-    cursor: { ...otherPane.cursor },
-    mode: otherPane.mode ?? 'NORMAL',
-    visualAnchor: otherPane.visualAnchor,
-    viewport: otherPane.viewport,
-    undoStack: otherPane.undoStack ? [...otherPane.undoStack] : [],
-    redoStack: otherPane.redoStack ? [...otherPane.redoStack] : [],
-    primaryFilename: otherPane.filename,
-    splitDirection: 'none',
-    activePaneIndex: 0,
-    previousPaneIndex: undefined,
-    splitPanes: undefined,
-    splitRatio: undefined,
-  };
+  // 1. 현재 탭에서는 나머지 창들(단일 또는 남은 멀티 트리)을 유지
+  const remainingState = closeSplitWindow(synced);
 
   // 2. 새 탭을 열고 떼어낸 활성 창 내용 적재
   const stateWithNewTab = openNewTab(remainingState, activePane.filename);
@@ -454,10 +570,14 @@ export function moveWindowToNewTab(state: VimEditorState): VimEditorState {
     cursor: { ...activePane.cursor },
     mode: activePane.mode ?? 'NORMAL',
     visualAnchor: activePane.visualAnchor,
+    visualBlockEndOfLine: activePane.visualBlockEndOfLine,
     viewport: activePane.viewport,
     undoStack: activePane.undoStack ? [...activePane.undoStack] : [],
     redoStack: activePane.redoStack ? [...activePane.redoStack] : [],
-    commandMessage: msg('"{filename}" 창을 새 탭으로 분리했습니다 (Ctrl-w T)', { filename: activePane.filename }),
+    locationList: activePane.locationList,
+    commandMessage: msg('"{filename}" 창을 새 탭으로 분리했습니다 (Ctrl-w T)', {
+      filename: activePane.filename,
+    }),
   };
 }
 
@@ -470,24 +590,28 @@ export function syncActivePane(state: VimEditorState): VimEditorState {
   }
 
   const curIdx = state.activePaneIndex ?? 0;
-  const newPanes: [SplitPaneState, SplitPaneState] = [
-    state.splitPanes[0],
-    state.splitPanes[1],
-  ];
+  if (curIdx < 0 || curIdx >= state.splitPanes.length) {
+    return state;
+  }
 
-  newPanes[curIdx] = {
-    ...newPanes[curIdx],
-    lines: [...state.lines],
-    cursor: { ...state.cursor },
-    mode: state.mode,
-    visualAnchor: state.visualAnchor,
-    viewport: state.viewport,
-    undoStack: state.undoStack ? [...state.undoStack] : [],
-    redoStack: state.redoStack ? [...state.redoStack] : [],
-    pendingKeys: state.pendingKeys,
-    blockInsertSession: state.blockInsertSession,
-    locationList: state.locationList,
-  };
+  const newPanes = state.splitPanes.map((pane, idx) =>
+    idx === curIdx
+      ? {
+          ...pane,
+          lines: [...state.lines],
+          cursor: { ...state.cursor },
+          mode: state.mode,
+          visualAnchor: state.visualAnchor,
+          visualBlockEndOfLine: state.visualBlockEndOfLine,
+          viewport: state.viewport,
+          undoStack: state.undoStack ? [...state.undoStack] : [],
+          redoStack: state.redoStack ? [...state.redoStack] : [],
+          pendingKeys: state.pendingKeys,
+          blockInsertSession: state.blockInsertSession,
+          locationList: state.locationList,
+        }
+      : pane
+  );
 
   return {
     ...state,
@@ -496,26 +620,32 @@ export function syncActivePane(state: VimEditorState): VimEditorState {
 }
 
 /**
- * :wincmd {arg} 명령을 실행합니다. (예: :wincmd w, :1wincmd w, :wincmd H/J/K/L/r/R/x, :wincmd v/s/c/o)
+ * :wincmd {arg} 명령을 실행합니다. (예: :wincmd w, :2wincmd w, :wincmd h/j/k/l/H/J/K/L/r/R/x, :wincmd v/s/n/c/o)
  */
-export function executeWincmd(state: VimEditorState, arg: string, count?: number): VimEditorState {
-  if (count !== undefined && count >= 1 && (arg === 'w' || arg === 'W')) {
-    return switchPaneFocus(state, Math.min(1, count - 1));
-  }
+export function executeWincmd(
+  state: VimEditorState,
+  arg: string,
+  count?: number
+): VimEditorState {
+  const paneCount = state.splitPanes?.length ?? 0;
   switch (arg) {
     case 'w':
+      return cyclePaneFocus(state, 1, count);
     case 'W':
-      return switchPaneFocus(state, (state.activePaneIndex ?? 0) === 0 ? 1 : 0);
+      return cyclePaneFocus(state, -1, count);
     case 'h':
+    case 'j':
     case 'k':
+    case 'l':
+      return moveFocusByDirection(state, arg);
     case 't':
       return switchPaneFocus(state, 0);
-    case 'l':
-    case 'j':
     case 'b':
-      return switchPaneFocus(state, 1);
-    case 'p':
-      return switchPaneFocus(state, state.previousPaneIndex ?? 0);
+      return paneCount > 0 ? switchPaneFocus(state, paneCount - 1) : state;
+    case 'p': {
+      const fallback = (state.activePaneIndex ?? 0) === 0 ? Math.min(1, paneCount - 1) : 0;
+      return switchPaneFocus(state, state.previousPaneIndex ?? fallback);
+    }
     case 'c':
     case 'q':
       return closeSplitWindow(state);
@@ -525,8 +655,10 @@ export function executeWincmd(state: VimEditorState, arg: string, count?: number
       return splitWindow(state, 'horizontal');
     case 'v':
       return splitWindow(state, 'vertical');
+    case 'n':
+      return splitWindow(state, 'horizontal', [''], '[No Name]');
     case 'x':
-      return exchangePanes(state);
+      return exchangePanes(state, count);
     case 'r':
       return rotatePanes(state, false);
     case 'R':
@@ -541,14 +673,17 @@ export function executeWincmd(state: VimEditorState, arg: string, count?: number
     case '=':
       return resizeSplit(state, '=');
     case '_':
+      return resizeSplit(state, '_', 'horizontal');
     case '|':
-      return resizeSplit(state, arg);
+      return resizeSplit(state, '|', 'vertical');
     case '+':
-    case '>':
-      return resizeSplit(state, count ?? 5);
+      return resizeSplit(state, count ?? 5, 'horizontal');
     case '-':
+      return resizeSplit(state, -(count ?? 5), 'horizontal');
+    case '>':
+      return resizeSplit(state, count ?? 5, 'vertical');
     case '<':
-      return resizeSplit(state, -(count ?? 5));
+      return resizeSplit(state, -(count ?? 5), 'vertical');
     default:
       return state;
   }
@@ -572,7 +707,12 @@ export function windo(
     };
   }
 
-  if (!state.splitDirection || state.splitDirection === 'none' || !state.splitPanes) {
+  if (
+    !state.splitDirection ||
+    state.splitDirection === 'none' ||
+    !state.splitPanes ||
+    state.splitPanes.length < 2
+  ) {
     let currState = executeCmd(state, cleanCmd);
     if (currState.bell) {
       if (!isBang) return currState;
@@ -580,19 +720,32 @@ export function windo(
     }
     return {
       ...currState,
-      commandMessage: msg('({count}개 창에 대해 :windo \'{cleanCmd}\' 실행 완료)', { count: 1, cleanCmd }),
+      commandMessage: msg('({count}개 창에 대해 :windo \'{cleanCmd}\' 실행 완료)', {
+        count: 1,
+        cleanCmd,
+      }),
     };
   }
 
   let currState = syncActivePane(state);
   const origActiveIdx = currState.activePaneIndex ?? 0;
+  const origWinId = getPaneWinId(currState.splitPanes, origActiveIdx);
+  const targetWinIds = currState.splitPanes!.map((_, idx) =>
+    getPaneWinId(currState.splitPanes, idx)
+  );
+
   let executedCount = 0;
 
-  for (let i = 0; i < 2; i++) {
+  for (const targetWinId of targetWinIds) {
     if (!currState.splitPanes || currState.splitDirection === 'none') {
       break;
     }
-    currState = switchPaneFocus(currState, i);
+    const targetIdx = currState.splitPanes.findIndex(
+      (p, idx) => (p.winId ?? 1000 + idx) === targetWinId
+    );
+    if (targetIdx < 0) continue;
+
+    currState = switchPaneFocus(currState, targetIdx);
     currState = executeCmd(currState, cleanCmd);
     currState = syncActivePane(currState);
     executedCount++;
@@ -606,17 +759,27 @@ export function windo(
   }
 
   if (currState.splitPanes && currState.splitDirection !== 'none') {
-    currState = switchPaneFocus(currState, origActiveIdx);
+    const restoreIdx = currState.splitPanes.findIndex(
+      (p, idx) => (p.winId ?? 1000 + idx) === origWinId
+    );
+    const safeRestoreIdx =
+      restoreIdx >= 0
+        ? restoreIdx
+        : Math.min(origActiveIdx, currState.splitPanes.length - 1);
+    currState = switchPaneFocus(currState, safeRestoreIdx);
   }
 
   return {
     ...currState,
-    commandMessage: msg('({count}개 창에 대해 :windo \'{cleanCmd}\' 실행 완료)', { count: executedCount, cleanCmd }),
+    commandMessage: msg('({count}개 창에 대해 :windo \'{cleanCmd}\' 실행 완료)', {
+      count: executedCount,
+      cleanCmd,
+    }),
   };
 }
 
 /**
- * :syncbind — scrollbind 가 활성화된 다른 분할 창의 상단 행을 현재 창과 맞춥니다.
+ * :syncbind — scrollbind 가 활성화된 다른 모든 분할 창의 상단 행을 현재 창과 맞춥니다.
  */
 export function syncScrollbind(state: VimEditorState): VimEditorState {
   const synced = syncActivePane(state);
@@ -625,24 +788,27 @@ export function syncScrollbind(state: VimEditorState): VimEditorState {
   }
 
   const activeIdx = synced.activePaneIndex ?? 0;
-  const activeScb = synced.splitPanes[activeIdx]?.scrollbind ?? getOptions(synced).scrollbind ?? false;
+  const activeScb =
+    synced.splitPanes[activeIdx]?.scrollbind ?? getOptions(synced).scrollbind ?? false;
   if (!activeScb) return synced;
 
   const activeTop = synced.viewport?.topRow ?? 0;
-  const otherIdx = activeIdx === 0 ? 1 : 0;
-  const otherPane = synced.splitPanes[otherIdx];
-  if (!otherPane?.scrollbind) return synced;
+  let changed = false;
 
-  const maxOtherTop = Math.max(0, otherPane.lines.length - 1);
-  const nextOtherTop = Math.max(0, Math.min(maxOtherTop, activeTop));
-  const otherVp = otherPane.viewport ?? { topRow: 0, visibleRows: 15 };
-  if (otherVp.topRow === nextOtherTop) return synced;
+  const nextPanes = synced.splitPanes.map((pane, idx) => {
+    if (idx === activeIdx || !pane.scrollbind) return pane;
+    const maxTop = Math.max(0, pane.lines.length - 1);
+    const nextTop = Math.max(0, Math.min(maxTop, activeTop));
+    const vp = pane.viewport ?? { topRow: 0, visibleRows: 15 };
+    if (vp.topRow === nextTop) return pane;
+    changed = true;
+    return {
+      ...pane,
+      viewport: { ...vp, topRow: nextTop },
+    };
+  });
 
-  const nextPanes: [SplitPaneState, SplitPaneState] = [synced.splitPanes[0], synced.splitPanes[1]];
-  nextPanes[otherIdx] = {
-    ...otherPane,
-    viewport: { ...otherVp, topRow: nextOtherTop },
-  };
+  if (!changed) return synced;
   return {
     ...synced,
     splitPanes: nextPanes,
@@ -650,12 +816,12 @@ export function syncScrollbind(state: VimEditorState): VimEditorState {
 }
 
 /**
- * 키 입력 전후의 뷰포트 topRow 변화량(delta)을 scrollbind 가 켜진 상대 창에 동기화합니다.
+ * 키 입력 전후의 뷰포트 topRow 변화량(delta)을 scrollbind 가 켜진 모든 다른 창에 동기화합니다.
  */
 export function applyScrollbindDelta(
   prevTopRow: number,
   prevActivePaneIndex: number,
-  prevSplitPanes: [SplitPaneState, SplitPaneState] | undefined,
+  prevSplitPanes: SplitPaneState[] | undefined,
   state: VimEditorState
 ): VimEditorState {
   const synced = syncActivePane(state);
@@ -670,28 +836,34 @@ export function applyScrollbindDelta(
 
   const activeIdx = synced.activePaneIndex ?? 0;
   if (activeIdx !== prevActivePaneIndex) return synced;
+  if (prevSplitPanes.length !== synced.splitPanes.length) return synced;
 
-  const otherIdx = activeIdx === 0 ? 1 : 0;
-  if (synced.splitPanes[otherIdx] !== prevSplitPanes[otherIdx]) return synced;
-
-  const activeScb = synced.splitPanes[activeIdx]?.scrollbind ?? getOptions(synced).scrollbind ?? false;
-  const otherPane = synced.splitPanes[otherIdx];
-  if (!activeScb || !otherPane?.scrollbind) return synced;
+  const activeScb =
+    synced.splitPanes[activeIdx]?.scrollbind ?? getOptions(synced).scrollbind ?? false;
+  if (!activeScb) return synced;
 
   const nextTopRow = synced.viewport?.topRow ?? 0;
   const delta = nextTopRow - prevTopRow;
   if (delta === 0) return synced;
 
-  const otherVp = otherPane.viewport ?? { topRow: 0, visibleRows: 15 };
-  const maxOtherTop = Math.max(0, otherPane.lines.length - 1);
-  const newOtherTop = Math.max(0, Math.min(maxOtherTop, otherVp.topRow + delta));
-  if (newOtherTop === otherVp.topRow) return synced;
+  let changed = false;
+  const nextPanes = synced.splitPanes.map((pane, idx) => {
+    if (idx === activeIdx) return pane;
+    if (pane !== prevSplitPanes[idx]) return pane;
+    if (!pane.scrollbind) return pane;
 
-  const nextPanes: [SplitPaneState, SplitPaneState] = [synced.splitPanes[0], synced.splitPanes[1]];
-  nextPanes[otherIdx] = {
-    ...otherPane,
-    viewport: { ...otherVp, topRow: newOtherTop },
-  };
+    const vp = pane.viewport ?? { topRow: 0, visibleRows: 15 };
+    const maxTop = Math.max(0, pane.lines.length - 1);
+    const newTop = Math.max(0, Math.min(maxTop, vp.topRow + delta));
+    if (newTop === vp.topRow) return pane;
+    changed = true;
+    return {
+      ...pane,
+      viewport: { ...vp, topRow: newTop },
+    };
+  });
+
+  if (!changed) return synced;
   return {
     ...synced,
     splitPanes: nextPanes,

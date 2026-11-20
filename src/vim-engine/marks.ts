@@ -272,8 +272,11 @@ export function setMark(state: VimEditorState, markChar: string): VimEditorState
     (baseState.buffers && baseState.currentBufferId
       ? baseState.buffers.find((b) => b.id === baseState.currentBufferId)?.name
       : null) ||
-    (baseState.splitPanes && (baseState.activePaneIndex ?? 0) === 1
-      ? baseState.secondaryFilename || 'target.ts'
+    (baseState.splitPanes && baseState.splitDirection && baseState.splitDirection !== 'none'
+      ? baseState.splitPanes[baseState.activePaneIndex ?? 0]?.filename ||
+        ((baseState.activePaneIndex ?? 0) === 1
+          ? baseState.secondaryFilename || 'target.ts'
+          : baseState.primaryFilename || 'source.ts')
       : baseState.primaryFilename || 'source.ts');
 
   const markData: MarkPosition = {
@@ -331,16 +334,15 @@ export function jumpToMark(
       targetState.splitDirection &&
       targetState.splitDirection !== 'none'
     ) {
-      if (
-        targetState.secondaryFilename === mark.filename &&
-        (targetState.activePaneIndex ?? 0) === 0
-      ) {
-        targetState = switchPaneFocus(targetState, 1);
-      } else if (
-        targetState.primaryFilename === mark.filename &&
-        (targetState.activePaneIndex ?? 0) === 1
-      ) {
-        targetState = switchPaneFocus(targetState, 0);
+      const curIdx = targetState.activePaneIndex ?? 0;
+      const targetPaneIdx = targetState.splitPanes.findIndex(
+        (p, idx) =>
+          p.filename === mark.filename ||
+          (idx === 0 && targetState.primaryFilename === mark.filename) ||
+          (idx === 1 && targetState.secondaryFilename === mark.filename)
+      );
+      if (targetPaneIdx >= 0 && targetPaneIdx !== curIdx) {
+        targetState = switchPaneFocus(targetState, targetPaneIdx);
       }
     } else {
       if (

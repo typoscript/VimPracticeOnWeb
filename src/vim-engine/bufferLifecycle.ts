@@ -212,6 +212,8 @@ export function quitAllWindows(state: VimEditorState, force = false): VimEditorS
     ...next,
     splitDirection: 'none',
     splitPanes: undefined,
+    windowLayout: undefined,
+    splitRatio: undefined,
     activePaneIndex: 0,
     previousPaneIndex: undefined,
     tabPages: activeTab,

@@ -123,9 +123,11 @@ export function handleVisualModeKey(
     };
   }
 
-  // 윈도우 분할 및 포커스 제어 (Ctrl-w)
-  if (state.pendingKeys === 'Ctrl-w' || state.pendingKeys === 'Ctrl+w') {
-    return handleCtrlWKey(state, key, parsed.count1);
+  // 윈도우 분할 및 포커스 제어 ([count]Ctrl-w)
+  if (state.pendingKeys?.endsWith('Ctrl-w') || state.pendingKeys?.endsWith('Ctrl+w')) {
+    const countMatch = state.pendingKeys.match(/^(\d+)/);
+    const wCount = countMatch ? parseInt(countMatch[1], 10) : undefined;
+    return handleCtrlWKey(state, key, wCount);
   }
 
   if (key === '"' && !state.pendingKeys) {
@@ -135,10 +137,10 @@ export function handleVisualModeKey(
     };
   }
 
-  if ((key === 'Ctrl-w' || key === 'Ctrl+w') && !state.pendingKeys) {
+  if ((key === 'Ctrl-w' || key === 'Ctrl+w') && (!state.pendingKeys || /^\d+$/.test(state.pendingKeys))) {
     return {
       ...state,
-      pendingKeys: 'Ctrl-w',
+      pendingKeys: `${state.pendingKeys ?? ''}Ctrl-w`,
     };
   }
 

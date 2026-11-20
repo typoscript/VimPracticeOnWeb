@@ -123,15 +123,17 @@ export function handleNormalModeKey(
     return { ...state, pendingKeys: undefined };
   }
 
-  // 1-0-b. 윈도우 분할 및 포커스 제어 (Ctrl-w)
-  if (state.pendingKeys === 'Ctrl-w' || state.pendingKeys === 'Ctrl+w') {
-    return handleCtrlWKey(state, key, parsed.count1);
+  // 1-0-b. 윈도우 분할 및 포커스 제어 ([count]Ctrl-w)
+  if (state.pendingKeys?.endsWith('Ctrl-w') || state.pendingKeys?.endsWith('Ctrl+w')) {
+    const countMatch = state.pendingKeys.match(/^(\d+)/);
+    const wCount = countMatch ? parseInt(countMatch[1], 10) : undefined;
+    return handleCtrlWKey(state, key, wCount);
   }
   if (key === '"' && !state.pendingKeys) {
     return { ...state, pendingKeys: '"' };
   }
-  if ((key === 'Ctrl-w' || key === 'Ctrl+w') && !state.pendingKeys) {
-    return { ...state, pendingKeys: 'Ctrl-w' };
+  if ((key === 'Ctrl-w' || key === 'Ctrl+w') && (!state.pendingKeys || /^\d+$/.test(state.pendingKeys))) {
+    return { ...state, pendingKeys: `${state.pendingKeys ?? ''}Ctrl-w` };
   }
 
   // 1-0-s. 순정 vim-surround 대기 (ds, cs, ys, yss)

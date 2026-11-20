@@ -26,6 +26,8 @@ import {
   closeSplitWindow,
   closeOtherPanes,
   switchPaneFocus,
+  moveFocusByDirection,
+  cyclePaneFocus,
   exchangePanes,
   rotatePanes,
   movePaneToDirection,
@@ -388,44 +390,58 @@ export function handleCtrlWKey(
   key: string,
   count?: number
 ): VimEditorState {
+  const isAlreadySplit = Boolean(
+    state.splitDirection && state.splitDirection !== 'none' && state.splitPanes && state.splitPanes.length >= 2
+  );
   // 창 생성: s, v, n
   if (key === 's' || key === 'Ctrl-s' || key === 'Ctrl+s') {
-    return { ...splitWindow(state, 'horizontal', state.secondaryLines), pendingKeys: undefined };
+    return {
+      ...splitWindow(state, 'horizontal', isAlreadySplit ? undefined : state.secondaryLines),
+      pendingKeys: undefined,
+    };
   }
   if (key === 'v' || key === 'Ctrl-v' || key === 'Ctrl+v') {
-    return { ...splitWindow(state, 'vertical', state.secondaryLines), pendingKeys: undefined };
+    return {
+      ...splitWindow(state, 'vertical', isAlreadySplit ? undefined : state.secondaryLines),
+      pendingKeys: undefined,
+    };
   }
   if (key === 'n' || key === 'Ctrl-n' || key === 'Ctrl+n') {
     return { ...splitWindow(state, 'horizontal', [''], '[No Name]'), pendingKeys: undefined };
   }
 
   // 창 포커스 이동: w, W, h, l, k, j, t, b, p
+  const paneCount = state.splitPanes?.length ?? 0;
   if (key === 'w' || key === 'Ctrl-w' || key === 'Ctrl+w') {
-    return { ...switchPaneFocus(state, (state.activePaneIndex ?? 0) === 0 ? 1 : 0), pendingKeys: undefined };
+    return { ...cyclePaneFocus(state, 1, count), pendingKeys: undefined };
   }
   if (key === 'W') {
-    return { ...switchPaneFocus(state, (state.activePaneIndex ?? 0) === 0 ? 1 : 0), pendingKeys: undefined };
+    return { ...cyclePaneFocus(state, -1, count), pendingKeys: undefined };
   }
   if (key === 'h' || key === 'Ctrl-h' || key === 'Ctrl+h' || key === 'ArrowLeft') {
-    return { ...switchPaneFocus(state, 0), pendingKeys: undefined };
+    return { ...moveFocusByDirection(state, 'h'), pendingKeys: undefined };
   }
   if (key === 'l' || key === 'Ctrl-l' || key === 'Ctrl+l' || key === 'ArrowRight') {
-    return { ...switchPaneFocus(state, 1), pendingKeys: undefined };
+    return { ...moveFocusByDirection(state, 'l'), pendingKeys: undefined };
   }
   if (key === 'k' || key === 'Ctrl-k' || key === 'Ctrl+k' || key === 'ArrowUp') {
-    return { ...switchPaneFocus(state, 0), pendingKeys: undefined };
+    return { ...moveFocusByDirection(state, 'k'), pendingKeys: undefined };
   }
   if (key === 'j' || key === 'Ctrl-j' || key === 'Ctrl+j' || key === 'ArrowDown') {
-    return { ...switchPaneFocus(state, 1), pendingKeys: undefined };
+    return { ...moveFocusByDirection(state, 'j'), pendingKeys: undefined };
   }
   if (key === 't' || key === 'Ctrl-t' || key === 'Ctrl+t') {
     return { ...switchPaneFocus(state, 0), pendingKeys: undefined };
   }
   if (key === 'b' || key === 'Ctrl-b' || key === 'Ctrl+b') {
-    return { ...switchPaneFocus(state, 1), pendingKeys: undefined };
+    return {
+      ...switchPaneFocus(state, paneCount > 0 ? paneCount - 1 : 0),
+      pendingKeys: undefined,
+    };
   }
   if (key === 'p' || key === 'Ctrl-p' || key === 'Ctrl+p') {
-    const prev = state.previousPaneIndex ?? ((state.activePaneIndex ?? 0) === 0 ? 1 : 0);
+    const fallback = (state.activePaneIndex ?? 0) === 0 ? Math.min(1, Math.max(0, paneCount - 1)) : 0;
+    const prev = state.previousPaneIndex ?? fallback;
     return { ...switchPaneFocus(state, prev), pendingKeys: undefined };
   }
 
@@ -439,7 +455,7 @@ export function handleCtrlWKey(
 
   // 창 위치 맞바꾸기 및 회전: x, r, R
   if (key === 'x' || key === 'Ctrl-x' || key === 'Ctrl+x') {
-    return { ...exchangePanes(state), pendingKeys: undefined };
+    return { ...exchangePanes(state, count), pendingKeys: undefined };
   }
   if (key === 'r' || key === 'Ctrl-r' || key === 'Ctrl+r') {
     return { ...rotatePanes(state, false), pendingKeys: undefined };
@@ -475,14 +491,23 @@ export function handleCtrlWKey(
   if (key === '=') {
     return { ...resizeSplit(state, '='), pendingKeys: undefined };
   }
-  if (key === '_' || key === '|') {
-    return { ...resizeSplit(state, key), pendingKeys: undefined };
+  if (key === '_') {
+    return { ...resizeSplit(state, '_', 'horizontal'), pendingKeys: undefined };
   }
-  if (key === '+' || key === '>') {
-    return { ...resizeSplit(state, count ?? 5), pendingKeys: undefined };
+  if (key === '|') {
+    return { ...resizeSplit(state, '|', 'vertical'), pendingKeys: undefined };
   }
-  if (key === '-' || key === '<') {
-    return { ...resizeSplit(state, -(count ?? 5)), pendingKeys: undefined };
+  if (key === '+') {
+    return { ...resizeSplit(state, count ?? 5, 'horizontal'), pendingKeys: undefined };
+  }
+  if (key === '-') {
+    return { ...resizeSplit(state, -(count ?? 5), 'horizontal'), pendingKeys: undefined };
+  }
+  if (key === '>') {
+    return { ...resizeSplit(state, count ?? 5, 'vertical'), pendingKeys: undefined };
+  }
+  if (key === '<') {
+    return { ...resizeSplit(state, -(count ?? 5), 'vertical'), pendingKeys: undefined };
   }
 
   return {

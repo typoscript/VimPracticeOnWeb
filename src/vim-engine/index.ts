@@ -25,7 +25,21 @@ export * from './types';
 export { isPositionSelected } from './visual';
 export { findMatches } from './search';
 export { computeDiffHunks } from './diffEngine';
-export { switchPaneFocus, executeWincmd } from './splitWindow';
+export {
+  splitWindow,
+  closeSplitWindow,
+  closeOtherPanes,
+  switchPaneFocus,
+  executeWincmd,
+  windo,
+} from './splitWindow';
+export {
+  getEffectiveWindowTree,
+  computePaneRects,
+  findNeighborPane,
+  toVimWinlayout,
+} from './windowTree';
+export type { PaneRect } from './windowTree';
 export { switchBuffer, ensureBuffers, syncCurrentBuffer, addBuffer, editBuffer, deleteBuffer } from './bufferEngine';
 export { switchTab, openNewTab, closeTab, ensureTabPages, tabdo } from './tabEngine';
 export { bufdo } from './bufferEngine';

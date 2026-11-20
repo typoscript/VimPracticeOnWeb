@@ -115,6 +115,46 @@ describe('EditorViewport', () => {
     expect(props.onSwitchPane).toHaveBeenCalledWith(1);
   });
 
+  it('3개 이상의 중첩 멀티 윈도우 트리를 재귀적으로 렌더링하고 클릭 전환을 호출한다', () => {
+    const nestedState = makeBaseState({
+      splitDirection: 'vertical',
+      activePaneIndex: 0,
+      splitPanes: [
+        { winId: 1000, filename: 'leftTop.ts', lines: ['lt'], cursor: { line: 0, col: 0 }, mode: 'NORMAL' },
+        { winId: 1002, filename: 'leftBottom.ts', lines: ['lb'], cursor: { line: 0, col: 0 }, mode: 'NORMAL' },
+        { winId: 1001, filename: 'right.ts', lines: ['r'], cursor: { line: 0, col: 0 }, mode: 'NORMAL' },
+      ],
+      windowLayout: {
+        kind: 'split',
+        direction: 'vertical',
+        weights: [50, 50],
+        children: [
+          {
+            kind: 'split',
+            direction: 'horizontal',
+            weights: [50, 50],
+            children: [
+              { kind: 'leaf', paneIndex: 0 },
+              { kind: 'leaf', paneIndex: 1 },
+            ],
+          },
+          { kind: 'leaf', paneIndex: 2 },
+        ],
+      },
+    });
+    const props = createProps({ editorState: nestedState, displayEditorState: nestedState });
+    render(<EditorViewport {...props} />);
+
+    expect(screen.getByTestId('editor-split-container')).toHaveClass('split-vertical');
+    expect(screen.getByTestId('split-branch-horizontal')).toBeInTheDocument();
+    expect(screen.getByTestId('split-pane-0')).toHaveTextContent('#1');
+    expect(screen.getByTestId('split-pane-1')).toHaveTextContent('#2');
+    expect(screen.getByTestId('split-pane-2')).toHaveTextContent('#3');
+
+    fireEvent.click(screen.getByTestId('split-pane-2'));
+    expect(props.onSwitchPane).toHaveBeenCalledWith(2);
+  });
+
   it('커맨드라인 윈도우가 열려 있으면 히스토리 줄 선택·즉시 실행·초기화·닫기 핸들러를 동작시킨다', () => {
     const cmdWinState = makeBaseState({
       cmdlineWindow: {

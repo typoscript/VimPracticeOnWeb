@@ -207,10 +207,9 @@ export function updateDiffState(state: VimEditorState): VimEditorState {
 
   const hunks = computeDiffHunks(lines0, lines1);
 
-  const updatedPanes: [SplitPaneState, SplitPaneState] = [
-    { ...state.splitPanes[0], diff: true },
-    { ...state.splitPanes[1], diff: true },
-  ];
+  const updatedPanes: SplitPaneState[] = state.splitPanes.map((pane, idx) =>
+    idx <= 1 ? { ...pane, diff: true } : pane
+  );
 
   return {
     ...state,
@@ -279,19 +278,17 @@ export function diffThis(state: VimEditorState): VimEditorState {
   }
 
   const curIdx = state.activePaneIndex ?? 0;
-  const updatedPanes: [SplitPaneState, SplitPaneState] = [
-    { ...state.splitPanes[0] },
-    { ...state.splitPanes[1] },
-  ];
-  updatedPanes[curIdx].diff = true;
+  const updatedPanes: SplitPaneState[] = state.splitPanes.map((pane, idx) =>
+    idx === curIdx ? { ...pane, diff: true } : { ...pane }
+  );
 
   const nextState = {
     ...state,
     splitPanes: updatedPanes,
   };
 
-  const otherIdx = 1 - curIdx;
-  if (updatedPanes[otherIdx].diff) {
+  const hasOtherDiff = updatedPanes.some((pane, idx) => idx !== curIdx && pane.diff);
+  if (hasOtherDiff) {
     const res = updateDiffState({ ...nextState, diffMode: true });
     return {
       ...res,
@@ -319,10 +316,10 @@ export function diffOff(state: VimEditorState, all = false): VimEditorState {
   }
 
   const curIdx = state.activePaneIndex ?? 0;
-  const updatedPanes: [SplitPaneState, SplitPaneState] = [
-    { ...state.splitPanes[0], diff: all ? false : curIdx === 0 ? false : state.splitPanes[0].diff },
-    { ...state.splitPanes[1], diff: all ? false : curIdx === 1 ? false : state.splitPanes[1].diff },
-  ];
+  const updatedPanes: SplitPaneState[] = state.splitPanes.map((pane, idx) => ({
+    ...pane,
+    diff: all ? false : idx === curIdx ? false : pane.diff,
+  }));
 
   return {
     ...state,
@@ -492,15 +489,9 @@ export function diffObtain(state: VimEditorState): VimEditorState {
     cursor: { ...state.cursor },
   });
 
-  const updatedPanes: [SplitPaneState, SplitPaneState] = [
-    { ...state.splitPanes[0] },
-    { ...state.splitPanes[1] },
-  ];
-  updatedPanes[curIdx] = {
-    ...updatedPanes[curIdx],
-    lines: newLines,
-    undoStack,
-  };
+  const updatedPanes: SplitPaneState[] = state.splitPanes.map((pane, idx) =>
+    idx === curIdx ? { ...pane, lines: newLines, undoStack } : pane
+  );
 
   const nextState: VimEditorState = {
     ...state,
@@ -562,15 +553,9 @@ export function diffPut(state: VimEditorState): VimEditorState {
     cursor: { ...state.splitPanes[otherIdx].cursor },
   });
 
-  const updatedPanes: [SplitPaneState, SplitPaneState] = [
-    { ...state.splitPanes[0] },
-    { ...state.splitPanes[1] },
-  ];
-  updatedPanes[otherIdx] = {
-    ...updatedPanes[otherIdx],
-    lines: newOtherLines,
-    undoStack: otherUndo,
-  };
+  const updatedPanes: SplitPaneState[] = state.splitPanes.map((pane, idx) =>
+    idx === otherIdx ? { ...pane, lines: newOtherLines, undoStack: otherUndo } : pane
+  );
 
   const nextState: VimEditorState = {
     ...state,

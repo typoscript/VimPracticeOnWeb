@@ -559,14 +559,9 @@ export function executeSetCommand(
 
   const nextSplitPanes =
     isSplit && ctx.updatedScrollbind !== undefined && state.splitPanes
-      ? ([
-          activePaneIdx === 0
-            ? { ...state.splitPanes[0], scrollbind: ctx.updatedScrollbind }
-            : state.splitPanes[0],
-          activePaneIdx === 1
-            ? { ...state.splitPanes[1], scrollbind: ctx.updatedScrollbind }
-            : state.splitPanes[1],
-        ] as [typeof state.splitPanes[0], typeof state.splitPanes[1]])
+      ? state.splitPanes.map((pane, idx) =>
+          idx === activePaneIdx ? { ...pane, scrollbind: ctx.updatedScrollbind } : pane
+        )
       : state.splitPanes;
 
   const nextBufferLocalOptions = {

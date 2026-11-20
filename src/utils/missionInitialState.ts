@@ -22,7 +22,7 @@ export function buildMissionInitialState(
   { activePresets, leaderKey, customKeymaps }: UserKeymapSettings
 ): VimEditorState {
   const isSplit = m.initialSplit && m.initialSplit !== 'none';
-  let splitPanes: [SplitPaneState, SplitPaneState] | undefined = undefined;
+  let splitPanes: SplitPaneState[] | undefined = undefined;
   if (isSplit) {
     const p0: SplitPaneState = {
       filename: m.primaryFilename || 'source.ts',
@@ -151,14 +151,16 @@ export function resolveStatusFilename(
   currentMission: Mission,
   speedrunCurrentStage: number
 ): string {
-  if (displayEditorState.splitPanes) {
-    return displayEditorState.activePaneIndex === 1
-      ? displayEditorState.secondaryFilename ||
-          displayEditorState.splitPanes[1].filename ||
-          'target.ts'
-      : displayEditorState.primaryFilename ||
-          displayEditorState.splitPanes[0].filename ||
-          'source.ts';
+  if (displayEditorState.splitPanes && displayEditorState.splitPanes.length > 0) {
+    const idx = displayEditorState.activePaneIndex ?? 0;
+    const activePane = displayEditorState.splitPanes[idx] ?? displayEditorState.splitPanes[0];
+    if (idx === 0) {
+      return displayEditorState.primaryFilename || activePane?.filename || 'source.ts';
+    }
+    if (idx === 1) {
+      return displayEditorState.secondaryFilename || activePane?.filename || 'target.ts';
+    }
+    return activePane?.filename || `pane_${idx + 1}.ts`;
   }
   if (currentTab === 'course') {
     return currentMission.primaryFilename || `lesson_${currentMission.id}.txt`;

@@ -1,5 +1,16 @@
 import { VimEditorState, VimTabPage, SplitPaneState } from './types';
+import { cloneWindowTree } from './windowTree';
 import { msg } from './messages';
+
+function clonePanes(panes: SplitPaneState[] | undefined): SplitPaneState[] | undefined {
+  return panes
+    ? panes.map((pane) => ({
+        ...pane,
+        lines: [...pane.lines],
+        cursor: { ...pane.cursor },
+      }))
+    : undefined;
+}
 
 /**
  * 탭 페이지 목록이 초기화되어 있지 않은 경우, 현재 작업 화면을 기반으로 1번 탭을 생성합니다.
@@ -23,20 +34,9 @@ export function ensureTabPages(state: VimEditorState): VimEditorState {
     redoStack: state.redoStack ? [...state.redoStack] : [],
     splitDirection: state.splitDirection,
     activePaneIndex: state.activePaneIndex,
-    splitPanes: state.splitPanes
-      ? ([
-          {
-            ...state.splitPanes[0],
-            lines: [...state.splitPanes[0].lines],
-            cursor: { ...state.splitPanes[0].cursor },
-          },
-          {
-            ...state.splitPanes[1],
-            lines: [...state.splitPanes[1].lines],
-            cursor: { ...state.splitPanes[1].cursor },
-          },
-        ] as [SplitPaneState, SplitPaneState])
-      : undefined,
+    splitPanes: clonePanes(state.splitPanes),
+    windowLayout: state.windowLayout ? cloneWindowTree(state.windowLayout) : undefined,
+    splitRatio: state.splitRatio,
     primaryFilename: state.primaryFilename,
     secondaryFilename: state.secondaryFilename,
     currentBufferId: state.currentBufferId,
@@ -74,20 +74,9 @@ export function syncCurrentTab(state: VimEditorState): VimEditorState {
         redoStack: s.redoStack ? [...s.redoStack] : [],
         splitDirection: s.splitDirection,
         activePaneIndex: s.activePaneIndex,
-        splitPanes: s.splitPanes
-          ? ([
-              {
-                ...s.splitPanes[0],
-                lines: [...s.splitPanes[0].lines],
-                cursor: { ...s.splitPanes[0].cursor },
-              },
-              {
-                ...s.splitPanes[1],
-                lines: [...s.splitPanes[1].lines],
-                cursor: { ...s.splitPanes[1].cursor },
-              },
-            ] as [SplitPaneState, SplitPaneState])
-          : undefined,
+        splitPanes: clonePanes(s.splitPanes),
+        windowLayout: s.windowLayout ? cloneWindowTree(s.windowLayout) : undefined,
+        splitRatio: s.splitRatio,
         primaryFilename: s.primaryFilename,
         secondaryFilename: s.secondaryFilename,
         currentBufferId: s.currentBufferId,
@@ -135,20 +124,9 @@ export function switchTab(state: VimEditorState, targetId: number): VimEditorSta
     redoStack: targetTab.redoStack ? [...targetTab.redoStack] : [],
     splitDirection: targetTab.splitDirection,
     activePaneIndex: targetTab.activePaneIndex,
-    splitPanes: targetTab.splitPanes
-      ? ([
-          {
-            ...targetTab.splitPanes[0],
-            lines: [...targetTab.splitPanes[0].lines],
-            cursor: { ...targetTab.splitPanes[0].cursor },
-          },
-          {
-            ...targetTab.splitPanes[1],
-            lines: [...targetTab.splitPanes[1].lines],
-            cursor: { ...targetTab.splitPanes[1].cursor },
-          },
-        ] as [SplitPaneState, SplitPaneState])
-      : undefined,
+    splitPanes: clonePanes(targetTab.splitPanes),
+    windowLayout: targetTab.windowLayout ? cloneWindowTree(targetTab.windowLayout) : undefined,
+    splitRatio: targetTab.splitRatio,
     primaryFilename: targetTab.primaryFilename ?? targetTab.filename,
     secondaryFilename: targetTab.secondaryFilename,
     currentBufferId: targetTab.currentBufferId,
@@ -213,6 +191,8 @@ export function openNewTab(state: VimEditorState, filename?: string): VimEditorS
     splitDirection: 'none',
     activePaneIndex: 0,
     splitPanes: undefined,
+    windowLayout: undefined,
+    splitRatio: undefined,
     primaryFilename: tabName,
     secondaryFilename: undefined,
     cwd: syncedState.globalCwd ?? syncedState.cwd,
@@ -273,20 +253,9 @@ export function closeTab(state: VimEditorState, targetIdx?: number): VimEditorSt
     redoStack: fallbackTab.redoStack ? [...fallbackTab.redoStack] : [],
     splitDirection: fallbackTab.splitDirection,
     activePaneIndex: fallbackTab.activePaneIndex,
-    splitPanes: fallbackTab.splitPanes
-      ? ([
-          {
-            ...fallbackTab.splitPanes[0],
-            lines: [...fallbackTab.splitPanes[0].lines],
-            cursor: { ...fallbackTab.splitPanes[0].cursor },
-          },
-          {
-            ...fallbackTab.splitPanes[1],
-            lines: [...fallbackTab.splitPanes[1].lines],
-            cursor: { ...fallbackTab.splitPanes[1].cursor },
-          },
-        ] as [SplitPaneState, SplitPaneState])
-      : undefined,
+    splitPanes: clonePanes(fallbackTab.splitPanes),
+    windowLayout: fallbackTab.windowLayout ? cloneWindowTree(fallbackTab.windowLayout) : undefined,
+    splitRatio: fallbackTab.splitRatio,
     primaryFilename: fallbackTab.primaryFilename ?? fallbackTab.filename,
     secondaryFilename: fallbackTab.secondaryFilename,
     currentBufferId: fallbackTab.currentBufferId,

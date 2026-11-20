@@ -18,6 +18,13 @@ import {
   getEffectiveCwd,
   getVfsFile,
 } from './vfs';
+import {
+  findNeighborPane,
+  getEffectiveWindowTree,
+  getPaneWinId,
+  switchPaneFocusCore,
+  toVimWinlayout,
+} from './windowTree';
 
 export interface ExtraBuiltin {
   min: number;
@@ -217,12 +224,89 @@ export const EXTRA_BUILTINS: Record<string, ExtraBuiltin> = {
     max: 1,
     fn: (ctx, [expr]) => {
       const s = ctx.state;
-      const isSplit = !!s.splitDirection && s.splitDirection !== 'none';
+      const isSplit = Boolean(
+        s.splitDirection && s.splitDirection !== 'none' && s.splitPanes && s.splitPanes.length >= 2
+      );
       if (!isSplit) return 1;
-      if (expr === '$') return 2;
+      const paneCount = s.splitPanes!.length;
+      if (expr === '$') return paneCount;
       if (expr === '#') return (s.previousPaneIndex ?? 0) + 1;
+      if (typeof expr === 'string') {
+        const dirMatch = expr.match(/^(\d*)([hjkl])$/);
+        if (dirMatch) {
+          const steps = dirMatch[1] ? Math.max(1, parseInt(dirMatch[1], 10)) : 1;
+          const dir = dirMatch[2] as 'h' | 'j' | 'k' | 'l';
+          const tree = getEffectiveWindowTree(s);
+          let idx = s.activePaneIndex ?? 0;
+          if (tree) {
+            for (let i = 0; i < steps; i++) {
+              const next = findNeighborPane(tree, idx, dir);
+              if (next === null) break;
+              idx = next;
+            }
+          }
+          return idx + 1;
+        }
+      }
       return (s.activePaneIndex ?? 0) + 1;
     },
+  },
+  win_getid: {
+    min: 0,
+    max: 1,
+    fn: (ctx, [winArg]) => {
+      const s = ctx.state;
+      const isSplit = Boolean(
+        s.splitDirection && s.splitDirection !== 'none' && s.splitPanes && s.splitPanes.length >= 2
+      );
+      if (!isSplit) {
+        if (winArg === undefined) return 1000;
+        const n = Math.trunc(toNumber(winArg));
+        return n === 1 ? 1000 : 0;
+      }
+      const panes = s.splitPanes!;
+      if (winArg === undefined) {
+        return getPaneWinId(panes, s.activePaneIndex ?? 0);
+      }
+      const winNum = Math.trunc(toNumber(winArg));
+      if (winNum < 1 || winNum > panes.length) return 0;
+      return getPaneWinId(panes, winNum - 1);
+    },
+  },
+  win_id2win: {
+    min: 1,
+    max: 1,
+    fn: (ctx, [idArg]) => {
+      const targetId = Math.trunc(toNumber(idArg));
+      const s = ctx.state;
+      const isSplit = Boolean(
+        s.splitDirection && s.splitDirection !== 'none' && s.splitPanes && s.splitPanes.length >= 2
+      );
+      if (!isSplit) return targetId === 1000 ? 1 : 0;
+      const idx = s.splitPanes!.findIndex((p, i) => (p.winId ?? 1000 + i) === targetId);
+      return idx >= 0 ? idx + 1 : 0;
+    },
+  },
+  win_gotoid: {
+    min: 1,
+    max: 1,
+    fn: (ctx, [idArg]) => {
+      const targetId = Math.trunc(toNumber(idArg));
+      const s = ctx.state;
+      const isSplit = Boolean(
+        s.splitDirection && s.splitDirection !== 'none' && s.splitPanes && s.splitPanes.length >= 2
+      );
+      if (!isSplit) return targetId === 1000 ? 1 : 0;
+      const idx = s.splitPanes!.findIndex((p, i) => (p.winId ?? 1000 + i) === targetId);
+      if (idx < 0) return 0;
+      ctx.state = switchPaneFocusCore(s, idx);
+      return 1;
+    },
+  },
+  winlayout: {
+    min: 0,
+    max: 0,
+    fn: (ctx) => toVimWinlayout(ctx.state),
   },
   tabpagenr: {
     min: 0,

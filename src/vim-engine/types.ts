@@ -169,7 +169,9 @@ export interface VimTabPage {
   redoStack?: StateSnapshot[];
   splitDirection?: SplitDirection;
   activePaneIndex?: number;
-  splitPanes?: [SplitPaneState, SplitPaneState];
+  splitPanes?: SplitPaneState[];
+  windowLayout?: WindowLayoutNode;
+  splitRatio?: number;
   primaryFilename?: string;
   secondaryFilename?: string;
   currentBufferId?: number;
@@ -395,7 +397,18 @@ export interface FoldRange {
 
 export type SplitDirection = 'none' | 'horizontal' | 'vertical';
 
+export type WindowLayoutNode =
+  | { kind: 'leaf'; paneIndex: number }
+  | {
+      kind: 'split';
+      direction: 'horizontal' | 'vertical';
+      children: WindowLayoutNode[];
+      weights: number[];
+    };
+
 export interface SplitPaneState {
+  /** 고유 윈도우 ID (win_getid / win_gotoid 용, 1000 이상) */
+  winId?: number;
   filename: string;
   lines: string[];
   cursor: CursorPosition;
@@ -487,11 +500,15 @@ export interface VimEditorState {
   viewport?: ViewportState;
   /** 창 분할 방향 (:sp, :vsp, Ctrl+w) */
   splitDirection?: SplitDirection;
-  /** 현재 활성 포커스 창 인덱스 (0: 주 창, 1: 보조 창) */
+  /** 현재 활성 포커스 창 인덱스 (0 .. splitPanes.length - 1) */
   activePaneIndex?: number;
-  /** 분할된 윈도우 페인 목록 */
-  splitPanes?: [SplitPaneState, SplitPaneState];
-  /** 분할 창 크기 비율 (기본 50: 50%) */
+  /** 분할된 윈도우 페인 목록 (트리 DFS 좌→우, 상→하 순서) */
+  splitPanes?: SplitPaneState[];
+  /** 중첩 가로/세로 분할 레이아웃 트리 */
+  windowLayout?: WindowLayoutNode;
+  /** 다음에 발급할 고유 윈도우 ID (기본 1000부터 증가) */
+  nextWindowId?: number;
+  /** 분할 창 크기 비율 (2분할 호환용, 기본 50: 50%) */
   splitRatio?: number;
   /** 직전에 활성화되었던 창 인덱스 (Ctrl-w p 용) */
   previousPaneIndex?: number;

@@ -370,12 +370,31 @@
   gap: 8px;
 }
 
-.editor-split-container.split-vertical {
+.editor-split-container.split-vertical,
+.editor-split-branch.split-vertical {
   flex-direction: row;
 }
 
-.editor-split-container.split-horizontal {
+.editor-split-container.split-horizontal,
+.editor-split-branch.split-horizontal {
   flex-direction: column;
+}
+
+.editor-split-branch {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  gap: 8px;
+}
+
+.pane-window-num {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 0 5px;
+  border-radius: 3px;
+  font-size: 0.7rem;
+  background: rgba(122, 162, 247, 0.16);
+  color: #7aa2f7;
 }
 
 .editor-split-pane {

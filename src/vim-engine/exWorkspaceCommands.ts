@@ -77,12 +77,25 @@ function tryExecuteSplitAndDiffCommand(
   if (splitMatch) {
     const isVertical = splitMatch[1].toLowerCase().startsWith('v');
     const targetFile = splitMatch[2]?.trim();
+    const isAlreadySplit = Boolean(
+      state.splitDirection && state.splitDirection !== 'none' && state.splitPanes && state.splitPanes.length >= 2
+    );
+    let targetLines: string[] | undefined = isAlreadySplit ? undefined : state.secondaryLines;
+    if (targetFile) {
+      const matchedBuf = state.buffers?.find((b) => b.name === targetFile);
+      const matchedVfs = state.virtualFiles?.[targetFile] ?? state.netrw?.files?.[targetFile];
+      if (matchedBuf) {
+        targetLines = [...matchedBuf.lines];
+      } else if (matchedVfs) {
+        targetLines = [...matchedVfs];
+      }
+    }
     return finishEx(
       splitWindow(
         state,
         isVertical ? 'vertical' : 'horizontal',
-        state.secondaryLines,
-        targetFile || state.secondaryFilename
+        targetLines,
+        targetFile || (isAlreadySplit ? undefined : state.secondaryFilename)
       )
     );
   }
@@ -138,9 +151,10 @@ function tryExecuteSplitAndDiffCommand(
 
   const resizeMatch = cleanCmdRaw.match(/^(?:(vertical|vert)\s+)?(?:res|resize)(?:\s+([+-]?\d+|=))?$/i);
   if (resizeMatch) {
+    const axis = resizeMatch[1] ? 'vertical' : 'horizontal';
     const deltaStr = resizeMatch[2];
     const delta = deltaStr === '=' ? '=' : deltaStr ? parseInt(deltaStr, 10) : 5;
-    return finishEx(resizeSplit(state, delta));
+    return finishEx(resizeSplit(state, delta, axis));
   }
 
   return null;

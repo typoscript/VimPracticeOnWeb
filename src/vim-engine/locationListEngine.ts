@@ -26,20 +26,14 @@ import { msg } from './messages';
 function syncPaneLocationList(
   state: VimEditorState,
   locList: QuickfixState | null | undefined
-): [SplitPaneState, SplitPaneState] | undefined {
+): SplitPaneState[] | undefined {
   if (!state.splitPanes || state.activePaneIndex === undefined) {
     return state.splitPanes;
   }
   const curIdx = state.activePaneIndex;
-  const newPanes: [SplitPaneState, SplitPaneState] = [
-    state.splitPanes[0],
-    state.splitPanes[1],
-  ];
-  newPanes[curIdx] = {
-    ...newPanes[curIdx],
-    locationList: locList,
-  };
-  return newPanes;
+  return state.splitPanes.map((pane, idx) =>
+    idx === curIdx ? { ...pane, locationList: locList } : pane
+  );
 }
 
 const LOCATION_LIST_ADAPTER: ErrorListAdapter = {

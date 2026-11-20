@@ -1,6 +1,13 @@
 import { Editor } from '../Editor/Editor';
 import { QuickfixPanel } from '../QuickfixPanel';
-import { VimEditorState, ensureBuffers, ensureTabPages, CursorPosition } from '../../vim-engine';
+import {
+  VimEditorState,
+  WindowLayoutNode,
+  ensureBuffers,
+  ensureTabPages,
+  getEffectiveWindowTree,
+  CursorPosition,
+} from '../../vim-engine';
 import { t } from '../../i18n';
 
 interface EditorViewportProps {
@@ -74,10 +81,120 @@ export function EditorViewport({
   const currentBufId = stateWithBuffers.currentBufferId ?? 1;
   const altBufId = stateWithBuffers.alternateBufferId;
 
-  const isSplitMode =
-    Boolean(editorState.splitDirection) &&
-    editorState.splitDirection !== 'none' &&
-    Boolean(editorState.splitPanes);
+  const splitTree = getEffectiveWindowTree(editorState);
+  const isSplitMode = Boolean(splitTree && editorState.splitPanes && editorState.splitPanes.length >= 2);
+  const paneCount = editorState.splitPanes?.length ?? 0;
+
+  const renderSplitNode = (
+    node: WindowLayoutNode,
+    weight: number,
+    isRoot: boolean,
+    keyPrefix: string
+  ): React.ReactNode => {
+    if (node.kind === 'leaf') {
+      const paneIdx = node.paneIndex;
+      const pane = editorState.splitPanes?.[paneIdx];
+      if (!pane) return null;
+      const isActive = (editorState.activePaneIndex ?? 0) === paneIdx;
+      const defaultName =
+        paneIdx === 0 ? 'source.ts' : paneIdx === 1 ? 'target.ts' : `pane_${paneIdx + 1}.ts`;
+      const paneFilename =
+        paneIdx === 0
+          ? pane.filename || editorState.primaryFilename || fallbackPrimaryFilename
+          : paneIdx === 1
+            ? pane.filename || editorState.secondaryFilename || defaultName
+            : pane.filename || defaultName;
+      const headerFilename =
+        paneIdx === 0
+          ? pane.filename || editorState.primaryFilename || defaultName
+          : paneIdx === 1
+            ? pane.filename || editorState.secondaryFilename || defaultName
+            : pane.filename || defaultName;
+
+      return (
+        <div
+          key={`${keyPrefix}-leaf-${paneIdx}`}
+          className={`editor-split-pane ${isActive ? 'active' : ''}`}
+          onClick={() => onSwitchPane(paneIdx)}
+          data-testid={`split-pane-${paneIdx}`}
+          style={{ flex: `${Math.round(weight)} 1 0%` }}
+        >
+          <div className="pane-header">
+            <span className="pane-filename">
+              {paneCount > 2 && <span className="pane-window-num">#{paneIdx + 1}</span>}
+              📄 {headerFilename}
+            </span>
+            {displayEditorState.diffMode && (
+              <span className="pane-diff-badge" data-testid={`diff-badge-${paneIdx}`}>
+                [DIFF]
+              </span>
+            )}
+            {isActive && <span className="pane-active-indicator">FOCUS</span>}
+          </div>
+          <Editor
+            lines={isActive ? editorState.lines : pane.lines}
+            cursor={isActive ? editorState.cursor : pane.cursor}
+            mode={isActive ? editorState.mode : pane.mode}
+            targetPosition={targetPosition}
+            visualAnchor={isActive ? editorState.visualAnchor : pane.visualAnchor}
+            visualBlockEndOfLine={
+              isActive ? editorState.visualBlockEndOfLine : pane.visualBlockEndOfLine
+            }
+            relativeLineNumbers={relativeLineNumbers}
+            searchQuery={
+              isActive && editorState.mode === 'SEARCH'
+                ? editorState.commandBuffer
+                : editorState.hlsearchSuppressed
+                ? undefined
+                : editorState.lastSearchQuery
+            }
+            isFocused={isEditorFocused && isActive}
+            onFocus={() => onSwitchPane(paneIdx)}
+            marks={editorState.marks}
+            jumpList={editorState.jumpList}
+            jumpIndex={editorState.jumpIndex}
+            onJumpToMark={onJumpToMark}
+            viewport={isActive ? editorState.viewport : pane.viewport}
+            folds={editorState.folds}
+            completionSession={isActive ? editorState.completionSession : undefined}
+            insertNormalSession={isActive ? editorState.insertNormalSession : undefined}
+            insertRegisterPending={isActive ? editorState.insertRegisterPending : undefined}
+            confirmSubstitute={isActive ? editorState.confirmSubstitute : undefined}
+            options={displayEditorState.options}
+            spellGoodWords={displayEditorState.spellGoodWords}
+            spellWrongWords={displayEditorState.spellWrongWords}
+            diffHunks={displayEditorState.diffMode ? displayEditorState.diffHunks : undefined}
+            diffPaneIndex={paneIdx}
+            bellSignal={isActive ? bellCount : undefined}
+            onSelectCompletionItem={onSelectCompletionCandidate}
+            primaryFilename={paneFilename}
+          />
+        </div>
+      );
+    }
+
+    const totalWeight = node.weights.reduce((acc, w) => acc + (w > 0 ? w : 0), 0);
+    return (
+      <div
+        key={`${keyPrefix}-split-${node.direction}`}
+        className={
+          isRoot
+            ? `editor-split-container split-${node.direction}`
+            : `editor-split-branch split-${node.direction}`
+        }
+        data-testid={isRoot ? 'editor-split-container' : `split-branch-${node.direction}`}
+        style={isRoot ? undefined : { flex: `${Math.round(weight)} 1 0%` }}
+      >
+        {node.children.map((child, idx) => {
+          const childWeight =
+            totalWeight > 0
+              ? ((node.weights[idx] ?? 100 / node.children.length) / totalWeight) * 100
+              : 100 / node.children.length;
+          return renderSplitNode(child, childWeight, false, `${keyPrefix}-${idx}`);
+        })}
+      </div>
+    );
+  };
 
   return (
     <>
@@ -163,85 +280,9 @@ export function EditorViewport({
           </div>
         )}
 
-        {/* 에디터 렌더링: 분할 창 모드 vs 단일 창 모드 */}
-        {isSplitMode && editorState.splitPanes ? (
-          <div
-            className={`editor-split-container split-${editorState.splitDirection}`}
-            data-testid="editor-split-container"
-          >
-            {([0, 1] as const).map((paneIdx) => {
-              const pane = editorState.splitPanes![paneIdx];
-              const isActive = editorState.activePaneIndex === paneIdx;
-              const defaultName = paneIdx === 0 ? 'source.ts' : 'target.ts';
-              const paneFilename =
-                paneIdx === 0
-                  ? editorState.primaryFilename || pane.filename || fallbackPrimaryFilename
-                  : editorState.secondaryFilename || pane.filename || defaultName;
-              const headerFilename =
-                paneIdx === 0
-                  ? editorState.primaryFilename || pane.filename || defaultName
-                  : editorState.secondaryFilename || pane.filename || defaultName;
-              const ratio = editorState.splitRatio ?? 50;
-
-              return (
-                <div
-                  key={paneIdx}
-                  className={`editor-split-pane ${isActive ? 'active' : ''}`}
-                  onClick={() => onSwitchPane(paneIdx)}
-                  data-testid={`split-pane-${paneIdx}`}
-                  style={{ flex: `${paneIdx === 0 ? ratio : 100 - ratio} 1 0%` }}
-                >
-                  <div className="pane-header">
-                    <span className="pane-filename">📄 {headerFilename}</span>
-                    {displayEditorState.diffMode && (
-                      <span className="pane-diff-badge" data-testid={`diff-badge-${paneIdx}`}>
-                        [DIFF]
-                      </span>
-                    )}
-                    {isActive && <span className="pane-active-indicator">FOCUS</span>}
-                  </div>
-                  <Editor
-                    lines={isActive ? editorState.lines : pane.lines}
-                    cursor={isActive ? editorState.cursor : pane.cursor}
-                    mode={isActive ? editorState.mode : pane.mode}
-                    targetPosition={targetPosition}
-                    visualAnchor={isActive ? editorState.visualAnchor : pane.visualAnchor}
-                    visualBlockEndOfLine={
-                      isActive ? editorState.visualBlockEndOfLine : pane.visualBlockEndOfLine
-                    }
-                    relativeLineNumbers={relativeLineNumbers}
-                    searchQuery={
-                      isActive && editorState.mode === 'SEARCH'
-                        ? editorState.commandBuffer
-                        : editorState.hlsearchSuppressed
-                        ? undefined
-                        : editorState.lastSearchQuery
-                    }
-                    isFocused={isEditorFocused && isActive}
-                    onFocus={() => onSwitchPane(paneIdx)}
-                    marks={editorState.marks}
-                    jumpList={editorState.jumpList}
-                    jumpIndex={editorState.jumpIndex}
-                    onJumpToMark={onJumpToMark}
-                    viewport={isActive ? editorState.viewport : pane.viewport}
-                    folds={editorState.folds}
-                    completionSession={isActive ? editorState.completionSession : undefined}
-                    insertNormalSession={isActive ? editorState.insertNormalSession : undefined}
-                    insertRegisterPending={isActive ? editorState.insertRegisterPending : undefined}
-                    confirmSubstitute={isActive ? editorState.confirmSubstitute : undefined}
-                    options={displayEditorState.options}
-                    spellGoodWords={displayEditorState.spellGoodWords}
-                    spellWrongWords={displayEditorState.spellWrongWords}
-                    diffHunks={displayEditorState.diffMode ? displayEditorState.diffHunks : undefined}
-                    diffPaneIndex={paneIdx}
-                    bellSignal={isActive ? bellCount : undefined}
-                    onSelectCompletionItem={onSelectCompletionCandidate}
-                    primaryFilename={paneFilename}
-                  />
-                </div>
-              );
-            })}
-          </div>
+        {/* 에디터 렌더링: 분할 창 트리 모드 vs 단일 창 모드 */}
+        {isSplitMode && splitTree ? (
+          renderSplitNode(splitTree, 100, true, 'root')
         ) : (
           <Editor
             lines={displayEditorState.lines}

@@ -6,11 +6,13 @@ import {
   MarkPosition,
   RegisterEntry,
   VimOptions,
+  WindowLayoutNode,
 } from './types';
 import { msg } from './messages';
 import { buildVfsMap } from './vfs';
 import { getOptions } from './setEngine';
 import { syncActivePane } from './splitWindow';
+import { cloneWindowTree } from './windowTree';
 
 export interface SessionMetadata {
   version: 1;
@@ -25,7 +27,8 @@ export interface SessionMetadata {
     cursor: { line: number; col: number };
   }>;
   splitDirection: 'none' | 'horizontal' | 'vertical';
-  splitPanes?: [SplitPaneState, SplitPaneState];
+  splitPanes?: SplitPaneState[];
+  windowLayout?: WindowLayoutNode;
   activePaneIndex?: number;
   splitRatio?: number;
   tabPages?: Array<{
@@ -100,14 +103,16 @@ export function generateSessionScript(state: VimEditorState, sessionFile: string
   }
 
   // 3. 윈도우 분할(Split) 및 활성 창 직렬화
-  if (state.splitDirection && state.splitDirection !== 'none' && state.splitPanes) {
+  if (state.splitDirection && state.splitDirection !== 'none' && state.splitPanes && state.splitPanes.length >= 2) {
     const p0 = state.splitPanes[0];
-    const p1 = state.splitPanes[1];
     lines.push(`edit ${p0.filename}`);
     lines.push(`keepjumps call cursor(${p0.cursor.line + 1}, ${p0.cursor.col + 1})`);
-    lines.push(state.splitDirection === 'vertical' ? `vsplit ${p1.filename}` : `split ${p1.filename}`);
-    lines.push(`keepjumps call cursor(${p1.cursor.line + 1}, ${p1.cursor.col + 1})`);
-    lines.push(state.activePaneIndex === 0 ? '1wincmd w' : '2wincmd w');
+    for (let i = 1; i < state.splitPanes.length; i++) {
+      const pi = state.splitPanes[i];
+      lines.push(state.splitDirection === 'vertical' ? `vsplit ${pi.filename}` : `split ${pi.filename}`);
+      lines.push(`keepjumps call cursor(${pi.cursor.line + 1}, ${pi.cursor.col + 1})`);
+    }
+    lines.push(`${(state.activePaneIndex ?? 0) + 1}wincmd w`);
   } else {
     const curFile = state.primaryFilename || 'practice.txt';
     lines.push(`edit ${curFile}`);
@@ -152,19 +157,13 @@ export function generateSessionScript(state: VimEditorState, sessionFile: string
     })),
     splitDirection: state.splitDirection || 'none',
     splitPanes: state.splitPanes
-      ? [
-          {
-            ...state.splitPanes[0],
-            lines: [...state.splitPanes[0].lines],
-            cursor: { ...state.splitPanes[0].cursor },
-          },
-          {
-            ...state.splitPanes[1],
-            lines: [...state.splitPanes[1].lines],
-            cursor: { ...state.splitPanes[1].cursor },
-          },
-        ]
+      ? state.splitPanes.map((pane) => ({
+          ...pane,
+          lines: [...pane.lines],
+          cursor: { ...pane.cursor },
+        }))
       : undefined,
+    windowLayout: state.windowLayout ? cloneWindowTree(state.windowLayout) : undefined,
     activePaneIndex: state.activePaneIndex,
     splitRatio: state.splitRatio,
     tabPages: state.tabPages?.map((t) => ({
@@ -315,24 +314,18 @@ export function restoreSession(
         currentBufferId: activeBuf?.id ?? 1,
         alternateBufferId: meta.alternateBufferId,
         primaryFilename: meta.primaryFilename,
-        secondaryFilename: meta.splitPanes ? meta.splitPanes[1].filename : undefined,
+        secondaryFilename: meta.splitPanes?.[1]?.filename,
         lines: activeLines,
         cursor: activeCursor,
         splitDirection: meta.splitDirection ?? 'none',
         splitPanes: meta.splitPanes
-          ? [
-              {
-                ...meta.splitPanes[0],
-                lines: [...meta.splitPanes[0].lines],
-                cursor: { ...meta.splitPanes[0].cursor },
-              },
-              {
-                ...meta.splitPanes[1],
-                lines: [...meta.splitPanes[1].lines],
-                cursor: { ...meta.splitPanes[1].cursor },
-              },
-            ]
+          ? meta.splitPanes.map((pane) => ({
+              ...pane,
+              lines: [...pane.lines],
+              cursor: { ...pane.cursor },
+            }))
           : undefined,
+        windowLayout: meta.windowLayout ? cloneWindowTree(meta.windowLayout) : undefined,
         activePaneIndex: meta.activePaneIndex ?? 0,
         splitRatio: meta.splitRatio,
         tabPages: restoredTabPages,

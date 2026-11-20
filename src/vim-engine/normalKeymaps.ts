@@ -1,6 +1,6 @@
 import { VimEditorState } from './types';
 import { moveToLineEnd, moveToFirstNonBlank } from './motions';
-import { switchPaneFocus } from './splitWindow';
+import { executeWincmd } from './splitWindow';
 import { executeCommandLine } from './commandLine';
 import {
   MAX_REMAP_DEPTH,
@@ -53,11 +53,8 @@ function runResolvedNormalMapping(
       if (isNoremap && rhs === '$') {
         return { ...runState, cursor: moveToLineEnd(runState.lines, runState.cursor) };
       }
-      if (isNoremap && (rhs === 'Ctrl-w h' || rhs === 'Ctrl-w k')) {
-        return switchPaneFocus(runState, 0);
-      }
-      if (isNoremap && (rhs === 'Ctrl-w l' || rhs === 'Ctrl-w j')) {
-        return switchPaneFocus(runState, 1);
+      if (isNoremap && (rhs === 'Ctrl-w h' || rhs === 'Ctrl-w k' || rhs === 'Ctrl-w l' || rhs === 'Ctrl-w j')) {
+        return executeWincmd(runState, rhs.slice(-1));
       }
       if (rhs.startsWith(':')) {
         const cmd = rhs.slice(1).replace(/<(?:CR|Enter)>$/i, '').replace(/Enter$/, '');
