@@ -418,4 +418,5 @@ export const EN_MESSAGES: Record<string, string> = {
   "메시지 기록이 비어 있습니다": "No messages in history",
   "E227: {lhs} 에 대한 매핑이 이미 존재합니다": "E227: mapping already exists for {lhs}",
   "매핑을 찾을 수 없습니다: {lhs}": "No mapping found: {lhs}",
+  "E354: 유효하지 않은 레지스터 이름입니다: '{reg}'": "E354: Invalid register name: '{reg}'",
 };

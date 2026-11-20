@@ -550,4 +550,123 @@ describe('Named Registers & Black Hole Register ("a~"z, "0, "_)', () => {
       expect(state.lines).toEqual(['base', 'lineC', 'lineB', 'lineA']);
     });
   });
+
+  describe('Indent-Adjusted Put (]p, [p, ]P, [P) and Special Read-Only Registers ("%, "#, "., ":, "/)', () => {
+    it(']p 와 [p 는 줄 단위 레지스터를 현재 줄의 들여쓰기에 맞춰 정렬해 붙여넣고, Visual 모드에서도 선택 영역을 들여쓰기 맞춰 교체한다', () => {
+      let state: VimEditorState = {
+        lines: ['if (ok) {', '    const a = 1;', '  const b = 2;', '}'],
+        cursor: { line: 2, col: 2 },
+        mode: 'NORMAL',
+      };
+
+      // 3번째 줄(2칸 들여쓰기)을 yy 복사 후 2번째 줄(4칸 들여쓰기) 아래에 ]p 로 붙여넣기 -> 4칸으로 자동 정렬
+      state = handleKey(state, 'y');
+      state = handleKey(state, 'y');
+      state = handleKey(state, 'k');
+      state = handleKey(state, ']');
+      state = handleKey(state, 'p');
+
+      expect(state.lines).toEqual([
+        'if (ok) {',
+        '    const a = 1;',
+        '    const b = 2;',
+        '  const b = 2;',
+        '}',
+      ]);
+      expect(state.cursor).toEqual({ line: 2, col: 4 });
+      expect(state.lastBracketMarks?.start.row).toBe(2);
+      expect(state.lastBracketMarks?.end.row).toBe(2);
+
+      // 줄 단위 레지스터("l = "return true;")도 [p 로 붙여넣으면 현재 줄(4칸) 앞에 줄 단위로 정렬되어 들어간다
+      state = executeCommandLine(state, 'call setreg("l", ["return true;"], "l")');
+      state = handleKey(state, '"');
+      state = handleKey(state, 'l');
+      state = handleKey(state, '[');
+      state = handleKey(state, 'p');
+      expect(state.lines[2]).toBe('    return true;');
+    });
+
+    it('다중 줄 블록을 ]p 로 붙여넣을 때 첫 비공백 줄을 기준으로 상대 들여쓰기 구조를 보존한다', () => {
+      let state: VimEditorState = {
+        lines: [
+          '  function foo() {',
+          '    return 1;',
+          '  }',
+          '      if (nested) {',
+          '      }',
+        ],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      // 1~3줄(2칸/4칸/2칸)을 3yy 복사 후 4번째 줄(6칸 들여쓰기)에서 ]p -> 6칸/8칸/6칸으로 상대 들여쓰기 유지
+      state = handleKey(state, '3');
+      state = handleKey(state, 'y');
+      state = handleKey(state, 'y');
+      state = handleKey(state, '3');
+      state = handleKey(state, 'j');
+      state = handleKey(state, ']');
+      state = handleKey(state, 'p');
+
+      expect(state.lines).toEqual([
+        '  function foo() {',
+        '    return 1;',
+        '  }',
+        '      if (nested) {',
+        '      function foo() {',
+        '        return 1;',
+        '      }',
+        '      }',
+      ]);
+    });
+
+    it('특수 레지스터 ("%, "#, "., ":, "/)를 Normal 붙여넣기, Insert <C-r>, Vimscript @r/getreg(), :registers 에서 일관되게 지원한다', () => {
+      let state: VimEditorState = {
+        lines: [''],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+        primaryFilename: 'main.ts',
+        secondaryFilename: 'utils.ts',
+        lastSearchQuery: 'targetPattern',
+        commandHistory: ['set number'],
+      };
+
+      // Insert 모드로 텍스트 입력하여 ". (lastInsertedText) 기록
+      for (const k of ['i', 'h', 'e', 'l', 'l', 'o', 'Escape']) {
+        state = handleKey(state, k);
+      }
+      expect(state.lastInsertedText).toBe('hello');
+
+      // 1) Vimscript @%, @#, @., @:, @/ 및 getreg() 일관성 확인
+      state = executeCommandLine(
+        state,
+        'echo [@%, @#, @., @/, getreg("%"), getreg("#"), getreg("."), getreg("/")]'
+      );
+      expect(state.commandMessage).toBe(
+        "['main.ts', 'utils.ts', 'hello', 'targetPattern', 'main.ts', 'utils.ts', 'hello', 'targetPattern']"
+      );
+
+      // 2) :let @/ = 'newPat' 및 setreg('#', 'alt.ts') 쓰기 지원, 읽기 전용(@%) 대입 시 E354 에러 확인
+      state = executeCommandLine(state, 'let @/ = "newPat" | call setreg("#", "alt.ts")');
+      expect(state.lastSearchQuery).toBe('newPat');
+      expect(state.secondaryFilename).toBe('alt.ts');
+
+      const roAttempt = executeCommandLine(state, 'let @% = " forbidden.ts"');
+      expect(roAttempt.bell).toBe(true);
+      expect(roAttempt.commandMessage).toContain('E354');
+
+      // 3) :registers 출력에 "., "%, "#, ":, "/ 가 모두 포함된다
+      const regOut = formatRegisters(state);
+      expect(regOut).toContain('".   c   hello');
+      expect(regOut).toContain('"%   c   main.ts');
+      expect(regOut).toContain('"#   c   alt.ts');
+      expect(regOut).toContain('"/   c   newPat');
+
+      // 4) Normal 모드 "#p 로 대안 파일명 붙여넣기
+      state = handleKey(state, '"');
+      state = handleKey(state, '#');
+      state = handleKey(state, 'p');
+      expect(state.lines[0]).toBe('helloalt.ts');
+    });
+  });
 });

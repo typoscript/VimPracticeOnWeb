@@ -896,6 +896,18 @@ export const EXTRA_BUILTINS: Record<string, ExtraBuiltin> = {
         const val = s.primaryFilename ?? '';
         return asList ? (val ? [val] : []) : val;
       }
+      if (rawName === '#') {
+        const altBuffer =
+          s.alternateBufferId !== undefined
+            ? s.buffers?.find((b) => b.id === s.alternateBufferId)
+            : undefined;
+        const val = altBuffer?.name ?? s.secondaryFilename ?? '';
+        return asList ? (val ? [val] : []) : val;
+      }
+      if (rawName === '.') {
+        const val = s.lastInsertedText ?? '';
+        return asList ? (val ? val.split('\n') : []) : val;
+      }
       if (rawName === '/') {
         const val = s.lastSearchQuery ?? '';
         return asList ? (val ? [val] : []) : val;
@@ -925,7 +937,7 @@ export const EXTRA_BUILTINS: Record<string, ExtraBuiltin> = {
       const rawName = regArg === undefined ? '"' : toVimString(regArg) || '"';
       const s = ctx.state;
       if (rawName === '_') return '';
-      if (rawName === '%' || rawName === '/' || rawName === ':') return 'v';
+      if (rawName === '%' || rawName === '#' || rawName === '.' || rawName === '/' || rawName === ':') return 'v';
       const key = rawName === '"' ? '"' : rawName.toLowerCase();
       const entry = s.registers?.[key];
       if (entry) {
@@ -955,6 +967,27 @@ export const EXTRA_BUILTINS: Record<string, ExtraBuiltin> = {
     max: 3,
     fn: (ctx, [regArg, valArg, optArg]) => {
       const rawName = toVimString(regArg) || '"';
+      if (rawName === '%' || rawName === '.' || rawName === ':') return -1;
+      if (rawName === '/') {
+        ctx.state = {
+          ...ctx.state,
+          lastSearchQuery: isList(valArg) ? valArg.map(toVimString).join('\n') : toVimString(valArg),
+          hlsearchSuppressed: false,
+        };
+        return 0;
+      }
+      if (rawName === '#') {
+        const targetName = isList(valArg) ? valArg.map(toVimString).join('\n') : toVimString(valArg);
+        const found = ctx.state.buffers?.find(
+          (b) => b.name === targetName || String(b.id) === targetName
+        );
+        ctx.state = {
+          ...ctx.state,
+          ...(found ? { alternateBufferId: found.id } : {}),
+          secondaryFilename: found ? found.name : targetName,
+        };
+        return 0;
+      }
       if (rawName.length !== 1 || !/^[a-zA-Z0-9"_+*=-]$/.test(rawName)) return -1;
       if (rawName === '_') return 0;
 

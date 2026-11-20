@@ -291,9 +291,23 @@ function updateScopeStore(ctx: EvalContext, scope: VarScope, next: Record<string
 }
 
 export function readRegister(state: VimEditorState, reg: string): string {
-  const entry = state.registers?.[reg === '"' ? '"' : reg.toLowerCase()];
+  if (reg === '_') return '';
+  if (reg === '%') return state.primaryFilename ?? '';
+  if (reg === '#') {
+    const altBuffer =
+      state.alternateBufferId !== undefined
+        ? state.buffers?.find((b) => b.id === state.alternateBufferId)
+        : undefined;
+    return altBuffer?.name ?? state.secondaryFilename ?? '';
+  }
+  if (reg === '.') return state.lastInsertedText ?? '';
+  if (reg === ':') return state.commandHistory?.[state.commandHistory.length - 1] ?? '';
+  if (reg === '/') return state.lastSearchQuery ?? '';
+  const key = reg === '"' ? '"' : reg.toLowerCase();
+  const entry = state.registers?.[key];
   if (entry) return Array.isArray(entry.content) ? entry.content.join('') : entry.content;
-  if (reg === '"') return state.clipboard?.content ?? '';
+  if (key === '"') return state.clipboard?.content ?? '';
+  if ((key === '+' || key === '*') && state.systemClipboard !== undefined) return state.systemClipboard;
   return '';
 }
 

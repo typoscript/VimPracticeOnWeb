@@ -339,7 +339,7 @@ export function getRegisterContent(
 }
 
 export interface PutOptions {
-  /** ]p / [p: 현재 줄의 들여쓰기에 맞춰 줄 단위 텍스트의 들여쓰기를 재조정 */
+  /** ]p / [p: 현재 줄의 들여쓰기에 맞춰 줄 단위 텍스트의 들여쓰기를 재조정 (charwise도 줄 단위로 강제 전환) */
   adjustIndent?: boolean;
   /** gp / gP: 붙여넣은 텍스트 바로 뒤(줄 단위는 다음 줄 첫 칸)로 커서를 이동 */
   leaveCursorAfter?: boolean;
@@ -370,7 +370,8 @@ function reindentBlockToLine(
   expandtab: boolean
 ): string[] {
   const targetCols = measureIndentCols(targetLineText, tabstop);
-  const firstCols = measureIndentCols(blockLines[0] ?? '', tabstop);
+  const firstNonEmpty = blockLines.find((l) => l.trim().length > 0) ?? blockLines[0] ?? '';
+  const firstCols = measureIndentCols(firstNonEmpty, tabstop);
   const delta = targetCols - firstCols;
 
   return blockLines.map((l) => {
@@ -431,12 +432,18 @@ export function putFromRegister(
       ...state.lines.slice(targetLine),
     ];
 
+    const bracketMarks = {
+      start: { row: targetLine, col: 0 },
+      end: { row: targetLine + insertedLines.length - 1, col: 0 },
+    };
+
     if (options?.leaveCursorAfter) {
       const afterLine = Math.min(nextLines.length - 1, targetLine + insertedLines.length);
       return {
         ...stateWithSnapshot,
         lines: nextLines,
         cursor: { line: afterLine, col: 0 },
+        lastBracketMarks: bracketMarks,
         activeRegister: undefined,
         pendingKeys: undefined,
       };
@@ -449,6 +456,7 @@ export function putFromRegister(
       ...stateWithSnapshot,
       lines: nextLines,
       cursor: { line: targetLine, col: targetCol },
+      lastBracketMarks: bracketMarks,
       activeRegister: undefined,
       pendingKeys: undefined,
     };
@@ -661,7 +669,15 @@ export function formatRegisters(state: VimEditorState, filterArg?: string): stri
     }
   }
 
-  // 5. "% (현재 파일명)
+  // 5. ". (마지막 Insert 텍스트), "% (현재 파일명), "# (대안 파일명), ": (마지막 Ex 명령), "/ (마지막 검색어), "= (표현식)
+  if (state.lastInsertedText) {
+    list.push({
+      name: '.',
+      type: 'c',
+      content: state.lastInsertedText,
+    });
+  }
+
   if (state.primaryFilename) {
     list.push({
       name: '%',
@@ -670,7 +686,19 @@ export function formatRegisters(state: VimEditorState, filterArg?: string): stri
     });
   }
 
-  // 6. ": (마지막 실행된 Ex 명령)
+  const altBuffer =
+    state.alternateBufferId !== undefined
+      ? state.buffers?.find((b) => b.id === state.alternateBufferId)
+      : undefined;
+  const altName = altBuffer?.name ?? state.secondaryFilename;
+  if (altName) {
+    list.push({
+      name: '#',
+      type: 'c',
+      content: altName,
+    });
+  }
+
   if (state.commandHistory && state.commandHistory.length > 0) {
     const lastCmd = state.commandHistory[state.commandHistory.length - 1];
     if (lastCmd) {
@@ -682,13 +710,24 @@ export function formatRegisters(state: VimEditorState, filterArg?: string): stri
     }
   }
 
-  // 7. "/ (마지막 검색어)
   if (state.lastSearchQuery) {
     list.push({
       name: '/',
       type: 'c',
       content: state.lastSearchQuery,
     });
+  }
+
+  const exprEntry = state.registers?.['='];
+  if (exprEntry && exprEntry.content) {
+    const rawContent = Array.isArray(exprEntry.content) ? exprEntry.content.join('') : exprEntry.content;
+    if (rawContent) {
+      list.push({
+        name: '=',
+        type: 'c',
+        content: rawContent,
+      });
+    }
   }
 
   // 필터링 적용 (예: :reg a b 0 ")

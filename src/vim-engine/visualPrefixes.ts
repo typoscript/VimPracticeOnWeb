@@ -263,17 +263,46 @@ export function handleVisualTextObject(state: VimEditorState, key: string): VimE
 }
 
 /**
- * Visual 모드 괄호·섹션·메서드 모션 [( [{ ]) ]} [[ ]] [] ][ ]m [m ]M [M 처리
+ * Visual 모드 괄호·섹션·메서드 모션 [( [{ ]) ]} [[ ]] [] ][ ]m [m ]M [M 및 ]p / [p / ]P / [P 처리
  */
 export function handleVisualBracketPrefix(state: VimEditorState, key: string): VimEditorState | null {
   const visualBracket = state.pendingKeys?.match(/^([1-9][0-9]*)?([\[\]])$/);
   if (visualBracket) {
+    const count = visualBracket[1] ? parseInt(visualBracket[1], 10) : 1;
     const bracket = visualBracket[2];
     const isPaired = (bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'));
     const isSection = key === '[' || key === ']';
     const isMethod = key === 'm' || key === 'M';
     if (isPaired || isSection || isMethod) {
-      return moveByExtraMotion(state, `${bracket}${key}`, visualBracket[1] ? parseInt(visualBracket[1], 10) : 1);
+      return moveByExtraMotion(state, `${bracket}${key}`, count);
+    }
+    if (key === 'p' || key === 'P') {
+      const snap = state.visualAnchor
+        ? {
+            mode: state.mode as 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK',
+            anchor: { ...state.visualAnchor },
+            cursor: { ...state.cursor },
+          }
+        : state.lastVisualSelection;
+      const targetClip = putFromRegister(state, state.activeRegister, key === 'P' || bracket === '[', count, {
+        adjustIndent: true,
+      });
+      if (targetClip.lines === state.lines) {
+        return { ...state, pendingKeys: undefined, activeRegister: undefined };
+      }
+      const delRes = deleteVisualSelection(state);
+      const synced = syncRegisters(state, delRes, false);
+      const restoredRegs = state.activeRegister
+        ? synced.registers
+        : { ...(synced.registers ?? {}), '"': state.registers?.['"'] ?? { type: 'line', content: '' } };
+      const res = putFromRegister(
+        { ...synced, registers: restoredRegs, clipboard: state.activeRegister ? synced.clipboard : state.clipboard },
+        state.activeRegister,
+        key === 'P' || bracket === '[',
+        count,
+        { adjustIndent: true }
+      );
+      return { ...res, registers: synced.registers, clipboard: synced.clipboard, lastVisualSelection: snap };
     }
     return { ...state, pendingKeys: undefined };
   }

@@ -100,10 +100,52 @@ export function writeLValue(ctx: EvalContext, lv: LValue, value: VimScriptValue)
   }
   if (lv.base.startsWith('@')) {
     if (lv.path.length > 0) throw new VimScriptError(msg('E15: 레지스터에는 인덱스를 쓸 수 없습니다: {base}', { base: lv.base }));
-    const reg = lv.base[1] === '"' ? '"' : lv.base[1].toLowerCase();
+    const rawReg = lv.base[1];
+    if (rawReg === '%' || rawReg === '.' || rawReg === ':') {
+      throw new VimScriptError(msg('E354: 유효하지 않은 레지스터 이름입니다: \'{reg}\'', { reg: rawReg }));
+    }
+    if (rawReg === '_') return;
+    if (rawReg === '/') {
+      ctx.state = {
+        ...ctx.state,
+        lastSearchQuery: toVimString(value),
+        hlsearchSuppressed: false,
+      };
+      return;
+    }
+    if (rawReg === '#') {
+      const targetName = toVimString(value);
+      const found = ctx.state.buffers?.find(
+        (b) => b.name === targetName || String(b.id) === targetName
+      );
+      ctx.state = {
+        ...ctx.state,
+        ...(found ? { alternateBufferId: found.id } : {}),
+        secondaryFilename: found ? found.name : targetName,
+      };
+      return;
+    }
+    const isAppend = /^[A-Z]$/.test(rawReg);
+    const reg = rawReg === '"' ? '"' : rawReg.toLowerCase();
+    const strVal = toVimString(value);
+    const prevEntry = ctx.state.registers?.[reg];
+    const prevStr = prevEntry
+      ? (Array.isArray(prevEntry.content) ? prevEntry.content.join('') : prevEntry.content)
+      : '';
+    const finalContent = isAppend && prevEntry ? `${prevStr}${strVal}` : strVal;
+    const nextEntry = {
+      type: (isAppend && prevEntry && prevEntry.type === 'line' ? 'line' : 'char') as 'char' | 'line',
+      content: finalContent,
+    };
     ctx.state = {
       ...ctx.state,
-      registers: { ...(ctx.state.registers ?? {}), [reg]: { type: 'char', content: toVimString(value) } },
+      registers: {
+        ...(ctx.state.registers ?? {}),
+        [reg]: nextEntry,
+        ...(reg === '+' || reg === '*' ? { '+': nextEntry, '*': nextEntry } : {}),
+      },
+      ...(reg === '"' ? { clipboard: { type: nextEntry.type === 'line' ? 'line' : 'text', content: finalContent } } : {}),
+      ...(reg === '+' || reg === '*' ? { systemClipboard: finalContent } : {}),
     };
     return;
   }
