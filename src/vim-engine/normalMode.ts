@@ -168,7 +168,7 @@ export function handleNormalModeKey(
         pendingKeys: undefined,
       };
     }
-    return { ...jumpToTag(state, word), pendingKeys: undefined };
+    return { ...jumpToTag(state, word, parsed.count1 || 1), pendingKeys: undefined };
   }
   if (key === 'Ctrl-t' || key === 'Ctrl+t' || key === 'ctrl-t' || key === '<C-t>') {
     return { ...popTagStack(state, parsed.count1 || 1), pendingKeys: undefined };

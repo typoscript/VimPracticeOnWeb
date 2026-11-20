@@ -169,14 +169,30 @@ export function jumpToTagEntry(
   matchIndex?: number,
   pushStack = true
 ): VimEditorState {
+  const prevHistory = state.tagStackHistory ?? state.tagStack ?? [];
+  const prevIdx = state.tagStackIndex ?? (state.tagStack ?? []).length;
+  let nextHistory = prevHistory;
   let nextTagStack = state.tagStack ?? [];
+  let nextTagStackIndex = prevIdx;
+
   if (pushStack) {
+    const truncated = prevHistory.slice(0, Math.min(prevIdx, prevHistory.length));
     const currentStackItem: TagStackItem = {
       tag: target.name,
       filename: state.primaryFilename || 'source.ts',
+      bufferId: state.currentBufferId ?? 1,
       cursor: { ...state.cursor },
+      matchnr: (matchIndex ?? 0) + 1,
     };
-    nextTagStack = [...nextTagStack, currentStackItem];
+    nextHistory = [...truncated, currentStackItem];
+    nextTagStack = nextHistory;
+    nextTagStackIndex = nextHistory.length;
+  } else if (nextHistory.length > 0) {
+    const activeEntryIdx = Math.min(nextHistory.length - 1, Math.max(0, prevIdx - 1));
+    nextHistory = nextHistory.map((item, idx) =>
+      idx === activeEntryIdx ? { ...item, matchnr: (matchIndex ?? 0) + 1 } : item
+    );
+    nextTagStack = nextHistory.slice(0, nextTagStackIndex);
   }
   const stateWithJump = recordJump(state);
 
@@ -189,6 +205,8 @@ export function jumpToTagEntry(
     nextState = {
       ...stateWithJump,
       tagStack: nextTagStack,
+      tagStackHistory: nextHistory,
+      tagStackIndex: nextTagStackIndex,
       tagMatches: matches ?? state.tagMatches,
       tagMatchIndex: matchIndex ?? state.tagMatchIndex,
       cursor: clampCursor(stateWithJump.lines, { line: target.line, col: target.col }, 'NORMAL'),
@@ -199,6 +217,8 @@ export function jumpToTagEntry(
       {
         ...stateWithJump,
         tagStack: nextTagStack,
+        tagStackHistory: nextHistory,
+        tagStackIndex: nextTagStackIndex,
       },
       target.filename
     );
@@ -206,6 +226,8 @@ export function jumpToTagEntry(
     nextState = {
       ...bufferSwitchedState,
       tagStack: nextTagStack,
+      tagStackHistory: nextHistory,
+      tagStackIndex: nextTagStackIndex,
       tagMatches: matches ?? state.tagMatches,
       tagMatchIndex: matchIndex ?? state.tagMatchIndex,
       cursor: clampCursor(bufferSwitchedState.lines, { line: target.line, col: target.col }, 'NORMAL'),
@@ -217,27 +239,63 @@ export function jumpToTagEntry(
 }
 
 /**
- * 지정된 태그(심볼)의 정의 위치로 점프합니다 (Ctrl+], :tag <name>).
+ * 지정된 태그(심볼)의 정의 위치로 점프하거나, 인자 없이([count]:tag) 태그 스택의 이후 항목으로 전진합니다 (Ctrl+], :[count]tag [name]).
  */
-export function jumpToTag(state: VimEditorState, tagName: string): VimEditorState {
+export function jumpToTag(state: VimEditorState, tagName: string, count = 1): VimEditorState {
   const clean = tagName.trim();
   if (!clean) {
+    const history = state.tagStackHistory ?? state.tagStack ?? [];
+    if (history.length === 0) {
+      return {
+        ...state,
+        commandMessage: msg('E73: 태그 스택이 비어 있습니다 (tag stack empty)'),
+        bell: true,
+      };
+    }
+    const curIdx = state.tagStackIndex ?? (state.tagStack ?? []).length;
+    if (curIdx >= history.length) {
+      const topTag = history[history.length - 1];
+      return jumpToTag(state, topTag.tag);
+    }
+    const targetEntryIdx = Math.min(history.length - 1, curIdx + Math.max(1, count) - 1);
+    const entry = history[targetEntryIdx];
+    const matches = findTags(state, entry.tag);
+    const matchIdx = Math.max(0, Math.min((entry.matchnr ?? 1) - 1, Math.max(0, matches.length - 1)));
+    const target = matches[matchIdx] ?? findTag(state, entry.tag);
+    if (!target) {
+      return {
+        ...state,
+        commandMessage: msg('E426: 태그를 찾을 수 없습니다: "{clean}"', { clean: entry.tag }),
+        bell: true,
+      };
+    }
+    const nextIdx = targetEntryIdx + 1;
+    const jumped = jumpToTagEntry(state, target, matches.length > 0 ? matches : [target], matchIdx, false);
     return {
-      ...state,
-      commandMessage: msg('E431: 태그를 지정하지 않았습니다 (tag name required)'),
+      ...jumped,
+      tagStack: history.slice(0, nextIdx),
+      tagStackHistory: history,
+      tagStackIndex: nextIdx,
     };
   }
 
   const matches = findTags(state, clean);
-  const target = findTag(state, clean);
-  if (!target) {
+  if (matches.length === 0) {
     return {
       ...state,
       commandMessage: msg('E426: 태그를 찾을 수 없습니다: "{clean}"', { clean }),
+      bell: true,
     };
   }
 
-  return jumpToTagEntry(state, target, matches.length > 0 ? matches : [target], 0);
+  if (count > 1) {
+    const idx = Math.min(matches.length - 1, count - 1);
+    return jumpToTagEntry(state, matches[idx], matches, idx);
+  }
+
+  const target = findTag(state, clean) ?? matches[0];
+  const matchIdx = Math.max(0, matches.indexOf(target));
+  return jumpToTagEntry(state, target, matches, matchIdx);
 }
 
 /**
@@ -365,18 +423,28 @@ export function cycleTagMatch(
  * 태그 스택을 팝하여 이전 위치로 복귀합니다 (Ctrl+t, :pop).
  */
 export function popTagStack(state: VimEditorState, count = 1): VimEditorState {
-  const stack = state.tagStack ?? [];
-  if (stack.length === 0) {
+  const history = state.tagStackHistory ?? state.tagStack ?? [];
+  if (history.length === 0) {
     return {
       ...state,
       commandMessage: msg('E73: 태그 스택이 비어 있습니다 (tag stack empty)'),
+      bell: true,
+    };
+  }
+
+  const curIdx = state.tagStackIndex ?? (state.tagStack ?? []).length;
+  if (curIdx <= 0) {
+    return {
+      ...state,
+      commandMessage: msg('E555: 태그 스택의 맨 아래입니다 (at bottom of tag stack)'),
+      bell: true,
     };
   }
 
   const popCount = Math.max(1, count);
-  const targetIdx = Math.max(0, stack.length - popCount);
-  const targetEntry = stack[targetIdx];
-  const nextStack = stack.slice(0, targetIdx);
+  const targetIdx = Math.max(0, curIdx - popCount);
+  const targetEntry = history[targetIdx];
+  const nextActiveStack = history.slice(0, targetIdx);
 
   // 점프 리스트 기록
   const stateWithJump = recordJump(state);
@@ -385,7 +453,9 @@ export function popTagStack(state: VimEditorState, count = 1): VimEditorState {
   if (targetEntry.filename === state.primaryFilename) {
     nextState = {
       ...stateWithJump,
-      tagStack: nextStack,
+      tagStack: nextActiveStack,
+      tagStackHistory: history,
+      tagStackIndex: targetIdx,
       cursor: { ...targetEntry.cursor },
       commandMessage: `tag stack popped: ${targetEntry.filename}:${targetEntry.cursor.line + 1}`,
     };
@@ -394,14 +464,18 @@ export function popTagStack(state: VimEditorState, count = 1): VimEditorState {
     const bufferSwitchedState = editBuffer(
       {
         ...stateWithJump,
-        tagStack: nextStack,
+        tagStack: nextActiveStack,
+        tagStackHistory: history,
+        tagStackIndex: targetIdx,
       },
       targetEntry.filename
     );
 
     nextState = {
       ...bufferSwitchedState,
-      tagStack: nextStack,
+      tagStack: nextActiveStack,
+      tagStackHistory: history,
+      tagStackIndex: targetIdx,
       cursor: { ...targetEntry.cursor },
       commandMessage: `tag stack popped: ${targetEntry.filename}:${targetEntry.cursor.line + 1}`,
     };
@@ -414,19 +488,25 @@ export function popTagStack(state: VimEditorState, count = 1): VimEditorState {
  * 현재 태그 스택 목록을 Vim 형식으로 포맷팅합니다 (:tags).
  */
 export function formatTagStack(state: VimEditorState): string {
-  const stack = state.tagStack ?? [];
+  const stack = state.tagStackHistory ?? state.tagStack ?? [];
   if (stack.length === 0) {
     return 'tag stack empty';
   }
 
+  const curIdx = state.tagStackIndex ?? (state.tagStack ?? []).length;
+  const activeDisplayIdx = Math.max(0, Math.min(stack.length - 1, curIdx - 1));
   const lines = ['  # TO tag         FROM line  in file/text'];
   for (let i = 0; i < stack.length; i++) {
     const item = stack[i];
-    const isCurrent = i === stack.length - 1 ? '>' : ' ';
+    const isCurrent = i === activeDisplayIdx && curIdx > 0 ? '>' : ' ';
     const num = (i + 1).toString().padStart(2, ' ');
+    const matchNr = (item.matchnr ?? 1).toString().padStart(2, ' ');
     const tagName = item.tag.padEnd(14, ' ');
     const lineNum = (item.cursor.line + 1).toString().padStart(9, ' ');
-    lines.push(`${isCurrent} ${num}  1 ${tagName} ${lineNum}  ${item.filename}`);
+    lines.push(`${isCurrent} ${num} ${matchNr} ${tagName} ${lineNum}  ${item.filename}`);
+  }
+  if (curIdx === 0) {
+    lines.push('>');
   }
 
   return lines.join('\n');

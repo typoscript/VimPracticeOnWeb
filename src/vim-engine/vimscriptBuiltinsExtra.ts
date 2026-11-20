@@ -6,6 +6,7 @@ import {
   VimScriptError,
   EvalContext,
   isList,
+  isDict,
   isFuncref,
   makeDict,
   toNumber,
@@ -1066,6 +1067,136 @@ export const EXTRA_BUILTINS: Record<string, ExtraBuiltin> = {
         ...(key === '+' || key === '*' ? { systemClipboard: finalContent } : {}),
       };
       return 0;
+    },
+  },
+
+  // ---- 태그 스택 & 점프 리스트 (gettagstack / settagstack / getjumplist) ----
+  gettagstack: {
+    min: 0,
+    max: 1,
+    fn: (ctx, [winArg]) => {
+      if (winArg !== undefined) {
+        const winIdx = resolveWindowIndex(ctx.state, winArg);
+        if (winIdx < 0) return makeDict({});
+      }
+      const s = ctx.state;
+      const stack = s.tagStackHistory ?? s.tagStack ?? [];
+      const curIdx = s.tagStackIndex ?? (s.tagStack ?? []).length;
+      const curBufId = s.currentBufferId ?? 1;
+      const items = stack.map((entry) => {
+        const bufId =
+          entry.bufferId ??
+          s.buffers?.find((b) => b.name === entry.filename)?.id ??
+          curBufId;
+        return makeDict({
+          tagname: entry.tag,
+          from: [bufId, entry.cursor.line + 1, entry.cursor.col + 1, 0],
+          matchnr: entry.matchnr ?? 1,
+        });
+      });
+      return makeDict({
+        length: stack.length,
+        curidx: Math.min(stack.length + 1, Math.max(1, curIdx + 1)),
+        items,
+      });
+    },
+  },
+  settagstack: {
+    min: 2,
+    max: 3,
+    fn: (ctx, [winArg, dictArg, actionArg]) => {
+      const winIdx = resolveWindowIndex(ctx.state, winArg);
+      if (winIdx < 0 || !isDict(dictArg)) return -1;
+      const action = actionArg !== undefined ? toVimString(actionArg) : 'r';
+      const s = ctx.state;
+      const prevStack = s.tagStackHistory ?? s.tagStack ?? [];
+      let nextStack = [...prevStack];
+      let nextIdx = s.tagStackIndex ?? (s.tagStack ?? []).length;
+
+      if (action === 't') {
+        const truncAt = Math.min(nextIdx, nextStack.length);
+        nextStack = nextStack.slice(0, truncAt);
+      } else if (action === 'r') {
+        if ('items' in dictArg.items) {
+          nextStack = [];
+        }
+      }
+
+      const rawItems = dictArg.items.items;
+      if (rawItems !== undefined) {
+        if (!isList(rawItems)) return -1;
+        const parsedItems = rawItems
+          .filter(isDict)
+          .map((d) => {
+            const tag = toVimString(d.items.tagname ?? '');
+            const fromList = isList(d.items.from) ? d.items.from : [1, 1, 1, 0];
+            const bufId = Math.max(1, toNumber(fromList[0] ?? 1));
+            const lnum = Math.max(1, toNumber(fromList[1] ?? 1));
+            const col = Math.max(1, toNumber(fromList[2] ?? 1));
+            const matchnr = d.items.matchnr !== undefined ? Math.max(1, toNumber(d.items.matchnr)) : 1;
+            const foundBuf = s.buffers?.find((b) => b.id === bufId);
+            const filename =
+              foundBuf?.name ??
+              (bufId === (s.currentBufferId ?? 1) ? s.primaryFilename || 'source.ts' : 'source.ts');
+            return {
+              tag,
+              filename,
+              bufferId: bufId,
+              cursor: { line: lnum - 1, col: col - 1 },
+              matchnr,
+            };
+          });
+        nextStack = action === 'a' || action === 't' ? [...nextStack, ...parsedItems] : parsedItems;
+        nextIdx = nextStack.length;
+      }
+
+      if (dictArg.items.curidx !== undefined) {
+        const reqIdx = Math.trunc(toNumber(dictArg.items.curidx));
+        nextIdx = Math.max(0, Math.min(nextStack.length, reqIdx - 1));
+      }
+
+      ctx.state = {
+        ...s,
+        tagStack: nextStack.slice(0, nextIdx),
+        tagStackHistory: nextStack,
+        tagStackIndex: nextIdx,
+      };
+      return 0;
+    },
+  },
+  getjumplist: {
+    min: 0,
+    max: 2,
+    fn: (ctx, [winArg, tabArg]) => {
+      if (tabArg !== undefined) {
+        const tabs = ctx.state.tabPages ?? [];
+        const tnr = Math.trunc(toNumber(tabArg));
+        if (tnr < 1 || (tabs.length > 0 && tnr > tabs.length) || (tabs.length === 0 && tnr > 1)) {
+          return [];
+        }
+      }
+      if (winArg !== undefined) {
+        const winIdx = resolveWindowIndex(ctx.state, winArg);
+        if (winIdx < 0) return [];
+      }
+      const s = ctx.state;
+      const list = s.jumpList ?? [];
+      const curBufId = s.currentBufferId ?? 1;
+      const entries = list.map((item) => {
+        const bufId =
+          item.bufferId ??
+          (item.filename ? s.buffers?.find((b) => b.name === item.filename)?.id : undefined) ??
+          curBufId;
+        return makeDict({
+          bufnr: bufId,
+          filename: item.filename ?? s.primaryFilename ?? '',
+          lnum: item.row + 1,
+          col: item.col,
+          coladd: 0,
+        });
+      });
+      const lastPos = Math.min(s.jumpIndex ?? list.length, list.length);
+      return [entries, lastPos];
     },
   },
 

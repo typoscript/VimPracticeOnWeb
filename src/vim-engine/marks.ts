@@ -1,9 +1,9 @@
-import { VimEditorState, CursorPosition, MarkPosition } from './types';
+import { VimEditorState, CursorPosition, MarkPosition, JumpListItem } from './types';
 import { moveToFirstNonBlank } from './motions';
 import { clampCursor } from './cursor';
 import { pushUndoSnapshot } from './operators';
 import { deleteVisualSelection, yankVisualSelection } from './visual';
-import { switchBuffer, ensureBuffers } from './bufferEngine';
+import { switchBuffer, ensureBuffers, editBuffer } from './bufferEngine';
 import { switchPaneFocus } from './splitWindow';
 import { msg } from './messages';
 
@@ -162,11 +162,23 @@ export function recordJump(
   const pos = fromPos ?? state.cursor;
   const list = state.jumpList ? [...state.jumpList] : [];
   const currentIndex = state.jumpIndex ?? list.length;
-  const jumpMark = { row: pos.line, col: pos.col };
+  const curBufId = state.currentBufferId;
+  const curFilename = state.primaryFilename;
+  const jumpMark: MarkPosition = {
+    row: pos.line,
+    col: pos.col,
+    ...(curBufId !== undefined ? { bufferId: curBufId } : {}),
+    ...(curFilename ? { filename: curFilename } : {}),
+  };
 
   const truncated = list.slice(0, Math.min(currentIndex, list.length));
   const last = truncated[truncated.length - 1];
-  if (last && last.row === pos.line && last.col === pos.col) {
+  if (
+    last &&
+    last.row === pos.line &&
+    last.col === pos.col &&
+    (last.filename ?? curFilename) === curFilename
+  ) {
     return {
       ...state,
       jumpList: truncated,
@@ -175,7 +187,13 @@ export function recordJump(
     };
   }
 
-  truncated.push({ row: pos.line, col: pos.col });
+  const newEntry: JumpListItem = {
+    row: pos.line,
+    col: pos.col,
+    ...(curBufId !== undefined ? { bufferId: curBufId } : {}),
+    ...(curFilename ? { filename: curFilename } : {}),
+  };
+  truncated.push(newEntry);
   return {
     ...state,
     jumpList: truncated,
@@ -184,65 +202,104 @@ export function recordJump(
   };
 }
 
+function applyJumpTarget(
+  state: VimEditorState,
+  target: JumpListItem,
+  updatedList: JumpListItem[],
+  nextIndex: number
+): VimEditorState {
+  let targetState = state;
+  if (target.filename && target.filename !== state.primaryFilename) {
+    if (state.buffers && state.buffers.length > 0) {
+      const targetBuf =
+        (target.bufferId !== undefined
+          ? state.buffers.find((b) => b.id === target.bufferId)
+          : null) ||
+        state.buffers.find((b) => b.name === target.filename);
+      if (targetBuf && targetBuf.id !== state.currentBufferId) {
+        targetState = switchBuffer(state, targetBuf.id);
+      } else if (!targetBuf) {
+        targetState = editBuffer(state, target.filename);
+      }
+    } else {
+      targetState = editBuffer(state, target.filename);
+    }
+  } else if (
+    target.bufferId !== undefined &&
+    state.buffers &&
+    target.bufferId !== state.currentBufferId
+  ) {
+    const targetBuf = state.buffers.find((b) => b.id === target.bufferId);
+    if (targetBuf) {
+      targetState = switchBuffer(state, targetBuf.id);
+    }
+  }
+
+  const targetLine = Math.max(0, Math.min(target.row, targetState.lines.length - 1));
+  const lineLen = (targetState.lines[targetLine] ?? '').length;
+  const targetCol = Math.max(0, Math.min(target.col, Math.max(0, lineLen - 1)));
+
+  return {
+    ...targetState,
+    cursor: { line: targetLine, col: targetCol },
+    jumpList: updatedList,
+    jumpIndex: nextIndex,
+    pendingKeys: undefined,
+  };
+}
+
 /**
- * Ctrl+o: 점프 리스트의 이전(과거) 위치로 이동
+ * [count]Ctrl+o: 점프 리스트의 이전(과거) 위치로 이동 (버퍼 간 전환 지원)
  */
-export function jumpOlder(state: VimEditorState): VimEditorState {
+export function jumpOlder(state: VimEditorState, count = 1): VimEditorState {
   const list = state.jumpList ?? [];
   if (list.length === 0) return { ...state, pendingKeys: undefined };
 
   let currentIndex = state.jumpIndex ?? list.length;
-  let updatedList = [...list];
+  const updatedList = [...list];
+  const curFilename = state.primaryFilename;
+  const curBufId = state.currentBufferId;
 
   // 현재 커서가 점프리스트 최신에 없으면 먼저 현재 위치를 저장해 Ctrl+i로 돌아올 수 있게 함
   if (currentIndex >= list.length) {
     const last = list[list.length - 1];
-    if (!last || last.row !== state.cursor.line || last.col !== state.cursor.col) {
-      updatedList.push({ row: state.cursor.line, col: state.cursor.col });
+    if (
+      !last ||
+      last.row !== state.cursor.line ||
+      last.col !== state.cursor.col ||
+      (last.filename ?? curFilename) !== curFilename
+    ) {
+      updatedList.push({
+        row: state.cursor.line,
+        col: state.cursor.col,
+        ...(curBufId !== undefined ? { bufferId: curBufId } : {}),
+        ...(curFilename ? { filename: curFilename } : {}),
+      });
     }
     currentIndex = updatedList.length - 1;
   }
 
   if (currentIndex > 0) {
-    currentIndex -= 1;
-    const target = updatedList[currentIndex];
-    const targetLine = Math.max(0, Math.min(target.row, state.lines.length - 1));
-    const lineLen = (state.lines[targetLine] ?? '').length;
-    const targetCol = Math.max(0, Math.min(target.col, Math.max(0, lineLen - 1)));
-
-    return {
-      ...state,
-      cursor: { line: targetLine, col: targetCol },
-      jumpList: updatedList,
-      jumpIndex: currentIndex,
-      pendingKeys: undefined,
-    };
+    const steps = Math.max(1, count);
+    const nextIndex = Math.max(0, currentIndex - steps);
+    return applyJumpTarget(state, updatedList[nextIndex], updatedList, nextIndex);
   }
 
   return { ...state, pendingKeys: undefined };
 }
 
 /**
- * Ctrl+i: 점프 리스트의 다음(최신) 위치로 이동
+ * [count]Ctrl+i: 점프 리스트의 다음(최신) 위치로 이동 (버퍼 간 전환 지원)
  */
-export function jumpNewer(state: VimEditorState): VimEditorState {
+export function jumpNewer(state: VimEditorState, count = 1): VimEditorState {
   const list = state.jumpList ?? [];
   if (list.length === 0) return { ...state, pendingKeys: undefined };
 
   const currentIndex = state.jumpIndex ?? list.length;
   if (currentIndex < list.length - 1) {
-    const nextIndex = currentIndex + 1;
-    const target = list[nextIndex];
-    const targetLine = Math.max(0, Math.min(target.row, state.lines.length - 1));
-    const lineLen = (state.lines[targetLine] ?? '').length;
-    const targetCol = Math.max(0, Math.min(target.col, Math.max(0, lineLen - 1)));
-
-    return {
-      ...state,
-      cursor: { line: targetLine, col: targetCol },
-      jumpIndex: nextIndex,
-      pendingKeys: undefined,
-    };
+    const steps = Math.max(1, count);
+    const nextIndex = Math.min(list.length - 1, currentIndex + steps);
+    return applyJumpTarget(state, list[nextIndex], list, nextIndex);
   }
 
   return { ...state, pendingKeys: undefined };
@@ -437,7 +494,10 @@ export function formatJumpsList(state: VimEditorState): string {
     const jumpNum = String(diff).padStart(4, ' ');
     const lineNum = String(item.row + 1).padStart(5, ' ');
     const colNum = String(item.col).padStart(4, ' ');
-    const text = (state.lines[item.row] ?? '').trim().slice(0, 40);
+    const isOtherFile = Boolean(item.filename && item.filename !== state.primaryFilename);
+    const text = isOtherFile
+      ? item.filename!
+      : (state.lines[item.row] ?? '').trim().slice(0, 40);
     lines.push(`${pointer}${jumpNum} ${lineNum} ${colNum} ${text}`);
   }
 
@@ -543,16 +603,7 @@ export function jumpToIndex(
     return state;
   }
 
-  const target = list[targetIndex];
-  const targetLine = Math.max(0, Math.min(target.row, state.lines.length - 1));
-  const lineLen = (state.lines[targetLine] ?? '').length;
-  const targetCol = Math.max(0, Math.min(target.col, Math.max(0, lineLen - 1)));
-
-  return {
-    ...state,
-    cursor: { line: targetLine, col: targetCol },
-    jumpIndex: targetIndex,
-  };
+  return applyJumpTarget(state, list[targetIndex], list, targetIndex);
 }
 
 /**

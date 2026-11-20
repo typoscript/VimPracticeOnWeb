@@ -235,12 +235,12 @@ export function handleNormalViewportAndNavOps(
     return ringBell(state);
   }
 
-  // Ctrl-o / Ctrl-i: 점프 리스트 탐색
+  // Ctrl-o / Ctrl-i: 점프 리스트 탐색 ([count]Ctrl-o, [count]Ctrl-i)
   if ((key === 'Ctrl-o' || key === 'Ctrl+o' || key === 'ctrl-o') && !parsed.operator) {
-    return jumpOlder(state);
+    return jumpOlder(state, parsed.totalCount);
   }
   if ((key === 'Ctrl-i' || key === 'Ctrl+i' || key === 'ctrl-i') && !parsed.operator) {
-    return jumpNewer(state);
+    return jumpNewer(state, parsed.totalCount);
   }
 
   // Ctrl-g: 현재 버퍼 상태 출력

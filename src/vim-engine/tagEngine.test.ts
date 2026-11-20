@@ -130,7 +130,9 @@ describe('tagEngine (ctags, Ctrl+], Ctrl+t, :tag, :pop, :tags)', () => {
       expect(next.tagStack![0]).toEqual({
         tag: 'add',
         filename: 'app.ts',
+        bufferId: 1,
         cursor: { line: 1, col: 16 },
+        matchnr: 1,
       });
       expect(next.commandMessage).toContain('tag 1 of 1 "add"');
     });
@@ -160,11 +162,13 @@ describe('tagEngine (ctags, Ctrl+], Ctrl+t, :tag, :pop, :tags)', () => {
       state = jumpToTag(state, 'add');
       expect(state.primaryFilename).toBe('src/utils.ts');
 
-      // Pop -> app.ts (line 1, col 16) 복귀
+      // Pop -> app.ts (line 1, col 16) 복귀 (tagStack 은 비워지고 tagStackHistory 에 보존됨)
       state = popTagStack(state);
       expect(state.primaryFilename).toBe('app.ts');
       expect(state.cursor).toEqual({ line: 1, col: 16 });
       expect(state.tagStack).toHaveLength(0);
+      expect(state.tagStackHistory).toHaveLength(1);
+      expect(state.tagStackIndex).toBe(0);
       expect(state.commandMessage).toContain('tag stack popped: app.ts:2');
     });
 
@@ -185,16 +189,19 @@ describe('tagEngine (ctags, Ctrl+], Ctrl+t, :tag, :pop, :tags)', () => {
       state = jumpToTag(state, 'APP_NAME');
       expect(state.primaryFilename).toBe('src/main.ts');
       expect(state.tagStack).toHaveLength(2);
+      expect(state.tagStackIndex).toBe(2);
 
       // 3. Pop 1회 -> src/utils.ts 복귀
       state = popTagStack(state);
       expect(state.primaryFilename).toBe('src/utils.ts');
       expect(state.tagStack).toHaveLength(1);
+      expect(state.tagStackIndex).toBe(1);
 
       // 4. Pop 2회 -> 원래 app.ts 복귀
       state = popTagStack(state);
       expect(state.primaryFilename).toBe('app.ts');
       expect(state.tagStack).toHaveLength(0);
+      expect(state.tagStackIndex).toBe(0);
     });
   });
 
@@ -366,6 +373,75 @@ describe('tagEngine (ctags, Ctrl+], Ctrl+t, :tag, :pop, :tags)', () => {
       state = handleKey(state, 'Ctrl-t');
       expect(state.primaryFilename).toBe('client.ts');
       expect(state.cursor).toEqual({ line: 1, col: 0 });
+    });
+
+    it('[count]Ctrl-t / :[count]pop 후 인자 없는 :tag 로 태그 스택을 다시 앞으로 이동하고 gettagstack() / settagstack() 을 지원한다', () => {
+      let state = createBaseState();
+
+      // 1) app.ts -> src/utils.ts (add) -> src/main.ts (APP_NAME)
+      state = jumpToTag(state, 'add');
+      state = jumpToTag(state, 'APP_NAME');
+      expect(state.primaryFilename).toBe('src/main.ts');
+      expect(state.tagStackIndex).toBe(2);
+
+      // 2) 2Ctrl-t 로 한 번에 2단계 pop -> app.ts 복귀, tagStackHistory 길이는 2 유지, tagStackIndex=0
+      state = handleKey(state, '2');
+      state = handleKey(state, 'Ctrl-t');
+      expect(state.primaryFilename).toBe('app.ts');
+      expect(state.tagStack).toHaveLength(0);
+      expect(state.tagStackHistory).toHaveLength(2);
+      expect(state.tagStackIndex).toBe(0);
+
+      // 맨 아래에서 한 번 더 Ctrl-t 시 E555 에러 및 bell
+      const bottomTry = handleKey(state, 'Ctrl-t');
+      expect(bottomTry.bell).toBe(true);
+      expect(bottomTry.commandMessage).toContain('E555');
+
+      // 3) 인자 없는 :tag 실행 시 스택의 첫 항목(add -> src/utils.ts)으로 다시 전진
+      for (const ch of ':tag') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+      expect(state.primaryFilename).toBe('src/utils.ts');
+      expect(state.tagStackIndex).toBe(1);
+
+      // 4) gettagstack() 및 settagstack() 동작 확인
+      for (const ch of ':echo [gettagstack().length, gettagstack().curidx, gettagstack().items[0].tagname]') {
+        state = handleKey(state, ch);
+      }
+      state = handleKey(state, 'Enter');
+      expect(state.commandMessage).toBe("[2, 2, 'add']");
+
+      for (const ch of ':call settagstack(1, #{curidx: 1}, "t") | echo [gettagstack().length, gettagstack().curidx]') {
+        state = handleKey(state, ch);
+      }
+      state = handleKey(state, 'Enter');
+      expect(state.commandMessage).toBe('[1, 1]');
+    });
+
+    it('버퍼 간 점프 후 [count]Ctrl-o / [count]Ctrl-i 로 파일 간 점프 히스토리를 왕복하고 getjumplist() 를 지원한다', () => {
+      let state = createBaseState();
+
+      // app.ts (line 1, col 16) -> src/utils.ts (add) -> src/main.ts (APP_NAME)
+      state = handleKey(state, 'Ctrl-]');
+      expect(state.primaryFilename).toBe('src/utils.ts');
+      state = jumpToTag(state, 'APP_NAME');
+      expect(state.primaryFilename).toBe('src/main.ts');
+
+      // 2Ctrl-o 로 2단계 이전 점프 위치(app.ts, line 1, col 16)로 버퍼 자동 전환 복귀
+      state = handleKey(state, '2');
+      state = handleKey(state, 'Ctrl-o');
+      expect(state.primaryFilename).toBe('app.ts');
+      expect(state.cursor).toEqual({ line: 1, col: 16 });
+
+      // Ctrl-i 로 다음 점프 위치(src/utils.ts)로 이동
+      state = handleKey(state, 'Ctrl-i');
+      expect(state.primaryFilename).toBe('src/utils.ts');
+
+      // :jumps 및 getjumplist() 확인
+      for (const ch of ':echo [len(getjumplist()[0]), getjumplist()[1], getjumplist()[0][0].filename]') {
+        state = handleKey(state, ch);
+      }
+      state = handleKey(state, 'Enter');
+      expect(state.commandMessage).toBe("[3, 1, 'app.ts']");
     });
   });
 });

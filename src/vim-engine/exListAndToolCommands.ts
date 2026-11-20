@@ -216,9 +216,10 @@ function tryExecuteTagCommand(
     return finishEx(popTagStack(state, count));
   }
 
-  const tagMatch = cleanCmdRaw.match(/^(?:tag|ta)(?:\s+(.*))?$/i);
+  const tagMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?(?:tag|ta)(?:!)?(?:\s+(.*))?$/i);
   if (tagMatch) {
-    return finishEx(jumpToTag(state, tagMatch[1]?.trim() || ''));
+    const count = tagMatch[1] ? parseInt(tagMatch[1], 10) : 1;
+    return finishEx(jumpToTag(state, tagMatch[2]?.trim() || '', count));
   }
 
   const tselectMatch = cleanCmdRaw.match(/^(?:tselect|ts)(?:\s+(.*))?$/i);

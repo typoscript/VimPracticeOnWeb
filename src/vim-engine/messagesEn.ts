@@ -419,4 +419,5 @@ export const EN_MESSAGES: Record<string, string> = {
   "E227: {lhs} 에 대한 매핑이 이미 존재합니다": "E227: mapping already exists for {lhs}",
   "매핑을 찾을 수 없습니다: {lhs}": "No mapping found: {lhs}",
   "E354: 유효하지 않은 레지스터 이름입니다: '{reg}'": "E354: Invalid register name: '{reg}'",
+  "E555: 태그 스택의 맨 아래입니다 (at bottom of tag stack)": "E555: at bottom of tag stack",
 };

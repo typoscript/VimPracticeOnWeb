@@ -324,7 +324,16 @@ export interface TagEntry {
 export interface TagStackItem {
   tag: string;
   filename: string;
+  bufferId?: number;
   cursor: CursorPosition;
+  matchnr?: number;
+}
+
+export interface JumpListItem {
+  row: number;
+  col: number;
+  bufferId?: number;
+  filename?: string;
 }
 
 export interface WildmenuState {
@@ -502,7 +511,7 @@ export interface VimEditorState {
   /** 마크 위치 저장소 (m{a-zA-Z}, 전역 마크 A-Z는 파일/버퍼 위치 포함) */
   marks?: Record<string, MarkPosition>;
   /** 점프 리스트 (Ctrl+o, Ctrl+i) */
-  jumpList?: Array<{ row: number; col: number }>;
+  jumpList?: JumpListItem[];
   /** 점프 리스트 현재 인덱스 */
   jumpIndex?: number;
   /** 비주얼 블록(Ctrl+v) 다중 줄 동시 삽입 세션 */
@@ -673,6 +682,10 @@ export interface VimEditorState {
   wildmenu?: WildmenuState | null;
   /** ctags 태그 스택 (Ctrl+], Ctrl+t, :tag, :pop) */
   tagStack?: TagStackItem[];
+  /** pop 이후 인자 없는 :tag 재전진 및 gettagstack() 조회를 위해 보존되는 전체 태그 히스토리 */
+  tagStackHistory?: TagStackItem[];
+  /** 현재 태그 스택 포인터 인덱스 (0 .. tagStackHistory.length) */
+  tagStackIndex?: number;
   /** 수동 또는 외부 정의 태그 목록 */
   tags?: TagEntry[];
   /** 다중 태그 일치 목록 (:tselect, :tjump, :tnext, :tprev) */
