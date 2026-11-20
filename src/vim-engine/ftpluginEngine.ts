@@ -1,7 +1,7 @@
 import { VimEditorState } from './types';
 import { msg } from './messages';
 import { detectFiletype } from './syntaxEngine';
-import { getOptions } from './setEngine';
+import { getOptions } from './setOptionsCore';
 
 export interface FiletypeIndentConfig {
   shiftwidth: number;

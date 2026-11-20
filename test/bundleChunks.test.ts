@@ -72,4 +72,47 @@ describe('Vite 번들 청크 분리 규칙 (resolveManualChunk)', () => {
       expect(chunk).toMatch(/^vim-engine/);
     }
   });
+
+  it('vim-engine 내부 모듈 간 순환 의존성(import cycle)이 존재하지 않는다', () => {
+    const engineDir = path.resolve(__dirname, '..', 'src', 'vim-engine');
+    const files = fs
+      .readdirSync(engineDir)
+      .filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts'));
+    const fileSet = new Set(files);
+    const graph = new Map<string, string[]>();
+
+    for (const file of files) {
+      const source = fs.readFileSync(path.join(engineDir, file), 'utf8');
+      const deps = new Set<string>();
+      for (const m of source.matchAll(/(?:import|export)\s[^'"]*?from\s+['"]\.\/([^'"]+)['"]/g)) {
+        const dep = m[1].endsWith('.ts') ? m[1] : `${m[1]}.ts`;
+        if (fileSet.has(dep)) deps.add(dep);
+      }
+      graph.set(file, [...deps]);
+    }
+
+    const visited = new Set<string>();
+    const active = new Set<string>();
+    const cycles: string[] = [];
+
+    const dfs = (node: string, trail: string[]) => {
+      visited.add(node);
+      active.add(node);
+      for (const next of graph.get(node) ?? []) {
+        if (!visited.has(next)) {
+          dfs(next, [...trail, next]);
+        } else if (active.has(next)) {
+          const idx = trail.indexOf(next);
+          cycles.push([...trail.slice(idx), next].join(' -> '));
+        }
+      }
+      active.delete(node);
+    };
+
+    for (const file of files) {
+      if (!visited.has(file)) dfs(file, [file]);
+    }
+
+    expect(cycles).toEqual([]);
+  });
 });

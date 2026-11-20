@@ -1,7 +1,7 @@
-import { QuickfixItem, VimEditorState } from './types';
+import { QuickfixItem, VimEditorState, VimScriptValue } from './types';
 import { buildVfsMap } from './vfs';
 import { evaluateVimScript, isList, toVimString } from './vimscriptEval';
-import { getOptions } from './setEngine';
+import { getOptions } from './setOptionsCore';
 
 export const DEFAULT_ERRORFORMAT =
   '%f:%l:%c:%m,%f:%l:%m,%f(%l\\,%c):%m';
@@ -218,22 +218,24 @@ export function parseLinesWithErrorformat(lines: string[], efm?: string): Quickf
   return items;
 }
 
+export type ErrorExprUserFn = (
+  s: VimEditorState,
+  name: string,
+  args: VimScriptValue[]
+) => { value: VimScriptValue; state: VimEditorState; error?: string };
+
 /**
  * :cexpr / :cgetexpr / :caddexpr / :lexpr / :lgetexpr / :laddexpr 표현식을 평가해 문자열 배열로 변환합니다.
  */
 export function evaluateErrorExprLines(
   state: VimEditorState,
   expr: string,
-  callUserFn: (
-    s: VimEditorState,
-    name: string,
-    args: any[]
-  ) => { value: any; state: VimEditorState; error?: string }
+  callUserFn: ErrorExprUserFn
 ): { ok: true; lines: string[]; state: VimEditorState } | { ok: false; error: string } {
   let currentState = state;
   const ctx = {
     state: currentState,
-    callUserFunction: (c: { state: VimEditorState }, name: string, args: any[]) => {
+    callUserFunction: (c: { state: VimEditorState }, name: string, args: VimScriptValue[]) => {
       const r = callUserFn(c.state, name, args);
       c.state = r.state;
       if (r.error) throw new Error(r.error);

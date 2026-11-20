@@ -54,6 +54,7 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'fuzzyFinder.ts',
       'argEngine.ts',
       'errorformat.ts',
+      'errorListCore.ts',
       'quickfixEngine.ts',
       'locationListEngine.ts',
       'keymapEngine.ts',

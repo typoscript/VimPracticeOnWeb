@@ -1,6 +1,6 @@
 import { VimEditorState } from './types';
 import { msg } from './messages';
-import { getOptions } from './setEngine';
+import { getOptions } from './setOptionsCore';
 
 export type SyntaxTokenType =
   | 'keyword'

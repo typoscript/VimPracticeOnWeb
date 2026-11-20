@@ -1,4 +1,4 @@
-import { VimEditorState } from './types';
+import { QuickfixState, VimEditorState } from './types';
 import {
   openQuickfixWindow,
   closeQuickfixWindow,
@@ -31,10 +31,255 @@ import {
   lexprLocationList,
   grepToLocationList,
 } from './locationListEngine';
+import { ErrorExprUserFn } from './errorformat';
 import { syncDiagnosticsToLocationList } from './lspEngine';
 import { callUserFunction } from './vimscriptEngine';
 import { msg } from './messages';
 import type { ExCommandRunner } from './exWorkspaceCommands';
+
+interface ListExCommandSpec {
+  getList: (state: VimEditorState) => QuickfixState | null | undefined;
+  beforeOpen?: (state: VimEditorState) => VimEditorState;
+  open: (state: VimEditorState, height?: number) => VimEditorState;
+  close: (state: VimEditorState) => VimEditorState;
+  toggle: (state: VimEditorState, height?: number) => VimEditorState;
+  next: (state: VimEditorState, count: number) => VimEditorState;
+  prev: (state: VimEditorState, count: number) => VimEditorState;
+  first: (state: VimEditorState) => VimEditorState;
+  last: (state: VimEditorState) => VimEditorState;
+  jump: (state: VimEditorState, idx: number) => VimEditorState;
+  format: (state: VimEditorState) => string;
+  loadFile: (state: VimEditorState, filename: string, jumpToFirst: boolean) => VimEditorState;
+  vimgrep: (state: VimEditorState, args: string, isAppend: boolean) => VimEditorState;
+  grep: (state: VimEditorState, args: string, isAppend: boolean, jump: boolean) => VimEditorState;
+  clear: (state: VimEditorState) => VimEditorState;
+  clearMessage: () => string;
+  evalExpr: (
+    state: VimEditorState,
+    expr: string,
+    mode: 'replace' | 'get' | 'add',
+    callUserFn: ErrorExprUserFn
+  ) => VimEditorState;
+  patterns: {
+    open: RegExp;
+    close: readonly string[];
+    window: RegExp;
+    next: RegExp;
+    prev: RegExp;
+    first: readonly string[];
+    last: readonly string[];
+    jump: RegExp;
+    list: readonly string[];
+    file: RegExp;
+    getfile: RegExp;
+    vimgrep: RegExp;
+    vimgrepAddCmd: string;
+    grep: RegExp;
+    grepAddCmd: string;
+    expr: RegExp;
+    exprReplaceCmds: readonly string[];
+    exprAddCmds: readonly string[];
+    exprGetCmds: readonly string[];
+  };
+}
+
+function finishEx(res: VimEditorState, overrides?: Partial<VimEditorState>): VimEditorState {
+  return {
+    ...res,
+    mode: 'NORMAL',
+    visualAnchor: undefined,
+    commandBuffer: undefined,
+    commandType: undefined,
+    ...overrides,
+  };
+}
+
+const QUICKFIX_EX_SPEC: ListExCommandSpec = {
+  getList: (s) => s.quickfix,
+  open: openQuickfixWindow,
+  close: closeQuickfixWindow,
+  toggle: toggleQuickfixWindow,
+  next: nextQuickfix,
+  prev: prevQuickfix,
+  first: firstQuickfix,
+  last: lastQuickfix,
+  jump: jumpToQuickfixItem,
+  format: formatQuickfixList,
+  loadFile: loadQuickfixFromFile,
+  vimgrep,
+  grep: grepToQuickfix,
+  clear: (s) => setQuickfixList(s, [], false),
+  clearMessage: () => msg('퀵픽스 목록 초기화됨'),
+  evalExpr: cexprQuickfix,
+  patterns: {
+    open: /^(?:copen|cope)(?:\s+(\d+))?$/i,
+    close: ['cclose', 'ccl'],
+    window: /^(?:cwindow|cw)(?:\s+(\d+))?$/i,
+    next: /^(?:(\d+)\s*)?(?:cnext|cn)(?:\s+(\d+))?$/i,
+    prev: /^(?:(\d+)\s*)?(?:cprev|cp|cprevious)(?:\s+(\d+))?$/i,
+    first: ['cfirst', 'cr', 'crewind'],
+    last: ['clast', 'cla'],
+    jump: /^(?:cc)(?:\s+(\d+))?$/i,
+    list: ['clist', 'cl'],
+    file: /^(?:cfile|cf)\s+(.+)$/i,
+    getfile: /^(?:cgetfile|cg)\s+(.+)$/i,
+    vimgrep: /^(vimgrep|vimgrepadd)\s+(.*)$/i,
+    vimgrepAddCmd: 'vimgrepadd',
+    grep: /^(grep|grepadd)(!)?(?:\s+(.*))?$/i,
+    grepAddCmd: 'grepadd',
+    expr: /^(cexpr|cex|cgetexpr|cgete|caddexpr|cad)(?:\s+(.*))?$/i,
+    exprReplaceCmds: ['cexpr', 'cex'],
+    exprAddCmds: ['caddexpr', 'cad'],
+    exprGetCmds: ['cgetexpr', 'cgete'],
+  },
+};
+
+const LOCATION_LIST_EX_SPEC: ListExCommandSpec = {
+  getList: (s) => s.locationList,
+  beforeOpen: (s) =>
+    s.lspDiagnostics && !s.locationList ? syncDiagnosticsToLocationList(s, false) : s,
+  open: openLocationListWindow,
+  close: closeLocationListWindow,
+  toggle: toggleLocationListWindow,
+  next: nextLocationList,
+  prev: prevLocationList,
+  first: firstLocationList,
+  last: lastLocationList,
+  jump: jumpToLocationListItem,
+  format: formatLocationList,
+  loadFile: loadLocationListFromFile,
+  vimgrep: lvimgrep,
+  grep: grepToLocationList,
+  clear: (s) => setLocationList(s, [], false),
+  clearMessage: () => msg('로케이션 리스트 초기화됨'),
+  evalExpr: lexprLocationList,
+  patterns: {
+    open: /^(?:lopen|lope)(?:\s+(\d+))?$/i,
+    close: ['lclose', 'lcl'],
+    window: /^(?:lwindow|lw)(?:\s+(\d+))?$/i,
+    next: /^(?:(\d+)\s*)?(?:lnext|lne)(?:\s+(\d+))?$/i,
+    prev: /^(?:(\d+)\s*)?(?:lprev|lp|lprevious)(?:\s+(\d+))?$/i,
+    first: ['lfirst', 'lr', 'lrewind'],
+    last: ['llast', 'lla'],
+    jump: /^(?:ll)(?:\s+(\d+))?$/i,
+    list: ['llist', 'lli'],
+    file: /^(?:lfile|lf)\s+(.+)$/i,
+    getfile: /^(?:lgetfile|lg)\s+(.+)$/i,
+    vimgrep: /^(lvimgrep|lvimgrepadd|lv)\s+(.*)$/i,
+    vimgrepAddCmd: 'lvimgrepadd',
+    grep: /^(lgrep|lgrepadd)(!)?(?:\s+(.*))?$/i,
+    grepAddCmd: 'lgrepadd',
+    expr: /^(lexpr|lex|lgetexpr|lgete|laddexpr|lad)(?:\s+(.*))?$/i,
+    exprReplaceCmds: ['lexpr', 'lex'],
+    exprAddCmds: ['laddexpr', 'lad'],
+    exprGetCmds: ['lgetexpr', 'lgete'],
+  },
+};
+
+function tryExecuteListExCommand(
+  state: VimEditorState,
+  cleanCmdRaw: string,
+  cleanCmd: string,
+  runEx: ExCommandRunner,
+  spec: ListExCommandSpec
+): VimEditorState | null {
+  const { patterns } = spec;
+
+  const openMatch = cleanCmdRaw.match(patterns.open);
+  if (openMatch) {
+    const height = openMatch[1] ? parseInt(openMatch[1], 10) : undefined;
+    const baseState = spec.beforeOpen ? spec.beforeOpen(state) : state;
+    return finishEx(spec.open(baseState, height));
+  }
+
+  if (patterns.close.includes(cleanCmd)) {
+    return finishEx(spec.close(state));
+  }
+
+  const windowMatch = cleanCmdRaw.match(patterns.window);
+  if (windowMatch) {
+    const height = windowMatch[1] ? parseInt(windowMatch[1], 10) : undefined;
+    return finishEx(spec.toggle(state, height));
+  }
+
+  const nextMatch = cleanCmdRaw.match(patterns.next);
+  if (nextMatch) {
+    const countRaw = nextMatch[1] || nextMatch[2];
+    const count = countRaw ? parseInt(countRaw, 10) : 1;
+    return finishEx(spec.next(state, count));
+  }
+
+  const prevMatch = cleanCmdRaw.match(patterns.prev);
+  if (prevMatch) {
+    const countRaw = prevMatch[1] || prevMatch[2];
+    const count = countRaw ? parseInt(countRaw, 10) : 1;
+    return finishEx(spec.prev(state, count));
+  }
+
+  if (patterns.first.includes(cleanCmd)) {
+    return finishEx(spec.first(state));
+  }
+
+  if (patterns.last.includes(cleanCmd)) {
+    return finishEx(spec.last(state));
+  }
+
+  const jumpMatch = cleanCmdRaw.match(patterns.jump);
+  if (jumpMatch) {
+    const targetIdx = jumpMatch[1]
+      ? parseInt(jumpMatch[1], 10) - 1
+      : (spec.getList(state)?.currentIndex ?? 0);
+    return finishEx(spec.jump(state, targetIdx));
+  }
+
+  if (patterns.list.includes(cleanCmd)) {
+    return finishEx(state, { commandMessage: spec.format(state) });
+  }
+
+  const fileMatch = cleanCmdRaw.match(patterns.file);
+  if (fileMatch) {
+    return finishEx(spec.loadFile(state, fileMatch[1].trim(), true));
+  }
+
+  const getfileMatch = cleanCmdRaw.match(patterns.getfile);
+  if (getfileMatch) {
+    return finishEx(spec.loadFile(state, getfileMatch[1].trim(), false));
+  }
+
+  const vimgrepMatch = cleanCmdRaw.match(patterns.vimgrep);
+  if (vimgrepMatch) {
+    const isAppend = vimgrepMatch[1].toLowerCase() === patterns.vimgrepAddCmd;
+    return finishEx(spec.vimgrep(state, vimgrepMatch[2], isAppend));
+  }
+
+  const grepMatch = cleanCmdRaw.match(patterns.grep);
+  if (grepMatch) {
+    const isAppend = grepMatch[1].toLowerCase() === patterns.grepAddCmd;
+    const jump = grepMatch[2] !== '!';
+    return finishEx(spec.grep(state, grepMatch[3] ?? '', isAppend, jump));
+  }
+
+  const exprMatch = cleanCmdRaw.match(patterns.expr);
+  if (exprMatch) {
+    const sub = exprMatch[1].toLowerCase();
+    const expr = (exprMatch[2] ?? '').trim();
+    if (patterns.exprReplaceCmds.includes(sub) && (expr === '[]' || expr === '')) {
+      return finishEx(spec.clear(state), { commandMessage: spec.clearMessage() });
+    }
+    const mode = patterns.exprAddCmds.includes(sub)
+      ? 'add'
+      : patterns.exprGetCmds.includes(sub)
+        ? 'get'
+        : 'replace';
+    return finishEx(
+      spec.evalExpr(state, expr, mode, (s, name, fnArgs) =>
+        callUserFunction(s, name, fnArgs, runEx)
+      )
+    );
+  }
+
+  return null;
+}
 
 /**
  * 퀵픽스(:copen/:cn/:vimgrep 등)와 로케이션 리스트(:lopen/:lne/:lvimgrep 등) Ex 명령을 처리합니다.
@@ -46,442 +291,13 @@ export function tryExecuteQuickfixExCommand(
   cleanCmd: string,
   runEx: ExCommandRunner
 ): VimEditorState | null {
-  // 퀵픽스 창 열기: :copen [height], :cope [height]
-  const copenMatch = cleanCmdRaw.match(/^(?:copen|cope)(?:\s+(\d+))?$/i);
-  if (copenMatch) {
-    const height = copenMatch[1] ? parseInt(copenMatch[1], 10) : undefined;
-    const res = openQuickfixWindow(state, height);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-  // 퀵픽스 창 닫기: :cclose, :ccl
-  if (cleanCmd === 'cclose' || cleanCmd === 'ccl') {
-    const res = closeQuickfixWindow(state);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-  // 퀵픽스 창 토글/열기: :cwindow [height], :cw [height]
-  const cwMatch = cleanCmdRaw.match(/^(?:cwindow|cw)(?:\s+(\d+))?$/i);
-  if (cwMatch) {
-    const height = cwMatch[1] ? parseInt(cwMatch[1], 10) : undefined;
-    const res = toggleQuickfixWindow(state, height);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-  // 퀵픽스 다음 에러 이동: :cnext [count], :cn [count]
-  const cnMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?(?:cnext|cn)(?:\s+(\d+))?$/i);
-  if (cnMatch) {
-    const countRaw = cnMatch[1] || cnMatch[2];
-    const count = countRaw ? parseInt(countRaw, 10) : 1;
-    const res = nextQuickfix(state, count);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-  // 퀵픽스 이전 에러 이동: :cprev [count], :cp [count], :cprevious [count]
-  const cpMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?(?:cprev|cp|cprevious)(?:\s+(\d+))?$/i);
-  if (cpMatch) {
-    const countRaw = cpMatch[1] || cpMatch[2];
-    const count = countRaw ? parseInt(countRaw, 10) : 1;
-    const res = prevQuickfix(state, count);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-  // 퀵픽스 양 끝 이동: :cfirst, :cr, :crewind, :clast, :cla
-  if (cleanCmd === 'cfirst' || cleanCmd === 'cr' || cleanCmd === 'crewind') {
-    const res = firstQuickfix(state);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-  if (cleanCmd === 'clast' || cleanCmd === 'cla') {
-    const res = lastQuickfix(state);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-  // 퀵픽스 특정 번호 점프: :cc [N]
-  const ccMatch = cleanCmdRaw.match(/^(?:cc)(?:\s+(\d+))?$/i);
-  if (ccMatch) {
-    const targetIdx = ccMatch[1] ? parseInt(ccMatch[1], 10) - 1 : (state.quickfix?.currentIndex ?? 0);
-    const res = jumpToQuickfixItem(state, targetIdx);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-  // 퀵픽스 목록 조회: :clist, :cl
-  if (cleanCmd === 'clist' || cleanCmd === 'cl') {
-    return {
-      ...state,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-      commandMessage: formatQuickfixList(state),
-    };
-  }
-
-  // 퀵픽스 파일 로드 및 첫 에러 점프: :cfile [filename], :cf [filename]
-  const cfileMatch = cleanCmdRaw.match(/^(?:cfile|cf)\s+(.+)$/i);
-  if (cfileMatch) {
-    const filename = cfileMatch[1].trim();
-    const res = loadQuickfixFromFile(state, filename, true);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-  // 퀵픽스 파일 로드(점프 없음): :cgetfile [filename], :cg [filename]
-  const cgetfileMatch = cleanCmdRaw.match(/^(?:cgetfile|cg)\s+(.+)$/i);
-  if (cgetfileMatch) {
-    const filename = cgetfileMatch[1].trim();
-    const res = loadQuickfixFromFile(state, filename, false);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-  // vimgrep / vimgrepadd 검색: :vimgrep /pat/[flags] {file}, :vimgrepadd ...
-  const vimgrepMatch = cleanCmdRaw.match(/^(vimgrep|vimgrepadd)\s+(.*)$/i);
-  if (vimgrepMatch) {
-    const isAppend = vimgrepMatch[1].toLowerCase() === 'vimgrepadd';
-    const args = vimgrepMatch[2];
-    const res = vimgrep(state, args, isAppend);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-
-  // grep / grepadd 검색: :grep[! ] {args}, :grepadd[! ] {args}
-  const grepMatch = cleanCmdRaw.match(/^(grep|grepadd)(!)?(?:\s+(.*))?$/i);
-  if (grepMatch) {
-    const isAppend = grepMatch[1].toLowerCase() === 'grepadd';
-    const jump = grepMatch[2] !== '!';
-    const args = grepMatch[3] ?? '';
-    const res = grepToQuickfix(state, args, isAppend, jump);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-  // 퀵픽스 표현식 평가: :cexpr, :cex, :cgetexpr, :cgete, :caddexpr, :cad
-  const cexprMatch = cleanCmdRaw.match(/^(cexpr|cex|cgetexpr|cgete|caddexpr|cad)(?:\s+(.*))?$/i);
-  if (cexprMatch) {
-    const sub = cexprMatch[1].toLowerCase();
-    const expr = (cexprMatch[2] ?? '').trim();
-    if ((sub === 'cexpr' || sub === 'cex') && (expr === '[]' || expr === '')) {
-      const res = setQuickfixList(state, [], false);
-      return {
-        ...res,
-        mode: 'NORMAL',
-        visualAnchor: undefined,
-        commandBuffer: undefined,
-        commandType: undefined,
-        commandMessage: msg('퀵픽스 목록 초기화됨'),
-      };
-    }
-    const mode =
-      sub === 'caddexpr' || sub === 'cad'
-        ? 'add'
-        : sub === 'cgetexpr' || sub === 'cgete'
-          ? 'get'
-          : 'replace';
-    const res = cexprQuickfix(state, expr, mode, (s, name, fnArgs) => callUserFunction(s, name, fnArgs, runEx));
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-  // --- LSP 진단(Diagnostics) 로케이션 리스트 열기: :diagnostics, :diag ---
+  // LSP 진단(Diagnostics) 로케이션 리스트 열기: :diagnostics, :diag
   if (cleanCmd === 'diagnostics' || cleanCmd === 'diagnostic' || cleanCmd === 'diag') {
-    const res = syncDiagnosticsToLocationList(state, true);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(syncDiagnosticsToLocationList(state, true));
   }
 
-  // --- 로케이션 리스트 (Location List) Ex 명령 ---
-  // 로케이션 리스트 창 열기: :lopen [height], :lope [height]
-  const lopenMatch = cleanCmdRaw.match(/^(?:lopen|lope)(?:\s+(\d+))?$/i);
-  if (lopenMatch) {
-    const height = lopenMatch[1] ? parseInt(lopenMatch[1], 10) : undefined;
-    const baseState = state.lspDiagnostics && !state.locationList
-      ? syncDiagnosticsToLocationList(state, false)
-      : state;
-    const res = openLocationListWindow(baseState, height);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-  // 로케이션 리스트 창 닫기: :lclose, :lcl
-  if (cleanCmd === 'lclose' || cleanCmd === 'lcl') {
-    const res = closeLocationListWindow(state);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-  // 로케이션 리스트 창 토글/열기: :lwindow [height], :lw [height]
-  const lwMatch = cleanCmdRaw.match(/^(?:lwindow|lw)(?:\s+(\d+))?$/i);
-  if (lwMatch) {
-    const height = lwMatch[1] ? parseInt(lwMatch[1], 10) : undefined;
-    const res = toggleLocationListWindow(state, height);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-  // 로케이션 리스트 다음 에러 이동: :lnext [count], :lne [count]
-  const lneMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?(?:lnext|lne)(?:\s+(\d+))?$/i);
-  if (lneMatch) {
-    const countRaw = lneMatch[1] || lneMatch[2];
-    const count = countRaw ? parseInt(countRaw, 10) : 1;
-    const res = nextLocationList(state, count);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-  // 로케이션 리스트 이전 에러 이동: :lprev [count], :lp [count], :lprevious [count]
-  const lpMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?(?:lprev|lp|lprevious)(?:\s+(\d+))?$/i);
-  if (lpMatch) {
-    const countRaw = lpMatch[1] || lpMatch[2];
-    const count = countRaw ? parseInt(countRaw, 10) : 1;
-    const res = prevLocationList(state, count);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-  // 로케이션 리스트 양 끝 이동: :lfirst, :lr, :lrewind, :llast, :lla
-  if (cleanCmd === 'lfirst' || cleanCmd === 'lr' || cleanCmd === 'lrewind') {
-    const res = firstLocationList(state);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-  if (cleanCmd === 'llast' || cleanCmd === 'lla') {
-    const res = lastLocationList(state);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-  // 로케이션 리스트 특정 번호 점프: :ll [N]
-  const llMatch = cleanCmdRaw.match(/^(?:ll)(?:\s+(\d+))?$/i);
-  if (llMatch) {
-    const targetIdx = llMatch[1] ? parseInt(llMatch[1], 10) - 1 : (state.locationList?.currentIndex ?? 0);
-    const res = jumpToLocationListItem(state, targetIdx);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-  // 로케이션 리스트 목록 조회: :llist, :lli
-  if (cleanCmd === 'llist' || cleanCmd === 'lli') {
-    return {
-      ...state,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-      commandMessage: formatLocationList(state),
-    };
-  }
-
-  // 로케이션 리스트 파일 로드 및 첫 에러 점프: :lfile [filename], :lf [filename]
-  const lfileMatch = cleanCmdRaw.match(/^(?:lfile|lf)\s+(.+)$/i);
-  if (lfileMatch) {
-    const filename = lfileMatch[1].trim();
-    const res = loadLocationListFromFile(state, filename, true);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-  // 로케이션 리스트 파일 로드(점프 없음): :lgetfile [filename], :lg [filename]
-  const lgetfileMatch = cleanCmdRaw.match(/^(?:lgetfile|lg)\s+(.+)$/i);
-  if (lgetfileMatch) {
-    const filename = lgetfileMatch[1].trim();
-    const res = loadLocationListFromFile(state, filename, false);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-  // lvimgrep / lvimgrepadd / lv 검색: :lvimgrep /pat/[flags] {file}, :lv ...
-  const lvimgrepMatch = cleanCmdRaw.match(/^(lvimgrep|lvimgrepadd|lv)\s+(.*)$/i);
-  if (lvimgrepMatch) {
-    const isAppend = lvimgrepMatch[1].toLowerCase() === 'lvimgrepadd';
-    const args = lvimgrepMatch[2];
-    const res = lvimgrep(state, args, isAppend);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-
-  // lgrep / lgrepadd 검색: :lgrep[! ] {args}, :lgrepadd[! ] {args}
-  const lgrepMatch = cleanCmdRaw.match(/^(lgrep|lgrepadd)(!)?(?:\s+(.*))?$/i);
-  if (lgrepMatch) {
-    const isAppend = lgrepMatch[1].toLowerCase() === 'lgrepadd';
-    const jump = lgrepMatch[2] !== '!';
-    const args = lgrepMatch[3] ?? '';
-    const res = grepToLocationList(state, args, isAppend, jump);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-  // 로케이션 리스트 표현식 평가: :lexpr, :lex, :lgetexpr, :lgete, :laddexpr, :lad
-  const lexprMatch = cleanCmdRaw.match(/^(lexpr|lex|lgetexpr|lgete|laddexpr|lad)(?:\s+(.*))?$/i);
-  if (lexprMatch) {
-    const sub = lexprMatch[1].toLowerCase();
-    const expr = (lexprMatch[2] ?? '').trim();
-    if ((sub === 'lexpr' || sub === 'lex') && (expr === '[]' || expr === '')) {
-      const res = setLocationList(state, [], false);
-      return {
-        ...res,
-        mode: 'NORMAL',
-        visualAnchor: undefined,
-        commandBuffer: undefined,
-        commandType: undefined,
-        commandMessage: msg('로케이션 리스트 초기화됨'),
-      };
-    }
-    const mode =
-      sub === 'laddexpr' || sub === 'lad'
-        ? 'add'
-        : sub === 'lgetexpr' || sub === 'lgete'
-          ? 'get'
-          : 'replace';
-    const res = lexprLocationList(state, expr, mode, (s, name, fnArgs) => callUserFunction(s, name, fnArgs, runEx));
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
-  }
-
-
-  return null;
+  return (
+    tryExecuteListExCommand(state, cleanCmdRaw, cleanCmd, runEx, QUICKFIX_EX_SPEC) ??
+    tryExecuteListExCommand(state, cleanCmdRaw, cleanCmd, runEx, LOCATION_LIST_EX_SPEC)
+  );
 }
