@@ -359,6 +359,8 @@ export interface BlockInsertSession {
   typedChars: string[];    // INSERT 세션 중 입력된 문자 목록
   endOfLine?: boolean;     // Ctrl-v $ 이후 A / c 실행 시 각 줄의 끝 기준 처리 여부
   minCol?: number;         // 블록 왼쪽 경계 열 번호 (짧은 줄 필터링용)
+  maxCol?: number;         // 블록 오른쪽 경계 열 번호 (. 반복 및 블록 크기 복원용)
+  count?: number;          // [count]I / [count]A / [count]c 반복 횟수 (기본 1)
   skippedLines?: number[]; // 블록 범위(minCol)에 도달하지 않아 제외된 짧은 줄 목록
 }
 
@@ -376,6 +378,7 @@ export interface LastVisualSelection {
   mode: 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK';
   anchor: CursorPosition;
   cursor: CursorPosition;
+  endOfLine?: boolean;
 }
 
 export interface ChangeListItem {

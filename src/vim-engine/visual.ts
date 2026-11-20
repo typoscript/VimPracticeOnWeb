@@ -196,7 +196,8 @@ export function yankVisualBlock(state: VimEditorState): VimEditorState {
  */
 export function startVisualBlockInsert(
   state: VimEditorState,
-  insertMode: 'I' | 'A' | 'c'
+  insertMode: 'I' | 'A' | 'c',
+  count = 1
 ): VimEditorState {
   if (!state.visualAnchor) {
     return { ...state, mode: 'NORMAL', pendingKeys: undefined, visualBlockEndOfLine: undefined };
@@ -210,6 +211,7 @@ export function startVisualBlockInsert(
   const minCol = Math.min(anchor.col, cursor.col);
   const maxCol = Math.max(anchor.col, cursor.col);
   const isEol = Boolean(state.visualBlockEndOfLine) && insertMode !== 'I';
+  const repeatCount = Math.max(1, count);
 
   const linesList: number[] = [];
   const skippedLines: number[] = [];
@@ -255,6 +257,20 @@ export function startVisualBlockInsert(
 
   const stateWithSnapshot = pushUndoSnapshot(state);
 
+  const lineSpan = maxLine - minLine;
+  const colSpan = maxCol - minCol;
+  const blockReplayPrefix: string[] = [
+    'Ctrl-v',
+    ...(lineSpan > 0 ? [...(lineSpan > 1 ? String(lineSpan).split('') : []), 'j'] : []),
+    ...(isEol
+      ? ['$']
+      : colSpan > 0
+        ? [...(colSpan > 1 ? String(colSpan).split('') : []), 'l']
+        : []),
+    ...(repeatCount > 1 ? String(repeatCount).split('') : []),
+    insertMode,
+  ];
+
   return {
     ...stateWithSnapshot,
     lines: nextLines,
@@ -262,6 +278,13 @@ export function startVisualBlockInsert(
     cursor: { line: minLine, col: targetCol },
     visualAnchor: undefined,
     visualBlockEndOfLine: undefined,
+    lastVisualSelection: {
+      mode: 'VISUAL_BLOCK',
+      anchor: { ...anchor },
+      cursor: { ...cursor },
+      endOfLine: state.visualBlockEndOfLine,
+    },
+    currentChangeKeys: blockReplayPrefix,
     blockInsertSession: {
       lines: linesList,
       col: targetCol,
@@ -269,6 +292,8 @@ export function startVisualBlockInsert(
       typedChars: [],
       endOfLine: isEol || undefined,
       minCol,
+      maxCol,
+      count: repeatCount > 1 ? repeatCount : undefined,
       skippedLines: skippedLines.length > 0 ? skippedLines : undefined,
     },
     pendingKeys: undefined,

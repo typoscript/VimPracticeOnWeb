@@ -366,4 +366,29 @@ describe('Editor Component', () => {
     expect(container.querySelector('.listchar-trail')).toBeNull();
     expect(container.querySelector('[data-testid="listchar-eol"]')).toBeNull();
   });
+
+  it('blockInsertSession 활성화 시 다중 줄 보조 멀티커서와 실시간 고스트 프리뷰를 렌더링한다', () => {
+    render(
+      <Editor
+        lines={['prefix_line1', 'line2', 'line3']}
+        cursor={{ line: 0, col: 7 }}
+        mode="INSERT"
+        blockInsertSession={{
+          lines: [0, 1, 2],
+          col: 0,
+          insertMode: 'I',
+          typedChars: ['p', 'r', 'e', 'f', 'i', 'x', '_'],
+        }}
+        isFocused={true}
+      />
+    );
+
+    const secondaryCursors = screen.getAllByTestId('vim-block-secondary-cursor');
+    expect(secondaryCursors).toHaveLength(2);
+
+    const ghostPreviews = screen.getAllByTestId('vim-block-ghost-preview');
+    expect(ghostPreviews).toHaveLength(2);
+    expect(ghostPreviews[0]).toHaveTextContent('prefix_');
+    expect(ghostPreviews[1]).toHaveTextContent('prefix_');
+  });
 });

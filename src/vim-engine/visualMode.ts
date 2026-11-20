@@ -370,17 +370,61 @@ export function handleVisualModeKey(
     return swapVisualCursorAnchor(state, key);
   }
 
-  // VISUAL_BLOCK 전용 모드 삽입 연산자 (I, A, c)
-  if (state.mode === 'VISUAL_BLOCK') {
+  // VISUAL_BLOCK 전용 모드 삽입 연산자 (I, A, c, C, s) 및 VISUAL/VISUAL_LINE c/s/C/S/R (텍스트 객체 'i'/'a' 대기 중이 아닐 때만)
+  const isTextObjPending = Boolean(state.pendingKeys && /^([1-9][0-9]*)?[ia]$/.test(state.pendingKeys));
+  if (state.mode === 'VISUAL_BLOCK' && !isTextObjPending) {
     if (key === 'I') {
-      return startVisualBlockInsert(state, 'I');
+      return startVisualBlockInsert(state, 'I', parsed.totalCount);
     }
     if (key === 'A') {
-      return startVisualBlockInsert(state, 'A');
+      return startVisualBlockInsert(state, 'A', parsed.totalCount);
     }
-    if (key === 'c') {
-      return startVisualBlockInsert(state, 'c');
+    if (key === 'c' || key === 's') {
+      return startVisualBlockInsert(state, 'c', parsed.totalCount);
     }
+    if (key === 'C') {
+      return startVisualBlockInsert({ ...state, visualBlockEndOfLine: true }, 'c', parsed.totalCount);
+    }
+  } else if (!isTextObjPending && (key === 'c' || key === 's' || key === 'C' || key === 'S' || key === 'R')) {
+    const snap = state.visualAnchor
+      ? {
+          mode: state.mode as 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK',
+          anchor: { ...state.visualAnchor },
+          cursor: { ...state.cursor },
+        }
+      : state.lastVisualSelection;
+    const isLinewiseChange = state.mode === 'VISUAL_LINE' || key === 'C' || key === 'S' || key === 'R';
+    if (isLinewiseChange && state.visualAnchor) {
+      const minLine = Math.min(state.visualAnchor.line, state.cursor.line);
+      const maxLine = Math.max(state.visualAnchor.line, state.cursor.line);
+      const deletedContent = state.lines.slice(minLine, maxLine + 1).join('\n');
+      const nextLines = [
+        ...state.lines.slice(0, minLine),
+        '',
+        ...state.lines.slice(maxLine + 1),
+      ];
+      const withDel: VimEditorState = {
+        ...state,
+        lines: nextLines,
+        cursor: { line: minLine, col: 0 },
+        mode: 'INSERT',
+        visualAnchor: undefined,
+        clipboard: { type: 'line', content: deletedContent },
+        pendingKeys: undefined,
+      };
+      return {
+        ...syncRegisters(state, withDel, false),
+        mode: 'INSERT',
+        lastVisualSelection: snap,
+      };
+    }
+    const delRes = deleteVisualSelection(state);
+    const synced = syncRegisters(state, delRes, false);
+    return {
+      ...synced,
+      mode: 'INSERT',
+      lastVisualSelection: snap,
+    };
   }
 
   if (key === 'r' && !state.pendingKeys) {

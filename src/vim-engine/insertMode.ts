@@ -383,19 +383,46 @@ function handleInsertEditingKey(
   // Ctrl+w: 커서 앞의 단어 하나 즉시 삭제
   if (key === 'Ctrl-w' || key === 'Ctrl+w' || key === 'Alt-w' || key === 'Alt+w') {
     const nextChangeKeys = appendCurrentChange(state, 'Ctrl-w', isReplayingDot);
-    if (col === 0 && line > 0) return mergeWithPreviousLine(state, nextChangeKeys);
+    if (col === 0 && line > 0 && !state.blockInsertSession) return mergeWithPreviousLine(state, nextChangeKeys);
     if (col > 0) {
       let start = col;
-      while (start > 0 && /\s/.test(currentLine[start - 1])) start--;
-      if (start > 0) {
-        const isWordChar = /\w/.test(currentLine[start - 1]);
-        while (
-          start > 0 &&
-          (isWordChar
-            ? /\w/.test(currentLine[start - 1])
-            : !/\w/.test(currentLine[start - 1]) && !/\s/.test(currentLine[start - 1]))
-        ) {
-          start--;
+      if (state.blockInsertSession) {
+        const minBound = state.blockInsertSession.col;
+        while (start > minBound && /\s/.test(currentLine[start - 1])) start--;
+        if (start > minBound) {
+          const isWordChar = /\w/.test(currentLine[start - 1]);
+          while (
+            start > minBound &&
+            (isWordChar
+              ? /\w/.test(currentLine[start - 1])
+              : !/\w/.test(currentLine[start - 1]) && !/\s/.test(currentLine[start - 1]))
+          ) {
+            start--;
+          }
+        }
+        const removedCount = col - start;
+        state = {
+          ...state,
+          blockInsertSession: {
+            ...state.blockInsertSession,
+            typedChars: state.blockInsertSession.typedChars.slice(
+              0,
+              Math.max(0, state.blockInsertSession.typedChars.length - removedCount)
+            ),
+          },
+        };
+      } else {
+        while (start > 0 && /\s/.test(currentLine[start - 1])) start--;
+        if (start > 0) {
+          const isWordChar = /\w/.test(currentLine[start - 1]);
+          while (
+            start > 0 &&
+            (isWordChar
+              ? /\w/.test(currentLine[start - 1])
+              : !/\w/.test(currentLine[start - 1]) && !/\s/.test(currentLine[start - 1]))
+          ) {
+            start--;
+          }
         }
       }
       const nextLines = [...state.lines];
@@ -411,9 +438,28 @@ function handleInsertEditingKey(
     return { ...state, currentChangeKeys: nextChangeKeys };
   }
 
-  // Ctrl+u: 현재 줄의 커서 앞쪽 내용을 줄 시작까지 통째로 삭제
+  // Ctrl+u: 현재 줄의 커서 앞쪽 내용을 줄 시작(블록 삽입 시에는 블록 삽입 시작 열)까지 통째로 삭제
   if (key === 'Ctrl-u' || key === 'Ctrl+u' || key === 'Alt-u' || key === 'Alt+u') {
     const nextChangeKeys = appendCurrentChange(state, 'Ctrl-u', isReplayingDot);
+    if (state.blockInsertSession) {
+      const minBound = state.blockInsertSession.col;
+      if (col > minBound) {
+        const nextLines = [...state.lines];
+        nextLines[line] = currentLine.slice(0, minBound) + currentLine.slice(col);
+        return {
+          ...state,
+          lines: nextLines,
+          cursor: { line, col: minBound },
+          blockInsertSession: {
+            ...state.blockInsertSession,
+            typedChars: [],
+          },
+          currentChangeKeys: nextChangeKeys,
+          currentInsertText: trimInsertText(state.currentInsertText, col - minBound),
+        };
+      }
+      return { ...state, currentChangeKeys: nextChangeKeys };
+    }
     if (col === 0 && line > 0) return mergeWithPreviousLine(state, nextChangeKeys);
     const nextLines = [...state.lines];
     nextLines[line] = currentLine.slice(col);
@@ -435,6 +481,9 @@ function handleInsertEditingKey(
     key === 'Alt+h'
   ) {
     if (state.blockInsertSession) {
+      if (col <= state.blockInsertSession.col) {
+        return state;
+      }
       state = {
         ...state,
         blockInsertSession: {
@@ -459,7 +508,7 @@ function handleInsertEditingKey(
     return { ...state, currentChangeKeys: nextChangeKeys };
   }
 
-  // Enter: 줄 분할 및 다음 줄 맨 앞으로 이동
+  // Enter: 줄 분할 및 다음 줄 맨 앞으로 이동 (비주얼 블록 삽입 중 Enter 입력 시 다중 줄 세션 해제)
   if (key === 'Enter') {
     const nextChangeKeys = appendCurrentChange(state, 'Enter', isReplayingDot);
     const nextLines = [
@@ -472,6 +521,7 @@ function handleInsertEditingKey(
       ...state,
       lines: nextLines,
       cursor: { line: line + 1, col: 0 },
+      blockInsertSession: null,
       currentChangeKeys: nextChangeKeys,
       currentInsertText: (state.currentInsertText ?? '') + '\n',
     };

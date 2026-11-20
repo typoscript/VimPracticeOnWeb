@@ -305,6 +305,20 @@
   box-shadow: -2px 0 0 var(--cursor-insert, #89b4fa);
 }
 
+/* VISUAL_BLOCK 다중 줄 삽입(I/A/c) 보조 멀티커서 & 실시간 고스트 프리뷰 */
+.vim-block-secondary-cursor {
+  box-shadow: -2px 0 0 rgba(137, 180, 250, 0.85);
+  background-color: rgba(137, 180, 250, 0.2);
+}
+
+.vim-block-ghost-preview {
+  display: inline;
+  color: var(--cursor-insert, #89b4fa);
+  background-color: rgba(137, 180, 250, 0.14);
+  opacity: 0.78;
+  border-bottom: 1px dashed rgba(137, 180, 250, 0.7);
+}
+
 /* INSERT (normal) 모드: 보라빛 블록 커서 */
 .cursor-insert-normal {
   background-color: #bb9af7;

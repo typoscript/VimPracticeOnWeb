@@ -160,6 +160,7 @@ export function EditorViewport({
             insertNormalSession={isActive ? editorState.insertNormalSession : undefined}
             insertRegisterPending={isActive ? editorState.insertRegisterPending : undefined}
             confirmSubstitute={isActive ? editorState.confirmSubstitute : undefined}
+            blockInsertSession={isActive ? editorState.blockInsertSession : pane.blockInsertSession}
             options={displayEditorState.options}
             spellGoodWords={displayEditorState.spellGoodWords}
             spellWrongWords={displayEditorState.spellWrongWords}
@@ -311,6 +312,7 @@ export function EditorViewport({
             insertNormalSession={displayEditorState.insertNormalSession}
             insertRegisterPending={displayEditorState.insertRegisterPending}
             confirmSubstitute={displayEditorState.confirmSubstitute}
+            blockInsertSession={displayEditorState.blockInsertSession}
             options={displayEditorState.options}
             spellGoodWords={displayEditorState.spellGoodWords}
             spellWrongWords={displayEditorState.spellWrongWords}

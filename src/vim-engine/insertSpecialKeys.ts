@@ -289,11 +289,22 @@ export function handleInsertEscape(state: VimEditorState, isReplayingDot: boolea
       insertMode,
       endOfLine,
       minCol = 0,
+      count = 1,
       skippedLines,
     } = state.blockInsertSession;
-    const insertedText = typedChars.join('');
+    const unitText = typedChars.join('');
+    const repeatCount = Math.max(1, count);
+    const insertedText = repeatCount > 1 ? unitText.repeat(repeatCount) : unitText;
     const skippedSet = skippedLines ? new Set(skippedLines) : null;
     const nextLines = [...state.lines];
+
+    const firstLineIdx = targetLines[0];
+    if (repeatCount > 1 && unitText.length > 0 && !skippedSet?.has(firstLineIdx)) {
+      const firstLineText = nextLines[firstLineIdx] ?? '';
+      const extraFirst = unitText.repeat(repeatCount - 1);
+      nextLines[firstLineIdx] =
+        firstLineText.slice(0, col) + extraFirst + firstLineText.slice(col);
+    }
 
     for (let i = 1; i < targetLines.length; i++) {
       const lineIdx = targetLines[i];
@@ -318,10 +329,14 @@ export function handleInsertEscape(state: VimEditorState, isReplayingDot: boolea
       }
     }
 
-    const firstLineIdx = targetLines[0];
-    const nextCol = Math.max(0, col - 1);
+    const finalFirstCol = col + (repeatCount > 1 ? unitText.length * (repeatCount - 1) : 0);
+    const nextCol = Math.max(0, finalFirstCol - 1);
     const lastPos = { line: firstLineIdx, col: insertCol, row: firstLineIdx };
     const changeRecord = recordChangePosition(state.changeList, { line: firstLineIdx, col: insertCol });
+    const nextLastChange =
+      !isReplayingDot && state.currentChangeKeys
+        ? [...state.currentChangeKeys, 'Escape']
+        : state.lastChangeKeys;
 
     return {
       ...state,
@@ -331,6 +346,7 @@ export function handleInsertEscape(state: VimEditorState, isReplayingDot: boolea
       blockInsertSession: null,
       pendingKeys: undefined,
       digraphPending: undefined,
+      lastChangeKeys: nextLastChange,
       currentChangeKeys: undefined,
       lastInsertedText: resolveLastInsertedText(state, insertedText),
       currentInsertText: undefined,

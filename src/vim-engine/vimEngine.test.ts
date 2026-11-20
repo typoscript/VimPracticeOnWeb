@@ -1555,4 +1555,39 @@ describe('Vim Engine - Visual Replace (v/V/Ctrl-v r{char})', () => {
     expect(state.lines).toEqual(['a***ef', 'x*', '1***56']);
     expect(state.cursor).toEqual({ line: 0, col: 1 });
   });
+
+  it('VISUAL_BLOCK [count]I / [count]A / [count]c / C 및 . (dot repeat), Ctrl-w / Ctrl-u / Ctrl-r 연동을 지원한다', () => {
+    // 1) Ctrl-v 2j 2I-<Esc> -> 각 줄 앞에 "--" 가 삽입되고, . 반복 시 동일한 3줄 블록에 다시 "--" 가 삽입된다
+    let state = createState(['alpha', 'beta', 'gamma', 'delta'], 0, 0);
+    for (const k of ['Ctrl-v', '2', 'j', '2', 'I', '-', 'Escape']) {
+      state = handleKey(state, k);
+    }
+    expect(state.lines).toEqual(['--alpha', '--beta', '--gamma', 'delta']);
+
+    // 2번째 줄로 이동 후 . 반복 -> 2~4번째 줄에 "--" 삽입
+    state = handleKey(state, 'j');
+    state = handleKey(state, '0');
+    state = handleKey(state, '.');
+    expect(state.lines).toEqual(['--alpha', '----beta', '----gamma', '--delta']);
+
+    // 2) 블록 I 입력 중 Ctrl-w 및 Ctrl-u 가 typedChars 와 정확히 동기화된다
+    let editState = createState(['one', 'two', 'three'], 0, 0);
+    for (const k of ['Ctrl-v', '2', 'j', 'I', 'foo', ' ', 'bar']) {
+      for (const ch of k === 'Ctrl-v' || k === 'Escape' ? [k] : k.split('')) {
+        editState = handleKey(editState, ch);
+      }
+    }
+    // 현재 첫 줄: "foo barone", typedChars: "foo bar" -> Ctrl-w 로 "bar" 삭제 후 "baz" 입력 -> Esc
+    editState = handleKey(editState, 'Ctrl-w');
+    for (const ch of 'baz') editState = handleKey(editState, ch);
+    editState = handleKey(editState, 'Escape');
+    expect(editState.lines).toEqual(['foo bazone', 'foo baztwo', 'foo bazthree']);
+
+    // 3) Ctrl-v C 는 블록 시작 열부터 각 줄 끝까지 삭제하고 다중 줄 삽입을 수행한다
+    let cState = createState(['name = 10', 'val  = 200', 'id   = 3'], 0, 7);
+    for (const k of ['Ctrl-v', '2', 'j', 'C', '0', 'Escape']) {
+      cState = handleKey(cState, k);
+    }
+    expect(cState.lines).toEqual(['name = 0', 'val  = 0', 'id   = 0']);
+  });
 });

@@ -6,6 +6,7 @@ import {
   FoldRange,
   CompletionSession,
   ConfirmSubstituteSession,
+  BlockInsertSession,
   VimOptions,
   DiffHunk,
   LspDiagnostic,
@@ -57,6 +58,8 @@ export interface EditorProps {
   insertRegisterPending?: boolean;
   /** :s/.../.../gc 대화형 치환 확인 세션 */
   confirmSubstitute?: ConfirmSubstituteSession | null;
+  /** 비주얼 블록(Ctrl+v) 다중 줄 동시 삽입 세션 (실시간 멀티커서/고스트 프리뷰용) */
+  blockInsertSession?: BlockInsertSession | null;
   /** 순정 Vim 환경 옵션 설정 (:set nu, :set rnu, :set ic 등) */
   options?: VimOptions;
   /** 순정 Vim diff 차이점 목록 */
@@ -103,6 +106,7 @@ export const Editor: React.FC<EditorProps> = ({
   insertNormalSession,
   insertRegisterPending,
   confirmSubstitute,
+  blockInsertSession,
   options,
   diffHunks,
   diffPaneIndex = 0,
@@ -336,6 +340,7 @@ export const Editor: React.FC<EditorProps> = ({
                         insertNormalSession,
                         insertRegisterPending,
                         confirmSubstitute,
+                        blockInsertSession,
                         spellErrors: options?.spell
                           ? findSpellErrorsInLine(lineText, lineIdx, { spellGoodWords, spellWrongWords })
                           : undefined,

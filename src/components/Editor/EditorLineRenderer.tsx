@@ -4,6 +4,7 @@ import {
   VimMode,
   SearchMatch,
   ConfirmSubstituteSession,
+  BlockInsertSession,
   SpellError,
   SyntaxToken,
   SupportedLanguage,
@@ -27,6 +28,7 @@ export interface RenderLineOptions {
   insertNormalSession?: boolean;
   insertRegisterPending?: boolean;
   confirmSubstitute?: ConfirmSubstituteSession | null;
+  blockInsertSession?: BlockInsertSession | null;
   spellErrors?: SpellError[];
   lineDiagnostics?: LspDiagnostic[];
   syntaxLanguage?: SupportedLanguage;
@@ -72,6 +74,7 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     insertNormalSession,
     insertRegisterPending,
     confirmSubstitute,
+    blockInsertSession,
     spellErrors,
     lineDiagnostics,
     syntaxLanguage,
@@ -95,9 +98,36 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
   const hasSpellErrors = (spellErrors?.length ?? 0) > 0;
   const hasDiagnostics = (lineDiagnostics?.length ?? 0) > 0;
 
+  // 비주얼 블록 I / A / c 다중 줄 실시간 멀티커서 & 고스트 프리뷰 계산 (첫 줄이 아닌 대상 줄)
+  let blockSecondaryCol: number | null = null;
+  let blockGhostText = '';
+  if (
+    mode === 'INSERT' &&
+    blockInsertSession &&
+    !isCursorLine &&
+    blockInsertSession.lines.includes(lineIdx) &&
+    !(blockInsertSession.skippedLines && blockInsertSession.skippedLines.includes(lineIdx))
+  ) {
+    const { col: insertCol, insertMode, endOfLine, minCol = 0, count = 1, typedChars } = blockInsertSession;
+    const unitText = typedChars.join('');
+    blockGhostText = count > 1 ? unitText.repeat(count) : unitText;
+    if (endOfLine) {
+      blockSecondaryCol = text.length;
+    } else if (insertMode === 'A') {
+      blockSecondaryCol = insertCol;
+    } else if (insertMode === 'I') {
+      if (insertCol === 0 || text.length > insertCol) {
+        blockSecondaryCol = insertCol;
+      }
+    } else {
+      blockSecondaryCol = Math.min(minCol, text.length);
+    }
+  }
+
   if (
     text.length === 0 &&
     cursorCol === null &&
+    blockSecondaryCol === null &&
     targetCol === null &&
     !isLineInVisualRange &&
     !hasSearchMatches &&
@@ -117,6 +147,7 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
   // 커서, 타겟, 비주얼 선택, 검색 매칭, 맞춤법/LSP 오류, 불가시 문자 표시가 모두 없는 일반 줄
   if (
     cursorCol === null &&
+    blockSecondaryCol === null &&
     targetCol === null &&
     !isLineInVisualRange &&
     !hasSearchMatches &&
@@ -153,14 +184,27 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
   const maxIdx = Math.max(
     chars.length - 1,
     cursorCol !== null ? cursorCol : 0,
+    blockSecondaryCol !== null ? blockSecondaryCol : 0,
     targetCol !== null ? targetCol : 0
   );
 
   let eolRenderedOnCursor = false;
   const elements: React.ReactNode[] = [];
   for (let i = 0; i <= maxIdx; i++) {
+    if (blockSecondaryCol !== null && i === blockSecondaryCol && blockGhostText.length > 0) {
+      elements.push(
+        <span
+          key={`block-ghost-${i}`}
+          className="vim-block-ghost-preview"
+          data-testid="vim-block-ghost-preview"
+        >
+          {blockGhostText}
+        </span>
+      );
+    }
     const char = chars[i] !== undefined ? chars[i] : ' ';
     const isCursor = i === cursorCol;
+    const isBlockSecondaryCursor = i === blockSecondaryCol;
     const isTarget = i === targetCol;
     const isSelected =
       hasVisual &&
@@ -168,7 +212,7 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     const isSearchMatch = lineMatches.some(
       (m) => i >= m.col && i < m.col + m.length
     );
-    const isTrailingCursor = isCursor && i >= text.length;
+    const isTrailingCursor = (isCursor || isBlockSecondaryCursor) && i >= text.length;
     const isConfirmMatch =
       confirmSubstitute &&
       confirmSubstitute.currentMatch.line === lineIdx &&
@@ -233,6 +277,8 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
               : `cursor-${mode.toLowerCase()}`
             : 'cursor-unfocused'
         }`
+      : isBlockSecondaryCursor
+      ? 'vim-char vim-block-secondary-cursor'
       : 'vim-char';
 
     if (tokenType) {
@@ -276,6 +322,8 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
         data-testid={
           isCursor
             ? 'vim-cursor'
+            : isBlockSecondaryCursor
+            ? 'vim-block-secondary-cursor'
             : isSelected
             ? 'visual-selected-char'
             : isSearchMatch

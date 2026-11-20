@@ -1,6 +1,20 @@
 import { VimEditorState } from './types';
 import { buildVfsMap } from './vfs';
 
+function syncBlockInsertCompletion(
+  state: VimEditorState,
+  nextLineText: string,
+  nextCol: number
+) {
+  if (!state.blockInsertSession) return state.blockInsertSession;
+  const baseCol = state.blockInsertSession.col;
+  const typedSlice = nextCol >= baseCol ? nextLineText.slice(baseCol, nextCol) : '';
+  return {
+    ...state.blockInsertSession,
+    typedChars: typedSlice.split(''),
+  };
+}
+
 /**
  * 커서 바로 앞의 접두사(Prefix)를 검출합니다.
  * 접두사는 영문자, 숫자, 언더스코어로 구성되며 기본 최소 길이는 2자 이상입니다 (1자 완성은 minLength=1 지정).
@@ -327,6 +341,7 @@ export function startOrCycleCompletion(
       ...state,
       lines: nextLines,
       cursor: { line, col: nextCol },
+      blockInsertSession: syncBlockInsertCompletion(state, newLine, nextCol),
       completionSession: {
         prefix,
         prefixStartCol,
@@ -368,6 +383,7 @@ export function startOrCycleCompletion(
     ...state,
     lines: nextLines,
     cursor: { line, col: nextCol },
+    blockInsertSession: syncBlockInsertCompletion(state, newLine, nextCol),
     completionSession: {
       prefix: found.prefix,
       prefixStartCol: found.startCol,
@@ -410,6 +426,7 @@ export function cancelCompletion(state: VimEditorState): VimEditorState {
     ...state,
     lines: nextLines,
     cursor: { line, col: nextCol },
+    blockInsertSession: syncBlockInsertCompletion(state, newLine, nextCol),
     completionSession: null,
     insertCtrlXMode: false,
   };
@@ -472,6 +489,7 @@ export function selectCompletionCandidate(
     ...state,
     lines: nextLines,
     cursor: { line, col: nextCol },
+    blockInsertSession: syncBlockInsertCompletion(state, newLine, nextCol),
     completionSession: null,
     insertCtrlXMode: false,
   };
