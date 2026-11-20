@@ -1,29 +1,16 @@
-import { useEffect, useState, useCallback, useRef, Dispatch, SetStateAction } from 'react';
-import { calculateStars } from './components/MissionPanel/MissionPanel';
+import { useState, useCallback, useRef, Dispatch, SetStateAction } from 'react';
 import { CoachingToast } from './components/CoachingToast/CoachingToast';
 import { AppHeader, AppTab } from './components/AppHeader/AppHeader';
 import { AppModals } from './components/AppModals/AppModals';
 import { AppMainWorkspace } from './components/AppMainWorkspace/AppMainWorkspace';
-import { VimEditorState, handleKey } from './vim-engine';
+import { VimEditorState } from './vim-engine';
 import { Mission } from './types/mission';
-import { recordLessonSrsReview } from './utils/srsScheduler';
 import { MISSIONS } from './data/missions';
 import { sandboxInitialLines } from './data/sandbox';
-import {
-  loadProgress,
-  saveLessonRecord,
-  LessonProgress,
-} from './utils/storage';
+import { loadProgress, LessonProgress } from './utils/storage';
 import { AntiPatternDetector } from './utils/antiPatternDetector';
 import { useSoundEffects } from './utils/soundEffects';
-import {
-  getChallengeFromUrl,
-  createCustomMissionObject,
-} from './utils/customMission';
-import {
-  recordKeyInputStats,
-  recordAntiPatternDetection,
-} from './utils/analyticsStorage';
+import { getChallengeFromUrl, createCustomMissionObject } from './utils/customMission';
 import {
   buildMissionInitialState,
   buildCustomInitialState,
@@ -36,6 +23,7 @@ import { useGhostReplay } from './hooks/useGhostReplay';
 import { useActionTimeline } from './hooks/useActionTimeline';
 import { useEditorViewSettings } from './hooks/useEditorViewSettings';
 import { useAppMissionHandlers } from './hooks/useAppMissionHandlers';
+import { useAppKeyAndCompletionEffects } from './hooks/useAppKeyAndCompletionEffects';
 import {
   useSpeedrunSession,
   SPEEDRUN_CANDIDATE_IDS,
@@ -58,52 +46,41 @@ export function App() {
   } | null>(null);
 
   const setEditorStateRef = useRef<Dispatch<SetStateAction<VimEditorState>> | null>(null);
-  const {
-    hardcoreMode,
-    hardcoreGuardRef,
-    isEditorShaking,
-    hardcoreWarning,
-    dismissHardcoreWarning,
-    handleToggleHardcoreMode,
-    triggerHardcoreViolation,
-    handleEditorAreaClick,
-    activePresets,
-    leaderKey,
-    customKeymaps,
-    handleTogglePreset,
-    handleChangeLeaderKey,
-    handleAddCustomKeymap,
-    handleDeleteCustomKeymap,
-    currentTheme,
-    handleThemeChange,
-    reloadHardcoreAndKeymaps,
-  } = useHardcoreAndKeymaps(setEditorStateRef);
-
+  const hardcore = useHardcoreAndKeymaps(setEditorStateRef);
   const locale = useLocale();
-  const { isMuted, toggleMute, playKeySound, playSuccessSound } = useSoundEffects();
+  const audio = useSoundEffects();
 
   const [currentMissionIndex, setCurrentMissionIndex] = useState(0);
   const [progress, setProgress] = useState<LessonProgress>(() => loadProgress());
   const [isEditorFocused, setIsEditorFocused] = useState<boolean>(true);
-
-  const currentMission = MISSIONS[currentMissionIndex];
-
   const [keystrokeCount, setKeystrokeCount] = useState(0);
   const [recentKeys, setRecentKeys] = useState<string[]>([]);
   const [lastPressedKey, setLastPressedKey] = useState<string | undefined>(undefined);
   const [coachingMessage, setCoachingMessage] = useState<string | null>(null);
+  const [macroPreviewState, setMacroPreviewState] = useState<VimEditorState | null>(null);
+  const [bellCount, setBellCount] = useState(0);
+
   const antiPatternDetectorRef = useRef(new AntiPatternDetector());
+  const currentMission = MISSIONS[currentMissionIndex];
 
   const getMissionInitialState = useCallback(
     (m: Mission): VimEditorState =>
-      buildMissionInitialState(m, { activePresets, leaderKey, customKeymaps }),
-    [activePresets, leaderKey, customKeymaps]
+      buildMissionInitialState(m, {
+        activePresets: hardcore.activePresets,
+        leaderKey: hardcore.leaderKey,
+        customKeymaps: hardcore.customKeymaps,
+      }),
+    [hardcore.activePresets, hardcore.leaderKey, hardcore.customKeymaps]
   );
 
   const createCustomInitialState = useCallback(
     (mission: Mission): VimEditorState =>
-      buildCustomInitialState(mission, { activePresets, leaderKey, customKeymaps }),
-    [activePresets, leaderKey, customKeymaps]
+      buildCustomInitialState(mission, {
+        activePresets: hardcore.activePresets,
+        leaderKey: hardcore.leaderKey,
+        customKeymaps: hardcore.customKeymaps,
+      }),
+    [hardcore.activePresets, hardcore.leaderKey, hardcore.customKeymaps]
   );
 
   const [editorState, setEditorState] = useState<VimEditorState>(() =>
@@ -113,114 +90,25 @@ export function App() {
   );
   setEditorStateRef.current = setEditorState;
 
-  const {
-    isModalOpen,
-    setIsModalOpen,
-    isCustomModalOpen,
-    setIsCustomModalOpen,
-    isAnalyticsModalOpen,
-    setIsAnalyticsModalOpen,
-    isDailyModalOpen,
-    setIsDailyModalOpen,
-    isConfigModalOpen,
-    setIsConfigModalOpen,
-    isBYOCModalOpen,
-    setIsBYOCModalOpen,
-    isAnyModalOpen,
-    relativeLineNumbers,
-    showVirtualKeyboard,
-    showDiffView,
-    showRegisterInspector,
-    showMarksVisualizer,
-    showGrammarAST,
-    setShowGrammarAST,
-    showMacroDebugger,
-    handleToggleRegisterInspector,
-    handleToggleMarksVisualizer,
-    handleToggleGrammarAST,
-    handleToggleVirtualKeyboard,
-    handleToggleDiffView,
-    enableDiffView,
-    handleToggleRelativeLine,
-    handleToggleMacroDebugger,
-    handleOpenMacroDebugger,
-    restoreViewSettings,
-  } = useEditorViewSettings({ editorState, setEditorState });
+  const editorStateRef = useRef(editorState);
+  editorStateRef.current = editorState;
+  const keystrokeCountRef = useRef(keystrokeCount);
+  keystrokeCountRef.current = keystrokeCount;
 
-  const {
-    handleSwitchPane,
-    handleSelectCompletionCandidate,
-    handleSwitchBuffer,
-    handleSwitchTabPage,
-    handleCloseTabPage,
-    handleNewTabPage,
-    handleCloseCommandLineWindow,
-    handleSelectCommandLineWindowLine,
-    handleSwitchCommandLineWindowType,
-    handleClearCommandLineHistory,
-    handleExecuteCommandLineWindowLine,
-    handleJumpQuickfixItem,
-    handleCloseQuickfixWindow,
-    handleJumpLocationListItem,
-    handleCloseLocationListWindow,
-    handleCloseLspHover,
-    handleSelectFuzzyFinderAction,
-    handleCloseFuzzyFinder,
-    handleSelectFuzzyItemIndex,
-    handleJumpHelpTag,
-    handlePopHelpTag,
-    handleCloseHelp,
-    handleJumpToMark,
-    handleDeleteMark,
-    handleDeleteAllLocalMarks,
-    handleJumpToIndex,
-    handleJumpOlder,
-    handleJumpNewer,
-    handleClearJumps,
-    handleSetMark,
-    handleJumpToLine,
-    handleUpdateRegister,
-    handleDeleteRegister,
-  } = useEditorWorkspaceHandlers({ setEditorState, setIsEditorFocused });
+  const viewSettings = useEditorViewSettings({ editorState, setEditorState });
+  const workspaceHandlers = useEditorWorkspaceHandlers({ setEditorState, setIsEditorFocused });
 
-  const {
-    isGhostReplaying,
-    ghostReplayProgress,
-    handleStopGhostReplay,
-    handleStartGhostReplay,
-  } = useGhostReplay({
+  const ghost = useGhostReplay({
     currentMission,
     getMissionInitialState,
     setEditorState,
     setKeystrokeCount,
     setRecentKeys,
     setLastPressedKey,
-    playKeySound,
+    playKeySound: audio.playKeySound,
   });
 
-  const [macroPreviewState, setMacroPreviewState] = useState<VimEditorState | null>(null);
-  const [bellCount, setBellCount] = useState(0);
-
-  const editorStateRef = useRef(editorState);
-  editorStateRef.current = editorState;
-  const keystrokeCountRef = useRef(keystrokeCount);
-  keystrokeCountRef.current = keystrokeCount;
-
-  const {
-    showActionTimeline,
-    setShowActionTimeline,
-    timelineSteps,
-    allKeysSoFar,
-    previewStepIndex,
-    timelineBaseState,
-    handleToggleActionTimeline,
-    handleSelectTimelineStep,
-    handleCancelPreview,
-    handleBranchFromStep,
-    resetActionTimeline,
-    beginTimelineKeyInput,
-    commitTimelineKeyStep,
-  } = useActionTimeline({
+  const timeline = useActionTimeline({
     createInitialState: () =>
       initialCustomMission
         ? createCustomInitialState(initialCustomMission)
@@ -233,177 +121,66 @@ export function App() {
     setCoachingMessage,
   });
 
-  const displayEditorState = macroPreviewState ?? timelineBaseState;
+  const displayEditorState = macroPreviewState ?? timeline.timelineBaseState;
 
-  const {
-    speedrunStatus,
-    speedrunStages,
-    speedrunCurrentStage,
-    speedrunElapsedSeconds,
-    speedrunKeystrokes,
-    setSpeedrunKeystrokes,
-    speedrunBestRecord,
-    setSpeedrunBestRecord,
-    speedrunIsNewRecord,
-    activeSpeedrunMission,
-    handleStartSpeedrun,
-    resetSpeedrunReady,
-  } = useSpeedrunSession({
+  const speedrun = useSpeedrunSession({
     currentTab,
     editorState,
     getMissionInitialState,
     setEditorState,
     setCoachingMessage,
-    playSuccessSound,
-    handleStopGhostReplay,
-    resetActionTimeline,
+    playSuccessSound: audio.playSuccessSound,
+    handleStopGhostReplay: ghost.handleStopGhostReplay,
+    resetActionTimeline: timeline.resetActionTimeline,
     setRecentKeys,
     setLastPressedKey,
     antiPatternDetectorRef,
   });
 
-  const isCompleted =
-    currentTab === 'course'
-      ? currentMission.checkComplete(editorState)
-      : currentTab === 'custom' && customMission
-      ? customMission.checkComplete(editorState)
-      : false;
+  const { isCompleted, processKeyInput } = useAppKeyAndCompletionEffects({
+    currentTab,
+    currentMission,
+    customMission,
+    initialCustomMission,
+    editorState,
+    editorStateRef,
+    setEditorState,
+    keystrokeCount,
+    keystrokeCountRef,
+    setKeystrokeCount,
+    setRecentKeys,
+    setLastPressedKey,
+    setCoachingMessage,
+    setProgress,
+    setMacroPreviewState,
+    setBellCount,
+    speedrunStatus: speedrun.speedrunStatus,
+    setSpeedrunKeystrokes: speedrun.setSpeedrunKeystrokes,
+    hardcoreMode: hardcore.hardcoreMode,
+    hardcoreGuardRef: hardcore.hardcoreGuardRef,
+    triggerHardcoreViolation: hardcore.triggerHardcoreViolation,
+    antiPatternDetectorRef,
+    playKeySound: audio.playKeySound,
+    playSuccessSound: audio.playSuccessSound,
+    beginTimelineKeyInput: timeline.beginTimelineKeyInput,
+    commitTimelineKeyStep: timeline.commitTimelineKeyStep,
+  });
 
-  // 튜토리얼 코스 미션 클리어 시 최고 기록 및 별점 영구 저장
-  useEffect(() => {
-    if (currentTab === 'course' && isCompleted) {
-      const rating = calculateStars(keystrokeCount, currentMission.par);
-      const updated = saveLessonRecord(currentMission.id, rating.starCount, keystrokeCount);
-      setProgress(updated);
-    }
-  }, [currentTab, isCompleted, currentMission.id, currentMission.par, keystrokeCount]);
-
-  // 미션 클리어 시 레트로 8비트 아르페지오 성공 효과음 재생 및 SRS 간격 반복 스케줄 갱신
-  const wasCompletedRef = useRef(false);
-  useEffect(() => {
-    if (isCompleted && !wasCompletedRef.current) {
-      playSuccessSound();
-      if (currentTab === 'course') {
-        const rating = calculateStars(keystrokeCount, currentMission.par);
-        recordLessonSrsReview(currentMission.id, rating.starCount);
-      }
-    }
-    wasCompletedRef.current = isCompleted;
-  }, [isCompleted, playSuccessSound, currentTab, currentMission.id, currentMission.par, keystrokeCount]);
-
-  // 시스템 클립보드 ("+, "*) 변경 시 실제 웹 브라우저 클립보드에 동기화
-  const prevSystemClipboardRef = useRef<string | undefined>(editorState.systemClipboard);
-  useEffect(() => {
-    if (
-      editorState.systemClipboard &&
-      editorState.systemClipboard !== prevSystemClipboardRef.current
-    ) {
-      prevSystemClipboardRef.current = editorState.systemClipboard;
-      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
-        navigator.clipboard.writeText(editorState.systemClipboard).catch(() => {});
-      }
-    }
-  }, [editorState.systemClipboard]);
-
-  useEffect(() => {
-    if (initialCustomMission) {
-      setCoachingMessage(
-        t('⛳ URL 커스텀 Vim Golf 미션 [{title}]이(가) 로드되었습니다!', {
-          title: initialCustomMission.title,
-        })
-      );
-    }
-  }, [initialCustomMission]);
-
-  const processKeyInput = useCallback(
-    (key: string) => {
-      if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(key)) {
-        return;
-      }
-
-      if (hardcoreMode) {
-        const check = hardcoreGuardRef.current.checkKey(key, Date.now());
-        if (check.blocked) {
-          triggerHardcoreViolation(check.message!, check.suggestion);
-          return;
-        }
-      }
-
-      const { baseState, baseKeystrokes, baseSteps, nextActionKeys } =
-        beginTimelineKeyInput(key);
-      setMacroPreviewState(null);
-
-      setLastPressedKey(key);
-      const nextKeystrokes = baseKeystrokes + 1;
-      keystrokeCountRef.current = nextKeystrokes;
-      setKeystrokeCount(nextKeystrokes);
-      setRecentKeys((prev) => [...prev.slice(-7), key]);
-
-      playKeySound(key, baseState.mode);
-      recordKeyInputStats(key);
-
-      if (currentTab === 'speedrun' && speedrunStatus === 'running') {
-        setSpeedrunKeystrokes((prev) => prev + 1);
-      }
-
-      const coachingAdvice = antiPatternDetectorRef.current.processKey(
-        key,
-        baseState.mode,
-        baseState.pendingKeys
-      );
-      if (coachingAdvice) {
-        setCoachingMessage(coachingAdvice);
-        recordAntiPatternDetection(coachingAdvice);
-      }
-
-      const nextState = handleKey(baseState, key);
-      editorStateRef.current = nextState;
-      setEditorState(nextState);
-      if (nextState.bell) {
-        setBellCount((c) => c + 1);
-      }
-
-      commitTimelineKeyStep(baseSteps, nextActionKeys, nextKeystrokes, nextState);
-    },
-    [
-      currentTab,
-      speedrunStatus,
-      playKeySound,
-      hardcoreMode,
-      hardcoreGuardRef,
-      triggerHardcoreViolation,
-      beginTimelineKeyInput,
-      commitTimelineKeyStep,
-      setSpeedrunKeystrokes,
-    ]
-  );
-
-  const {
-    handleSelectMission,
-    handleResetMission,
-    handleResetSandbox,
-    handleResetCustomMission,
-    handlePlayCustomMission,
-    handlePlayBYOCMission,
-    handleSwitchTab,
-    handleRunMacroFromDebugger,
-    handleSelectLessonById,
-    handleRestoreBackup,
-  } = useAppMissionHandlers({
+  const missionHandlers = useAppMissionHandlers({
     currentMission,
     currentMissionIndex,
     customMission,
-    activePresets,
-    leaderKey,
-    customKeymaps,
+    activePresets: hardcore.activePresets,
+    leaderKey: hardcore.leaderKey,
+    customKeymaps: hardcore.customKeymaps,
     antiPatternDetectorRef,
     getMissionInitialState,
-    resetActionTimeline,
-    resetSpeedrunReady,
-    handleStopGhostReplay,
-    enableDiffView,
-    reloadHardcoreAndKeymaps,
-    restoreViewSettings,
+    resetActionTimeline: timeline.resetActionTimeline,
+    resetSpeedrunReady: speedrun.resetSpeedrunReady,
+    handleStopGhostReplay: ghost.handleStopGhostReplay,
+    enableDiffView: viewSettings.enableDiffView,
+    reloadHardcoreAndKeymaps: hardcore.reloadHardcoreAndKeymaps,
+    restoreViewSettings: viewSettings.restoreViewSettings,
     processKeyInput,
     setCurrentTab,
     setCurrentMissionIndex,
@@ -414,27 +191,27 @@ export function App() {
     setLastPressedKey,
     setCoachingMessage,
     setProgress,
-    setShowActionTimeline,
-    setSpeedrunBestRecord,
+    setShowActionTimeline: timeline.setShowActionTimeline,
+    setSpeedrunBestRecord: speedrun.setSpeedrunBestRecord,
   });
 
   const isModalOrGameBlocked =
-    isAnyModalOpen ||
+    viewSettings.isAnyModalOpen ||
     currentTab === 'arcade' ||
     currentTab === 'dungeon' ||
     currentTab === 'dojo';
 
   useVimKeyboardInput({
     isModalOrGameBlocked,
-    isGhostReplaying,
-    handleStopGhostReplay,
+    isGhostReplaying: ghost.isGhostReplaying,
+    handleStopGhostReplay: ghost.handleStopGhostReplay,
     isEditorFocused,
     setIsEditorFocused,
     editorMode: editorState.mode,
-    activePresets,
-    hardcoreMode,
-    hardcoreGuardRef,
-    triggerHardcoreViolation,
+    activePresets: hardcore.activePresets,
+    hardcoreMode: hardcore.hardcoreMode,
+    hardcoreGuardRef: hardcore.hardcoreGuardRef,
+    triggerHardcoreViolation: hardcore.triggerHardcoreViolation,
     setCoachingMessage,
     processKeyInput,
   });
@@ -443,23 +220,23 @@ export function App() {
     currentTab === 'course'
       ? currentMission
       : currentTab === 'custom' && customMission
-      ? customMission
-      : currentTab === 'speedrun' && speedrunStatus === 'running'
-      ? activeSpeedrunMission
-      : undefined;
+        ? customMission
+        : currentTab === 'speedrun' && speedrun.speedrunStatus === 'running'
+          ? speedrun.activeSpeedrunMission
+          : undefined;
 
   const statusFilename = resolveStatusFilename(
     displayEditorState,
     currentTab,
     currentMission,
-    speedrunCurrentStage
+    speedrun.speedrunCurrentStage
   );
 
   return (
     <div className="app-layout">
       {/* 🚀 상단 고정 플로팅 알림 토스트 */}
       <div className="top-toast-container" data-testid="top-toast-container" aria-live="polite">
-        {hardcoreWarning && (
+        {hardcore.hardcoreWarning && (
           <div
             className="hardcore-warning-banner hardcore-warning-toast"
             role="alert"
@@ -467,12 +244,12 @@ export function App() {
           >
             <div className="hardcore-warning-content">
               <span className="hardcore-warning-icon">🚫</span>
-              <span className="hardcore-warning-text">{hardcoreWarning}</span>
+              <span className="hardcore-warning-text">{hardcore.hardcoreWarning}</span>
             </div>
             <button
               type="button"
               className="hardcore-warning-close-btn"
-              onClick={dismissHardcoreWarning}
+              onClick={hardcore.dismissHardcoreWarning}
               aria-label={t('닫기')}
             >
               ✕
@@ -489,137 +266,119 @@ export function App() {
       <AppHeader
         currentTab={currentTab}
         customMission={customMission}
-        onSwitchTab={handleSwitchTab}
-        hardcoreMode={hardcoreMode}
-        onToggleHardcoreMode={handleToggleHardcoreMode}
-        onOpenDailyModal={() => setIsDailyModalOpen(true)}
-        onOpenAnalyticsModal={() => setIsAnalyticsModalOpen(true)}
-        onOpenCustomModal={() => setIsCustomModalOpen(true)}
-        onOpenConfigModal={() => setIsConfigModalOpen(true)}
-        onOpenLessonModal={() => setIsModalOpen(true)}
-        showDiffView={showDiffView}
-        onToggleDiffView={handleToggleDiffView}
-        showRegisterInspector={showRegisterInspector}
-        onToggleRegisterInspector={handleToggleRegisterInspector}
-        showMarksVisualizer={showMarksVisualizer}
-        onToggleMarksVisualizer={handleToggleMarksVisualizer}
-        showGrammarAST={showGrammarAST}
-        onToggleGrammarAST={handleToggleGrammarAST}
-        showActionTimeline={showActionTimeline}
-        onToggleActionTimeline={handleToggleActionTimeline}
-        showVirtualKeyboard={showVirtualKeyboard}
-        onToggleVirtualKeyboard={handleToggleVirtualKeyboard}
-        relativeLineNumbers={relativeLineNumbers}
-        onToggleRelativeLineNumbers={handleToggleRelativeLine}
-        showMacroDebugger={showMacroDebugger}
-        onToggleMacroDebugger={handleToggleMacroDebugger}
-        currentTheme={currentTheme}
-        onThemeChange={handleThemeChange}
-        isMuted={isMuted}
-        onToggleMute={toggleMute}
+        onSwitchTab={missionHandlers.handleSwitchTab}
+        hardcoreMode={hardcore.hardcoreMode}
+        onToggleHardcoreMode={hardcore.handleToggleHardcoreMode}
+        onOpenDailyModal={() => viewSettings.setIsDailyModalOpen(true)}
+        onOpenAnalyticsModal={() => viewSettings.setIsAnalyticsModalOpen(true)}
+        onOpenCustomModal={() => viewSettings.setIsCustomModalOpen(true)}
+        onOpenConfigModal={() => viewSettings.setIsConfigModalOpen(true)}
+        onOpenLessonModal={() => viewSettings.setIsModalOpen(true)}
+        showDiffView={viewSettings.showDiffView}
+        onToggleDiffView={viewSettings.handleToggleDiffView}
+        showRegisterInspector={viewSettings.showRegisterInspector}
+        onToggleRegisterInspector={viewSettings.handleToggleRegisterInspector}
+        showMarksVisualizer={viewSettings.showMarksVisualizer}
+        onToggleMarksVisualizer={viewSettings.handleToggleMarksVisualizer}
+        showGrammarAST={viewSettings.showGrammarAST}
+        onToggleGrammarAST={viewSettings.handleToggleGrammarAST}
+        showActionTimeline={timeline.showActionTimeline}
+        onToggleActionTimeline={timeline.handleToggleActionTimeline}
+        showVirtualKeyboard={viewSettings.showVirtualKeyboard}
+        onToggleVirtualKeyboard={viewSettings.handleToggleVirtualKeyboard}
+        relativeLineNumbers={viewSettings.relativeLineNumbers}
+        onToggleRelativeLineNumbers={viewSettings.handleToggleRelativeLine}
+        showMacroDebugger={viewSettings.showMacroDebugger}
+        onToggleMacroDebugger={viewSettings.handleToggleMacroDebugger}
+        currentTheme={hardcore.currentTheme}
+        onThemeChange={hardcore.handleThemeChange}
+        isMuted={audio.isMuted}
+        onToggleMute={audio.toggleMute}
         locale={locale}
       />
 
       <AppMainWorkspace
         currentTab={currentTab}
-        onSwitchTab={handleSwitchTab}
-        showGrammarAST={showGrammarAST}
-        onCloseGrammarAST={() => setShowGrammarAST(false)}
-        editorState={editorState}
-        displayEditorState={displayEditorState}
-        processKeyInput={processKeyInput}
-        playKeySound={playKeySound}
-        playSuccessSound={playSuccessSound}
-        isMuted={isMuted}
-        dojoInitialDrill={dojoInitialDrill}
-        progress={progress}
-        currentMission={currentMission}
-        currentMissionIndex={currentMissionIndex}
-        totalMissions={MISSIONS.length}
-        customMission={customMission}
-        isCompleted={isCompleted}
-        keystrokeCount={keystrokeCount}
-        onSelectMission={handleSelectMission}
-        onResetMission={handleResetMission}
-        onResetCustomMission={handleResetCustomMission}
-        onStartGhostReplay={handleStartGhostReplay}
-        onStopGhostReplay={handleStopGhostReplay}
-        isGhostReplaying={isGhostReplaying}
-        ghostReplayProgress={ghostReplayProgress}
-        onOpenBYOCModal={() => setIsBYOCModalOpen(true)}
-        onResetSandbox={handleResetSandbox}
-        speedrunStatus={speedrunStatus}
-        speedrunCurrentStage={speedrunCurrentStage}
-        speedrunTotalStages={speedrunStages.length}
-        activeSpeedrunMission={activeSpeedrunMission}
-        speedrunElapsedSeconds={speedrunElapsedSeconds}
-        speedrunKeystrokes={speedrunKeystrokes}
-        speedrunBestRecord={speedrunBestRecord}
-        speedrunIsNewRecord={speedrunIsNewRecord}
-        onStartSpeedrun={handleStartSpeedrun}
-        isEditorShaking={isEditorShaking}
-        isEditorFocused={isEditorFocused}
-        relativeLineNumbers={relativeLineNumbers}
-        bellCount={bellCount}
-        onFocusEditor={() => setIsEditorFocused(true)}
-        onEditorAreaClick={handleEditorAreaClick}
-        viewportHandlers={{
-          onSwitchPane: handleSwitchPane,
-          onSelectCompletionCandidate: handleSelectCompletionCandidate,
-          onSwitchBuffer: handleSwitchBuffer,
-          onSwitchTabPage: handleSwitchTabPage,
-          onCloseTabPage: handleCloseTabPage,
-          onNewTabPage: handleNewTabPage,
-          onJumpToMark: handleJumpToMark,
-          onCloseLspHover: handleCloseLspHover,
-          onJumpQuickfixItem: handleJumpQuickfixItem,
-          onCloseQuickfixWindow: handleCloseQuickfixWindow,
-          onJumpLocationListItem: handleJumpLocationListItem,
-          onCloseLocationListWindow: handleCloseLocationListWindow,
-          onSwitchCommandLineWindowType: handleSwitchCommandLineWindowType,
-          onClearCommandLineHistory: handleClearCommandLineHistory,
-          onCloseCommandLineWindow: handleCloseCommandLineWindow,
-          onSelectCommandLineWindowLine: handleSelectCommandLineWindowLine,
-          onExecuteCommandLineWindowLine: handleExecuteCommandLineWindowLine,
+        onSwitchTab={missionHandlers.handleSwitchTab}
+        audio={{
+          playKeySound: audio.playKeySound,
+          playSuccessSound: audio.playSuccessSound,
+          isMuted: audio.isMuted,
         }}
-        recentKeys={recentKeys}
-        statusFilename={statusFilename}
-        showRegisterInspector={showRegisterInspector}
-        onToggleRegisterInspector={handleToggleRegisterInspector}
-        onRunMacroFromDebugger={handleRunMacroFromDebugger}
-        onOpenMacroDebugger={handleOpenMacroDebugger}
-        onUpdateRegister={handleUpdateRegister}
-        onDeleteRegister={handleDeleteRegister}
-        showMarksVisualizer={showMarksVisualizer}
-        onToggleMarksVisualizer={handleToggleMarksVisualizer}
-        marksHandlers={{
-          onJumpToMark: handleJumpToMark,
-          onDeleteMark: handleDeleteMark,
-          onDeleteAllLocalMarks: handleDeleteAllLocalMarks,
-          onJumpToIndex: handleJumpToIndex,
-          onJumpOlder: handleJumpOlder,
-          onJumpNewer: handleJumpNewer,
-          onClearJumps: handleClearJumps,
-          onSetMark: handleSetMark,
-          onJumpToLine: handleJumpToLine,
+        mission={{
+          progress,
+          currentMission,
+          currentMissionIndex,
+          totalMissions: MISSIONS.length,
+          customMission,
+          isCompleted,
+          keystrokeCount,
+          onSelectMission: missionHandlers.handleSelectMission,
+          onResetMission: missionHandlers.handleResetMission,
+          onResetCustomMission: missionHandlers.handleResetCustomMission,
+          onStartGhostReplay: ghost.handleStartGhostReplay,
+          onStopGhostReplay: ghost.handleStopGhostReplay,
+          isGhostReplaying: ghost.isGhostReplaying,
+          ghostReplayProgress: ghost.ghostReplayProgress,
+          onOpenBYOCModal: () => viewSettings.setIsBYOCModalOpen(true),
+          onResetSandbox: missionHandlers.handleResetSandbox,
+          dojoInitialDrill,
         }}
-        showMacroDebugger={showMacroDebugger}
-        onToggleMacroDebugger={handleToggleMacroDebugger}
-        timelineBaseState={timelineBaseState}
-        onPreviewMacroFrame={setMacroPreviewState}
-        showDiffView={showDiffView}
-        activeMissionForDiff={activeMissionForDiff}
-        showVirtualKeyboard={showVirtualKeyboard}
-        lastPressedKey={lastPressedKey}
-        showActionTimeline={showActionTimeline}
-        timelineSteps={timelineSteps}
-        previewStepIndex={previewStepIndex}
-        sandboxInitialText={sandboxInitialLines().join('\n')}
-        allKeysSoFar={allKeysSoFar}
-        onSelectTimelineStep={handleSelectTimelineStep}
-        onBranchFromStep={handleBranchFromStep}
-        onCancelTimelinePreview={handleCancelPreview}
-        onToggleActionTimeline={handleToggleActionTimeline}
+        speedrun={{
+          status: speedrun.speedrunStatus,
+          currentStage: speedrun.speedrunCurrentStage,
+          totalStages: speedrun.speedrunStages.length,
+          activeMission: speedrun.activeSpeedrunMission,
+          elapsedSeconds: speedrun.speedrunElapsedSeconds,
+          keystrokes: speedrun.speedrunKeystrokes,
+          bestRecord: speedrun.speedrunBestRecord,
+          isNewRecord: speedrun.speedrunIsNewRecord,
+          onStart: speedrun.handleStartSpeedrun,
+        }}
+        editor={{
+          editorState,
+          displayEditorState,
+          processKeyInput,
+          isShaking: hardcore.isEditorShaking,
+          isFocused: isEditorFocused,
+          relativeLineNumbers: viewSettings.relativeLineNumbers,
+          bellCount,
+          onFocus: () => setIsEditorFocused(true),
+          onAreaClick: hardcore.handleEditorAreaClick,
+          recentKeys,
+          statusFilename,
+          viewportHandlers: workspaceHandlers.viewportHandlers,
+        }}
+        panels={{
+          showGrammarAST: viewSettings.showGrammarAST,
+          onCloseGrammarAST: () => viewSettings.setShowGrammarAST(false),
+          showRegisterInspector: viewSettings.showRegisterInspector,
+          onToggleRegisterInspector: viewSettings.handleToggleRegisterInspector,
+          onRunMacroFromDebugger: missionHandlers.handleRunMacroFromDebugger,
+          onOpenMacroDebugger: viewSettings.handleOpenMacroDebugger,
+          onUpdateRegister: workspaceHandlers.handleUpdateRegister,
+          onDeleteRegister: workspaceHandlers.handleDeleteRegister,
+          showMarksVisualizer: viewSettings.showMarksVisualizer,
+          onToggleMarksVisualizer: viewSettings.handleToggleMarksVisualizer,
+          marksHandlers: workspaceHandlers.marksHandlers,
+          showMacroDebugger: viewSettings.showMacroDebugger,
+          onToggleMacroDebugger: viewSettings.handleToggleMacroDebugger,
+          timelineBaseState: timeline.timelineBaseState,
+          onPreviewMacroFrame: setMacroPreviewState,
+          showDiffView: viewSettings.showDiffView,
+          activeMissionForDiff,
+          showVirtualKeyboard: viewSettings.showVirtualKeyboard,
+          lastPressedKey,
+          showActionTimeline: timeline.showActionTimeline,
+          timelineSteps: timeline.timelineSteps,
+          previewStepIndex: timeline.previewStepIndex,
+          sandboxInitialText: sandboxInitialLines().join('\n'),
+          allKeysSoFar: timeline.allKeysSoFar,
+          onSelectTimelineStep: timeline.handleSelectTimelineStep,
+          onBranchFromStep: timeline.handleBranchFromStep,
+          onCancelTimelinePreview: timeline.handleCancelPreview,
+          onToggleActionTimeline: timeline.handleToggleActionTimeline,
+        }}
       />
 
       <footer className="app-footer">
@@ -628,49 +387,57 @@ export function App() {
 
       <AppModals
         editorState={editorState}
-        currentMissionId={currentMission.id}
-        progress={progress}
-        isModalOpen={isModalOpen}
-        onCloseLessonModal={() => setIsModalOpen(false)}
-        onSelectLessonById={handleSelectLessonById}
-        isCustomModalOpen={isCustomModalOpen}
-        onCloseCustomModal={() => setIsCustomModalOpen(false)}
-        onPlayCustomMission={handlePlayCustomMission}
-        isAnalyticsModalOpen={isAnalyticsModalOpen}
-        onCloseAnalyticsModal={() => setIsAnalyticsModalOpen(false)}
-        onOpenDailyFromAnalytics={() => setIsDailyModalOpen(true)}
-        onStartWeaknessDrill={() => {
-          setDojoInitialDrill({ drill: 'weakness-custom', nonce: Date.now() });
-          handleSwitchTab('dojo');
+        lesson={{
+          isOpen: viewSettings.isModalOpen,
+          onClose: () => viewSettings.setIsModalOpen(false),
+          currentMissionId: currentMission.id,
+          progress,
+          onSelectById: missionHandlers.handleSelectLessonById,
         }}
-        isDailyModalOpen={isDailyModalOpen}
-        onCloseDailyModal={() => setIsDailyModalOpen(false)}
-        playKeySound={playKeySound}
-        playSuccessSound={playSuccessSound}
-        isConfigModalOpen={isConfigModalOpen}
-        onCloseConfigModal={() => {
-          setIsConfigModalOpen(false);
-          setEditorState((prev) => ({ ...prev, showConfigModal: false }));
+        customMission={{
+          isOpen: viewSettings.isCustomModalOpen,
+          onClose: () => viewSettings.setIsCustomModalOpen(false),
+          onPlay: missionHandlers.handlePlayCustomMission,
         }}
-        relativeLineNumbers={relativeLineNumbers}
-        currentTheme={currentTheme}
-        leaderKey={leaderKey}
-        activePresets={activePresets}
-        onTogglePreset={handleTogglePreset}
-        onChangeLeaderKey={handleChangeLeaderKey}
-        customKeymaps={customKeymaps}
-        onAddCustomKeymap={handleAddCustomKeymap}
-        onDeleteCustomKeymap={handleDeleteCustomKeymap}
-        onRestoreBackup={handleRestoreBackup}
-        isBYOCModalOpen={isBYOCModalOpen}
-        onCloseBYOCModal={() => setIsBYOCModalOpen(false)}
-        onPlayBYOCMission={handlePlayBYOCMission}
-        onSelectFuzzyFinderAction={handleSelectFuzzyFinderAction}
-        onSelectFuzzyItemIndex={handleSelectFuzzyItemIndex}
-        onCloseFuzzyFinder={handleCloseFuzzyFinder}
-        onJumpHelpTag={handleJumpHelpTag}
-        onPopHelpTag={handlePopHelpTag}
-        onCloseHelp={handleCloseHelp}
+        analytics={{
+          isOpen: viewSettings.isAnalyticsModalOpen,
+          onClose: () => viewSettings.setIsAnalyticsModalOpen(false),
+          onOpenDaily: () => viewSettings.setIsDailyModalOpen(true),
+          onStartWeaknessDrill: () => {
+            setDojoInitialDrill({ drill: 'weakness-custom', nonce: Date.now() });
+            missionHandlers.handleSwitchTab('dojo');
+          },
+        }}
+        daily={{
+          isOpen: viewSettings.isDailyModalOpen,
+          onClose: () => viewSettings.setIsDailyModalOpen(false),
+          playKeySound: audio.playKeySound,
+          playSuccessSound: audio.playSuccessSound,
+        }}
+        config={{
+          isOpen: viewSettings.isConfigModalOpen,
+          onClose: () => {
+            viewSettings.setIsConfigModalOpen(false);
+            setEditorState((prev) => ({ ...prev, showConfigModal: false }));
+          },
+          relativeLineNumbers: viewSettings.relativeLineNumbers,
+          currentTheme: hardcore.currentTheme,
+          leaderKey: hardcore.leaderKey,
+          activePresets: hardcore.activePresets,
+          onTogglePreset: hardcore.handleTogglePreset,
+          onChangeLeaderKey: hardcore.handleChangeLeaderKey,
+          customKeymaps: hardcore.customKeymaps,
+          onAddCustomKeymap: hardcore.handleAddCustomKeymap,
+          onDeleteCustomKeymap: hardcore.handleDeleteCustomKeymap,
+          onRestoreBackup: missionHandlers.handleRestoreBackup,
+        }}
+        byoc={{
+          isOpen: viewSettings.isBYOCModalOpen,
+          onClose: () => viewSettings.setIsBYOCModalOpen(false),
+          onPlay: missionHandlers.handlePlayBYOCMission,
+        }}
+        fuzzyFinderHandlers={workspaceHandlers.fuzzyFinderHandlers}
+        helpHandlers={workspaceHandlers.helpHandlers}
       />
     </div>
   );

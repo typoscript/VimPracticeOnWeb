@@ -41,52 +41,68 @@ function useOpenedOnce(isOpen: boolean): boolean {
   return opened || isOpen;
 }
 
-interface AppModalsProps {
+export interface AppModalsProps {
   editorState: VimEditorState;
-  currentMissionId: number;
-  progress: LessonProgress;
-  isModalOpen: boolean;
-  onCloseLessonModal: () => void;
-  onSelectLessonById: (missionId: number) => void;
-  isCustomModalOpen: boolean;
-  onCloseCustomModal: () => void;
-  onPlayCustomMission: (data: CustomMissionData) => void;
-  isAnalyticsModalOpen: boolean;
-  onCloseAnalyticsModal: () => void;
-  onOpenDailyFromAnalytics: () => void;
-  onStartWeaknessDrill: () => void;
-  isDailyModalOpen: boolean;
-  onCloseDailyModal: () => void;
-  playKeySound: (key: string, mode: VimMode) => void;
-  playSuccessSound: () => void;
-  isConfigModalOpen: boolean;
-  onCloseConfigModal: () => void;
-  relativeLineNumbers: boolean;
-  currentTheme: VimTheme;
-  leaderKey: string;
-  activePresets: Record<string, boolean>;
-  onTogglePreset: (presetId: string) => void;
-  onChangeLeaderKey: (leader: string) => void;
-  customKeymaps: CustomKeymapItem[];
-  onAddCustomKeymap: (rule: Omit<CustomKeymapItem, 'id'>) => void;
-  onDeleteCustomKeymap: (id: string) => void;
-  onRestoreBackup: () => void;
-  isBYOCModalOpen: boolean;
-  onCloseBYOCModal: () => void;
-  onPlayBYOCMission: (missionData: {
-    title: string;
-    description: string;
-    initialText: string;
-    targetText: string;
-    par: number;
-    hint: string;
-  }) => void;
-  onSelectFuzzyFinderAction: (action: 'open' | 'vsplit' | 'split' | 'tab') => void;
-  onSelectFuzzyItemIndex: (index: number) => void;
-  onCloseFuzzyFinder: () => void;
-  onJumpHelpTag: (tag: string) => void;
-  onPopHelpTag: () => void;
-  onCloseHelp: () => void;
+  lesson: {
+    isOpen: boolean;
+    onClose: () => void;
+    currentMissionId: number;
+    progress: LessonProgress;
+    onSelectById: (missionId: number) => void;
+  };
+  customMission: {
+    isOpen: boolean;
+    onClose: () => void;
+    onPlay: (data: CustomMissionData) => void;
+  };
+  analytics: {
+    isOpen: boolean;
+    onClose: () => void;
+    onOpenDaily: () => void;
+    onStartWeaknessDrill: () => void;
+  };
+  daily: {
+    isOpen: boolean;
+    onClose: () => void;
+    playKeySound: (key: string, mode: VimMode) => void;
+    playSuccessSound: () => void;
+  };
+  config: {
+    isOpen: boolean;
+    onClose: () => void;
+    relativeLineNumbers: boolean;
+    currentTheme: VimTheme;
+    leaderKey: string;
+    activePresets: Record<string, boolean>;
+    onTogglePreset: (presetId: string) => void;
+    onChangeLeaderKey: (leader: string) => void;
+    customKeymaps: CustomKeymapItem[];
+    onAddCustomKeymap: (rule: Omit<CustomKeymapItem, 'id'>) => void;
+    onDeleteCustomKeymap: (id: string) => void;
+    onRestoreBackup: () => void;
+  };
+  byoc: {
+    isOpen: boolean;
+    onClose: () => void;
+    onPlay: (missionData: {
+      title: string;
+      description: string;
+      initialText: string;
+      targetText: string;
+      par: number;
+      hint: string;
+    }) => void;
+  };
+  fuzzyFinderHandlers: {
+    onSelectAction: (action: 'open' | 'vsplit' | 'split' | 'tab') => void;
+    onSelectItemIndex: (index: number) => void;
+    onClose: () => void;
+  };
+  helpHandlers: {
+    onJumpTag: (tag: string) => void;
+    onPopTag: () => void;
+    onClose: () => void;
+  };
 }
 
 /**
@@ -94,114 +110,85 @@ interface AppModalsProps {
  */
 export function AppModals({
   editorState,
-  currentMissionId,
-  progress,
-  isModalOpen,
-  onCloseLessonModal,
-  onSelectLessonById,
-  isCustomModalOpen,
-  onCloseCustomModal,
-  onPlayCustomMission,
-  isAnalyticsModalOpen,
-  onCloseAnalyticsModal,
-  onOpenDailyFromAnalytics,
-  onStartWeaknessDrill,
-  isDailyModalOpen,
-  onCloseDailyModal,
-  playKeySound,
-  playSuccessSound,
-  isConfigModalOpen,
-  onCloseConfigModal,
-  relativeLineNumbers,
-  currentTheme,
-  leaderKey,
-  activePresets,
-  onTogglePreset,
-  onChangeLeaderKey,
-  customKeymaps,
-  onAddCustomKeymap,
-  onDeleteCustomKeymap,
-  onRestoreBackup,
-  isBYOCModalOpen,
-  onCloseBYOCModal,
-  onPlayBYOCMission,
-  onSelectFuzzyFinderAction,
-  onSelectFuzzyItemIndex,
-  onCloseFuzzyFinder,
-  onJumpHelpTag,
-  onPopHelpTag,
-  onCloseHelp,
+  lesson,
+  customMission,
+  analytics,
+  daily,
+  config,
+  byoc,
+  fuzzyFinderHandlers,
+  helpHandlers,
 }: AppModalsProps) {
-  const customModalLoaded = useOpenedOnce(isCustomModalOpen);
-  const analyticsModalLoaded = useOpenedOnce(isAnalyticsModalOpen);
-  const dailyModalLoaded = useOpenedOnce(isDailyModalOpen);
-  const configModalLoaded = useOpenedOnce(isConfigModalOpen);
-  const byocModalLoaded = useOpenedOnce(isBYOCModalOpen);
+  const customModalLoaded = useOpenedOnce(customMission.isOpen);
+  const analyticsModalLoaded = useOpenedOnce(analytics.isOpen);
+  const dailyModalLoaded = useOpenedOnce(daily.isOpen);
+  const configModalLoaded = useOpenedOnce(config.isOpen);
+  const byocModalLoaded = useOpenedOnce(byoc.isOpen);
 
   return (
     <>
       <LessonSelectModal
-        isOpen={isModalOpen}
-        onClose={onCloseLessonModal}
+        isOpen={lesson.isOpen}
+        onClose={lesson.onClose}
         missions={MISSIONS}
-        currentMissionId={currentMissionId}
-        progress={progress}
-        onSelectLesson={onSelectLessonById}
+        currentMissionId={lesson.currentMissionId}
+        progress={lesson.progress}
+        onSelectLesson={lesson.onSelectById}
       />
 
       <Suspense fallback={null}>
         {customModalLoaded && (
           <CustomMissionModal
-            isOpen={isCustomModalOpen}
-            onClose={onCloseCustomModal}
-            onPlayMission={onPlayCustomMission}
+            isOpen={customMission.isOpen}
+            onClose={customMission.onClose}
+            onPlayMission={customMission.onPlay}
           />
         )}
 
         {analyticsModalLoaded && (
           <AnalyticsModal
-            isOpen={isAnalyticsModalOpen}
-            onClose={onCloseAnalyticsModal}
-            progress={progress}
-            onOpenDailyChallenge={onOpenDailyFromAnalytics}
-            onStartWeaknessDrill={onStartWeaknessDrill}
-            onSelectLesson={onSelectLessonById}
+            isOpen={analytics.isOpen}
+            onClose={analytics.onClose}
+            progress={lesson.progress}
+            onOpenDailyChallenge={analytics.onOpenDaily}
+            onStartWeaknessDrill={analytics.onStartWeaknessDrill}
+            onSelectLesson={lesson.onSelectById}
           />
         )}
 
         {dailyModalLoaded && (
           <DailyChallengeModal
-            isOpen={isDailyModalOpen}
-            onClose={onCloseDailyModal}
-            onPlayKeySound={playKeySound}
-            onPlaySuccessSound={playSuccessSound}
+            isOpen={daily.isOpen}
+            onClose={daily.onClose}
+            onPlayKeySound={daily.playKeySound}
+            onPlaySuccessSound={daily.playSuccessSound}
           />
         )}
 
         {configModalLoaded && (
           <ConfigExporterModal
-            isOpen={isConfigModalOpen}
-            onClose={onCloseConfigModal}
-            relativenumber={relativeLineNumbers}
-            theme={currentTheme}
-            leaderKey={leaderKey}
-            activePresets={activePresets}
-            onTogglePreset={onTogglePreset}
-            onChangeLeaderKey={onChangeLeaderKey}
-            customKeymaps={customKeymaps}
-            onAddCustomKeymap={onAddCustomKeymap}
-            onDeleteCustomKeymap={onDeleteCustomKeymap}
+            isOpen={config.isOpen}
+            onClose={config.onClose}
+            relativenumber={config.relativeLineNumbers}
+            theme={config.currentTheme}
+            leaderKey={config.leaderKey}
+            activePresets={config.activePresets}
+            onTogglePreset={config.onTogglePreset}
+            onChangeLeaderKey={config.onChangeLeaderKey}
+            customKeymaps={config.customKeymaps}
+            onAddCustomKeymap={config.onAddCustomKeymap}
+            onDeleteCustomKeymap={config.onDeleteCustomKeymap}
             options={editorState.options}
-            onRestoreBackup={onRestoreBackup}
+            onRestoreBackup={config.onRestoreBackup}
           />
         )}
 
         {byocModalLoaded && (
           <BYOCModal
-            isOpen={isBYOCModalOpen}
-            onClose={onCloseBYOCModal}
+            isOpen={byoc.isOpen}
+            onClose={byoc.onClose}
             initialCode={editorState.lines.join('\n')}
-            onStartMission={onPlayBYOCMission}
+            onStartMission={byoc.onPlay}
           />
         )}
       </Suspense>
@@ -209,18 +196,18 @@ export function AppModals({
       {editorState.fuzzyFinder?.isOpen && (
         <FuzzyFinder
           state={editorState}
-          onSelectAction={onSelectFuzzyFinderAction}
-          onSelectItemIndex={onSelectFuzzyItemIndex}
-          onClose={onCloseFuzzyFinder}
+          onSelectAction={fuzzyFinderHandlers.onSelectAction}
+          onSelectItemIndex={fuzzyFinderHandlers.onSelectItemIndex}
+          onClose={fuzzyFinderHandlers.onClose}
         />
       )}
 
       {editorState.helpSession?.isOpen && (
         <HelpViewer
           session={editorState.helpSession}
-          onJumpTag={onJumpHelpTag}
-          onPopTag={onPopHelpTag}
-          onClose={onCloseHelp}
+          onJumpTag={helpHandlers.onJumpTag}
+          onPopTag={helpHandlers.onPopTag}
+          onClose={helpHandlers.onClose}
         />
       )}
     </>

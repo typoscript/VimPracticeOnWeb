@@ -18,9 +18,15 @@ import { LessonProgress } from '../../utils/storage';
 import { t } from '../../i18n';
 
 // 첫 화면에 필요 없는 게임 탭 화면은 처음 열 때 별도 청크로 불러옵니다 (초기 번들 크기 절감)
-const ArcadeSurvival = lazy(() => import('../ArcadeSurvival/ArcadeSurvival').then((m) => ({ default: m.ArcadeSurvival })));
-const DungeonRPG = lazy(() => import('../DungeonRPG/DungeonRPG').then((m) => ({ default: m.DungeonRPG })));
-const HardcoreDojo = lazy(() => import('../HardcoreDojo/HardcoreDojo').then((m) => ({ default: m.HardcoreDojo })));
+const ArcadeSurvival = lazy(() =>
+  import('../ArcadeSurvival/ArcadeSurvival').then((m) => ({ default: m.ArcadeSurvival }))
+);
+const DungeonRPG = lazy(() =>
+  import('../DungeonRPG/DungeonRPG').then((m) => ({ default: m.DungeonRPG }))
+);
+const HardcoreDojo = lazy(() =>
+  import('../HardcoreDojo/HardcoreDojo').then((m) => ({ default: m.HardcoreDojo }))
+);
 
 type MissionPanelProps = React.ComponentProps<typeof MissionPanel>;
 type SpeedrunPanelProps = React.ComponentProps<typeof SpeedrunPanel>;
@@ -29,18 +35,13 @@ type RegisterInspectorProps = React.ComponentProps<typeof RegisterInspector>;
 type MarksVisualizerProps = React.ComponentProps<typeof MarksJumpVisualizer>;
 type ActionTimelineProps = React.ComponentProps<typeof ActionTimelinePanel>;
 
-export interface AppMainWorkspaceProps {
-  currentTab: AppTab;
-  onSwitchTab: (tab: AppTab) => void;
-  showGrammarAST: boolean;
-  onCloseGrammarAST: () => void;
-  editorState: VimEditorState;
-  displayEditorState: VimEditorState;
-  processKeyInput: (key: string) => void;
+export interface WorkspaceAudioProps {
   playKeySound: (key: string, mode: VimMode) => void;
   playSuccessSound: () => void;
   isMuted: boolean;
-  dojoInitialDrill: { drill: 'weakness-custom'; nonce: number } | null;
+}
+
+export interface WorkspaceMissionProps {
   progress: LessonProgress;
   currentMission: Mission;
   currentMissionIndex: number;
@@ -57,21 +58,33 @@ export interface AppMainWorkspaceProps {
   ghostReplayProgress: MissionPanelProps['ghostReplayProgress'];
   onOpenBYOCModal: () => void;
   onResetSandbox: () => void;
-  speedrunStatus: SpeedrunPanelProps['status'];
-  speedrunCurrentStage: number;
-  speedrunTotalStages: number;
-  activeSpeedrunMission?: Mission;
-  speedrunElapsedSeconds: number;
-  speedrunKeystrokes: number;
-  speedrunBestRecord: SpeedrunPanelProps['bestRecord'];
-  speedrunIsNewRecord: boolean;
-  onStartSpeedrun: () => void;
-  isEditorShaking: boolean;
-  isEditorFocused: boolean;
+  dojoInitialDrill: { drill: 'weakness-custom'; nonce: number } | null;
+}
+
+export interface WorkspaceSpeedrunProps {
+  status: SpeedrunPanelProps['status'];
+  currentStage: number;
+  totalStages: number;
+  activeMission?: Mission;
+  elapsedSeconds: number;
+  keystrokes: number;
+  bestRecord: SpeedrunPanelProps['bestRecord'];
+  isNewRecord: boolean;
+  onStart: () => void;
+}
+
+export interface WorkspaceEditorProps {
+  editorState: VimEditorState;
+  displayEditorState: VimEditorState;
+  processKeyInput: (key: string) => void;
+  isShaking: boolean;
+  isFocused: boolean;
   relativeLineNumbers: boolean;
   bellCount: number;
-  onFocusEditor: () => void;
-  onEditorAreaClick: () => void;
+  onFocus: () => void;
+  onAreaClick: () => void;
+  recentKeys: React.ComponentProps<typeof Keycaster>['recentKeys'];
+  statusFilename: string;
   viewportHandlers: Pick<
     EditorViewportProps,
     | 'onSwitchPane'
@@ -92,8 +105,11 @@ export interface AppMainWorkspaceProps {
     | 'onSelectCommandLineWindowLine'
     | 'onExecuteCommandLineWindowLine'
   >;
-  recentKeys: React.ComponentProps<typeof Keycaster>['recentKeys'];
-  statusFilename: string;
+}
+
+export interface WorkspacePanelsProps {
+  showGrammarAST: boolean;
+  onCloseGrammarAST: () => void;
   showRegisterInspector: boolean;
   onToggleRegisterInspector: () => void;
   onRunMacroFromDebugger: (regName: string, count?: number) => void;
@@ -133,79 +149,26 @@ export interface AppMainWorkspaceProps {
   onToggleActionTimeline: () => void;
 }
 
+export interface AppMainWorkspaceProps {
+  currentTab: AppTab;
+  onSwitchTab: (tab: AppTab) => void;
+  audio: WorkspaceAudioProps;
+  mission: WorkspaceMissionProps;
+  speedrun: WorkspaceSpeedrunProps;
+  editor: WorkspaceEditorProps;
+  panels: WorkspacePanelsProps;
+}
+
 export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
   currentTab,
   onSwitchTab,
-  showGrammarAST,
-  onCloseGrammarAST,
-  editorState,
-  displayEditorState,
-  processKeyInput,
-  playKeySound,
-  playSuccessSound,
-  isMuted,
-  dojoInitialDrill,
-  progress,
-  currentMission,
-  currentMissionIndex,
-  totalMissions,
-  customMission,
-  isCompleted,
-  keystrokeCount,
-  onSelectMission,
-  onResetMission,
-  onResetCustomMission,
-  onStartGhostReplay,
-  onStopGhostReplay,
-  isGhostReplaying,
-  ghostReplayProgress,
-  onOpenBYOCModal,
-  onResetSandbox,
-  speedrunStatus,
-  speedrunCurrentStage,
-  speedrunTotalStages,
-  activeSpeedrunMission,
-  speedrunElapsedSeconds,
-  speedrunKeystrokes,
-  speedrunBestRecord,
-  speedrunIsNewRecord,
-  onStartSpeedrun,
-  isEditorShaking,
-  isEditorFocused,
-  relativeLineNumbers,
-  bellCount,
-  onFocusEditor,
-  onEditorAreaClick,
-  viewportHandlers,
-  recentKeys,
-  statusFilename,
-  showRegisterInspector,
-  onToggleRegisterInspector,
-  onRunMacroFromDebugger,
-  onOpenMacroDebugger,
-  onUpdateRegister,
-  onDeleteRegister,
-  showMarksVisualizer,
-  onToggleMarksVisualizer,
-  marksHandlers,
-  showMacroDebugger,
-  onToggleMacroDebugger,
-  timelineBaseState,
-  onPreviewMacroFrame,
-  showDiffView,
-  activeMissionForDiff,
-  showVirtualKeyboard,
-  lastPressedKey,
-  showActionTimeline,
-  timelineSteps,
-  previewStepIndex,
-  sandboxInitialText,
-  allKeysSoFar,
-  onSelectTimelineStep,
-  onBranchFromStep,
-  onCancelTimelinePreview,
-  onToggleActionTimeline,
+  audio,
+  mission,
+  speedrun,
+  editor,
+  panels,
 }) => {
+  const { editorState, displayEditorState } = editor;
   const tabLoadingFallback = (
     <div className="lazy-tab-loading" data-testid="lazy-tab-loading">
       {t('불러오는 중…')}
@@ -214,72 +177,75 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
 
   return (
     <main className="editor-wrapper">
-      {showGrammarAST && currentTab !== 'arcade' && currentTab !== 'dungeon' && currentTab !== 'dojo' && (
-        <VimGrammarASTViewer
-          currentKeySequence={editorState.pendingKeys || ''}
-          activeRegister={editorState.activeRegister}
-          onSelectCandidate={(token) => {
-            for (const ch of token) {
-              processKeyInput(ch);
-            }
-          }}
-          onClose={onCloseGrammarAST}
-        />
-      )}
+      {panels.showGrammarAST &&
+        currentTab !== 'arcade' &&
+        currentTab !== 'dungeon' &&
+        currentTab !== 'dojo' && (
+          <VimGrammarASTViewer
+            currentKeySequence={editorState.pendingKeys || ''}
+            activeRegister={editorState.activeRegister}
+            onSelectCandidate={(token) => {
+              for (const ch of token) {
+                editor.processKeyInput(ch);
+              }
+            }}
+            onClose={panels.onCloseGrammarAST}
+          />
+        )}
 
       {currentTab === 'arcade' ? (
         <Suspense fallback={tabLoadingFallback}>
           <ArcadeSurvival
-            onPlayKeySound={playKeySound}
-            onPlaySuccessSound={playSuccessSound}
-            isMuted={isMuted}
+            onPlayKeySound={audio.playKeySound}
+            onPlaySuccessSound={audio.playSuccessSound}
+            isMuted={audio.isMuted}
           />
         </Suspense>
       ) : currentTab === 'dungeon' ? (
         <Suspense fallback={tabLoadingFallback}>
           <DungeonRPG
-            onPlayKeySound={playKeySound}
-            onPlaySuccessSound={playSuccessSound}
-            isMuted={isMuted}
+            onPlayKeySound={audio.playKeySound}
+            onPlaySuccessSound={audio.playSuccessSound}
+            isMuted={audio.isMuted}
           />
         </Suspense>
       ) : currentTab === 'dojo' ? (
         <Suspense fallback={tabLoadingFallback}>
           <HardcoreDojo
             onBackToCourse={() => onSwitchTab('course')}
-            playKeySound={playKeySound}
-            playSuccessSound={playSuccessSound}
-            initialDrill={dojoInitialDrill}
-            analyticsProgress={progress}
+            playKeySound={audio.playKeySound}
+            playSuccessSound={audio.playSuccessSound}
+            initialDrill={mission.dojoInitialDrill}
+            analyticsProgress={mission.progress}
           />
         </Suspense>
       ) : (
         <>
           {currentTab === 'course' && (
             <MissionPanel
-              mission={currentMission}
-              missionIndex={currentMissionIndex}
-              totalMissions={totalMissions}
-              isCompleted={isCompleted}
-              keystrokeCount={keystrokeCount}
-              onSelectMission={onSelectMission}
-              onResetMission={onResetMission}
-              onStartGhostReplay={onStartGhostReplay}
-              onStopGhostReplay={onStopGhostReplay}
-              isGhostReplaying={isGhostReplaying}
-              ghostReplayProgress={ghostReplayProgress}
+              mission={mission.currentMission}
+              missionIndex={mission.currentMissionIndex}
+              totalMissions={mission.totalMissions}
+              isCompleted={mission.isCompleted}
+              keystrokeCount={mission.keystrokeCount}
+              onSelectMission={mission.onSelectMission}
+              onResetMission={mission.onResetMission}
+              onStartGhostReplay={mission.onStartGhostReplay}
+              onStopGhostReplay={mission.onStopGhostReplay}
+              isGhostReplaying={mission.isGhostReplaying}
+              ghostReplayProgress={mission.ghostReplayProgress}
             />
           )}
 
-          {currentTab === 'custom' && customMission && (
+          {currentTab === 'custom' && mission.customMission && (
             <MissionPanel
-              mission={customMission}
+              mission={mission.customMission}
               missionIndex={0}
               totalMissions={1}
-              isCompleted={isCompleted}
-              keystrokeCount={keystrokeCount}
+              isCompleted={mission.isCompleted}
+              keystrokeCount={mission.keystrokeCount}
               onSelectMission={() => {}}
-              onResetMission={onResetCustomMission}
+              onResetMission={mission.onResetCustomMission}
             />
           )}
 
@@ -294,7 +260,7 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
               <div className="sandbox-actions">
                 <button
                   className="sandbox-byoc-btn"
-                  onClick={onOpenBYOCModal}
+                  onClick={mission.onOpenBYOCModal}
                   data-testid="open-byoc-modal-btn"
                   title={t('내 실제 업무 코드를 붙여넣어 자동 리팩토링 미션 생성')}
                 >
@@ -302,7 +268,7 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
                 </button>
                 <button
                   className="sandbox-reset-btn"
-                  onClick={onResetSandbox}
+                  onClick={mission.onResetSandbox}
                   data-testid="sandbox-reset-btn"
                 >
                   {t('🔄 코드 초기화')}
@@ -313,16 +279,16 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
 
           {currentTab === 'speedrun' && (
             <SpeedrunPanel
-              status={speedrunStatus}
-              currentStageIndex={speedrunCurrentStage}
-              totalStages={speedrunTotalStages}
-              currentMissionTitle={activeSpeedrunMission ? t(activeSpeedrunMission.title) : undefined}
-              elapsedSeconds={speedrunElapsedSeconds}
-              totalKeystrokes={speedrunKeystrokes}
-              bestRecord={speedrunBestRecord}
-              isNewRecord={speedrunIsNewRecord}
-              onStart={onStartSpeedrun}
-              onRestart={onStartSpeedrun}
+              status={speedrun.status}
+              currentStageIndex={speedrun.currentStage}
+              totalStages={speedrun.totalStages}
+              currentMissionTitle={speedrun.activeMission ? t(speedrun.activeMission.title) : undefined}
+              elapsedSeconds={speedrun.elapsedSeconds}
+              totalKeystrokes={speedrun.keystrokes}
+              bestRecord={speedrun.bestRecord}
+              isNewRecord={speedrun.isNewRecord}
+              onStart={speedrun.onStart}
+              onRestart={speedrun.onStart}
             />
           )}
 
@@ -331,22 +297,22 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
             displayEditorState={displayEditorState}
             targetPosition={
               currentTab === 'course'
-                ? currentMission.targetCursor
-                : activeSpeedrunMission?.targetCursor
+                ? mission.currentMission.targetCursor
+                : speedrun.activeMission?.targetCursor
             }
             fallbackPrimaryFilename={
-              currentTab === 'course' ? currentMission.primaryFilename : undefined
+              currentTab === 'course' ? mission.currentMission.primaryFilename : undefined
             }
-            isEditorShaking={isEditorShaking}
-            isEditorFocused={isEditorFocused}
-            relativeLineNumbers={relativeLineNumbers}
-            bellCount={bellCount}
-            onFocusEditor={onFocusEditor}
-            onEditorAreaClick={onEditorAreaClick}
-            {...viewportHandlers}
+            isEditorShaking={editor.isShaking}
+            isEditorFocused={editor.isFocused}
+            relativeLineNumbers={editor.relativeLineNumbers}
+            bellCount={editor.bellCount}
+            onFocusEditor={editor.onFocus}
+            onEditorAreaClick={editor.onAreaClick}
+            {...editor.viewportHandlers}
           />
 
-          <Keycaster recentKeys={recentKeys} />
+          <Keycaster recentKeys={editor.recentKeys} />
           <StatusBar
             mode={displayEditorState.mode}
             cursor={displayEditorState.cursor}
@@ -354,7 +320,7 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
             insertRegisterPending={displayEditorState.insertRegisterPending}
             insertCtrlXMode={displayEditorState.insertCtrlXMode}
             confirmSubstitute={displayEditorState.confirmSubstitute}
-            filename={statusFilename}
+            filename={editor.statusFilename}
             pendingKeys={displayEditorState.pendingKeys}
             recordingMacro={displayEditorState.recordingMacro}
             commandType={displayEditorState.commandType}
@@ -376,85 +342,87 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
           />
 
           <RegisterInspector
-            isOpen={showRegisterInspector}
-            onToggle={onToggleRegisterInspector}
+            isOpen={panels.showRegisterInspector}
+            onToggle={panels.onToggleRegisterInspector}
             registers={editorState.registers}
             activeRegister={editorState.activeRegister}
             clipboard={editorState.clipboard}
             recordingMacro={editorState.recordingMacro}
-            onRunMacro={onRunMacroFromDebugger}
-            onOpenMacroDebugger={onOpenMacroDebugger}
-            onUpdateRegister={onUpdateRegister}
-            onDeleteRegister={onDeleteRegister}
+            onRunMacro={panels.onRunMacroFromDebugger}
+            onOpenMacroDebugger={panels.onOpenMacroDebugger}
+            onUpdateRegister={panels.onUpdateRegister}
+            onDeleteRegister={panels.onDeleteRegister}
           />
 
           <MarksJumpVisualizer
-            isOpen={showMarksVisualizer}
-            onClose={onToggleMarksVisualizer}
+            isOpen={panels.showMarksVisualizer}
+            onClose={panels.onToggleMarksVisualizer}
             marks={displayEditorState.marks}
             jumpList={displayEditorState.jumpList}
             jumpIndex={displayEditorState.jumpIndex}
             lines={displayEditorState.lines}
             currentCursor={displayEditorState.cursor}
             primaryFilename={displayEditorState.primaryFilename}
-            {...marksHandlers}
+            {...panels.marksHandlers}
           />
 
           <MacroDebugger
-            isOpen={showMacroDebugger}
-            onToggle={onToggleMacroDebugger}
-            baseState={timelineBaseState}
-            onPreviewFrame={onPreviewMacroFrame}
-            onRunMacro={onRunMacroFromDebugger}
+            isOpen={panels.showMacroDebugger}
+            onToggle={panels.onToggleMacroDebugger}
+            baseState={panels.timelineBaseState}
+            onPreviewFrame={panels.onPreviewMacroFrame}
+            onRunMacro={panels.onRunMacroFromDebugger}
           />
 
-          {showDiffView && activeMissionForDiff && (
+          {panels.showDiffView && panels.activeMissionForDiff && (
             <DiffViewer
               currentLines={displayEditorState.lines}
-              targetLines={activeMissionForDiff.targetLines}
-              isCompleted={currentTab === 'course' || currentTab === 'custom' ? isCompleted : false}
+              targetLines={panels.activeMissionForDiff.targetLines}
+              isCompleted={
+                currentTab === 'course' || currentTab === 'custom' ? mission.isCompleted : false
+              }
             />
           )}
 
-          {showVirtualKeyboard && (
+          {panels.showVirtualKeyboard && (
             <VirtualKeyboard
               mode={editorState.mode}
-              lastPressedKey={lastPressedKey}
-              onKeyPress={processKeyInput}
+              lastPressedKey={panels.lastPressedKey}
+              onKeyPress={editor.processKeyInput}
             />
           )}
 
-          {showActionTimeline && (
+          {panels.showActionTimeline && (
             <ActionTimelinePanel
-              steps={timelineSteps}
-              previewStepIndex={previewStepIndex}
+              steps={panels.timelineSteps}
+              previewStepIndex={panels.previewStepIndex}
               editorState={displayEditorState}
               missionTitle={
                 currentTab === 'course'
-                  ? currentMission.title
-                  : currentTab === 'custom' && customMission
-                  ? customMission.title
-                  : undefined
+                  ? mission.currentMission.title
+                  : currentTab === 'custom' && mission.customMission
+                    ? mission.customMission.title
+                    : undefined
               }
               initialText={
                 currentTab === 'course'
-                  ? currentMission.initialLines.join('\n')
-                  : currentTab === 'custom' && customMission
-                  ? customMission.initialLines.join('\n')
-                  : sandboxInitialText
+                  ? mission.currentMission.initialLines.join('\n')
+                  : currentTab === 'custom' && mission.customMission
+                    ? mission.customMission.initialLines.join('\n')
+                    : panels.sandboxInitialText
               }
               initialCursor={
                 currentTab === 'course'
-                  ? currentMission.initialCursor
-                  : currentTab === 'custom' && customMission
-                  ? customMission.initialCursor
-                  : { line: 0, col: 0 }
+                  ? mission.currentMission.initialCursor
+                  : currentTab === 'custom' && mission.customMission
+                    ? mission.customMission.initialCursor
+                    : { line: 0, col: 0 }
               }
-              allKeysSoFar={allKeysSoFar}
-              onSelectStep={onSelectTimelineStep}
-              onBranchFromStep={onBranchFromStep}
-              onCancelPreview={onCancelTimelinePreview}
-              onClose={onToggleActionTimeline}
+              allKeysSoFar={panels.allKeysSoFar}
+              onSelectStep={panels.onSelectTimelineStep}
+              onBranchFromStep={panels.onBranchFromStep}
+              onCancelPreview={panels.onCancelTimelinePreview}
+              onClose={panels.onToggleActionTimeline}
             />
           )}
         </>

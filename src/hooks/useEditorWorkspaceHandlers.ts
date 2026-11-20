@@ -1,4 +1,4 @@
-import { useCallback, Dispatch, SetStateAction } from 'react';
+import { useCallback, useMemo, Dispatch, SetStateAction } from 'react';
 import {
   VimEditorState,
   handleKey,
@@ -251,6 +251,90 @@ export function useEditorWorkspaceHandlers({
     [setEditorState]
   );
 
+  const viewportHandlers = useMemo(
+    () => ({
+      onSwitchPane: handleSwitchPane,
+      onSelectCompletionCandidate: handleSelectCompletionCandidate,
+      onSwitchBuffer: handleSwitchBuffer,
+      onSwitchTabPage: handleSwitchTabPage,
+      onCloseTabPage: handleCloseTabPage,
+      onNewTabPage: handleNewTabPage,
+      onJumpToMark: handleJumpToMark,
+      onCloseLspHover: handleCloseLspHover,
+      onJumpQuickfixItem: handleJumpQuickfixItem,
+      onCloseQuickfixWindow: handleCloseQuickfixWindow,
+      onJumpLocationListItem: handleJumpLocationListItem,
+      onCloseLocationListWindow: handleCloseLocationListWindow,
+      onSwitchCommandLineWindowType: handleSwitchCommandLineWindowType,
+      onClearCommandLineHistory: handleClearCommandLineHistory,
+      onCloseCommandLineWindow: handleCloseCommandLineWindow,
+      onSelectCommandLineWindowLine: handleSelectCommandLineWindowLine,
+      onExecuteCommandLineWindowLine: handleExecuteCommandLineWindowLine,
+    }),
+    [
+      handleSwitchPane,
+      handleSelectCompletionCandidate,
+      handleSwitchBuffer,
+      handleSwitchTabPage,
+      handleCloseTabPage,
+      handleNewTabPage,
+      handleJumpToMark,
+      handleCloseLspHover,
+      handleJumpQuickfixItem,
+      handleCloseQuickfixWindow,
+      handleJumpLocationListItem,
+      handleCloseLocationListWindow,
+      handleSwitchCommandLineWindowType,
+      handleClearCommandLineHistory,
+      handleCloseCommandLineWindow,
+      handleSelectCommandLineWindowLine,
+      handleExecuteCommandLineWindowLine,
+    ]
+  );
+
+  const marksHandlers = useMemo(
+    () => ({
+      onJumpToMark: handleJumpToMark,
+      onDeleteMark: handleDeleteMark,
+      onDeleteAllLocalMarks: handleDeleteAllLocalMarks,
+      onJumpToIndex: handleJumpToIndex,
+      onJumpOlder: handleJumpOlder,
+      onJumpNewer: handleJumpNewer,
+      onClearJumps: handleClearJumps,
+      onSetMark: handleSetMark,
+      onJumpToLine: handleJumpToLine,
+    }),
+    [
+      handleJumpToMark,
+      handleDeleteMark,
+      handleDeleteAllLocalMarks,
+      handleJumpToIndex,
+      handleJumpOlder,
+      handleJumpNewer,
+      handleClearJumps,
+      handleSetMark,
+      handleJumpToLine,
+    ]
+  );
+
+  const fuzzyFinderHandlers = useMemo(
+    () => ({
+      onSelectAction: handleSelectFuzzyFinderAction,
+      onSelectItemIndex: handleSelectFuzzyItemIndex,
+      onClose: handleCloseFuzzyFinder,
+    }),
+    [handleSelectFuzzyFinderAction, handleSelectFuzzyItemIndex, handleCloseFuzzyFinder]
+  );
+
+  const helpHandlers = useMemo(
+    () => ({
+      onJumpTag: handleJumpHelpTag,
+      onPopTag: handlePopHelpTag,
+      onClose: handleCloseHelp,
+    }),
+    [handleJumpHelpTag, handlePopHelpTag, handleCloseHelp]
+  );
+
   return {
     handleSwitchPane,
     handleSelectCompletionCandidate,
@@ -285,5 +369,9 @@ export function useEditorWorkspaceHandlers({
     handleJumpToLine,
     handleUpdateRegister,
     handleDeleteRegister,
+    viewportHandlers,
+    marksHandlers,
+    fuzzyFinderHandlers,
+    helpHandlers,
   };
 }
