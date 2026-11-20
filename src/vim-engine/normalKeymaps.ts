@@ -41,7 +41,7 @@ function runResolvedNormalMapping(
   macroDepth: number
 ): VimEditorState {
   const leaderKey = state.leaderKey || ' ';
-  const runEx = (s: VimEditorState, cmd: string) => executeCommandLine(s, cmd, runHandleKey);
+  const runEx = (s: VimEditorState, cmd: string) => executeCommandLine(s, cmd, runHandleKey, 0, true);
   return runKeymapTokens(
     state,
     resolved,
@@ -94,7 +94,7 @@ export function handleNormalUserKeymap(
     const opResolved = resolveKeymapWithMeta(state, 'o', combined);
     if (opResolved) {
       const cleanState: VimEditorState = { ...state, pendingKeymapPrefix: undefined };
-      const runEx = (s: VimEditorState, cmd: string) => executeCommandLine(s, cmd, runHandleKey);
+      const runEx = (s: VimEditorState, cmd: string) => executeCommandLine(s, cmd, runHandleKey, 0, true);
       return {
         handled: true,
         state: runKeymapTokens(

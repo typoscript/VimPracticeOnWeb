@@ -351,4 +351,151 @@ describe('Multi-Window Split Tree (3+ panes, nested layouts, :windo, Vimscript b
     expect(s.commandMessage).toBe('[0, 0, 0]');
     expect(s.activePaneIndex).toBe(2);
   });
+
+  it('synchronizes edits live across multiple windows viewing the same buffer while keeping cursors independent', () => {
+    let s = createVimState(['line 1', 'line 2', 'line 3', 'line 4'], { line: 0, col: 0 }, {
+      primaryFilename: 'shared.ts',
+      virtualFiles: { 'other.ts': ['independent'] },
+    });
+
+    // Plain :vsp opens a second window viewing the SAME buffer (shared.ts)
+    s = runExCommand(s, 'vsp');
+    expect(s.splitPanes).toHaveLength(2);
+    expect(s.splitPanes![0].filename).toBe('shared.ts');
+    expect(s.splitPanes![1].filename).toBe('shared.ts');
+    expect(s.splitPanes![0].bufferId).toBe(s.splitPanes![1].bufferId);
+
+    // Move pane 1 cursor to line 3 (bottom), then return to pane 0
+    s = sendKeys(s, '<C-w>l3j<C-w>h');
+    expect(s.activePaneIndex).toBe(0);
+    expect(s.cursor.line).toBe(0);
+    expect(s.splitPanes![1].cursor.line).toBe(3);
+
+    // Also open an independent buffer in a 3rd pane (other.ts)
+    s = runExCommand(s, 'sp other.ts'); // [shared(0), other(1), shared(2)]
+    expect(s.splitPanes!.map((p) => p.filename)).toEqual(['shared.ts', 'other.ts', 'shared.ts']);
+
+    // Edit pane 0 via Ex substitution -> pane 2 (same buffer) updates immediately, pane 1 (other.ts) untouched!
+    s = runExCommand(s, '%s/line/row/g');
+    expect(s.splitPanes![0].lines[0]).toBe('row 1');
+    expect(s.splitPanes![2].lines[0]).toBe('row 1');
+    expect(s.splitPanes![1].lines[0]).toBe('independent');
+
+    // Delete 2 lines in pane 0 via Normal mode (2dd) -> pane 2 shrinks to 2 lines and clamps cursor safely to line 1
+    s = sendKeys(s, '2dd');
+    expect(s.lines).toEqual(['row 3', 'row 4']);
+    expect(s.splitPanes![2].lines).toEqual(['row 3', 'row 4']);
+    expect(s.splitPanes![2].cursor.line).toBe(1);
+
+    // Switch to pane 2 and undo ('u') -> restores 4 lines in both pane 2 and pane 0!
+    s = sendKeys(s, '<C-w>lu');
+    expect(s.lines).toEqual(['row 1', 'row 2', 'row 3', 'row 4']);
+    expect(s.splitPanes![0].lines).toEqual(['row 1', 'row 2', 'row 3', 'row 4']);
+  });
+
+  it('supports :topleft, :botright, :aboveleft, :belowright, and :vertical split placement modifiers', () => {
+    let s = createVimState(['MAIN'], { line: 0, col: 0 }, {
+      primaryFilename: 'main.ts',
+      virtualFiles: {
+        'right.ts': ['RIGHT'],
+        'footer.ts': ['FOOTER'],
+        'sidebar.ts': ['SIDEBAR'],
+        'above.ts': ['ABOVE'],
+      },
+    });
+
+    // 1. :vsp right.ts -> [main(0) | right(1)]
+    s = runExCommand(s, 'vsp right.ts');
+
+    // 2. :botright sp footer.ts -> full-width footer at bottom of the entire root tree
+    s = runExCommand(s, 'botright sp footer.ts');
+    expect(s.splitDirection).toBe('horizontal');
+    expect(s.splitPanes!.map((p) => p.filename)).toEqual(['main.ts', 'right.ts', 'footer.ts']);
+    let rects = computePaneRects(getEffectiveWindowTree(s)!);
+    expect(rects[2]).toMatchObject({ paneIndex: 2, x: 0, y: 0.5, w: 1, h: 0.5 });
+
+    // 3. :topleft vertical sp sidebar.ts -> full-height sidebar on far left of the entire root tree
+    s = runExCommand(s, 'topleft vertical sp sidebar.ts');
+    expect(s.splitDirection).toBe('vertical');
+    expect(s.splitPanes!.map((p) => p.filename)).toEqual([
+      'sidebar.ts',
+      'main.ts',
+      'right.ts',
+      'footer.ts',
+    ]);
+    rects = computePaneRects(getEffectiveWindowTree(s)!);
+    expect(rects[0]).toMatchObject({ paneIndex: 0, x: 0, y: 0, w: 0.5, h: 1 });
+    // Active focus remains on main.ts (now index 1)
+    expect(s.activePaneIndex).toBe(1);
+
+    // 4. :aboveleft sp above.ts -> splits directly ABOVE main.ts (not below)
+    s = runExCommand(s, 'aboveleft sp above.ts');
+    expect(s.splitPanes!.map((p) => p.filename)).toEqual([
+      'sidebar.ts',
+      'above.ts',
+      'main.ts',
+      'right.ts',
+      'footer.ts',
+    ]);
+    expect(s.activePaneIndex).toBe(2);
+  });
+
+  it('triggers WinNew, WinLeave, WinEnter, WinClosed, TabLeave, and TabEnter autocmds cleanly and respects :noautocmd', () => {
+    let s = createVimState(['A'], { line: 0, col: 0 }, {
+      primaryFilename: 'a.ts',
+      virtualFiles: { 'b.ts': ['B'] },
+    });
+
+    s = runExCommand(s, 'let g:log = []');
+    s = runExCommand(s, 'autocmd WinNew * :call add(g:log, "WinNew")');
+    s = runExCommand(s, 'autocmd WinLeave * :call add(g:log, "WinLeave")');
+    s = runExCommand(s, 'autocmd WinEnter * :call add(g:log, "WinEnter")');
+    s = runExCommand(s, 'autocmd WinClosed * :call add(g:log, "WinClosed")');
+    s = runExCommand(s, 'autocmd TabLeave * :call add(g:log, "TabLeave")');
+    s = runExCommand(s, 'autocmd TabEnter * :call add(g:log, "TabEnter")');
+
+    // :vsp b.ts -> WinNew
+    s = runExCommand(s, 'vsp b.ts');
+    expect(s.globalVars?.log).toEqual(['WinNew']);
+
+    // Ctrl-w l -> WinLeave, WinEnter (fired exactly once!)
+    s = sendKeys(s, '<C-w>l');
+    expect(s.globalVars?.log).toEqual(['WinNew', 'WinLeave', 'WinEnter']);
+
+    // :noautocmd wincmd h -> suppressed!
+    s = runExCommand(s, 'noautocmd wincmd h');
+    expect(s.activePaneIndex).toBe(0);
+    expect(s.globalVars?.log).toEqual(['WinNew', 'WinLeave', 'WinEnter']);
+
+    // :tabnew -> WinLeave, TabLeave, TabEnter, WinEnter
+    s = runExCommand(s, 'tabnew');
+    expect(s.globalVars?.log).toEqual([
+      'WinNew',
+      'WinLeave',
+      'WinEnter',
+      'WinLeave',
+      'TabLeave',
+      'TabEnter',
+      'WinEnter',
+    ]);
+
+    // gT back to Tab 1, then :close -> WinClosed, WinEnter
+    s = sendKeys(s, 'gT');
+    s = runExCommand(s, 'close');
+    expect(s.globalVars?.log).toEqual([
+      'WinNew',
+      'WinLeave',
+      'WinEnter',
+      'WinLeave',
+      'TabLeave',
+      'TabEnter',
+      'WinEnter',
+      'WinLeave',
+      'TabLeave',
+      'TabEnter',
+      'WinEnter',
+      'WinClosed',
+      'WinEnter',
+    ]);
+  });
 });

@@ -53,6 +53,8 @@ import { executeJoinRange, executeShiftRange, executePrintRange } from './exRang
 import { finishEx, tryExecuteWorkspaceExCommand } from './exWorkspaceCommands';
 import type { ExCommandRunner } from './exWorkspaceCommands';
 import { tryExecuteToolExCommand } from './exListAndToolCommands';
+import { syncActivePane } from './splitWindow';
+import { triggerWindowAndTabAutocmds } from './autocmdEngine';
 
 export {
   vimRegexToJsRegex,
@@ -83,7 +85,8 @@ function executePipedCommands(
   state: VimEditorState,
   commands: string[],
   keyRunner?: KeyRunner,
-  userCommandDepth = 0
+  userCommandDepth = 0,
+  skipWindowAutocmds = false
 ): VimEditorState {
   const isControlFlow = (cmd: string) => {
     const word = cmd.trim().replace(/^:\s*/, '').match(/^(\w+)/)?.[1] ?? '';
@@ -94,7 +97,7 @@ function executePipedCommands(
 
   const hasControlFlow = commands.some(isControlFlow);
   const runEx = (s: VimEditorState, c: string) =>
-    executeCommandLine(s, c, keyRunner, userCommandDepth);
+    executeCommandLine(s, c, keyRunner, userCommandDepth, skipWindowAutocmds);
 
   if (hasControlFlow) {
     return executeScriptBlock(state, commands, runEx);
@@ -104,7 +107,7 @@ function executePipedCommands(
   for (const cmd of commands) {
     const cleaned = cmd.trim();
     if (cleaned.length === 0) continue;
-    cur = executeCommandLine(cur, cleaned, keyRunner, userCommandDepth);
+    cur = executeCommandLine(cur, cleaned, keyRunner, userCommandDepth, skipWindowAutocmds);
     if (cur.bell || cur.scriptFinished) {
       break;
     }
@@ -478,8 +481,10 @@ export function executeCommandLine(
   state: VimEditorState,
   commandStr: string,
   keyRunner?: KeyRunner,
-  userCommandDepth = 0
+  userCommandDepth = 0,
+  skipWindowAutocmds = false
 ): VimEditorState {
+  const prevState = state;
   state = state.bell ? { ...state, bell: undefined } : state;
   const trimmed = commandStr.trimStart();
 
@@ -496,11 +501,18 @@ export function executeCommandLine(
   // 1-0. 다중 파이프(|) 명령어 분할 및 순차/스크립트 실행 (:help :bar)
   const pipedCommands = splitPipedCommands(trimmed);
   if (pipedCommands.length > 1) {
-    return executePipedCommands(state, pipedCommands, keyRunner, userCommandDepth);
+    return executePipedCommands(state, pipedCommands, keyRunner, userCommandDepth, skipWindowAutocmds);
   }
 
   const runEx: ExCommandRunner = (s, cmd) =>
-    executeCommandLine(s, cmd, keyRunner, userCommandDepth);
+    executeCommandLine(s, cmd, keyRunner, userCommandDepth, skipWindowAutocmds);
+
+  const finalize = (res: VimEditorState): VimEditorState => {
+    const synced = syncActivePane(res);
+    return skipWindowAutocmds
+      ? synced
+      : triggerWindowAndTabAutocmds(prevState, synced, runEx);
+  };
 
   // 1-0a. Ex 명령 모디파이어 (:silent[!], :keeppatterns, :noautocmd, :verbose)
   const modRes = tryExecuteWithModifiers(state, trimmed, runEx);
@@ -508,27 +520,29 @@ export function executeCommandLine(
 
   // 1-0b. 출력 리디렉션(:redir), 메시지 이력(:messages), 스크립트 조기 종료(:finish)
   const metaRes = tryExecuteMetaExCommand(state, trimmed);
-  if (metaRes) return metaRes;
+  if (metaRes) return finalize(metaRes);
 
   // 1-1. Vim script: :function, :endfunction, :delfunction, :let, :unlet, :echo, :execute, :[range]call
   const scriptRes = executeScriptCommandLine(state, trimmed, runEx);
-  if (scriptRes) return scriptRes;
+  if (scriptRes) return finalize(scriptRes);
 
   const callExtracted = extractRangeAndCommand(trimmed, state);
   const callMatch = !callExtracted.error && callExtracted.command.trim().match(/^cal(?:l)?\s+(.+)$/);
   if (callMatch) {
-    return executeCallCommand(
-      state,
-      callMatch[1],
-      callExtracted.hasRange ? callExtracted.range : null,
-      runEx
+    return finalize(
+      executeCallCommand(
+        state,
+        callMatch[1],
+        callExtracted.hasRange ? callExtracted.range : null,
+        runEx
+      )
     );
   }
 
   // 2. 글로벌 명령: :g/pattern/cmd, :v/pattern/cmd, :g!/pattern/cmd
   const gMatch = trimmed.match(/^:?\s*(g|global|v|vglobal)(!?)\s*\/([^\/]+)\/(.*)$/);
   if (gMatch) {
-    return withRedir(executeGlobalCommand(state, gMatch, commandStr, keyRunner));
+    return finalize(withRedir(executeGlobalCommand(state, gMatch, commandStr, keyRunner)));
   }
 
   // 3. 작업공간(창/버퍼/탭/Netrw/저장·종료) 및 도구(퀵픽스/옵션/마크/태그/매핑) 명령어
@@ -536,10 +550,10 @@ export function executeCommandLine(
   const cleanCmd = cleanCmdRaw.toLowerCase();
 
   const wsRes = tryExecuteWorkspaceExCommand(state, cleanCmdRaw, cleanCmd, trimmed, runEx);
-  if (wsRes) return withRedir(wsRes);
+  if (wsRes) return finalize(withRedir(wsRes));
 
   const toolRes = tryExecuteToolExCommand(state, cleanCmdRaw, cleanCmd, trimmed, runEx);
-  if (toolRes) return withRedir(toolRes);
+  if (toolRes) return finalize(withRedir(toolRes));
 
   // 4. 공통 Range 파서 및 사용자 명령 / 버퍼 범위 편집 명령 실행
   const extracted = extractRangeAndCommand(trimmed, state);
@@ -555,10 +569,10 @@ export function executeCommandLine(
     keyRunner,
     userCommandDepth
   );
-  if (userCmdRes) return userCmdRes;
+  if (userCmdRes) return finalize(userCmdRes);
 
   const rangeRes = tryExecuteRangeExCommand(state, extracted, trimmed, keyRunner, runEx);
-  if (rangeRes) return rangeRes;
+  if (rangeRes) return finalize(rangeRes);
 
   // 5. 알 수 없는 명령어는 에러 메시지와 함께 NORMAL 모드로 복귀
   return finishEx(state, {

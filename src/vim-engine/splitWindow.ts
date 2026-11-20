@@ -1,4 +1,4 @@
-import { SplitPaneState, VimEditorState, WindowLayoutNode } from './types';
+import { SplitPaneState, SplitPlacement, VimEditorState, WindowLayoutNode } from './types';
 import { openNewTab } from './tabEngine';
 import { msg } from './messages';
 import { getGlobalOptions, getOptions } from './setEngine';
@@ -15,6 +15,7 @@ import {
   rotateSiblingsInTree,
   splitLeafInTree,
   switchPaneFocusCore,
+  syncSharedBufferPanes,
 } from './windowTree';
 
 function withPaneScrollbindOption(
@@ -45,15 +46,36 @@ function loadPaneIntoTopLevel(
   };
 }
 
+function allocateDistinctBufferId(
+  state: VimEditorState,
+  panes: SplitPaneState[] | undefined,
+  excludeId: number
+): number {
+  let maxId = Math.max(excludeId, state.currentBufferId ?? 1);
+  if (state.buffers) {
+    for (const b of state.buffers) {
+      if (b.id > maxId) maxId = b.id;
+    }
+  }
+  if (panes) {
+    for (const p of panes) {
+      if (p.bufferId !== undefined && p.bufferId > maxId) maxId = p.bufferId;
+    }
+  }
+  return maxId + 1;
+}
+
 /**
  * 에디터 창을 가로(:sp, :new) 또는 세로(:vsp, :vnew)로 분할합니다.
- * 이미 분할된 상태에서도 현재 활성 창을 중첩 분할하여 3개 이상의 멀티 윈도우 트리를 구성합니다.
+ * 이미 분할된 상태에서도 현재 활성 창을 중첩 분할하여 3개 이상의 멀티 윈도우 트리를 구성하며,
+ * :topleft / :botright / :aboveleft / :belowright 배치 모디파이어와 동일 버퍼 실시간 동기화를 지원합니다.
  */
 export function splitWindow(
   state: VimEditorState,
   direction: 'horizontal' | 'vertical',
   secondaryLines?: string[],
-  secondaryFilename?: string
+  secondaryFilename?: string,
+  placement: SplitPlacement = 'default'
 ): VimEditorState {
   const isAlreadySplit = Boolean(
     state.splitDirection &&
@@ -69,28 +91,71 @@ export function splitWindow(
     const curPane = existingPanes[curIdx];
     const baseTree = getEffectiveWindowTree(synced)!;
 
-    const panesWithIds = existingPanes.map((p, i) =>
-      p.winId !== undefined ? p : { ...p, winId: 1000 + i }
-    );
+    const panesWithIds = existingPanes.map((p, i) => ({
+      ...p,
+      winId: p.winId ?? 1000 + i,
+      bufferId: p.bufferId ?? (i === curIdx ? (synced.currentBufferId ?? 1) : undefined),
+    }));
+    const curBufId = panesWithIds[curIdx].bufferId ?? synced.currentBufferId ?? 1;
     const newWinId = allocateNextWinId(panesWithIds, synced.nextWindowId);
     const curScb = curPane.scrollbind ?? getOptions(synced).scrollbind ?? false;
     const newWinScb = secondaryLines ? (getGlobalOptions(synced).scrollbind ?? false) : curScb;
 
+    const newName = secondaryFilename || curPane.filename || 'source.ts';
+    let newBufId: number;
+    let newLines: string[];
+
+    if (!secondaryFilename && !secondaryLines) {
+      // 동일 버퍼 복제 분할 (:sp, :vsp, Ctrl-w s, Ctrl-w v)
+      newBufId = curBufId;
+      newLines = [...curPane.lines];
+    } else if (secondaryFilename && secondaryFilename === curPane.filename && !secondaryLines) {
+      newBufId = curBufId;
+      newLines = [...curPane.lines];
+    } else {
+      const existingSamePane =
+        secondaryFilename && secondaryFilename !== '[No Name]'
+          ? panesWithIds.find((p) => p.filename === secondaryFilename)
+          : undefined;
+      const matchedBuf =
+        secondaryFilename && secondaryFilename !== '[No Name]'
+          ? synced.buffers?.find((b) => b.name === secondaryFilename)
+          : undefined;
+
+      if (existingSamePane && !secondaryLines) {
+        newBufId =
+          existingSamePane.bufferId ??
+          matchedBuf?.id ??
+          allocateDistinctBufferId(synced, panesWithIds, curBufId);
+        newLines = [...existingSamePane.lines];
+      } else if (existingSamePane && secondaryFilename === existingSamePane.filename && secondaryLines && existingSamePane.bufferId !== undefined) {
+        newBufId = existingSamePane.bufferId;
+        newLines = [...existingSamePane.lines];
+      } else if (matchedBuf) {
+        newBufId = matchedBuf.id;
+        newLines = secondaryLines ? [...secondaryLines] : [...matchedBuf.lines];
+      } else {
+        newBufId = allocateDistinctBufferId(synced, panesWithIds, curBufId);
+        newLines = secondaryLines ? [...secondaryLines] : [...curPane.lines];
+      }
+    }
+
     const newPane: SplitPaneState = {
       winId: newWinId,
-      filename: secondaryFilename || curPane.filename || 'source.ts',
-      lines: secondaryLines ? [...secondaryLines] : [...curPane.lines],
+      bufferId: newBufId,
+      filename: newName,
+      lines: newLines,
       cursor: { line: 0, col: 0 },
       mode: 'NORMAL',
       viewport: { topRow: 0, visibleRows: curPane.viewport?.visibleRows ?? 10 },
-      undoStack: [],
-      redoStack: [],
+      undoStack: newBufId === curBufId && curPane.undoStack ? [...curPane.undoStack] : [],
+      redoStack: newBufId === curBufId && curPane.redoStack ? [...curPane.redoStack] : [],
       scrollbind: newWinScb,
     };
 
     const nextRawPanes = [...panesWithIds, newPane];
     const newRawIdx = panesWithIds.length;
-    const nextTree = splitLeafInTree(baseTree, curIdx, newRawIdx, direction);
+    const nextTree = splitLeafInTree(baseTree, curIdx, newRawIdx, direction, placement);
 
     const normalized = normalizeWindowLayout({
       tree: nextTree,
@@ -120,16 +185,32 @@ export function splitWindow(
   }
 
   const primaryName = state.primaryFilename || 'source.ts';
-  const secondaryName = secondaryFilename || state.secondaryFilename || 'target.ts';
+  const isImplicitSameBuffer =
+    !secondaryLines &&
+    ((secondaryFilename !== undefined && secondaryFilename === primaryName) ||
+      (!secondaryFilename && !state.secondaryFilename && !state.secondaryLines));
+
+  const secondaryName = isImplicitSameBuffer
+    ? primaryName
+    : secondaryFilename || state.secondaryFilename || 'target.ts';
 
   const curScb = getOptions(state).scrollbind ?? false;
   const newWinScb = secondaryLines ? (getGlobalOptions(state).scrollbind ?? false) : curScb;
 
   const winId0 = 1000;
   const winId1 = allocateNextWinId([{ winId: winId0 } as SplitPaneState], state.nextWindowId);
+  const bufId0 = state.currentBufferId ?? 1;
+  const matchedSecBuf =
+    !isImplicitSameBuffer && secondaryName !== '[No Name]'
+      ? state.buffers?.find((b) => b.name === secondaryName)
+      : undefined;
+  const bufId1 = isImplicitSameBuffer
+    ? bufId0
+    : matchedSecBuf?.id ?? allocateDistinctBufferId(state, undefined, bufId0);
 
   const pane0: SplitPaneState = {
     winId: winId0,
+    bufferId: bufId0,
     filename: primaryName,
     lines: [...state.lines],
     cursor: { ...state.cursor },
@@ -145,18 +226,25 @@ export function splitWindow(
     scrollbind: curScb,
   };
 
-  const p1Lines = secondaryLines ?? state.secondaryLines ?? [...state.lines];
+  const p1Lines = isImplicitSameBuffer
+    ? [...state.lines]
+    : (secondaryLines ?? state.secondaryLines ?? [...state.lines]);
   const pane1: SplitPaneState = {
     winId: winId1,
+    bufferId: bufId1,
     filename: secondaryName,
     lines: [...p1Lines],
     cursor: { line: 0, col: 0 },
     mode: 'NORMAL',
     viewport: { topRow: 0, visibleRows: 10 },
-    undoStack: [],
-    redoStack: [],
+    undoStack: isImplicitSameBuffer && state.undoStack ? [...state.undoStack] : [],
+    redoStack: isImplicitSameBuffer && state.redoStack ? [...state.redoStack] : [],
     scrollbind: newWinScb,
   };
+
+  const placeNewFirst = placement === 'aboveleft' || placement === 'topleft';
+  const orderedPanes = placeNewFirst ? [pane1, pane0] : [pane0, pane1];
+  const nextActiveIdx = placeNewFirst ? 1 : 0;
 
   const initialTree: WindowLayoutNode = {
     kind: 'split',
@@ -171,14 +259,14 @@ export function splitWindow(
   return {
     ...state,
     splitDirection: direction,
-    activePaneIndex: 0,
+    activePaneIndex: nextActiveIdx,
     previousPaneIndex: undefined,
-    splitPanes: [pane0, pane1],
+    splitPanes: orderedPanes,
     windowLayout: initialTree,
     nextWindowId: winId1 + 1,
     splitRatio: 50,
-    primaryFilename: primaryName,
-    secondaryFilename: secondaryName,
+    primaryFilename: orderedPanes[0].filename,
+    secondaryFilename: orderedPanes[1].filename,
     commandMessage:
       direction === 'vertical'
         ? msg('창을 세로로 분할했습니다 (:vsp)')
@@ -594,7 +682,7 @@ export function syncActivePane(state: VimEditorState): VimEditorState {
     return state;
   }
 
-  const newPanes = state.splitPanes.map((pane, idx) =>
+  const updatedPanes = state.splitPanes.map((pane, idx) =>
     idx === curIdx
       ? {
           ...pane,
@@ -613,9 +701,17 @@ export function syncActivePane(state: VimEditorState): VimEditorState {
       : pane
   );
 
+  const syncedPanes = syncSharedBufferPanes(
+    updatedPanes,
+    curIdx,
+    state.lines,
+    state.undoStack,
+    state.redoStack
+  );
+
   return {
     ...state,
-    splitPanes: newPanes,
+    splitPanes: syncedPanes,
   };
 }
 

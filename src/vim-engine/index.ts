@@ -38,6 +38,7 @@ export {
   computePaneRects,
   findNeighborPane,
   toVimWinlayout,
+  isSamePaneBuffer,
 } from './windowTree';
 export type { PaneRect } from './windowTree';
 export { switchBuffer, ensureBuffers, syncCurrentBuffer, addBuffer, editBuffer, deleteBuffer } from './bufferEngine';
@@ -175,6 +176,7 @@ export {
   executeDeleteAutocmd,
   executeDoAutocmd,
   triggerAutocmd,
+  triggerWindowAndTabAutocmds,
   formatAutocmdList,
   normalizeEvent,
   matchAutocmdPattern,

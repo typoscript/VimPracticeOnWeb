@@ -397,6 +397,8 @@ export interface FoldRange {
 
 export type SplitDirection = 'none' | 'horizontal' | 'vertical';
 
+export type SplitPlacement = 'default' | 'aboveleft' | 'belowright' | 'topleft' | 'botright';
+
 export type WindowLayoutNode =
   | { kind: 'leaf'; paneIndex: number }
   | {
@@ -409,6 +411,8 @@ export type WindowLayoutNode =
 export interface SplitPaneState {
   /** 고유 윈도우 ID (win_getid / win_gotoid 용, 1000 이상) */
   winId?: number;
+  /** 이 창이 표시 중인 버퍼 ID (동일 버퍼 다중 창 실시간 동기화용) */
+  bufferId?: number;
   filename: string;
   lines: string[];
   cursor: CursorPosition;

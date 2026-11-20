@@ -17,6 +17,10 @@ export const KNOWN_EVENTS = [
   'VimEnter',
   'WinEnter',
   'WinLeave',
+  'WinNew',
+  'WinClosed',
+  'TabEnter',
+  'TabLeave',
   'User',
 ] as const;
 
@@ -37,6 +41,10 @@ const EVENT_ALIAS_MAP: Record<string, string> = {
   vimenter: 'VimEnter',
   winenter: 'WinEnter',
   winleave: 'WinLeave',
+  winnew: 'WinNew',
+  winclosed: 'WinClosed',
+  tabenter: 'TabEnter',
+  tableave: 'TabLeave',
   user: 'User',
 };
 
@@ -464,7 +472,12 @@ export function triggerAutocmd(
   }
 
   const normEvent = normalizeEvent(event);
-  const curFilename = context?.filename || state.primaryFilename || 'practice.txt';
+  const activePaneFilename =
+    state.splitPanes && state.splitDirection && state.splitDirection !== 'none'
+      ? state.splitPanes[state.activePaneIndex ?? 0]?.filename
+      : undefined;
+  const curFilename =
+    context?.filename || activePaneFilename || state.primaryFilename || 'practice.txt';
   const curBufId = context?.bufferId ?? state.currentBufferId ?? 1;
   const curFt = context?.filetype || state.options?.filetype;
 
@@ -497,4 +510,90 @@ export function triggerAutocmd(
     ...currState,
     autocmdDepth: depth,
   };
+}
+
+function getActiveWindowInfo(s: VimEditorState): {
+  winId: number;
+  paneCount: number;
+  filename: string;
+  tabId: number;
+} {
+  const isSplit = Boolean(
+    s.splitPanes && s.splitDirection && s.splitDirection !== 'none' && s.splitPanes.length >= 2
+  );
+  const idx = s.activePaneIndex ?? 0;
+  const activePane = isSplit ? s.splitPanes![idx] : undefined;
+  return {
+    winId: isSplit ? (activePane?.winId ?? 1000 + idx) : 1000,
+    paneCount: isSplit ? s.splitPanes!.length : 1,
+    filename: activePane?.filename || s.primaryFilename || 'practice.txt',
+    tabId: s.currentTabId ?? 1,
+  };
+}
+
+/**
+ * 상태 전이(prev -> curr)에서 창·탭 변경을 감지해 WinLeave/WinEnter/WinNew/WinClosed/TabLeave/TabEnter 를 발화합니다.
+ */
+export function triggerWindowAndTabAutocmds(
+  prev: VimEditorState,
+  curr: VimEditorState,
+  runEx: (s: VimEditorState, cmd: string) => VimEditorState
+): VimEditorState {
+  if (curr.noautocmdSuppressed || !curr.autocmds || curr.autocmds.length === 0) {
+    return curr;
+  }
+
+  const before = getActiveWindowInfo(prev);
+  const after = getActiveWindowInfo(curr);
+
+  const tabChanged = before.tabId !== after.tabId;
+  const winChanged = before.winId !== after.winId;
+  const winCreated = !tabChanged && after.paneCount > before.paneCount;
+  const winClosed = !tabChanged && after.paneCount < before.paneCount;
+
+  if (!tabChanged && !winChanged && !winCreated && !winClosed) {
+    return curr;
+  }
+
+  let res = curr;
+  if (tabChanged) {
+    res = triggerAutocmd(res, 'WinLeave', { filename: before.filename }, runEx);
+    res = triggerAutocmd(res, 'TabLeave', { filename: before.filename }, runEx);
+    res = triggerAutocmd(res, 'TabEnter', { filename: after.filename }, runEx);
+    res = triggerAutocmd(res, 'WinEnter', { filename: after.filename }, runEx);
+    return res;
+  }
+
+  if (winCreated) {
+    const prevIds = new Set(
+      (prev.splitPanes ?? []).map((p, i) => p.winId ?? 1000 + i)
+    );
+    const createdPane = curr.splitPanes?.find(
+      (p, i) => !prevIds.has(p.winId ?? 1000 + i)
+    );
+    res = triggerAutocmd(
+      res,
+      'WinNew',
+      { filename: createdPane?.filename || after.filename },
+      runEx
+    );
+    if (winChanged) {
+      res = triggerAutocmd(res, 'WinLeave', { filename: before.filename }, runEx);
+      res = triggerAutocmd(res, 'WinEnter', { filename: after.filename }, runEx);
+    }
+    return res;
+  }
+
+  if (winClosed) {
+    res = triggerAutocmd(res, 'WinClosed', { filename: before.filename }, runEx);
+    res = triggerAutocmd(res, 'WinEnter', { filename: after.filename }, runEx);
+    return res;
+  }
+
+  if (winChanged) {
+    res = triggerAutocmd(res, 'WinLeave', { filename: before.filename }, runEx);
+    res = triggerAutocmd(res, 'WinEnter', { filename: after.filename }, runEx);
+  }
+
+  return res;
 }

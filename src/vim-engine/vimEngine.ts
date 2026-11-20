@@ -2,7 +2,7 @@ import { getVimEngineConfig } from './config';
 import { VimEditorState } from './types';
 import { deepFreeze, assertValidVimState } from './invariants';
 import { executeCommandLine, handleConfirmSubstituteKey } from './commandLine';
-import { triggerAutocmd } from './autocmdEngine';
+import { triggerAutocmd, triggerWindowAndTabAutocmds } from './autocmdEngine';
 import { handleCommandLineWindowKey } from './cmdlineWindow';
 import { handleNetrwKey } from './netrwEngine';
 import { handleFuzzyFinderKey } from './fuzzyFinder';
@@ -294,15 +294,22 @@ function processKeyAutocmds(prev: VimEditorState, curr: VimEditorState): VimEdit
   let res = curr;
   const originalMode = curr.mode;
   const originalCursor = { ...curr.cursor };
+  const runEx = (s: VimEditorState, cmd: string) => executeCommandLine(s, cmd, handleKey);
+
+  // 0. 창/탭 전환 이벤트 (WinLeave/WinEnter/WinNew/WinClosed/TabLeave/TabEnter)
+  // COMMAND/cmdlineWindow 경로는 executeCommandLine 내부에서 이미 처리하므로 중복 발화를 방지합니다.
+  if (prev.mode !== 'COMMAND' && !prev.cmdlineWindow) {
+    res = triggerWindowAndTabAutocmds(prev, res, runEx);
+  }
 
   // 1. InsertEnter (인서트 모드 진입)
   if (prev.mode !== 'INSERT' && curr.mode === 'INSERT') {
-    res = triggerAutocmd(res, 'InsertEnter', undefined, (s, cmd) => executeCommandLine(s, cmd, handleKey));
+    res = triggerAutocmd(res, 'InsertEnter', undefined, runEx);
     res = { ...res, mode: originalMode, cursor: originalCursor };
   }
   // 2. InsertLeave (인서트 모드 탈출)
   else if (prev.mode === 'INSERT' && curr.mode !== 'INSERT') {
-    res = triggerAutocmd(res, 'InsertLeave', undefined, (s, cmd) => executeCommandLine(s, cmd, handleKey));
+    res = triggerAutocmd(res, 'InsertLeave', undefined, runEx);
     res = { ...res, mode: originalMode };
   }
 
@@ -311,7 +318,7 @@ function processKeyAutocmds(prev: VimEditorState, curr: VimEditorState): VimEdit
     (prev.cursor.line !== curr.cursor.line || prev.cursor.col !== curr.cursor.col) &&
     (curr.mode === 'NORMAL' || curr.mode.startsWith('VISUAL'))
   ) {
-    res = triggerAutocmd(res, 'CursorMoved', undefined, (s, cmd) => executeCommandLine(s, cmd, handleKey));
+    res = triggerAutocmd(res, 'CursorMoved', undefined, runEx);
     res = { ...res, mode: originalMode, cursor: originalCursor };
   }
 

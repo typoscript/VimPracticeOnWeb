@@ -1,11 +1,14 @@
 import {
   SplitDirection,
   SplitPaneState,
+  SplitPlacement,
+  StateSnapshot,
   VimEditorState,
   VimScriptValue,
   WindowLayoutNode,
 } from './types';
 import { DEFAULT_VIM_OPTIONS } from './setOptionsCore';
+import { clampCursor } from './cursor';
 
 export interface PaneRect {
   paneIndex: number;
@@ -265,23 +268,103 @@ export function normalizeWindowLayout(params: {
 }
 
 /**
- * 지정한 리프 노드를 가로/세로로 분할하여 새 리프를 오른쪽/아래쪽에 배치합니다.
+ * 두 분할 창이 동일한 버퍼를 보고 있는지 판정합니다.
+ */
+export function isSamePaneBuffer(a: SplitPaneState, b: SplitPaneState): boolean {
+  if (a.bufferId !== undefined && b.bufferId !== undefined) {
+    return a.bufferId === b.bufferId;
+  }
+  if (a.bufferId !== undefined || b.bufferId !== undefined) {
+    return false;
+  }
+  return Boolean(a.filename && a.filename !== '[No Name]' && a.filename === b.filename);
+}
+
+function areStringArraysEqual(a: string[], b: string[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+/**
+ * 활성 창의 버퍼 내용(lines/undoStack/redoStack)을 같은 버퍼를 보고 있는 다른 분할 창들에 실시간 동기화합니다.
+ * 각 창의 커서·뷰포트·모드·scrollbind·locationList 는 독립 유지하되, 줄 수 축소 시 커서 경계만 안전하게 보정합니다.
+ */
+export function syncSharedBufferPanes(
+  panes: SplitPaneState[],
+  activeIdx: number,
+  activeLines: string[],
+  activeUndo?: StateSnapshot[],
+  activeRedo?: StateSnapshot[]
+): SplitPaneState[] {
+  const activePane = panes[activeIdx];
+  if (!activePane) return panes;
+
+  let changed = false;
+  const next = panes.map((pane, idx) => {
+    if (idx === activeIdx) return pane;
+    if (!isSamePaneBuffer(activePane, pane)) return pane;
+    const sameLines = areStringArraysEqual(pane.lines, activeLines);
+    const sameUndo = (pane.undoStack?.length ?? 0) === (activeUndo?.length ?? 0);
+    const sameRedo = (pane.redoStack?.length ?? 0) === (activeRedo?.length ?? 0);
+    if (sameLines && sameUndo && sameRedo) return pane;
+    changed = true;
+    const clampedCursor = clampCursor(activeLines, pane.cursor, pane.mode);
+    const clampedAnchor = pane.visualAnchor
+      ? clampCursor(activeLines, pane.visualAnchor, pane.mode)
+      : undefined;
+    return {
+      ...pane,
+      lines: [...activeLines],
+      cursor: clampedCursor,
+      visualAnchor: clampedAnchor,
+      undoStack: activeUndo ? [...activeUndo] : [],
+      redoStack: activeRedo ? [...activeRedo] : [],
+    };
+  });
+
+  return changed ? next : panes;
+}
+
+/**
+ * 지정한 리프 노드를 가로/세로로 분할하고 placement 모디파이어에 따라 배치합니다.
  */
 export function splitLeafInTree(
   node: WindowLayoutNode,
   targetPaneIndex: number,
   newPaneIndex: number,
-  direction: 'horizontal' | 'vertical'
+  direction: 'horizontal' | 'vertical',
+  placement: SplitPlacement = 'default'
 ): WindowLayoutNode {
-  if (node.kind === 'leaf') {
-    if (node.paneIndex !== targetPaneIndex) return node;
+  if (placement === 'topleft') {
     return {
       kind: 'split',
       direction,
-      children: [
-        { kind: 'leaf', paneIndex: targetPaneIndex },
-        { kind: 'leaf', paneIndex: newPaneIndex },
-      ],
+      children: [{ kind: 'leaf', paneIndex: newPaneIndex }, node],
+      weights: [50, 50],
+    };
+  }
+  if (placement === 'botright') {
+    return {
+      kind: 'split',
+      direction,
+      children: [node, { kind: 'leaf', paneIndex: newPaneIndex }],
+      weights: [50, 50],
+    };
+  }
+
+  const placeBefore = placement === 'aboveleft';
+  if (node.kind === 'leaf') {
+    if (node.paneIndex !== targetPaneIndex) return node;
+    const targetLeaf: WindowLayoutNode = { kind: 'leaf', paneIndex: targetPaneIndex };
+    const newLeaf: WindowLayoutNode = { kind: 'leaf', paneIndex: newPaneIndex };
+    return {
+      kind: 'split',
+      direction,
+      children: placeBefore ? [newLeaf, targetLeaf] : [targetLeaf, newLeaf],
       weights: [50, 50],
     };
   }
@@ -289,7 +372,7 @@ export function splitLeafInTree(
     kind: 'split',
     direction: node.direction,
     children: node.children.map((c) =>
-      splitLeafInTree(c, targetPaneIndex, newPaneIndex, direction)
+      splitLeafInTree(c, targetPaneIndex, newPaneIndex, direction, placement)
     ),
     weights: [...node.weights],
   };
@@ -690,8 +773,19 @@ export function switchPaneFocusCore(
     diff: prevCurPane?.diff,
   };
 
-  const newPanes = state.splitPanes.map((p, i) => (i === curIdx ? currentPane : p));
+  const updatedPanes = state.splitPanes.map((p, i) => (i === curIdx ? currentPane : p));
+  const newPanes = syncSharedBufferPanes(
+    updatedPanes,
+    curIdx,
+    currentPane.lines,
+    currentPane.undoStack,
+    currentPane.redoStack
+  );
   const targetPane = newPanes[targetPaneIndex];
+  const nextCurrentBufferId =
+    targetPane.bufferId !== undefined && state.buffers?.some((b) => b.id === targetPane.bufferId)
+      ? targetPane.bufferId
+      : state.currentBufferId;
 
   const nextOptions =
     targetPane.scrollbind === undefined && !state.options
@@ -716,6 +810,7 @@ export function switchPaneFocusCore(
     pendingKeys: undefined,
     activePaneIndex: targetPaneIndex,
     previousPaneIndex: curIdx,
+    currentBufferId: nextCurrentBufferId,
     splitPanes: newPanes,
     locationList: targetPane.locationList,
     options: nextOptions,

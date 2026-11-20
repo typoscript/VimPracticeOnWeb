@@ -1,4 +1,4 @@
-import { VimEditorState } from './types';
+import { SplitPlacement, VimEditorState } from './types';
 import { splitWindow, closeSplitWindow, closeOtherPanes, resizeSplit, executeWincmd } from './splitWindow';
 import {
   formatBufferList,
@@ -68,23 +68,69 @@ export function finishEx(
   };
 }
 
+const SPLIT_MODIFIER_PREFIX_RE =
+  /^(topleft|to|botright|bo|aboveleft|abo|leftabove|lefta|belowright|bel|rightbelow|rightb|vertical|vert|horizontal|hor)\s+([\s\S]+)$/i;
+
+function parseSplitModifiers(raw: string): {
+  placement: SplitPlacement;
+  dirOverride?: 'horizontal' | 'vertical';
+  rest: string;
+} {
+  let placement: SplitPlacement = 'default';
+  let dirOverride: 'horizontal' | 'vertical' | undefined;
+  let rest = raw;
+
+  for (;;) {
+    const m = rest.match(SPLIT_MODIFIER_PREFIX_RE);
+    if (!m) break;
+    const mod = m[1].toLowerCase();
+    if (mod === 'topleft' || mod === 'to') placement = 'topleft';
+    else if (mod === 'botright' || mod === 'bo') placement = 'botright';
+    else if (mod === 'aboveleft' || mod === 'abo' || mod === 'leftabove' || mod === 'lefta') {
+      placement = 'aboveleft';
+    } else if (mod === 'belowright' || mod === 'bel' || mod === 'rightbelow' || mod === 'rightb') {
+      placement = 'belowright';
+    } else if (mod === 'vertical' || mod === 'vert') {
+      dirOverride = 'vertical';
+    } else if (mod === 'horizontal' || mod === 'hor') {
+      dirOverride = 'horizontal';
+    }
+    rest = m[2].trimStart();
+  }
+
+  return { placement, dirOverride, rest };
+}
+
 function tryExecuteSplitAndDiffCommand(
   state: VimEditorState,
   cleanCmdRaw: string,
   cleanCmd: string
 ): VimEditorState | null {
-  const splitMatch = cleanCmdRaw.match(/^(sp|split|vsp|vsplit)(?:\s+(.+))?$/i);
+  const { placement, dirOverride, rest: splitRest } = parseSplitModifiers(cleanCmdRaw);
+
+  const splitMatch = splitRest.match(/^(sp|split|vsp|vsplit)(?:\s+(.+))?$/i);
   if (splitMatch) {
-    const isVertical = splitMatch[1].toLowerCase().startsWith('v');
+    const baseDir: 'horizontal' | 'vertical' = splitMatch[1].toLowerCase().startsWith('v')
+      ? 'vertical'
+      : 'horizontal';
+    const direction = dirOverride ?? baseDir;
     const targetFile = splitMatch[2]?.trim();
     const isAlreadySplit = Boolean(
-      state.splitDirection && state.splitDirection !== 'none' && state.splitPanes && state.splitPanes.length >= 2
+      state.splitDirection &&
+        state.splitDirection !== 'none' &&
+        state.splitPanes &&
+        state.splitPanes.length >= 2
     );
     let targetLines: string[] | undefined = isAlreadySplit ? undefined : state.secondaryLines;
     if (targetFile) {
+      const matchedPane = state.splitPanes?.find((p) => p.filename === targetFile);
       const matchedBuf = state.buffers?.find((b) => b.name === targetFile);
       const matchedVfs = state.virtualFiles?.[targetFile] ?? state.netrw?.files?.[targetFile];
-      if (matchedBuf) {
+      if (matchedPane) {
+        const matchedIdx = state.splitPanes!.indexOf(matchedPane);
+        targetLines =
+          matchedIdx === (state.activePaneIndex ?? 0) ? [...state.lines] : [...matchedPane.lines];
+      } else if (matchedBuf) {
         targetLines = [...matchedBuf.lines];
       } else if (matchedVfs) {
         targetLines = [...matchedVfs];
@@ -93,19 +139,22 @@ function tryExecuteSplitAndDiffCommand(
     return finishEx(
       splitWindow(
         state,
-        isVertical ? 'vertical' : 'horizontal',
+        direction,
         targetLines,
-        targetFile || (isAlreadySplit ? undefined : state.secondaryFilename)
+        targetFile || (isAlreadySplit ? undefined : state.secondaryFilename),
+        placement
       )
     );
   }
 
-  // 새 파일 창 분할: :new, :vnew [filename]
-  const newWinMatch = cleanCmdRaw.match(/^(new|vnew)(?:\s+(.+))?$/i);
+  // 새 파일 창 분할: :new, :vnew [filename] (+ 배치 모디파이어 지원)
+  const newWinMatch = splitRest.match(/^(new|vnew)(?:\s+(.+))?$/i);
   if (newWinMatch) {
-    const isVertical = newWinMatch[1].toLowerCase() === 'vnew';
+    const baseDir: 'horizontal' | 'vertical' =
+      newWinMatch[1].toLowerCase() === 'vnew' ? 'vertical' : 'horizontal';
+    const direction = dirOverride ?? baseDir;
     const targetFile = newWinMatch[2]?.trim() || '[No Name]';
-    return finishEx(splitWindow(state, isVertical ? 'vertical' : 'horizontal', [''], targetFile));
+    return finishEx(splitWindow(state, direction, [''], targetFile, placement));
   }
 
   // 순정 Vim Diff 모드 분할: :diffsplit, :diffs, :vert diffsplit, :vertical diffsplit
