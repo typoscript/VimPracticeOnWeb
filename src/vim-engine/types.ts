@@ -87,8 +87,10 @@ export interface AbbreviationEntry {
 }
 
 export interface ClipboardRegister {
-  type: 'line' | 'text';
+  type: 'line' | 'text' | 'block';
   content: string;
+  /** 블록 레지스터(Ctrl-v)의 열 너비 */
+  blockWidth?: number;
 }
 
 export interface StateSnapshot {
@@ -339,8 +341,10 @@ export interface WildmenuState {
 }
 
 export interface RegisterEntry {
-  type: 'char' | 'line' | 'macro';
+  type: 'char' | 'line' | 'block' | 'macro';
   content: string | string[];
+  /** 블록 레지스터(Ctrl-v)의 열 너비 */
+  blockWidth?: number;
 }
 
 export interface MacroRecording {
@@ -481,7 +485,7 @@ export interface VimEditorState {
   /** 커맨드라인 또는 검색 실행 결과 피드백 메시지 (예: '10번째 줄로 이동', 'E492: 알 수 없는 명령어') */
   commandMessage?: string;
   /** 멀티 레지스터 저장소 */
-  registers?: Record<string, { type: 'char' | 'line' | 'macro'; content: string | string[] }>;
+  registers?: Record<string, RegisterEntry>;
   /** 현재 선택된 대상 레지스터 ("a~"z, "0, "_ 등) */
   activeRegister?: string | null;
   /** 현재 매크로 녹화 상태 */

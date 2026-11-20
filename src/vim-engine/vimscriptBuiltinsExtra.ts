@@ -883,6 +883,159 @@ export const EXTRA_BUILTINS: Record<string, ExtraBuiltin> = {
     },
   },
 
+  // ---- 레지스터 조회/설정 (getreg / getregtype / setreg) ----
+  getreg: {
+    min: 0,
+    max: 3,
+    fn: (ctx, [regArg, _keepList, asListArg]) => {
+      const rawName = regArg === undefined ? '"' : toVimString(regArg) || '"';
+      const asList = asListArg !== undefined && isTruthy(asListArg);
+      const s = ctx.state;
+      if (rawName === '_') return asList ? [] : '';
+      if (rawName === '%') {
+        const val = s.primaryFilename ?? '';
+        return asList ? (val ? [val] : []) : val;
+      }
+      if (rawName === '/') {
+        const val = s.lastSearchQuery ?? '';
+        return asList ? (val ? [val] : []) : val;
+      }
+      if (rawName === ':') {
+        const val = s.commandHistory?.[s.commandHistory.length - 1] ?? '';
+        return asList ? (val ? [val] : []) : val;
+      }
+      const key = rawName === '"' ? '"' : rawName.toLowerCase();
+      const entry = s.registers?.[key];
+      let content: string | undefined;
+      if (entry) {
+        content = Array.isArray(entry.content) ? entry.content.join('') : entry.content;
+      } else if (key === '"' && s.clipboard) {
+        content = s.clipboard.content;
+      } else if ((key === '+' || key === '*') && s.systemClipboard !== undefined) {
+        content = s.systemClipboard;
+      }
+      if (content === undefined) return asList ? [] : '';
+      return asList ? content.split('\n') : content;
+    },
+  },
+  getregtype: {
+    min: 0,
+    max: 1,
+    fn: (ctx, [regArg]) => {
+      const rawName = regArg === undefined ? '"' : toVimString(regArg) || '"';
+      const s = ctx.state;
+      if (rawName === '_') return '';
+      if (rawName === '%' || rawName === '/' || rawName === ':') return 'v';
+      const key = rawName === '"' ? '"' : rawName.toLowerCase();
+      const entry = s.registers?.[key];
+      if (entry) {
+        if (entry.type === 'line') return 'V';
+        if (entry.type === 'block') {
+          const text = Array.isArray(entry.content) ? entry.content.join('') : entry.content;
+          const w = entry.blockWidth ?? Math.max(0, ...text.split('\n').map((l) => l.length));
+          return `\x16${w}`;
+        }
+        return 'v';
+      }
+      if (key === '"' && s.clipboard) {
+        if (s.clipboard.type === 'line') return 'V';
+        if (s.clipboard.type === 'block') {
+          const w =
+            s.clipboard.blockWidth ??
+            Math.max(0, ...s.clipboard.content.split('\n').map((l) => l.length));
+          return `\x16${w}`;
+        }
+        return 'v';
+      }
+      return '';
+    },
+  },
+  setreg: {
+    min: 2,
+    max: 3,
+    fn: (ctx, [regArg, valArg, optArg]) => {
+      const rawName = toVimString(regArg) || '"';
+      if (rawName.length !== 1 || !/^[a-zA-Z0-9"_+*=-]$/.test(rawName)) return -1;
+      if (rawName === '_') return 0;
+
+      const isUpperAppend = /^[A-Z]$/.test(rawName);
+      const key = rawName === '"' ? '"' : rawName.toLowerCase();
+      const opt = optArg !== undefined ? toVimString(optArg) : '';
+      const isAppend = isUpperAppend || opt.includes('a');
+      const incomingIsList = isList(valArg);
+      const incomingText = incomingIsList
+        ? valArg.map(toVimString).join('\n')
+        : toVimString(valArg);
+
+      let nextType: 'char' | 'line' | 'block';
+      let blockWidth: number | undefined;
+      const blockMatch = opt.match(/(?:b|\x16)(\d*)/);
+      if (blockMatch) {
+        nextType = 'block';
+        blockWidth = blockMatch[1]
+          ? parseInt(blockMatch[1], 10)
+          : Math.max(0, ...incomingText.split('\n').map((l) => l.length));
+      } else if (opt.includes('l') || opt.includes('V')) {
+        nextType = 'line';
+      } else if (opt.includes('c') || opt.includes('v')) {
+        nextType = 'char';
+      } else {
+        nextType = incomingIsList ? 'line' : 'char';
+      }
+
+      const existing = ctx.state.registers?.[key];
+      let finalContent = incomingText;
+      if (isAppend && existing) {
+        const prevText = Array.isArray(existing.content)
+          ? existing.content.join('')
+          : existing.content;
+        finalContent =
+          nextType === 'line' || nextType === 'block' || existing.type === 'line'
+            ? `${prevText}\n${incomingText}`
+            : `${prevText}${incomingText}`;
+        if (nextType === 'block') {
+          blockWidth = Math.max(
+            blockWidth ?? 0,
+            existing.blockWidth ?? 0,
+            ...finalContent.split('\n').map((l) => l.length)
+          );
+        }
+      }
+
+      const nextEntry = {
+        type: nextType,
+        content: finalContent,
+        ...(nextType === 'block' && blockWidth !== undefined ? { blockWidth } : {}),
+      };
+
+      const nextRegisters = {
+        ...(ctx.state.registers ?? {}),
+        [key]: nextEntry,
+        ...(key === '+' || key === '*' ? { '+': nextEntry, '*': nextEntry } : {}),
+      };
+
+      const nextClipboard =
+        key === '"'
+          ? {
+              type: (nextType === 'line' ? 'line' : nextType === 'block' ? 'block' : 'text') as
+                | 'line'
+                | 'text'
+                | 'block',
+              content: finalContent,
+              ...(nextType === 'block' && blockWidth !== undefined ? { blockWidth } : {}),
+            }
+          : ctx.state.clipboard;
+
+      ctx.state = {
+        ...ctx.state,
+        registers: nextRegisters,
+        clipboard: nextClipboard,
+        ...(key === '+' || key === '*' ? { systemClipboard: finalContent } : {}),
+      };
+      return 0;
+    },
+  },
+
   // ---- 키매핑 조회 (maparg / mapcheck) ----
   maparg: {
     min: 1,

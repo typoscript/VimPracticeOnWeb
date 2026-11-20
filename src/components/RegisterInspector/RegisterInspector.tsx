@@ -17,7 +17,7 @@ export interface RegisterInspectorProps {
   onToggle: () => void;
   onRunMacro?: (register: string, count?: number) => void;
   onOpenMacroDebugger?: (register: string) => void;
-  onUpdateRegister?: (register: string, content: string | string[], type: 'char' | 'line' | 'macro') => void;
+  onUpdateRegister?: (register: string, content: string | string[], type: 'char' | 'line' | 'block' | 'macro') => void;
   onDeleteRegister?: (register: string) => void;
 }
 
@@ -25,7 +25,7 @@ export interface DisplayRegisterItem {
   rawKey: string;
   key: string;
   label: string;
-  type: 'char' | 'line' | 'macro';
+  type: 'char' | 'line' | 'block' | 'macro';
   content: string;
   rawKeys?: string[];
   isSpecial?: boolean;
@@ -99,11 +99,14 @@ export const RegisterInspector: React.FC<RegisterInspectorProps> = ({
       ? (Array.isArray(unnamedEntry.content) ? unnamedEntry.content.join('') : unnamedEntry.content)
       : clipboard?.content ?? '';
 
+    const resolveType = (t?: RegisterEntry['type'] | ClipboardRegister['type']): DisplayRegisterItem['type'] =>
+      t === 'line' ? 'line' : t === 'block' ? 'block' : t === 'macro' ? 'macro' : 'char';
+
     items.push({
       rawKey: '"',
       key: '""',
       label: t('기본 클립보드 (Unnamed)'),
-      type: unnamedEntry?.type === 'line' || clipboard?.type === 'line' ? 'line' : 'char',
+      type: resolveType(unnamedEntry?.type ?? clipboard?.type),
       content: defaultContent,
       isSpecial: true,
     });
@@ -115,7 +118,7 @@ export const RegisterInspector: React.FC<RegisterInspectorProps> = ({
         rawKey: '0',
         key: '"0',
         label: t('최근 복사본 (Yank)'),
-        type: zeroEntry.type === 'line' ? 'line' : 'char',
+        type: resolveType(zeroEntry.type),
         content: Array.isArray(zeroEntry.content) ? zeroEntry.content.join('') : zeroEntry.content,
         isSpecial: true,
       });
@@ -155,7 +158,7 @@ export const RegisterInspector: React.FC<RegisterInspectorProps> = ({
       return registerItems.filter((i) => i.type === 'macro');
     }
     if (filter === 'clipboard') {
-      return registerItems.filter((i) => i.isSpecial || i.type === 'char' || i.type === 'line');
+      return registerItems.filter((i) => i.isSpecial || i.type === 'char' || i.type === 'line' || i.type === 'block');
     }
     return registerItems;
   }, [registerItems, filter]);
@@ -319,7 +322,13 @@ export const RegisterInspector: React.FC<RegisterInspectorProps> = ({
                       </td>
                       <td className="cell-type">
                         <span className={`type-badge type-${item.type}`}>
-                          {item.type === 'line' ? t('줄 단위') : item.type === 'macro' ? t('매크로') : t('문자열')}
+                          {item.type === 'line'
+                            ? t('줄 단위')
+                            : item.type === 'block'
+                              ? t('블록 단위')
+                              : item.type === 'macro'
+                                ? t('매크로')
+                                : t('문자열')}
                         </span>
                       </td>
                       <td className="cell-content">

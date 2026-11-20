@@ -230,7 +230,7 @@ export function useEditorWorkspaceHandlers({
   );
 
   const handleUpdateRegister = useCallback(
-    (register: string, content: string | string[], type: 'char' | 'line' | 'macro') => {
+    (register: string, content: string | string[], type: 'char' | 'line' | 'block' | 'macro') => {
       setEditorState((prev) => {
         const nextRegisters = { ...(prev.registers ?? {}) };
         nextRegisters[register] = { type, content };

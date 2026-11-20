@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { handleKey } from './vimEngine';
+import { executeCommandLine } from './commandLine';
 import { VimEditorState } from './types';
 import { formatRegisters } from './registers';
 
@@ -344,6 +345,132 @@ describe('Named Registers & Black Hole Register ("a~"z, "0, "_)', () => {
       state = handleKey(state, '@');
 
       expect(state.lines[2]).toBe('// item 2');
+    });
+  });
+
+  describe('Blockwise Registers (Ctrl-v y/d/p/P/gp, :reg b, >/<, getreg/setreg/getregtype)', () => {
+    it('Ctrl-v 블록 복사(y) 후 p/P/2p/gp 로 열 정렬 직사각형 붙여넣기를 수행한다', () => {
+      let state: VimEditorState = {
+        lines: [
+          'AA11xx',
+          'BB22yy',
+          'CC33zz',
+        ],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      // Ctrl-v 2j l y -> 3x2 블록 복사 ('AA', 'BB', 'CC')
+      for (const k of ['Ctrl-v', 'j', 'j', 'l', 'y']) {
+        state = handleKey(state, k);
+      }
+      expect(state.clipboard).toEqual({ type: 'block', content: 'AA\nBB\nCC', blockWidth: 2 });
+      expect(state.registers?.['"']?.type).toBe('block');
+      expect(state.registers?.['0']?.type).toBe('block');
+
+      // :reg 에서 블록 타입('b') 표기 확인
+      expect(formatRegisters(state)).toContain('""   b   AA^JBB^JCC');
+
+      // 줄 끝($)으로 이동 후 p 로 오른쪽에 열 정렬 붙여넣기
+      state = handleKey(state, '$');
+      state = handleKey(state, 'p');
+      expect(state.lines).toEqual([
+        'AA11xxAA',
+        'BB22yyBB',
+        'CC33zzCC',
+      ]);
+      expect(state.cursor).toEqual({ line: 0, col: 6 });
+
+      // P 로 커서 앞(col 2)에 삽입 및 2p 가로 반복 확인
+      state = { ...state, cursor: { line: 0, col: 2 } };
+      state = handleKey(state, 'P');
+      expect(state.lines).toEqual([
+        'AAAA11xxAA',
+        'BBBB22yyBB',
+        'CCCC33zzCC',
+      ]);
+    });
+
+    it('블록 붙여넣기(p) 시 짧은 줄은 공백 패딩하고 버퍼 끝을 넘으면 새 줄을 확장한다', () => {
+      let state: VimEditorState = {
+        lines: [
+          '12345',
+          'x',
+        ],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+        registers: {
+          '"': { type: 'block', content: 'AB\nC\nDE', blockWidth: 2 },
+        },
+        clipboard: { type: 'block', content: 'AB\nC\nDE', blockWidth: 2 },
+      };
+
+      // col 3 ('4') 뒤(insertCol=4)에 3줄 블록 붙여넣기 + gp 커서 확인
+      state = { ...state, cursor: { line: 0, col: 3 } };
+      state = handleKey(state, 'g');
+      state = handleKey(state, 'p');
+      expect(state.lines).toEqual([
+        '1234AB5',
+        'x   C',
+        '    DE',
+      ]);
+      expect(state.cursor.line).toBe(2);
+    });
+
+    it('VISUAL_BLOCK 모드에서 > / < 는 블록 시작 열(minCol) 기준으로 들여쓰기·내어쓰기를 수행한다', () => {
+      let state: VimEditorState = {
+        lines: [
+          'foo = 1',
+          'bar = 2',
+          'baz = 3',
+        ],
+        cursor: { line: 0, col: 4 }, // '=' 위치
+        mode: 'NORMAL',
+      };
+
+      // Ctrl-v 2j > -> col 4 위치에 2칸 들여쓰기
+      for (const k of ['Ctrl-v', 'j', 'j', '>']) {
+        state = handleKey(state, k);
+      }
+      expect(state.lines).toEqual([
+        'foo   = 1',
+        'bar   = 2',
+        'baz   = 3',
+      ]);
+
+      // 다시 Ctrl-v 2j < -> col 4 위치에서 2칸 내어쓰기
+      for (const k of ['Ctrl-v', 'j', 'j', '<']) {
+        state = handleKey(state, k);
+      }
+      expect(state.lines).toEqual([
+        'foo = 1',
+        'bar = 2',
+        'baz = 3',
+      ]);
+    });
+
+    it('Vimscript getreg(), getregtype(), setreg() 가 char/line/block 레지스터를 완벽히 지원한다', () => {
+      let state: VimEditorState = {
+        lines: ['111', '222'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      // setreg 로 블록 레지스터("b) 설정 후 getreg / getregtype 확인
+      state = executeCommandLine(state, 'call setreg("b", ["XX", "YY"], "b2")');
+      state = executeCommandLine(state, 'echo [getreg("b", 1, 1), getregtype("b") == "\\x162" || stridx(getregtype("b"), "2") >= 0]');
+      expect(state.commandMessage).toBe("[['XX', 'YY'], 1]");
+
+      // setreg("a", "hi", "c") + append("A", "!") + linewise("l")
+      state = executeCommandLine(state, 'call setreg("a", "hi", "c") | call setreg("A", "!") | call setreg("l", ["L1", "L2"], "l")');
+      state = executeCommandLine(state, 'echo [getreg("a"), getregtype("a"), getregtype("l")]');
+      expect(state.commandMessage).toBe("['hi!', 'v', 'V']");
+
+      // "bP 로 블록 레지스터를 열 앞에 수직 붙여넣기
+      state = handleKey(state, '"');
+      state = handleKey(state, 'b');
+      state = handleKey(state, 'P');
+      expect(state.lines).toEqual(['XX111', 'YY222']);
     });
   });
 });

@@ -119,6 +119,10 @@ export function deleteVisualBlock(state: VimEditorState): VimEditorState {
     'NORMAL'
   );
 
+  const blockWidth = isEol
+    ? Math.max(0, ...deletedParts.map((p) => p.length))
+    : maxCol - minCol + 1;
+
   return {
     ...stateWithSnapshot,
     lines: nextLines,
@@ -127,8 +131,9 @@ export function deleteVisualBlock(state: VimEditorState): VimEditorState {
     visualAnchor: undefined,
     visualBlockEndOfLine: undefined,
     clipboard: {
-      type: 'text',
+      type: 'block',
       content: deletedParts.join('\n'),
+      blockWidth,
     },
     pendingKeys: undefined,
   };
@@ -163,6 +168,10 @@ export function yankVisualBlock(state: VimEditorState): VimEditorState {
     }
   }
 
+  const blockWidth = isEol
+    ? Math.max(0, ...parts.map((p) => p.length))
+    : maxCol - minCol + 1;
+
   return {
     ...state,
     mode: 'NORMAL',
@@ -170,8 +179,9 @@ export function yankVisualBlock(state: VimEditorState): VimEditorState {
     visualBlockEndOfLine: undefined,
     cursor: clampCursor(state.lines, { line: minLine, col: minCol }, 'NORMAL'),
     clipboard: {
-      type: 'text',
+      type: 'block',
       content: parts.join('\n'),
+      blockWidth,
     },
     lastBracketMarks: {
       start: { row: minLine, col: minCol },

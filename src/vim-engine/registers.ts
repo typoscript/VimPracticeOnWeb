@@ -31,7 +31,11 @@ export function syncRegisters(
     };
   }
 
-  const regType: 'char' | 'line' = clip.type === 'line' ? 'line' : 'char';
+  const regType: 'char' | 'line' | 'block' =
+    clip.type === 'line' ? 'line' : clip.type === 'block' ? 'block' : 'char';
+  const blockWidthProp = regType === 'block' && clip.blockWidth !== undefined
+    ? { blockWidth: clip.blockWidth }
+    : {};
   const newRegisters: Record<string, RegisterEntry> = { ...(prevState.registers ?? {}) };
 
   // 명명된 레지스터("a~"z, "A~"Z 등)에 저장
@@ -46,6 +50,18 @@ export function syncRegisters(
         newRegisters[targetKey] = {
           type: 'line',
           content: `${existingContent}\n${clip.content}`,
+        };
+      } else if (existing.type === 'block' && regType === 'block') {
+        const mergedContent = `${existingContent}\n${clip.content}`;
+        const mergedWidth = Math.max(
+          existing.blockWidth ?? 0,
+          clip.blockWidth ?? 0,
+          ...mergedContent.split('\n').map((l) => l.length)
+        );
+        newRegisters[targetKey] = {
+          type: 'block',
+          content: mergedContent,
+          blockWidth: mergedWidth,
         };
       } else if (existing.type === 'char' && regType === 'char') {
         newRegisters[targetKey] = {
@@ -63,6 +79,7 @@ export function syncRegisters(
       newRegisters[targetKey] = {
         type: regType,
         content: clip.content,
+        ...blockWidthProp,
       };
     }
   }
@@ -71,12 +88,13 @@ export function syncRegisters(
   newRegisters['"'] = {
     type: regType,
     content: clip.content,
+    ...blockWidthProp,
   };
 
   // 시스템 클립보드 ("+, "*) 연동 동기화
   if (reg === '+' || reg === '*') {
-    newRegisters['+'] = { type: regType, content: clip.content };
-    newRegisters['*'] = { type: regType, content: clip.content };
+    newRegisters['+'] = { type: regType, content: clip.content, ...blockWidthProp };
+    newRegisters['*'] = { type: regType, content: clip.content, ...blockWidthProp };
   }
 
   // 복사(Yank) 연산인 경우 전용 "0 레지스터에도 저장
@@ -84,6 +102,7 @@ export function syncRegisters(
     newRegisters['0'] = {
       type: regType,
       content: clip.content,
+      ...blockWidthProp,
     };
   }
 
@@ -235,13 +254,16 @@ export function getRegisterContent(
 
   // 시스템 클립보드 ("+, "*) 조회
   if (targetReg === '+' || targetReg === '*') {
-    const content = state.systemClipboard ?? state.registers?.[targetReg]?.content;
+    const entry = state.registers?.[targetReg];
+    const content = state.systemClipboard ?? entry?.content;
     if (content !== undefined && content !== null) {
       const str = Array.isArray(content) ? content.join('') : content;
-      const type = state.registers?.[targetReg]?.type === 'line' ? 'line' : 'text';
+      const type: ClipboardRegister['type'] =
+        entry?.type === 'line' ? 'line' : entry?.type === 'block' ? 'block' : 'text';
       return {
         type,
         content: str,
+        ...(type === 'block' && entry?.blockWidth !== undefined ? { blockWidth: entry.blockWidth } : {}),
       };
     }
   }
@@ -266,9 +288,12 @@ export function getRegisterContent(
     const content = Array.isArray(entry.content)
       ? (entry.type === 'macro' ? formatMacroKeysToString(entry.content) : entry.content.join(''))
       : entry.content;
+    const type: ClipboardRegister['type'] =
+      entry.type === 'line' ? 'line' : entry.type === 'block' ? 'block' : 'text';
     return {
-      type: entry.type === 'line' ? 'line' : 'text',
+      type,
       content,
+      ...(type === 'block' && entry.blockWidth !== undefined ? { blockWidth: entry.blockWidth } : {}),
     };
   }
 
@@ -278,9 +303,12 @@ export function getRegisterContent(
     const content = Array.isArray(entry.content)
       ? (entry.type === 'macro' ? formatMacroKeysToString(entry.content) : entry.content.join(''))
       : entry.content;
+    const type: ClipboardRegister['type'] =
+      entry.type === 'line' ? 'line' : entry.type === 'block' ? 'block' : 'text';
     return {
-      type: entry.type === 'line' ? 'line' : 'text',
+      type,
       content,
+      ...(type === 'block' && entry.blockWidth !== undefined ? { blockWidth: entry.blockWidth } : {}),
     };
   }
 
@@ -403,6 +431,59 @@ export function putFromRegister(
     };
   }
 
+  if (rawClip.type === 'block') {
+    const blockLines = rawClip.content.split('\n');
+    const blockWidth =
+      rawClip.blockWidth ?? Math.max(0, ...blockLines.map((l) => l.length));
+    const repeatCount = Math.max(1, count);
+    const currentLine = state.lines[line] ?? '';
+    const insertCol = isBefore ? col : (currentLine.length === 0 ? 0 : col + 1);
+
+    const nextLines = [...state.lines];
+    for (let i = 0; i < blockLines.length; i++) {
+      const rowIdx = line + i;
+      while (rowIdx >= nextLines.length) {
+        nextLines.push('');
+      }
+      const existingLine = nextLines[rowIdx];
+      const seg = blockLines[i];
+      if (seg.length === 0 && existingLine.length <= insertCol) {
+        continue;
+      }
+      const paddedPrefix =
+        existingLine.length < insertCol
+          ? existingLine.padEnd(insertCol, ' ')
+          : existingLine.slice(0, insertCol);
+      const suffix = existingLine.slice(insertCol);
+      const paddedUnit = seg.padEnd(blockWidth, ' ');
+      const inserted =
+        suffix.length > 0
+          ? paddedUnit.repeat(repeatCount)
+          : repeatCount > 1
+            ? paddedUnit.repeat(repeatCount - 1) + seg
+            : seg;
+      nextLines[rowIdx] = paddedPrefix + inserted + suffix;
+    }
+
+    const endRow = line + blockLines.length - 1;
+    const totalAddedWidth = blockWidth * repeatCount;
+    const nextCursor = options?.leaveCursorAfter
+      ? clampCursor(nextLines, { line: endRow, col: insertCol + totalAddedWidth }, 'NORMAL')
+      : clampCursor(nextLines, { line, col: insertCol }, 'NORMAL');
+
+    return {
+      ...stateWithSnapshot,
+      lines: nextLines,
+      cursor: nextCursor,
+      lastBracketMarks: {
+        start: { row: line, col: insertCol },
+        end: { row: endRow, col: Math.max(insertCol, insertCol + totalAddedWidth - 1) },
+      },
+      activeRegister: undefined,
+      pendingKeys: undefined,
+    };
+  }
+
   // 문자/멀티라인 텍스트 붙여넣기
   const textContent = count > 1 ? rawClip.content.repeat(count) : rawClip.content;
   const currentLine = state.lines[line] ?? '';
@@ -473,6 +554,9 @@ export function formatRegisters(state: VimEditorState, filterArg?: string): stri
 
   const list: RegDisplay[] = [];
 
+  const toDisplayType = (t?: RegisterEntry['type'] | ClipboardRegister['type']): 'l' | 'c' | 'b' | 'm' =>
+    t === 'line' ? 'l' : t === 'block' ? 'b' : t === 'macro' ? 'm' : 'c';
+
   // 1. "" (무명 기본 레지스터)
   const unnamedEntry = state.registers?.['"'];
   if (unnamedEntry && unnamedEntry.content) {
@@ -480,14 +564,14 @@ export function formatRegisters(state: VimEditorState, filterArg?: string): stri
     if (rawContent) {
       list.push({
         name: '"',
-        type: unnamedEntry.type === 'line' ? 'l' : 'c',
+        type: toDisplayType(unnamedEntry.type),
         content: rawContent,
       });
     }
   } else if (state.clipboard?.content) {
     list.push({
       name: '"',
-      type: state.clipboard.type === 'line' ? 'l' : 'c',
+      type: toDisplayType(state.clipboard.type),
       content: state.clipboard.content,
     });
   }
@@ -501,7 +585,7 @@ export function formatRegisters(state: VimEditorState, filterArg?: string): stri
       if (rawContent) {
         list.push({
           name: key,
-          type: entry.type === 'line' ? 'l' : 'c',
+          type: toDisplayType(entry.type),
           content: rawContent,
         });
       }
@@ -515,7 +599,7 @@ export function formatRegisters(state: VimEditorState, filterArg?: string): stri
     if (rawContent) {
       list.push({
         name: '-',
-        type: smallDel.type === 'line' ? 'l' : 'c',
+        type: toDisplayType(smallDel.type),
         content: rawContent,
       });
     }
@@ -547,7 +631,7 @@ export function formatRegisters(state: VimEditorState, filterArg?: string): stri
       if (rawContent) {
         list.push({
           name: k,
-          type: isMacro ? 'm' : (entry.type === 'line' ? 'l' : 'c'),
+          type: toDisplayType(entry.type),
           content: rawContent,
         });
       }

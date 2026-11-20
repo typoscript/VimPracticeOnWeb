@@ -353,6 +353,42 @@ export function indentVisual(
   const indentStr = et ? ' '.repeat(sw) : '\t';
 
   const newLines = [...state.lines];
+  if (state.mode === 'VISUAL_BLOCK') {
+    const minCol = Math.min(state.visualAnchor.col, state.cursor.col);
+    for (let i = minLine; i <= maxLine; i++) {
+      const line = newLines[i];
+      if (line.length <= minCol) continue;
+      const prefix = line.slice(0, minCol);
+      const rest = line.slice(minCol);
+      if (direction === 'in') {
+        if (rest.length > 0) newLines[i] = prefix + indentStr + rest;
+      } else {
+        if (rest.startsWith(indentStr)) {
+          newLines[i] = prefix + rest.slice(indentStr.length);
+        } else if (rest.startsWith('\t')) {
+          newLines[i] = prefix + rest.slice(1);
+        } else if (rest.startsWith(' ')) {
+          let spaces = 0;
+          while (spaces < sw && rest[spaces] === ' ') spaces++;
+          newLines[i] = prefix + rest.slice(spaces);
+        }
+      }
+    }
+    const blockCursor = {
+      line: minLine,
+      col: Math.min(minCol, Math.max(0, (newLines[minLine] ?? '').length - 1)),
+    };
+    return {
+      ...stateWithUndo,
+      lines: newLines,
+      cursor: blockCursor,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      visualBlockEndOfLine: undefined,
+      pendingKeys: undefined,
+    };
+  }
+
   for (let i = minLine; i <= maxLine; i++) {
     const line = newLines[i];
     if (direction === 'in') {

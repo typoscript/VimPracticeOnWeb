@@ -170,7 +170,12 @@ export const ActionTimelinePanel: React.FC<ActionTimelinePanelProps> = ({
       };
     }
 
-    const typeStr = clip.type === 'line' ? t('줄(line) 단위') : t('문자(char) 단위');
+    const typeStr =
+      clip.type === 'line'
+        ? t('줄(line) 단위')
+        : clip.type === 'block'
+          ? t('블록(block) 단위')
+          : t('문자(char) 단위');
     const preview =
       clip.content.length > 25 ? `${clip.content.slice(0, 25)}...` : clip.content;
 
