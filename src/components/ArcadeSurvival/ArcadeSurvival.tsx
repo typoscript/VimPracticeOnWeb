@@ -1,13 +1,13 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React from 'react';
 import { Editor } from '../Editor/Editor';
 import { StatusBar } from '../StatusBar/StatusBar';
 import { Keycaster } from '../Keycaster/Keycaster';
-import { VimEditorState, VimMode } from '../../vim-engine';
-import { handleKey } from '../../vim-engine';
-import { saveArcadeRecord, loadUserAnalytics, recordKeyInputStats } from '../../utils/analyticsStorage';
+import { VimMode } from '../../vim-engine';
 import './ArcadeSurvival.css';
 import { t } from '../../i18n';
-import { ARCADE_MISSIONS } from './arcadeMissions';
+import { useArcadeSurvival, ArcadePowerUps } from './useArcadeSurvival';
+
+export type { ArcadePowerUps };
 
 export interface ArcadeSurvivalProps {
   onPlayKeySound: (key: string, mode: VimMode) => void;
@@ -15,339 +15,33 @@ export interface ArcadeSurvivalProps {
   isMuted: boolean;
 }
 
-export interface ArcadePowerUps {
-  freeze: number;
-  bomb: number;
-  shield: number;
-}
-
 export const ArcadeSurvival: React.FC<ArcadeSurvivalProps> = ({
   onPlayKeySound,
   onPlaySuccessSound,
 }) => {
-  const [gameState, setGameState] = useState<'ready' | 'playing' | 'gameover'>('ready');
-  const [wave, setWave] = useState(1);
-  const [score, setScore] = useState(0);
-  const [combo, setCombo] = useState(0);
-  const [maxCombo, setMaxCombo] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(15);
-  const [maxTime, setMaxTime] = useState(15);
-  const [keystrokesInWave, setKeystrokesInWave] = useState(0);
-  const [totalKeystrokes, setTotalKeystrokes] = useState(0);
-  const [powerups, setPowerups] = useState<ArcadePowerUps>({
-    freeze: 1,
-    bomb: 1,
-    shield: 0,
-  });
-  const [freezeTimeLeft, setFreezeTimeLeft] = useState(0);
-  const [perfectMessage, setPerfectMessage] = useState<string | null>(null);
-  const [penaltyMessage, setPenaltyMessage] = useState<string | null>(null);
-  const [skillMessage, setSkillMessage] = useState<string | null>(null);
-  const [bossAlertMessage, setBossAlertMessage] = useState<string | null>(null);
-  const [bossDefeatedMessage, setBossDefeatedMessage] = useState<string | null>(null);
-  const [recentKeys, setRecentKeys] = useState<string[]>([]);
-  const [isNewRecord, setIsNewRecord] = useState(false);
-
-  // 로컬 저장소 최고 기록 조회
-  const [analytics, setAnalytics] = useState(() => loadUserAnalytics());
-
-  const currentMission = ARCADE_MISSIONS[(wave - 1) % ARCADE_MISSIONS.length];
-
-  const [editorState, setEditorState] = useState<VimEditorState>(() => ({
-    lines: [...currentMission.initialLines],
-    cursor: { ...currentMission.initialCursor },
-    mode: 'NORMAL',
-    undoStack: [],
-    redoStack: [],
-  }));
-
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const shieldRef = useRef(powerups.shield);
-  const freezeTimeLeftRef = useRef(freezeTimeLeft);
-
-  useEffect(() => {
-    shieldRef.current = powerups.shield;
-  }, [powerups.shield]);
-
-  useEffect(() => {
-    freezeTimeLeftRef.current = freezeTimeLeft;
-  }, [freezeTimeLeft]);
-
-  // 미션 초기화 함수
-  const loadWaveMission = useCallback((waveNum: number) => {
-    const mission = ARCADE_MISSIONS[(waveNum - 1) % ARCADE_MISSIONS.length];
-    // 웨이브가 높아질수록 제한 시간 단축 (최소 6초)
-    const waveTime = Math.max(6, mission.timeLimit - Math.floor((waveNum - 1) / 3));
-
-    setEditorState({
-      lines: [...mission.initialLines],
-      cursor: { ...mission.initialCursor },
-      mode: 'NORMAL',
-      undoStack: [],
-      redoStack: [],
-    });
-    setTimeLeft(waveTime);
-    setMaxTime(waveTime);
-    setFreezeTimeLeft(0);
-    setKeystrokesInWave(0);
-
-    if (mission.isBoss) {
-      setBossAlertMessage(
-        t('🚨 BOSS ALERT: {bossName} 출현!', { bossName: mission.bossName ?? 'BOSS' })
-      );
-      setTimeout(() => setBossAlertMessage(null), 2000);
-    }
-  }, []);
-
-  const handleStartGame = useCallback(() => {
-    setGameState('playing');
-    setWave(1);
-    setScore(0);
-    setCombo(0);
-    setMaxCombo(0);
-    setTotalKeystrokes(0);
-    setPowerups({ freeze: 1, bomb: 1, shield: 0 });
-    setFreezeTimeLeft(0);
-    setPerfectMessage(null);
-    setPenaltyMessage(null);
-    setSkillMessage(null);
-    setBossAlertMessage(null);
-    setBossDefeatedMessage(null);
-    setIsNewRecord(false);
-    loadWaveMission(1);
-  }, [loadWaveMission]);
-
-  // 카운트다운 타이머 (100ms마다 실행)
-  useEffect(() => {
-    if (gameState === 'playing') {
-      timerRef.current = setInterval(() => {
-        if (freezeTimeLeftRef.current > 0) {
-          setFreezeTimeLeft((prev) => {
-            const next = Number((prev - 0.1).toFixed(1));
-            return next <= 0 ? 0 : next;
-          });
-          return;
-        }
-
-        setTimeLeft((prev) => {
-          if (prev <= 0.1) {
-            // 비상 생명선: 쉴드 보유 시 타임아웃 1회 방어 및 +5초 연장
-            if (shieldRef.current > 0) {
-              setPowerups((p) => ({ ...p, shield: Math.max(0, p.shield - 1) }));
-              setSkillMessage(t('🛡️ 쉴드 비상 발동! 타임아웃 방어 (+5초)'));
-              setTimeout(() => setSkillMessage(null), 1800);
-              return 5.0;
-            }
-            return 0;
-          }
-          return Number((prev - 0.1).toFixed(1));
-        });
-      }, 100);
-    }
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    };
-  }, [gameState]);
-
-  // 시간 초과 시 게임 오버 처리
-  useEffect(() => {
-    if (gameState === 'playing' && timeLeft <= 0 && freezeTimeLeft <= 0) {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-      setGameState('gameover');
-      const { isNewBestScore, data } = saveArcadeRecord(score, wave, maxCombo);
-      setIsNewRecord(isNewBestScore);
-      setAnalytics(data);
-    }
-  }, [gameState, timeLeft, freezeTimeLeft, score, wave, maxCombo]);
-
-  // 웨이브 성공 처리 (정상 완료 또는 폭탄 사용)
-  const handleWaveSuccess = useCallback(
-    (isBomb: boolean = false) => {
-      onPlaySuccessSound();
-      const nextCombo = combo + 1;
-      let waveBonus = 50;
-      const isParBeaten = !isBomb && keystrokesInWave + 1 <= currentMission.par;
-
-      if (isBomb) {
-        waveBonus = 100;
-      } else if (isParBeaten) {
-        waveBonus = 200;
-        setPowerups((prev) => ({ ...prev, freeze: prev.freeze + 1 }));
-        setPerfectMessage(t('⭐ PERFECT! +{waveBonus} Bonus! (최소 타수 달성)', { waveBonus }));
-        setTimeout(() => setPerfectMessage(null), 1200);
-        setSkillMessage(t('⏳ PERFECT 달성! 시간 정지 +1 획득!'));
-        setTimeout(() => setSkillMessage(null), 1800);
-      }
-
-      // 3콤보 달성 시마다 쉴드 +1 획득
-      if (nextCombo > 0 && nextCombo % 3 === 0) {
-        setPowerups((prev) => ({ ...prev, shield: prev.shield + 1 }));
-        setSkillMessage(t('🛡️ 콤보 보너스! 쉴드 +1 획득!'));
-        setTimeout(() => setSkillMessage(null), 1800);
-      }
-
-      let bossBonus = 0;
-      if (currentMission.isBoss) {
-        bossBonus = wave % 10 === 0 ? 1000 : 500;
-        setPowerups((prev) => ({
-          freeze: prev.freeze + 1,
-          bomb: prev.bomb + 1,
-          shield: prev.shield + 1,
-        }));
-        setBossDefeatedMessage(
-          t('👑 BOSS DEFEATED! 보스 격퇴 보너스 (+{bossBonus}점) & 파워업 충전!', { bossBonus })
-        );
-        setTimeout(() => setBossDefeatedMessage(null), 2200);
-      }
-
-      const timeBonus = Math.round(timeLeft * 10);
-      const waveScore = 150 * nextCombo + waveBonus + timeBonus + bossBonus;
-
-      setCombo(nextCombo);
-      setMaxCombo((prev) => Math.max(prev, nextCombo));
-      setScore((prev) => prev + waveScore);
-
-      const nextWave = wave + 1;
-      setWave(nextWave);
-      loadWaveMission(nextWave);
-    },
-    [
-      onPlaySuccessSound,
-      combo,
-      keystrokesInWave,
-      currentMission,
-      timeLeft,
-      wave,
-      loadWaveMission,
-    ]
-  );
-
-  // 파워업: 시간 정지 (Chrono Freeze - Ctrl+Z)
-  const useChronoFreeze = useCallback(() => {
-    if (gameState !== 'playing' || powerups.freeze <= 0 || freezeTimeLeft > 0) {
-      return;
-    }
-    setPowerups((prev) => ({ ...prev, freeze: Math.max(0, prev.freeze - 1) }));
-    setFreezeTimeLeft(5.0);
-    setSkillMessage(t('⏳ 시간 정지 발동! 5초간 시간이 멈춥니다.'));
-    setTimeout(() => setSkillMessage(null), 1500);
-  }, [gameState, powerups.freeze, freezeTimeLeft]);
-
-  // 파워업: 버그 폭탄 (Bug Bomb - Ctrl+B)
-  const useBugBomb = useCallback(() => {
-    if (gameState !== 'playing' || powerups.bomb <= 0) {
-      return;
-    }
-    setPowerups((prev) => ({ ...prev, bomb: Math.max(0, prev.bomb - 1) }));
-    setSkillMessage(t('💣 버그 폭탄 폭발! 버그 섬멸!'));
-    setTimeout(() => setSkillMessage(null), 1500);
-    handleWaveSuccess(true);
-  }, [gameState, powerups.bomb, handleWaveSuccess]);
-
-  // 키 입력 처리 및 버그 처치 검사
-  const processArcadeKey = useCallback(
-    (key: string) => {
-      if (gameState !== 'playing') {
-        if (key === 'Enter') {
-          handleStartGame();
-        }
-        return;
-      }
-
-      // 방향키 사용 시 페널티 (쉴드 방어 또는 콤보 리셋)
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(key)) {
-        if (powerups.shield > 0) {
-          setPowerups((prev) => ({ ...prev, shield: Math.max(0, prev.shield - 1) }));
-          setPenaltyMessage(t('🛡️ 쉴드 방어! 방향키 페널티를 막아냈습니다.'));
-          setTimeout(() => setPenaltyMessage(null), 1500);
-        } else {
-          setCombo(0);
-          setPenaltyMessage(t('⚠️ 방향키 사용으로 콤보가 리셋되었습니다! (hjkl을 사용하세요)'));
-          setTimeout(() => setPenaltyMessage(null), 1500);
-        }
-      }
-
-      setKeystrokesInWave((prev) => prev + 1);
-      setTotalKeystrokes((prev) => prev + 1);
-      setRecentKeys((prev) => [...prev.slice(-6), key]);
-      onPlayKeySound(key, editorState.mode);
-      recordKeyInputStats(key);
-
-      // Vim 엔진 키 처리
-      const nextState = handleKey(editorState, key);
-      setEditorState(nextState);
-
-      // 버그 박멸 완료 검사
-      const isTargetMatched =
-        nextState.mode === 'NORMAL' &&
-        nextState.lines.length === currentMission.targetLines.length &&
-        nextState.lines.every((line, idx) => line === currentMission.targetLines[idx]);
-
-      if (isTargetMatched) {
-        handleWaveSuccess(false);
-      }
-    },
-    [
-      gameState,
-      handleStartGame,
-      powerups.shield,
-      editorState,
-      currentMission,
-      handleWaveSuccess,
-      onPlayKeySound,
-    ]
-  );
-
-  // 키보드 이벤트 리스너 등록
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(e.key)) {
-        return;
-      }
-
-      // 파워업 단축키 처리
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) {
-        e.preventDefault();
-        useChronoFreeze();
-        return;
-      }
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'b' || e.key === 'B')) {
-        e.preventDefault();
-        useBugBomb();
-        return;
-      }
-
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
-        e.preventDefault();
-      }
-
-      processArcadeKey(e.key);
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [processArcadeKey, useChronoFreeze, useBugBomb]);
-
-  const isFrozen = freezeTimeLeft > 0;
-  const timeRatio = isFrozen
-    ? 100
-    : Math.max(0, Math.min(100, (timeLeft / maxTime) * 100));
-  const timeBarColor = isFrozen
-    ? '#7dcfff'
-    : timeRatio > 50
-    ? '#9ece6a'
-    : timeRatio > 25
-    ? '#e0af68'
-    : '#f7768e';
+  const {
+    gameState,
+    wave,
+    score,
+    combo,
+    maxCombo,
+    timeLeft,
+    totalKeystrokes,
+    powerups,
+    freezeTimeLeft,
+    banners,
+    recentKeys,
+    isNewRecord,
+    analytics,
+    editorState,
+    currentMission,
+    isFrozen,
+    timeRatio,
+    timeBarColor,
+    handleStartGame,
+    useChronoFreeze,
+    useBugBomb,
+  } = useArcadeSurvival({ onPlayKeySound, onPlaySuccessSound });
 
   return (
     <div className="arcade-survival-container" data-testid="arcade-survival">
@@ -442,29 +136,29 @@ export const ArcadeSurvival: React.FC<ArcadeSurvivalProps> = ({
       </div>
 
       {/* 실시간 팝업 이펙트 메시지 */}
-      {perfectMessage && (
+      {banners.perfect && (
         <div className="arcade-banner perfect-banner" data-testid="perfect-banner">
-          {perfectMessage}
+          {banners.perfect}
         </div>
       )}
-      {penaltyMessage && (
+      {banners.penalty && (
         <div className="arcade-banner penalty-banner" data-testid="penalty-banner">
-          {penaltyMessage}
+          {banners.penalty}
         </div>
       )}
-      {skillMessage && (
+      {banners.skill && (
         <div className="arcade-banner skill-banner" data-testid="skill-banner">
-          {skillMessage}
+          {banners.skill}
         </div>
       )}
-      {bossAlertMessage && (
+      {banners.bossAlert && (
         <div className="arcade-banner boss-alert-banner" data-testid="boss-alert-banner">
-          {bossAlertMessage}
+          {banners.bossAlert}
         </div>
       )}
-      {bossDefeatedMessage && (
+      {banners.bossDefeated && (
         <div className="arcade-banner boss-defeated-banner" data-testid="boss-defeated-banner">
-          {bossDefeatedMessage}
+          {banners.bossDefeated}
         </div>
       )}
 
@@ -515,10 +209,21 @@ export const ArcadeSurvival: React.FC<ArcadeSurvivalProps> = ({
             </p>
             <ul className="dialog-rules">
               <li>{t('⏱️ 문제를 해결할 때마다 시간 보너스가 주어집니다.')}</li>
-              <li>{t('⭐ Par 이하 최소 타수로 처치하면')} <strong>{t('PERFECT 보너스 (+200점)')}</strong>!</li>
-              <li>{t('⚠️ 방향키 연타 사용 시')} <strong>{t('콤보가 0으로 리셋')}</strong>{t('됩니다.')}</li>
-              <li>{t('👑 Wave 5 & 10에는 강력한')} <strong>{t('보스 버그')}</strong>{t('가 출현합니다!')}</li>
-              <li>{t('⚡ [Ctrl+Z] 시간 정지, [Ctrl+B] 폭탄, 🛡️ 쉴드를 전략적으로 활용하세요!')}</li>
+              <li>
+                {t('⭐ Par 이하 최소 타수로 처치하면')}{' '}
+                <strong>{t('PERFECT 보너스 (+200점)')}</strong>!
+              </li>
+              <li>
+                {t('⚠️ 방향키 연타 사용 시')} <strong>{t('콤보가 0으로 리셋')}</strong>
+                {t('됩니다.')}
+              </li>
+              <li>
+                {t('👑 Wave 5 & 10에는 강력한')} <strong>{t('보스 버그')}</strong>
+                {t('가 출현합니다!')}
+              </li>
+              <li>
+                {t('⚡ [Ctrl+Z] 시간 정지, [Ctrl+B] 폭탄, 🛡️ 쉴드를 전략적으로 활용하세요!')}
+              </li>
             </ul>
             <div className="best-score-badge">
               {t('최고 기록: {score}점 (최대 {wave} Wave)', {

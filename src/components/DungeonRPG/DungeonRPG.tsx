@@ -1,18 +1,9 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import {
-  DUNGEON_STAGES,
-  DUNGEON_SKILLS,
-} from '../../data/dungeonStages';
-import { DungeonStage, DungeonSkill } from '../../types/dungeon';
-import { VimEditorState, VimMode } from '../../vim-engine';
-import { handleKey } from '../../vim-engine';
-import {
-  loadDungeonSave,
-  recordStageClear,
-} from '../../utils/dungeonStorage';
-import { recordKeyInputStats } from '../../utils/analyticsStorage';
+import React from 'react';
+import { DUNGEON_STAGES, DUNGEON_SKILLS } from '../../data/dungeonStages';
+import { VimMode } from '../../vim-engine';
 import './DungeonRPG.css';
 import { t } from '../../i18n';
+import { useDungeonRPG } from './useDungeonRPG';
 
 export interface DungeonRPGProps {
   onPlayKeySound: (key: string, mode: VimMode) => void;
@@ -24,262 +15,22 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
   onPlayKeySound,
   onPlaySuccessSound,
 }) => {
-  const [saveData, setSaveData] = useState(() => loadDungeonSave());
-  const [currentStageIndex, setCurrentStageIndex] = useState(0);
-
-  const stage: DungeonStage = DUNGEON_STAGES[currentStageIndex];
-
-  const [editorState, setEditorState] = useState<VimEditorState>(() => ({
-    lines: [...stage.initialLines],
-    cursor: { ...stage.initialCursor },
-    mode: 'NORMAL',
-    undoStack: [],
-    redoStack: [],
-  }));
-
-  const [keystrokes, setKeystrokes] = useState(0);
-  const [hasKey, setHasKey] = useState(false);
-  const [doorOpen, setDoorOpen] = useState(false);
-  const [isCompleted, setIsCompleted] = useState(false);
-  const [starsEarned, setStarsEarned] = useState(0);
-  const [newBadge, setNewBadge] = useState<string | null>(null);
-  const [unlockedSkill, setUnlockedSkill] = useState<DungeonSkill | null>(null);
-
-  // 시각 효과: 타격 이펙트 및 배너 알림
-  const [slashEffect, setSlashEffect] = useState<{
-    line: number;
-    col: number;
-    label: string;
-  } | null>(null);
-
-  const [toastMessage, setToastMessage] = useState<string | null>(null);
-
-  const isMountedRef = useRef(true);
-  const activeTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-      activeTimersRef.current.forEach((t) => clearTimeout(t));
-      activeTimersRef.current = [];
-    };
-  }, []);
-
-  // 스테이지 변경 시 초기화
-  const loadStage = useCallback((index: number) => {
-    const s = DUNGEON_STAGES[index];
-    setCurrentStageIndex(index);
-    setEditorState({
-      lines: [...s.initialLines],
-      cursor: { ...s.initialCursor },
-      mode: 'NORMAL',
-      undoStack: [],
-      redoStack: [],
-    });
-    setKeystrokes(0);
-    setHasKey(false);
-    setDoorOpen(false);
-    setIsCompleted(false);
-    setStarsEarned(0);
-    setNewBadge(null);
-    setUnlockedSkill(null);
-    setSlashEffect(null);
-    setToastMessage(null);
-  }, []);
-
-  const showToast = useCallback((msg: string) => {
-    setToastMessage(msg);
-    const timer = setTimeout(() => {
-      if (isMountedRef.current) {
-        setToastMessage((prev) => (prev === msg ? null : prev));
-      }
-    }, 2000);
-    activeTimersRef.current.push(timer);
-  }, []);
-
-  // 키 입력 및 던전 상호작용 처리
-  const processDungeonKey = useCallback(
-    (key: string) => {
-      if (isCompleted) {
-        if (key === 'Enter') {
-          if (currentStageIndex < DUNGEON_STAGES.length - 1) {
-            loadStage(currentStageIndex + 1);
-          }
-        }
-        return;
-      }
-
-      // 허용 키 검사 (스킬 잠금)
-      const isAllowed =
-        stage.allowedKeys.includes(key) ||
-        stage.allowedKeys.some((k) => key.startsWith(k)) ||
-        ['Shift', 'Control', 'Alt', 'Meta'].includes(key);
-
-      if (!isAllowed) {
-        showToast(t('🔒 이 스테이지에서는 아직 [{key}] 키를 사용할 수 없습니다!', { key }));
-        return;
-      }
-
-      onPlayKeySound(key, editorState.mode);
-      recordKeyInputStats(key);
-      const prevCursor = { ...editorState.cursor };
-
-      // Vim 엔진 키 처리
-      let nextState = handleKey(editorState, key);
-
-      // 단일 보행(h/j/k/l) 시 벽/물/문 충돌 검사
-      const isWalk = ['h', 'j', 'k', 'l'].includes(key);
-      const nextCursor = nextState.cursor;
-      const targetTileChar = stage.tileMap[nextCursor.line]?.[nextCursor.col];
-
-      if (isWalk) {
-        // 벽(#) 충돌
-        if (targetTileChar === '#') {
-          nextState = { ...nextState, cursor: prevCursor };
-          showToast(t('🧱 벽에 부딪혔습니다!'));
-        }
-        // 물(~) 충돌: 보행 불가
-        else if (targetTileChar === '~') {
-          nextState = { ...nextState, cursor: prevCursor };
-          showToast(t('🌊 깊은 물은 걸어서 건널 수 없습니다! w/b/e 도약 부츠를 사용하세요.'));
-        }
-        // 심연(_) 충돌: 다리가 없으면 보행 불가
-        else if (targetTileChar === '_' && !nextState.lines[nextCursor.line]?.includes('BRIDGE')) {
-          nextState = { ...nextState, cursor: prevCursor };
-          showToast(t('🕳️ 끊어진 심연입니다! 다리 블록을 yiw 복사한 후 p로 건설하세요.'));
-        }
-        // 잠긴 문(D) 충돌
-        else if (targetTileChar === 'D' && !doorOpen) {
-          nextState = { ...nextState, cursor: prevCursor };
-          showToast(t('🚪 굳게 잠긴 문입니다! 황금 열쇠(K)를 획득하세요.'));
-        }
-      }
-
-      // 타격 액션 이펙트 (x, di", da(, dw, yiw)
-      if (key === 'x' || key === 'd' || nextState.pendingKeys?.includes('d')) {
-        setSlashEffect({
-          line: nextCursor.line,
-          col: nextCursor.col,
-          label: 'SLASH! 🗡️',
-        });
-        const timer = setTimeout(() => {
-          if (isMountedRef.current) setSlashEffect(null);
-        }, 600);
-        activeTimersRef.current.push(timer);
-      }
-
-      // 열쇠(K) 획득 검사
-      const curCharInLine = nextState.lines[nextCursor.line]?.[nextCursor.col];
-      const origCharInMap = stage.tileMap[nextCursor.line]?.[nextCursor.col];
-      if (!hasKey && (curCharInLine === 'K' || origCharInMap === 'K')) {
-        setHasKey(true);
-        setDoorOpen(true);
-        onPlaySuccessSound();
-        showToast(t('🗝️ 황금 열쇠를 획득하여 잠긴 문(D)이 열렸습니다!'));
-
-        // 맵에서 K를 빈 공간(.)으로 갱신
-        const updatedLines = [...nextState.lines];
-        const rowStr = updatedLines[nextCursor.line] || '';
-        updatedLines[nextCursor.line] =
-          rowStr.slice(0, nextCursor.col) + '.' + rowStr.slice(nextCursor.col + 1);
-        nextState = { ...nextState, lines: updatedLines };
-      }
-
-      // 보스전(Stage 5) 특수 판정: BUG_LORD 핵 파괴 시 문 자동 개방
-      if (stage.id === 5) {
-        const hasBossAlive = nextState.lines.some((l) => l.includes('BUG_LORD'));
-        if (!hasBossAlive && !doorOpen) {
-          setDoorOpen(true);
-          setHasKey(true);
-          onPlaySuccessSound();
-          setSlashEffect({ line: 2, col: 5, label: 'BOSS CRUSHED! 💥' });
-          showToast(t('💥 버그 로드가 쓰러져 신전의 거대한 문이 열렸습니다!'));
-        }
-      }
-
-      // 최종 보스전(Stage 6) 특수 판정: CHAOS_DRAGON 핵 파괴 시 궁극의 차원문 개방
-      if (stage.id === 6) {
-        const hasDragonAlive = nextState.lines.some((l) => l.includes('CHAOS_DRAGON'));
-        if (!hasDragonAlive && !doorOpen) {
-          setDoorOpen(true);
-          setHasKey(true);
-          onPlaySuccessSound();
-          setSlashEffect({ line: 2, col: 7, label: 'DRAGON VANQUISHED! 🐉💥' });
-          showToast(t('🐉 카오스 드래곤이 쓰러져 궁극의 차원 포탈이 열렸습니다!'));
-        }
-
-        // Stage 6 마력 코어 파괴 감지
-        const hasCoreAlive = nextState.lines.some((l) => l.includes('CORE'));
-        if (!hasCoreAlive && editorState.lines.some((l) => l.includes('CORE'))) {
-          setSlashEffect({ line: 1, col: 10, label: 'CORE SHATTERED! ⚡' });
-          showToast(t('⚡ 마력 코어가 파괴되어 드래곤의 방어막이 약화되었습니다!'));
-        }
-
-        // Par 초과 시 드래곤 분노 알림
-        if (keystrokes === stage.par) {
-          showToast(t('⚠️ 카오스 드래곤이 폭주(Enrage) 상태에 돌입했습니다! (Par 초과)'));
-        }
-      }
-
-      // 출구(E) 도달 클리어 검사
-      if (
-        (origCharInMap === 'E' || curCharInLine === 'E') &&
-        (doorOpen || hasKey || stage.id === 2 || stage.id === 3)
-      ) {
-        setIsCompleted(true);
-        onPlaySuccessSound();
-        const nextKeystrokes = keystrokes + 1;
-        setKeystrokes(nextKeystrokes);
-
-        const res = recordStageClear(
-          stage.id,
-          nextKeystrokes,
-          stage.par,
-          stage.newSkillUnlocked?.id
-        );
-        setSaveData(res.data);
-        setStarsEarned(res.stars);
-        if (res.newBadgeEarned) setNewBadge(res.newBadgeEarned);
-        if (stage.newSkillUnlocked) setUnlockedSkill(stage.newSkillUnlocked);
-        return;
-      }
-
-      setKeystrokes((prev) => prev + 1);
-      setEditorState(nextState);
-    },
-    [
-      isCompleted,
-      stage,
-      currentStageIndex,
-      loadStage,
-      editorState,
-      doorOpen,
-      hasKey,
-      keystrokes,
-      onPlayKeySound,
-      onPlaySuccessSound,
-      showToast,
-    ]
-  );
-
-  // 키보드 리스너 등록
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(e.key)) {
-        return;
-      }
-      if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' '].includes(e.key)) {
-        e.preventDefault();
-      }
-      processDungeonKey(e.key);
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [processDungeonKey]);
+  const {
+    saveData,
+    currentStageIndex,
+    stage,
+    editorState,
+    keystrokes,
+    hasKey,
+    doorOpen,
+    isCompleted,
+    starsEarned,
+    newBadge,
+    unlockedSkill,
+    slashEffect,
+    toastMessage,
+    loadStage,
+  } = useDungeonRPG({ onPlayKeySound, onPlaySuccessSound });
 
   return (
     <div className="dungeon-rpg-container" data-testid="dungeon-rpg-container">
@@ -388,8 +139,9 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
                   let tileClass = 'tile-floor';
                   if (isWall) tileClass = 'tile-wall';
                   else if (isWater) tileClass = 'tile-water';
-                  else if (isGap) tileClass = lineText.includes('BRIDGE') ? 'tile-bridge' : 'tile-gap';
-                  else if (isDoor) tileClass = doorOpen ? 'tile-door-open' : 'tile-door-closed';
+                  else if (isGap) {
+                    tileClass = lineText.includes('BRIDGE') ? 'tile-bridge' : 'tile-gap';
+                  } else if (isDoor) tileClass = doorOpen ? 'tile-door-open' : 'tile-door-closed';
                   else if (isExit) tileClass = 'tile-exit';
 
                   return (
@@ -472,7 +224,8 @@ export const DungeonRPG: React.FC<DungeonRPGProps> = ({
             </div>
 
             <p className="clear-stat">
-              {t('소모 마나(타수):')} <strong>{t('{n}타', { n: keystrokes })}</strong> {t('(Par 기준: {n}타)', { n: stage.par })}
+              {t('소모 마나(타수):')} <strong>{t('{n}타', { n: keystrokes })}</strong>{' '}
+              {t('(Par 기준: {n}타)', { n: stage.par })}
             </p>
 
             {unlockedSkill && (

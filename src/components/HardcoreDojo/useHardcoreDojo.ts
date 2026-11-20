@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useReducer, useEffect, useRef, useCallback } from 'react';
 import {
   DojoDrillType,
   DojoProblem,
@@ -37,188 +37,448 @@ export interface UseHardcoreDojoOptions {
   analyticsProgress?: LessonProgress;
 }
 
+interface DojoState {
+  selectedDrill: DojoDrillType;
+  gameState: DojoGamePhase;
+  weaknessPlan: WeaknessDrillPlan;
+  timeLeft: number;
+  score: number;
+  targetsHit: number;
+  keystrokes: number;
+  problemKeystrokes: number;
+  combo: number;
+  suddenDeathFailReason: string | null;
+  finalTime: number | null;
+  myRank: number | null;
+  isLeaderboardOpen: boolean;
+  leaderboard: DojoLeaderboardEntry[];
+  playerName: string;
+  currentProblem: DojoProblem | null;
+  editorState: VimEditorState;
+  highScores: Record<string, DojoHighScore>;
+  isNewRecord: boolean;
+  isShaking: boolean;
+  isTargetHit: boolean;
+  warningMessage: string | null;
+}
+
+type DojoAction =
+  | { type: 'SET_WEAKNESS_PLAN'; plan: WeaknessDrillPlan }
+  | { type: 'LOAD_PROBLEM'; problem: DojoProblem }
+  | {
+      type: 'SELECT_DRILL';
+      drill: DojoDrillType;
+      plan?: WeaknessDrillPlan;
+      problem: DojoProblem;
+      resetStats?: boolean;
+    }
+  | { type: 'START_GAME'; plan?: WeaknessDrillPlan; problem: DojoProblem; initialTime: number }
+  | { type: 'TICK_TIME'; timeLeft: number; finished?: boolean }
+  | { type: 'RECORD_STANDARD_FINISH'; isNewRecord: boolean; highScores: Record<string, DojoHighScore> }
+  | { type: 'APPLY_KEY'; nextEditorState: VimEditorState; nextProblemKeystrokes: number }
+  | { type: 'STANDARD_HIT'; addedScore: number; nextProblem: DojoProblem }
+  | { type: 'SUDDEN_DEATH_STEP'; nextCombo: number; nextProblem: DojoProblem }
+  | {
+      type: 'SUDDEN_DEATH_CLEARED';
+      finalTime: number;
+      leaderboard: DojoLeaderboardEntry[];
+      myRank: number | null;
+    }
+  | { type: 'WEAKNESS_STEP'; nextCombo: number; nextScore: number; nextProblem: DojoProblem }
+  | {
+      type: 'WEAKNESS_CLEARED';
+      totalProblems: number;
+      nextScore: number;
+      finalTime: number;
+      isNewRecord: boolean;
+      highScores: Record<string, DojoHighScore>;
+    }
+  | { type: 'SUDDEN_DEATH_FAILED'; reason: string }
+  | { type: 'SHOW_WARNING'; message: string }
+  | { type: 'CLEAR_SHAKE' }
+  | { type: 'CLEAR_WARNING' }
+  | { type: 'CLEAR_TARGET_HIT' }
+  | { type: 'SET_LEADERBOARD_OPEN'; open: boolean };
+
+function isTenStageDrill(drill: DojoDrillType): boolean {
+  return drill === 'sudden-death' || drill === 'pro-master' || drill === 'weakness-custom';
+}
+
+function createProblemForDrillWithPlan(
+  drillType: DojoDrillType,
+  targetCombo: number,
+  plan: WeaknessDrillPlan
+): DojoProblem {
+  switch (drillType) {
+    case 'relative-jump':
+      return generateRelativeJumpProblem();
+    case 'ft-sniper':
+      return generateFTSniperProblem();
+    case 'word-jump':
+      return generateWordJumpProblem();
+    case 'sudden-death':
+      return generateSuddenDeathProblem(targetCombo);
+    case 'pro-master':
+      return generateProMasterProblem(targetCombo);
+    case 'weakness-custom': {
+      const idx = Math.max(0, targetCombo % plan.queue.length);
+      return plan.queue[idx].problem;
+    }
+  }
+}
+
+function buildEditorStateForProblem(problem: DojoProblem): VimEditorState {
+  if (problem.type === 'relative-jump' || problem.type === 'pro-master') {
+    return {
+      lines: [...problem.lines],
+      cursor: { ...problem.initialCursor },
+      mode: 'NORMAL',
+    };
+  }
+  return {
+    lines: [problem.line],
+    cursor: { ...problem.initialCursor },
+    mode: 'NORMAL',
+  };
+}
+
+function resolveSpeedrunTier(drill: DojoDrillType, finalSec: number): string {
+  if (drill === 'pro-master') {
+    if (finalSec > 35.0) return '📜 PRO-DEV';
+    if (finalSec > 22.0) return '💼 TECH-LEAD';
+    if (finalSec > 14.0) return '⚔️ SENIOR ARCHITECT';
+    return '👑 GRANDMASTER';
+  }
+  if (finalSec > 28.0) return '📜 DISCIPLE';
+  if (finalSec > 18.0) return '🥈 DOJO-MASTER';
+  if (finalSec > 12.0) return '🥇 ONE-STRIKE';
+  return '👑 GODSPEED';
+}
+
+function evaluateProblemSuccess(
+  problem: DojoProblem,
+  nextState: VimEditorState,
+  nextProbKeys: number
+): { hit: boolean; standardBonus: number } {
+  if (problem.type === 'relative-jump') {
+    const targetPresent = nextState.lines.some((l) => l.includes(problem.targetText));
+    return { hit: !targetPresent, standardBonus: nextProbKeys <= 5 ? 50 : 0 };
+  }
+  if (problem.type === 'ft-sniper') {
+    const landed = nextState.cursor.line === 0 && nextState.cursor.col === problem.targetCol;
+    return { hit: landed, standardBonus: nextProbKeys <= 3 ? 50 : 0 };
+  }
+  if (problem.type === 'word-jump') {
+    const landed =
+      nextState.cursor.line === 0 &&
+      nextState.cursor.col >= problem.targetStartCol &&
+      nextState.cursor.col <= problem.targetEndCol;
+    return { hit: landed, standardBonus: nextProbKeys <= problem.optimalKeyCount + 1 ? 50 : 0 };
+  }
+  const isMatched =
+    nextState.mode === 'NORMAL' &&
+    nextState.lines.length === problem.targetLines.length &&
+    nextState.lines.every((l, i) => l === problem.targetLines[i]);
+  return { hit: isMatched, standardBonus: 0 };
+}
+
+function createInitialDojoState(
+  initialDrill: DojoDrillType,
+  analyticsProgress?: LessonProgress
+): DojoState {
+  const weaknessPlan = buildWeaknessDrillPlan(loadUserAnalytics(), analyticsProgress ?? {});
+  const initialProblem = createProblemForDrillWithPlan(initialDrill, 0, weaknessPlan);
+  return {
+    selectedDrill: initialDrill,
+    gameState: 'ready',
+    weaknessPlan,
+    timeLeft: 30.0,
+    score: 0,
+    targetsHit: 0,
+    keystrokes: 0,
+    problemKeystrokes: 0,
+    combo: 0,
+    suddenDeathFailReason: null,
+    finalTime: null,
+    myRank: null,
+    isLeaderboardOpen: false,
+    leaderboard: loadDojoLeaderboard(),
+    playerName: 'VimRunner',
+    currentProblem: initialProblem,
+    editorState: buildEditorStateForProblem(initialProblem),
+    highScores: loadDojoHighScores(),
+    isNewRecord: false,
+    isShaking: false,
+    isTargetHit: false,
+    warningMessage: null,
+  };
+}
+
+function dojoReducer(state: DojoState, action: DojoAction): DojoState {
+  switch (action.type) {
+    case 'SET_WEAKNESS_PLAN':
+      return { ...state, weaknessPlan: action.plan };
+
+    case 'LOAD_PROBLEM':
+      return {
+        ...state,
+        currentProblem: action.problem,
+        problemKeystrokes: 0,
+        editorState: buildEditorStateForProblem(action.problem),
+      };
+
+    case 'SELECT_DRILL':
+      return {
+        ...state,
+        selectedDrill: action.drill,
+        gameState: 'ready',
+        weaknessPlan: action.plan ?? state.weaknessPlan,
+        combo: 0,
+        score: action.resetStats ? 0 : state.score,
+        targetsHit: action.resetStats ? 0 : state.targetsHit,
+        keystrokes: action.resetStats ? 0 : state.keystrokes,
+        finalTime: null,
+        suddenDeathFailReason: null,
+        currentProblem: action.problem,
+        problemKeystrokes: 0,
+        editorState: buildEditorStateForProblem(action.problem),
+      };
+
+    case 'START_GAME':
+      return {
+        ...state,
+        gameState: 'running',
+        weaknessPlan: action.plan ?? state.weaknessPlan,
+        timeLeft: action.initialTime,
+        score: 0,
+        targetsHit: 0,
+        keystrokes: 0,
+        problemKeystrokes: 0,
+        combo: 0,
+        finalTime: null,
+        myRank: null,
+        suddenDeathFailReason: null,
+        isNewRecord: false,
+        warningMessage: null,
+        currentProblem: action.problem,
+        editorState: buildEditorStateForProblem(action.problem),
+      };
+
+    case 'TICK_TIME':
+      return {
+        ...state,
+        timeLeft: action.timeLeft,
+        gameState: action.finished ? 'finished' : state.gameState,
+      };
+
+    case 'RECORD_STANDARD_FINISH':
+      return {
+        ...state,
+        isNewRecord: action.isNewRecord,
+        highScores: action.highScores,
+      };
+
+    case 'APPLY_KEY':
+      return {
+        ...state,
+        keystrokes: state.keystrokes + 1,
+        problemKeystrokes: action.nextProblemKeystrokes,
+        editorState: action.nextEditorState,
+      };
+
+    case 'STANDARD_HIT':
+      return {
+        ...state,
+        score: state.score + action.addedScore,
+        targetsHit: state.targetsHit + 1,
+        isTargetHit: true,
+        currentProblem: action.nextProblem,
+        problemKeystrokes: 0,
+        editorState: buildEditorStateForProblem(action.nextProblem),
+      };
+
+    case 'SUDDEN_DEATH_STEP':
+      return {
+        ...state,
+        score: state.score + 150,
+        targetsHit: state.targetsHit + 1,
+        isTargetHit: true,
+        combo: action.nextCombo,
+        currentProblem: action.nextProblem,
+        problemKeystrokes: 0,
+        editorState: buildEditorStateForProblem(action.nextProblem),
+      };
+
+    case 'SUDDEN_DEATH_CLEARED':
+      return {
+        ...state,
+        score: state.score + 150,
+        targetsHit: state.targetsHit + 1,
+        isTargetHit: true,
+        combo: 10,
+        finalTime: action.finalTime,
+        leaderboard: action.leaderboard,
+        myRank: action.myRank,
+        gameState: 'sudden-death-cleared',
+      };
+
+    case 'WEAKNESS_STEP':
+      return {
+        ...state,
+        score: action.nextScore,
+        targetsHit: state.targetsHit + 1,
+        isTargetHit: true,
+        combo: action.nextCombo,
+        currentProblem: action.nextProblem,
+        problemKeystrokes: 0,
+        editorState: buildEditorStateForProblem(action.nextProblem),
+      };
+
+    case 'WEAKNESS_CLEARED':
+      return {
+        ...state,
+        score: action.nextScore,
+        targetsHit: state.targetsHit + 1,
+        isTargetHit: true,
+        combo: action.totalProblems,
+        finalTime: action.finalTime,
+        isNewRecord: action.isNewRecord,
+        highScores: action.highScores,
+        gameState: 'weakness-cleared',
+      };
+
+    case 'SUDDEN_DEATH_FAILED':
+      return {
+        ...state,
+        gameState: 'sudden-death-failed',
+        suddenDeathFailReason: action.reason,
+        isShaking: true,
+      };
+
+    case 'SHOW_WARNING':
+      return {
+        ...state,
+        isShaking: true,
+        warningMessage: action.message,
+      };
+
+    case 'CLEAR_SHAKE':
+      return { ...state, isShaking: false };
+
+    case 'CLEAR_WARNING':
+      return { ...state, warningMessage: null };
+
+    case 'CLEAR_TARGET_HIT':
+      return { ...state, isTargetHit: false };
+
+    case 'SET_LEADERBOARD_OPEN':
+      return { ...state, isLeaderboardOpen: action.open };
+
+    default:
+      return state;
+  }
+}
+
 export function useHardcoreDojo({
   playKeySound,
   playSuccessSound,
   initialDrill,
   analyticsProgress,
 }: UseHardcoreDojoOptions) {
-  const [selectedDrill, setSelectedDrill] = useState<DojoDrillType>(
-    initialDrill?.drill ?? 'relative-jump'
+  const [state, dispatch] = useReducer(
+    dojoReducer,
+    undefined,
+    () => createInitialDojoState(initialDrill?.drill ?? 'relative-jump', analyticsProgress)
   );
-  const [gameState, setGameState] = useState<DojoGamePhase>('ready');
-  const [weaknessPlan, setWeaknessPlan] = useState<WeaknessDrillPlan>(() =>
-    buildWeaknessDrillPlan(loadUserAnalytics(), analyticsProgress ?? {})
-  );
-  const [timeLeft, setTimeLeft] = useState<number>(30.0);
-  const [score, setScore] = useState<number>(0);
-  const [targetsHit, setTargetsHit] = useState<number>(0);
-  const [keystrokes, setKeystrokes] = useState<number>(0);
-  const [problemKeystrokes, setProblemKeystrokes] = useState<number>(0);
-  const [combo, setCombo] = useState<number>(0);
-  const [suddenDeathFailReason, setSuddenDeathFailReason] = useState<string | null>(null);
-  const [finalTime, setFinalTime] = useState<number | null>(null);
-  const [myRank, setMyRank] = useState<number | null>(null);
-  const [isLeaderboardOpen, setIsLeaderboardOpen] = useState<boolean>(false);
-  const [leaderboard, setLeaderboard] = useState<DojoLeaderboardEntry[]>(() =>
-    loadDojoLeaderboard()
-  );
-  const [playerName] = useState<string>('VimRunner');
-
-  const [currentProblem, setCurrentProblem] = useState<DojoProblem | null>(null);
-  const [editorState, setEditorState] = useState<VimEditorState>({
-    lines: [''],
-    cursor: { line: 0, col: 0 },
-    mode: 'NORMAL',
-  });
-
-  const [highScores, setHighScores] = useState<Record<string, DojoHighScore>>(() =>
-    loadDojoHighScores()
-  );
-  const [isNewRecord, setIsNewRecord] = useState(false);
-
-  // 시각 효과 상태
-  const [isShaking, setIsShaking] = useState(false);
-  const [isTargetHit, setIsTargetHit] = useState(false);
-  const [warningMessage, setWarningMessage] = useState<string | null>(null);
 
   const isMountedRef = useRef(true);
+  const activeTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+
   useEffect(() => {
     isMountedRef.current = true;
     return () => {
       isMountedRef.current = false;
+      activeTimersRef.current.forEach((timer) => clearTimeout(timer));
+      activeTimersRef.current = [];
     };
   }, []);
 
+  const scheduleTimer = useCallback((fn: () => void, ms: number) => {
+    const timer = setTimeout(() => {
+      if (isMountedRef.current) fn();
+    }, ms);
+    activeTimersRef.current.push(timer);
+  }, []);
+
   const hardcoreGuardRef = useRef(new HardcoreGuard());
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const arenaRef = useRef<HTMLDivElement>(null);
   const startTimeRef = useRef<number | null>(null);
 
-  // 문제 생성 헬퍼
-  const createProblemForDrill = useCallback(
-    (drillType: DojoDrillType, targetCombo = 0, planOverride?: WeaknessDrillPlan): DojoProblem => {
-      const activePlan = planOverride ?? weaknessPlan;
-      switch (drillType) {
-        case 'relative-jump':
-          return generateRelativeJumpProblem();
-        case 'ft-sniper':
-          return generateFTSniperProblem();
-        case 'word-jump':
-          return generateWordJumpProblem();
-        case 'sudden-death':
-          return generateSuddenDeathProblem(targetCombo);
-        case 'pro-master':
-          return generateProMasterProblem(targetCombo);
-        case 'weakness-custom': {
-          const idx = Math.max(0, targetCombo % activePlan.queue.length);
-          return activePlan.queue[idx].problem;
-        }
-      }
-    },
-    [weaknessPlan]
+  const buildFreshWeaknessPlan = useCallback(
+    () => buildWeaknessDrillPlan(loadUserAnalytics(), analyticsProgress ?? {}),
+    [analyticsProgress]
   );
 
-  // 새 문제 로드 및 에디터 상태 초기화
-  const loadProblem = useCallback((problem: DojoProblem) => {
-    setCurrentProblem(problem);
-    setProblemKeystrokes(0);
-
-    if (problem.type === 'relative-jump' || problem.type === 'pro-master') {
-      setEditorState({
-        lines: [...problem.lines],
-        cursor: { ...problem.initialCursor },
-        mode: 'NORMAL',
-      });
-    } else {
-      setEditorState({
-        lines: [problem.line],
-        cursor: { ...problem.initialCursor },
-        mode: 'NORMAL',
-      });
-    }
-  }, []);
-
-  // 통계 기반 약점 플랜 재분석
-  const refreshWeaknessPlan = useCallback((): WeaknessDrillPlan => {
-    const freshPlan = buildWeaknessDrillPlan(loadUserAnalytics(), analyticsProgress ?? {});
-    setWeaknessPlan(freshPlan);
-    return freshPlan;
-  }, [analyticsProgress]);
-
-  // 드릴 변경 시 준비 상태로 전환
   const handleSelectDrill = useCallback(
     (drillType: DojoDrillType) => {
-      if (gameState === 'running') return;
-      setSelectedDrill(drillType);
-      setGameState('ready');
-      setCombo(0);
-      setFinalTime(null);
-      setSuddenDeathFailReason(null);
-      const activePlan = drillType === 'weakness-custom' ? refreshWeaknessPlan() : weaknessPlan;
-      const prob = createProblemForDrill(drillType, 0, activePlan);
-      loadProblem(prob);
+      if (state.gameState === 'running') return;
+      const activePlan =
+        drillType === 'weakness-custom' ? buildFreshWeaknessPlan() : state.weaknessPlan;
+      const problem = createProblemForDrillWithPlan(drillType, 0, activePlan);
+      dispatch({
+        type: 'SELECT_DRILL',
+        drill: drillType,
+        plan: drillType === 'weakness-custom' ? activePlan : undefined,
+        problem,
+      });
     },
-    [gameState, createProblemForDrill, loadProblem, refreshWeaknessPlan, weaknessPlan]
+    [state.gameState, state.weaknessPlan, buildFreshWeaknessPlan]
   );
 
   // AnalyticsModal 등에서 특정 드릴로 진입 시 자동 선택/재분석
   const lastInitialNonceRef = useRef<number | undefined>(initialDrill?.nonce);
   useEffect(() => {
     if (!initialDrill) return;
-    if (lastInitialNonceRef.current === initialDrill.nonce && selectedDrill === initialDrill.drill) {
+    if (
+      lastInitialNonceRef.current === initialDrill.nonce &&
+      state.selectedDrill === initialDrill.drill
+    ) {
       return;
     }
     lastInitialNonceRef.current = initialDrill.nonce;
-    setSelectedDrill(initialDrill.drill);
-    setGameState('ready');
-    setCombo(0);
-    setScore(0);
-    setTargetsHit(0);
-    setKeystrokes(0);
-    setFinalTime(null);
-    setSuddenDeathFailReason(null);
     const activePlan =
-      initialDrill.drill === 'weakness-custom' ? refreshWeaknessPlan() : weaknessPlan;
-    loadProblem(createProblemForDrill(initialDrill.drill, 0, activePlan));
-  }, [initialDrill, selectedDrill, refreshWeaknessPlan, weaknessPlan, createProblemForDrill, loadProblem]);
+      initialDrill.drill === 'weakness-custom' ? buildFreshWeaknessPlan() : state.weaknessPlan;
+    const problem = createProblemForDrillWithPlan(initialDrill.drill, 0, activePlan);
+    dispatch({
+      type: 'SELECT_DRILL',
+      drill: initialDrill.drill,
+      plan: initialDrill.drill === 'weakness-custom' ? activePlan : undefined,
+      problem,
+      resetStats: true,
+    });
+  }, [initialDrill, state.selectedDrill, state.weaknessPlan, buildFreshWeaknessPlan]);
 
-  // 게임 시작
   const startGame = useCallback(() => {
-    setScore(0);
-    setTargetsHit(0);
-    setKeystrokes(0);
-    setCombo(0);
-    setFinalTime(null);
-    setMyRank(null);
-    setSuddenDeathFailReason(null);
-    setIsNewRecord(false);
-    setWarningMessage(null);
     hardcoreGuardRef.current.reset();
+    const activePlan =
+      state.selectedDrill === 'weakness-custom' ? buildFreshWeaknessPlan() : state.weaknessPlan;
+    const problem = createProblemForDrillWithPlan(state.selectedDrill, 0, activePlan);
+    const initialTime = isTenStageDrill(state.selectedDrill) ? 0.0 : 30.0;
 
-    const activePlan = selectedDrill === 'weakness-custom' ? refreshWeaknessPlan() : weaknessPlan;
-
-    if (
-      selectedDrill === 'sudden-death' ||
-      selectedDrill === 'pro-master' ||
-      selectedDrill === 'weakness-custom'
-    ) {
-      setTimeLeft(0.0);
-    } else {
-      setTimeLeft(30.0);
-    }
-
-    const prob = createProblemForDrill(selectedDrill, 0, activePlan);
-    loadProblem(prob);
-
-    setGameState('running');
+    dispatch({
+      type: 'START_GAME',
+      plan: state.selectedDrill === 'weakness-custom' ? activePlan : undefined,
+      problem,
+      initialTime,
+    });
     startTimeRef.current = Date.now();
     arenaRef.current?.focus();
-  }, [selectedDrill, createProblemForDrill, loadProblem, refreshWeaknessPlan, weaknessPlan]);
+  }, [state.selectedDrill, state.weaknessPlan, buildFreshWeaknessPlan]);
 
   // 카운트다운 또는 스피드런 타이머
   useEffect(() => {
-    if (gameState !== 'running') {
+    if (state.gameState !== 'running') {
       if (timerRef.current) clearInterval(timerRef.current);
       return;
     }
@@ -227,205 +487,147 @@ export function useHardcoreDojo({
       const now = Date.now();
       const elapsed = (now - (startTimeRef.current ?? now)) / 1000;
 
-      if (
-        selectedDrill === 'sudden-death' ||
-        selectedDrill === 'pro-master' ||
-        selectedDrill === 'weakness-custom'
-      ) {
-        setTimeLeft(elapsed);
+      if (isTenStageDrill(state.selectedDrill)) {
+        dispatch({ type: 'TICK_TIME', timeLeft: elapsed });
       } else {
         const remaining = Math.max(0, 30.0 - elapsed);
-        setTimeLeft(remaining);
-
-        if (remaining <= 0) {
-          if (timerRef.current) clearInterval(timerRef.current);
-          setGameState('finished');
+        if (remaining <= 0 && timerRef.current) {
+          clearInterval(timerRef.current);
         }
+        dispatch({ type: 'TICK_TIME', timeLeft: remaining, finished: remaining <= 0 });
       }
     }, 100);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [gameState, selectedDrill]);
+  }, [state.gameState, state.selectedDrill]);
 
   // 게임 종료 시 고득점 계산 및 저장 (일반 드릴)
   useEffect(() => {
-    if (
-      gameState === 'finished' &&
-      selectedDrill !== 'sudden-death' &&
-      selectedDrill !== 'pro-master' &&
-      selectedDrill !== 'weakness-custom'
-    ) {
-      const finalSpm = Math.round((targetsHit / 30) * 60);
-      const finalApm = Math.round((keystrokes / 30) * 60);
-
-      const res = saveDojoHighScore(selectedDrill, {
-        score,
-        targetsHit,
+    if (state.gameState === 'finished' && !isTenStageDrill(state.selectedDrill)) {
+      const finalSpm = Math.round((state.targetsHit / 30) * 60);
+      const finalApm = Math.round((state.keystrokes / 30) * 60);
+      const res = saveDojoHighScore(state.selectedDrill, {
+        score: state.score,
+        targetsHit: state.targetsHit,
         spm: finalSpm,
         apm: finalApm,
       });
-
-      setIsNewRecord(res.isNewRecord);
-      setHighScores(loadDojoHighScores());
+      dispatch({
+        type: 'RECORD_STANDARD_FINISH',
+        isNewRecord: res.isNewRecord,
+        highScores: loadDojoHighScores(),
+      });
     }
-  }, [gameState, selectedDrill, score, targetsHit, keystrokes]);
+  }, [state.gameState, state.selectedDrill, state.score, state.targetsHit, state.keystrokes]);
 
-  // 타깃 피격 효과음 & 애니메이션 (일반 모드)
-  const triggerTargetHit = useCallback(
-    (addedScore: number) => {
-      playSuccessSound?.();
-      setScore((s) => s + addedScore);
-      setTargetsHit((h) => h + 1);
-      setIsTargetHit(true);
-
-      setTimeout(() => {
-        setIsTargetHit(false);
-      }, 300);
-
-      // 다음 문제 로드
-      const nextProblem = createProblemForDrill(selectedDrill);
-      loadProblem(nextProblem);
+  const failSuddenDeath = useCallback(
+    (reason: string) => {
+      dispatch({ type: 'SUDDEN_DEATH_FAILED', reason });
+      scheduleTimer(() => dispatch({ type: 'CLEAR_SHAKE' }), 400);
     },
-    [playSuccessSound, createProblemForDrill, selectedDrill, loadProblem]
+    [scheduleTimer]
   );
 
-  // 서든데스 타깃 격파 핸들러
-  const handleSuddenDeathHit = useCallback(
-    (currentCombo: number) => {
-      const nextCombo = currentCombo + 1;
-      playSuccessSound?.();
-      setScore((s) => s + 150);
-      setTargetsHit((h) => h + 1);
-      setIsTargetHit(true);
-
-      setTimeout(() => {
-        setIsTargetHit(false);
-      }, 300);
-
-      if (nextCombo >= 10) {
-        const now = Date.now();
-        const elapsed = (now - (startTimeRef.current ?? now)) / 1000;
-        const finalSec = Number(elapsed.toFixed(2));
-        setFinalTime(finalSec);
-        setCombo(10);
-
-        let tierName = '👑 GODSPEED';
-        if (selectedDrill === 'pro-master') {
-          if (finalSec > 35.0) tierName = '📜 PRO-DEV';
-          else if (finalSec > 22.0) tierName = '💼 TECH-LEAD';
-          else if (finalSec > 14.0) tierName = '⚔️ SENIOR ARCHITECT';
-          else tierName = '👑 GRANDMASTER';
-        } else {
-          if (finalSec > 28.0) tierName = '📜 DISCIPLE';
-          else if (finalSec > 18.0) tierName = '🥈 DOJO-MASTER';
-          else if (finalSec > 12.0) tierName = '🥇 ONE-STRIKE';
-        }
-
-        const saveRes = saveDojoLeaderboardEntry({
-          playerName: playerName.trim() || 'VimRunner',
-          clearTime: finalSec,
-          tier: tierName,
-          combo: 10,
-        });
-        setLeaderboard(saveRes.leaderboard);
-        setMyRank(saveRes.rank);
-        setGameState('sudden-death-cleared');
-      } else {
-        setCombo(nextCombo);
-        const nextProblem = createProblemForDrill(selectedDrill, nextCombo);
-        loadProblem(nextProblem);
-      }
+  const triggerHardcoreWarning = useCallback(
+    (message: string, suggestion?: string) => {
+      dispatch({
+        type: 'SHOW_WARNING',
+        message: `${message}${suggestion ? ` 👉 ${suggestion}` : ''}`,
+      });
+      scheduleTimer(() => dispatch({ type: 'CLEAR_SHAKE' }), 400);
+      scheduleTimer(() => dispatch({ type: 'CLEAR_WARNING' }), 1800);
     },
-    [playSuccessSound, playerName, selectedDrill, createProblemForDrill, loadProblem]
+    [scheduleTimer]
   );
 
-  // 약점 집중 맞춤 드릴 타깃 해결 핸들러 (10문제 완주형)
+  const handleSuddenDeathHit = useCallback(() => {
+    const nextCombo = state.combo + 1;
+    playSuccessSound?.();
+    scheduleTimer(() => dispatch({ type: 'CLEAR_TARGET_HIT' }), 300);
+
+    if (nextCombo >= 10) {
+      const now = Date.now();
+      const elapsed = (now - (startTimeRef.current ?? now)) / 1000;
+      const finalSec = Number(elapsed.toFixed(2));
+      const tierName = resolveSpeedrunTier(state.selectedDrill, finalSec);
+      const saveRes = saveDojoLeaderboardEntry({
+        playerName: state.playerName.trim() || 'VimRunner',
+        clearTime: finalSec,
+        tier: tierName,
+        combo: 10,
+      });
+      dispatch({
+        type: 'SUDDEN_DEATH_CLEARED',
+        finalTime: finalSec,
+        leaderboard: saveRes.leaderboard,
+        myRank: saveRes.rank,
+      });
+    } else {
+      const nextProblem = createProblemForDrillWithPlan(
+        state.selectedDrill,
+        nextCombo,
+        state.weaknessPlan
+      );
+      dispatch({ type: 'SUDDEN_DEATH_STEP', nextCombo, nextProblem });
+    }
+  }, [state.combo, state.selectedDrill, state.playerName, state.weaknessPlan, playSuccessSound, scheduleTimer]);
+
   const handleWeaknessHit = useCallback(
-    (currentCombo: number, currentScore: number, totalKeys: number) => {
-      const nextCombo = currentCombo + 1;
-      const nextScore = currentScore + 120;
+    (totalKeys: number) => {
+      const nextCombo = state.combo + 1;
+      const nextScore = state.score + 120;
       playSuccessSound?.();
-      setScore(nextScore);
-      setTargetsHit((h) => h + 1);
-      setIsTargetHit(true);
+      scheduleTimer(() => dispatch({ type: 'CLEAR_TARGET_HIT' }), 300);
 
-      setTimeout(() => {
-        if (isMountedRef.current) setIsTargetHit(false);
-      }, 300);
-
-      const totalProblems = weaknessPlan.queue.length || 10;
+      const totalProblems = state.weaknessPlan.queue.length || 10;
       if (nextCombo >= totalProblems) {
         const now = Date.now();
         const elapsed = (now - (startTimeRef.current ?? now)) / 1000;
         const finalSec = Number(Math.max(0.1, elapsed).toFixed(2));
-        setFinalTime(finalSec);
-        setCombo(totalProblems);
         const res = saveDojoHighScore('weakness-custom', {
           score: nextScore,
           targetsHit: totalProblems,
           spm: Math.round((totalProblems / Math.max(1, finalSec)) * 60),
           apm: Math.round((totalKeys / Math.max(1, finalSec)) * 60),
         });
-        setIsNewRecord(res.isNewRecord);
-        setHighScores(loadDojoHighScores());
-        setGameState('weakness-cleared');
+        dispatch({
+          type: 'WEAKNESS_CLEARED',
+          totalProblems,
+          nextScore,
+          finalTime: finalSec,
+          isNewRecord: res.isNewRecord,
+          highScores: loadDojoHighScores(),
+        });
       } else {
-        setCombo(nextCombo);
-        const nextProblem = createProblemForDrill('weakness-custom', nextCombo);
-        loadProblem(nextProblem);
+        const nextProblem = createProblemForDrillWithPlan(
+          'weakness-custom',
+          nextCombo,
+          state.weaknessPlan
+        );
+        dispatch({ type: 'WEAKNESS_STEP', nextCombo, nextScore, nextProblem });
       }
     },
-    [playSuccessSound, weaknessPlan, createProblemForDrill, loadProblem]
+    [state.combo, state.score, state.weaknessPlan, playSuccessSound, scheduleTimer]
   );
 
-  // 하드코어 경고 & 셰이크 발동
-  const triggerHardcoreWarning = useCallback((message: string, suggestion?: string) => {
-    setIsShaking(true);
-    setWarningMessage(`${message}${suggestion ? ` 👉 ${suggestion}` : ''}`);
-
-    setTimeout(() => {
-      if (isMountedRef.current) {
-        setIsShaking(false);
-      }
-    }, 400);
-
-    setTimeout(() => {
-      if (isMountedRef.current) {
-        setWarningMessage(null);
-      }
-    }, 1800);
-  }, []);
-
-  // 에디터 마우스 클릭 방지
   const handleEditorClick = useCallback(() => {
-    if (gameState !== 'running') return;
+    if (state.gameState !== 'running') return;
     const check = hardcoreGuardRef.current.checkMouseClick();
-    if (check.blocked) {
-      if (selectedDrill === 'sudden-death' || selectedDrill === 'pro-master') {
-        setGameState('sudden-death-failed');
-        setSuddenDeathFailReason(check.message || t('마우스 클릭 사용으로 탈락!'));
-        setIsShaking(true);
-        setTimeout(() => {
-          if (isMountedRef.current) setIsShaking(false);
-        }, 400);
-        return;
-      }
-      triggerHardcoreWarning(check.message!, check.suggestion);
+    if (!check.blocked) return;
+    if (state.selectedDrill === 'sudden-death' || state.selectedDrill === 'pro-master') {
+      failSuddenDeath(check.message || t('마우스 클릭 사용으로 탈락!'));
+      return;
     }
-  }, [gameState, selectedDrill, triggerHardcoreWarning]);
+    triggerHardcoreWarning(check.message!, check.suggestion);
+  }, [state.gameState, state.selectedDrill, failSuddenDeath, triggerHardcoreWarning]);
 
-  // 키 입력 핸들러
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
-      if (gameState !== 'running' || !currentProblem) return;
+      if (state.gameState !== 'running' || !state.currentProblem) return;
+      if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(e.key)) return;
 
-      if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(e.key)) {
-        return;
-      }
-
-      // 브라우저 기본 동작 차단
       if (
         ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Backspace', 'Tab'].includes(
           e.key
@@ -434,189 +636,128 @@ export function useHardcoreDojo({
         e.preventDefault();
       }
 
-      // 하드코어 가드 체크 (방향키, 1.5초 3회 초과 spam 차단)
       const check = hardcoreGuardRef.current.checkKey(e.key, Date.now());
       if (check.blocked) {
-        if (selectedDrill === 'sudden-death' || selectedDrill === 'pro-master') {
-          setGameState('sudden-death-failed');
-          setSuddenDeathFailReason(check.message || t('방향키 또는 비정상 입력으로 탈락!'));
-          setIsShaking(true);
-          setTimeout(() => {
-            if (isMountedRef.current) setIsShaking(false);
-          }, 400);
+        if (state.selectedDrill === 'sudden-death' || state.selectedDrill === 'pro-master') {
+          failSuddenDeath(check.message || t('방향키 또는 비정상 입력으로 탈락!'));
           return;
         }
         triggerHardcoreWarning(check.message!, check.suggestion);
         return;
       }
 
-      const nextProbKeys = problemKeystrokes + 1;
-      const isSpeedrun = selectedDrill === 'sudden-death' || selectedDrill === 'pro-master';
-      const maxAllowed = selectedDrill === 'pro-master' ? 25 : 12;
+      const nextProbKeys = state.problemKeystrokes + 1;
+      const isSpeedrun =
+        state.selectedDrill === 'sudden-death' || state.selectedDrill === 'pro-master';
+      const maxAllowed = state.selectedDrill === 'pro-master' ? 25 : 12;
       if (isSpeedrun && nextProbKeys > maxAllowed) {
-        setGameState('sudden-death-failed');
-        setSuddenDeathFailReason(t('타수 초과: 한 번의 모션으로 정확히 격파하지 못했습니다.'));
-        setIsShaking(true);
-        setTimeout(() => {
-          if (isMountedRef.current) setIsShaking(false);
-        }, 400);
+        failSuddenDeath(t('타수 초과: 한 번의 모션으로 정확히 격파하지 못했습니다.'));
         return;
       }
 
-      // 키 사운드 재생
-      playKeySound?.(e.key, editorState.mode);
+      playKeySound?.(e.key, state.editorState.mode);
+      const nextEditorState = handleKey(state.editorState, e.key);
+      dispatch({ type: 'APPLY_KEY', nextEditorState, nextProblemKeystrokes: nextProbKeys });
 
-      setKeystrokes((k) => k + 1);
-      setProblemKeystrokes(nextProbKeys);
+      const { hit, standardBonus } = evaluateProblemSuccess(
+        state.currentProblem,
+        nextEditorState,
+        nextProbKeys
+      );
+      if (!hit) return;
 
-      // Vim 엔진 실행
-      const nextState = handleKey(editorState, e.key);
-      setEditorState(nextState);
-
-      // 각 드릴별 성공 조건 판정
-      if (currentProblem.type === 'relative-jump') {
-        const targetPresent = nextState.lines.some((l) =>
-          l.includes(currentProblem.targetText)
+      if (state.selectedDrill === 'weakness-custom') {
+        handleWeaknessHit(state.keystrokes + 1);
+      } else if (state.selectedDrill === 'sudden-death' || state.selectedDrill === 'pro-master') {
+        handleSuddenDeathHit();
+      } else {
+        playSuccessSound?.();
+        scheduleTimer(() => dispatch({ type: 'CLEAR_TARGET_HIT' }), 300);
+        const nextProblem = createProblemForDrillWithPlan(
+          state.selectedDrill,
+          0,
+          state.weaknessPlan
         );
-        if (!targetPresent) {
-          // 목표 라인이 dd 등으로 성공적으로 삭제됨!
-          if (selectedDrill === 'weakness-custom') {
-            handleWeaknessHit(combo, score, keystrokes + 1);
-          } else if (selectedDrill === 'sudden-death') {
-            handleSuddenDeathHit(combo);
-          } else {
-            const bonus = nextProbKeys <= 5 ? 50 : 0;
-            triggerTargetHit(100 + bonus);
-          }
-        }
-      } else if (currentProblem.type === 'ft-sniper') {
-        if (
-          nextState.cursor.line === 0 &&
-          nextState.cursor.col === currentProblem.targetCol
-        ) {
-          // 목표 문자 위치에 착지함!
-          if (selectedDrill === 'weakness-custom') {
-            handleWeaknessHit(combo, score, keystrokes + 1);
-          } else if (selectedDrill === 'sudden-death') {
-            handleSuddenDeathHit(combo);
-          } else {
-            const bonus = nextProbKeys <= 3 ? 50 : 0;
-            triggerTargetHit(100 + bonus);
-          }
-        }
-      } else if (currentProblem.type === 'word-jump') {
-        if (
-          nextState.cursor.line === 0 &&
-          nextState.cursor.col >= currentProblem.targetStartCol &&
-          nextState.cursor.col <= currentProblem.targetEndCol
-        ) {
-          // 목표 단어 범위에 착지함!
-          if (selectedDrill === 'weakness-custom') {
-            handleWeaknessHit(combo, score, keystrokes + 1);
-          } else if (selectedDrill === 'sudden-death') {
-            handleSuddenDeathHit(combo);
-          } else {
-            const bonus = nextProbKeys <= currentProblem.optimalKeyCount + 1 ? 50 : 0;
-            triggerTargetHit(100 + bonus);
-          }
-        }
-      } else if (currentProblem.type === 'pro-master') {
-        const isMatched =
-          nextState.lines.length === currentProblem.targetLines.length &&
-          nextState.lines.every((l, i) => l === currentProblem.targetLines[i]);
-        if (isMatched && nextState.mode === 'NORMAL') {
-          if (selectedDrill === 'weakness-custom') {
-            handleWeaknessHit(combo, score, keystrokes + 1);
-          } else {
-            handleSuddenDeathHit(combo);
-          }
-        }
+        dispatch({ type: 'STANDARD_HIT', addedScore: 100 + standardBonus, nextProblem });
       }
     },
     [
-      gameState,
-      currentProblem,
-      problemKeystrokes,
-      editorState,
-      selectedDrill,
-      combo,
-      score,
-      keystrokes,
+      state.gameState,
+      state.currentProblem,
+      state.problemKeystrokes,
+      state.editorState,
+      state.selectedDrill,
+      state.keystrokes,
+      state.weaknessPlan,
       playKeySound,
+      playSuccessSound,
+      failSuddenDeath,
       triggerHardcoreWarning,
-      triggerTargetHit,
       handleSuddenDeathHit,
       handleWeaknessHit,
+      scheduleTimer,
     ]
   );
 
-  // 최초 초기화
-  useEffect(() => {
-    if (!currentProblem) {
-      const prob = createProblemForDrill(selectedDrill, 0);
-      loadProblem(prob);
-    }
-  }, [currentProblem, selectedDrill, createProblemForDrill, loadProblem]);
+  const setIsLeaderboardOpen = useCallback((open: boolean) => {
+    dispatch({ type: 'SET_LEADERBOARD_OPEN', open });
+  }, []);
 
-  // 실시간 SPM / APM 계산
-  const isTenStageMode =
-    selectedDrill === 'sudden-death' ||
-    selectedDrill === 'pro-master' ||
-    selectedDrill === 'weakness-custom';
-  const elapsedSeconds = isTenStageMode ? timeLeft : 30.0 - timeLeft;
+  const handleRefreshWeaknessPlan = useCallback(() => {
+    const fresh = buildFreshWeaknessPlan();
+    dispatch({ type: 'SET_WEAKNESS_PLAN', plan: fresh });
+    dispatch({
+      type: 'LOAD_PROBLEM',
+      problem: createProblemForDrillWithPlan('weakness-custom', 0, fresh),
+    });
+  }, [buildFreshWeaknessPlan]);
+
+  const isTenStageMode = isTenStageDrill(state.selectedDrill);
+  const elapsedSeconds = isTenStageMode ? state.timeLeft : 30.0 - state.timeLeft;
   const activeWeaknessItem =
-    selectedDrill === 'weakness-custom'
-      ? weaknessPlan.queue[Math.min(combo, weaknessPlan.queue.length - 1)]
+    state.selectedDrill === 'weakness-custom'
+      ? state.weaknessPlan.queue[Math.min(state.combo, state.weaknessPlan.queue.length - 1)]
       : null;
   const currentSpm =
-    elapsedSeconds > 0 ? Math.round((targetsHit / Math.max(1, elapsedSeconds)) * 60) : 0;
+    elapsedSeconds > 0 ? Math.round((state.targetsHit / Math.max(1, elapsedSeconds)) * 60) : 0;
   const currentApm =
-    elapsedSeconds > 0 ? Math.round((keystrokes / Math.max(1, elapsedSeconds)) * 60) : 0;
+    elapsedSeconds > 0 ? Math.round((state.keystrokes / Math.max(1, elapsedSeconds)) * 60) : 0;
 
-  // 도장 수료 등급 산출
   const getTier = () => {
-    if (score >= 1000 || targetsHit >= 10) {
+    if (state.score >= 1000 || state.targetsHit >= 10) {
       return { title: '👑 MASTER', className: 'master', desc: t('신들린 Vim 마스터의 손놀림!') };
     }
-    if (score >= 600 || targetsHit >= 6) {
+    if (state.score >= 600 || state.targetsHit >= 6) {
       return { title: '🥇 GOLD', className: 'gold', desc: t('상위 5% 실무 고수 레벨!') };
     }
-    if (score >= 300 || targetsHit >= 3) {
+    if (state.score >= 300 || state.targetsHit >= 3) {
       return { title: '🥈 SILVER', className: 'silver', desc: t('좋은 감각입니다. 조금 더 연습해 보세요.') };
     }
     return { title: '🥉 BRONZE', className: 'bronze', desc: t('hjkl 연타 대신 카운트와 점프를 의식해 보세요!') };
   };
 
-  const currentMeta = DOJO_DRILL_METAS[selectedDrill];
-  const activeHighScore = highScores[selectedDrill];
-
-  const handleRefreshWeaknessPlan = useCallback(() => {
-    const fresh = refreshWeaknessPlan();
-    loadProblem(createProblemForDrill('weakness-custom', 0, fresh));
-  }, [refreshWeaknessPlan, loadProblem, createProblemForDrill]);
-
   return {
-    selectedDrill,
-    gameState,
-    weaknessPlan,
-    timeLeft,
-    score,
-    targetsHit,
-    keystrokes,
-    combo,
-    suddenDeathFailReason,
-    finalTime,
-    myRank,
-    isLeaderboardOpen,
+    selectedDrill: state.selectedDrill,
+    gameState: state.gameState,
+    weaknessPlan: state.weaknessPlan,
+    timeLeft: state.timeLeft,
+    score: state.score,
+    targetsHit: state.targetsHit,
+    keystrokes: state.keystrokes,
+    combo: state.combo,
+    suddenDeathFailReason: state.suddenDeathFailReason,
+    finalTime: state.finalTime,
+    myRank: state.myRank,
+    isLeaderboardOpen: state.isLeaderboardOpen,
     setIsLeaderboardOpen,
-    leaderboard,
-    currentProblem,
-    editorState,
-    highScores,
-    isNewRecord,
-    isShaking,
-    isTargetHit,
-    warningMessage,
+    leaderboard: state.leaderboard,
+    currentProblem: state.currentProblem,
+    editorState: state.editorState,
+    highScores: state.highScores,
+    isNewRecord: state.isNewRecord,
+    isShaking: state.isShaking,
+    isTargetHit: state.isTargetHit,
+    warningMessage: state.warningMessage,
     arenaRef,
     handleSelectDrill,
     startGame,
@@ -627,8 +768,8 @@ export function useHardcoreDojo({
     currentSpm,
     currentApm,
     getTier,
-    currentMeta,
-    activeHighScore,
+    currentMeta: DOJO_DRILL_METAS[state.selectedDrill],
+    activeHighScore: state.highScores[state.selectedDrill],
     handleRefreshWeaknessPlan,
   };
 }
