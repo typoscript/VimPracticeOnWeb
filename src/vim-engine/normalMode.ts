@@ -64,7 +64,18 @@ export function handleNormalModeKey(
 ): VimEditorState {
   const parsed = parsePending(state.pendingKeys);
 
-  // 1. ESC 또는 타임아웃: 대기 중인 모든 키 시퀀스 및 열린 LSP 호버 닫기
+  // 1. ESC 또는 타임아웃: 대기 중인 키매핑 접두사가 있으면 타임아웃 시 짧은 매핑을 해소하고, 그 외에는 대기 상태 초기화
+  if (key === 'Timeout' && state.pendingKeymapPrefix) {
+    const timeoutKeymapRes = handleNormalUserKeymap(
+      state,
+      key,
+      dispatchKey,
+      runHandleKey,
+      isReplayingDot,
+      macroDepth
+    );
+    if (timeoutKeymapRes?.handled) return timeoutKeymapRes.state;
+  }
   if (key === 'Escape' || key === 'Timeout') {
     return {
       ...state,

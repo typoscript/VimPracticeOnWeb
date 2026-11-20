@@ -180,7 +180,8 @@ function tryHandleCmdlineKeymap(
 
   const combined = `${prefix}${key}`;
   const resolved = resolveKeymapWithMeta(state, 'c', combined);
-  if (resolved) {
+  const hasLongerPrefix = isKeymapPrefix(state, 'c', combined);
+  if (resolved && (!hasLongerPrefix || resolved.nowait)) {
     const cleanState: VimEditorState = { ...state, pendingKeymapPrefix: undefined };
     const runEx = (s: VimEditorState, cmd: string) => executeCommandLine(s, cmd, runHandleKey);
     return runKeymapTokens(
@@ -200,11 +201,32 @@ function tryHandleCmdlineKeymap(
     );
   }
 
-  if (isKeymapPrefix(state, 'c', combined)) {
+  if (hasLongerPrefix) {
     return { ...state, pendingKeymapPrefix: combined };
   }
 
   if (prefix) {
+    const prevResolved = resolveKeymapWithMeta(state, 'c', prefix);
+    if (prevResolved) {
+      const cleanState: VimEditorState = { ...state, pendingKeymapPrefix: undefined };
+      const runEx = (s: VimEditorState, cmd: string) => executeCommandLine(s, cmd, runHandleKey);
+      const afterPrev = runKeymapTokens(
+        cleanState,
+        prevResolved,
+        macroDepth,
+        (runState, rhs, _isNoremap, nextDepth) => {
+          const tokens = parseKeySequence(rhs, leaderKey);
+          let s: VimEditorState = runState;
+          for (const tok of tokens) {
+            s = stepToken(s, tok, nextDepth);
+            if (s.bell) break;
+          }
+          return s;
+        },
+        runEx
+      );
+      return stepToken(afterPrev, key, macroDepth);
+    }
     const prevDisabled = state.keymapsDisabled;
     const flushTokens = parseKeySequence(prefix, leaderKey);
     let s: VimEditorState = { ...state, pendingKeymapPrefix: undefined, keymapsDisabled: true };

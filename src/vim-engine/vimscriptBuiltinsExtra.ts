@@ -155,6 +155,129 @@ function resolveWindowIndex(state: VimEditorState, nrArg: VimScriptValue): numbe
   return nr - 1;
 }
 
+function buildLhsVariants(lhs: string, leaderKey: string): string[] {
+  const variants = [lhs];
+  if (lhs.includes('<leader>')) {
+    variants.push(lhs.replace(/<leader>/gi, leaderKey));
+  } else if (lhs.startsWith(leaderKey)) {
+    variants.push('<leader>' + lhs.slice(leaderKey.length));
+  }
+  const ctrlBracket = lhs.match(/^<(?:c|ctrl)-([a-z0-9])>$/i);
+  if (ctrlBracket) variants.push(`Ctrl-${ctrlBracket[1].toLowerCase()}`);
+  const ctrlDash = lhs.match(/^Ctrl-([a-z0-9])$/i);
+  if (ctrlDash) variants.push(`<C-${ctrlDash[1].toLowerCase()}>`, `<c-${ctrlDash[1].toLowerCase()}>`);
+  return Array.from(new Set(variants));
+}
+
+function lookupKeymapForScript(
+  state: VimEditorState,
+  name: string,
+  modeRaw: string,
+  isAbbr: boolean,
+  prefixMatch: boolean
+): {
+  lhs: string;
+  rhs: string;
+  mode: string;
+  silent: number;
+  expr: number;
+  noremap: number;
+  nowait: number;
+  buffer: number;
+} | null {
+  const mode = (modeRaw || 'n').trim().toLowerCase() || 'n';
+  if (isAbbr) {
+    const abbrevs = state.abbreviations ?? {};
+    const checkModes = mode === 'i' || mode === 'c' ? [mode] : ['i', 'c'];
+    for (const m of checkModes) {
+      for (const [k, entry] of Object.entries(abbrevs)) {
+        if (entry.mode !== m && !k.startsWith(`${m}:`)) continue;
+        const match = prefixMatch
+          ? entry.lhs === name || entry.lhs.startsWith(name) || name.startsWith(entry.lhs)
+          : entry.lhs === name;
+        if (match) {
+          return {
+            lhs: entry.lhs,
+            rhs: entry.rhs,
+            mode: entry.mode,
+            silent: 0,
+            expr: 0,
+            noremap: entry.noremap ? 1 : 0,
+            nowait: 0,
+            buffer: 0,
+          };
+        }
+      }
+    }
+    return null;
+  }
+
+  const leaderKey = state.leaderKey || ' ';
+  const variants = buildLhsVariants(name, leaderKey);
+  const bufId = state.currentBufferId ?? 1;
+  const sources: Array<{ map: Record<string, string> | undefined; isBuf: boolean }> = [
+    { map: state.bufferKeymaps?.[bufId], isBuf: true },
+    { map: state.userKeymaps, isBuf: false },
+  ];
+  const strictModeOnly = mode === 'x' || mode === 'o' || mode === 'c';
+
+  for (const { map, isBuf } of sources) {
+    if (!map) continue;
+    for (const v of variants) {
+      const keysToCheck = strictModeOnly ? [`${mode}:${v}`] : [`${mode}:${v}`, v];
+      for (const mapKey of keysToCheck) {
+        if (map[mapKey] !== undefined) {
+          const metaKey = isBuf ? `b:${bufId}:${mode}:${v}` : `${mode}:${v}`;
+          const meta =
+            state.keymapMeta?.[metaKey] ??
+            (strictModeOnly ? undefined : state.keymapMeta?.[isBuf ? `b:${bufId}:${v}` : v]);
+          return {
+            lhs: v,
+            rhs: map[mapKey],
+            mode,
+            silent: meta?.silent ? 1 : 0,
+            expr: meta?.expr ? 1 : 0,
+            noremap: meta?.noremap === false ? 0 : 1,
+            nowait: meta?.nowait ? 1 : 0,
+            buffer: isBuf ? 1 : 0,
+          };
+        }
+      }
+    }
+    if (prefixMatch) {
+      for (const [rawKey, rhs] of Object.entries(map)) {
+        let entryMode = 'all';
+        let entryLhs = rawKey;
+        if (/^[nivxoc]:/.test(rawKey)) {
+          entryMode = rawKey[0];
+          entryLhs = rawKey.slice(2);
+        }
+        if (entryMode !== 'all' && entryMode !== mode) continue;
+        if (entryMode === 'all' && strictModeOnly) continue;
+        const entryVariants = buildLhsVariants(entryLhs, leaderKey);
+        const matched = entryVariants.some((ev) =>
+          variants.some((v) => ev.startsWith(v) || v.startsWith(ev))
+        );
+        if (matched) {
+          const metaKey = isBuf ? `b:${bufId}:${mode}:${entryLhs}` : `${mode}:${entryLhs}`;
+          const meta = state.keymapMeta?.[metaKey];
+          return {
+            lhs: entryLhs,
+            rhs,
+            mode: entryMode === 'all' ? mode : entryMode,
+            silent: meta?.silent ? 1 : 0,
+            expr: meta?.expr ? 1 : 0,
+            noremap: meta?.noremap === false ? 0 : 1,
+            nowait: meta?.nowait ? 1 : 0,
+            buffer: isBuf ? 1 : 0,
+          };
+        }
+      }
+    }
+  }
+  return null;
+}
+
 function normalizeVfsLookupKey(state: VimEditorState, raw: string): string {
   const cwdPrefix = `${getEffectiveCwd(state).replace(/\/$/, '')}/`;
   let key = raw.trim();
@@ -757,6 +880,42 @@ export const EXTRA_BUILTINS: Record<string, ExtraBuiltin> = {
         throw new VimScriptError(errMsg);
       }
       return captured;
+    },
+  },
+
+  // ---- 키매핑 조회 (maparg / mapcheck) ----
+  maparg: {
+    min: 1,
+    max: 4,
+    fn: (ctx, [nameArg, modeArg, abbrArg, dictArg]) => {
+      const name = toVimString(nameArg);
+      const mode = modeArg !== undefined ? toVimString(modeArg) : 'n';
+      const isAbbr = abbrArg !== undefined && isTruthy(abbrArg);
+      const asDict = dictArg !== undefined && isTruthy(dictArg);
+      const hit = lookupKeymapForScript(ctx.state, name, mode, isAbbr, false);
+      if (!hit) return asDict ? makeDict({}) : '';
+      if (!asDict) return hit.rhs;
+      return makeDict({
+        lhs: hit.lhs,
+        rhs: hit.rhs,
+        mode: hit.mode,
+        silent: hit.silent,
+        expr: hit.expr,
+        noremap: hit.noremap,
+        nowait: hit.nowait,
+        buffer: hit.buffer,
+      });
+    },
+  },
+  mapcheck: {
+    min: 1,
+    max: 3,
+    fn: (ctx, [nameArg, modeArg, abbrArg]) => {
+      const name = toVimString(nameArg);
+      const mode = modeArg !== undefined ? toVimString(modeArg) : 'n';
+      const isAbbr = abbrArg !== undefined && isTruthy(abbrArg);
+      const hit = lookupKeymapForScript(ctx.state, name, mode, isAbbr, true);
+      return hit ? hit.rhs : '';
     },
   },
 

@@ -416,4 +416,6 @@ export const EN_MESSAGES: Record<string, string> = {
   "E475: 잘못된 인수입니다: {arg}": "E475: Invalid argument: {arg}",
   "E738: 스코프 딕셔너리에는 딕셔너리만 대입할 수 있습니다: {name}": "E738: Can only assign Dict to scope dictionary: {name}",
   "메시지 기록이 비어 있습니다": "No messages in history",
+  "E227: {lhs} 에 대한 매핑이 이미 존재합니다": "E227: mapping already exists for {lhs}",
+  "매핑을 찾을 수 없습니다: {lhs}": "No mapping found: {lhs}",
 };

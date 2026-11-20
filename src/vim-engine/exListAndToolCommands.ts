@@ -27,6 +27,7 @@ import {
   registerKeymap,
   unregisterKeymap,
   formatKeymapsList,
+  parseMapQuery,
   parseMapRest,
   parseUnmapRest,
 } from './keymapEngine';
@@ -286,7 +287,7 @@ function tryExecuteMappingAndMiscToolCommand(
     return finishEx(state, { commandMessage: formatKeymapsList(state, modeFilter) });
   }
 
-  // 커스텀 키매핑 등록
+  // 커스텀 키매핑 등록 또는 단일 키 조회(:nmap {lhs}, :imap <buffer> {lhs})
   const mapMatch = trimmed.match(
     /^:?\s*(nmap|nnoremap|imap|inoremap|vmap|vnoremap|xmap|xnoremap|omap|onoremap|cmap|cnoremap|map|noremap)\s+([\s\S]+)$/i
   );
@@ -294,6 +295,23 @@ function tryExecuteMappingAndMiscToolCommand(
     const parsed = parseMapRest(mapMatch[2]);
     if (parsed) {
       return registerKeymap(state, mapMatch[1], parsed.lhs, parsed.rhs, parsed.modifiers);
+    }
+    const query = parseMapQuery(mapMatch[2]);
+    if (query) {
+      const cmd = mapMatch[1].toLowerCase();
+      let modeFilter = 'all';
+      if (cmd.startsWith('i')) modeFilter = 'i';
+      else if (cmd.startsWith('n') && !cmd.startsWith('nore')) modeFilter = 'n';
+      else if (cmd.startsWith('v')) modeFilter = 'v';
+      else if (cmd.startsWith('x')) modeFilter = 'x';
+      else if (cmd.startsWith('o')) modeFilter = 'o';
+      else if (cmd.startsWith('c')) modeFilter = 'c';
+      return finishEx(state, {
+        commandMessage: formatKeymapsList(state, modeFilter, {
+          lhsFilter: query.lhs || undefined,
+          bufferOnly: query.bufferOnly,
+        }),
+      });
     }
   }
 

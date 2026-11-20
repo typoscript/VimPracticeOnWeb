@@ -169,12 +169,39 @@ export function handleNormalUserKeymap(
     }
   }
 
-  // 3. 일반 모드 단일/다중 키 매핑 처리 (재귀 *map 및 noremap 구분)
+  // 3. 일반 모드 단일/다중 키 매핑 처리 (재귀 *map, noremap, <nowait> 구분)
   if (!state.pendingKeys && macroDepth <= MAX_REMAP_DEPTH) {
     const prefix = state.pendingKeymapPrefix ?? '';
+    if (prefix && key === 'Timeout') {
+      const prefixResolved = resolveKeymapWithMeta(state, 'n', prefix);
+      if (prefixResolved) {
+        return {
+          handled: true,
+          state: runResolvedNormalMapping(
+            { ...state, pendingKeymapPrefix: undefined },
+            prefixResolved,
+            dispatchKey,
+            runHandleKey,
+            isReplayingDot,
+            macroDepth
+          ),
+        };
+      }
+      const prevDisabled = state.keymapsDisabled;
+      const flushed = executeNormalTokens(
+        { ...state, pendingKeymapPrefix: undefined, keymapsDisabled: true },
+        parseKeySequence(prefix, leaderKey),
+        dispatchKey,
+        isReplayingDot,
+        macroDepth
+      );
+      const restored = flushed.keymapsDisabled === prevDisabled ? flushed : { ...flushed, keymapsDisabled: prevDisabled };
+      return { handled: true, state: restored };
+    }
     const combined = `${prefix}${key}`;
     const resolved = resolveKeymapWithMeta(state, 'n', combined);
-    if (resolved) {
+    const hasLongerPrefix = (!isLeaderKey || Boolean(prefix)) && isKeymapPrefix(state, 'n', combined);
+    if (resolved && (!hasLongerPrefix || resolved.nowait)) {
       return {
         handled: true,
         state: runResolvedNormalMapping(
@@ -187,13 +214,28 @@ export function handleNormalUserKeymap(
         ),
       };
     }
-    if ((!isLeaderKey || prefix) && isKeymapPrefix(state, 'n', combined)) {
+    if (hasLongerPrefix) {
       return {
         handled: true,
         state: { ...state, pendingKeymapPrefix: combined },
       };
     }
     if (prefix) {
+      const prefixResolved = resolveKeymapWithMeta(state, 'n', prefix);
+      if (prefixResolved) {
+        const afterPrefix = runResolvedNormalMapping(
+          { ...state, pendingKeymapPrefix: undefined },
+          prefixResolved,
+          dispatchKey,
+          runHandleKey,
+          isReplayingDot,
+          macroDepth
+        );
+        return {
+          handled: true,
+          state: dispatchKey(afterPrefix, key, isReplayingDot, macroDepth),
+        };
+      }
       const prevDisabled = state.keymapsDisabled;
       const flushed = executeNormalTokens(
         { ...state, pendingKeymapPrefix: undefined, keymapsDisabled: true },

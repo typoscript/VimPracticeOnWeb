@@ -1,5 +1,6 @@
 import { VimEditorState } from './types';
 import { clampCursor } from './cursor';
+import { executeCommandLine } from './commandLine';
 import {
   MAX_REMAP_DEPTH,
   ResolvedKeymap,
@@ -244,15 +245,23 @@ function executeInsertMapped(
     cursor: { line, col: baseCol },
     pendingKeys: undefined,
   };
-  return runKeymapTokens(startBase, resolved, macroDepth, (runState, evalRhs) => {
-    const tokens = parseKeySequence(evalRhs, state.leaderKey || ' ');
-    let s: VimEditorState = runState;
-    for (const tok of tokens) {
-      s = dispatchKey(s, tok, isReplayingDot, Math.max(1, macroDepth + 1));
-      if (s.bell) break;
-    }
-    return s;
-  });
+  const runEx = (s: VimEditorState, cmd: string) =>
+    executeCommandLine(s, cmd, (st, k) => dispatchKey(st, k, isReplayingDot, 0));
+  return runKeymapTokens(
+    startBase,
+    resolved,
+    macroDepth,
+    (runState, evalRhs) => {
+      const tokens = parseKeySequence(evalRhs, state.leaderKey || ' ');
+      let s: VimEditorState = runState;
+      for (const tok of tokens) {
+        s = dispatchKey(s, tok, isReplayingDot, Math.max(1, macroDepth + 1));
+        if (s.bell) break;
+      }
+      return s;
+    },
+    runEx
+  );
 }
 
 function tryHandleInsertKeymap(
@@ -264,15 +273,32 @@ function tryHandleInsertKeymap(
 ): VimEditorState | null {
   if (state.keymapsDisabled || macroDepth > MAX_REMAP_DEPTH) return null;
   if (state.pendingKeys) {
-    const resolved = resolveKeymapWithMeta(state, 'i', `${state.pendingKeys}${key}`);
-    return resolved
-      ? executeInsertMapped(state, resolved, state.pendingKeys.length, dispatchKey, isReplayingDot, macroDepth)
-      : null;
+    if (key === 'Timeout') {
+      const prevResolved = resolveKeymapWithMeta(state, 'i', state.pendingKeys);
+      if (prevResolved) {
+        return executeInsertMapped(state, prevResolved, state.pendingKeys.length, dispatchKey, isReplayingDot, macroDepth);
+      }
+      return null;
+    }
+    const combined = `${state.pendingKeys}${key}`;
+    const resolved = resolveKeymapWithMeta(state, 'i', combined);
+    if (resolved && (!isKeymapPrefix(state, 'i', combined) || resolved.nowait)) {
+      return executeInsertMapped(state, resolved, state.pendingKeys.length, dispatchKey, isReplayingDot, macroDepth);
+    }
+    if (!isKeymapPrefix(state, 'i', combined)) {
+      const prevResolved = resolveKeymapWithMeta(state, 'i', state.pendingKeys);
+      if (prevResolved) {
+        const afterPrev = executeInsertMapped(state, prevResolved, state.pendingKeys.length, dispatchKey, isReplayingDot, macroDepth);
+        return dispatchKey(afterPrev, key, isReplayingDot, macroDepth);
+      }
+    }
+    return null;
   }
   const resolved = resolveKeymapWithMeta(state, 'i', key);
-  return resolved
-    ? executeInsertMapped(state, resolved, 0, dispatchKey, isReplayingDot, macroDepth)
-    : null;
+  if (resolved && (!isKeymapPrefix(state, 'i', key) || resolved.nowait)) {
+    return executeInsertMapped(state, resolved, 0, dispatchKey, isReplayingDot, macroDepth);
+  }
+  return null;
 }
 
 /** ^X 서브모드 및 인버퍼 자동완성(Ctrl-n/p/e/y/Arrow) 처리 */

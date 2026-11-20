@@ -1,4 +1,5 @@
 import { VimEditorState, CursorPosition } from './types';
+import { executeCommandLine } from './commandLine';
 import { moveToLineStart, moveToLineEnd, moveToFirstNonBlank } from './motions';
 import { syncRegisters, putFromRegister } from './registers';
 import { alternateBuffer } from './bufferEngine';
@@ -156,19 +157,16 @@ export function handleVisualModeKey(
     return alternateBuffer(state);
   }
 
-  // 비주얼 모드 커스텀 키매핑 (:xmap/:xnoremap 우선, :vmap/:vnoremap 폴백, 다중 키 및 재귀 *map 지원)
+  // 비주얼 모드 커스텀 키매핑 (:xmap/:xnoremap 우선, :vmap/:vnoremap 폴백, 다중 키·<Cmd>·<nowait>·재귀 *map 지원)
   if (!state.keymapsDisabled && !state.pendingKeys && macroDepth <= MAX_REMAP_DEPTH) {
     const leaderKey = state.leaderKey || ' ';
     const prefix = state.pendingKeymapPrefix ?? '';
-    const isLeader = !prefix && (key === leaderKey || (leaderKey === ' ' && (key === ' ' || key === 'Space')));
-    const combined = isLeader ? '<leader>' : `${prefix}${key}`;
-    const resolved =
-      resolveKeymapWithMeta(state, 'x', combined) ??
-      resolveKeymapWithMeta(state, 'v', combined);
-    if (resolved) {
-      return runKeymapTokens(
-        { ...state, pendingKeymapPrefix: undefined },
-        resolved,
+    const runVisualEx = (s: VimEditorState, cmd: string) =>
+      executeCommandLine(s, cmd, (st, k) => dispatchKey(st, k, false, 0));
+    const runVisualResolved = (baseState: VimEditorState, res: NonNullable<ReturnType<typeof resolveKeymapWithMeta>>) =>
+      runKeymapTokens(
+        baseState,
+        res,
         macroDepth,
         (runState, rhs, isNoremap, nextDepth) => {
           if (isNoremap && rhs === '^') {
@@ -184,17 +182,38 @@ export function handleVisualModeKey(
             if (s.bell) break;
           }
           return s;
-        }
+        },
+        runVisualEx
       );
+
+    if (prefix && key === 'Timeout') {
+      const prevRes = resolveKeymapWithMeta(state, 'x', prefix) ?? resolveKeymapWithMeta(state, 'v', prefix);
+      if (prevRes) return runVisualResolved({ ...state, pendingKeymapPrefix: undefined }, prevRes);
+      return { ...state, pendingKeymapPrefix: undefined };
     }
-    if (
+
+    const isLeader = !prefix && (key === leaderKey || (leaderKey === ' ' && (key === ' ' || key === 'Space')));
+    const combined = isLeader ? '<leader>' : `${prefix}${key}`;
+    const resolved =
+      resolveKeymapWithMeta(state, 'x', combined) ??
+      resolveKeymapWithMeta(state, 'v', combined);
+    const hasLongerPrefix =
       isKeymapPrefix(state, 'x', combined) ||
       isKeymapPrefix(state, 'v', combined) ||
-      (isLeader && (isKeymapPrefix(state, 'x', leaderKey) || isKeymapPrefix(state, 'v', leaderKey)))
-    ) {
+      (isLeader && (isKeymapPrefix(state, 'x', leaderKey) || isKeymapPrefix(state, 'v', leaderKey)));
+
+    if (resolved && (!hasLongerPrefix || resolved.nowait)) {
+      return runVisualResolved({ ...state, pendingKeymapPrefix: undefined }, resolved);
+    }
+    if (hasLongerPrefix) {
       return { ...state, pendingKeymapPrefix: combined };
     }
     if (prefix) {
+      const prevRes = resolveKeymapWithMeta(state, 'x', prefix) ?? resolveKeymapWithMeta(state, 'v', prefix);
+      if (prevRes) {
+        const afterPrev = runVisualResolved({ ...state, pendingKeymapPrefix: undefined }, prevRes);
+        return dispatchKey(afterPrev, key, false, macroDepth);
+      }
       const prevDisabled = state.keymapsDisabled;
       const flushTokens = parseKeySequence(prefix, leaderKey);
       let s: VimEditorState = { ...state, pendingKeymapPrefix: undefined, keymapsDisabled: true };

@@ -530,8 +530,8 @@ export interface VimEditorState {
   userKeymaps?: Record<string, string>;
   /** 버퍼별 로컬 키매핑 (:nmap <buffer> ...) */
   bufferKeymaps?: Record<number, Record<string, string>>;
-  /** 키매핑 메타데이터 (<silent>, <expr>, noremap 여부) */
-  keymapMeta?: Record<string, { silent?: boolean; expr?: boolean; noremap?: boolean }>;
+  /** 키매핑 메타데이터 (<silent>, <expr>, <nowait>, noremap 여부) */
+  keymapMeta?: Record<string, { silent?: boolean; expr?: boolean; noremap?: boolean; nowait?: boolean }>;
   /** :normal! 실행 중 사용자 키매핑 우회 여부 */
   keymapsDisabled?: boolean;
   /** 다중 키 키매핑(:omap/:xmap/:cmap 등) 중간 입력 접두 버퍼 */

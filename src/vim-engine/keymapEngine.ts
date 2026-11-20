@@ -1,4 +1,5 @@
 import { VimEditorState } from './types';
+import { clampCursor } from './cursor';
 import { msg } from './messages';
 import { evaluateScriptExpression, ExRunner } from './vimscriptEngine';
 
@@ -17,6 +18,8 @@ export interface KeymapModifiers {
   buffer?: boolean;
   silent?: boolean;
   expr?: boolean;
+  nowait?: boolean;
+  unique?: boolean;
 }
 
 export interface ResolvedKeymap {
@@ -24,12 +27,13 @@ export interface ResolvedKeymap {
   silent?: boolean;
   expr?: boolean;
   noremap?: boolean;
+  nowait?: boolean;
   buffer?: boolean;
 }
 
 const MAP_FLAG_RE = /^<(buffer|silent|expr|nowait|unique)>$/i;
 
-/** :map / :nnoremap 뒤의 수식어(<buffer>, <silent>, <expr>)와 lhs / rhs 를 분리합니다. */
+/** :map / :nnoremap 뒤의 수식어(<buffer>, <silent>, <expr>, <nowait>, <unique>)와 lhs / rhs 를 분리합니다. */
 export function parseMapRest(rawRest: string): { modifiers: KeymapModifiers; lhs: string; rhs: string } | null {
   const modifiers: KeymapModifiers = {};
   let rest = rawRest.trim();
@@ -40,11 +44,26 @@ export function parseMapRest(rawRest: string): { modifiers: KeymapModifiers; lhs
     if (flag === 'buffer') modifiers.buffer = true;
     else if (flag === 'silent') modifiers.silent = true;
     else if (flag === 'expr') modifiers.expr = true;
+    else if (flag === 'nowait') modifiers.nowait = true;
+    else if (flag === 'unique') modifiers.unique = true;
     rest = m[2].trimStart();
   }
   const body = rest.match(/^(\S+)\s+([\s\S]+)$/);
   if (!body) return null;
   return { modifiers, lhs: body[1], rhs: body[2].trim() };
+}
+
+/** :nmap [<buffer>] {lhs} 단일 매핑 조회 인수를 파싱합니다. */
+export function parseMapQuery(rawRest: string): { bufferOnly: boolean; lhs: string } | null {
+  let rest = rawRest.trim();
+  let bufferOnly = false;
+  if (/^<buffer>(?:\s+|$)/i.test(rest)) {
+    bufferOnly = true;
+    rest = rest.replace(/^<buffer>\s*/i, '').trim();
+  }
+  if (!rest) return { bufferOnly, lhs: '' };
+  if (/\s/.test(rest)) return null;
+  return { bufferOnly, lhs: rest };
 }
 
 /** :unmap 뒤의 <buffer> 수식어와 lhs 를 분리합니다. */
@@ -104,8 +123,67 @@ export function applySilentKeymapResult(
   return { ...nextState, commandMessage: prevMessage };
 }
 
+export type KeymapRhsSegment =
+  | { kind: 'cmd'; command: string }
+  | { kind: 'keys'; text: string };
+
+/** RHS 문자열에서 <Cmd>...<CR> 구간과 일반 키 시퀀스 구간을 분리합니다. */
+export function splitCmdSegments(rhs: string): KeymapRhsSegment[] {
+  if (!/<cmd>/i.test(rhs)) {
+    return rhs ? [{ kind: 'keys', text: rhs }] : [];
+  }
+  const segments: KeymapRhsSegment[] = [];
+  const re = /<cmd>([\s\S]*?)<(?:cr|enter|return)>/gi;
+  let lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(rhs)) !== null) {
+    if (m.index > lastIndex) {
+      segments.push({ kind: 'keys', text: rhs.slice(lastIndex, m.index) });
+    }
+    segments.push({ kind: 'cmd', command: m[1].trim() });
+    lastIndex = re.lastIndex;
+  }
+  if (lastIndex < rhs.length) {
+    segments.push({ kind: 'keys', text: rhs.slice(lastIndex) });
+  }
+  return segments;
+}
+
+/** <Cmd>...<CR> 구간을 현재 모드(INSERT/VISUAL/NORMAL/COMMAND)를 유지한 채 직접 실행합니다. */
+export function executeCmdSegment(
+  state: VimEditorState,
+  command: string,
+  runEx?: ExRunner
+): VimEditorState {
+  if (!runEx || !command) return state;
+  const prevMode = state.mode;
+  const prevAnchor = state.visualAnchor;
+  const prevBlockEol = state.visualBlockEndOfLine;
+  const prevCmdBuf = state.commandBuffer;
+  const prevCmdType = state.commandType;
+  const prevCmdCol = state.commandCursorCol;
+  const prevInsertText = state.currentInsertText;
+
+  const after = runEx(state, command);
+  const clampedCursor = clampCursor(after.lines, after.cursor, prevMode);
+  const clampedAnchor = prevAnchor ? clampCursor(after.lines, prevAnchor, prevMode) : undefined;
+
+  return {
+    ...after,
+    mode: prevMode,
+    cursor: clampedCursor,
+    visualAnchor: clampedAnchor,
+    visualBlockEndOfLine: prevBlockEol,
+    commandBuffer: prevMode === 'COMMAND' || prevMode === 'SEARCH' ? prevCmdBuf : after.commandBuffer,
+    commandType: prevMode === 'COMMAND' || prevMode === 'SEARCH' ? prevCmdType : after.commandType,
+    commandCursorCol: prevMode === 'COMMAND' || prevMode === 'SEARCH' ? prevCmdCol : after.commandCursorCol,
+    currentInsertText: prevMode === 'INSERT' ? prevInsertText : after.currentInsertText,
+  };
+}
+
 /**
  * 해소된 키매핑 RHS 를 noremap(재매핑 금지) 또는 재귀 *map(최대 깊이 제한) 규약으로 실행합니다.
+ * <Cmd>...<CR> 구간이 포함된 경우 현재 모드를 벗어나지 않고 Ex 명령을 실행합니다.
  */
 export function runKeymapTokens(
   state: VimEditorState,
@@ -132,7 +210,20 @@ export function runKeymapTokens(
   if (!rhs) return applySilentKeymapResult(prevMessage, state, resolved.silent);
 
   const startState = isNoremap ? { ...state, keymapsDisabled: true } : state;
-  const after = executeRhs(startState, rhs, isNoremap, macroDepth + 1);
+  const segments = splitCmdSegments(rhs);
+  let after: VimEditorState = startState;
+  if (segments.length === 1 && segments[0].kind === 'keys') {
+    after = executeRhs(startState, segments[0].text, isNoremap, macroDepth + 1);
+  } else {
+    for (const seg of segments) {
+      if (seg.kind === 'cmd') {
+        after = executeCmdSegment(after, seg.command, runEx);
+      } else {
+        after = executeRhs(after, seg.text, isNoremap, macroDepth + 1);
+      }
+      if (after.bell) break;
+    }
+  }
   const restored = after.keymapsDisabled === prevDisabled ? after : { ...after, keymapsDisabled: prevDisabled };
   return applySilentKeymapResult(prevMessage, restored, resolved.silent);
 }
@@ -397,13 +488,29 @@ export function isKeymapPrefix(
 
 /**
  * Formats user keymaps into a clean Vim-style list string.
+ * lhsFilter 가 주어지면 해당 키(또는 접두어)와 일치하는 매핑만 필터링합니다 (:nmap {lhs}).
  */
-export function formatKeymapsList(state: VimEditorState, modeFilter = 'all'): string {
+export function formatKeymapsList(
+  state: VimEditorState,
+  modeFilter = 'all',
+  options?: { lhsFilter?: string; bufferOnly?: boolean }
+): string {
   const bufId = state.currentBufferId ?? 1;
   const bufMaps = state.bufferKeymaps?.[bufId] ?? {};
   const userKeymaps = state.userKeymaps ?? {};
   const entries: Array<KeymapEntry & { buffer?: boolean }> = [];
   const seen = new Set<string>();
+  const leaderKey = state.leaderKey || ' ';
+  const lhsFilter = options?.lhsFilter?.trim();
+  const filterVariants = lhsFilter ? getKeyVariants(lhsFilter, leaderKey) : null;
+
+  const matchesLhsFilter = (lhs: string): boolean => {
+    if (!filterVariants) return true;
+    const lhsVariants = getKeyVariants(lhs, leaderKey);
+    return lhsVariants.some((lv) =>
+      filterVariants.some((fv) => lv === fv || lv.startsWith(fv))
+    );
+  };
 
   const collect = (source: Record<string, string>, isBuf: boolean) => {
     for (const [rawKey, rhs] of Object.entries(source)) {
@@ -424,14 +531,21 @@ export function formatKeymapsList(state: VimEditorState, modeFilter = 'all'): st
         if (mode !== modeFilter && mode !== ' ') continue;
       }
 
+      if (!matchesLhsFilter(lhs)) continue;
+
       seen.add(keyId);
       entries.push({ mode, lhs, rhs, buffer: isBuf });
     }
   };
   collect(bufMaps, true);
-  collect(userKeymaps, false);
+  if (!options?.bufferOnly) {
+    collect(userKeymaps, false);
+  }
 
   if (entries.length === 0) {
+    if (lhsFilter) {
+      return msg('매핑을 찾을 수 없습니다: {lhs}', { lhs: lhsFilter });
+    }
     const modeName =
       modeFilter === 'n'
         ? msg('일반 (Normal)')
@@ -492,6 +606,24 @@ export function registerKeymap(
   const targetMap = modifiers.buffer
     ? { ...(state.bufferKeymaps?.[bufId] ?? {}) }
     : { ...(state.userKeymaps ?? {}) };
+
+  if (modifiers.unique) {
+    const existsAlready = variants.some((v) =>
+      modes.some((m) => targetMap[`${m}:${v}`] !== undefined) || (!strictMode && targetMap[v] !== undefined)
+    );
+    if (existsAlready) {
+      return {
+        ...state,
+        mode: 'NORMAL',
+        visualAnchor: undefined,
+        commandBuffer: undefined,
+        commandType: undefined,
+        bell: true,
+        commandMessage: msg('E227: {lhs} 에 대한 매핑이 이미 존재합니다', { lhs }),
+      };
+    }
+  }
+
   const nextMeta = { ...(state.keymapMeta ?? {}) };
 
   for (const v of variants) {
@@ -501,6 +633,7 @@ export function registerKeymap(
       nextMeta[metaKey] = {
         ...(modifiers.silent ? { silent: true } : {}),
         ...(modifiers.expr ? { expr: true } : {}),
+        ...(modifiers.nowait ? { nowait: true } : {}),
         noremap,
       };
     }
