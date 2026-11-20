@@ -35,6 +35,7 @@ import { ErrorExprUserFn } from './errorformat';
 import { syncDiagnosticsToLocationList } from './lspEngine';
 import { callUserFunction } from './vimscriptEngine';
 import { msg } from './messages';
+import { finishEx } from './exWorkspaceCommands';
 import type { ExCommandRunner } from './exWorkspaceCommands';
 
 interface ListExCommandSpec {
@@ -80,17 +81,6 @@ interface ListExCommandSpec {
     exprReplaceCmds: readonly string[];
     exprAddCmds: readonly string[];
     exprGetCmds: readonly string[];
-  };
-}
-
-function finishEx(res: VimEditorState, overrides?: Partial<VimEditorState>): VimEditorState {
-  return {
-    ...res,
-    mode: 'NORMAL',
-    visualAnchor: undefined,
-    commandBuffer: undefined,
-    commandType: undefined,
-    ...overrides,
   };
 }
 

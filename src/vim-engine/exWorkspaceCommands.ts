@@ -53,42 +53,38 @@ import { msg } from './messages';
 
 export type ExCommandRunner = (state: VimEditorState, cmd: string) => VimEditorState;
 
-/**
- * 창 분할·버퍼·탭·diff·Netrw·저장·종료·도움말 등 작업공간 관련 Ex 명령을 처리합니다.
- * 일치하는 명령이 없으면 null 을 반환합니다.
- */
-export function tryExecuteWorkspaceExCommand(
-  state: VimEditorState,
-  cleanCmdRaw: string,
-  cleanCmd: string,
-  trimmed: string,
-  runEx: ExCommandRunner
-): VimEditorState | null {
-  const finishEx = (res: VimEditorState): VimEditorState => ({
+/** Ex 명령 실행 후 COMMAND 모드를 정리하고 NORMAL 모드로 복귀합니다. */
+export function finishEx(
+  res: VimEditorState,
+  overrides?: Partial<VimEditorState>
+): VimEditorState {
+  return {
     ...res,
     mode: 'NORMAL',
     visualAnchor: undefined,
     commandBuffer: undefined,
     commandType: undefined,
-  });
+    ...overrides,
+  };
+}
 
+function tryExecuteSplitAndDiffCommand(
+  state: VimEditorState,
+  cleanCmdRaw: string,
+  cleanCmd: string
+): VimEditorState | null {
   const splitMatch = cleanCmdRaw.match(/^(sp|split|vsp|vsplit)(?:\s+(.+))?$/i);
   if (splitMatch) {
     const isVertical = splitMatch[1].toLowerCase().startsWith('v');
     const targetFile = splitMatch[2]?.trim();
-    const splitRes = splitWindow(
-      state,
-      isVertical ? 'vertical' : 'horizontal',
-      state.secondaryLines,
-      targetFile || state.secondaryFilename
+    return finishEx(
+      splitWindow(
+        state,
+        isVertical ? 'vertical' : 'horizontal',
+        state.secondaryLines,
+        targetFile || state.secondaryFilename
+      )
     );
-    return {
-      ...splitRes,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
   }
 
   // 새 파일 창 분할: :new, :vnew [filename]
@@ -96,207 +92,112 @@ export function tryExecuteWorkspaceExCommand(
   if (newWinMatch) {
     const isVertical = newWinMatch[1].toLowerCase() === 'vnew';
     const targetFile = newWinMatch[2]?.trim() || '[No Name]';
-    const splitRes = splitWindow(
-      state,
-      isVertical ? 'vertical' : 'horizontal',
-      [''],
-      targetFile
-    );
-    return {
-      ...splitRes,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(splitWindow(state, isVertical ? 'vertical' : 'horizontal', [''], targetFile));
   }
 
   // 순정 Vim Diff 모드 분할: :diffsplit, :diffs, :vert diffsplit, :vertical diffsplit
-  const diffSplitMatch = cleanCmdRaw.match(/^(?:(vert(?:ical)?|hor(?:izontal)?)\s+)?(diffs(?:plit)?)(?:\s+(.+))?$/i);
+  const diffSplitMatch = cleanCmdRaw.match(
+    /^(?:(vert(?:ical)?|hor(?:izontal)?)\s+)?(diffs(?:plit)?)(?:\s+(.+))?$/i
+  );
   if (diffSplitMatch) {
     const mod = diffSplitMatch[1]?.toLowerCase();
-    const isVert = mod ? mod.startsWith('vert') : true; // 기본값 세로(vertical) 분할
+    const isVert = mod ? mod.startsWith('vert') : true;
     const targetFile = diffSplitMatch[3]?.trim();
-    const res = startDiffSplit(state, targetFile, isVert ? 'vertical' : 'horizontal');
-    return finishEx(res);
+    return finishEx(startDiffSplit(state, targetFile, isVert ? 'vertical' : 'horizontal'));
   }
 
-  // :diffthis, :difft
-  if (cleanCmdRaw.toLowerCase() === 'diffthis' || cleanCmdRaw.toLowerCase() === 'difft') {
+  if (cleanCmd === 'diffthis' || cleanCmd === 'difft') {
     return finishEx(diffThis(state));
   }
-
-  // :diffoff, :diffo, :diffoff!
   if (/^diffo(?:ff)?!?$/i.test(cleanCmdRaw)) {
     return finishEx(diffOff(state, cleanCmdRaw.includes('!')));
   }
-
-  // :diffupdate, :diffu
-  if (cleanCmdRaw.toLowerCase() === 'diffupdate' || cleanCmdRaw.toLowerCase() === 'diffu') {
+  if (cleanCmd === 'diffupdate' || cleanCmd === 'diffu') {
     return finishEx(diffUpdate(state));
   }
-
-  // :diffget, :diffg (do)
-  if (cleanCmdRaw.toLowerCase() === 'diffget' || cleanCmdRaw.toLowerCase() === 'diffg') {
+  if (cleanCmd === 'diffget' || cleanCmd === 'diffg') {
     return finishEx(diffObtain(state));
   }
-
-  // :diffput, :diffp (dp)
-  if (cleanCmdRaw.toLowerCase() === 'diffput' || cleanCmdRaw.toLowerCase() === 'diffp') {
+  if (cleanCmd === 'diffput' || cleanCmd === 'diffp') {
     return finishEx(diffPut(state));
   }
 
-  // 창 닫기: :close, :clo
+  // 창 닫기 / 단독화 / 제어 / 크기 조절
   if (cleanCmd === 'close' || cleanCmd === 'clo') {
     return finishEx(closeSplitWindow(state));
   }
-
-  // 현재 창만 유지: :only, :on
   if (cleanCmd === 'only' || cleanCmd === 'on') {
     return finishEx(closeOtherPanes(state));
   }
 
-  // 창 제어 Ex 명령: :wincmd {arg}, :1wincmd w, :2wincmd w 등
   const wincmdMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?wincmd\s+(\S+)$/i);
   if (wincmdMatch) {
     const count = wincmdMatch[1] ? parseInt(wincmdMatch[1], 10) : undefined;
     return finishEx(executeWincmd(state, wincmdMatch[2], count));
   }
 
-  // 창 크기 조절: :res, :resize, :vertical res
   const resizeMatch = cleanCmdRaw.match(/^(?:(vertical|vert)\s+)?(?:res|resize)(?:\s+([+-]?\d+|=))?$/i);
   if (resizeMatch) {
     const deltaStr = resizeMatch[2];
     const delta = deltaStr === '=' ? '=' : deltaStr ? parseInt(deltaStr, 10) : 5;
-    const res = resizeSplit(state, delta);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(resizeSplit(state, delta));
   }
 
-  // 퍼지 파일 파인더 팝업: :Files, :FZF
+  return null;
+}
+
+function tryExecuteBufferListAndCwdCommand(
+  state: VimEditorState,
+  cleanCmdRaw: string,
+  cleanCmd: string
+): VimEditorState | null {
+  // 퍼지 파인더 팝업: :Files, :FZF, :Buffers
   if (/^(?:Files|FZF|fzf)$/.test(cleanCmdRaw)) {
-    const res = openFuzzyFinder(state, 'files');
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(openFuzzyFinder(state, 'files'));
   }
-
-  // 퍼지 버퍼 파인더 팝업: :Buffers
   if (/^(?:Buffers)$/.test(cleanCmdRaw)) {
-    const res = openFuzzyFinder(state, 'buffers');
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(openFuzzyFinder(state, 'buffers'));
   }
 
   // 버퍼 목록 조회: :ls, :buffers, :files (순정 소문자 명령)
   if (cleanCmd === 'ls' || cleanCmdRaw === 'buffers' || cleanCmdRaw === 'files') {
-    return {
-      ...state,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-      commandMessage: formatBufferList(state),
-    };
+    return finishEx(state, { commandMessage: formatBufferList(state) });
   }
 
-  // 작업 디렉터리 확인/변경: :pwd, :cd [dir], :lcd [dir]
+  // 작업 디렉터리 확인/변경: :pwd, :cd [dir], :lcd [dir], :tcd [dir]
   if (cleanCmd === 'pwd') {
-    return {
-      ...state,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-      commandMessage: getEffectiveCwd(state),
-    };
+    return finishEx(state, { commandMessage: getEffectiveCwd(state) });
   }
   const cdMatch = cleanCmdRaw.match(/^(cd|chd|chdir|lcd|lchd|lchdir|tcd|tchd|tchdir)(?:\s+(.*))?$/);
   if (cdMatch) {
     const scope = cdMatch[1].startsWith('t') ? 'tab' : 'global';
-    const res = changeWorkingDirectory(state, cdMatch[2], scope);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(changeWorkingDirectory(state, cdMatch[2], scope));
   }
 
   // 새 빈 버퍼: :enew[!]
   const enewMatch = cleanCmdRaw.match(/^ene(?:w)?(!)?$/i);
   if (enewMatch) {
-    const res = newEmptyBuffer(state, enewMatch[1] === '!');
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(newEmptyBuffer(state, enewMatch[1] === '!'));
   }
 
   // 현재 버퍼 파일명 조회/변경: :f[ile] [name]
   const fileMatch = cleanCmdRaw.match(/^(?:f|fi|fil|file)(?:\s+(.*))?$/);
   if (fileMatch) {
-    const res = fileBufferCommand(state, fileMatch[1]);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(fileBufferCommand(state, fileMatch[1]));
   }
 
-  // 버퍼 순회: :bn, :bnext, :bp, :bprev, :bprevious ([count] 지원)
+  // 버퍼 순회 및 양 끝 이동: :bn, :bp, :bf, :bl
   const bnMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?(bn|bnext|bp|bprev|bprevious)$/i);
   if (bnMatch) {
     const count = bnMatch[1] ? parseInt(bnMatch[1], 10) : 1;
     const isNext = bnMatch[2].toLowerCase().startsWith('bn');
-    const res = isNext ? nextBuffer(state, count) : prevBuffer(state, count);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(isNext ? nextBuffer(state, count) : prevBuffer(state, count));
   }
-
-  // 버퍼 양 끝 이동: :bf, :bfirst, :bl, :blast
   if (cleanCmd === 'bf' || cleanCmd === 'bfirst') {
-    return {
-      ...firstBuffer(state),
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(firstBuffer(state));
   }
   if (cleanCmd === 'bl' || cleanCmd === 'blast') {
-    return {
-      ...lastBuffer(state),
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(lastBuffer(state));
   }
 
   // 버퍼 삭제·언로드·완전 제거: :bd[!], :bunload[!], :bwipeout[!]
@@ -306,18 +207,21 @@ export function tryExecuteWorkspaceExCommand(
     const force = bdMatch[2] === '!';
     const target = bdMatch[3]?.trim();
     const kind = sub.startsWith('bun') ? 'unload' : sub.startsWith('bw') ? 'wipe' : 'delete';
-    const res = deleteBuffer(state, target, force, kind);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(deleteBuffer(state, target, force, kind));
   }
 
+  return null;
+}
+
+function tryExecuteNetrwAndBufferSwitchCommand(
+  state: VimEditorState,
+  cleanCmdRaw: string,
+  runEx: ExCommandRunner
+): VimEditorState | null {
   // 순정 파일 탐색기 Netrw 열기: :Explore, :E, :Vexplore, :Ve, :Sexplore, :Se, :Hexplore, :He, :Texplore, :Te
-  const netrwMatch = cleanCmdRaw.match(/^(?:Explore|E|Vexplore|Ve|Sexplore|Se|Hexplore|He|Texplore|Te)(?:\s+(.*))?$/);
+  const netrwMatch = cleanCmdRaw.match(
+    /^(?:Explore|E|Vexplore|Ve|Sexplore|Se|Hexplore|He|Texplore|Te)(?:\s+(.*))?$/
+  );
   if (netrwMatch) {
     const cmdName = netrwMatch[0].split(/\s+/)[0];
     const targetDir = netrwMatch[1]?.trim() || '';
@@ -329,48 +233,27 @@ export function tryExecuteWorkspaceExCommand(
     } else if (cmdName === 'Texplore' || cmdName === 'Te') {
       mode = 'tab';
     }
-    const res = openNetrw(state, targetDir, mode);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(openNetrw(state, targetDir, mode));
   }
 
-  // Netrw 북마크 목록 조회: :Bookmarks, :BookmarkList
+  // Netrw 북마크 조회/추가/이동
   if (/^(?:Bookmarks|BookmarkList|bmlist)$/i.test(cleanCmdRaw)) {
-    const listMsg = formatNetrwBookmarks(state);
-    return {
-      ...state,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-      commandMessage: listMsg,
-    };
+    return finishEx(state, { commandMessage: formatNetrwBookmarks(state) });
   }
-
-  // Netrw 북마크 추가: :Bookmark [path]
   const bmMatch = cleanCmdRaw.match(/^(?:Bookmark|bookmark)(?:\s+(.*))?$/);
   if (bmMatch) {
-    const rawPath = (bmMatch[1] ?? '').trim();
-    let targetPath = rawPath;
+    let targetPath = (bmMatch[1] ?? '').trim();
     if (!targetPath) {
       if (state.netrw?.isOpen) {
         targetPath = state.netrw.currentPath;
       } else {
-        const curFile = state.primaryFilename ?? '';
-        const parts = curFile.split('/');
+        const parts = (state.primaryFilename ?? '').split('/');
         parts.pop();
         targetPath = parts.join('/');
       }
     }
     return finishEx(addNetrwBookmark(state, targetPath));
   }
-
-  // Netrw 북마크 이동: :gb [index]
   const gbMatch = cleanCmdRaw.match(/^gb(?:\s+(\d+))?$/i);
   if (gbMatch) {
     const idx = gbMatch[1] ? parseInt(gbMatch[1], 10) - 1 : undefined;
@@ -397,7 +280,10 @@ export function tryExecuteWorkspaceExCommand(
 
   // 버퍼 전환: :b {target}, :buffer {target}
   const bMatch = cleanCmdRaw.match(/^(?:b|buffer)(?:\s+(.+))?$/i);
-  if (bMatch && !cleanCmdRaw.match(/^(?:bn|bnext|bp|bprev|bprevious|bf|bfirst|bl|blast|bd|bdelete|bdel)/i)) {
+  if (
+    bMatch &&
+    !cleanCmdRaw.match(/^(?:bn|bnext|bp|bprev|bprevious|bf|bfirst|bl|blast|bd|bdelete|bdel)/i)
+  ) {
     const target = bMatch[1]?.trim();
     const leftState = triggerAutocmd(state, 'BufLeave', undefined, runEx);
     const res = target ? switchBuffer(leftState, target) : nextBuffer(leftState, 1);
@@ -411,118 +297,70 @@ export function tryExecuteWorkspaceExCommand(
     return finishEx(addBuffer(state, baddMatch[2], lineNum));
   }
 
-  // 탭 생성: :tabnew, :tabedit, :tabe [filename]
+  return null;
+}
+
+function tryExecuteTabCommand(
+  state: VimEditorState,
+  cleanCmdRaw: string,
+  cleanCmd: string
+): VimEditorState | null {
   const tabNewMatch = cleanCmdRaw.match(/^(?:tabnew|tabedit|tabe)(?:\s+(.+))?$/i);
   if (tabNewMatch) {
-    const filename = tabNewMatch[1]?.trim();
-    const res = openNewTab(state, filename);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(openNewTab(state, tabNewMatch[1]?.trim()));
   }
 
-  // 탭 닫기: :tabc, :tabclose [N]
   const tabCloseMatch = cleanCmdRaw.match(/^(?:tabc|tabclose)(?:\s+(\d+))?$/i);
   if (tabCloseMatch) {
     const targetIdx = tabCloseMatch[1] ? parseInt(tabCloseMatch[1], 10) : undefined;
-    const res = closeTab(state, targetIdx);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(closeTab(state, targetIdx));
   }
 
-  // 다른 탭 모두 닫기: :tabo, :tabonly
   if (cleanCmd === 'tabo' || cleanCmd === 'tabonly') {
-    const res = closeOtherTabs(state);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(closeOtherTabs(state));
   }
 
-  // 탭 순회(다음): :tabn, :tabnext [count]
   const tabNextMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?(?:tabn|tabnext)(?:\s+(\d+))?$/i);
   if (tabNextMatch) {
     const countRaw = tabNextMatch[1] || tabNextMatch[2];
     const count = countRaw ? parseInt(countRaw, 10) : undefined;
-    const res = nextTab(state, count);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(nextTab(state, count));
   }
 
-  // 탭 순회(이전): :tabp, :tabprev, :tabprevious [count]
   const tabPrevMatch = cleanCmdRaw.match(/^(?:(\d+)\s*)?(?:tabp|tabprev|tabprevious)(?:\s+(\d+))?$/i);
   if (tabPrevMatch) {
     const countRaw = tabPrevMatch[1] || tabPrevMatch[2];
     const count = countRaw ? parseInt(countRaw, 10) : 1;
-    const res = prevTab(state, count);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(prevTab(state, count));
   }
 
-  // 탭 양 끝 이동: :tabfirst, :tabfir, :tabr, :tabrewind, :tablast, :tabl
   if (
     cleanCmd === 'tabfirst' ||
     cleanCmd === 'tabfir' ||
     cleanCmd === 'tabr' ||
     cleanCmd === 'tabrewind'
   ) {
-    const res = firstTab(state);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(firstTab(state));
   }
   if (cleanCmd === 'tablast' || cleanCmd === 'tabl') {
-    const res = lastTab(state);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(lastTab(state));
   }
 
-  // 탭 이동: :tabmove, :tabm [N]
   const tabMoveMatch = cleanCmdRaw.match(/^(?:tabmove|tabm)(?:\s+(.+))?$/i);
   if (tabMoveMatch) {
-    const targetPos = tabMoveMatch[1]?.trim();
-    const res = moveTab(state, targetPos);
-    return {
-      ...res,
-      mode: 'NORMAL',
-      visualAnchor: undefined,
-      commandBuffer: undefined,
-      commandType: undefined,
-    };
+    return finishEx(moveTab(state, tabMoveMatch[1]?.trim()));
   }
 
+  return null;
+}
 
+function tryExecuteSaveQuitAndHelpCommand(
+  state: VimEditorState,
+  cleanCmdRaw: string,
+  cleanCmd: string,
+  trimmed: string,
+  runEx: ExCommandRunner
+): VimEditorState | null {
   const writeCurrentBuffer = (curState: VimEditorState): VimEditorState => {
     const preSaved = triggerAutocmd(curState, 'BufWritePre', undefined, runEx);
     const savedState = recordFileSave(preSaved);
@@ -537,18 +375,22 @@ export function tryExecuteWorkspaceExCommand(
       runEx
     );
     const marked = markCurrentBufferSaved(postSaved);
-    return finishEx({
-      ...marked,
-      commandMessage: marked.commandMessage || msg('[가상 저장 완료] 변경사항이 안전하게 메모리에 저장되었습니다.'),
+    return finishEx(marked, {
+      commandMessage:
+        marked.commandMessage ||
+        msg('[가상 저장 완료] 변경사항이 안전하게 메모리에 저장되었습니다.'),
     });
   };
 
   const quitCurrentWindow = (curState: VimEditorState, force = false): VimEditorState => {
     if (curState.helpSession?.isOpen) return finishEx(closeHelp(curState));
-    if (curState.splitDirection && curState.splitDirection !== 'none') return finishEx(closeSplitWindow(curState));
-    return finishEx({
-      ...curState,
-      commandMessage: curState.commandMessage || (force ? msg('단일 창 종료 무시 (:q!)') : msg('단일 창 상태입니다 (:q)')),
+    if (curState.splitDirection && curState.splitDirection !== 'none') {
+      return finishEx(closeSplitWindow(curState));
+    }
+    return finishEx(curState, {
+      commandMessage:
+        curState.commandMessage ||
+        (force ? msg('단일 창 종료 무시 (:q!)') : msg('단일 창 상태입니다 (:q)')),
     });
   };
 
@@ -562,8 +404,7 @@ export function tryExecuteWorkspaceExCommand(
       virtualFiles: { ...(prep.state.virtualFiles ?? {}), [prep.filename]: [...prep.state.lines] },
     };
     const written = writeCurrentBuffer({ ...withVfs, commandMessage: undefined });
-    return finishEx({
-      ...written,
+    return finishEx(written, {
       commandMessage: msg('"{filename}" [새로 저장됨] {count}줄', {
         filename: prep.filename,
         count: written.lines.length,
@@ -577,8 +418,7 @@ export function tryExecuteWorkspaceExCommand(
     const res = writeAllNamedBuffers(state);
     if (!res.ok) return finishEx(res.state);
     const recorded = recordFileSave(res.state);
-    return finishEx({
-      ...recorded,
+    return finishEx(recorded, {
       commandMessage: msg('{count}개 버퍼를 모두 저장했습니다 (:wall)', { count: res.savedCount }),
     });
   }
@@ -623,4 +463,24 @@ export function tryExecuteWorkspaceExCommand(
   }
 
   return null;
+}
+
+/**
+ * 창 분할·버퍼·탭·diff·Netrw·저장·종료·도움말 등 작업공간 관련 Ex 명령을 처리합니다.
+ * 일치하는 명령이 없으면 null 을 반환합니다.
+ */
+export function tryExecuteWorkspaceExCommand(
+  state: VimEditorState,
+  cleanCmdRaw: string,
+  cleanCmd: string,
+  trimmed: string,
+  runEx: ExCommandRunner
+): VimEditorState | null {
+  return (
+    tryExecuteSplitAndDiffCommand(state, cleanCmdRaw, cleanCmd) ??
+    tryExecuteBufferListAndCwdCommand(state, cleanCmdRaw, cleanCmd) ??
+    tryExecuteNetrwAndBufferSwitchCommand(state, cleanCmdRaw, runEx) ??
+    tryExecuteTabCommand(state, cleanCmdRaw, cleanCmd) ??
+    tryExecuteSaveQuitAndHelpCommand(state, cleanCmdRaw, cleanCmd, trimmed, runEx)
+  );
 }
