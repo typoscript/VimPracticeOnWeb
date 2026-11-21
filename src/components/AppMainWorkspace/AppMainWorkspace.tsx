@@ -118,6 +118,18 @@ const SANDBOX_QUICK_TRY_CHIPS: ReadonlyArray<{
     keys: ['Escape', ...':MultiCursor user'.split(''), 'Enter'],
   },
   {
+    id: 'minimove',
+    label: '↕️ Alt-j/k',
+    titleKey: i18nKey('줄 · 블록 즉시 이동 (Alt-j/k/h/l)'),
+    keys: ['Escape', 'Alt-j'],
+  },
+  {
+    id: 'zenmode',
+    label: '🧘 :ZenMode',
+    titleKey: i18nKey('몰입형 집중 모드 토글 (:ZenMode)'),
+    keys: ['Escape', ...':ZenMode'.split(''), 'Enter'],
+  },
+  {
     id: 'lua',
     label: '🌙 :source init.lua',
     titleKey: i18nKey('Lua 설정 즉시 적용 (:source init.lua)'),

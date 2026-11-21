@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 195개 테스트 파일, 2,262개 테스트 100% 통과 필수)*
+  *(현재 196개 테스트 파일, 2,265개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 114)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 116)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -231,6 +231,10 @@
 - **현대 Neovim 실전 레슨 113~114 확장 & `nvim-spectre` 프로젝트 대화형 검색·치환 분할 패널 (`src/vim-engine/spectreEngine.ts`, `src/components/SpectrePanel/`, `src/data/missions/part6ModernNeovim.ts`)**:
   - **실전 레슨 113~114**: `mbbill/undotree` `:UndotreeToggle` 분기 확인 및 `:undo 1` 잃어버린 브랜치 복구(레슨 113), `yanky.nvim` `p` 직후 `Ctrl-p` 링 순환 붙여넣기(레슨 114)를 추가해 전체 커리큘럼을 **114강**으로 확장했습니다.
   - **`nvim-spectre` 프로젝트 검색·치환 (`:Spectre [search] [replace]`, `:SpectreToggle`, `:SpectreClose`, `:SpectreApply`)**: `compileVimRegex` 기반 프로젝트 전체 VFS·열린 버퍼 실시간 매치 수집, 파일별 인라인 Diff 미리보기(`- old` / `+ new`), 대소문자 무시(`Aa`) 및 개별 항목 체크/제외 토글, 원클릭 **`Replace All`** 일괄 치환(현재 버퍼 Undo 및 열린 버퍼·VFS 동기화)을 `React.lazy` 분할 패널과 Sandbox 퀵런처 칩(`:Spectre v1 v2`)으로 구현했습니다.
+- **`mini.move` 줄·선택 블록 즉시 이동 (`Alt-h/j/k/l`) & `:ZenMode` 집중 모드 & 실전 레슨 115~116 (`src/vim-engine/miniMoveEngine.ts`, `src/vim-engine/README.md`, `src/data/missions/part6ModernNeovim.ts`)**:
+  - **`mini.move` (`Alt-j`/`Alt-k` · `Alt-h`/`Alt-l`, `<A-j>`/`<M-j>` 표기 및 macOS Option 물리 키 코드 지원)**: NORMAL 모드에서 현재 줄 상하 스왑(경계 bell·카운트·`.` 반복·Undo 연동) 및 커서 상대 위치를 유지하는 좌우 들여쓰기 이동, VISUAL / VISUAL_LINE 모드에서 선택 영역을 유지한 채 다중 줄 블록 전체를 상하·좌우로 연속 이동합니다.
+  - **`:ZenMode` (`:Zen [on|off|toggle]`) & 독립 엔진 문서 최신화**: 헤더·네비게이션·보조 패널을 숨기고 에디터에 몰입하는 집중 뷰(우측 상단 플로팅 종료 버튼 포함)를 추가하고, `src/vim-engine/README.md` 공개 API 표와 한/영 `locale` 가이드를 최신화했습니다.
+  - **실전 레슨 115~116**: `:Spectre` + `:SpectreApply` 멀티파일 일괄 치환(레슨 115)과 `mini.move` `Alt-j` / `Alt-l` 줄·들여쓰기 이동(레슨 116)을 추가해 전체 커리큘럼을 **116강**으로 확장했습니다.
 
 ---
 

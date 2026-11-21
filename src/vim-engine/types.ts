@@ -935,6 +935,8 @@ export interface VimEditorState {
   undotreePanel?: { isOpen: boolean } | null;
   /** nvim-spectre 스타일 프로젝트 대화형 검색·치환 분할 패널 상태 (:Spectre) */
   spectrePanel?: SpectreSessionState | null;
+  /** zen-mode.nvim 스타일 몰입형 집중 모드 활성화 여부 (:ZenMode / :Zen) */
+  zenMode?: boolean;
   /** vim-visual-multi 스타일 다중 커서 선택·동시 편집 세션 (g Ctrl-n / :MultiCursor) */
   multiCursor?: MultiCursorSession | null;
   /** 순정 Vim Undo Tree 노드 맵 (seq -> UndoTreeNode) */

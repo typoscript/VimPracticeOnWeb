@@ -255,6 +255,39 @@
   transform: translateY(-1px);
 }
 
+/* Zen Mode (:ZenMode / :Zen) 집중 뷰 */
+.app-layout.zen-mode-active .app-header,
+.app-layout.zen-mode-active .app-nav-bar,
+.app-layout.zen-mode-active .app-footer,
+.app-layout.zen-mode-active .sandbox-panel,
+.app-layout.zen-mode-active .mission-panel {
+  display: none !important;
+}
+
+.app-layout.zen-mode-active {
+  padding-top: 2.2rem;
+}
+
+.zen-mode-exit-btn {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 1200;
+  background-color: rgba(30, 30, 46, 0.92);
+  border: 1px solid #94e2d5;
+  color: #94e2d5;
+  border-radius: 9999px;
+  padding: 0.3rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+}
+
+.zen-mode-exit-btn:hover {
+  background-color: rgba(148, 226, 213, 0.18);
+}
+
 .sandbox-info {
   display: flex;
   align-items: center;

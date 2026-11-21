@@ -700,4 +700,88 @@ export const MISSIONS_PART6: Mission[] = [
       );
     },
   },
+  {
+    id: 115,
+    title: '레슨 115: nvim-spectre 프로젝트 대화형 검색·치환(:Spectre · :SpectreApply)',
+    description:
+      '여러 파일에 걸친 문자열이나 정규식 패턴을 인라인 Diff 미리보기(- old / + new)로 먼저 확인한 뒤 안전하게 일괄 치환하는 nvim-spectre(:Spectre) 워크플로우를 마스터해 보세요.\n\n1) :Spectre [검색어] [치환어]:\n   - 프로젝트 전체 VFS 와 열린 버퍼에서 일치하는 모든 줄을 찾아 파일별 치환 미리보기 패널을 엽니다.\n\n2) :SpectreApply & :SpectreClose:\n   - 체크된 모든 항목을 프로젝트 전체 파일에 한 번에 반영(:SpectreApply)하고 패널을 닫습니다(:SpectreClose).\n\n미션:\n1. :Spectre v1.local v2.local<Enter> 로 두 파일(src/client.ts, src/worker.ts)의 매치와 치환 미리보기를 여세요.\n2. :SpectreApply<Enter> 로 모든 활성 항목을 한 번에 v2.local 로 일괄 치환하세요.\n3. :SpectreClose<Enter> 로 패널을 닫아 미션을 완료하세요!',
+    hint: ':Spectre v1.local v2.local<Enter> → :SpectreApply<Enter> → :SpectreClose<Enter>',
+    par: 65,
+    primaryFilename: 'src/client.ts',
+    initialLines: [
+      'export const api = "http://v1.local/users";',
+      'export const health = "http://v1.local/ping";',
+    ],
+    targetLines: [
+      'export const api = "http://v2.local/users";',
+      'export const health = "http://v2.local/ping";',
+    ],
+    initialVirtualFiles: {
+      'src/client.ts': [
+        'export const api = "http://v1.local/users";',
+        'export const health = "http://v1.local/ping";',
+      ],
+      'src/worker.ts': [
+        'export const jobUrl = "http://v1.local/jobs";',
+      ],
+    },
+    initialCursor: { line: 0, col: 0 },
+    optimalKeys: [
+      ...keysOf(':Spectre v1.local v2.local'),
+      'Enter',
+      ...keysOf(':SpectreApply'),
+      'Enter',
+      ...keysOf(':SpectreClose'),
+      'Enter',
+    ],
+    checkComplete: (state) => {
+      const clientOk =
+        state.lines.length === 2 &&
+        state.lines[0] === 'export const api = "http://v2.local/users";' &&
+        state.lines[1] === 'export const health = "http://v2.local/ping";';
+      const workerLines = state.virtualFiles?.['src/worker.ts'] ?? [];
+      const workerOk =
+        workerLines.length === 1 &&
+        workerLines[0] === 'export const jobUrl = "http://v2.local/jobs";';
+      return clientOk && workerOk && state.spectrePanel === null;
+    },
+  },
+  {
+    id: 116,
+    title: '레슨 116: mini.move 줄·선택 블록 즉시 이동(Alt-j/k · Alt-h/l)',
+    description:
+      'ddp 나 >> 를 반복할 필요 없이 Alt-j / Alt-k(상하 줄·블록 스왑)와 Alt-h / Alt-l(좌우 들여쓰기 이동)만으로 줄과 Visual 선택 블록을 자유자재로 옮기는 mini.move 워크플로우를 마스터해 보세요.\n\n1) NORMAL 모드 Alt-j / Alt-k · Alt-h / Alt-l:\n   - 현재 줄을 아래(Alt-j)·위(Alt-k) 줄과 즉시 맞바꾸거나, 커서 상대 위치를 유지한 채 좌(Alt-h)·우(Alt-l)로 들여쓰기를 이동합니다.\n\n2) VISUAL 모드 Alt-j / Alt-k · Alt-h / Alt-l:\n   - 선택된 다중 줄 블록 전체를 선택 상태를 유지한 채 위아래·좌우로 연속 이동합니다.\n\n미션:\n1. 1번째 줄(step2)에서 Alt-j 를 눌러 step1 아래(2번째 줄)로 즉시 내리세요.\n2. 2j 로 4번째 줄(run(step1, step2);)로 내려간 뒤 Alt-l 을 눌러 if 블록 안으로 들여쓰기를 맞추세요!',
+    hint: 'Alt-j → 2j → Alt-l',
+    par: 8,
+    primaryFilename: 'src/steps.ts',
+    initialLines: [
+      'const step2 = "build";',
+      'const step1 = "init";',
+      'if (ready) {',
+      'run(step1, step2);',
+      '}',
+    ],
+    targetLines: [
+      'const step1 = "init";',
+      'const step2 = "build";',
+      'if (ready) {',
+      '  run(step1, step2);',
+      '}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    optimalKeys: ['Alt-j', '2', 'j', 'Alt-l'],
+    checkComplete: (state) => {
+      const target = [
+        'const step1 = "init";',
+        'const step2 = "build";',
+        'if (ready) {',
+        '  run(step1, step2);',
+        '}',
+      ];
+      return (
+        state.lines.length === target.length &&
+        state.lines.every((l, i) => l === target[i])
+      );
+    },
+  },
 ];

@@ -148,6 +148,24 @@ export function useVimKeyboardInput({
         return;
       }
 
+      // mini.move: Alt+h/j/k/l 줄·선택 블록 즉시 이동 (NORMAL / VISUAL)
+      if (e.altKey && !e.ctrlKey && !e.metaKey && isNormalOrVisual(editorMode)) {
+        const codeMap: Record<string, string> = {
+          KeyH: 'h',
+          KeyJ: 'j',
+          KeyK: 'k',
+          KeyL: 'l',
+        };
+        const moveChar = ['h', 'j', 'k', 'l'].includes(lowerKey)
+          ? lowerKey
+          : codeMap[e.code];
+        if (moveChar) {
+          e.preventDefault();
+          processKeyInput(`Alt-${moveChar}`);
+          return;
+        }
+      }
+
       if (e.metaKey || e.ctrlKey || e.altKey) {
         return;
       }

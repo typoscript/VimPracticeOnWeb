@@ -532,4 +532,6 @@ export const EN_MESSAGES: Record<string, string> = {
   "[Spectre] 치환할 활성 항목이 없습니다": "[Spectre] No active matches to replace",
   "[Spectre] 잘못된 정규식 패턴입니다": "[Spectre] Invalid regular expression pattern",
   "[Spectre] {files}개 파일에서 {count}개 줄 치환 완료": "[Spectre] Replaced {count} lines across {files} files",
+  "[ZenMode] 집중 모드 켜짐 (:ZenMode 로 해제)": "[ZenMode] Zen mode enabled (run :ZenMode to exit)",
+  "[ZenMode] 집중 모드 해제됨": "[ZenMode] Zen mode disabled",
 };

@@ -234,7 +234,20 @@ export function App() {
   );
 
   return (
-    <div className="app-layout">
+    <div className={`app-layout ${displayEditorState.zenMode ? 'zen-mode-active' : ''}`}>
+      {displayEditorState.zenMode && (
+        <button
+          type="button"
+          className="zen-mode-exit-btn"
+          data-testid="zen-mode-exit-btn"
+          onClick={() => {
+            setEditorState((prev) => ({ ...prev, zenMode: false }));
+            setIsEditorFocused(true);
+          }}
+        >
+          {t('🧘 Zen 모드 종료 (:ZenMode)')}
+        </button>
+      )}
       {/* 🚀 상단 고정 플로팅 알림 토스트 */}
       <div className="top-toast-container" data-testid="top-toast-container" aria-live="polite">
         {hardcore.hardcoreWarning && (

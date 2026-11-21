@@ -85,6 +85,7 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'textObjectsExtended.ts',
       'treesitterTextObjects.ts',
       'miniAiTextObjects.ts',
+      'miniMoveEngine.ts',
       'tagTextObject.ts',
       'textObjects.ts',
       'extraMotions.ts',

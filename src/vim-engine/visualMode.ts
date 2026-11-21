@@ -41,6 +41,7 @@ import { setMark, isValidMarkJumpChar, resolveMarkPosition } from './marks';
 import { joinLines, changeCaseVisual, indentVisual, modifyNumberVisual, formatIndentVisual } from './lineOperators';
 import { findMatchingBracket } from './bracketMatch';
 import { computePercentJumpTarget } from './extraMotions';
+import { handleMiniMoveVisual } from './miniMoveEngine';
 import {
   parsePending,
   ringBell,
@@ -764,6 +765,12 @@ export function handleVisualModeKey(
   }
   if ((key === "'" || key === '`') && !state.pendingKeys) {
     return { ...state, pendingKeys: key };
+  }
+
+  // mini.move: Alt-h/j/k/l 선택 블록 상하·좌우 즉시 이동
+  if (!state.pendingKeys) {
+    const miniMovedVisual = handleMiniMoveVisual(state, key, parsed.totalCount);
+    if (miniMovedVisual) return miniMovedVisual;
   }
 
   // VISUAL 모드 보조 모션 (, ), +, -, Enter, |

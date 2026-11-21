@@ -28,6 +28,7 @@ import {
 } from './lspRefactorEngine';
 import { findMatchingBracket } from './bracketMatch';
 import { computePercentJumpTarget } from './extraMotions';
+import { handleMiniMoveNormal } from './miniMoveEngine';
 import { moveToNextParagraph, moveToPrevParagraph } from './advancedMotions';
 import { moveFind } from './findChar';
 import { getWordAtCursor } from './search';
@@ -632,6 +633,11 @@ export function handleNormalEditingAndMotionFallback(
       cursor: clampCursor(state.lines, target, 'NORMAL'),
       pendingKeys: undefined,
     };
+  }
+
+  if (!parsed.operator) {
+    const miniMoved = handleMiniMoveNormal(state, key, parsed.totalCount, isReplayingDot);
+    if (miniMoved) return miniMoved;
   }
 
   if (!parsed.operator && NORMAL_EXTRA_KEYS.has(key)) {

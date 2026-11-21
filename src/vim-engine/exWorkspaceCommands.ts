@@ -323,6 +323,21 @@ function tryExecuteNetrwAndBufferSwitchCommand(
     return finishEx(executeSpectreCommand(state, spectreMatch[1], spectreMatch[2] ?? ''));
   }
 
+  // zen-mode.nvim 스타일 집중 모드: :ZenMode / :Zen [on|off|toggle]
+  const zenMatch = cleanCmdRaw.match(/^Zen(?:Mode)?(?:\s+(on|off|toggle))?$/i);
+  if (zenMatch) {
+    const arg = (zenMatch[1] ?? 'toggle').toLowerCase();
+    const nextZen =
+      arg === 'on' ? true : arg === 'off' ? false : !Boolean(state.zenMode);
+    return finishEx({
+      ...state,
+      zenMode: nextZen,
+      commandMessage: nextZen
+        ? msg('[ZenMode] 집중 모드 켜짐 (:ZenMode 로 해제)')
+        : msg('[ZenMode] 집중 모드 해제됨'),
+    });
+  }
+
   // trouble.nvim 스타일 프로젝트 진단·TODO·퀵픽스 통합 허브: :Trouble [mode|next|prev|toggle|close]
   const troubleMatch = cleanCmdRaw.match(
     /^(Trouble(?:Toggle|Close|Next|Prev)?)(?:\s+(.*))?$/i

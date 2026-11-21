@@ -101,6 +101,16 @@ function getKeyVariants(lhs: string, leaderKey: string): string[] {
     const ch = ctrlDash[1].toLowerCase();
     variants.push(`<C-${ch}>`, `<c-${ch}>`);
   }
+  const altBracket = lhs.match(/^<(?:a|m|alt)-([a-z0-9])>$/i);
+  if (altBracket) {
+    const ch = altBracket[1].toLowerCase();
+    variants.push(`Alt-${ch}`, `<A-${ch}>`, `<M-${ch}>`);
+  }
+  const altDash = lhs.match(/^Alt-([a-z0-9])$/i);
+  if (altDash) {
+    const ch = altDash[1].toLowerCase();
+    variants.push(`<A-${ch}>`, `<a-${ch}>`, `<M-${ch}>`, `<m-${ch}>`);
+  }
   return Array.from(new Set(variants));
 }
 
@@ -324,6 +334,14 @@ export function parseKeySequence(rhs: string, leaderKey = ' '): string[] {
         if (ctrlMatch) {
           const k = ctrlMatch[1].toLowerCase();
           tokens.push(`Ctrl-${k}`);
+          i = closeIdx + 1;
+          continue;
+        }
+
+        const altMatch = rawToken.match(/^(?:a|m|alt)-(.+)$/i);
+        if (altMatch) {
+          const k = altMatch[1].toLowerCase();
+          tokens.push(`Alt-${k}`);
           i = closeIdx + 1;
           continue;
         }

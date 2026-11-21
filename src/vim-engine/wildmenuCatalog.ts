@@ -316,6 +316,8 @@ export const AVAILABLE_COMMANDS: string[] = [
   'Yanks',
   'YankyClearHistory',
   'YankyRingHistory',
+  'Zen',
+  'ZenMode',
   'Undotree',
   'UndotreeHide',
   'UndotreeShow',

@@ -1,6 +1,6 @@
 # vim-engine
 
-순수 TypeScript로 만든 Vim 에디터 엔진입니다. React, DOM, 외부 라이브러리에 의존하지 않으며, **이 폴더 하나만 복사하면 브라우저·Node 어디서나 그대로 쓸 수 있습니다.**
+순수 TypeScript로 만든 독립형 Vim · 현대 Neovim 에디터 엔진입니다. React, DOM, 외부 라이브러리에 의존하지 않으며, **이 폴더 하나만 복사하면 브라우저·Node 어디서나 그대로 쓸 수 있습니다.**
 
 에디터 상태를 넣고 키를 하나 주면 새 상태를 돌려주는 순수 함수 하나가 핵심입니다.
 
@@ -8,7 +8,7 @@
 handleKey(state, key) => newState
 ```
 
-모션·연산자·텍스트 객체·레지스터·매크로·`.` 반복·실행 취소 트리·Vim 정규식·`:s`·`:g`·Vim script·버퍼·창 분할·탭·퀵픽스·폴딩·키매핑·vim-surround 등을 지원합니다. 동작은 실제 Neovim 결과와 대조해 검증하고 있습니다.
+순정 Vim 100%(모션·연산자·텍스트 객체·레지스터·매크로·`.` 반복·분기형 실행 취소 트리·Vim 정규식·`:s`·`:g`·Vim script·버퍼·창 분할·탭·퀵픽스·폴딩·키매핑·맞춤법·`vim-surround`)과 현대 Neovim 핵심 플러그인 생태계(`Telescope`, `LSP 0.11`, `Treesitter`, `mini.ai`, `mini.move`, `gitsigns.nvim`, `Lua`, `flash.nvim`, `oil.nvim`, `harpoon.nvim`, `trouble.nvim`, `vim-visual-multi`, `undotree`, `yanky.nvim`, `nvim-spectre`, `zen-mode.nvim`)를 순수 함수형 상태 전이로 지원합니다. 동작은 실제 `nvim --headless` 골든 회귀 스위트(116종)와 대조해 검증하고 있습니다.
 
 ## 다른 프로젝트에서 쓰기
 
@@ -25,8 +25,10 @@ let state = createVimState(['hello world', 'foo(a, b)']);
 
 state = sendKeys(state, 'dw');              // Vim 표기법 문자열: ['world', 'foo(a, b)']
 state = sendKeys(state, 'j0f(ci(x<Esc>');   // ['world', 'foo(x)']
+state = sendKeys(state, '<A-k>');           // mini.move: 현재 줄 위로 스왑
 state = handleKey(state, 'u');              // 키 하나씩: 실행 취소
 state = runExCommand(state, '%s/o/0/g');    // Ex 명령 (앞의 : 는 생략 가능)
+state = runExCommand(state, 'lua vim.opt.shiftwidth = 4'); // 내장 Neovim Lua 실행
 
 const { value } = evalVimExpression(state, "toupper(getline(1))");  // Vim script 표현식
 ```
@@ -42,7 +44,7 @@ import { configureVimEngine } from './vim-engine';
 
 configureVimEngine({
   devChecks: false,                  // true: 키마다 deepFreeze + 불변 조건 검사 (개발·테스트용, 느림)
-  workspaceFiles: {                  // :e, :Explore, ctags, 파일 이름 자동완성이 보는 가상 파일
+  workspaceFiles: {                  // :e, :Explore, :Oil, :LiveGrep, :Spectre, ctags 가 보는 가상 파일
     'src/main.ts': ['console.log("hi");'],
   },
   vimrc: ['set number', 'inoremap jk <Esc>'],  // :e ~/.vimrc 로 열리는 내용
@@ -60,10 +62,11 @@ configureVimEngine({
 |---|---|---|
 | 일반 문자 | `'a'`, `'A'`, `'$'`, `' '` | 그대로 |
 | Esc / Enter / Backspace / Tab | `'Escape'`, `'Enter'`, `'Backspace'`, `'Tab'` | `<Esc>`, `<CR>`, `<BS>`, `<Tab>` |
-| Ctrl 조합 | `'Ctrl-a'`, `'Ctrl-r'`, `'Ctrl-w'` | `<C-a>`, `<C-r>` |
+| Ctrl 조합 | `'Ctrl-a'`, `'Ctrl-r'`, `'Ctrl-w'`, `'Ctrl-n'`, `'Ctrl-p'` | `<C-a>`, `<C-r>`, `<C-n>`, `<C-p>` |
+| Alt / Meta 조합 (`mini.move`) | `'Alt-h'`, `'Alt-j'`, `'Alt-k'`, `'Alt-l'` | `<A-h>`, `<A-j>`, `<M-k>`, `<Alt-l>` |
 | 방향키 | `'ArrowUp'` … `'ArrowRight'` | `<Up>` … `<Right>` |
 
-브라우저의 `KeyboardEvent.key`는 대부분 그대로 넘기면 됩니다. Ctrl 조합만 `'Ctrl-' + key`로 바꿔 주세요.
+브라우저의 `KeyboardEvent.key`는 대부분 그대로 넘기면 됩니다. Ctrl/Alt 조합만 `'Ctrl-' + key` 또는 `'Alt-' + key`로 바꿔 주세요.
 
 ## 공개 API
 
@@ -73,22 +76,27 @@ configureVimEngine({
 | 설정 | `configureVimEngine`, `getVimEngineConfig` |
 | 상태 타입 | `VimEditorState`, `VimMode`, `CursorPosition`, `VimOptions` 등 (`types.ts` 전체) |
 | 화면용 보조 | `isPositionSelected`(선택 영역 판정), `findMatches`(검색 하이라이트), `computeDiffHunks`, `switchPaneFocus`, `switchBuffer`, `switchTab`, `openNewTab`, `closeTab`, `jumpToQuickfixItem` 등 |
-| Vim 정규식 | `compileVimRegex`(Vim 패턴 → `RegExp`), `translateVimPattern`, `escapeVimPattern` |
-| Vim script | `evalVimExpression`, `evaluateVimScript`, `VimScriptError`, `formatValue`, `displayValue` |
-| 매크로 디버거 | `buildMacroTrace`(매크로를 키 단위 상태 프레임으로 분해), `getMacroKeys`, `listMacroRegisters` |
+| Vim 정규식 | `compileVimRegex`(Vim 패턴 → `RegExp`), `translateVimPattern`, `escapeVimPattern`, `computeSearchCount` |
+| Vim script & Lua | `evalVimExpression`, `evaluateVimScript`, `VimScriptError`, `executeLua`, `evalLuaExpr`, `sourceLuaFile` |
+| Undo Tree & Undotree | `ensureUndoTreeInitialized`, `jumpUndoSeq`, `travelUndoTime`, `buildUndotreeGraphRows`, `openUndotreePanel`, `toggleUndotreePanel` |
+| LSP & Treesitter | `openLspHover`, `openLspRename`, `applyLspRename`, `findLspReferences`, `openLspCodeActionMenu`, `openLspDocumentSymbols` |
+| Git (`gitsigns.nvim`) | `getGitLineSigns`, `computeGitHunks`, `jumpToGitHunk`, `previewGitHunk`, `resetGitHunk`, `stageGitHunk` |
+| 현대 Neovim 확장 | `startFlashJump`, `openOilBuffer`, `saveOilBuffer`, `addHarpoonFile`, `openHarpoonMenu`, `selectHarpoonSlot`, `openTroublePanel`, `startMultiCursor`, `cycleYankRing`, `openYankyMenu`, `openSpectrePanel`, `applySpectreReplaceAll`, `handleMiniMoveNormal`, `handleMiniMoveVisual` |
+| 매크로 디버거 | `buildMacroTrace`(매크로를 키 단위 상태 프레임으로 분해), `getMacroKeys`, `listMacroRegisters`, `explainMacroKeyAction` |
 | 개발용 | `withInvariantCheck`, `assertValidVimState`, `deepFreeze` |
 
 ## 알아둘 점
 
 - **실패 신호**: Vim이 beep 하는 상황(마지막 줄에서 `j` 등)에서는 결과 상태에 `bell: true`가 남습니다. 다음 키를 누르면 사라지며, 화면에서 깜빡임 효과를 줄 때 쓰면 됩니다.
-- **메시지 언어**: `state.commandMessage`의 에러·안내 메시지는 한국어입니다. 에러 번호(`E486` 등)는 Vim과 같습니다.
+- **메시지 언어 (`locale`)**: `configureVimEngine({ locale: 'ko' | 'en' })`으로 한국어 또는 실제 Vim 표준 영어 에러·상태 메시지(`E492: Not an editor command` 등)를 선택할 수 있습니다.
 - **Vim script 리스트·딕셔너리**: 불변 상태 규약 때문에 값 의미론으로 동작합니다. `call add(l, x)`처럼 첫 인자가 변수이면 결과를 그 변수에 다시 저장하지만, `let b = a`로 만든 별칭은 함께 바뀌지 않습니다.
 - **클립보드**: 시스템 클립보드(`"+`)는 엔진 안의 레지스터일 뿐입니다. 실제 OS 클립보드와 연결하려면 앱에서 직접 처리하세요.
 - **테스트 파일**: 이 폴더의 `*.test.ts` 일부는 원래 프로젝트의 테스트 설정(데모 워크스페이스 주입)을 전제로 합니다. 복사해 갈 때는 빼거나, 같은 설정을 해 주세요.
 
-## 독립성 검사
+## 독립성 및 번들 계층 검사
 
-원래 프로젝트에서는 아래 두 가지가 이 폴더의 독립성을 계속 확인합니다.
+원래 프로젝트에서는 아래 테스트들이 이 폴더의 독립성과 비순환 계층을 계속 확인합니다.
 
-- `npm run check:vim-engine`: DOM 타입 없이 이 폴더만으로 타입 검사
+- `npm run check:vim-engine`: DOM 타입 없이 이 폴더만으로 단독 타입 검사
 - `moduleBoundary.test.ts`: 폴더 밖 import 금지, `process`/`window`/`document` 사용 금지, 앱은 `index.ts`만 import
+- `test/bundleChunks.test.ts`: `data` → `core` → `services` → `editing` → `neovim` → `ex` → 최상위 디스패처의 단방향 비순환 계층 검증

@@ -535,6 +535,14 @@ export {
 } from './spectreEngine';
 export type { SpectreMatchItem, SpectreSessionState } from './types';
 
+// ---- mini.move 스타일 줄·선택 블록 즉시 이동 (Alt-h/j/k/l) ----
+export {
+  parseMiniMoveDirection,
+  handleMiniMoveNormal,
+  handleMiniMoveVisual,
+} from './miniMoveEngine';
+export type { MiniMoveDirection } from './miniMoveEngine';
+
 // ---- mini.ai 스타일 Next/Last 텍스트 객체 (in/an/il/al) ----
 export { getMiniAiNextLastRange } from './textObjects';
 export type { MiniAiScope } from './textObjects';
