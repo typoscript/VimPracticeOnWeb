@@ -933,6 +933,8 @@ export interface VimEditorState {
   troublePanel?: TroubleSessionState | null;
   /** mbbill/undotree 스타일 시각적 Undo Tree 분할 패널 상태 (:UndotreeToggle) */
   undotreePanel?: { isOpen: boolean } | null;
+  /** nvim-spectre 스타일 프로젝트 대화형 검색·치환 분할 패널 상태 (:Spectre) */
+  spectrePanel?: SpectreSessionState | null;
   /** vim-visual-multi 스타일 다중 커서 선택·동시 편집 세션 (g Ctrl-n / :MultiCursor) */
   multiCursor?: MultiCursorSession | null;
   /** 순정 Vim Undo Tree 노드 맵 (seq -> UndoTreeNode) */
@@ -1137,6 +1139,24 @@ export interface TroubleSessionState {
   mode: TroubleMode;
   selectedIndex: number;
   items: TroubleItem[];
+}
+
+export interface SpectreMatchItem {
+  id: string;
+  filename: string;
+  line: number;
+  col: number;
+  lineText: string;
+  previewText: string;
+  enabled: boolean;
+}
+
+export interface SpectreSessionState {
+  isOpen: boolean;
+  searchQuery: string;
+  replaceQuery: string;
+  ignoreCase: boolean;
+  items: SpectreMatchItem[];
 }
 
 export interface MultiCursorSelection {

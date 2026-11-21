@@ -610,4 +610,94 @@ export const MISSIONS_PART6: Mission[] = [
       );
     },
   },
+  {
+    id: 113,
+    title: '레슨 113: undotree 시각적 분기 트리(:UndotreeToggle) & 브랜치 시간 여행(:undo N)',
+    description:
+      'Vim 의 실행 취소(Undo)는 단순한 일직선이 아니라 모든 과거 갈래를 보존하는 분기형 트리(Undo Tree)입니다. u 로 되돌린 뒤 새 편집을 해서 이전 작업이 사라진 것처럼 보여도 :UndotreeToggle 과 :undo N 으로 잃어버린 브랜치를 완벽히 되살릴 수 있습니다.\n\n1) :UndotreeToggle (:Undotree / :UndotreeShow / :UndotreeHide):\n   - 에디터 하단에 분기형 Undo 트리 그래프와 노드별 실시간 Diff 미리보기를 엽니다.\n\n2) :undo {seq} (또는 g- / g+):\n   - 다른 브랜치로 갈라져 나간 과거 시퀀스 번호(#N)로 즉시 시간 여행해 코드를 복구합니다.\n\n미션:\n1. 1번째 줄에서 f" ci" prod_secret<Esc> 로 토큰을 수정해 첫 번째 브랜치(#1)를 만드세요.\n2. u 로 되돌린 뒤 ci" broken_draft<Esc> 를 입력해 실수로 두 번째 브랜치(#2)로 덮어쓰세요.\n3. :UndotreeToggle<Enter> 로 분기 트리를 열어 확인한 뒤, :undo 1<Enter> 로 잃어버렸던 #1("prod_secret") 브랜치를 복구하고 :UndotreeHide<Enter> 로 패널을 닫으세요!',
+    hint: 'f" ci" prod_secret<Esc> → u → ci" broken_draft<Esc> → :UndotreeToggle<Enter> → :undo 1<Enter> → :UndotreeHide<Enter>',
+    par: 78,
+    primaryFilename: 'src/token.ts',
+    initialLines: ['export const token = "base";'],
+    targetLines: ['export const token = "prod_secret";'],
+    initialCursor: { line: 0, col: 0 },
+    optimalKeys: [
+      'f',
+      '"',
+      'c',
+      'i',
+      '"',
+      ...keysOf('prod_secret'),
+      'Escape',
+      'u',
+      'c',
+      'i',
+      '"',
+      ...keysOf('broken_draft'),
+      'Escape',
+      ...keysOf(':UndotreeToggle'),
+      'Enter',
+      ...keysOf(':undo 1'),
+      'Enter',
+      ...keysOf(':UndotreeHide'),
+      'Enter',
+    ],
+    checkComplete: (state) => {
+      const nodeCount = Object.keys(state.undoTreeNodes ?? {}).length;
+      return (
+        state.lines.length === 1 &&
+        state.lines[0] === 'export const token = "prod_secret";' &&
+        nodeCount >= 3 &&
+        state.undotreePanel === null
+      );
+    },
+  },
+  {
+    id: 114,
+    title: '레슨 114: yanky.nvim 복사 링 순환 붙여넣기(p + Ctrl-p/Ctrl-n · :Yanks)',
+    description:
+      '여러 단어를 연속으로 복사하거나 삭제하다가 이전에 복사했던 내용이 덮어씌워져 난감했던 경험이 있나요? yanky.nvim 의 Yank Ring 을 사용하면 p 로 붙여넣은 직후 Ctrl-p / Ctrl-n 만 눌러 이전 복사본들로 그 자리에서 즉시 교체할 수 있습니다.\n\n1) p / P 직후 Ctrl-p (이전 복사본) · Ctrl-n (다음 복사본):\n   - 모든 y / d / c 이력이 링 버퍼에 자동 보존되며, 붙여넣기 직후 Ctrl-p 를 누르면 방금 붙여넣은 텍스트가 직전 복사본으로 깔끔하게 교체됩니다.\n\n2) :Yanks (:YankyRingHistory):\n   - 전체 복사 히스토리 팝업을 열어 1~9 또는 Enter 로 원하는 항목을 골라 붙여넣을 수 있습니다.\n\n미션:\n1. 1번째 줄에서 f" yi" 로 "api.prod.local" 을 복사하세요.\n2. j yi" 로 2번째 줄의 "8080" 을 연달아 복사해 기본 클립보드를 덮어쓰세요.\n3. j f" 로 3번째 줄의 첫 따옴표(") 위로 이동해 p 로 붙여넣은 직후, Ctrl-p 를 눌러 이전에 복사했던 "api.prod.local" 로 제자리 교체하세요!',
+    hint: 'f" yi" → j yi" → j f" p → Ctrl-p',
+    par: 16,
+    primaryFilename: 'src/deploy.ts',
+    initialLines: [
+      'const host = "api.prod.local";',
+      'const port = "8080";',
+      'const target = "";',
+    ],
+    targetLines: [
+      'const host = "api.prod.local";',
+      'const port = "8080";',
+      'const target = "api.prod.local";',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    optimalKeys: [
+      'f',
+      '"',
+      'y',
+      'i',
+      '"',
+      'j',
+      'y',
+      'i',
+      '"',
+      'j',
+      'f',
+      '"',
+      'p',
+      'Ctrl+p',
+    ],
+    checkComplete: (state) => {
+      const target = [
+        'const host = "api.prod.local";',
+        'const port = "8080";',
+        'const target = "api.prod.local";',
+      ];
+      return (
+        (state.yankHistory?.length ?? 0) >= 2 &&
+        state.lines.length === target.length &&
+        state.lines.every((l, i) => l === target[i])
+      );
+    },
+  },
 ];

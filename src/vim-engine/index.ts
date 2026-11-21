@@ -520,6 +520,21 @@ export {
 } from './yankRingEngine';
 export type { YankyMenuState, YankRingSession } from './types';
 
+// ---- nvim-spectre 스타일 프로젝트 대화형 검색·치환 분할 패널 (:Spectre) ----
+export {
+  collectSpectreMatches,
+  openSpectrePanel,
+  closeSpectrePanel,
+  toggleSpectrePanel,
+  updateSpectreQuery,
+  toggleSpectreItem,
+  toggleAllSpectreItems,
+  jumpToSpectreItem,
+  applySpectreReplaceAll,
+  executeSpectreCommand,
+} from './spectreEngine';
+export type { SpectreMatchItem, SpectreSessionState } from './types';
+
 // ---- mini.ai 스타일 Next/Last 텍스트 객체 (in/an/il/al) ----
 export { getMiniAiNextLastRange } from './textObjects';
 export type { MiniAiScope } from './textObjects';

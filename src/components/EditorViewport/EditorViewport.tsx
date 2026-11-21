@@ -19,6 +19,9 @@ const TroublePanel = lazy(() =>
 const UndotreePanel = lazy(() =>
   import('../UndotreePanel/UndotreePanel').then((m) => ({ default: m.UndotreePanel }))
 );
+const SpectrePanel = lazy(() =>
+  import('../SpectrePanel/SpectrePanel').then((m) => ({ default: m.SpectrePanel }))
+);
 
 interface EditorViewportProps {
   editorState: VimEditorState;
@@ -56,6 +59,12 @@ interface EditorViewportProps {
   onTravelUndoOlder?: () => void;
   onTravelUndoNewer?: () => void;
   onCloseUndotreePanel?: () => void;
+  onUpdateSpectreQuery?: (searchQuery: string, replaceQuery: string, ignoreCase?: boolean) => void;
+  onToggleSpectreItem?: (itemId: string) => void;
+  onToggleAllSpectreItems?: (enabled: boolean) => void;
+  onJumpSpectreItem?: (index: number) => void;
+  onApplySpectreReplaceAll?: () => void;
+  onCloseSpectrePanel?: () => void;
   onSwitchCommandLineWindowType: (type: ':' | '/') => void;
   onClearCommandLineHistory: (type: ':' | '/' | '?') => void;
   onCloseCommandLineWindow: () => void;
@@ -102,6 +111,12 @@ export function EditorViewport({
   onTravelUndoOlder,
   onTravelUndoNewer,
   onCloseUndotreePanel,
+  onUpdateSpectreQuery,
+  onToggleSpectreItem,
+  onToggleAllSpectreItems,
+  onJumpSpectreItem,
+  onApplySpectreReplaceAll,
+  onCloseSpectrePanel,
   onSwitchCommandLineWindowType,
   onClearCommandLineHistory,
   onCloseCommandLineWindow,
@@ -430,6 +445,21 @@ export function EditorViewport({
               onTravelOlder={() => onTravelUndoOlder?.()}
               onTravelNewer={() => onTravelUndoNewer?.()}
               onClose={() => onCloseUndotreePanel?.()}
+            />
+          </Suspense>
+        )}
+
+        {/* nvim-spectre 프로젝트 대화형 검색·치환 분할 패널 (:Spectre) */}
+        {displayEditorState.spectrePanel?.isOpen && (
+          <Suspense fallback={null}>
+            <SpectrePanel
+              state={displayEditorState.spectrePanel}
+              onUpdateQuery={(s, r, ic) => onUpdateSpectreQuery?.(s, r, ic)}
+              onToggleItem={(id) => onToggleSpectreItem?.(id)}
+              onToggleAll={(en) => onToggleAllSpectreItems?.(en)}
+              onJumpItem={(idx) => onJumpSpectreItem?.(idx)}
+              onReplaceAll={() => onApplySpectreReplaceAll?.()}
+              onClose={() => onCloseSpectrePanel?.()}
             />
           </Suspense>
         )}

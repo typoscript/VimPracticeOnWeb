@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 193개 테스트 파일, 2,257개 테스트 100% 통과 필수)*
+  *(현재 195개 테스트 파일, 2,262개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 112)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 114)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -228,6 +228,9 @@
   - **Undotree 시각 패널 (`:UndotreeToggle`, `:Undotree`, `:UndotreeShow`, `:UndotreeHide`)**: 기존 분기형 `undoTreeNodes` 상태를 기반으로 최신 노드 상단·루트 `#0` 하단의 ASCII 브랜치 그래프(`buildUndotreeGraphRows`), 저장 스냅샷 배지(`S1`), 변경 줄 델타(`+N`/`-M`), 우측 실시간 Diff 미리보기, `g-`/`g+` 시간 여행 및 노드 클릭 즉시 복원을 `React.lazy` 분할 패널로 구현했습니다.
   - **Sandbox 퀵런처 칩 바 & `Neovim` 필터 태그**: 자유 연습장 상단에 9종 원클릭 체험 칩(`:Oil`, `:Trouble`, `:HarpoonMenu`, `:LiveGrep`, `:UndotreeToggle`, `gs`, `]h`, `:MultiCursor user`, `:source init.lua`)을 추가하고, `LessonSelectModal` 카테고리 필터에 **`Neovim`** 태그(레슨 101~112 모아보기)를 추가했습니다.
 - **`yanky.nvim` Yank Ring (`src/vim-engine/yankRingEngine.ts`, `src/components/YankyMenu/`, `vimEngine.ts`, `exWorkspaceCommands.ts`)**: 모든 `y`/`d`/`c` 복사 이력을 `yankHistory` 링 버퍼(최신순·최대 30건·중복은 맨 앞으로 이동, 블랙홀 레지스터 `"_` 제외)에 누적합니다. NORMAL 모드 순수 `p`/`P`(카운트 허용, 레지스터 지정·`gp`·`dp` 제외) 직후 `Ctrl-p`(이전 복사본)/`Ctrl-n`(다음 복사본)로 방금 붙여넣은 텍스트를 제자리 교체하며(`yankRing.base` 에서 재붙여넣기해 `u` 한 번에 원복, 무명 레지스터·클립보드는 유지, 한 바퀴 순환), 다른 키를 누르면 세션이 끝납니다. `:YankyRingHistory`/`:Yanks` 지연 로딩 팝업(`j`/`k` 이동, `Enter`/`p` 뒤에·`P` 앞에·`1-9` 즉시 붙여넣기, `d` 삭제, `Esc`/`q` 닫기, 행 클릭)과 `:YankyClearHistory`, Sandbox 퀵런처 칩(`:Yanks`)을 제공하며 엔진 파일은 `vim-engine-neovim` 청크에 속합니다.
+- **현대 Neovim 실전 레슨 113~114 확장 & `nvim-spectre` 프로젝트 대화형 검색·치환 분할 패널 (`src/vim-engine/spectreEngine.ts`, `src/components/SpectrePanel/`, `src/data/missions/part6ModernNeovim.ts`)**:
+  - **실전 레슨 113~114**: `mbbill/undotree` `:UndotreeToggle` 분기 확인 및 `:undo 1` 잃어버린 브랜치 복구(레슨 113), `yanky.nvim` `p` 직후 `Ctrl-p` 링 순환 붙여넣기(레슨 114)를 추가해 전체 커리큘럼을 **114강**으로 확장했습니다.
+  - **`nvim-spectre` 프로젝트 검색·치환 (`:Spectre [search] [replace]`, `:SpectreToggle`, `:SpectreClose`, `:SpectreApply`)**: `compileVimRegex` 기반 프로젝트 전체 VFS·열린 버퍼 실시간 매치 수집, 파일별 인라인 Diff 미리보기(`- old` / `+ new`), 대소문자 무시(`Aa`) 및 개별 항목 체크/제외 토글, 원클릭 **`Replace All`** 일괄 치환(현재 버퍼 Undo 및 열린 버퍼·VFS 동기화)을 `React.lazy` 분할 패널과 Sandbox 퀵런처 칩(`:Spectre v1 v2`)으로 구현했습니다.
 
 ---
 

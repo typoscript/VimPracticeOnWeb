@@ -38,6 +38,7 @@ import {
 import { openOilBuffer, closeOilBuffer, applyOilBufferChanges } from './oilEngine';
 import { executeHarpoonCommand } from './harpoonEngine';
 import { executeYankyCommand } from './yankRingEngine';
+import { executeSpectreCommand } from './spectreEngine';
 import { executeTroubleCommand } from './troubleEngine';
 import { executeFindFileCommand, openFuzzyFinder } from './fuzzyFinder';
 import { openHelp, closeHelp } from './helpEngine';
@@ -312,6 +313,14 @@ function tryExecuteNetrwAndBufferSwitchCommand(
   const yankyMatch = cleanCmdRaw.match(/^(YankyRingHistory|Yanks|YankyClearHistory)$/i);
   if (yankyMatch) {
     return finishEx(executeYankyCommand(state, yankyMatch[1]));
+  }
+
+  // nvim-spectre 스타일 프로젝트 대화형 검색·치환 패널: :Spectre, :SpectreToggle, :SpectreClose, :SpectreApply
+  const spectreMatch = cleanCmdRaw.match(
+    /^(Spectre(?:Toggle|Close|Apply)?)(?:\s+(.*))?$/i
+  );
+  if (spectreMatch) {
+    return finishEx(executeSpectreCommand(state, spectreMatch[1], spectreMatch[2] ?? ''));
   }
 
   // trouble.nvim 스타일 프로젝트 진단·TODO·퀵픽스 통합 허브: :Trouble [mode|next|prev|toggle|close]

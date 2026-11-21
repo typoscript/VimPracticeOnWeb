@@ -82,6 +82,12 @@ const SANDBOX_QUICK_TRY_CHIPS: ReadonlyArray<{
     keys: ['Escape', ...':Yanks'.split(''), 'Enter'],
   },
   {
+    id: 'spectre',
+    label: '🔁 :Spectre v1 v2',
+    titleKey: i18nKey('프로젝트 대화형 검색 · 치환 (:Spectre)'),
+    keys: ['Escape', ...':Spectre v1 v2'.split(''), 'Enter'],
+  },
+  {
     id: 'livegrep',
     label: '🔎 :LiveGrep',
     titleKey: i18nKey('프로젝트 전체 검색 (:LiveGrep)'),
@@ -210,6 +216,12 @@ export interface WorkspaceEditorProps {
     | 'onTravelUndoOlder'
     | 'onTravelUndoNewer'
     | 'onCloseUndotreePanel'
+    | 'onUpdateSpectreQuery'
+    | 'onToggleSpectreItem'
+    | 'onToggleAllSpectreItems'
+    | 'onJumpSpectreItem'
+    | 'onApplySpectreReplaceAll'
+    | 'onCloseSpectrePanel'
     | 'onSwitchCommandLineWindowType'
     | 'onClearCommandLineHistory'
     | 'onCloseCommandLineWindow'

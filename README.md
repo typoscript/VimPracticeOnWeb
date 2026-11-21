@@ -5,9 +5,9 @@
 CodeMirror나 Monaco 같은 무거운 외부 에디터 라이브러리 없이, **순수 함수형 상태 전이 아키텍처(`(state, key) => nextState`)**로 구현된 가볍고 반응성이 뛰어난 웹 Vim 학습 플랫폼입니다.
 독립 엔진 모듈 단독 사용법은 [`src/vim-engine/README.md`](./src/vim-engine/README.md)를 참고하세요.
 
-- **📚 112개 실전 커리큘럼**: 기초 이동(`hjkl`)부터 매크로·Vimscript·정규식·Netrw·세션, 현대 Neovim 플러그인(`Telescope`, `LSP`, `Treesitter`, `Gitsigns`, `Lua`, `Flash`, `Oil`, `Harpoon`, `mini.ai`, `Trouble`, `Multi-Cursor`)까지 단계별 완주
+- **📚 114개 실전 커리큘럼**: 기초 이동(`hjkl`)부터 매크로·Vimscript·정규식·Netrw·세션, 현대 Neovim 플러그인(`Telescope`, `LSP`, `Treesitter`, `Gitsigns`, `Lua`, `Flash`, `Oil`, `Harpoon`, `mini.ai`, `Trouble`, `Multi-Cursor`, `Undotree`, `Yanky`, `Spectre`)까지 단계별 완주
 - **🎮 다채로운 훈련 모드**: 튜토리얼 코스 · 타임어택 스피드런 · 아케이드 서바이벌(보스전/파워업) · 던전 RPG(6스테이지) · 하드코어 도장 · 멀티파일 자유 연습장(Sandbox) · BYOC 커스텀 미션
-- **🔬 높은 호환성 검증**: 실제 `nvim --headless` 대조 골든 회귀 **116종** 포함 **193개 테스트 파일 / 2,257개 테스트 100% 통과**
+- **🔬 높은 호환성 검증**: 실제 `nvim --headless` 대조 골든 회귀 **116종** 포함 **195개 테스트 파일 / 2,262개 테스트 100% 통과**
 
 ---
 
@@ -121,11 +121,12 @@ flowchart TD
 | **vim-visual-multi** | `g Ctrl-n`, `Ctrl-n`/`Ctrl-x`/`Ctrl-p`, `:MultiCursor` | 같은 단어 다중 커서 선택·동시 편집 |
 | **undotree** | `:UndotreeToggle`, `:Undotree`, `g-`/`g+`, `:undo N` | 분기형 Undo 트리 그래프, Diff 미리보기, 클릭 시간 여행 |
 | **yanky.nvim** | `p` 직후 `Ctrl-p`/`Ctrl-n`, `:YankyRingHistory`, `:Yanks` | 복사 이력 링 순환 붙여넣기와 이력 팝업 |
+| **nvim-spectre** | `:Spectre [검색어] [치환어]`, `:SpectreToggle`, `:SpectreApply` | 프로젝트 전체 정규식 검색·치환 인라인 Diff 미리보기 및 선별 일괄 치환 |
 | **which-key.nvim** | (`g`, `z`, `[`, `]`, `<leader>` 등 입력 대기) | 후속 키 실시간 가이드 팝업 |
 
 ---
 
-## 🎯 튜토리얼 커리큘럼 (Lessons 1 ~ 112)
+## 🎯 튜토리얼 커리큘럼 (Lessons 1 ~ 114)
 
 ### 🟢 기초 이동 및 텍스트 편집 (레슨 1 ~ 10)
 1. **레슨 1**: 기본 방향 이동 (`h`, `j`, `k`, `l`)
@@ -239,7 +240,7 @@ flowchart TD
 99. **레슨 99**: 덮어쓰기 모드(`R`), `[count]r` & 비주얼 블록 치환(`Ctrl-v r`) 마스터하기
 100. **레슨 100**: [대단원] 정규식 캡처·매크로·`vim-surround`·다중 파일 배치(`:vimgrep` + `:cdo` + `Ctrl-^`) 종합 마스터 챌린지
 
-### 🚀 현대 Neovim 실전 트랙 (레슨 101 ~ 112)
+### 🚀 현대 Neovim 실전 트랙 (레슨 101 ~ 114)
 101. **레슨 101**: Telescope `:LiveGrep` 본문 검색 & `Ctrl-q` 퀵픽스 일괄 치환
 102. **레슨 102**: Neovim 0.11 LSP 리팩토링 — `gra` 코드 액션 & `grn` 다중 파일 이름 변경
 103. **레슨 103**: Neovim 0.11 LSP 탐색 — `gO` 문서 심볼 아웃라인 & `grr` 참조 검색
@@ -252,6 +253,8 @@ flowchart TD
 110. **레슨 110**: `mini.ai` Next/Last 텍스트 객체(`cin"` · `din(` · `cil"`) 원격 편집 마스터
 111. **레슨 111**: `trouble.nvim` 프로젝트 진단·TODO 통합 허브(`:Trouble todo` · `:TroubleNext`)
 112. **레슨 112**: `vim-visual-multi` 다중 커서 선택·건너뛰기·동시 치환(`g Ctrl-n` · `Ctrl-x`)
+113. **레슨 113**: `undotree` 시각적 분기 트리(`:UndotreeToggle`) & 브랜치 시간 여행(`:undo N`)
+114. **레슨 114**: `yanky.nvim` 복사 링 순환 붙여넣기(`p` + `Ctrl-p`/`Ctrl-n` · `:Yanks`)
 
 ---
 
@@ -299,7 +302,7 @@ flowchart TD
 ## 🛠️ 기술 스택 (Tech Stack)
 
 - **Core**: React 19, TypeScript, Vite
-- **Testing**: Vitest, React Testing Library (193개 파일, 2,257개 단위/통합 테스트 100% 통과)
+- **Testing**: Vitest, React Testing Library (195개 파일, 2,262개 단위/통합 테스트 100% 통과)
 - **실제 Neovim 골든 회귀 스위트**: `nvim --headless` 로 생성한 116개 케이스(`test/fixtures/neovim-golden-cases.json`)와 엔진 결과를 비교합니다. 재생성은 `npx tsx scripts/generateGoldenTests.ts`.
 - **번들 분할**: 엔진을 단방향 비순환 계층(`data` → `core` → `services` → `editing` → `neovim` → `ex` → 디스패처)의 청크로 나눠 모든 청크를 300 kB 이하(엔진 청크 각 160 kB 미만)로 유지하고, 보조 패널과 탭은 `React.lazy` 로 지연 로딩합니다.
 - **Styling**: Modern Pure CSS (Catppuccin Macchiato 테마)
@@ -322,7 +325,7 @@ npm run dev
 
 ### 3. 테스트 및 타입 검사
 ```bash
-# 전체 단위/통합 테스트 단발 실행 (193개 파일, 2,257개 테스트)
+# 전체 단위/통합 테스트 단발 실행 (195개 파일, 2,262개 테스트)
 npm test -- --run
 
 # DOM 타입 없이 순수 Vim 엔진(src/vim-engine/) 단독 타입 검사

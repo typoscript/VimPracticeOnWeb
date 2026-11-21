@@ -27,6 +27,12 @@ import {
   jumpUndoSeq,
   travelUndoTime,
   closeUndotreePanel,
+  updateSpectreQuery,
+  toggleSpectreItem,
+  toggleAllSpectreItems,
+  jumpToSpectreItem,
+  applySpectreReplaceAll,
+  closeSpectrePanel,
   closeLspHover,
   cancelLspRename,
   applyLspCodeAction,
@@ -181,6 +187,37 @@ export function useEditorWorkspaceHandlers({
 
   const handleCloseUndotreePanel = useCallback(
     () => applyAndFocus((prev) => closeUndotreePanel(prev)),
+    [applyAndFocus]
+  );
+
+  const handleUpdateSpectreQuery = useCallback(
+    (searchQuery: string, replaceQuery: string, ignoreCase?: boolean) =>
+      setEditorState((prev) => updateSpectreQuery(prev, searchQuery, replaceQuery, ignoreCase)),
+    [setEditorState]
+  );
+
+  const handleToggleSpectreItem = useCallback(
+    (itemId: string) => setEditorState((prev) => toggleSpectreItem(prev, itemId)),
+    [setEditorState]
+  );
+
+  const handleToggleAllSpectreItems = useCallback(
+    (enabled: boolean) => setEditorState((prev) => toggleAllSpectreItems(prev, enabled)),
+    [setEditorState]
+  );
+
+  const handleJumpSpectreItem = useCallback(
+    (index: number) => applyAndFocus((prev) => jumpToSpectreItem(prev, index)),
+    [applyAndFocus]
+  );
+
+  const handleApplySpectreReplaceAll = useCallback(
+    () => applyAndFocus((prev) => applySpectreReplaceAll(prev)),
+    [applyAndFocus]
+  );
+
+  const handleCloseSpectrePanel = useCallback(
+    () => applyAndFocus((prev) => closeSpectrePanel(prev)),
     [applyAndFocus]
   );
 
@@ -364,6 +401,12 @@ export function useEditorWorkspaceHandlers({
       onTravelUndoOlder: handleTravelUndoOlder,
       onTravelUndoNewer: handleTravelUndoNewer,
       onCloseUndotreePanel: handleCloseUndotreePanel,
+      onUpdateSpectreQuery: handleUpdateSpectreQuery,
+      onToggleSpectreItem: handleToggleSpectreItem,
+      onToggleAllSpectreItems: handleToggleAllSpectreItems,
+      onJumpSpectreItem: handleJumpSpectreItem,
+      onApplySpectreReplaceAll: handleApplySpectreReplaceAll,
+      onCloseSpectrePanel: handleCloseSpectrePanel,
       onSwitchCommandLineWindowType: handleSwitchCommandLineWindowType,
       onClearCommandLineHistory: handleClearCommandLineHistory,
       onCloseCommandLineWindow: handleCloseCommandLineWindow,
@@ -396,6 +439,12 @@ export function useEditorWorkspaceHandlers({
       handleTravelUndoOlder,
       handleTravelUndoNewer,
       handleCloseUndotreePanel,
+      handleUpdateSpectreQuery,
+      handleToggleSpectreItem,
+      handleToggleAllSpectreItems,
+      handleJumpSpectreItem,
+      handleApplySpectreReplaceAll,
+      handleCloseSpectrePanel,
       handleSwitchCommandLineWindowType,
       handleClearCommandLineHistory,
       handleCloseCommandLineWindow,

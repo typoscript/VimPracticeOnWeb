@@ -526,4 +526,10 @@ export const EN_MESSAGES: Record<string, string> = {
   "[Yanky] 순환할 다른 복사 기록이 없습니다": "[Yanky] No other yank history to cycle",
   "[Yanky] 복사 기록 {count}건 (j/k 이동 · Enter 붙여넣기 · d 삭제 · Esc 닫기)": "[Yanky] {count} yanks (j/k move · Enter paste · d delete · Esc close)",
   "[Yanky] 복사 기록을 모두 비웠습니다": "[Yanky] Cleared yank history",
+  "[Spectre] \"{query}\" 매치 {count}건 발견": "[Spectre] Found {count} matches for \"{query}\"",
+  "[Spectre] 프로젝트 검색·치환 패널 열림": "[Spectre] Project search & replace panel opened",
+  "[Spectre] 패널을 닫았습니다": "[Spectre] Panel closed",
+  "[Spectre] 치환할 활성 항목이 없습니다": "[Spectre] No active matches to replace",
+  "[Spectre] 잘못된 정규식 패턴입니다": "[Spectre] Invalid regular expression pattern",
+  "[Spectre] {files}개 파일에서 {count}개 줄 치환 완료": "[Spectre] Replaced {count} lines across {files} files",
 };
