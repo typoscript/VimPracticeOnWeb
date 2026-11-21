@@ -1,19 +1,55 @@
 import { CursorPosition, VimMode } from './types';
 
+let activeCursorMode: VimMode = 'NORMAL';
+let activeVirtualEdit = '';
+
+export function setActiveCursorContext(mode: VimMode, virtualedit?: string): void {
+  activeCursorMode = mode;
+  activeVirtualEdit = virtualedit ?? '';
+}
+
+export function getActiveVirtualEdit(): string {
+  return activeVirtualEdit;
+}
+
+export function hasVirtualEdit(
+  virtualedit: string | undefined,
+  target: 'onemore' | 'block' | 'all' | 'insert'
+): boolean {
+  if (!virtualedit) return false;
+  const parts = virtualedit
+    .split(',')
+    .map((p) => p.trim().toLowerCase())
+    .filter(Boolean);
+  if (parts.includes('all')) return true;
+  return parts.includes(target);
+}
+
 /**
  * 줄의 최대 허용 열 인덱스를 반환합니다.
  * NORMAL 모드에서는 마지막 문자(length - 1)를 넘을 수 없으며,
- * INSERT 모드에서는 새 문자를 추가할 수 있도록 줄 길이(length)까지 허용합니다.
- * 빈 줄인 경우 0을 반환합니다.
+ * INSERT 모드나 virtualedit=onemore 에서는 줄 길이(length)까지 허용합니다.
+ * virtualedit=all 또는 VISUAL_BLOCK + virtualedit=block 에서는 줄 끝 너머 가상 열까지 허용합니다.
  */
-export function getMaxCol(lineText: string | undefined, mode: VimMode = 'NORMAL'): number {
-  if (!lineText || lineText.length === 0) {
+export function getMaxCol(
+  lineText: string | undefined,
+  mode: VimMode = activeCursorMode,
+  virtualedit: string = activeVirtualEdit
+): number {
+  const len = lineText ? lineText.length : 0;
+  if (
+    hasVirtualEdit(virtualedit, 'all') ||
+    (mode === 'VISUAL_BLOCK' && hasVirtualEdit(virtualedit, 'block'))
+  ) {
+    return Math.max(len + 1000, 10000);
+  }
+  if (len === 0) {
     return 0;
   }
-  if (mode === 'INSERT' || mode === 'REPLACE') {
-    return lineText.length;
+  if (mode === 'INSERT' || mode === 'REPLACE' || hasVirtualEdit(virtualedit, 'onemore')) {
+    return len;
   }
-  return Math.max(0, lineText.length - 1);
+  return Math.max(0, len - 1);
 }
 
 /**
@@ -34,7 +70,8 @@ export function getFirstNonBlankCol(lineText: string | undefined): number {
 export function clampCursor(
   lines: string[],
   cursor: CursorPosition,
-  mode: VimMode = 'NORMAL'
+  mode: VimMode = activeCursorMode,
+  virtualedit: string = activeVirtualEdit
 ): CursorPosition {
   if (lines.length === 0) {
     return { line: 0, col: 0 };
@@ -42,7 +79,7 @@ export function clampCursor(
 
   const line = Math.max(0, Math.min(cursor.line, lines.length - 1));
   const currentLineText = lines[line] ?? '';
-  const maxCol = getMaxCol(currentLineText, mode);
+  const maxCol = getMaxCol(currentLineText, mode, virtualedit);
   const col = Math.max(0, Math.min(cursor.col, maxCol));
 
   return { line, col };

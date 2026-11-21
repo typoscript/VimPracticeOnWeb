@@ -1,4 +1,5 @@
 import { VimEditorState, CursorPosition, VimMode, SplitPaneState } from './types';
+import { hasVirtualEdit } from './cursor';
 import { collectLeafIndices } from './windowTree';
 
 export class VimInvariantViolationError extends Error {
@@ -39,14 +40,31 @@ export function getCursorRow(cursor: CursorPosition | { row: number; col: number
   return (cursor as any).line !== undefined ? (cursor as any).line : (cursor as any).row;
 }
 
-export function getMaxAllowedCol(lineText: string | undefined, mode: VimMode = 'NORMAL'): number {
-  if (!lineText || lineText.length === 0) {
+export function getMaxAllowedCol(
+  lineText: string | undefined,
+  mode: VimMode = 'NORMAL',
+  virtualedit?: string
+): number {
+  const len = lineText ? lineText.length : 0;
+  if (
+    hasVirtualEdit(virtualedit, 'all') ||
+    (mode === 'VISUAL_BLOCK' && hasVirtualEdit(virtualedit, 'block'))
+  ) {
+    return Math.max(len + 1000, 10000);
+  }
+  if (len === 0) {
     return 0;
   }
-  if (mode === 'INSERT' || mode === 'COMMAND' || mode === 'SEARCH' || mode === 'REPLACE') {
-    return lineText.length;
+  if (
+    mode === 'INSERT' ||
+    mode === 'COMMAND' ||
+    mode === 'SEARCH' ||
+    mode === 'REPLACE' ||
+    hasVirtualEdit(virtualedit, 'onemore')
+  ) {
+    return len;
   }
-  return Math.max(0, lineText.length - 1);
+  return Math.max(0, len - 1);
 }
 
 /**
@@ -147,7 +165,11 @@ function assertBufferAndCursor(
   }
 
   const currentLine = lines[row];
-  const maxCol = getMaxAllowedCol(currentLine, mode);
+  const virtualedit =
+    nextState?.options?.virtualedit ??
+    nextState?.globalOptions?.virtualedit ??
+    prevState?.options?.virtualedit;
+  const maxCol = getMaxAllowedCol(currentLine, mode, virtualedit);
 
   if (col > maxCol) {
     throw new VimInvariantViolationError(

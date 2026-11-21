@@ -1,5 +1,6 @@
 import { AbbreviationEntry, VimEditorState } from './types';
 import { msg } from './messages';
+import { isKeywordChar } from './wordMotion';
 import {
   KeymapModifiers,
   evaluateExprKeymap,
@@ -19,9 +20,9 @@ const ABBREV_UNDEF_RE = /^(i|c)?(?:una|unab|unabb|unabbr|unabbre|unabbrev|unabbr
 const ABBREV_CLEAR_RE = /^(i|c)?(?:abc|abcl|abcle|abclea|abclear)$/i;
 const ABBREV_FLAG_RE = /^<(buffer|silent|expr|unique|nowait)>$/i;
 
-/** 단어를 구성하는 식별자 문자인지 판별합니다 (Vim iskeyword 기본 영숫자 + _). */
+/** 단어를 구성하는 식별자 문자인지 판별합니다 (Vim iskeyword 설정 반영). */
 export function isAbbrevWordChar(ch: string | undefined): boolean {
-  return ch !== undefined && /\w/.test(ch);
+  return ch !== undefined && isKeywordChar(ch);
 }
 
 /**

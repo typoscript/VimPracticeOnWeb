@@ -1,5 +1,9 @@
 import { getVimEngineConfig } from './config';
 import { VimEditorState } from './types';
+import { setActiveCursorContext } from './cursor';
+import { setActiveIskeyword } from './wordMotion';
+import { getOptions } from './setEngine';
+import { msg } from './messages';
 import { deepFreeze, assertValidVimState } from './invariants';
 import { executeCommandLine, handleConfirmSubstituteKey } from './commandLine';
 import { triggerAutocmd, triggerWindowAndTabAutocmds } from './autocmdEngine';
@@ -76,6 +80,10 @@ export function rawHandleKey(
   macroDepth = 0,
   abbrevCtx: AbbrevReplayCtx = INITIAL_ABBREV_CTX
 ): VimEditorState {
+  const effectiveOpts = getOptions(state);
+  setActiveIskeyword(effectiveOpts.iskeyword);
+  setActiveCursorContext(state.mode, effectiveOpts.virtualedit);
+
   // z= 맞춤법 교체 추천 세션 처리
   if (state.spellSuggest) {
     return handleSpellSuggestKey(state, key);
@@ -201,6 +209,38 @@ export function rawHandleKey(
   } else {
     nextState = state;
   }
+
+  // :set nomodifiable (noma) 상태에서 현재 버퍼 수정 또는 INSERT/REPLACE 진입 차단 (E21)
+  if (effectiveOpts.modifiable === false) {
+    const sameContext =
+      (nextState.currentBufferId ?? 1) === (state.currentBufferId ?? 1) &&
+      (nextState.activePaneIndex ?? 0) === (state.activePaneIndex ?? 0) &&
+      (nextState.currentTabId ?? 1) === (state.currentTabId ?? 1) &&
+      !nextState.netrw?.isOpen &&
+      !nextState.helpSession?.isOpen &&
+      !nextState.cmdlineWindow;
+    const triedToEnterEditMode =
+      state.mode !== 'INSERT' &&
+      state.mode !== 'REPLACE' &&
+      (nextState.mode === 'INSERT' || nextState.mode === 'REPLACE');
+    const triedToMutateLines = nextState.lines !== state.lines;
+
+    if (sameContext && (triedToEnterEditMode || triedToMutateLines)) {
+      return {
+        ...state,
+        mode: 'NORMAL',
+        visualAnchor: undefined,
+        visualBlockEndOfLine: undefined,
+        pendingKeys: undefined,
+        commandBuffer: undefined,
+        commandType: undefined,
+        bell: true,
+        commandMessage: msg('E21: \'modifiable\' 옵션이 꺼져 있어 변경할 수 없습니다'),
+      };
+    }
+  }
+
+  setActiveCursorContext(nextState.mode, getOptions(nextState).virtualedit);
 
   // INSERT 모드 신규 진입(Ctrl-o 일회성 복귀 제외) 시 직전 입력 텍스트 버퍼 초기화
   if (state.mode !== 'INSERT' && nextState.mode === 'INSERT' && !state.insertNormalSession) {

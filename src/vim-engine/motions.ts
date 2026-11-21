@@ -74,9 +74,10 @@ export function moveToLineStart(lines: string[], cursor: CursorPosition): Cursor
  */
 export function moveToLineEnd(lines: string[], cursor: CursorPosition): CursorPosition {
   const clamped = clampCursor(lines, cursor);
+  const lineText = lines[clamped.line] ?? '';
   return {
     line: clamped.line,
-    col: getMaxCol(lines[clamped.line]),
+    col: Math.max(0, lineText.length - 1),
   };
 }
 

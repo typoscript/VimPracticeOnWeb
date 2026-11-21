@@ -1,5 +1,7 @@
 import { VimEditorState } from './types';
-import { clampCursor } from './cursor';
+import { clampCursor, setActiveCursorContext } from './cursor';
+import { setActiveIskeyword } from './wordMotion';
+import { getOptions } from './setEngine';
 import { executeShellCommand, executeFilterRange, executeWriteShell } from './shellEngine';
 import { retabRange } from './formatEngine';
 import { executeUserCommand, lookupUserCommand } from './userCommandEngine';
@@ -507,7 +509,28 @@ export function executeCommandLine(
   const runEx: ExCommandRunner = (s, cmd) =>
     executeCommandLine(s, cmd, keyRunner, userCommandDepth, skipWindowAutocmds);
 
+  const startOpts = getOptions(state);
+  setActiveIskeyword(startOpts.iskeyword);
+  setActiveCursorContext(state.mode, startOpts.virtualedit);
+
   const finalize = (res: VimEditorState): VimEditorState => {
+    if (
+      startOpts.modifiable === false &&
+      res.lines !== state.lines &&
+      (res.currentBufferId ?? 1) === (state.currentBufferId ?? 1) &&
+      (res.activePaneIndex ?? 0) === (state.activePaneIndex ?? 0) &&
+      (res.currentTabId ?? 1) === (state.currentTabId ?? 1) &&
+      !res.netrw?.isOpen &&
+      !res.helpSession?.isOpen
+    ) {
+      return finishEx(state, {
+        bell: true,
+        commandMessage: msg('E21: \'modifiable\' 옵션이 꺼져 있어 변경할 수 없습니다'),
+      });
+    }
+    const endOpts = getOptions(res);
+    setActiveIskeyword(endOpts.iskeyword);
+    setActiveCursorContext(res.mode, endOpts.virtualedit);
     const synced = syncActivePane(res);
     return skipWindowAutocmds
       ? synced

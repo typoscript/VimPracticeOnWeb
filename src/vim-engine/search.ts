@@ -1,5 +1,6 @@
 import { CursorPosition, SearchMatch, SearchOffset } from './types';
 import { compileVimRegex } from './vimRegex';
+import { isKeywordChar } from './wordMotion';
 
 /**
  * 정규식 특수문자를 안전하게 이스케이프 처리합니다.
@@ -270,7 +271,11 @@ export function findCurrentOrNextMatch(
 /**
  * 커서 위치에 있는 단어를 추출합니다. ('*' 검색 단어 자동 추출용)
  */
-export function getWordAtCursor(lineText: string, col: number): string | null {
+export function getWordAtCursor(
+  lineText: string,
+  col: number,
+  iskeywordSpec?: string
+): string | null {
   if (!lineText || col < 0 || col >= lineText.length) {
     return null;
   }
@@ -280,7 +285,7 @@ export function getWordAtCursor(lineText: string, col: number): string | null {
     return null;
   }
 
-  const isWordChar = (ch: string) => /\w/.test(ch);
+  const isWordChar = (ch: string) => isKeywordChar(ch, iskeywordSpec);
   const targetIsWord = isWordChar(lineText[col]);
 
   let start = col;

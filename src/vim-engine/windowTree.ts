@@ -787,14 +787,21 @@ export function switchPaneFocusCore(
       ? targetPane.bufferId
       : state.currentBufferId;
 
+  const targetBufLocal = state.bufferLocalOptions?.[nextCurrentBufferId ?? 1] ?? {};
   const nextOptions =
-    targetPane.scrollbind === undefined && !state.options
+    targetPane.scrollbind === undefined && !targetPane.localOptions && !state.options
       ? state.options
       : {
           ...DEFAULT_VIM_OPTIONS,
-          ...(state.globalOptions ?? {}),
-          ...(state.options ?? {}),
-          scrollbind: targetPane.scrollbind ?? state.options?.scrollbind ?? false,
+          ...(state.globalOptions ?? state.options ?? {}),
+          ...targetBufLocal,
+          ...(targetPane.localOptions ?? {}),
+          scrollbind:
+            targetPane.scrollbind ??
+            targetPane.localOptions?.scrollbind ??
+            state.globalOptions?.scrollbind ??
+            state.options?.scrollbind ??
+            false,
         };
 
   return {

@@ -29,6 +29,10 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   foldlevel: 0,
   scrollbind: false,
   nrformats: 'bin,hex',
+  modifiable: true,
+  readonly: false,
+  iskeyword: '@,48-57,_,192-255',
+  virtualedit: '',
 };
 
 export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
@@ -91,7 +95,33 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   scrollbind: 'scrollbind',
   nf: 'nrformats',
   nrformats: 'nrformats',
+  ma: 'modifiable',
+  modifiable: 'modifiable',
+  ro: 'readonly',
+  readonly: 'readonly',
+  isk: 'iskeyword',
+  iskeyword: 'iskeyword',
+  ve: 'virtualedit',
+  virtualedit: 'virtualedit',
 };
+
+export const WINDOW_LOCAL_OPTION_KEYS = new Set<keyof VimOptions>([
+  'number',
+  'relativenumber',
+  'wrap',
+  'cursorline',
+  'list',
+  'listchars',
+  'spell',
+  'foldmethod',
+  'foldexpr',
+  'foldmarker',
+  'foldlevel',
+  'scrolloff',
+  'sidescroll',
+  'sidescrolloff',
+  'scrollbind',
+]);
 
 export interface ParsedListchars {
   eol?: string;
@@ -227,13 +257,17 @@ export function getOptions(state: VimEditorState): VimOptions {
   const local = getLocalOptions(state);
   const base: VimOptions = {
     ...global,
-    ...(state.options ?? {}),
     ...local,
   };
   if (state.splitPanes && state.splitDirection && state.splitDirection !== 'none') {
     const pane = state.splitPanes[state.activePaneIndex ?? 0];
-    if (pane && pane.scrollbind !== undefined) {
-      base.scrollbind = pane.scrollbind;
+    if (pane) {
+      if (pane.localOptions) {
+        Object.assign(base, pane.localOptions);
+      }
+      if (pane.scrollbind !== undefined) {
+        base.scrollbind = pane.scrollbind;
+      }
     }
   }
   return base;
@@ -261,6 +295,8 @@ export function formatOptionsList(
     'spell',
     'syntax',
     'scrollbind',
+    'modifiable',
+    'readonly',
   ];
 
   const numericKeys: (keyof VimOptions)[] = ['tabstop', 'shiftwidth', 'textwidth', 'scrolloff', 'sidescroll', 'sidescrolloff'];
@@ -298,6 +334,8 @@ export function formatOptionsList(
     'nrformats',
     'listchars',
     'inccommand',
+    'iskeyword',
+    'virtualedit',
   ];
 
   for (const k of stringKeys) {
@@ -393,6 +431,8 @@ const BOOLEAN_OPTION_KEYS = new Set<keyof VimOptions>([
   'spell',
   'syntax',
   'scrollbind',
+  'modifiable',
+  'readonly',
 ]);
 
 /** '&nu', '&g:sw', '&l:wrap' 문자열에서 스코프와 정규화된 옵션 키를 해석합니다. */
@@ -412,18 +452,25 @@ export function readOptionForScript(state: VimEditorState, raw: string): number 
   const { scope, key } = parsed;
   const curId = state.currentBufferId ?? 1;
   const isSplit = Boolean(state.splitPanes && state.splitDirection && state.splitDirection !== 'none');
+  const activePane = isSplit ? state.splitPanes?.[state.activePaneIndex ?? 0] : undefined;
   const paneScb =
     key === 'scrollbind' && scope !== 'g' && isSplit
-      ? state.splitPanes?.[state.activePaneIndex ?? 0]?.scrollbind
+      ? activePane?.scrollbind
+      : undefined;
+  const paneLocalVal =
+    scope !== 'g' && isSplit && WINDOW_LOCAL_OPTION_KEYS.has(key)
+      ? activePane?.localOptions?.[key]
       : undefined;
   const rawVal =
     paneScb !== undefined
       ? paneScb
-      : scope === 'l'
-        ? state.bufferLocalOptions?.[curId]?.[key] ?? state.options?.[key] ?? DEFAULT_VIM_OPTIONS[key]
-        : scope === 'g'
-          ? state.globalOptions?.[key] ?? state.options?.[key] ?? DEFAULT_VIM_OPTIONS[key]
-          : state.options?.[key] ?? state.globalOptions?.[key] ?? DEFAULT_VIM_OPTIONS[key];
+      : paneLocalVal !== undefined
+        ? paneLocalVal
+        : scope === 'l'
+          ? state.bufferLocalOptions?.[curId]?.[key] ?? state.options?.[key] ?? DEFAULT_VIM_OPTIONS[key]
+          : scope === 'g'
+            ? state.globalOptions?.[key] ?? state.options?.[key] ?? DEFAULT_VIM_OPTIONS[key]
+            : state.options?.[key] ?? state.globalOptions?.[key] ?? DEFAULT_VIM_OPTIONS[key];
 
   if (BOOLEAN_OPTION_KEYS.has(key)) {
     return rawVal ? 1 : 0;
@@ -456,9 +503,15 @@ export function writeOptionForScript(
   const activePaneIdx = state.activePaneIndex ?? 0;
 
   const nextSplitPanes =
-    key === 'scrollbind' && scope !== 'g' && isSplit && state.splitPanes
+    scope !== 'g' && isSplit && state.splitPanes && WINDOW_LOCAL_OPTION_KEYS.has(key)
       ? state.splitPanes.map((pane, idx) =>
-          idx === activePaneIdx ? { ...pane, scrollbind: Boolean(nextVal) } : pane
+          idx === activePaneIdx
+            ? {
+                ...pane,
+                ...(key === 'scrollbind' ? { scrollbind: Boolean(nextVal) } : {}),
+                localOptions: { ...(pane.localOptions ?? {}), [key]: nextVal },
+              }
+            : pane
         )
       : state.splitPanes;
 

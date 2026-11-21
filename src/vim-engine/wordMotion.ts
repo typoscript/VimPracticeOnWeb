@@ -1,12 +1,59 @@
 import { CursorPosition } from './types';
 import { getMaxCol } from './cursor';
 
+export const DEFAULT_ISKEYWORD = '@,48-57,_,192-255';
+
+let activeIskeyword: string = DEFAULT_ISKEYWORD;
+
+export function setActiveIskeyword(spec?: string): void {
+  activeIskeyword = spec ?? DEFAULT_ISKEYWORD;
+}
+
+export function getActiveIskeyword(): string {
+  return activeIskeyword;
+}
+
+/**
+ * Vim 'iskeyword' 옵션 규약(@, 48-57, a-z, 단일 문자, ^제외 등)에 따라 단어 문자인지 판별합니다.
+ */
+export function isKeywordChar(ch: string | undefined, iskeywordSpec?: string): boolean {
+  if (!ch || ch.length === 0 || /\s/.test(ch)) return false;
+  const spec = iskeywordSpec ?? activeIskeyword ?? DEFAULT_ISKEYWORD;
+  if (spec === DEFAULT_ISKEYWORD) {
+    return /[A-Za-z0-9_\u00C0-\u00FF]/.test(ch);
+  }
+  const code = ch.charCodeAt(0);
+  let matched = false;
+  for (const rawPart of spec.split(',')) {
+    if (!rawPart) continue;
+    const negated = rawPart.startsWith('^') && rawPart.length > 1;
+    const part = negated ? rawPart.slice(1) : rawPart;
+    let partHit = false;
+    if (part === '@') {
+      partHit = /[A-Za-z\u00C0-\u00FF]/.test(ch);
+    } else if (/^\d+-\d+$/.test(part)) {
+      const [lo, hi] = part.split('-').map(Number);
+      partHit = code >= lo && code <= hi;
+    } else if (part.length === 3 && part[1] === '-') {
+      partHit = code >= part.charCodeAt(0) && code <= part.charCodeAt(2);
+    } else if (/^\d+$/.test(part)) {
+      partHit = code === Number(part);
+    } else {
+      partHit = part.includes(ch);
+    }
+    if (partHit) {
+      matched = !negated;
+    }
+  }
+  return matched;
+}
+
 type CharType = 'word' | 'punct' | 'space';
 
-function getCharType(ch: string | undefined): CharType {
+function getCharType(ch: string | undefined, iskeywordSpec?: string): CharType {
   if (!ch) return 'space';
   if (/\s/.test(ch)) return 'space';
-  if (/\w/.test(ch)) return 'word';
+  if (isKeywordChar(ch, iskeywordSpec)) return 'word';
   return 'punct';
 }
 

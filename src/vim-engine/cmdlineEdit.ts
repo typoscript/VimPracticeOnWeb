@@ -1,4 +1,5 @@
 import { VimEditorState } from './types';
+import { isKeywordChar } from './wordMotion';
 import { lookupDigraph } from './digraphs';
 import { getRegisterContent } from './registers';
 import { extractFileTargetAtCursor } from './gotoFileEngine';
@@ -205,12 +206,12 @@ export function extractCwordAtCursor(line: string, col: number): string {
   }
   if (idx >= line.length) return '';
 
-  const isIdent = /[A-Za-z0-9_]/.test(line[idx]);
-  const pattern = isIdent ? /[A-Za-z0-9_]/ : /[^\sA-Za-z0-9_]/;
+  const isIdent = isKeywordChar(line[idx]);
+  const isSameKind = (c: string) => !/\s/.test(c) && isKeywordChar(c) === isIdent;
   let start = idx;
-  while (start > 0 && pattern.test(line[start - 1])) start--;
+  while (start > 0 && isSameKind(line[start - 1])) start--;
   let end = idx;
-  while (end + 1 < line.length && pattern.test(line[end + 1])) end++;
+  while (end + 1 < line.length && isSameKind(line[end + 1])) end++;
   return line.slice(start, end + 1);
 }
 

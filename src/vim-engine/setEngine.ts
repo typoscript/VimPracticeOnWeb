@@ -1,10 +1,13 @@
 import { VimEditorState, VimOptions } from './types';
 import { msg } from './messages';
+import { setActiveCursorContext } from './cursor';
+import { setActiveIskeyword } from './wordMotion';
 import { applyFiletypeIndent, getFiletypeCommentString } from './ftpluginEngine';
 import { detectFiletype } from './syntaxEngine';
 import {
   DEFAULT_VIM_OPTIONS,
   OPTION_ALIASES,
+  WINDOW_LOCAL_OPTION_KEYS,
   parseListcharsEntries,
   parseListchars,
   getGlobalOptions,
@@ -49,10 +52,13 @@ type BooleanOrSyntaxOptionKey =
   | 'wildmenu'
   | 'spell'
   | 'syntax'
-  | 'scrollbind';
+  | 'scrollbind'
+  | 'modifiable'
+  | 'readonly';
 
 const VALID_FOLDMETHODS: readonly FoldMethod[] = ['manual', 'indent', 'marker', 'syntax', 'expr'];
 const VALID_NRFORMATS = new Set(['bin', 'octal', 'hex', 'alpha', 'unsigned', 'blank']);
+const VALID_VIRTUALEDIT = new Set(['block', 'insert', 'all', 'onemore', 'none']);
 const NUMERIC_OPTION_KEYS = new Set<NumericOptionKey>([
   'tabstop',
   'shiftwidth',
@@ -82,6 +88,8 @@ const BOOLEAN_OR_SYNTAX_KEYS = new Set<BooleanOrSyntaxOptionKey>([
   'spell',
   'syntax',
   'scrollbind',
+  'modifiable',
+  'readonly',
 ]);
 
 const DEFAULT_ERRORFORMAT = '%f:%l:%c:%m,%f:%l:%m,%f(%l\\,%c):%m';
@@ -105,6 +113,7 @@ interface SetDraftContext {
   scope: SetScope;
   nextGlobal: VimOptions;
   nextLocal: Partial<VimOptions>;
+  nextPaneLocal: Partial<VimOptions>;
   isSplit: boolean;
   activePaneScrollbind: boolean | undefined;
   updatedFiletype: string | undefined;
@@ -118,7 +127,14 @@ function writeScopedOption<K extends keyof VimOptions>(
   optKey: K,
   value: VimOptions[K]
 ): void {
-  if (ctx.scope === 'local' || ctx.scope === 'both') {
+  if (ctx.isSplit && WINDOW_LOCAL_OPTION_KEYS.has(optKey)) {
+    if (ctx.scope === 'local' || ctx.scope === 'both') {
+      ctx.nextPaneLocal[optKey] = value;
+    }
+    if (ctx.scope === 'both' && !(ctx.scope as string === 'local')) {
+      ctx.nextLocal[optKey] = value;
+    }
+  } else if (ctx.scope === 'local' || ctx.scope === 'both') {
     ctx.nextLocal[optKey] = value;
   }
   if (ctx.scope === 'global' || ctx.scope === 'both') {
@@ -156,6 +172,8 @@ function handleOptionQuery(ctx: SetDraftContext, token: string): VimEditorState 
     val = ctx.updatedScrollbind ?? ctx.activePaneScrollbind;
   } else if (ctx.scope === 'global') {
     val = ctx.nextGlobal[optKey];
+  } else if (ctx.isSplit && WINDOW_LOCAL_OPTION_KEYS.has(optKey) && ctx.nextPaneLocal[optKey] !== undefined) {
+    val = ctx.nextPaneLocal[optKey];
   } else {
     val = ctx.nextLocal[optKey] ?? ctx.nextGlobal[optKey];
   }
@@ -179,6 +197,10 @@ function handleOptionQuery(ctx: SetDraftContext, token: string): VimEditorState 
       val = DEFAULT_VIM_OPTIONS.listchars;
     } else if (optKey === 'inccommand') {
       val = DEFAULT_VIM_OPTIONS.inccommand ?? 'nosplit';
+    } else if (optKey === 'iskeyword') {
+      val = DEFAULT_VIM_OPTIONS.iskeyword ?? '@,48-57,_,192-255';
+    } else if (optKey === 'virtualedit') {
+      val = DEFAULT_VIM_OPTIONS.virtualedit ?? '';
     }
   }
 
@@ -300,6 +322,106 @@ function handleNrformatsAssignment(
   return null;
 }
 
+function handleIskeywordAssignment(
+  ctx: SetDraftContext,
+  mod: string,
+  rawVal: string
+): VimEditorState | null {
+  const parseParts = (s: string) =>
+    s
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean);
+  const rawParts = parseParts(rawVal);
+  const curStr =
+    ctx.nextLocal.iskeyword ??
+    ctx.nextGlobal.iskeyword ??
+    DEFAULT_VIM_OPTIONS.iskeyword ??
+    '@,48-57,_,192-255';
+  const curParts = parseParts(curStr);
+  let nextParts: string[];
+
+  if (mod === '+') {
+    nextParts = [...curParts];
+    for (const p of rawParts) {
+      if (!nextParts.includes(p)) nextParts.push(p);
+    }
+  } else if (mod === '^') {
+    nextParts = [...rawParts];
+    for (const p of curParts) {
+      if (!nextParts.includes(p)) nextParts.push(p);
+    }
+  } else if (mod === '-') {
+    nextParts = curParts.filter((p) => !rawParts.includes(p));
+    for (const p of rawParts) {
+      if (p.length === 1 && /^[0-9]$/.test(p) && curParts.includes('48-57')) {
+        nextParts.push(`^${p}`);
+      } else if (p.length === 1 && /^[A-Za-z]$/.test(p) && curParts.includes('@')) {
+        nextParts.push(`^${p}`);
+      }
+    }
+  } else {
+    nextParts = rawParts;
+  }
+
+  const nextVal = nextParts.join(',');
+  writeScopedOption(ctx, 'iskeyword', nextVal);
+  ctx.appliedList.push(`iskeyword=${nextVal}`);
+  return null;
+}
+
+function handleVirtualeditAssignment(
+  ctx: SetDraftContext,
+  mod: string,
+  rawVal: string,
+  token: string
+): VimEditorState | null {
+  const parseParts = (s: string) =>
+    s
+      .split(',')
+      .map((p) => p.trim().toLowerCase())
+      .filter(Boolean);
+  const rawParts = parseParts(rawVal);
+  if (rawParts.some((p) => !VALID_VIRTUALEDIT.has(p))) {
+    return {
+      ...ctx.state,
+      bell: true,
+      commandMessage: msg('E474: 잘못된 인수입니다: {token}', { token }),
+    };
+  }
+
+  const curStr =
+    ctx.nextLocal.virtualedit ?? ctx.nextGlobal.virtualedit ?? DEFAULT_VIM_OPTIONS.virtualedit ?? '';
+  const curParts = parseParts(curStr);
+  let nextParts: string[];
+
+  if (rawParts.includes('none')) {
+    nextParts = [];
+  } else if (mod === '+') {
+    nextParts = [...curParts];
+    for (const p of rawParts) {
+      if (!nextParts.includes(p)) nextParts.push(p);
+    }
+  } else if (mod === '^') {
+    nextParts = [...rawParts];
+    for (const p of curParts) {
+      if (!nextParts.includes(p)) nextParts.push(p);
+    }
+  } else if (mod === '-') {
+    nextParts = curParts.filter((p) => !rawParts.includes(p));
+  } else {
+    nextParts = [];
+    for (const p of rawParts) {
+      if (!nextParts.includes(p)) nextParts.push(p);
+    }
+  }
+
+  const nextVal = nextParts.join(',');
+  writeScopedOption(ctx, 'virtualedit', nextVal);
+  ctx.appliedList.push(`virtualedit=${nextVal}`);
+  return null;
+}
+
 function handleOptionAssignment(ctx: SetDraftContext, token: string): VimEditorState | null {
   const eqIdx = token.indexOf('=');
   const rawKeyWithMod = token.slice(0, eqIdx);
@@ -316,6 +438,12 @@ function handleOptionAssignment(ctx: SetDraftContext, token: string): VimEditorS
   }
   if (optKey === 'nrformats') {
     return handleNrformatsAssignment(ctx, mod, rawVal, token);
+  }
+  if (optKey === 'iskeyword') {
+    return handleIskeywordAssignment(ctx, mod, rawVal);
+  }
+  if (optKey === 'virtualedit') {
+    return handleVirtualeditAssignment(ctx, mod, rawVal, token);
   }
   if (optKey === 'errorformat' || optKey === 'grepprg') {
     const currentStr =
@@ -466,7 +594,9 @@ function handleBooleanOption(
     ctx.scope !== 'global' &&
     (ctx.updatedScrollbind !== undefined || ctx.activePaneScrollbind !== undefined)
       ? (ctx.updatedScrollbind ?? ctx.activePaneScrollbind)
-      : (ctx.nextLocal[optKey] ?? ctx.nextGlobal[optKey]);
+      : ctx.isSplit && ctx.scope !== 'global' && WINDOW_LOCAL_OPTION_KEYS.has(optKey) && ctx.nextPaneLocal[optKey] !== undefined
+        ? ctx.nextPaneLocal[optKey]
+        : (ctx.nextLocal[optKey] ?? ctx.nextGlobal[optKey]);
 
   if (typeof curVal !== 'boolean' && optKey !== 'syntax') {
     return null;
@@ -506,11 +636,17 @@ export function executeSetCommand(
     return { ...state, commandMessage: formatOptionsList(effective, true) };
   }
 
+  const isSplit = !!(state.splitPanes && state.splitDirection && state.splitDirection !== 'none');
+  const activePaneIdx = state.activePaneIndex ?? 0;
+  const activePane = isSplit ? state.splitPanes?.[activePaneIdx] : undefined;
+  const activePaneScrollbind = activePane?.scrollbind;
+
   // 2. 인자 없음 (:set, :setlocal, :setglobal)
   if (trimmed === '') {
     if (scope === 'local') {
       const header = '--- Local Options ---';
-      if (Object.keys(curLocal).length === 0) {
+      const mergedLocal = { ...curLocal, ...(activePane?.localOptions ?? {}) };
+      if (Object.keys(mergedLocal).length === 0) {
         return {
           ...state,
           commandMessage: msg('{header}\\n(기본값과 다른 설정이 없습니다)', { header }),
@@ -518,7 +654,7 @@ export function executeSetCommand(
       }
       return {
         ...state,
-        commandMessage: formatOptionsList({ ...DEFAULT_VIM_OPTIONS, ...curLocal }, false, header),
+        commandMessage: formatOptionsList({ ...DEFAULT_VIM_OPTIONS, ...mergedLocal }, false, header),
       };
     }
     if (scope === 'global') {
@@ -530,15 +666,12 @@ export function executeSetCommand(
     return { ...state, commandMessage: formatOptionsList(effective, false) };
   }
 
-  const isSplit = !!(state.splitPanes && state.splitDirection && state.splitDirection !== 'none');
-  const activePaneIdx = state.activePaneIndex ?? 0;
-  const activePaneScrollbind = isSplit ? state.splitPanes?.[activePaneIdx]?.scrollbind : undefined;
-
   const ctx: SetDraftContext = {
     state,
     scope,
     nextGlobal: { ...curGlobal },
     nextLocal: { ...curLocal },
+    nextPaneLocal: { ...(activePane?.localOptions ?? {}) },
     isSplit,
     activePaneScrollbind,
     updatedFiletype: undefined,
@@ -569,15 +702,26 @@ export function executeSetCommand(
     ...DEFAULT_VIM_OPTIONS,
     ...ctx.nextGlobal,
     ...ctx.nextLocal,
+    ...(isSplit ? ctx.nextPaneLocal : {}),
     ...(isSplit && (ctx.updatedScrollbind !== undefined || activePaneScrollbind !== undefined)
       ? { scrollbind: ctx.updatedScrollbind ?? activePaneScrollbind }
       : {}),
   };
 
+  setActiveIskeyword(nextEffective.iskeyword);
+  setActiveCursorContext(state.mode, nextEffective.virtualedit);
+
+  const hasPaneLocalUpdates = Object.keys(ctx.nextPaneLocal).length > 0;
   const nextSplitPanes =
-    isSplit && ctx.updatedScrollbind !== undefined && state.splitPanes
+    isSplit && (ctx.updatedScrollbind !== undefined || hasPaneLocalUpdates) && state.splitPanes
       ? state.splitPanes.map((pane, idx) =>
-          idx === activePaneIdx ? { ...pane, scrollbind: ctx.updatedScrollbind } : pane
+          idx === activePaneIdx
+            ? {
+                ...pane,
+                ...(ctx.updatedScrollbind !== undefined ? { scrollbind: ctx.updatedScrollbind } : {}),
+                ...(hasPaneLocalUpdates ? { localOptions: ctx.nextPaneLocal } : {}),
+              }
+            : pane
         )
       : state.splitPanes;
 

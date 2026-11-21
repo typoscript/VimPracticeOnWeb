@@ -18,13 +18,17 @@ import {
   syncSharedBufferPanes,
 } from './windowTree';
 
-function withPaneScrollbindOption(
+function withPaneLocalOptions(
   state: VimEditorState,
-  scrollbind: boolean | undefined
+  pane: SplitPaneState
 ): VimEditorState['options'] {
-  if (scrollbind === undefined && !state.options) return state.options;
+  if (pane.scrollbind === undefined && !pane.localOptions && !state.options) return state.options;
   const base = state.options ?? getOptions(state);
-  return { ...base, scrollbind: scrollbind ?? base.scrollbind ?? false };
+  return {
+    ...base,
+    ...(pane.localOptions ?? {}),
+    scrollbind: pane.scrollbind ?? pane.localOptions?.scrollbind ?? base.scrollbind ?? false,
+  };
 }
 
 function loadPaneIntoTopLevel(
@@ -42,7 +46,7 @@ function loadPaneIntoTopLevel(
     redoStack: pane.redoStack ? [...pane.redoStack] : [],
     pendingKeys: undefined,
     locationList: pane.locationList,
-    options: withPaneScrollbindOption(state, pane.scrollbind),
+    options: withPaneLocalOptions(state, pane),
   };
 }
 

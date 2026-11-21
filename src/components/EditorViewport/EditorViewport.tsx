@@ -162,7 +162,11 @@ export function EditorViewport({
             confirmSubstitute={isActive ? editorState.confirmSubstitute : undefined}
             incCommandPreview={isActive ? editorState.incCommandPreview : undefined}
             blockInsertSession={isActive ? editorState.blockInsertSession : pane.blockInsertSession}
-            options={displayEditorState.options}
+            options={
+              pane.localOptions
+                ? { ...(displayEditorState.options ?? ({} as any)), ...pane.localOptions }
+                : displayEditorState.options
+            }
             spellGoodWords={displayEditorState.spellGoodWords}
             spellWrongWords={displayEditorState.spellWrongWords}
             diffHunks={displayEditorState.diffMode ? displayEditorState.diffHunks : undefined}

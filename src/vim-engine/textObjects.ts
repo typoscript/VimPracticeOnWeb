@@ -1,5 +1,6 @@
 import { CursorPosition, VimEditorState } from './types';
 import { clampCursor } from './cursor';
+import { isKeywordChar } from './wordMotion';
 import { pushUndoSnapshot } from './operators';
 import { formatLinesRange, changeCaseVisual, caseTypeForOperator } from './lineOperators';
 import { moveToFirstNonBlank } from './motions';
@@ -55,7 +56,7 @@ type CharClass = 'word' | 'space' | 'punct';
 function getCharClass(ch: string | undefined): CharClass {
   if (!ch) return 'space';
   if (/\s/.test(ch)) return 'space';
-  if (/\w/.test(ch)) return 'word';
+  if (isKeywordChar(ch)) return 'word';
   return 'punct';
 }
 

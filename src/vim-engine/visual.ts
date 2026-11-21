@@ -1,5 +1,6 @@
 import { CursorPosition, VimEditorState, VimMode } from './types';
-import { clampCursor } from './cursor';
+import { clampCursor, hasVirtualEdit } from './cursor';
+import { getOptions } from './setEngine';
 import { pushUndoSnapshot } from './operators';
 
 export interface VisualRange {
@@ -221,12 +222,22 @@ export function startVisualBlockInsert(
 
   const nextLines = [...state.lines];
   let targetCol = minCol;
+  const ve = getOptions(state).virtualedit;
+  const isVirtualBlock = hasVirtualEdit(ve, 'block') || hasVirtualEdit(ve, 'all');
 
   if (insertMode === 'I') {
-    targetCol = Math.min(minCol, (nextLines[minLine] ?? '').length);
-    for (const l of linesList) {
-      if (minCol > 0 && (state.lines[l] ?? '').length <= minCol) {
-        skippedLines.push(l);
+    if (isVirtualBlock) {
+      targetCol = minCol;
+      const firstLine = nextLines[minLine] ?? '';
+      if (firstLine.length < targetCol) {
+        nextLines[minLine] = firstLine.padEnd(targetCol, ' ');
+      }
+    } else {
+      targetCol = Math.min(minCol, (nextLines[minLine] ?? '').length);
+      for (const l of linesList) {
+        if (minCol > 0 && (state.lines[l] ?? '').length <= minCol) {
+          skippedLines.push(l);
+        }
       }
     }
   } else if (insertMode === 'A') {

@@ -322,6 +322,9 @@ export function handleInsertEscape(state: VimEditorState, isReplayingDot: boolea
       } else if (insertMode === 'I') {
         if (insertCol === 0 || lineText.length > insertCol) {
           nextLines[lineIdx] = lineText.slice(0, insertCol) + insertedText + lineText.slice(insertCol);
+        } else if (insertedText.length > 0 && !skippedSet?.has(lineIdx)) {
+          lineText = lineText.padEnd(insertCol, ' ');
+          nextLines[lineIdx] = lineText.slice(0, insertCol) + insertedText + lineText.slice(insertCol);
         }
       } else {
         const cCol = Math.min(minCol, lineText.length);

@@ -1,4 +1,5 @@
 import { CursorPosition } from './types';
+import { isKeywordChar } from './wordMotion';
 import { getSentenceStarts } from './textObjects';
 
 /**
@@ -42,7 +43,7 @@ type CharClass = 'space' | 'word' | 'punct' | 'empty';
 function charClass(ch: string | undefined, bigWord: boolean): CharClass {
   if (ch === undefined || /\s/.test(ch)) return 'space';
   if (bigWord) return 'word';
-  return /\w/.test(ch) ? 'word' : 'punct';
+  return isKeywordChar(ch) ? 'word' : 'punct';
 }
 
 /** 뒤로 한 칸 이동. 줄 경계는 공백 한 칸으로 취급하며 빈 줄은 하나의 단어로 봅니다. */

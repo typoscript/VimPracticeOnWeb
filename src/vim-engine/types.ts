@@ -323,6 +323,14 @@ export interface VimOptions {
   scrollbind?: boolean;
   /** Ctrl-a / Ctrl-x 숫자 증감 시 인식할 진법/형식 (:set nrformats=bin,hex,octal,alpha,unsigned) */
   nrformats?: string;
+  /** 버퍼 내용 수정 허용 여부 (:set ma / noma, :set modifiable / nomodifiable) */
+  modifiable?: boolean;
+  /** 읽기 전용 버퍼 여부 (:set ro / noro, :set readonly / noreadonly) */
+  readonly?: boolean;
+  /** 단어 구성 문자 집합 (:set isk=..., :set iskeyword+=...) */
+  iskeyword?: string;
+  /** 줄 끝 너머 가상 커서 이동 허용 모드 (:set ve=block,onemore,all,insert) */
+  virtualedit?: string;
 }
 
 /** 맞춤법 검사기 오탈자 정보 */
@@ -473,6 +481,8 @@ export interface SplitPaneState {
   diff?: boolean;
   /** 해당 분할 창의 동기 스크롤 여부 (:set scb / :setlocal scb) */
   scrollbind?: boolean;
+  /** 해당 분할 창의 윈도우 로컬 옵션 (:setlocal nu, rnu, wrap, list, cul, fdm 등) */
+  localOptions?: Partial<VimOptions>;
   /** 해당 분할 창의 로케이션 리스트 (:lopen, :lclose, :lnext, :lprev, :lvimgrep) */
   locationList?: QuickfixState | null;
 }

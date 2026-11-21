@@ -570,4 +570,139 @@ describe('setEngine (:set Option System)', () => {
       expect(state.incCommandPreview).toBeNull();
     });
   });
+
+  describe(':set iskeyword (isk), virtualedit (ve), modifiable (ma), readonly (ro), and window-local :setlocal', () => {
+    it(':set iskeyword+=- / -=_ 가 단어 모션(w/e/b), 텍스트 객체(ciw/diw), 단어 검색(*)에 즉시 반영된다', () => {
+      let state: VimEditorState = {
+        lines: ['my-custom-var = foo_bar;'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      // 기본 상태에서는 '-' 에서 단어가 끊김 (w -> '-' 로 이동)
+      const afterDefaultW = handleKey(state, 'w');
+      expect(afterDefaultW.cursor.col).toBe(2);
+
+      // :set isk+=- 실행 후 'my-custom-var' 전체를 한 단어로 인식
+      for (const ch of ':set isk+=-') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+      expect(getOptions(state).iskeyword).toContain('-');
+
+      // w 모션이 'my-custom-var' 전체를 건너뛰어 '='(col 14)로 이동
+      const afterIskW = handleKey(state, 'w');
+      expect(afterIskW.cursor.col).toBe(14);
+
+      // diw 가 'my-custom-var' 전체를 삭제
+      let deleted = handleKey(state, 'd');
+      deleted = handleKey(deleted, 'i');
+      deleted = handleKey(deleted, 'w');
+      expect(deleted.lines[0]).toBe(' = foo_bar;');
+    });
+
+    it(':set virtualedit=onemore 및 :set virtualedit=block 이 줄 끝 너머 가상 커서 이동과 블록 삽입을 허용한다', () => {
+      let state: VimEditorState = {
+        lines: ['abcd', 'x', 'efgh'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      // 1) virtualedit=onemore: NORMAL 모드에서 줄 마지막 문자 너머 1칸(col 4)까지 이동 가능
+      for (const ch of ':set ve=onemore') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+      state = handleKey(state, '$');
+      expect(state.cursor.col).toBe(3);
+      state = handleKey(state, 'l');
+      expect(state.cursor.col).toBe(4);
+
+      // 2) virtualedit=block: VISUAL_BLOCK 에서 짧은 줄(line 1: 'x')이 있어도 직사각형 열(col 3)에 일괄 I 삽입
+      state = { ...state, cursor: { line: 0, col: 3 } };
+      for (const ch of ':set ve=block') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+
+      for (const k of ['Ctrl-v', 'j', 'j', 'I', '#', 'Escape']) {
+        state = handleKey(state, k);
+      }
+      expect(state.lines).toEqual(['abc#d', 'x  #', 'efg#h']);
+
+      // 잘못된 virtualedit 인수는 E474 에러
+      const badVe = executeSetCommand(state, 've=invalid');
+      expect(badVe.bell).toBe(true);
+      expect(badVe.commandMessage).toContain('E474');
+    });
+
+    it(':set nomodifiable (noma) 은 모든 편집을 E21 로 차단하고, :set readonly (ro) 는 :w 를 E45 로 차단하되 :w! 는 허용한다', () => {
+      let state: VimEditorState = {
+        lines: ['locked line'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      // :set noma
+      for (const ch of ':set noma') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+      expect(getOptions(state).modifiable).toBe(false);
+
+      // Normal 편집(x, i) 및 Ex 편집(:s) 차단 (E21)
+      const afterX = handleKey(state, 'x');
+      expect(afterX.bell).toBe(true);
+      expect(afterX.commandMessage).toContain('E21');
+      expect(afterX.lines).toEqual(['locked line']);
+
+      const afterI = handleKey(state, 'i');
+      expect(afterI.bell).toBe(true);
+      expect(afterI.mode).toBe('NORMAL');
+      expect(afterI.commandMessage).toContain('E21');
+
+      let afterSub = state;
+      for (const ch of ':%s/locked/open/') afterSub = handleKey(afterSub, ch);
+      afterSub = handleKey(afterSub, 'Enter');
+      expect(afterSub.bell).toBe(true);
+      expect(afterSub.commandMessage).toContain('E21');
+      expect(afterSub.lines).toEqual(['locked line']);
+
+      // :set ma ro -> 수정은 가능하지만 :w 저장 시 E45 차단, :w! 강제 저장은 성공
+      for (const ch of ':set ma ro') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+      expect(getOptions(state).modifiable).toBe(true);
+      expect(getOptions(state).readonly).toBe(true);
+
+      for (const ch of ':w') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+      expect(state.bell).toBe(true);
+      expect(state.commandMessage).toContain('E45');
+
+      for (const ch of ':w!') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+      expect(state.bell).toBeFalsy();
+    });
+
+    it('분할 창에서 :setlocal 로 윈도우 로컬 옵션(rnu, wrap 등)을 창마다 독립적으로 유지한다', () => {
+      let state: VimEditorState = {
+        lines: ['shared buffer'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      // :vsp 로 창 분할 후 현재 창에만 :setlocal rnu nowrap 적용
+      for (const ch of ':vsp') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+      for (const ch of ':setlocal rnu nowrap') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+
+      expect(getOptions(state).relativenumber).toBe(true);
+      expect(getOptions(state).wrap).toBe(false);
+
+      // Ctrl-w w 로 반대쪽 창으로 이동하면 원래 전역 옵션(nornu, wrap) 유지
+      state = handleKey(state, 'Ctrl-w');
+      state = handleKey(state, 'w');
+      expect(getOptions(state).relativenumber).toBe(false);
+      expect(getOptions(state).wrap).toBe(true);
+
+      // 다시 첫 창으로 돌아오면 로컬 옵션(rnu, nowrap) 복원
+      state = handleKey(state, 'Ctrl-w');
+      state = handleKey(state, 'w');
+      expect(getOptions(state).relativenumber).toBe(true);
+      expect(getOptions(state).wrap).toBe(false);
+    });
+  });
 });

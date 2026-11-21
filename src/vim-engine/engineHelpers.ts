@@ -315,7 +315,7 @@ export function evaluateMotionWithCount(
     return null;
   }
 
-  return clampCursor(lines, cur, 'NORMAL');
+  return clampCursor(lines, cur);
 }
 
 /**

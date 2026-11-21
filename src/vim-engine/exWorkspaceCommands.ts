@@ -38,6 +38,7 @@ import {
 import { executeFindFileCommand, openFuzzyFinder } from './fuzzyFinder';
 import { openHelp, closeHelp } from './helpEngine';
 import { triggerAutocmd } from './autocmdEngine';
+import { getOptions } from './setEngine';
 import { recordFileSave } from './undoTreeEngine';
 import { lookupUserCommand } from './userCommandEngine';
 import { changeWorkingDirectory, getEffectiveCwd } from './vfs';
@@ -424,7 +425,13 @@ function tryExecuteSaveQuitAndHelpCommand(
   trimmed: string,
   runEx: ExCommandRunner
 ): VimEditorState | null {
-  const writeCurrentBuffer = (curState: VimEditorState): VimEditorState => {
+  const writeCurrentBuffer = (curState: VimEditorState, force = false): VimEditorState => {
+    if (!force && getOptions(curState).readonly === true) {
+      return finishEx(curState, {
+        bell: true,
+        commandMessage: msg('E45: \'readonly\' 옵션이 설정되어 있습니다 (덮어쓰려면 ! 추가)'),
+      });
+    }
     const preSaved = triggerAutocmd(curState, 'BufWritePre', undefined, runEx);
     const savedState = recordFileSave(preSaved);
     const syncedVirtualFiles =
@@ -500,15 +507,31 @@ function tryExecuteSaveQuitAndHelpCommand(
   }
 
   if (
-    (cleanCmd === 'w' || cleanCmd === 'write' || cleanCmd === 'update' || cleanCmdRaw === 'up') &&
+    (cleanCmd === 'w' ||
+      cleanCmd === 'write' ||
+      cleanCmd === 'update' ||
+      cleanCmdRaw === 'up' ||
+      cleanCmd === 'w!' ||
+      cleanCmd === 'write!' ||
+      cleanCmd === 'update!' ||
+      cleanCmdRaw === 'up!') &&
     !(state.userCommands && lookupUserCommand(state, cleanCmdRaw).kind === 'found')
   ) {
-    return writeCurrentBuffer(state);
+    return writeCurrentBuffer(state, cleanCmdRaw.endsWith('!'));
   }
 
-  if (cleanCmd === 'wq' || cleanCmd === 'x' || cleanCmd === 'exit' || cleanCmdRaw === 'wq!') {
-    const written = writeCurrentBuffer(state);
-    return quitCurrentWindow(written, cleanCmdRaw.endsWith('!'));
+  if (
+    cleanCmd === 'wq' ||
+    cleanCmd === 'x' ||
+    cleanCmd === 'exit' ||
+    cleanCmdRaw === 'wq!' ||
+    cleanCmdRaw === 'x!' ||
+    cleanCmdRaw === 'exit!'
+  ) {
+    const force = cleanCmdRaw.endsWith('!');
+    const written = writeCurrentBuffer(state, force);
+    if (written.bell) return written;
+    return quitCurrentWindow(written, force);
   }
 
   if (cleanCmd === 'q' || cleanCmd === 'quit' || cleanCmdRaw === 'q!' || cleanCmdRaw === 'quit!') {

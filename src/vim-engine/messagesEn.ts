@@ -420,4 +420,6 @@ export const EN_MESSAGES: Record<string, string> = {
   "매핑을 찾을 수 없습니다: {lhs}": "No mapping found: {lhs}",
   "E354: 유효하지 않은 레지스터 이름입니다: '{reg}'": "E354: Invalid register name: '{reg}'",
   "E555: 태그 스택의 맨 아래입니다 (at bottom of tag stack)": "E555: at bottom of tag stack",
+  "E21: 'modifiable' 옵션이 꺼져 있어 변경할 수 없습니다": "E21: Cannot make changes, 'modifiable' is off",
+  "E45: 'readonly' 옵션이 설정되어 있습니다 (덮어쓰려면 ! 추가)": "E45: 'readonly' option is set (add ! to override)",
 };
