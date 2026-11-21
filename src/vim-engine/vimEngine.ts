@@ -380,7 +380,20 @@ export function rawHandleKey(
     };
   }
 
-  // 실시간 LSP 진단 재계산 및 커서 이동/모드 전환 시 열린 LSP 호버 자동 닫기
+  // Gitsigns 기준선(gitBaseLines) 최초 버퍼 편집 시 자동 캡처
+  if (
+    !state.gitBaseLines &&
+    !nextState.gitBaseLines &&
+    nextState.lines !== state.lines &&
+    (nextState.currentBufferId ?? 1) === (state.currentBufferId ?? 1) &&
+    !nextState.netrw?.isOpen &&
+    !nextState.helpSession?.isOpen &&
+    !nextState.cmdlineWindow
+  ) {
+    nextState = { ...nextState, gitBaseLines: [...state.lines] };
+  }
+
+  // 실시간 LSP 진단 재계산 및 커서 이동/모드 전환 시 열린 LSP 호버·Git Hunk 미리보기 자동 닫기
   nextState = syncLiveLspDiagnostics(state, nextState);
   if (
     state.lspHover?.isOpen &&
@@ -390,6 +403,16 @@ export function rawHandleKey(
       nextState.mode !== 'NORMAL')
   ) {
     nextState = { ...nextState, lspHover: null };
+  }
+  if (
+    state.gitHunkPreview?.isOpen &&
+    nextState.gitHunkPreview?.isOpen &&
+    (key === 'Escape' ||
+      nextState.cursor.line !== state.cursor.line ||
+      nextState.lines !== state.lines ||
+      nextState.mode !== 'NORMAL')
+  ) {
+    nextState = { ...nextState, gitHunkPreview: null };
   }
 
   return applyScrollbindDelta(prevTopRow, prevActivePaneIndex, prevSplitPanes, nextState);

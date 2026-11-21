@@ -15,6 +15,7 @@ import {
   LspRenameSession,
   LspCodeActionMenuState,
   CustomMatchEntry,
+  GitHunkPreviewState,
 } from '../../vim-engine';
 import {
   findMatches,
@@ -103,6 +104,16 @@ export interface EditorProps {
   onCloseLspCodeAction?: () => void;
   /** 커스텀 정규식 하이라이트 매치 (:match, matchadd()) */
   customMatches?: CustomMatchEntry[];
+  /** Gitsigns 줄별 거터 사인 맵 (lineIdx -> 'add' | 'change' | 'delete') */
+  gitLineSigns?: Map<number, 'add' | 'change' | 'delete'>;
+  /** Gitsigns Hunk 미리보기 팝업 세션 (:Gitsigns preview_hunk) */
+  gitHunkPreview?: GitHunkPreviewState | null;
+  /** Git Hunk 미리보기 닫기 콜백 */
+  onCloseGitHunkPreview?: () => void;
+  /** 현재 Git Hunk 되돌리기 콜백 */
+  onResetGitHunk?: () => void;
+  /** 현재 Git Hunk 스테이징 콜백 */
+  onStageGitHunk?: () => void;
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -146,6 +157,11 @@ export const Editor: React.FC<EditorProps> = ({
   onApplyLspCodeAction,
   onCloseLspCodeAction,
   customMatches,
+  gitLineSigns,
+  gitHunkPreview,
+  onCloseGitHunkPreview,
+  onResetGitHunk,
+  onStageGitHunk,
 }) => {
   const explicitFt =
     options?.filetype ||
@@ -362,6 +378,19 @@ export const Editor: React.FC<EditorProps> = ({
                     </span>
                   )}
                   <span className="line-num-text">{lineNumberDisplay}</span>
+                  {gitLineSigns?.get(lineIdx) && (
+                    <span
+                      className={`gutter-git-sign git-sign-${gitLineSigns.get(lineIdx)}`}
+                      data-testid={`git-sign-${lineIdx + 1}`}
+                      title={`Git: ${gitLineSigns.get(lineIdx)}`}
+                    >
+                      {gitLineSigns.get(lineIdx) === 'add'
+                        ? '+'
+                        : gitLineSigns.get(lineIdx) === 'delete'
+                          ? '_'
+                          : '~'}
+                    </span>
+                  )}
                 </div>
                 <div className="line-content">
                   {colorColumnIndices.map((ccIdx) => (
@@ -517,6 +546,65 @@ export const Editor: React.FC<EditorProps> = ({
                             ))}
                           </div>
                           <div className="lsp-popup-hint">{t('숫자/Enter 선택 · Esc 취소')}</div>
+                        </div>
+                      )}
+                      {gitHunkPreview?.isOpen && gitHunkPreview.line === lineIdx && (
+                        <div
+                          className={`lsp-hover-popup git-hunk-preview-popup ${lines.length - 1 - lineIdx < 6 && lineIdx >= 4 ? 'open-upward' : ''}`}
+                          data-testid="git-hunk-preview-popup"
+                          style={{ left: `calc(${Math.min(cursor.col, 24)} * 1ch)` }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="lsp-hover-header">
+                            <span className={`lsp-hover-kind git-hunk-badge type-${gitHunkPreview.hunk.type}`}>
+                              GIT {gitHunkPreview.hunk.type.toUpperCase()}
+                            </span>
+                            <span className="lsp-hover-symbol">
+                              Hunk #{gitHunkPreview.hunk.id}
+                            </span>
+                            <div className="git-hunk-popup-actions">
+                              {onStageGitHunk && (
+                                <button
+                                  type="button"
+                                  className="git-hunk-action-btn stage"
+                                  data-testid="git-hunk-stage-btn"
+                                  onClick={() => onStageGitHunk()}
+                                >
+                                  Stage
+                                </button>
+                              )}
+                              {onResetGitHunk && (
+                                <button
+                                  type="button"
+                                  className="git-hunk-action-btn reset"
+                                  data-testid="git-hunk-reset-btn"
+                                  onClick={() => onResetGitHunk()}
+                                >
+                                  Reset
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                className="lsp-hover-close"
+                                onClick={() => onCloseGitHunkPreview?.()}
+                                aria-label={t('Git 미리보기 닫기')}
+                              >
+                                Esc
+                              </button>
+                            </div>
+                          </div>
+                          <div className="git-hunk-diff-body">
+                            {gitHunkPreview.hunk.removedLines.map((rl, idx) => (
+                              <div key={`rem-${idx}`} className="git-hunk-line removed">
+                                - {rl}
+                              </div>
+                            ))}
+                            {gitHunkPreview.hunk.addedLines.map((al, idx) => (
+                              <div key={`add-${idx}`} className="git-hunk-line added">
+                                + {al}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                       {isCursorLine &&

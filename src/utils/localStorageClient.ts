@@ -11,6 +11,7 @@ export const STORAGE_KEYS = {
   REGISTER_INSPECTOR: 'vim_register_inspector_v1',
   MARKS_VISUALIZER: 'vim_marks_visualizer_v1',
   GRAMMAR_AST: 'vim_grammar_ast_v1',
+  WHICH_KEY: 'vim_which_key_v1',
   ACTION_TIMELINE: 'vim_practice_action_timeline_enabled',
   SPEEDRUN_RECORD: 'vim_speedrun_record_v1',
   HARDCORE_MODE: 'vim_hardcore_mode_v1',

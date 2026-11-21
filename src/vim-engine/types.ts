@@ -210,6 +210,8 @@ export interface VimBuffer {
   filetype?: string;
   /** 마지막 저장 시점 스냅샷 (수정 여부 판정용) */
   savedLines?: string[];
+  /** Git HEAD 원본 스냅샷 (Gitsigns Hunk 계산용) */
+  gitBaseLines?: string[];
 }
 
 export interface VimTabPage {
@@ -568,6 +570,33 @@ export interface DiffHunk {
   type: 'change' | 'add' | 'delete';
 }
 
+export interface GitHunk {
+  id: number;
+  type: 'add' | 'change' | 'delete';
+  /** 현재 버퍼 기준 시작 0-based 행 인덱스 */
+  startLine: number;
+  /** 현재 버퍼 기준 끝 0-based 행 인덱스 */
+  endLine: number;
+  /** 원본(HEAD/base) 시작 0-based 행 인덱스 */
+  baseStart: number;
+  /** 원본(HEAD/base) 줄 수 */
+  baseCount: number;
+  /** 현재 버퍼 기준 실제 치환 시작 0-based 행 인덱스 */
+  currentStart: number;
+  /** 현재 버퍼 줄 수 */
+  currentCount: number;
+  /** 원본(HEAD/base)에서 제거·변경된 줄 목록 */
+  removedLines: string[];
+  /** 현재 버퍼에 추가·변경된 줄 목록 */
+  addedLines: string[];
+}
+
+export interface GitHunkPreviewState {
+  isOpen: boolean;
+  hunk: GitHunk;
+  line: number;
+}
+
 export interface UndoTreeNode {
   seq: number;
   parentSeq: number | null;
@@ -846,6 +875,12 @@ export interface VimEditorState {
   diffMode?: boolean;
   /** 현재 계산된 Diff Hunk 목록 */
   diffHunks?: DiffHunk[];
+  /** Gitsigns 기준 원본 스냅샷 (최초 편집 시 자동 캡처 또는 외부 주입) */
+  gitBaseLines?: string[];
+  /** :Gitsigns stage_hunk 취소를 위한 이전 gitBaseLines 스택 */
+  gitBaseHistory?: string[][];
+  /** :Gitsigns preview_hunk 플로팅 미리보기 세션 */
+  gitHunkPreview?: GitHunkPreviewState | null;
   /** 순정 Vim Undo Tree 노드 맵 (seq -> UndoTreeNode) */
   undoTreeNodes?: Record<number, UndoTreeNode>;
   /** 현재 활성화된 변경 시퀀스 번호 */

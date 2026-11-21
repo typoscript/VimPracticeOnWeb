@@ -25,6 +25,9 @@ import {
   applyLspCodeAction,
   closeLspCodeActionMenu,
   syncLiveLspDiagnostics,
+  closeGitHunkPreview,
+  resetGitHunk,
+  stageGitHunk,
   selectCompletionCandidate,
   selectWildmenuCandidate,
   setMark,
@@ -160,6 +163,21 @@ export function useEditorWorkspaceHandlers({
     [applyAndFocus]
   );
 
+  const handleCloseGitHunkPreview = useCallback(
+    () => applyAndFocus((prev) => closeGitHunkPreview(prev)),
+    [applyAndFocus]
+  );
+
+  const handleResetGitHunk = useCallback(
+    () => applyAndFocus((prev) => resetGitHunk(prev)),
+    [applyAndFocus]
+  );
+
+  const handleStageGitHunk = useCallback(
+    () => applyAndFocus((prev) => stageGitHunk(prev)),
+    [applyAndFocus]
+  );
+
   const handleSelectFuzzyFinderAction = useCallback(
     (action: 'open' | 'vsplit' | 'split' | 'tab') =>
       applyAndFocus((prev) => selectFuzzyFinderItem(prev, action)),
@@ -290,6 +308,9 @@ export function useEditorWorkspaceHandlers({
       onCancelLspRename: handleCancelLspRename,
       onApplyLspCodeAction: handleApplyLspCodeAction,
       onCloseLspCodeAction: handleCloseLspCodeAction,
+      onCloseGitHunkPreview: handleCloseGitHunkPreview,
+      onResetGitHunk: handleResetGitHunk,
+      onStageGitHunk: handleStageGitHunk,
       onJumpQuickfixItem: handleJumpQuickfixItem,
       onCloseQuickfixWindow: handleCloseQuickfixWindow,
       onJumpLocationListItem: handleJumpLocationListItem,
@@ -312,6 +333,9 @@ export function useEditorWorkspaceHandlers({
       handleCancelLspRename,
       handleApplyLspCodeAction,
       handleCloseLspCodeAction,
+      handleCloseGitHunkPreview,
+      handleResetGitHunk,
+      handleStageGitHunk,
       handleJumpQuickfixItem,
       handleCloseQuickfixWindow,
       handleJumpLocationListItem,

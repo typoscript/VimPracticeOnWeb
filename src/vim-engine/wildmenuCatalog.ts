@@ -120,6 +120,7 @@ export const AVAILABLE_COMMANDS: string[] = [
   'function',
   'g',
   'gb',
+  'Gitsigns',
   'global',
   'h',
   'help',

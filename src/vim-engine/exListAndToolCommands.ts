@@ -36,6 +36,7 @@ import { executeAbbrevCommand } from './abbrevEngine';
 import { executeUserCommandDefinition } from './userCommandEngine';
 import { executeDigraphCommand } from './digraphs';
 import { addSpellGoodWord, addSpellWrongWord, undoSpellWord } from './spellEngine';
+import { executeGitsignsCommand } from './gitSignsEngine';
 import { compileVimRegex } from './vimRegex';
 import { describeCharAt } from './engineHelpers';
 import { msg } from './messages';
@@ -447,6 +448,12 @@ function tryExecuteMappingAndMiscToolCommand(
   const spellUndoMatch = cleanCmdRaw.match(/^(?:speu|spellu(?:n(?:d(?:o)?)?)?)!?(?:\s+(.*))?$/i);
   if (spellUndoMatch) {
     return finishEx(undoSpellWord(state, spellUndoMatch[1]));
+  }
+
+  // :Gitsigns [next_hunk|prev_hunk|preview_hunk|reset_hunk|reset_buffer|stage_hunk|undo_stage_hunk|status]
+  const gitsignsMatch = cleanCmdRaw.match(/^(?:Gitsigns|Gitsign|GitHunk)(?:\s+(.*))?$/i);
+  if (gitsignsMatch) {
+    return finishEx(executeGitsignsCommand(state, gitsignsMatch[1] ?? ''));
   }
 
   return null;

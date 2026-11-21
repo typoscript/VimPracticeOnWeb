@@ -113,6 +113,13 @@ export const saveGrammarASTSetting = (enabled: boolean): void => {
   writeStorageBoolean(GRAMMAR_AST_STORAGE_KEY, enabled);
 };
 
+/** which-key.nvim 실시간 단축키 가이드 팝업 표시 여부 조회/저장 (기본값: true) */
+export const loadWhichKeySetting = (): boolean =>
+  readStorageBoolean(STORAGE_KEYS.WHICH_KEY, true);
+export const saveWhichKeySetting = (enabled: boolean): void => {
+  writeStorageBoolean(STORAGE_KEYS.WHICH_KEY, enabled);
+};
+
 /** 실시간 명령 복기 타임라인 & Vim X-Ray 패널 표시 여부 조회/저장 (기본값: true) */
 export const loadActionTimelineSetting = (): boolean =>
   readStorageBoolean(STORAGE_KEYS.ACTION_TIMELINE, true);

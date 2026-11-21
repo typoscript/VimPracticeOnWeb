@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 181개 테스트 파일, 2,178개 테스트 100% 통과 필수)*
+  *(현재 183개 테스트 파일, 2,188개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -202,6 +202,8 @@
   - **노멀·Ex 문법 보강 (`operators.ts`, `normalStandaloneCommands.ts`, `vimEngine.ts`, `exRange.ts`, `commandLine.ts`)**: 커서 왼쪽 문자 삭제 `[count]X`(레지스터·`.`·Undo 연동), 줄 단위 실행 취소·토글 `U`(`lineUndoSnapshot`), Neovim 기본 마지막 매크로 재실행 `[count]Q`(`lastRecordedMacro`/`lastPlayedMacro`), 첫 주소 이동 후 상대 평가하는 Ex 세미콜론 범위(`;`) 및 연쇄 범위, `:keepjumps`/`:keepmarks`/`:lockmarks` Ex 모디파이어를 구현했습니다.
   - **Vimscript 문법 완성 (`vimscriptLexer.ts`, `vimscriptValues.ts`, `vimscriptEval.ts`, `vimscriptBuiltins.ts`, `vimscriptFunctions.ts`, `vimscriptEngine.ts`, `sourceEngine.ts`)**: 부동소수점 리터럴(`3.14`, `1.5e-2`)·실수 나눗셈·`v:t_*` 상수·수학 내장 함수(`float2nr`, `round`, `floor`, `ceil`, `trunc`, `sqrt`, `pow`, `fmod`, `str2float`, `sin`/`cos`/`tan`/`log`/`log10`/`exp`), `:function` `dict`/`closure` 속성 보존 및 `self` 바인딩, 불변 `:const`·`:lockvar`/`:unlockvar`(`E46`/`E741`), `:echoerr`/`:echon`/`:echohl`, Heredoc(`:let/:const var =<< [trim] END ... END`, `E990`)을 구현했습니다.
   - **키매핑 전 모드 & Insert 완성/들여쓰기 (`keymapEngine.ts`, `exListAndToolCommands.ts`, `visualMode.ts`, `completion.ts`, `insertMode.ts`, `wildmenuCatalog.ts`)**: Select 모드 `:smap`/`:snoremap`/`:sunmap`/`:smapclear`, Insert+Cmdline 동시 `:map!`/`:noremap!`/`:unmap!`/`:mapclear!`, 전 모드 `*mapclear` (`<buffer>` 포함), Insert `Ctrl-x Ctrl-v`(Vim 명령·함수 완성)·`Ctrl-x s`/`Ctrl-x Ctrl-s`(맞춤법 추천 완성)·`0 Ctrl-d`/`^ Ctrl-d`(선행 들여쓰기 즉시 제거)를 구현했습니다.
+- **`which-key.nvim` 실시간 단축키 가이드 팝업 (`src/components/WhichKey/WhichKeyPopup.tsx`, `whichKeyCatalog.ts`, `ViewPanelsDropdown.tsx`)**: `g`/`gr`/`z`/`[`/`]`/`Ctrl-w`/`"`/`m`/`'`/`ys`/`cs`/`ds`/연산자 대기(`d`/`c`/`y`/`>`/`<`/`=`/`gc`/`gq`/`gu`/`gU`/`g~`)/텍스트 객체(`di`/`da`/`vi` 등)/Insert `Ctrl-x`·`Ctrl-r` 및 사용자 정의 `:nmap`/`<leader>` 다중 키 매핑 대기 시 에디터 하단에 후속 키 가이드를 실시간 표시하며, 클릭 실행·한/영 자동 전환·패널 메뉴 토글(`vim_which_key_v1`)을 지원합니다.
+- **`gitsigns.nvim` 스타일 Git Hunk 거터 & 조작 (`src/vim-engine/gitSignsEngine.ts`, `normalBracketPrefix.ts`, `visualPrefixes.ts`, `exListAndToolCommands.ts`, `Editor.tsx`)**: 버퍼 최초 편집 시 `gitBaseLines` 원본 스냅샷을 자동 캡처해 거터에 `+`(추가)/`~`(수정)/`_`(삭제) 사인을 실시간 표시합니다. `]h`/`[h`(NORMAL·VISUAL 및 카운트·`wrapscan` 지원), `:Gitsigns preview_hunk`(인라인 diff 플로팅 미리보기 + Stage/Reset 버튼 + Esc/이동 자동 닫힘), `:Gitsigns reset_hunk`(단일 Hunk 원복 + `u` Undo), `:Gitsigns reset_buffer`, `:Gitsigns stage_hunk`, `:Gitsigns undo_stage_hunk`, `:Gitsigns status` 를 구현했습니다.
 
 ---
 

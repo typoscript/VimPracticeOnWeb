@@ -26,6 +26,7 @@ import {
   moveByExtraMotion,
   evaluateMotionWithCount,
 } from './engineHelpers';
+import { jumpGitHunk } from './gitSignsEngine';
 
 /**
  * Visual 모드 'z' 접두 명령 처리 (수평 스크롤 zh/zl/zH/zL/ze/zs, 수동 폴드 zf)
@@ -285,6 +286,9 @@ export function handleVisualBracketPrefix(state: VimEditorState, key: string): V
     const isMethod = key === 'm' || key === 'M' || key === 'f' || key === 'F';
     if (isPaired || isSection || isMethod) {
       return moveByExtraMotion(state, `${bracket}${key}`, count);
+    }
+    if (key === 'h') {
+      return jumpGitHunk(state, bracket === ']' ? 'next' : 'prev', count);
     }
     if (key === 'p' || key === 'P') {
       const snap = state.visualAnchor

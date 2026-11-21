@@ -436,3 +436,21 @@ export {
   findFunctionJumpTarget,
 } from './treesitterTextObjects';
 export type { TreesitterObjectType, StructuralNode } from './treesitterTextObjects';
+
+// ---- gitsigns.nvim 스타일 Git Hunk 거터·탐색(]h/[h)·미리보기·리셋·스테이징 (:Gitsigns) ----
+export {
+  getEffectiveGitBaseLines,
+  computeGitHunks,
+  getGitHunks,
+  getGitLineSigns,
+  findGitHunkAtLine,
+  jumpGitHunk,
+  previewGitHunk,
+  closeGitHunkPreview,
+  resetGitHunk,
+  resetGitBuffer,
+  stageGitHunk,
+  undoStageGitHunk,
+  executeGitsignsCommand,
+} from './gitSignsEngine';
+export type { GitHunk, GitHunkPreviewState } from './types';

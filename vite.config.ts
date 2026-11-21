@@ -102,6 +102,7 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
     name: 'vim-engine-ex',
     files: [
       'diffEngine.ts',
+      'gitSignsEngine.ts',
       'netrwEngine.ts',
       'fuzzyFinder.ts',
       'spellEngine.ts',

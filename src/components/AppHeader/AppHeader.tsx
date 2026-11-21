@@ -40,6 +40,8 @@ interface AppHeaderProps {
   onToggleRelativeLineNumbers: () => void;
   showMacroDebugger: boolean;
   onToggleMacroDebugger: () => void;
+  showWhichKey?: boolean;
+  onToggleWhichKey?: () => void;
   currentTheme: VimTheme;
   onThemeChange: (theme: VimTheme) => void;
   isMuted: boolean;
@@ -77,6 +79,8 @@ export function AppHeader({
   onToggleRelativeLineNumbers,
   showMacroDebugger,
   onToggleMacroDebugger,
+  showWhichKey,
+  onToggleWhichKey,
   currentTheme,
   onThemeChange,
   isMuted,
@@ -247,6 +251,8 @@ export function AppHeader({
               onToggleRelativeLineNumbers={onToggleRelativeLineNumbers}
               showMacroDebugger={showMacroDebugger}
               onToggleMacroDebugger={onToggleMacroDebugger}
+              showWhichKey={showWhichKey}
+              onToggleWhichKey={onToggleWhichKey}
             />
           </div>
 

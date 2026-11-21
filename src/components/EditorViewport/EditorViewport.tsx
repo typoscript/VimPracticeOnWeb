@@ -6,6 +6,7 @@ import {
   ensureBuffers,
   ensureTabPages,
   getEffectiveWindowTree,
+  getGitLineSigns,
   CursorPosition,
 } from '../../vim-engine';
 import { t } from '../../i18n';
@@ -32,6 +33,9 @@ interface EditorViewportProps {
   onCancelLspRename?: () => void;
   onApplyLspCodeAction?: (index: number) => void;
   onCloseLspCodeAction?: () => void;
+  onCloseGitHunkPreview?: () => void;
+  onResetGitHunk?: () => void;
+  onStageGitHunk?: () => void;
   onJumpQuickfixItem: (index: number) => void;
   onCloseQuickfixWindow: () => void;
   onJumpLocationListItem: (index: number) => void;
@@ -68,6 +72,9 @@ export function EditorViewport({
   onCancelLspRename,
   onApplyLspCodeAction,
   onCloseLspCodeAction,
+  onCloseGitHunkPreview,
+  onResetGitHunk,
+  onStageGitHunk,
   onJumpQuickfixItem,
   onCloseQuickfixWindow,
   onJumpLocationListItem,
@@ -90,6 +97,7 @@ export function EditorViewport({
   const splitTree = getEffectiveWindowTree(editorState);
   const isSplitMode = Boolean(splitTree && editorState.splitPanes && editorState.splitPanes.length >= 2);
   const paneCount = editorState.splitPanes?.length ?? 0;
+  const gitLineSigns = getGitLineSigns(displayEditorState);
 
   const renderSplitNode = (
     node: WindowLayoutNode,
@@ -181,6 +189,11 @@ export function EditorViewport({
             onSelectCompletionItem={onSelectCompletionCandidate}
             primaryFilename={paneFilename}
             customMatches={displayEditorState.customMatches}
+            gitLineSigns={isActive ? gitLineSigns : undefined}
+            gitHunkPreview={isActive ? displayEditorState.gitHunkPreview : undefined}
+            onCloseGitHunkPreview={onCloseGitHunkPreview}
+            onResetGitHunk={onResetGitHunk}
+            onStageGitHunk={onStageGitHunk}
           />
         </div>
       );
@@ -341,6 +354,11 @@ export function EditorViewport({
             onApplyLspCodeAction={onApplyLspCodeAction}
             onCloseLspCodeAction={onCloseLspCodeAction}
             customMatches={displayEditorState.customMatches}
+            gitLineSigns={gitLineSigns}
+            gitHunkPreview={displayEditorState.gitHunkPreview}
+            onCloseGitHunkPreview={onCloseGitHunkPreview}
+            onResetGitHunk={onResetGitHunk}
+            onStageGitHunk={onStageGitHunk}
           />
         )}
 

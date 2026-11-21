@@ -939,3 +939,112 @@
   font-size: 0.68rem;
   color: var(--text-muted, #6c7086);
 }
+
+/* gitsigns.nvim 스타일 거터 Git Hunk 마커 및 인라인 미리보기 */
+.gutter-git-sign {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 10px;
+  margin-left: 3px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1;
+  border-radius: 2px;
+}
+
+.gutter-git-sign.git-sign-add {
+  color: #a6e3a1;
+  border-left: 2px solid #a6e3a1;
+}
+
+.gutter-git-sign.git-sign-change {
+  color: #89b4fa;
+  border-left: 2px solid #89b4fa;
+}
+
+.gutter-git-sign.git-sign-delete {
+  color: #f38ba8;
+  border-left: 2px solid #f38ba8;
+}
+
+.git-hunk-preview-popup {
+  min-width: 280px;
+  max-width: 520px;
+}
+
+.git-hunk-badge.type-add {
+  background-color: rgba(166, 227, 161, 0.2);
+  color: #a6e3a1;
+}
+
+.git-hunk-badge.type-change {
+  background-color: rgba(137, 180, 250, 0.2);
+  color: #89b4fa;
+}
+
+.git-hunk-badge.type-delete {
+  background-color: rgba(243, 139, 168, 0.2);
+  color: #f38ba8;
+}
+
+.git-hunk-popup-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: auto;
+}
+
+.git-hunk-action-btn {
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 4px;
+  background: transparent;
+  padding: 0.08rem 0.38rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.git-hunk-action-btn.stage {
+  color: #a6e3a1;
+  border-color: rgba(166, 227, 161, 0.4);
+}
+
+.git-hunk-action-btn.stage:hover {
+  background: rgba(166, 227, 161, 0.16);
+}
+
+.git-hunk-action-btn.reset {
+  color: #f38ba8;
+  border-color: rgba(243, 139, 168, 0.4);
+}
+
+.git-hunk-action-btn.reset:hover {
+  background: rgba(243, 139, 168, 0.16);
+}
+
+.git-hunk-diff-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.78rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.git-hunk-line {
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  white-space: pre;
+}
+
+.git-hunk-line.removed {
+  background-color: rgba(243, 139, 168, 0.14);
+  color: #f38ba8;
+}
+
+.git-hunk-line.added {
+  background-color: rgba(166, 227, 161, 0.14);
+  color: #a6e3a1;
+}

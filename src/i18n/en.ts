@@ -1319,4 +1319,12 @@ export const EN: Record<string, string> = {
   "✅ 저장됨!": "✅ Saved!",
   "💾 라이브러리 저장": "💾 Save to Library",
   "호버 닫기": "Close Hover",
+  "Git 미리보기 닫기": "Close Git Preview",
+  "Which-Key 단축키 가이드": "Which-Key Shortcut Guide",
+  "Esc 취소": "Esc cancel",
+  "Which-Key 팝업 끄기": "Hide Which-Key popup",
+  "Which-Key 실시간 단축키 가이드 팝업 토글": "Toggle Which-Key live shortcut guide popup",
+  "Which-Key 가이드": "Which-Key Guide",
+  "g/z/[/]/Ctrl-w/연산자/리더키 대기 시 후속 키 실시간 안내": "Live next-key hints for g/z/[/]/Ctrl-w/operators/leader",
+  "🧭 Which-Key: {state}": "🧭 Which-Key: {state}",
 };

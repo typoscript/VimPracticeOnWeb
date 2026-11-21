@@ -10,6 +10,7 @@ import { MarksJumpVisualizer } from '../MarksJumpVisualizer/MarksJumpVisualizer'
 import { MacroDebugger } from '../MacroDebugger/MacroDebugger';
 import { VimGrammarASTViewer } from '../VimGrammarASTViewer/VimGrammarASTViewer';
 import { ActionTimelinePanel } from '../ActionTimelinePanel/ActionTimelinePanel';
+import { WhichKeyPopup } from '../WhichKey/WhichKeyPopup';
 import { AppTab } from '../AppHeader/AppHeader';
 import { EditorViewport } from '../EditorViewport/EditorViewport';
 import { VimEditorState, VimMode, computeSearchCount } from '../../vim-engine';
@@ -96,6 +97,12 @@ export interface WorkspaceEditorProps {
     | 'onNewTabPage'
     | 'onJumpToMark'
     | 'onCloseLspHover'
+    | 'onCancelLspRename'
+    | 'onApplyLspCodeAction'
+    | 'onCloseLspCodeAction'
+    | 'onCloseGitHunkPreview'
+    | 'onResetGitHunk'
+    | 'onStageGitHunk'
     | 'onJumpQuickfixItem'
     | 'onCloseQuickfixWindow'
     | 'onJumpLocationListItem'
@@ -133,6 +140,8 @@ export interface WorkspacePanelsProps {
   >;
   showMacroDebugger: boolean;
   onToggleMacroDebugger: () => void;
+  showWhichKey?: boolean;
+  onToggleWhichKey?: () => void;
   timelineBaseState: VimEditorState;
   onPreviewMacroFrame: (state: VimEditorState | null) => void;
   showDiffView: boolean;
@@ -311,6 +320,13 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
             onFocusEditor={editor.onFocus}
             onEditorAreaClick={editor.onAreaClick}
             {...editor.viewportHandlers}
+          />
+
+          <WhichKeyPopup
+            editorState={displayEditorState}
+            enabled={panels.showWhichKey ?? true}
+            onPressKey={editor.processKeyInput}
+            onDisable={panels.onToggleWhichKey}
           />
 
           <Keycaster recentKeys={editor.recentKeys} />

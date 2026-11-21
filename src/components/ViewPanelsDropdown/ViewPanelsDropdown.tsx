@@ -27,6 +27,9 @@ export interface ViewPanelsDropdownProps {
 
   showMacroDebugger?: boolean;
   onToggleMacroDebugger?: () => void;
+
+  showWhichKey?: boolean;
+  onToggleWhichKey?: () => void;
 }
 
 export const ViewPanelsDropdown: React.FC<ViewPanelsDropdownProps> = ({
@@ -47,6 +50,8 @@ export const ViewPanelsDropdown: React.FC<ViewPanelsDropdownProps> = ({
   onToggleRelativeLineNumbers,
   showMacroDebugger = false,
   onToggleMacroDebugger,
+  showWhichKey = true,
+  onToggleWhichKey,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -61,6 +66,7 @@ export const ViewPanelsDropdown: React.FC<ViewPanelsDropdownProps> = ({
     showVirtualKeyboard,
     relativeLineNumbers,
     !!onToggleMacroDebugger && showMacroDebugger,
+    !!onToggleWhichKey && showWhichKey,
   ].filter(Boolean).length;
 
   // 외부 클릭 시 드롭다운 닫기
@@ -310,6 +316,30 @@ export const ViewPanelsDropdown: React.FC<ViewPanelsDropdownProps> = ({
               </div>
               <span className={`panel-switch-badge ${showMacroDebugger ? 'on' : 'off'}`}>
                 {t('🎞️ 매크로 디버거: {state}', { state: showMacroDebugger ? 'ON' : 'OFF' })}
+              </span>
+            </button>
+          )}
+
+          {/* 8. Which-Key 실시간 단축키 가이드 팝업 */}
+          {onToggleWhichKey && (
+            <button
+              type="button"
+              className={`view-panel-item ${showWhichKey ? 'active' : ''}`}
+              onClick={onToggleWhichKey}
+              data-testid="toggle-which-key-btn"
+              title={t('Which-Key 실시간 단축키 가이드 팝업 토글')}
+              role="menuitemcheckbox"
+              aria-checked={showWhichKey}
+            >
+              <div className="panel-item-left">
+                <span className="panel-icon">🧭</span>
+                <div className="panel-text-block">
+                  <span className="panel-title">{t('Which-Key 가이드')}</span>
+                  <span className="panel-desc">{t('g/z/[/]/Ctrl-w/연산자/리더키 대기 시 후속 키 실시간 안내')}</span>
+                </div>
+              </div>
+              <span className={`panel-switch-badge ${showWhichKey ? 'on' : 'off'}`}>
+                {t('🧭 Which-Key: {state}', { state: showWhichKey ? 'ON' : 'OFF' })}
               </span>
             </button>
           )}

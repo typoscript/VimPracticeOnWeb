@@ -13,6 +13,8 @@ import {
   saveMarksVisualizerSetting,
   loadGrammarASTSetting,
   saveGrammarASTSetting,
+  loadWhichKeySetting,
+  saveWhichKeySetting,
 } from '../utils/storage';
 
 interface UseEditorViewSettingsParams {
@@ -49,6 +51,7 @@ export function useEditorViewSettings({
     loadMarksVisualizerSetting()
   );
   const [showGrammarAST, setShowGrammarAST] = useState<boolean>(() => loadGrammarASTSetting());
+  const [showWhichKey, setShowWhichKey] = useState<boolean>(() => loadWhichKeySetting());
   const [showMacroDebugger, setShowMacroDebugger] = useState<boolean>(false);
 
   // Vim 엔진 상태 플래그/옵션 변경에 따라 UI 패널 상태를 동기화
@@ -97,6 +100,14 @@ export function useEditorViewSettings({
     setShowGrammarAST((prev) => {
       const next = !prev;
       saveGrammarASTSetting(next);
+      return next;
+    });
+  }, []);
+
+  const handleToggleWhichKey = useCallback(() => {
+    setShowWhichKey((prev) => {
+      const next = !prev;
+      saveWhichKeySetting(next);
       return next;
     });
   }, []);
@@ -163,6 +174,7 @@ export function useEditorViewSettings({
     setShowRegisterInspector(loadRegisterInspectorSetting());
     setShowMarksVisualizer(loadMarksVisualizerSetting());
     setShowGrammarAST(loadGrammarASTSetting());
+    setShowWhichKey(loadWhichKeySetting());
   }, []);
 
   const isAnyModalOpen =
@@ -194,10 +206,13 @@ export function useEditorViewSettings({
     showMarksVisualizer,
     showGrammarAST,
     setShowGrammarAST,
+    showWhichKey,
+    setShowWhichKey,
     showMacroDebugger,
     handleToggleRegisterInspector,
     handleToggleMarksVisualizer,
     handleToggleGrammarAST,
+    handleToggleWhichKey,
     handleToggleVirtualKeyboard,
     handleToggleDiffView,
     enableDiffView,

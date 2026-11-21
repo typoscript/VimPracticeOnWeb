@@ -1,0 +1,158 @@
+.which-key-popup {
+  margin-top: 0.45rem;
+  background: var(--bg-panel, #1e1e2e);
+  border: 1px solid rgba(137, 180, 250, 0.38);
+  border-radius: 10px;
+  padding: 0.65rem 0.85rem;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.42);
+  font-family: var(--font-mono, 'JetBrains Mono', monospace);
+  animation: whichKeyFadeIn 0.12s ease-out;
+}
+
+@keyframes whichKeyFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.which-key-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.which-key-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.which-key-prefix-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.12rem 0.45rem;
+  border-radius: 5px;
+  background: rgba(137, 180, 250, 0.2);
+  color: #89b4fa;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+
+.which-key-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-primary, #cdd6f4);
+  font-family: var(--font-sans, inherit);
+}
+
+.which-key-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.which-key-esc-hint {
+  font-size: 0.7rem;
+  color: var(--text-muted, #6c7086);
+}
+
+.which-key-close-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  color: var(--text-secondary, #a6adc8);
+  font-size: 0.7rem;
+  padding: 0.08rem 0.35rem;
+  cursor: pointer;
+}
+
+.which-key-close-btn:hover {
+  background: rgba(243, 139, 168, 0.16);
+  color: #f38ba8;
+}
+
+.which-key-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+  gap: 0.28rem 0.6rem;
+}
+
+.which-key-item {
+  display: flex;
+  align-items: center;
+  gap: 0.38rem;
+  padding: 0.22rem 0.38rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text-primary, #cdd6f4);
+  font-size: 0.75rem;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
+}
+
+.which-key-item:not(:disabled):hover {
+  background: rgba(137, 180, 250, 0.12);
+  border-color: rgba(137, 180, 250, 0.3);
+}
+
+.which-key-item:disabled {
+  cursor: default;
+  opacity: 0.92;
+}
+
+.which-key-keycap {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.6rem;
+  padding: 0.06rem 0.32rem;
+  border-radius: 4px;
+  background: rgba(250, 179, 135, 0.16);
+  color: #fab387;
+  font-weight: 700;
+  font-size: 0.74rem;
+  font-family: inherit;
+}
+
+.which-key-item.is-group .which-key-keycap {
+  background: rgba(203, 166, 247, 0.18);
+  color: #cba6f7;
+}
+
+.which-key-item.is-custom .which-key-keycap {
+  background: rgba(166, 227, 161, 0.18);
+  color: #a6e3a1;
+}
+
+.which-key-arrow {
+  color: var(--text-muted, #6c7086);
+  font-size: 0.65rem;
+}
+
+.which-key-label {
+  color: var(--text-secondary, #bac2de);
+  font-family: var(--font-sans, inherit);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.which-key-item.is-group .which-key-label {
+  color: #cba6f7;
+  font-weight: 600;
+}
+
+.which-key-item.is-custom .which-key-label {
+  color: #a6e3a1;
+}

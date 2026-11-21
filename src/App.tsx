@@ -290,6 +290,8 @@ export function App() {
         onToggleRelativeLineNumbers={viewSettings.handleToggleRelativeLine}
         showMacroDebugger={viewSettings.showMacroDebugger}
         onToggleMacroDebugger={viewSettings.handleToggleMacroDebugger}
+        showWhichKey={viewSettings.showWhichKey}
+        onToggleWhichKey={viewSettings.handleToggleWhichKey}
         currentTheme={hardcore.currentTheme}
         onThemeChange={hardcore.handleThemeChange}
         isMuted={audio.isMuted}
@@ -364,6 +366,8 @@ export function App() {
           marksHandlers: workspaceHandlers.marksHandlers,
           showMacroDebugger: viewSettings.showMacroDebugger,
           onToggleMacroDebugger: viewSettings.handleToggleMacroDebugger,
+          showWhichKey: viewSettings.showWhichKey,
+          onToggleWhichKey: viewSettings.handleToggleWhichKey,
           timelineBaseState: timeline.timelineBaseState,
           onPreviewMacroFrame: setMacroPreviewState,
           showDiffView: viewSettings.showDiffView,
