@@ -77,6 +77,10 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       ? 'VISUAL LINE'
       : mode === 'VISUAL_BLOCK'
       ? 'VISUAL BLOCK'
+      : mode === 'SELECT_LINE'
+      ? 'SELECT LINE'
+      : mode === 'SELECT_BLOCK'
+      ? 'SELECT BLOCK'
       : mode;
   const modeClass =
     insertCtrlXMode
@@ -85,6 +89,8 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       ? 'mode-insert-normal'
       : mode === 'VISUAL_LINE' || mode === 'VISUAL_BLOCK'
       ? 'mode-visual'
+      : mode === 'SELECT' || mode === 'SELECT_LINE' || mode === 'SELECT_BLOCK'
+      ? 'mode-select'
       : `mode-${mode.toLowerCase()}`;
   const isCommandLineActive = mode === 'COMMAND' || mode === 'SEARCH';
   const promptPrefix = commandType ?? (mode === 'COMMAND' ? ':' : '/');

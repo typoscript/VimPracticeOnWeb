@@ -120,7 +120,7 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
       return `role-${keyDef.role}`;
     }
 
-    if (mode === 'INSERT') {
+    if (mode === 'INSERT' || mode === 'SELECT' || mode === 'SELECT_LINE' || mode === 'SELECT_BLOCK') {
       if (keyDef.key === 'Escape') return 'role-control active-mode-key';
       return '';
     }

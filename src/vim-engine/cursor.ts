@@ -39,7 +39,7 @@ export function getMaxCol(
   const len = lineText ? lineText.length : 0;
   if (
     hasVirtualEdit(virtualedit, 'all') ||
-    (mode === 'VISUAL_BLOCK' && hasVirtualEdit(virtualedit, 'block'))
+    ((mode === 'VISUAL_BLOCK' || mode === 'SELECT_BLOCK') && hasVirtualEdit(virtualedit, 'block'))
   ) {
     return Math.max(len + 1000, 10000);
   }

@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 170개 테스트 파일, 2,079개 테스트 100% 통과 필수)*
+  *(현재 174개 테스트 파일, 2,112개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -173,6 +173,11 @@
   - **시각 가이드(`colorcolumn`, `cursorcolumn`) & Insert Undo 제어 (`setOptionsCore.ts`, `Editor.tsx`, `insertMode.ts`, `operators.ts`, `undoTreeEngine.ts`, `exBatchAndUndoCommands.ts`)**: 윈도우 로컬 `:set colorcolumn`(`cc=80,+1,100`) 세로 가이드선 및 `:set cursorcolumn`(`cuc`) 열 강조, Insert 모드 `Ctrl-g u`(수동 Undo 중단점)·`Ctrl-g j`/`k`(Insert 시작 열 기준 상하 이동), `:undojoin`(`E790` 검증 및 Undo Tree 제자리 병합)을 구현했습니다.
   - **와일드메뉴 `wildmode` & 클릭 선택 완성 (`wildmenu.ts`, `setEngine.ts`, `StatusBar.tsx`, `useEditorWorkspaceHandlers.ts`)**: `:set wildmode`(`wim`, `longest:full,full` 등 다단계 최장 공통 접두사 완성 및 순환, `E474` 검증)와 `StatusBar` 후보 칩 마우스 클릭 즉시 선택을 연동했습니다.
 - **8차 대형 엔진 모듈 분해 & 번들 청크 균형화 (`wildmenuCatalog.ts`, `vimscriptEditorBuiltins.ts`, `setOptionAssigners.ts`, `splitWindowCore.ts`, `vite.config.ts`)**: `wildmenu.ts`(1,355→726줄)에서 정적 카탈로그(`wildmenuCatalog.ts`, 638줄, `vim-engine-data` 청크)를, `vimscriptBuiltinsExtra.ts`(1,427→727줄)에서 레지스터·태그·점프·매핑·명령행·검색카운트·커스텀매치·JSON 내장 함수(`vimscriptEditorBuiltins.ts`, 726줄, `vim-engine-core` 청크)를, `setEngine.ts`(949→198줄)에서 옵션별 할당·조회기(`setOptionAssigners.ts`, 702줄)를, `splitWindow.ts`(971→524줄)에서 창 생성/닫기/포커스 코어(`splitWindowCore.ts`, 478줄)를 비순환 분리했습니다. 아울러 `diffEngine`·`netrwEngine`·`fuzzyFinder`·`spellEngine`·`cmdlineWindow`를 `vim-engine-ex` 계층으로 재배치해 `vim-engine-services` 청크를 `158.03 kB` → `128.61 kB` 로 경량화하고 모든 엔진 청크를 `91~135 kB` 대역으로 균형화했습니다.
+- **순정 Vim/Neovim 정밀 디테일 4종 확장 (`wrapscan`/`whichwrap`/`softtabstop`, `[count]%`/`[count]go`/`Ctrl-w gf|gF|g]|]`/`zug|zuw`, Insert `Ctrl-r Ctrl-o|Ctrl-p`/`g<`, Select 모드)**:
+  - **검색·줄경계·소프트탭 정밀 옵션 (`setOptionsCore.ts`, `setOptionAssigners.ts`, `searchMode.ts`, `motions.ts`, `insertMode.ts`, `replaceMode.ts`, `lineOperators.ts`)**: `:set wrapscan`/`nowrapscan`(`ws`/`nows`, `E384`/`E385`), `:set whichwrap`(`ww`, `b,s,h,l,<,>,~,[,]` 줄 경계 이동 및 `E474` 검증), `:set softtabstop`(`sts`, `-1` 시 `shiftwidth` 추종, `Tab`/`Backspace` 소프트탭 정지 및 `noexpandtab` 탭 병합)을 구현했습니다.
+  - **고급 점프 모션 & 맞춤법 등록 취소 (`extraMotions.ts`, `normalStandaloneCommands.ts`, `normalDCYOperators.ts`, `gotoFileEngine.ts`, `engineHelpers.ts`, `spellEngine.ts`, `normalZPrefix.ts`, `exListAndToolCommands.ts`)**: `[count]%`(백분율 줄 점프 및 `d`/`c`/`y`/`v` 결합), `[count]go`(1-based UTF-8 바이트 오프셋 점프 및 연산자 결합), `Ctrl-w gf`/`Ctrl-w gF`(새 탭 열기)·`Ctrl-w ]`/`Ctrl-w g]`(분할 창 태그 점프), `zug`/`zuw`/`zuG`/`zuW` 및 `:spellgood`/`:spellwrong`/`:spellundo`(`:speu`) Ex 명령을 구현했습니다.
+  - **Insert 리터럴/들여쓰기 맞춤 레지스터 삽입 & `g<` (`insertSpecialKeys.ts`, `commandLine.ts`, `normalGPrefix.ts`)**: Insert 모드 `Ctrl-r Ctrl-o`/`Ctrl-r Ctrl-r`(자동 들여쓰기 미적용 리터럴 삽입)·`Ctrl-r Ctrl-p`(현재 줄 들여쓰기 맞춤 삽입)과 Normal 모드 `g<`(직전 Ex 명령 출력 재표시)를 구현했습니다.
+  - **Select 모드 (`visualMode.ts`, `visual.ts`, `vimEngine.ts`, `normalGPrefix.ts`, `StatusBar.tsx`, `EditorLineRenderer.tsx`)**: `SELECT` / `SELECT_LINE` / `SELECT_BLOCK` 진입(`gh`, `gH`, `g<C-h>`, Visual `Ctrl-g` 토글), 방향키/Home/End 선택 확장, `Ctrl-o` 일회성 Visual 명령, `Backspace`/`Delete` 및 출력 문자 입력 시 선택 영역 즉시 교체·INSERT 전환과 UI 배지/선택 하이라이트를 구현했습니다.
 
 ---
 

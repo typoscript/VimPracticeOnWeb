@@ -35,7 +35,7 @@ import {
 import { executeSearchQuery, handleSearchModeKey } from './searchMode';
 import { handleCommandLineModeKey } from './cmdlineMode';
 import { handleInsertModeKey, handleReplaceModeKey } from './insertMode';
-import { handleVisualModeKey } from './visualMode';
+import { handleVisualModeKey, handleSelectModeKey } from './visualMode';
 import { handleNormalModeKey } from './normalMode';
 
 export type { ParsedPending } from './engineHelpers';
@@ -181,8 +181,38 @@ export function rawHandleKey(
     nextState = handleReplaceModeKey(state, key, isReplayingDot, macroDepth);
   } else if (state.mode === 'INSERT') {
     nextState = handleInsertModeKey(state, key, rawHandleKey, isReplayingDot, macroDepth, abbrevCtx);
+  } else if (state.mode === 'SELECT' || state.mode === 'SELECT_LINE' || state.mode === 'SELECT_BLOCK') {
+    nextState = handleSelectModeKey(state, key, rawHandleKey, macroDepth);
   } else if (state.mode === 'VISUAL' || state.mode === 'VISUAL_LINE' || state.mode === 'VISUAL_BLOCK') {
     nextState = handleVisualModeKey(state, key, rawHandleKey, macroDepth);
+    // Select 모드 Ctrl-o 일회성 Visual 명령 완료 시 다시 Select 모드로 복귀
+    if (state.selectVisualOneShot) {
+      if (key === 'Escape') {
+        nextState = { ...nextState, selectVisualOneShot: undefined };
+      } else if (!nextState.pendingKeys) {
+        if (
+          nextState.mode === 'VISUAL' ||
+          nextState.mode === 'VISUAL_LINE' ||
+          nextState.mode === 'VISUAL_BLOCK'
+        ) {
+          const backToSelect =
+            nextState.mode === 'VISUAL_LINE'
+              ? 'SELECT_LINE'
+              : nextState.mode === 'VISUAL_BLOCK'
+                ? 'SELECT_BLOCK'
+                : 'SELECT';
+          nextState = {
+            ...nextState,
+            mode: backToSelect,
+            selectVisualOneShot: undefined,
+          };
+        } else {
+          nextState = { ...nextState, selectVisualOneShot: undefined };
+        }
+      } else {
+        nextState = { ...nextState, selectVisualOneShot: true };
+      }
+    }
   } else if (state.mode === 'NORMAL') {
     nextState = handleNormalModeKey(state, key, rawHandleKey, handleKey, isReplayingDot, macroDepth);
     // 일회성 NORMAL 모드 명령 (Ctrl+o) 완료 여부 검사

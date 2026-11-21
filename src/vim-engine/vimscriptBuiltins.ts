@@ -109,7 +109,12 @@ function resolveLineArg(state: VimEditorState, arg: VimScriptValue): number {
   if (arg === '$') return state.lines.length - 1;
   if (arg === 'v') {
     const isVisual =
-      state.mode === 'VISUAL' || state.mode === 'VISUAL_LINE' || state.mode === 'VISUAL_BLOCK';
+      state.mode === 'VISUAL' ||
+      state.mode === 'VISUAL_LINE' ||
+      state.mode === 'VISUAL_BLOCK' ||
+      state.mode === 'SELECT' ||
+      state.mode === 'SELECT_LINE' ||
+      state.mode === 'SELECT_BLOCK';
     return isVisual && state.visualAnchor ? state.visualAnchor.line : state.cursor.line;
   }
   if (typeof arg === 'string' && arg.length === 2 && arg[0] === "'") {
@@ -232,7 +237,12 @@ const BUFFER_AND_CURSOR_BUILTINS: Record<string, Builtin> = {
       if (a === '$') return (s.lines[s.cursor.line] ?? '').length + 1;
       if (a === 'v') {
         const isVisual =
-          s.mode === 'VISUAL' || s.mode === 'VISUAL_LINE' || s.mode === 'VISUAL_BLOCK';
+          s.mode === 'VISUAL' ||
+          s.mode === 'VISUAL_LINE' ||
+          s.mode === 'VISUAL_BLOCK' ||
+          s.mode === 'SELECT' ||
+          s.mode === 'SELECT_LINE' ||
+          s.mode === 'SELECT_BLOCK';
         const col = isVisual && s.visualAnchor ? s.visualAnchor.col : s.cursor.col;
         return col + 1;
       }

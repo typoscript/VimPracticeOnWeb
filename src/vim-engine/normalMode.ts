@@ -298,6 +298,14 @@ export function handleNormalModeKey(
   if (key === 'g<Ctrl-g>' || key === 'g<C-g>' || key === 'g Ctrl-g' || key === 'g Ctrl+g') {
     return executeGCtrlG(state);
   }
+  if (key === 'g<Ctrl-h>' || key === 'g<C-h>' || key === 'g Ctrl-h' || key === 'g Ctrl+h') {
+    return {
+      ...state,
+      mode: 'SELECT_BLOCK',
+      visualAnchor: { ...state.cursor },
+      pendingKeys: undefined,
+    };
+  }
 
   // ZZ / ZQ: 저장 후 닫기(:wq) / 저장 없이 닫기(:q!)
   if (state.pendingKeys === 'Z') {

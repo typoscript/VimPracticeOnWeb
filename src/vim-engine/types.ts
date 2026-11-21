@@ -1,4 +1,15 @@
-export type VimMode = 'NORMAL' | 'INSERT' | 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK' | 'COMMAND' | 'SEARCH' | 'REPLACE';
+export type VimMode =
+  | 'NORMAL'
+  | 'INSERT'
+  | 'VISUAL'
+  | 'VISUAL_LINE'
+  | 'VISUAL_BLOCK'
+  | 'SELECT'
+  | 'SELECT_LINE'
+  | 'SELECT_BLOCK'
+  | 'COMMAND'
+  | 'SEARCH'
+  | 'REPLACE';
 
 export interface CursorPosition {
   line: number; // 0-indexed 줄 번호
@@ -663,6 +674,8 @@ export interface VimEditorState {
   folds?: FoldRange[];
   /** Insert 모드 일회성 Normal 명령 실행 세션 (Ctrl+o) */
   insertNormalSession?: boolean;
+  /** Select 모드 일회성 Visual 명령 실행 세션 (Ctrl+o) */
+  selectVisualOneShot?: boolean;
   /** Insert 모드 및 Command 모드 Ctrl+r 레지스터 입력 대기 상태 */
   insertRegisterPending?: boolean;
   /** Insert 모드 Ctrl+r 세부 삽입 모드 ('normal' | 'literal'(Ctrl-o/Ctrl-r) | 'indent'(Ctrl-p)) */

@@ -35,11 +35,20 @@ export function isPositionSelected(
   mode?: VimMode,
   endOfLine?: boolean
 ): boolean {
-  if (!anchor || !cursor || (mode !== 'VISUAL' && mode !== 'VISUAL_LINE' && mode !== 'VISUAL_BLOCK')) {
+  if (
+    !anchor ||
+    !cursor ||
+    (mode !== 'VISUAL' &&
+      mode !== 'VISUAL_LINE' &&
+      mode !== 'VISUAL_BLOCK' &&
+      mode !== 'SELECT' &&
+      mode !== 'SELECT_LINE' &&
+      mode !== 'SELECT_BLOCK')
+  ) {
     return false;
   }
 
-  if (mode === 'VISUAL_BLOCK') {
+  if (mode === 'VISUAL_BLOCK' || mode === 'SELECT_BLOCK') {
     const minLine = Math.min(anchor.line, cursor.line);
     const maxLine = Math.max(anchor.line, cursor.line);
     const minCol = Math.min(anchor.col, cursor.col);
@@ -50,7 +59,7 @@ export function isPositionSelected(
     return line >= minLine && line <= maxLine && col >= minCol && col <= maxCol;
   }
 
-  if (mode === 'VISUAL_LINE') {
+  if (mode === 'VISUAL_LINE' || mode === 'SELECT_LINE') {
     const minLine = Math.min(anchor.line, cursor.line);
     const maxLine = Math.max(anchor.line, cursor.line);
     return line >= minLine && line <= maxLine;

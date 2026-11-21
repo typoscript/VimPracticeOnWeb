@@ -340,6 +340,39 @@ export function handleNormalGOperator(
   if (key === 'v') {
     return { handled: true, state: reselectLastVisual(state) };
   }
+  if (key === 'h') {
+    return {
+      handled: true,
+      state: {
+        ...state,
+        mode: 'SELECT',
+        visualAnchor: { ...state.cursor },
+        pendingKeys: undefined,
+      },
+    };
+  }
+  if (key === 'H') {
+    return {
+      handled: true,
+      state: {
+        ...state,
+        mode: 'SELECT_LINE',
+        visualAnchor: { ...state.cursor },
+        pendingKeys: undefined,
+      },
+    };
+  }
+  if (key === 'Ctrl-h' || key === 'Ctrl+h' || key === 'ctrl-h' || key === '<C-h>') {
+    return {
+      handled: true,
+      state: {
+        ...state,
+        mode: 'SELECT_BLOCK',
+        visualAnchor: { ...state.cursor },
+        pendingKeys: undefined,
+      },
+    };
+  }
   if (
     key === 'Ctrl-g' ||
     key === 'Ctrl+g' ||

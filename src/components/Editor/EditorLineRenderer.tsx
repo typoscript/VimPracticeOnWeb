@@ -96,9 +96,15 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
   const isCursorLine = cursor.line === lineIdx;
   const cursorCol = isCursorLine ? cursor.col : null;
 
-  // 빈 줄이면서 커서와 타겟, 비주얼 선택, 검색 매칭, 맞춤법 오류가 모두 없는 경우
+  // 빈 줄이면서 커서와 타겟, 비주얼/셀렉트 선택, 검색 매칭, 맞춤법 오류가 모두 없는 경우
   const hasVisual =
-    (mode === 'VISUAL' || mode === 'VISUAL_LINE' || mode === 'VISUAL_BLOCK') && !!visualAnchor;
+    (mode === 'VISUAL' ||
+      mode === 'VISUAL_LINE' ||
+      mode === 'VISUAL_BLOCK' ||
+      mode === 'SELECT' ||
+      mode === 'SELECT_LINE' ||
+      mode === 'SELECT_BLOCK') &&
+    !!visualAnchor;
   const isLineInVisualRange =
     hasVisual &&
     lineIdx >= Math.min(visualAnchor.line, cursor.line) &&

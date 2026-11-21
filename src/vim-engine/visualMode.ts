@@ -9,7 +9,9 @@ import {
   yankVisualSelection,
   startVisualBlockInsert,
   swapVisualCursorAnchor,
+  getOrderedRange,
 } from './visual';
+import { pushUndoSnapshot } from './operators';
 import { replaceVisualChars } from './visualUtilities';
 import { moveFind } from './findChar';
 import { findMatches, findSearchTarget, getWordAtCursor } from './search';
@@ -77,6 +79,7 @@ export function handleVisualModeKey(
       mode: 'NORMAL',
       visualAnchor: undefined,
       visualBlockEndOfLine: undefined,
+      selectVisualOneShot: undefined,
       pendingKeys: undefined,
       pendingKeymapPrefix: undefined,
       activeRegister: undefined,
@@ -87,6 +90,25 @@ export function handleVisualModeKey(
             cursor: { ...state.cursor },
           }
         : state.lastVisualSelection,
+    };
+  }
+
+  // Ctrl-g: VISUAL / VISUAL_LINE / VISUAL_BLOCK <-> SELECT / SELECT_LINE / SELECT_BLOCK 전환
+  if (
+    !state.pendingKeys &&
+    (key === 'Ctrl-g' || key === 'Ctrl+g' || key === 'ctrl-g' || key === '<C-g>')
+  ) {
+    const nextSelectMode =
+      state.mode === 'VISUAL_LINE'
+        ? 'SELECT_LINE'
+        : state.mode === 'VISUAL_BLOCK'
+          ? 'SELECT_BLOCK'
+          : 'SELECT';
+    return {
+      ...state,
+      mode: nextSelectMode,
+      selectVisualOneShot: undefined,
+      pendingKeys: undefined,
     };
   }
 
@@ -786,6 +808,162 @@ export function handleVisualModeKey(
       visualBlockEndOfLine: nextBlockEol,
       pendingKeys: undefined,
     };
+  }
+
+  return state;
+}
+
+/**
+ * SELECT / SELECT_LINE / SELECT_BLOCK 모드 키 입력 처리 (:help Select-mode)
+ * - 방향키/Home/End: 선택 영역 확장
+ * - Ctrl-g: 대응하는 VISUAL 모드로 전환
+ * - Ctrl-o: 일회성 VISUAL 명령 실행 후 SELECT 모드 복귀
+ * - Backspace / Delete: 선택 영역 삭제 후 INSERT 모드 진입
+ * - 일반 출력 문자 / Enter / Tab: 선택 영역 삭제 후 INSERT 모드에서 즉시 입력
+ */
+export function handleSelectModeKey(
+  state: VimEditorState,
+  key: string,
+  dispatchKey: DispatchKeyFn,
+  macroDepth = 0
+): VimEditorState {
+  const visualEquiv: 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK' =
+    state.mode === 'SELECT_LINE'
+      ? 'VISUAL_LINE'
+      : state.mode === 'SELECT_BLOCK'
+        ? 'VISUAL_BLOCK'
+        : 'VISUAL';
+
+  const snap = state.visualAnchor
+    ? {
+        mode: visualEquiv,
+        anchor: { ...state.visualAnchor },
+        cursor: { ...state.cursor },
+      }
+    : state.lastVisualSelection;
+
+  if (key === 'Escape' || key === 'Ctrl-c' || key === 'Ctrl+c' || key === 'ctrl-c') {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      visualBlockEndOfLine: undefined,
+      selectVisualOneShot: undefined,
+      pendingKeys: undefined,
+      pendingKeymapPrefix: undefined,
+      activeRegister: undefined,
+      lastVisualSelection: snap,
+    };
+  }
+
+  // Ctrl-g: 대응하는 VISUAL 모드로 전환
+  if (key === 'Ctrl-g' || key === 'Ctrl+g' || key === 'ctrl-g' || key === '<C-g>') {
+    return {
+      ...state,
+      mode: visualEquiv,
+      selectVisualOneShot: undefined,
+      pendingKeys: undefined,
+    };
+  }
+
+  // Ctrl-o: 일회성 VISUAL 명령 실행 후 SELECT 복귀
+  if (key === 'Ctrl-o' || key === 'Ctrl+o' || key === 'ctrl-o' || key === '<C-o>') {
+    return {
+      ...state,
+      mode: visualEquiv,
+      selectVisualOneShot: true,
+      pendingKeys: undefined,
+    };
+  }
+
+  // 방향키 / Home / End: 선택 영역 확장
+  if (
+    key === 'ArrowLeft' ||
+    key === 'ArrowRight' ||
+    key === 'ArrowUp' ||
+    key === 'ArrowDown'
+  ) {
+    const motionCursor = evaluateMotionWithCount(
+      state.lines,
+      state.cursor,
+      key,
+      1,
+      state.folds,
+      getOptions(state).whichwrap
+    );
+    if (!motionCursor || isFailedMotion(key, state.cursor, motionCursor)) {
+      return ringBell(state);
+    }
+    return {
+      ...state,
+      cursor: motionCursor,
+      pendingKeys: undefined,
+    };
+  }
+  if (key === 'Home') {
+    return { ...state, cursor: moveToLineStart(state.lines, state.cursor), pendingKeys: undefined };
+  }
+  if (key === 'End') {
+    return { ...state, cursor: moveToLineEnd(state.lines, state.cursor), pendingKeys: undefined };
+  }
+
+  const deleteSelectionAndEnterInsert = (): VimEditorState => {
+    const asVisual: VimEditorState = { ...state, mode: visualEquiv };
+    if (state.mode === 'SELECT_BLOCK') {
+      const started = startVisualBlockInsert(asVisual, 'c', 1);
+      return { ...started, lastVisualSelection: snap };
+    }
+    if (state.mode === 'SELECT_LINE' && state.visualAnchor) {
+      const stateWithUndo = pushUndoSnapshot(state);
+      const minLine = Math.min(state.visualAnchor.line, state.cursor.line);
+      const maxLine = Math.max(state.visualAnchor.line, state.cursor.line);
+      const deletedContent = state.lines.slice(minLine, maxLine + 1).join('\n');
+      const nextLines = [
+        ...state.lines.slice(0, minLine),
+        '',
+        ...state.lines.slice(maxLine + 1),
+      ];
+      const withDel: VimEditorState = {
+        ...stateWithUndo,
+        lines: nextLines,
+        cursor: { line: minLine, col: 0 },
+        mode: 'INSERT',
+        visualAnchor: undefined,
+        visualBlockEndOfLine: undefined,
+        clipboard: { type: 'line', content: deletedContent },
+        pendingKeys: undefined,
+      };
+      return {
+        ...syncRegisters(state, withDel, false),
+        mode: 'INSERT',
+        lastVisualSelection: snap,
+      };
+    }
+    const anchor = state.visualAnchor ?? state.cursor;
+    const ordered = getOrderedRange(anchor, state.cursor);
+    const delRes = deleteVisualSelection(asVisual);
+    const insertLine = Math.min(ordered.start.line, delRes.lines.length - 1);
+    const insertCol = Math.min(ordered.start.col, (delRes.lines[insertLine] ?? '').length);
+    const synced = syncRegisters(state, delRes, false);
+    return {
+      ...synced,
+      mode: 'INSERT',
+      cursor: { line: insertLine, col: insertCol },
+      visualAnchor: undefined,
+      visualBlockEndOfLine: undefined,
+      lastVisualSelection: snap,
+    };
+  };
+
+  // Backspace / Delete: 선택 영역 삭제 후 INSERT 모드 진입
+  if (key === 'Backspace' || key === 'Delete') {
+    return deleteSelectionAndEnterInsert();
+  }
+
+  // 출력 가능 문자 / Enter / Tab: 선택 영역 삭제 후 INSERT 모드에서 즉시 입력
+  if (key.length === 1 || key === 'Enter' || key === 'Tab') {
+    const inInsert = deleteSelectionAndEnterInsert();
+    return dispatchKey(inInsert, key, false, macroDepth);
   }
 
   return state;
