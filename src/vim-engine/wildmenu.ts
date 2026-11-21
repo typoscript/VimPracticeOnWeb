@@ -1,6 +1,6 @@
 import { VimEditorState } from './types';
 import { getAvailableDirectories, getWorkspaceFiles } from './vfs';
-import { OPTION_ALIASES } from './setEngine';
+import { OPTION_ALIASES, getOptions } from './setEngine';
 import { buildProjectTags } from './tagEngine';
 import { HELP_TOPICS } from './helpData';
 
@@ -383,6 +383,7 @@ export const AVAILABLE_OPTIONS: string[] = [
   'textwidth',
   'virtualedit',
   'wildmenu',
+  'wildmode',
   'wrap',
 ];
 
@@ -391,6 +392,7 @@ const OPTION_VALUE_COMPLETIONS: Record<string, readonly string[]> = {
   inccommand: ['nosplit', 'split'],
   virtualedit: ['all', 'block', 'insert', 'none', 'onemore'],
   nrformats: ['alpha', 'bin', 'blank', 'hex', 'octal', 'unsigned'],
+  wildmode: ['full', 'list', 'list:full', 'list:longest', 'longest', 'longest:full', 'longest:list'],
   filetype: [
     'c',
     'cpp',
@@ -1128,21 +1130,80 @@ export function selectWildmenuCandidate(
     wildmenu: {
       ...state.wildmenu,
       selectedIndex: clamped,
+      phase: 'full',
     },
   };
 }
 
 /**
- * Tab 또는 Shift-Tab 키 입력 시 와일드메뉴 자동완성을 처리합니다.
+ * 후보 목록의 최장 공통 접두사(Longest Common Prefix)를 계산합니다.
+ */
+export function computeLongestCommonPrefix(candidates: readonly string[]): string {
+  if (candidates.length === 0) return '';
+  let prefix = candidates[0];
+  for (let i = 1; i < candidates.length; i++) {
+    const cand = candidates[i];
+    let j = 0;
+    while (j < prefix.length && j < cand.length && prefix[j] === cand[j]) {
+      j++;
+    }
+    prefix = prefix.slice(0, j);
+    if (prefix.length === 0) break;
+  }
+  return prefix;
+}
+
+/**
+ * Tab 또는 Shift-Tab 키 입력 시 와일드메뉴 자동완성을 처리합니다 (:set wildmode 지원).
  */
 export function handleTabCompletion(
   state: VimEditorState,
   reverse = false
 ): VimEditorState {
-  // 이미 와일드메뉴가 활성화되어 있는 경우 -> 후보 순환 (Cycle)
+  const wildmodeRaw = getOptions(state).wildmode ?? 'full';
+  const stages = wildmodeRaw
+    .split(',')
+    .map((s) => s.trim().toLowerCase())
+    .filter((s, idx) => idx === 0 || s.length > 0);
+
+  // 이미 와일드메뉴가 활성화되어 있는 경우
   if (state.wildmenu?.active && state.wildmenu.candidates.length > 0) {
-    const { candidates, prefix, selectedIndex } = state.wildmenu;
+    const { candidates, prefix, selectedIndex, phase, step = 1 } = state.wildmenu;
     const len = candidates.length;
+
+    // longest / list 단계에서 다음 Tab 입력 시 다음 wildmode 단계로 전이
+    if (phase === 'longest') {
+      const stageSpec = stages[Math.min(step, stages.length - 1)] || 'full';
+      const atoms = stageSpec.split(':');
+      if (atoms.includes('full') || stageSpec === '') {
+        const nextIndex = reverse ? len - 1 : 0;
+        return {
+          ...state,
+          commandBuffer: `${prefix}${candidates[nextIndex]}`,
+          commandCursorCol: undefined,
+          commandMessage: atoms.includes('list') ? candidates.join('  ') : state.commandMessage,
+          wildmenu: {
+            ...state.wildmenu,
+            selectedIndex: nextIndex,
+            phase: 'full',
+            step: step + 1,
+          },
+        };
+      }
+      if (atoms.includes('list')) {
+        return {
+          ...state,
+          commandMessage: candidates.join('  '),
+          wildmenu: {
+            ...state.wildmenu,
+            step: step + 1,
+          },
+        };
+      }
+      return state;
+    }
+
+    // full 단계: 후보 순환 (Cycle)
     const nextIndex = reverse ? (selectedIndex - 1 + len) % len : (selectedIndex + 1) % len;
     const nextCandidate = candidates[nextIndex];
 
@@ -1153,6 +1214,7 @@ export function handleTabCompletion(
       wildmenu: {
         ...state.wildmenu,
         selectedIndex: nextIndex,
+        phase: 'full',
       },
     };
   }
@@ -1166,6 +1228,65 @@ export function handleTabCompletion(
   }
 
   const { prefix, candidates } = result;
+  const stage0 = stages[0] || 'full';
+  const atoms0 = stage0.split(':');
+
+  // 후보가 1개뿐이면 wildmode 와 무관하게 즉시 완성
+  if (candidates.length === 1) {
+    return {
+      ...state,
+      commandBuffer: `${prefix}${candidates[0]}`,
+      commandCursorCol: undefined,
+      wildmenu: {
+        active: true,
+        candidates,
+        selectedIndex: 0,
+        originalBuffer: rawInput,
+        prefix,
+        phase: 'full',
+        step: 1,
+      },
+    };
+  }
+
+  // Stage 0 이 longest 또는 단독 list 인 경우
+  if (atoms0.includes('longest')) {
+    const lcp = computeLongestCommonPrefix(candidates);
+    const currentArg = rawInput.slice(prefix.length);
+    const expanded = lcp.length >= currentArg.length ? lcp : currentArg;
+    return {
+      ...state,
+      commandBuffer: `${prefix}${expanded}`,
+      commandCursorCol: undefined,
+      commandMessage: atoms0.includes('list') ? candidates.join('  ') : state.commandMessage,
+      wildmenu: {
+        active: true,
+        candidates,
+        selectedIndex: -1,
+        originalBuffer: rawInput,
+        prefix,
+        phase: 'longest',
+        step: 1,
+      },
+    };
+  }
+
+  if (atoms0.includes('list') && !atoms0.includes('full')) {
+    return {
+      ...state,
+      commandMessage: candidates.join('  '),
+      wildmenu: {
+        active: true,
+        candidates,
+        selectedIndex: -1,
+        originalBuffer: rawInput,
+        prefix,
+        phase: 'longest',
+        step: 1,
+      },
+    };
+  }
+
   const initialIndex = reverse ? candidates.length - 1 : 0;
   const initialCandidate = candidates[initialIndex];
 
@@ -1173,12 +1294,15 @@ export function handleTabCompletion(
     ...state,
     commandBuffer: `${prefix}${initialCandidate}`,
     commandCursorCol: undefined,
+    commandMessage: atoms0.includes('list') ? candidates.join('  ') : state.commandMessage,
     wildmenu: {
       active: true,
       candidates,
       selectedIndex: initialIndex,
       originalBuffer: rawInput,
       prefix,
+      phase: 'full',
+      step: 1,
     },
   };
 }

@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { StatusBar } from './StatusBar';
 
@@ -203,5 +203,30 @@ describe('StatusBar Component', () => {
       />
     );
     expect(screen.queryByTestId('status-search-count')).not.toBeInTheDocument();
+  });
+
+  it('wildmenu 후보 칩을 클릭하면 onSelectWildmenuCandidate 콜백을 해당 인덱스로 호출한다', () => {
+    const onSelect = vi.fn();
+    render(
+      <StatusBar
+        mode="COMMAND"
+        cursor={{ line: 0, col: 0 }}
+        commandType=":"
+        commandBuffer="set nu"
+        wildmenu={{
+          active: true,
+          candidates: ['number', 'relativenumber'],
+          selectedIndex: 0,
+          originalBuffer: 'set ',
+          prefix: 'set ',
+        }}
+        showWildmenuBar={true}
+        onSelectWildmenuCandidate={onSelect}
+      />
+    );
+
+    const items = screen.getAllByTestId('wildmenu-item');
+    items[0].click();
+    expect(onSelect).toHaveBeenCalledWith(1);
   });
 });

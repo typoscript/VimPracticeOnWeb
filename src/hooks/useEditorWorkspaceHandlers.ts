@@ -22,6 +22,7 @@ import {
   jumpToLocationListItem,
   closeLspHover,
   selectCompletionCandidate,
+  selectWildmenuCandidate,
   setMark,
   jumpToMark,
   clearJumps,
@@ -60,6 +61,11 @@ export function useEditorWorkspaceHandlers({
 
   const handleSelectCompletionCandidate = useCallback(
     (index: number) => applyAndFocus((prev) => selectCompletionCandidate(prev, index)),
+    [applyAndFocus]
+  );
+
+  const handleSelectWildmenuCandidate = useCallback(
+    (index: number) => applyAndFocus((prev) => selectWildmenuCandidate(prev, index)),
     [applyAndFocus]
   );
 
@@ -338,6 +344,7 @@ export function useEditorWorkspaceHandlers({
   return {
     handleSwitchPane,
     handleSelectCompletionCandidate,
+    handleSelectWildmenuCandidate,
     handleSwitchBuffer,
     handleSwitchTabPage,
     handleCloseTabPage,

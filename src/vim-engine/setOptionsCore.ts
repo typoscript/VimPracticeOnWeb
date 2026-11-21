@@ -40,6 +40,7 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   shortmess: 'filnxtToOF',
   colorcolumn: '',
   cursorcolumn: false,
+  wildmode: 'full',
 };
 
 export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
@@ -124,6 +125,8 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   colorcolumn: 'colorcolumn',
   cuc: 'cursorcolumn',
   cursorcolumn: 'cursorcolumn',
+  wim: 'wildmode',
+  wildmode: 'wildmode',
 };
 
 export const WINDOW_LOCAL_OPTION_KEYS = new Set<keyof VimOptions>([
@@ -401,6 +404,7 @@ export function formatOptionsList(
     'matchpairs',
     'shortmess',
     'colorcolumn',
+    'wildmode',
   ];
 
   for (const k of stringKeys) {

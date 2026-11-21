@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 168개 테스트 파일, 2,064개 테스트 100% 통과 필수)*
+  *(현재 170개 테스트 파일, 2,079개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -167,6 +167,11 @@
   - **증분 검색(`incsearch`) & 실시간 치환 미리보기(`inccommand`) (`searchMode.ts`, `exSubstitute.ts`, `Editor.tsx`, `EditorViewport.tsx`)**: `:set incsearch`(`is`)/`noincsearch`로 `/`·`?` 입력 중 실시간 매치 프리뷰 점프·뷰포트 스크롤·`Ctrl-g`/`Ctrl-t` 매치 순환·`Esc`/`Ctrl-c` 원래 커서/뷰포트 복원을 지원하고, `:set inccommand=nosplit|split`(`icm`)으로 `:%s/pat/rep/` 입력 중 인라인 치환 배지 및 하단 `[Preview]` 분할 창 미리보기를 제공합니다.
   - **윈도우 로컬 `:setlocal` 격리 및 핵심 편집 옵션 (`setEngine.ts`, `cursor.ts`, `wordMotion.ts`, `visual.ts`, `vimEngine.ts`)**: 분할 창별 윈도우 로컬 옵션(`number`, `relativenumber`, `wrap`, `cursorline`, `list`, `listchars`, `spell`, `foldmethod`, `foldlevel`, `foldexpr`, `foldmarker`, `scrolloff`, `sidescrolloff`) 격리, `:set iskeyword`(`isk`, `=`/`+=`/`-=`/`^=`, `@`/`48-57`/제외 `^`), `:set virtualedit=onemore|block|all`(`ve`), `:set modifiable`/`nomodifiable`(`ma`/`noma`, `E21`), `:set readonly`/`noreadonly`(`ro`/`noro`, `E45` 및 `:w!` 강제 저장)를 완성했습니다.
   - **Ex 커맨드라인 `wildmenu` 자동완성 전면 확장 (`wildmenu.ts`, `StatusBar.tsx`)**: `:setlocal`/`:setglobal` 및 `opt=val` 열거형 값(`foldmethod=`, `inccommand=`, `virtualedit=`, `nrformats=`, `filetype=`, `syntax=`), 사용자 정의 명령(`:command`/`:delcommand`), 사용자/내장 함수(`:call`/`:delfunction`), 도움말 토픽/태그(`:help`), 자동명령 그룹/이벤트(`:augroup`/`:autocmd`), 스크립트 변수(`:let`/`:unlet`), 매핑/약어 해제(`:unmap`/`:unabbrev`), 파이프(`|`) 후속 명령 자동완성 및 `StatusBar` 후보 카운터(`idx/total`)·자동 스크롤을 구현했습니다.
+- **순정 Vim/Neovim 편집·시각화·Undo·와일드모드 4종 확장 (`autoindent`/`smartindent`/`shiftround`/`matchpairs`, `searchcount()`/`:match`/`matchadd()`, `colorcolumn`/`cursorcolumn`/`Ctrl-g u`/`:undojoin`, `wildmode` & 클릭 선택)**:
+  - **자동 들여쓰기 & 편집 정밀 옵션 (`setEngine.ts`, `operators.ts`, `insertMode.ts`, `lineOperators.ts`, `bracketMatch.ts`)**: `:set autoindent`(`ai`), `:set smartindent`(`si`, `Enter`/`o`/`O` 자동 들여쓰기 및 `}` 자동 내어쓰기), `:set shiftround`(`sr`, `>>`/`<<`/`:>`/`:<` `shiftwidth` 배수 정렬), `:set matchpairs`(`mps`, `%` 괄호 쌍 동적 확장 및 `E474` 검증)를 구현했습니다.
+  - **검색 카운트 HUD(`[current/total]`, `searchcount()`) & 커스텀 패턴 강조 (`vimRegex.ts`, `vimscriptBuiltinsExtra.ts`, `exListAndToolCommands.ts`, `Editor.tsx`, `StatusBar.tsx`)**: `StatusBar` 실시간 `[current/total]` 검색 카운트 배지(`:set shortmess+=S` 억제 연동), Vimscript `searchcount([dict])`, `:match`/`:2match`/`:3match`/`:clearmatches` 및 `matchadd()`/`matchdelete()`/`getmatches()`/`clearmatches()` 커스텀 그룹 하이라이트 렌더링을 구현했습니다.
+  - **시각 가이드(`colorcolumn`, `cursorcolumn`) & Insert Undo 제어 (`setOptionsCore.ts`, `Editor.tsx`, `insertMode.ts`, `operators.ts`, `undoTreeEngine.ts`, `exBatchAndUndoCommands.ts`)**: 윈도우 로컬 `:set colorcolumn`(`cc=80,+1,100`) 세로 가이드선 및 `:set cursorcolumn`(`cuc`) 열 강조, Insert 모드 `Ctrl-g u`(수동 Undo 중단점)·`Ctrl-g j`/`k`(Insert 시작 열 기준 상하 이동), `:undojoin`(`E790` 검증 및 Undo Tree 제자리 병합)을 구현했습니다.
+  - **와일드메뉴 `wildmode` & 클릭 선택 완성 (`wildmenu.ts`, `setEngine.ts`, `StatusBar.tsx`, `useEditorWorkspaceHandlers.ts`)**: `:set wildmode`(`wim`, `longest:full,full` 등 다단계 최장 공통 접두사 완성 및 순환, `E474` 검증)와 `StatusBar` 후보 칩 마우스 클릭 즉시 선택을 연동했습니다.
 
 ---
 

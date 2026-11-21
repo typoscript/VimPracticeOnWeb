@@ -67,6 +67,7 @@ type BooleanOrSyntaxOptionKey =
 const VALID_FOLDMETHODS: readonly FoldMethod[] = ['manual', 'indent', 'marker', 'syntax', 'expr'];
 const VALID_NRFORMATS = new Set(['bin', 'octal', 'hex', 'alpha', 'unsigned', 'blank']);
 const VALID_VIRTUALEDIT = new Set(['block', 'insert', 'all', 'onemore', 'none']);
+const VALID_WILDMODE_ATOMS = new Set(['', 'full', 'longest', 'list', 'lastused']);
 const NUMERIC_OPTION_KEYS = new Set<NumericOptionKey>([
   'tabstop',
   'shiftwidth',
@@ -219,6 +220,8 @@ function handleOptionQuery(ctx: SetDraftContext, token: string): VimEditorState 
       val = DEFAULT_VIM_OPTIONS.shortmess ?? 'filnxtToOF';
     } else if (optKey === 'colorcolumn') {
       val = DEFAULT_VIM_OPTIONS.colorcolumn ?? '';
+    } else if (optKey === 'wildmode') {
+      val = DEFAULT_VIM_OPTIONS.wildmode ?? 'full';
     }
   }
 
@@ -580,6 +583,41 @@ function handleOptionAssignment(ctx: SetDraftContext, token: string): VimEditorS
     const nextVal = nextParts.join(',');
     writeScopedOption(ctx, 'colorcolumn', nextVal);
     ctx.appliedList.push(`colorcolumn=${nextVal}`);
+    return null;
+  }
+  if (optKey === 'wildmode') {
+    const parseWimStages = (raw: string) =>
+      raw === '' ? [''] : raw.split(',').map((s) => s.trim().toLowerCase());
+    const isValidStage = (stage: string): boolean => {
+      if (stage === '') return true;
+      const atoms = stage.split(':');
+      if (atoms.length > 2) return false;
+      return atoms.every((a) => VALID_WILDMODE_ATOMS.has(a));
+    };
+    const newStages = parseWimStages(rawVal);
+    if (newStages.length > 4 || newStages.some((s) => !isValidStage(s))) {
+      return {
+        ...ctx.state,
+        bell: true,
+        commandMessage: msg('E474: 잘못된 인수입니다: {token}', { token }),
+      };
+    }
+    const curStr =
+      ctx.nextLocal.wildmode ?? ctx.nextGlobal.wildmode ?? DEFAULT_VIM_OPTIONS.wildmode ?? 'full';
+    const curStages = curStr ? curStr.split(',').map((s) => s.trim().toLowerCase()) : [];
+    let nextStages: string[];
+    if (mod === '+') {
+      nextStages = [...curStages, ...newStages.filter(Boolean)].slice(0, 4);
+    } else if (mod === '^') {
+      nextStages = [...newStages.filter(Boolean), ...curStages].slice(0, 4);
+    } else if (mod === '-') {
+      nextStages = curStages.filter((s) => !newStages.includes(s));
+    } else {
+      nextStages = newStages;
+    }
+    const nextVal = nextStages.join(',');
+    writeScopedOption(ctx, 'wildmode', nextVal);
+    ctx.appliedList.push(`wildmode=${nextVal}`);
     return null;
   }
   if (optKey === 'errorformat' || optKey === 'grepprg') {

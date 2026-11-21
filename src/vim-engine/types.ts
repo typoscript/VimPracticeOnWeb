@@ -360,6 +360,8 @@ export interface VimOptions {
   colorcolumn?: string;
   /** 커서 위치 세로 열 강조 여부 (:set cuc / nocuc, :set cursorcolumn) */
   cursorcolumn?: boolean;
+  /** 와일드메뉴 자동완성 단계 모드 (:set wim=longest:full,full, :set wildmode) */
+  wildmode?: string;
 }
 
 /** 맞춤법 검사기 오탈자 정보 */
@@ -406,12 +408,16 @@ export interface WildmenuState {
   active: boolean;
   /** 현재 완성 후보 목록 */
   candidates: string[];
-  /** 현재 선택된 후보 인덱스 (0 .. candidates.length - 1) */
+  /** 현재 선택된 후보 인덱스 (0 .. candidates.length - 1, longest 단계에서는 -1) */
   selectedIndex: number;
   /** Tab 키 누르기 직전의 원본 커맨드라인 텍스트 */
   originalBuffer: string;
   /** 완성 인수 앞부분 (예: "set " 또는 "e ") */
   prefix: string;
+  /** 현재 wildmode 진행 단계 ('longest' | 'full') */
+  phase?: 'longest' | 'full';
+  /** wildmode 쉼표 구분 단계 인덱스 */
+  step?: number;
 }
 
 export interface RegisterEntry {

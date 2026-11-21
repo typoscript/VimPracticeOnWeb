@@ -347,6 +347,7 @@ export function App() {
           onAreaClick: hardcore.handleEditorAreaClick,
           recentKeys,
           statusFilename,
+          onSelectWildmenuCandidate: workspaceHandlers.handleSelectWildmenuCandidate,
           viewportHandlers: workspaceHandlers.viewportHandlers,
         }}
         panels={{

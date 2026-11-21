@@ -304,6 +304,12 @@
   background-color: transparent;
   transition: all 0.1s ease;
   user-select: none;
+  cursor: pointer;
+}
+
+.wildmenu-item:hover:not(.selected) {
+  background-color: rgba(250, 179, 135, 0.18);
+  color: #cdd6f4;
 }
 
 .wildmenu-item.selected {

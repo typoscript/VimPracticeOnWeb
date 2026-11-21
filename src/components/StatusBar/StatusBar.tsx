@@ -32,6 +32,8 @@ export interface StatusBarProps {
   wildmenu?: import('../../vim-engine').WildmenuState | null;
   /** 와일드메뉴 비주얼 바 표시 여부 (:set wildmenu) */
   showWildmenuBar?: boolean;
+  /** 와일드메뉴 후보 칩 클릭 선택 콜백 */
+  onSelectWildmenuCandidate?: (index: number) => void;
   /** :function 본문 입력 중인 함수 이름과 지금까지 입력한 줄 수 */
   functionDraft?: { name: string; lines: number } | null;
   /** 맞춤법 검사기 활성화 여부 (:set spell) */
@@ -58,6 +60,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   wildmenu,
   functionDraft,
   showWildmenuBar = true,
+  onSelectWildmenuCandidate,
   spellActive,
   searchCount,
 }) => {
@@ -112,7 +115,9 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       {wildmenu?.active && showWildmenuBar && wildmenu.candidates.length > 0 && (
         <div className="wildmenu-bar" data-testid="wildmenu-bar">
           <span className="wildmenu-count" data-testid="wildmenu-count">
-            {wildmenu.selectedIndex + 1}/{wildmenu.candidates.length}
+            {wildmenu.selectedIndex >= 0
+              ? `${wildmenu.selectedIndex + 1}/${wildmenu.candidates.length}`
+              : `${wildmenu.candidates.length}`}
           </span>
           {wildmenu.candidates.map((cand, idx) => {
             const isSelected = idx === wildmenu.selectedIndex;
@@ -122,6 +127,8 @@ export const StatusBar: React.FC<StatusBarProps> = ({
                 ref={isSelected ? selectedWildmenuRef : undefined}
                 className={`wildmenu-item ${isSelected ? 'selected' : ''}`}
                 data-testid={isSelected ? 'wildmenu-item-selected' : 'wildmenu-item'}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => onSelectWildmenuCandidate?.(idx)}
               >
                 {cand}
               </span>

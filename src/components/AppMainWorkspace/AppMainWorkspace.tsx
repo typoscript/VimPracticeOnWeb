@@ -85,6 +85,7 @@ export interface WorkspaceEditorProps {
   onAreaClick: () => void;
   recentKeys: React.ComponentProps<typeof Keycaster>['recentKeys'];
   statusFilename: string;
+  onSelectWildmenuCandidate?: (index: number) => void;
   viewportHandlers: Pick<
     EditorViewportProps,
     | 'onSwitchPane'
@@ -330,6 +331,7 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
             commandMessage={displayEditorState.commandMessage}
             wildmenu={displayEditorState.wildmenu}
             showWildmenuBar={displayEditorState.options?.wildmenu ?? true}
+            onSelectWildmenuCandidate={editor.onSelectWildmenuCandidate}
             spellActive={displayEditorState.options?.spell}
             searchCount={(() => {
               const shm = displayEditorState.options?.shortmess ?? '';

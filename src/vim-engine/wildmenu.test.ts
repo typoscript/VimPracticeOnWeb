@@ -333,5 +333,40 @@ describe('wildmenu engine (:set wildmenu, Tab completion)', () => {
       expect(cmdState.commandBuffer).toBe('call getcmdtype');
       expect(cmdState.wildmenu?.selectedIndex).toBe(2);
     });
+
+    it(':set wildmode=longest:full,full 에서 첫 Tab은 최장 공통 접두사만 채우고 두 번째 Tab부터 순환한다', () => {
+      let state = createBaseState();
+      state = executeCommandLine(state, 'set wim=longest:full,full');
+      expect(state.options?.wildmode).toBe('longest:full,full');
+
+      // :call getcm<Tab> -> 후보 ['getcmdline', 'getcmdpos', 'getcmdtype'] 의 LCP 'getcmd' 로 먼저 확장
+      state = {
+        ...state,
+        mode: 'COMMAND',
+        commandType: ':',
+        commandBuffer: 'call getcm',
+      };
+      state = handleKey(state, 'Tab');
+      expect(state.commandBuffer).toBe('call getcmd');
+      expect(state.wildmenu?.active).toBe(true);
+      expect(state.wildmenu?.phase).toBe('longest');
+      expect(state.wildmenu?.selectedIndex).toBe(-1);
+
+      // 두 번째 Tab -> full 단계 진입하여 첫 번째 후보 'getcmdline' 선택
+      state = handleKey(state, 'Tab');
+      expect(state.commandBuffer).toBe('call getcmdline');
+      expect(state.wildmenu?.phase).toBe('full');
+      expect(state.wildmenu?.selectedIndex).toBe(0);
+
+      // 세 번째 Tab -> 다음 후보 'getcmdpos'
+      state = handleKey(state, 'Tab');
+      expect(state.commandBuffer).toBe('call getcmdpos');
+      expect(state.wildmenu?.selectedIndex).toBe(1);
+
+      // 잘못된 wildmode 값은 E474 에러
+      const badWim = executeCommandLine(state, 'set wim=bogus');
+      expect(badWim.bell).toBe(true);
+      expect(badWim.commandMessage).toContain('E474');
+    });
   });
 });
