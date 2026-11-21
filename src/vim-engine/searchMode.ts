@@ -191,7 +191,8 @@ export function executeGn(
     };
   }
 
-  const matches = findMatches(state.lines, state.lastSearchQuery, state.options);
+  const opts = getOptions(state);
+  const matches = findMatches(state.lines, state.lastSearchQuery, opts);
   if (matches.length === 0) {
     return {
       ...state,
@@ -204,6 +205,19 @@ export function executeGn(
   const res = findCurrentOrNextMatch(matches, state.cursor, isForward);
   if (!res) {
     return { ...state, pendingKeys: undefined };
+  }
+  if (!res.isCurrent && opts.wrapscan === false) {
+    const check = findSearchTarget(state.lines, matches, state.cursor, null, isForward, false);
+    if (check?.wrapped) {
+      return {
+        ...state,
+        pendingKeys: undefined,
+        bell: true,
+        commandMessage: isForward
+          ? msg('E385: 파일 맨 아래까지 검색했으나 찾지 못했습니다: {pattern}', { pattern: state.lastSearchQuery })
+          : msg('E384: 파일 맨 위까지 검색했으나 찾지 못했습니다: {pattern}', { pattern: state.lastSearchQuery }),
+      };
+    }
   }
 
   const target = res.match;
@@ -334,6 +348,14 @@ export function applyIncsearchPreview(
     !backward,
     true
   )!;
+  if (opts.wrapscan === false && firstFound.wrapped) {
+    return {
+      ...state,
+      cursor: originCursor,
+      viewport: state.searchOriginViewport ?? state.viewport,
+      incsearchStepOffset: 0,
+    };
+  }
   const baseIdx = Math.max(
     0,
     matches.findIndex((m) => m.line === firstFound.match.line && m.col === firstFound.match.col)
@@ -341,9 +363,11 @@ export function applyIncsearchPreview(
   const nextStepOffset =
     stepDelta === 0 ? 0 : (state.incsearchStepOffset ?? 0) + stepDelta;
   const dirSign = backward ? -1 : 1;
+  const rawIdx = baseIdx + nextStepOffset * dirSign;
   const effectiveIdx =
-    (((baseIdx + nextStepOffset * dirSign) % matches.length) + matches.length) %
-    matches.length;
+    opts.wrapscan === false
+      ? Math.max(0, Math.min(matches.length - 1, rawIdx))
+      : ((rawIdx % matches.length) + matches.length) % matches.length;
   const chosenMatch = matches[effectiveIdx];
   const targetPos = applySearchOffset(state.lines, chosenMatch, parsedQuery.offset);
 
@@ -424,6 +448,17 @@ export function executeSearchQuery(
   }
 
   const found = findSearchTarget(state.lines, matches, returnCursor, offset, !backward, true)!;
+  if (opts.wrapscan === false && found.wrapped) {
+    return {
+      ...failBase,
+      lastSearchQuery: pattern,
+      lastSearchOffset: offset,
+      lastSearchDirection: direction,
+      commandMessage: backward
+        ? msg('E384: 파일 맨 위까지 검색했으나 찾지 못했습니다: {pattern}', { pattern })
+        : msg('E385: 파일 맨 아래까지 검색했으나 찾지 못했습니다: {pattern}', { pattern }),
+    };
+  }
   let targetMatch = found.match;
   let targetPos = found.target;
 
@@ -434,9 +469,11 @@ export function executeSearchQuery(
       matches.findIndex((m) => m.line === found.match.line && m.col === found.match.col)
     );
     const dirSign = backward ? -1 : 1;
+    const rawIdx = baseIdx + stepOffset * dirSign;
     const effectiveIdx =
-      (((baseIdx + stepOffset * dirSign) % matches.length) + matches.length) %
-      matches.length;
+      opts.wrapscan === false
+        ? Math.max(0, Math.min(matches.length - 1, rawIdx))
+        : ((rawIdx % matches.length) + matches.length) % matches.length;
     targetMatch = matches[effectiveIdx];
     targetPos = applySearchOffset(state.lines, targetMatch, offset);
   }
@@ -514,7 +551,8 @@ export function repeatSearch(state: VimEditorState, reverse: boolean): VimEditor
   if (!state.lastSearchQuery) {
     return { ...state, pendingKeys: undefined };
   }
-  const matches = findMatches(state.lines, state.lastSearchQuery, state.options);
+  const opts = getOptions(state);
+  const matches = findMatches(state.lines, state.lastSearchQuery, opts);
   if (matches.length === 0) {
     return {
       ...state,
@@ -525,6 +563,16 @@ export function repeatSearch(state: VimEditorState, reverse: boolean): VimEditor
   }
   const forward = (state.lastSearchDirection !== 'backward') !== reverse;
   const found = findSearchTarget(state.lines, matches, state.cursor, state.lastSearchOffset, forward)!;
+  if (opts.wrapscan === false && found.wrapped) {
+    return {
+      ...state,
+      pendingKeys: undefined,
+      bell: true,
+      commandMessage: forward
+        ? msg('E385: 파일 맨 아래까지 검색했으나 찾지 못했습니다: {pattern}', { pattern: state.lastSearchQuery })
+        : msg('E384: 파일 맨 위까지 검색했으나 찾지 못했습니다: {pattern}', { pattern: state.lastSearchQuery }),
+    };
+  }
   const matchIdx = matches.findIndex((m) => m.line === found.match.line && m.col === found.match.col);
   const stateWithJump = recordJump(state);
   return {
@@ -652,8 +700,9 @@ export function executeWordSearch(
     return { ...state, pendingKeys: undefined, bell: true, commandMessage: msg('E348: 커서 아래에 단어가 없습니다') };
   }
 
+  const opts = getOptions(state);
   const query = starSearchPattern(word, wholeWord);
-  const matches = findMatches(state.lines, query, state.options);
+  const matches = findMatches(state.lines, query, opts);
   if (matches.length === 0) {
     return {
       ...state,
@@ -667,10 +716,23 @@ export function executeWordSearch(
     };
   }
 
-  const targetMatch =
-    direction === 'forward'
-      ? findNextMatch(matches, state.cursor) ?? matches[0]
-      : findPrevMatch(matches, state.cursor) ?? matches[matches.length - 1];
+  const found = findSearchTarget(state.lines, matches, state.cursor, null, direction === 'forward', false)!;
+  if (opts.wrapscan === false && found.wrapped) {
+    return {
+      ...state,
+      lastSearchQuery: query,
+      lastSearchOffset: null,
+      lastSearchDirection: direction,
+      hlsearchSuppressed: undefined,
+      pendingKeys: undefined,
+      bell: true,
+      commandMessage:
+        direction === 'forward'
+          ? msg('E385: 파일 맨 아래까지 검색했으나 찾지 못했습니다: {pattern}', { pattern: query })
+          : msg('E384: 파일 맨 위까지 검색했으나 찾지 못했습니다: {pattern}', { pattern: query }),
+    };
+  }
+  const targetMatch = found.match;
   const matchIdx = targetMatch
     ? matches.findIndex((m) => m.line === targetMatch.line && m.col === targetMatch.col)
     : -1;

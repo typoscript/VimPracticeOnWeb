@@ -426,4 +426,6 @@ export const EN_MESSAGES: Record<string, string> = {
   "커스텀 하이라이트 매치 해제 ({cmd})": "Custom match highlight cleared ({cmd})",
   "[하이라이트 매치] {group}: /{pattern}/": "[Match Highlight] {group}: /{pattern}/",
   "E790: undojoin 은 실행 취소(undo) 직후에 사용할 수 없습니다": "E790: undojoin is not allowed after undo",
+  "E384: 파일 맨 위까지 검색했으나 찾지 못했습니다: {pattern}": "E384: search hit TOP without match for: {pattern}",
+  "E385: 파일 맨 아래까지 검색했으나 찾지 못했습니다: {pattern}": "E385: search hit BOTTOM without match for: {pattern}",
 };

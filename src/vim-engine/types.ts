@@ -362,6 +362,12 @@ export interface VimOptions {
   cursorcolumn?: boolean;
   /** 와일드메뉴 자동완성 단계 모드 (:set wim=longest:full,full, :set wildmode) */
   wildmode?: string;
+  /** 검색이 버퍼 끝에 도달하면 반대쪽 끝으로 순환할지 여부 (:set ws / nows, :set wrapscan) */
+  wrapscan?: boolean;
+  /** 줄 경계를 넘어 이동할 수 있는 키 목록 (:set ww=b,s,h,l,<,>,~,[,], :set whichwrap) */
+  whichwrap?: string;
+  /** Insert 모드 Tab/Backspace 소프트 탭 정지 폭 (:set sts=4, -1이면 shiftwidth, :set softtabstop) */
+  softtabstop?: number;
 }
 
 /** 맞춤법 검사기 오탈자 정보 */

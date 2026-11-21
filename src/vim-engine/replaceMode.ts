@@ -1,5 +1,6 @@
 import { VimEditorState } from './types';
 import { getMaxCol } from './cursor';
+import { getOptions, parseWhichwrapFlags } from './setOptionsCore';
 
 /**
  * REPLACE (R) 모드 키 입력 처리:
@@ -82,9 +83,24 @@ export function handleReplaceModeKey(
   }
 
   if (key === 'ArrowLeft') {
-    return { ...state, cursor: { line: state.cursor.line, col: Math.max(0, state.cursor.col - 1) } };
+    if (state.cursor.col > 0) {
+      return { ...state, cursor: { line: state.cursor.line, col: state.cursor.col - 1 } };
+    }
+    if (state.cursor.line > 0 && parseWhichwrapFlags(getOptions(state).whichwrap).has('[')) {
+      const prevLine = state.lines[state.cursor.line - 1] ?? '';
+      return { ...state, cursor: { line: state.cursor.line - 1, col: prevLine.length } };
+    }
+    return { ...state, cursor: { line: state.cursor.line, col: 0 } };
   }
   if (key === 'ArrowRight') {
+    const curLine = state.lines[state.cursor.line] ?? '';
+    if (
+      state.cursor.col >= curLine.length &&
+      state.cursor.line < state.lines.length - 1 &&
+      parseWhichwrapFlags(getOptions(state).whichwrap).has(']')
+    ) {
+      return { ...state, cursor: { line: state.cursor.line + 1, col: 0 } };
+    }
     return { ...state, cursor: { line: state.cursor.line, col: state.cursor.col + 1 } };
   }
   if (key === 'ArrowUp') {

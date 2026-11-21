@@ -358,6 +358,7 @@ export const AVAILABLE_OPTIONS: string[] = [
   'nosyntax',
   'nowildmenu',
   'nowrap',
+  'nowrapscan',
   'nrformats',
   'number',
   'readonly',
@@ -371,14 +372,17 @@ export const AVAILABLE_OPTIONS: string[] = [
   'sidescrolloff',
   'smartcase',
   'smartindent',
+  'softtabstop',
   'spell',
   'syntax',
   'tabstop',
   'textwidth',
   'virtualedit',
+  'whichwrap',
   'wildmenu',
   'wildmode',
   'wrap',
+  'wrapscan',
 ];
 
 export const OPTION_VALUE_COMPLETIONS: Record<string, readonly string[]> = {
@@ -386,6 +390,7 @@ export const OPTION_VALUE_COMPLETIONS: Record<string, readonly string[]> = {
   inccommand: ['nosplit', 'split'],
   virtualedit: ['all', 'block', 'insert', 'none', 'onemore'],
   nrformats: ['alpha', 'bin', 'blank', 'hex', 'octal', 'unsigned'],
+  whichwrap: ['<', '>', '[', ']', 'b', 'h', 'l', 's', '~'],
   wildmode: ['full', 'list', 'list:full', 'list:longest', 'longest', 'longest:full', 'longest:list'],
   filetype: [
     'c',

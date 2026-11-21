@@ -41,6 +41,9 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   colorcolumn: '',
   cursorcolumn: false,
   wildmode: 'full',
+  wrapscan: true,
+  whichwrap: 'b,s',
+  softtabstop: 0,
 };
 
 export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
@@ -127,6 +130,12 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   cursorcolumn: 'cursorcolumn',
   wim: 'wildmode',
   wildmode: 'wildmode',
+  ws: 'wrapscan',
+  wrapscan: 'wrapscan',
+  ww: 'whichwrap',
+  whichwrap: 'whichwrap',
+  sts: 'softtabstop',
+  softtabstop: 'softtabstop',
 };
 
 export const WINDOW_LOCAL_OPTION_KEYS = new Set<keyof VimOptions>([
@@ -362,9 +371,10 @@ export function formatOptionsList(
     'autoindent',
     'smartindent',
     'shiftround',
+    'wrapscan',
   ];
 
-  const numericKeys: (keyof VimOptions)[] = ['tabstop', 'shiftwidth', 'textwidth', 'scrolloff', 'sidescroll', 'sidescrolloff'];
+  const numericKeys: (keyof VimOptions)[] = ['tabstop', 'shiftwidth', 'softtabstop', 'textwidth', 'scrolloff', 'sidescroll', 'sidescrolloff'];
 
   const displayedItems: string[] = [];
 
@@ -405,6 +415,7 @@ export function formatOptionsList(
     'shortmess',
     'colorcolumn',
     'wildmode',
+    'whichwrap',
   ];
 
   for (const k of stringKeys) {
@@ -478,6 +489,7 @@ export function tokenizeSetArgs(rawArgs: string): string[] {
 const NUMERIC_OPTION_KEYS = new Set<keyof VimOptions>([
   'tabstop',
   'shiftwidth',
+  'softtabstop',
   'textwidth',
   'scrolloff',
   'sidescroll',
@@ -506,7 +518,21 @@ const BOOLEAN_OPTION_KEYS = new Set<keyof VimOptions>([
   'autoindent',
   'smartindent',
   'shiftround',
+  'wrapscan',
 ]);
+
+/**
+ * whichwrap 옵션 문자열을 파싱하여 활성화된 플래그 집합을 반환합니다. (기본값: 'b,s')
+ */
+export function parseWhichwrapFlags(raw?: string): Set<string> {
+  const effective = raw !== undefined ? raw : (DEFAULT_VIM_OPTIONS.whichwrap ?? 'b,s');
+  const flags = new Set<string>();
+  for (const part of effective.split(',')) {
+    const trimmed = part.trim();
+    if (trimmed) flags.add(trimmed);
+  }
+  return flags;
+}
 
 /** '&nu', '&g:sw', '&l:wrap' 문자열에서 스코프와 정규화된 옵션 키를 해석합니다. */
 export function parseOptionRef(raw: string): { scope: 'default' | 'g' | 'l'; key: keyof VimOptions } | null {

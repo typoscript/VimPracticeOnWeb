@@ -18,6 +18,7 @@ type FoldMethod = NonNullable<VimOptions['foldmethod']>;
 type NumericOptionKey =
   | 'tabstop'
   | 'shiftwidth'
+  | 'softtabstop'
   | 'textwidth'
   | 'scrolloff'
   | 'sidescroll'
@@ -42,15 +43,18 @@ type BooleanOrSyntaxOptionKey =
   | 'readonly'
   | 'autoindent'
   | 'smartindent'
-  | 'shiftround';
+  | 'shiftround'
+  | 'wrapscan';
 
 const VALID_FOLDMETHODS: readonly FoldMethod[] = ['manual', 'indent', 'marker', 'syntax', 'expr'];
 const VALID_NRFORMATS = new Set(['bin', 'octal', 'hex', 'alpha', 'unsigned', 'blank']);
 const VALID_VIRTUALEDIT = new Set(['block', 'insert', 'all', 'onemore', 'none']);
 const VALID_WILDMODE_ATOMS = new Set(['', 'full', 'longest', 'list', 'lastused']);
+const VALID_WHICHWRAP_FLAGS = new Set(['b', 's', 'h', 'l', '<', '>', '~', '[', ']']);
 const NUMERIC_OPTION_KEYS = new Set<NumericOptionKey>([
   'tabstop',
   'shiftwidth',
+  'softtabstop',
   'textwidth',
   'scrolloff',
   'sidescroll',
@@ -83,6 +87,7 @@ const BOOLEAN_OR_SYNTAX_KEYS = new Set<BooleanOrSyntaxOptionKey>([
   'autoindent',
   'smartindent',
   'shiftround',
+  'wrapscan',
 ]);
 
 const DEFAULT_ERRORFORMAT = '%f:%l:%c:%m,%f:%l:%m,%f(%l\\,%c):%m';
@@ -202,6 +207,8 @@ export function handleOptionQuery(ctx: SetDraftContext, token: string): VimEdito
       val = DEFAULT_VIM_OPTIONS.colorcolumn ?? '';
     } else if (optKey === 'wildmode') {
       val = DEFAULT_VIM_OPTIONS.wildmode ?? 'full';
+    } else if (optKey === 'whichwrap') {
+      val = DEFAULT_VIM_OPTIONS.whichwrap ?? 'b,s';
     }
   }
 
@@ -513,6 +520,33 @@ function handleWildmodeAssignment(
   return null;
 }
 
+function handleWhichwrapAssignment(
+  ctx: SetDraftContext,
+  mod: string,
+  rawVal: string,
+  token: string
+): VimEditorState | null {
+  const parseParts = (s: string) =>
+    s
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean);
+  const rawParts = parseParts(rawVal);
+  if (rawParts.some((p) => !VALID_WHICHWRAP_FLAGS.has(p))) {
+    return {
+      ...ctx.state,
+      bell: true,
+      commandMessage: msg('E474: 잘못된 인수입니다: {token}', { token }),
+    };
+  }
+  const curStr =
+    ctx.nextLocal.whichwrap ?? ctx.nextGlobal.whichwrap ?? DEFAULT_VIM_OPTIONS.whichwrap ?? 'b,s';
+  const nextVal = mergeCommaList(parseParts(curStr), rawParts, mod).join(',');
+  writeScopedOption(ctx, 'whichwrap', nextVal);
+  ctx.appliedList.push(`whichwrap=${nextVal}`);
+  return null;
+}
+
 export function handleOptionAssignment(ctx: SetDraftContext, token: string): VimEditorState | null {
   const eqIdx = token.indexOf('=');
   const rawKeyWithMod = token.slice(0, eqIdx);
@@ -532,6 +566,7 @@ export function handleOptionAssignment(ctx: SetDraftContext, token: string): Vim
   if (optKey === 'shortmess') return handleShortmessAssignment(ctx, mod, rawVal);
   if (optKey === 'colorcolumn') return handleColorcolumnAssignment(ctx, mod, rawVal, token);
   if (optKey === 'wildmode') return handleWildmodeAssignment(ctx, mod, rawVal, token);
+  if (optKey === 'whichwrap') return handleWhichwrapAssignment(ctx, mod, rawVal, token);
 
   if (optKey === 'errorformat' || optKey === 'grepprg') {
     const currentStr =
@@ -644,7 +679,8 @@ export function handleOptionAssignment(ctx: SetDraftContext, token: string): Vim
   }
 
   const numVal = parseInt(rawVal, 10);
-  const minVal = ZERO_ALLOWED_NUMERIC_KEYS.has(optKey) ? 0 : 1;
+  const minVal =
+    optKey === 'softtabstop' ? -1 : ZERO_ALLOWED_NUMERIC_KEYS.has(optKey) ? 0 : 1;
   if (isNaN(numVal) || numVal < minVal) {
     return {
       ...ctx.state,

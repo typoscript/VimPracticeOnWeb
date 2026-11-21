@@ -38,6 +38,7 @@ import { recordJump, jumpOlder, jumpNewer } from './marks';
 import { joinLines, toggleCaseChar, modifyNumberAtCursor } from './lineOperators';
 import { yankFoldOrLine } from './folding';
 import { msg } from './messages';
+import { getOptions } from './setOptionsCore';
 import { repeatSearch, executeWordSearch } from './searchMode';
 import {
   ringBell,
@@ -569,7 +570,8 @@ export function handleNormalEditingAndMotionFallback(
     state.cursor,
     key,
     parsed.totalCount,
-    state.folds
+    state.folds,
+    getOptions(state).whichwrap
   );
 
   if (motionCursor) {

@@ -10,26 +10,45 @@ import {
 } from './wordMotion';
 
 /**
- * 'h': 왼쪽으로 1칸 이동
+ * 'h': 왼쪽으로 1칸 이동 (wrap=true 이면 줄 시작에서 윗줄 끝으로 이동)
  */
-export function moveLeft(lines: string[], cursor: CursorPosition): CursorPosition {
+export function moveLeft(lines: string[], cursor: CursorPosition, wrap = false): CursorPosition {
   const clamped = clampCursor(lines, cursor);
-  return {
-    line: clamped.line,
-    col: Math.max(0, clamped.col - 1),
-  };
+  if (clamped.col > 0) {
+    return {
+      line: clamped.line,
+      col: clamped.col - 1,
+    };
+  }
+  if (wrap && clamped.line > 0) {
+    const prevLine = clamped.line - 1;
+    return {
+      line: prevLine,
+      col: getMaxCol(lines[prevLine]),
+    };
+  }
+  return clamped;
 }
 
 /**
- * 'l': 오른쪽으로 1칸 이동 (줄 끝을 넘지 않음)
+ * 'l': 오른쪽으로 1칸 이동 (wrap=true 이면 줄 끝에서 아랫줄 시작으로 이동)
  */
-export function moveRight(lines: string[], cursor: CursorPosition): CursorPosition {
+export function moveRight(lines: string[], cursor: CursorPosition, wrap = false): CursorPosition {
   const clamped = clampCursor(lines, cursor);
   const maxCol = getMaxCol(lines[clamped.line]);
-  return {
-    line: clamped.line,
-    col: Math.min(maxCol, clamped.col + 1),
-  };
+  if (clamped.col < maxCol) {
+    return {
+      line: clamped.line,
+      col: clamped.col + 1,
+    };
+  }
+  if (wrap && clamped.line < lines.length - 1) {
+    return {
+      line: clamped.line + 1,
+      col: 0,
+    };
+  }
+  return clamped;
 }
 
 /**

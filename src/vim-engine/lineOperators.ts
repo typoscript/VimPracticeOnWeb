@@ -1,6 +1,7 @@
 import { VimEditorState } from './types';
 import { pushUndoSnapshot } from './operators';
 import { getOptions } from './setEngine';
+import { parseWhichwrapFlags } from './setOptionsCore';
 import {
   moveToFirstNonBlank,
   moveToNextWord,
@@ -75,7 +76,15 @@ export function joinLines(state: VimEditorState, count = 1, insertSpace = true):
  */
 export function toggleCaseChar(state: VimEditorState, count = 1): VimEditorState {
   const currentLine = state.lines[state.cursor.line] ?? '';
+  const wwTilde = parseWhichwrapFlags(getOptions(state).whichwrap).has('~');
   if (currentLine.length === 0) {
+    if (wwTilde && state.cursor.line < state.lines.length - 1) {
+      return {
+        ...state,
+        cursor: { line: state.cursor.line + 1, col: 0 },
+        pendingKeys: undefined,
+      };
+    }
     return { ...state, pendingKeys: undefined };
   }
 
@@ -96,12 +105,16 @@ export function toggleCaseChar(state: VimEditorState, count = 1): VimEditorState
 
   const newLines = [...state.lines];
   newLines[state.cursor.line] = chars.join('');
-  const newCol = Math.min(col + repeat, Math.max(0, chars.length - 1));
+  const wrappedToNext =
+    wwTilde && col + repeat >= chars.length && state.cursor.line < state.lines.length - 1;
+  const newCursor = wrappedToNext
+    ? { line: state.cursor.line + 1, col: 0 }
+    : { line: state.cursor.line, col: Math.min(col + repeat, Math.max(0, chars.length - 1)) };
 
   return {
     ...stateWithUndo,
     lines: newLines,
-    cursor: { line: state.cursor.line, col: newCol },
+    cursor: newCursor,
     pendingKeys: undefined,
   };
 }

@@ -23,6 +23,7 @@ import {
   startWholeLineCompletion,
 } from './completion';
 import { getOptions } from './setEngine';
+import { parseWhichwrapFlags } from './setOptionsCore';
 import { recordChangePosition } from './advancedMotions';
 import {
   AbbrevReplayCtx,
@@ -38,6 +39,20 @@ import {
   handleInsertEscape,
   handleInsertLastInserted,
 } from './insertSpecialKeys';
+
+function displayWidthOf(text: string, ts: number): number {
+  let w = 0;
+  for (const ch of text) {
+    w += ch === '\t' ? ts - (w % ts) : 1;
+  }
+  return w;
+}
+
+function resolveSofttabstop(opts: { softtabstop?: number; shiftwidth?: number }): number {
+  const raw = opts.softtabstop ?? 0;
+  if (raw < 0) return Math.max(1, opts.shiftwidth || 2);
+  return raw;
+}
 
 function trimInsertText(text: string | undefined, count: number): string | undefined {
   if (!text || count <= 0) return text;
@@ -516,14 +531,32 @@ function handleInsertEditingKey(
     }
     const nextChangeKeys = appendCurrentChange(state, 'Backspace', isReplayingDot);
     if (col > 0) {
+      const opts = getOptions(state);
+      const sts = resolveSofttabstop(opts);
+      let deleteFrom = col - 1;
+      if (sts > 0 && !state.blockInsertSession && currentLine[col - 1] === ' ') {
+        const ts = Math.max(1, opts.tabstop || 2);
+        const vcol = displayWidthOf(currentLine.slice(0, col), ts);
+        const targetVcol = Math.max(0, Math.floor((vcol - 1) / sts) * sts);
+        deleteFrom = col;
+        while (
+          deleteFrom > 0 &&
+          currentLine[deleteFrom - 1] === ' ' &&
+          displayWidthOf(currentLine.slice(0, deleteFrom), ts) > targetVcol
+        ) {
+          deleteFrom--;
+        }
+        if (deleteFrom === col) deleteFrom = col - 1;
+      }
+      const removed = col - deleteFrom;
       const nextLines = [...state.lines];
-      nextLines[line] = currentLine.slice(0, col - 1) + currentLine.slice(col);
+      nextLines[line] = currentLine.slice(0, deleteFrom) + currentLine.slice(col);
       return {
         ...state,
         lines: nextLines,
-        cursor: { line, col: col - 1 },
+        cursor: { line, col: deleteFrom },
         currentChangeKeys: nextChangeKeys,
-        currentInsertText: trimInsertText(state.currentInsertText, 1),
+        currentInsertText: trimInsertText(state.currentInsertText, removed),
       };
     }
     if (col === 0 && line > 0) return mergeWithPreviousLine(state, nextChangeKeys);
@@ -565,11 +598,60 @@ function handleInsertEditingKey(
     };
   }
 
-  // Tab: 들여쓰기 삽입
+  // Tab: 들여쓰기 삽입 (softtabstop / expandtab / tabstop 지원)
   if (key === 'Tab') {
     const nextChangeKeys = appendCurrentChange(state, 'Tab', isReplayingDot);
     const opts = getOptions(state);
-    const ts = opts.tabstop || opts.shiftwidth || 2;
+    const ts = Math.max(1, opts.tabstop || opts.shiftwidth || 2);
+    const sts = resolveSofttabstop(opts);
+
+    if (sts > 0) {
+      const vcol = displayWidthOf(currentLine.slice(0, col), ts);
+      const targetVcol = Math.floor(vcol / sts + 1) * sts;
+      if (opts.expandtab !== false) {
+        const indent = ' '.repeat(targetVcol - vcol);
+        if (state.blockInsertSession) {
+          state = {
+            ...state,
+            blockInsertSession: {
+              ...state.blockInsertSession,
+              typedChars: [...state.blockInsertSession.typedChars, ...indent.split('')],
+            },
+          };
+        }
+        const nextLines = [...state.lines];
+        nextLines[line] = currentLine.slice(0, col) + indent + currentLine.slice(col);
+        return {
+          ...state,
+          lines: nextLines,
+          cursor: { line, col: col + indent.length },
+          currentChangeKeys: nextChangeKeys,
+          currentInsertText: (state.currentInsertText ?? '') + indent,
+        };
+      }
+      // noexpandtab + softtabstop: 직전 공백과 합쳐 tabstop 단위는 \t 로, 나머지는 공백으로 채움
+      let spaceStart = col;
+      while (spaceStart > 0 && currentLine[spaceStart - 1] === ' ') spaceStart--;
+      let curV = displayWidthOf(currentLine.slice(0, spaceStart), ts);
+      let replacement = '';
+      while (curV + (ts - (curV % ts)) <= targetVcol) {
+        replacement += '\t';
+        curV += ts - (curV % ts);
+      }
+      if (curV < targetVcol) {
+        replacement += ' '.repeat(targetVcol - curV);
+      }
+      const nextLines = [...state.lines];
+      nextLines[line] = currentLine.slice(0, spaceStart) + replacement + currentLine.slice(col);
+      return {
+        ...state,
+        lines: nextLines,
+        cursor: { line, col: spaceStart + replacement.length },
+        currentChangeKeys: nextChangeKeys,
+        currentInsertText: (state.currentInsertText ?? '') + replacement,
+      };
+    }
+
     const indent = opts.expandtab !== false ? ' '.repeat(ts) : '\t';
     if (state.blockInsertSession) {
       state = {
@@ -591,12 +673,25 @@ function handleInsertEditingKey(
     };
   }
 
-  // 방향키 이동
+  // 방향키 이동 (whichwrap '[' / ']' 지원)
   if (key === 'ArrowLeft') {
-    return { ...state, cursor: { line, col: Math.max(0, col - 1) } };
+    if (col > 0) {
+      return { ...state, cursor: { line, col: col - 1 } };
+    }
+    if (line > 0 && parseWhichwrapFlags(getOptions(state).whichwrap).has('[')) {
+      const prevLine = state.lines[line - 1] ?? '';
+      return { ...state, cursor: { line: line - 1, col: prevLine.length } };
+    }
+    return { ...state, cursor: { line, col: 0 } };
   }
   if (key === 'ArrowRight') {
-    return { ...state, cursor: { line, col: Math.min(currentLine.length, col + 1) } };
+    if (col < currentLine.length) {
+      return { ...state, cursor: { line, col: col + 1 } };
+    }
+    if (line < state.lines.length - 1 && parseWhichwrapFlags(getOptions(state).whichwrap).has(']')) {
+      return { ...state, cursor: { line: line + 1, col: 0 } };
+    }
+    return { ...state, cursor: { line, col: currentLine.length } };
   }
   if (key === 'ArrowUp') {
     const targetLine = Math.max(0, line - 1);

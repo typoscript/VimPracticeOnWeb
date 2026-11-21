@@ -12,8 +12,10 @@ import {
 } from './visual';
 import { replaceVisualChars } from './visualUtilities';
 import { moveFind } from './findChar';
-import { findMatches, findNextMatch, findPrevMatch, getWordAtCursor } from './search';
+import { findMatches, findSearchTarget, getWordAtCursor } from './search';
 import { starSearchPattern } from './vimRegex';
+import { getOptions } from './setOptionsCore';
+import { msg } from './messages';
 import {
   MAX_REMAP_DEPTH,
   isKeymapPrefix,
@@ -609,16 +611,24 @@ export function handleVisualModeKey(
   if (key === '*' || key === '#') {
     const word = getWordAtCursor(state.lines[state.cursor.line] ?? '', state.cursor.col);
     if (word) {
+      const opts = getOptions(state);
       const query = starSearchPattern(word);
-      const matches = findMatches(state.lines, query, state.options);
-      const match =
-        key === '*'
-          ? findNextMatch(matches, state.cursor) ?? matches[0]
-          : findPrevMatch(matches, state.cursor) ?? matches[matches.length - 1];
-      if (match) {
+      const matches = findMatches(state.lines, query, opts);
+      const forward = key === '*';
+      const found = findSearchTarget(state.lines, matches, state.cursor, null, forward, false);
+      if (found) {
+        if (opts.wrapscan === false && found.wrapped) {
+          return {
+            ...ringBell(state),
+            lastSearchQuery: query,
+            commandMessage: forward
+              ? msg('E385: 파일 맨 아래까지 검색했으나 찾지 못했습니다: {pattern}', { pattern: query })
+              : msg('E384: 파일 맨 위까지 검색했으나 찾지 못했습니다: {pattern}', { pattern: query }),
+          };
+        }
         return {
           ...state,
-          cursor: { line: match.line, col: match.col },
+          cursor: { line: found.match.line, col: found.match.col },
           lastSearchQuery: query,
           pendingKeys: undefined,
         };
@@ -727,7 +737,8 @@ export function handleVisualModeKey(
     state.cursor,
     key,
     parsed.totalCount,
-    state.folds
+    state.folds,
+    getOptions(state).whichwrap
   );
 
   if (motionCursor) {

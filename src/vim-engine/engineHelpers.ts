@@ -1,5 +1,6 @@
 import { VimEditorState, CursorPosition, FoldRange } from './types';
 import { getMaxCol, clampCursor } from './cursor';
+import { parseWhichwrapFlags } from './setOptionsCore';
 import { evaluateExtraMotion } from './extraMotions';
 import { executeOperatorMotion } from './operatorMotion';
 import { syncRegisters, putFromRegister } from './registers';
@@ -115,6 +116,7 @@ export function ringBell(state: VimEditorState): VimEditorState {
 export const FAILABLE_MOTION_KEYS = new Set([
   'h', 'j', 'k', 'l', 'w', 'b', 'e', 'W', 'B', 'E',
   'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
+  'Backspace', ' ', 'Space',
 ]);
 
 export const NORMAL_EXTRA_KEYS = new Set(['(', ')', '+', '-', 'Enter', '|']);
@@ -218,20 +220,37 @@ export function evaluateMotionWithCount(
   cursor: { line: number; col: number },
   key: string,
   count = 1,
-  folds?: FoldRange[]
+  folds?: FoldRange[],
+  whichwrap?: string
 ): { line: number; col: number } | null {
   let cur = { ...cursor };
   let matched = true;
+  const wwFlags = parseWhichwrapFlags(whichwrap);
 
   switch (key) {
     case 'h':
+      for (let i = 0; i < count; i++) cur = moveLeft(lines, cur, wwFlags.has('h'));
+      break;
+
     case 'ArrowLeft':
-      for (let i = 0; i < count; i++) cur = moveLeft(lines, cur);
+      for (let i = 0; i < count; i++) cur = moveLeft(lines, cur, wwFlags.has('<'));
+      break;
+
+    case 'Backspace':
+      for (let i = 0; i < count; i++) cur = moveLeft(lines, cur, wwFlags.has('b'));
       break;
 
     case 'l':
+      for (let i = 0; i < count; i++) cur = moveRight(lines, cur, wwFlags.has('l'));
+      break;
+
     case 'ArrowRight':
-      for (let i = 0; i < count; i++) cur = moveRight(lines, cur);
+      for (let i = 0; i < count; i++) cur = moveRight(lines, cur, wwFlags.has('>'));
+      break;
+
+    case ' ':
+    case 'Space':
+      for (let i = 0; i < count; i++) cur = moveRight(lines, cur, wwFlags.has('s'));
       break;
 
     case 'j':
