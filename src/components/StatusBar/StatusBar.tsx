@@ -86,6 +86,21 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   // 언어와 무관하게 판정: Vim 에러 번호(E486 등)로 시작하거나 한/영 에러 문구를 포함
   const isErrorMessage = !!commandMessage && (commandMessage.startsWith('E') || /오류|찾을 수 없습니다|error|not found/i.test(commandMessage));
 
+  const selectedWildmenuRef = React.useRef<HTMLSpanElement | null>(null);
+
+  React.useEffect(() => {
+    if (
+      wildmenu?.active &&
+      selectedWildmenuRef.current &&
+      typeof selectedWildmenuRef.current.scrollIntoView === 'function'
+    ) {
+      selectedWildmenuRef.current.scrollIntoView({
+        block: 'nearest',
+        inline: 'nearest',
+      });
+    }
+  }, [wildmenu?.active, wildmenu?.selectedIndex]);
+
   return (
     <footer
       className={`status-bar ${isCommandLineActive || confirmSubstitute ? 'status-bar-active-command' : ''}`}
@@ -93,15 +108,22 @@ export const StatusBar: React.FC<StatusBarProps> = ({
     >
       {wildmenu?.active && showWildmenuBar && wildmenu.candidates.length > 0 && (
         <div className="wildmenu-bar" data-testid="wildmenu-bar">
-          {wildmenu.candidates.map((cand, idx) => (
-            <span
-              key={`${cand}-${idx}`}
-              className={`wildmenu-item ${idx === wildmenu.selectedIndex ? 'selected' : ''}`}
-              data-testid={idx === wildmenu.selectedIndex ? 'wildmenu-item-selected' : 'wildmenu-item'}
-            >
-              {cand}
-            </span>
-          ))}
+          <span className="wildmenu-count" data-testid="wildmenu-count">
+            {wildmenu.selectedIndex + 1}/{wildmenu.candidates.length}
+          </span>
+          {wildmenu.candidates.map((cand, idx) => {
+            const isSelected = idx === wildmenu.selectedIndex;
+            return (
+              <span
+                key={`${cand}-${idx}`}
+                ref={isSelected ? selectedWildmenuRef : undefined}
+                className={`wildmenu-item ${isSelected ? 'selected' : ''}`}
+                data-testid={isSelected ? 'wildmenu-item-selected' : 'wildmenu-item'}
+              >
+                {cand}
+              </span>
+            );
+          })}
         </div>
       )}
       <div className="status-bar-left">

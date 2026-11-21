@@ -2,144 +2,314 @@ import { VimEditorState } from './types';
 import { getAvailableDirectories, getWorkspaceFiles } from './vfs';
 import { OPTION_ALIASES } from './setEngine';
 import { buildProjectTags } from './tagEngine';
+import { HELP_TOPICS } from './helpData';
 
 /**
  * 자동완성 가능한 순정 Vim Ex 커맨드 목록
  */
 export const AVAILABLE_COMMANDS: string[] = [
-  'args',
+  'ab',
+  'abbrev',
+  'abclear',
+  'argadd',
+  'argdelete',
   'argdo',
+  'args',
   'ascii',
+  'au',
+  'augroup',
+  'autocmd',
   'b',
+  'badd',
+  'bd',
+  'bdelete',
+  'bfirst',
+  'blast',
+  'bn',
+  'bnext',
+  'Bookmark',
+  'Bookmarks',
+  'bp',
+  'bprev',
+  'bufdo',
   'buffer',
   'buffers',
-  'bdelete',
-  'bd',
-  'bnext',
-  'bn',
-  'bprev',
-  'bp',
-  'bufdo',
+  'Buffers',
   'bunload',
   'bw',
   'bwipeout',
+  'cab',
+  'cabbrev',
+  'cabclear',
+  'call',
+  'cc',
+  'cclose',
   'cd',
   'cdo',
   'center',
+  'cexpr',
+  'cfile',
   'cfdo',
+  'cfirst',
+  'cgetexpr',
   'changes',
   'chdir',
+  'clast',
+  'clearjumps',
+  'clist',
   'close',
   'cmap',
-  'cclose',
-  'cnext',
+  'cmapclear',
   'cn',
+  'cnewer',
+  'cnext',
+  'cnfile',
   'cnoremap',
-  'cunmap',
-  'copen',
-  'cprev',
-  'cp',
-  'cc',
+  'colder',
+  'comclear',
+  'command',
   'config',
+  'copy',
+  'cp',
+  'cpfile',
+  'cprev',
+  'cquit',
+  'cunabbrev',
+  'cunmap',
+  'delcommand',
+  'delete',
+  'delfunction',
+  'delmarks',
+  'di',
+  'diffget',
+  'diffoff',
+  'diffput',
   'diffsplit',
   'diffthis',
-  'diffoff',
   'diffupdate',
-  'diffget',
-  'diffput',
   'digraphs',
   'display',
-  'di',
-  'edit',
+  'doautocmd',
   'e',
+  'earlier',
+  'echo',
+  'echom',
+  'echomsg',
+  'edit',
+  'endfunction',
   'enew',
-  'export',
+  'execute',
   'Explore',
   'E',
+  'export',
   'file',
+  'files',
+  'Files',
+  'filetype',
+  'find',
   'finish',
-  'global',
+  'first',
+  'Fold',
+  'foldclose',
+  'folddoclosed',
+  'folddoopen',
+  'foldopen',
+  'function',
   'g',
+  'gb',
+  'global',
+  'h',
+  'help',
+  'helpclose',
+  'Hexplore',
+  'He',
+  'history',
+  'iab',
+  'iabbrev',
+  'iabclear',
+  'imap',
+  'imapclear',
+  'inoremap',
+  'iunabbrev',
+  'iunmap',
   'j',
   'join',
   'jumps',
   'keeppatterns',
   'l',
+  'last',
+  'later',
+  'laddexpr',
   'lcd',
+  'lchdir',
+  'lclose',
   'ldo',
   'left',
+  'let',
+  'lexpr',
+  'lfile',
   'lfdo',
+  'lfirst',
+  'lgetexpr',
   'list',
+  'll',
+  'llast',
+  'llist',
+  'lnewer',
+  'lnext',
+  'lnfile',
+  'lolder',
+  'lopen',
+  'lp',
+  'lpfile',
+  'lprev',
   'ls',
+  'lvimgrep',
+  'lvimgrepadd',
+  'lwindow',
+  'make',
+  'map',
+  'mapclear',
+  'mapconfig',
+  'mark',
   'marks',
   'messages',
-  'noautocmd',
-  'nu',
-  'number',
-  'p',
-  'print',
-  'pwd',
-  'right',
-  'next',
+  'mksession',
+  'move',
   'n',
+  'new',
+  'next',
+  'nmap',
+  'nmapclear',
+  'nnoremap',
+  'noautocmd',
+  'noh',
+  'nohlsearch',
+  'noremap',
   'norm',
   'normal',
+  'nu',
+  'number',
+  'nunmap',
   'omap',
-  'onoremap',
+  'omapclear',
   'only',
+  'onoremap',
   'ounmap',
-  'pop',
+  'p',
+  'pedit',
   'po',
+  'pop',
   'prev',
+  'print',
+  'ptag',
+  'put',
+  'pwd',
+  'q',
   'qa',
   'qall',
   'quit',
-  'q',
+  'read',
   'redir',
-  'registers',
+  'redo',
   'reg',
+  'registers',
+  'resize',
+  'retab',
+  'rewind',
+  'right',
   'ru',
   'runtime',
+  's',
   'saveas',
+  'sbuffer',
+  'se',
   'set',
+  'setg',
+  'setglobal',
+  'setl',
+  'setlocal',
+  'Se',
+  'Sexplore',
   'silent',
+  'so',
   'sort',
   'source',
-  'so',
-  'split',
   'sp',
+  'spellgood',
+  'spellinfo',
+  'spellundo',
+  'spellwrong',
+  'split',
   'substitute',
-  's',
+  'syncbind',
+  'syntax',
+  'ta',
   'tabclose',
   'tabdo',
+  'tabedit',
+  'tabfirst',
+  'tablast',
+  'tabmove',
+  'tabn',
   'tabnew',
   'tabnext',
-  'tabn',
-  'tabprev',
+  'tabonly',
   'tabp',
+  'tabprev',
+  'tabs',
+  'tag',
+  'tags',
   'tcd',
   'tchdir',
-  'tag',
-  'ta',
-  'tags',
-  'update',
+  'Te',
+  'Texplore',
+  'tfirst',
+  'tjump',
+  'tlast',
+  'tnext',
+  'tprev',
+  'tselect',
+  'unabbrev',
+  'undo',
+  'undolist',
+  'unlet',
+  'unmap',
   'up',
+  'update',
+  'verbose',
+  'vertical',
+  'Ve',
+  'Vexplore',
+  'vglobal',
+  'view',
+  'vimgrep',
+  'vimgrepadd',
   'vimrc',
-  'vsplit',
+  'vmap',
+  'vmapclear',
+  'vnew',
+  'vnoremap',
   'vsp',
+  'vsplit',
+  'vunmap',
+  'w',
   'wa',
   'wall',
-  'write',
+  'wincmd',
+  'windo',
   'wq',
   'wqa',
   'wqall',
-  'w',
+  'write',
   'x',
   'xa',
   'xall',
   'xmap',
+  'xmapclear',
   'xnoremap',
   'xunmap',
+  'yank',
 ];
 
 /**
@@ -147,8 +317,16 @@ export const AVAILABLE_COMMANDS: string[] = [
  */
 export const AVAILABLE_OPTIONS: string[] = [
   'all',
+  'commentstring',
   'cursorline',
+  'errorformat',
   'expandtab',
+  'filetype',
+  'foldexpr',
+  'foldlevel',
+  'foldmarker',
+  'foldmethod',
+  'grepprg',
   'hlsearch',
   'ignorecase',
   'inccommand',
@@ -167,20 +345,279 @@ export const AVAILABLE_OPTIONS: string[] = [
   'nonumber',
   'noreadonly',
   'norelativenumber',
+  'noscrollbind',
   'nosmartcase',
   'nospell',
+  'nosyntax',
   'nowildmenu',
   'nowrap',
+  'nrformats',
   'number',
   'readonly',
   'relativenumber',
+  'scrollbind',
+  'scrolloff',
   'shiftwidth',
+  'sidescroll',
+  'sidescrolloff',
   'smartcase',
   'spell',
+  'syntax',
   'tabstop',
+  'textwidth',
   'virtualedit',
   'wildmenu',
   'wrap',
+];
+
+const OPTION_VALUE_COMPLETIONS: Record<string, readonly string[]> = {
+  foldmethod: ['expr', 'indent', 'manual', 'marker', 'syntax'],
+  inccommand: ['nosplit', 'split'],
+  virtualedit: ['all', 'block', 'insert', 'none', 'onemore'],
+  nrformats: ['alpha', 'bin', 'blank', 'hex', 'octal', 'unsigned'],
+  filetype: [
+    'c',
+    'cpp',
+    'css',
+    'go',
+    'html',
+    'java',
+    'javascript',
+    'json',
+    'lua',
+    'markdown',
+    'python',
+    'rust',
+    'sh',
+    'sql',
+    'typescript',
+    'vim',
+    'yaml',
+  ],
+  syntax: ['enable', 'off', 'on', 'reset'],
+};
+
+const AUTOCMD_EVENTS: readonly string[] = [
+  'BufAdd',
+  'BufCreate',
+  'BufDelete',
+  'BufEnter',
+  'BufFilePost',
+  'BufFilePre',
+  'BufHidden',
+  'BufLeave',
+  'BufNew',
+  'BufNewFile',
+  'BufRead',
+  'BufReadPost',
+  'BufReadPre',
+  'BufUnload',
+  'BufWinEnter',
+  'BufWinLeave',
+  'BufWipeout',
+  'BufWrite',
+  'BufWritePost',
+  'BufWritePre',
+  'CmdlineChanged',
+  'CmdlineEnter',
+  'CmdlineLeave',
+  'CursorHold',
+  'CursorHoldI',
+  'CursorMoved',
+  'CursorMovedI',
+  'DirChanged',
+  'FileType',
+  'InsertChange',
+  'InsertCharPre',
+  'InsertEnter',
+  'InsertLeave',
+  'ModeChanged',
+  'OptionSet',
+  'QuickFixCmdPost',
+  'QuickFixCmdPre',
+  'SourcePost',
+  'SourcePre',
+  'Syntax',
+  'TabClosed',
+  'TabEnter',
+  'TabLeave',
+  'TabNew',
+  'TextChanged',
+  'TextChangedI',
+  'TextYankPost',
+  'User',
+  'VimEnter',
+  'VimLeave',
+  'WinClosed',
+  'WinEnter',
+  'WinLeave',
+  'WinNew',
+  'WinScrolled',
+];
+
+const BUILTIN_VIM_FUNCTIONS: readonly string[] = [
+  'abs',
+  'add',
+  'append',
+  'bufexists',
+  'buflisted',
+  'bufloaded',
+  'bufname',
+  'bufnr',
+  'bufwinid',
+  'bufwinnr',
+  'call',
+  'char2nr',
+  'col',
+  'copy',
+  'count',
+  'deepcopy',
+  'delete',
+  'empty',
+  'escape',
+  'eval',
+  'execute',
+  'exists',
+  'expand',
+  'extend',
+  'filereadable',
+  'filter',
+  'flatten',
+  'fnamemodify',
+  'foldclosed',
+  'foldclosedend',
+  'foldlevel',
+  'foldtext',
+  'function',
+  'funcref',
+  'get',
+  'getbufinfo',
+  'getbufline',
+  'getbufvar',
+  'getchar',
+  'getcmdline',
+  'getcmdpos',
+  'getcmdtype',
+  'getcwd',
+  'getenv',
+  'getfsize',
+  'getftype',
+  'getline',
+  'getloclist',
+  'getpos',
+  'getqflist',
+  'getreg',
+  'getregtype',
+  'gettabinfo',
+  'gettabvar',
+  'gettabwinvar',
+  'getwininfo',
+  'getwinvar',
+  'glob',
+  'has',
+  'has_key',
+  'histadd',
+  'histdel',
+  'histget',
+  'histnr',
+  'index',
+  'insert',
+  'invert',
+  'isdirectory',
+  'items',
+  'join',
+  'json_decode',
+  'json_encode',
+  'keys',
+  'len',
+  'line',
+  'line2byte',
+  'list2str',
+  'map',
+  'match',
+  'matchend',
+  'matchlist',
+  'matchstr',
+  'matchstrpos',
+  'max',
+  'min',
+  'mkdir',
+  'mode',
+  'nr2char',
+  'printf',
+  'pumvisible',
+  'range',
+  'readfile',
+  'reg_executing',
+  'reg_recording',
+  'remove',
+  'rename',
+  'repeat',
+  'reverse',
+  'search',
+  'searchpos',
+  'setbufline',
+  'setbufvar',
+  'setcmdpos',
+  'setline',
+  'setloclist',
+  'setpos',
+  'setqflist',
+  'setreg',
+  'settabvar',
+  'settabwinvar',
+  'setwinvar',
+  'shellescape',
+  'simplify',
+  'sort',
+  'split',
+  'str2list',
+  'str2nr',
+  'strchars',
+  'strdisplaywidth',
+  'strftime',
+  'strgetchar',
+  'stridx',
+  'string',
+  'strlen',
+  'strpart',
+  'strridx',
+  'strwidth',
+  'submatch',
+  'substitute',
+  'synID',
+  'synIDattr',
+  'system',
+  'systemlist',
+  'tabpagebuflist',
+  'tabpagenr',
+  'tabpagewinnr',
+  'taglist',
+  'tolower',
+  'toupper',
+  'tr',
+  'trim',
+  'type',
+  'uniq',
+  'values',
+  'virtcol',
+  'visualmode',
+  'win_findbuf',
+  'win_getid',
+  'win_gotoid',
+  'win_id2tabwin',
+  'win_id2win',
+  'winbufnr',
+  'wincol',
+  'winheight',
+  'winlayout',
+  'winline',
+  'winnr',
+  'winrestview',
+  'winsaveview',
+  'winwidth',
+  'wordcount',
+  'writefile',
 ];
 
 /**
@@ -235,35 +672,114 @@ export function getAvailableBuffers(state: VimEditorState): string[] {
 }
 
 /**
+ * 현재 에디터 상태에서 도움말 토픽/태그 목록을 조회합니다.
+ */
+export function getAvailableHelpTopics(): string[] {
+  const topicSet = new Set<string>();
+  for (const [filename, doc] of Object.entries(HELP_TOPICS)) {
+    topicSet.add(filename);
+    topicSet.add(doc.id);
+    for (const tag of doc.tags) {
+      topicSet.add(tag);
+    }
+    for (const line of doc.content) {
+      const matches = line.matchAll(/\*([A-Za-z0-9_.:-]+)\*/g);
+      for (const m of matches) {
+        topicSet.add(m[1]);
+      }
+    }
+  }
+  return Array.from(topicSet).sort();
+}
+
+/**
  * 현재 입력된 커맨드라인 문자열에 대한 자동완성 접두사(prefix) 및 후보 목록(candidates)을 계산합니다.
  */
 export function calculateCompletions(
   state: VimEditorState,
   input: string
 ): { prefix: string; candidates: string[] } | null {
-  // 공백이 없는 경우: 커맨드 이름 자체 자동완성
+  // 파이프(|) 뒤의 마지막 명령어 세그먼트 분리 지원 (:set nu | setl rnu<Tab>)
+  const lastPipeIdx = input.lastIndexOf('|');
+  if (lastPipeIdx >= 0 && (lastPipeIdx === 0 || input[lastPipeIdx - 1] !== '\\')) {
+    const afterPipeRaw = input.slice(lastPipeIdx + 1);
+    const leadingSpaces = afterPipeRaw.match(/^\s*/)?.[0] ?? '';
+    const subInput = afterPipeRaw.slice(leadingSpaces.length);
+    const subRes = calculateCompletions(state, subInput);
+    if (!subRes) return null;
+    return {
+      prefix: `${input.slice(0, lastPipeIdx + 1)}${leadingSpaces}${subRes.prefix}`,
+      candidates: subRes.candidates,
+    };
+  }
+
+  // 공백이 없는 경우: 커맨드 이름 자체 자동완성 (선행 범위 %, '<,'>, 1,5 등 보존 + 사용자 정의 명령 포함)
   if (!input.includes(' ')) {
-    if (!input) {
-      return { prefix: '', candidates: [...AVAILABLE_COMMANDS] };
+    const rangeMatch = input.match(/^([%$]|'<,'>|\d+(?:,\d+)?|\.,\$)?(.*)$/);
+    const rangePrefix = rangeMatch?.[1] ?? '';
+    const cmdPart = rangeMatch?.[2] ?? input;
+    const userCmds = Object.keys(state.userCommands ?? {});
+    const allCommands = Array.from(new Set([...AVAILABLE_COMMANDS, ...userCmds]));
+
+    if (!cmdPart) {
+      return { prefix: rangePrefix, candidates: allCommands };
     }
-    const lower = input.toLowerCase();
-    const matched = AVAILABLE_COMMANDS.filter((cmd) => cmd.toLowerCase().startsWith(lower));
+    const lower = cmdPart.toLowerCase();
+    const matched = allCommands.filter((cmd) => cmd.toLowerCase().startsWith(lower));
     if (matched.length === 0) return null;
-    return { prefix: '', candidates: matched };
+    return { prefix: rangePrefix, candidates: matched };
   }
 
   // 첫 공백을 기준으로 커맨드와 인수 분리
   const spaceIdx = input.indexOf(' ');
-  const cmd = input.slice(0, spaceIdx).trim().toLowerCase();
+  const rawCmdToken = input.slice(0, spaceIdx).trim();
+  const cmd = rawCmdToken.toLowerCase();
   const rest = input.slice(spaceIdx + 1);
 
-  // 1. :set 옵션 자동완성
-  if (cmd === 'set' || cmd === 'se') {
-    // 다중 옵션 지정 시 마지막 단어 기준
+  // 1. :set / :setlocal / :setglobal 옵션 및 옵션 값(opt=val) 자동완성
+  if (
+    cmd === 'set' ||
+    cmd === 'se' ||
+    cmd === 'setlocal' ||
+    cmd === 'setl' ||
+    cmd === 'setglobal' ||
+    cmd === 'setg'
+  ) {
+    const cmdPrefixVerb = cmd === 'se' ? 'set' : rawCmdToken;
     const lastSpace = rest.lastIndexOf(' ');
-    const prefix = lastSpace >= 0 ? `set ${rest.slice(0, lastSpace + 1)}` : 'set ';
-    const arg = (lastSpace >= 0 ? rest.slice(lastSpace + 1) : rest).toLowerCase();
+    const basePrefix =
+      lastSpace >= 0 ? `${cmdPrefixVerb} ${rest.slice(0, lastSpace + 1)}` : `${cmdPrefixVerb} `;
+    const rawArg = lastSpace >= 0 ? rest.slice(lastSpace + 1) : rest;
+    const arg = rawArg.toLowerCase();
 
+    // 1-a. opt=val 또는 opt+=val 형태의 열거형 옵션 값 완성
+    const eqIdx = rawArg.indexOf('=');
+    if (eqIdx > 0) {
+      const lhsWithMod = rawArg.slice(0, eqIdx + 1);
+      const rawOptName = rawArg
+        .slice(0, eqIdx)
+        .replace(/[+^-]$/, '')
+        .toLowerCase();
+      const canonicalOpt = OPTION_ALIASES[rawOptName] ?? rawOptName;
+      const valueList = OPTION_VALUE_COMPLETIONS[canonicalOpt];
+      if (!valueList) return null;
+
+      const rhsRaw = rawArg.slice(eqIdx + 1);
+      const lastCommaIdx = rhsRaw.lastIndexOf(',');
+      const valPrefix =
+        lastCommaIdx >= 0
+          ? `${basePrefix}${lhsWithMod}${rhsRaw.slice(0, lastCommaIdx + 1)}`
+          : `${basePrefix}${lhsWithMod}`;
+      const valQuery = (
+        lastCommaIdx >= 0 ? rhsRaw.slice(lastCommaIdx + 1) : rhsRaw
+      ).toLowerCase();
+
+      const matchedVals = valueList.filter((v) => v.toLowerCase().startsWith(valQuery));
+      if (matchedVals.length === 0) return null;
+      return { prefix: valPrefix, candidates: [...matchedVals] };
+    }
+
+    // 1-b. 옵션 이름 자체 완성
     const matchedSet = new Set<string>();
 
     for (const opt of AVAILABLE_OPTIONS) {
@@ -285,21 +801,24 @@ export function calculateCompletions(
 
     const matched = Array.from(matchedSet).sort();
     if (matched.length === 0) return null;
-    return { prefix, candidates: matched };
+    return { prefix: basePrefix, candidates: matched };
   }
 
-  // 2. 버퍼 관련 커맨드 (:b, :buffer, :bd, :bdelete, :bunload, :bwipeout 등)
+  // 2. 버퍼 관련 커맨드 (:b, :buffer, :bd, :bdelete, :bunload, :bwipeout, :sb, :sbuffer 등)
   if (
     cmd === 'b' ||
     cmd === 'buffer' ||
     cmd === 'bd' ||
+    cmd === 'bdel' ||
     cmd === 'bdelete' ||
     cmd === 'bun' ||
     cmd === 'bunload' ||
     cmd === 'bw' ||
-    cmd === 'bwipeout'
+    cmd === 'bwipeout' ||
+    cmd === 'sb' ||
+    cmd === 'sbuffer'
   ) {
-    const prefix = `${cmd} `;
+    const prefix = `${rawCmdToken} `;
     const arg = rest.toLowerCase();
     const allBuffers = getAvailableBuffers(state);
 
@@ -311,9 +830,16 @@ export function calculateCompletions(
     return { prefix, candidates: matched };
   }
 
-  // 2.5. 디렉터리 관련 커맨드 (:cd, :chdir, :lcd, :lchdir)
-  if (cmd === 'cd' || cmd === 'chdir' || cmd === 'lcd' || cmd === 'lchdir') {
-    const prefix = `${cmd} `;
+  // 2.5. 디렉터리 관련 커맨드 (:cd, :chdir, :lcd, :lchdir, :tcd, :tchdir)
+  if (
+    cmd === 'cd' ||
+    cmd === 'chdir' ||
+    cmd === 'lcd' ||
+    cmd === 'lchdir' ||
+    cmd === 'tcd' ||
+    cmd === 'tchdir'
+  ) {
+    const prefix = `${rawCmdToken} `;
     const arg = rest.toLowerCase();
     const allDirs = getAvailableDirectories(state);
     let matched = allDirs.filter((d) => d.toLowerCase().startsWith(arg));
@@ -324,7 +850,7 @@ export function calculateCompletions(
     return { prefix, candidates: matched };
   }
 
-  // 3. 파일 관련 커맨드 (:e, :edit, :sp, :split, :vsp, :vsplit, :so, :source, :saveas)
+  // 3. 파일 관련 커맨드 (:e, :edit, :sp, :split, :vsp, :vsplit, :so, :source, :saveas, :tabnew, :find, :r, :w 등)
   if (
     cmd === 'e' ||
     cmd === 'edit' ||
@@ -332,14 +858,29 @@ export function calculateCompletions(
     cmd === 'split' ||
     cmd === 'vsp' ||
     cmd === 'vsplit' ||
+    cmd === 'vs' ||
     cmd === 'so' ||
     cmd === 'source' ||
     cmd === 'saveas' ||
     cmd === 'sav' ||
     cmd === 'diffs' ||
-    cmd === 'diffsplit'
+    cmd === 'diffsplit' ||
+    cmd === 'tabe' ||
+    cmd === 'tabedit' ||
+    cmd === 'tabnew' ||
+    cmd === 'find' ||
+    cmd === 'fin' ||
+    cmd === 'r' ||
+    cmd === 'read' ||
+    cmd === 'w' ||
+    cmd === 'write' ||
+    cmd === 'badd' ||
+    cmd === 'bad' ||
+    cmd === 'argadd' ||
+    cmd === 'arga' ||
+    cmd === 'view'
   ) {
-    const prefix = `${cmd} `;
+    const prefix = `${rawCmdToken} `;
     const arg = rest.toLowerCase();
     const allFiles = getAvailableFiles(state);
 
@@ -351,9 +892,18 @@ export function calculateCompletions(
     return { prefix, candidates: matched };
   }
 
-  // 4. 태그 관련 커맨드 (:tag, :ta)
-  if (cmd === 'tag' || cmd === 'ta') {
-    const prefix = `${cmd} `;
+  // 4. 태그 관련 커맨드 (:tag, :ta, :tselect, :ts, :tjump, :tj, :ptag, :pt)
+  if (
+    cmd === 'tag' ||
+    cmd === 'ta' ||
+    cmd === 'tselect' ||
+    cmd === 'ts' ||
+    cmd === 'tjump' ||
+    cmd === 'tj' ||
+    cmd === 'ptag' ||
+    cmd === 'pt'
+  ) {
+    const prefix = `${rawCmdToken} `;
     const arg = rest.toLowerCase();
     const allTags = buildProjectTags(state);
     const tagNames = Array.from(new Set(allTags.map((t) => t.name))).sort();
@@ -366,7 +916,199 @@ export function calculateCompletions(
     return { prefix, candidates: matched };
   }
 
+  // 5. 도움말 토픽/태그 관련 커맨드 (:help, :h)
+  if (cmd === 'help' || cmd === 'h') {
+    const prefix = `${rawCmdToken} `;
+    const arg = rest.toLowerCase();
+    const allTopics = getAvailableHelpTopics();
+
+    let matched = allTopics.filter((t) => t.toLowerCase().startsWith(arg));
+    if (matched.length === 0 && arg) {
+      matched = allTopics.filter((t) => t.toLowerCase().includes(arg));
+    }
+    if (matched.length === 0) return null;
+    return { prefix, candidates: matched };
+  }
+
+  // 6. 함수 호출 및 삭제 (:call, :cal, :delfunction, :delf, :function, :fu, :fun, :func)
+  if (
+    cmd === 'call' ||
+    cmd === 'cal' ||
+    cmd === 'delfunction' ||
+    cmd === 'delf' ||
+    cmd === 'function' ||
+    cmd === 'func' ||
+    cmd === 'fun' ||
+    cmd === 'fu'
+  ) {
+    const prefix = `${rawCmdToken} `;
+    const arg = rest.toLowerCase();
+    const userFnNames = Object.values(state.userFunctions ?? {}).map((fn) => fn.name);
+    const pool =
+      cmd === 'call' || cmd === 'cal'
+        ? Array.from(new Set([...userFnNames, ...BUILTIN_VIM_FUNCTIONS])).sort()
+        : Array.from(new Set(userFnNames)).sort();
+
+    const matched = pool.filter((name) => name.toLowerCase().startsWith(arg));
+    if (matched.length === 0) return null;
+    return { prefix, candidates: matched };
+  }
+
+  // 7. 사용자 정의 명령 조회/삭제 (:command, :com, :delcommand, :delc)
+  if (cmd === 'command' || cmd === 'com' || cmd === 'delcommand' || cmd === 'delc') {
+    const prefix = `${rawCmdToken} `;
+    const arg = rest.toLowerCase();
+    const userCmds = Object.keys(state.userCommands ?? {}).sort();
+    const matched = userCmds.filter((name) => name.toLowerCase().startsWith(arg));
+    if (matched.length === 0) return null;
+    return { prefix, candidates: matched };
+  }
+
+  // 8. 자동 명령 그룹 및 이벤트 (:augroup, :aug, :autocmd, :au, :doautocmd, :doau)
+  if (cmd === 'augroup' || cmd === 'aug') {
+    const prefix = `${rawCmdToken} `;
+    const arg = rest.toLowerCase();
+    const existingGroups = (state.autocmds ?? [])
+      .map((a) => a.group)
+      .filter((g): g is string => Boolean(g && g !== 'default'));
+    const groups = Array.from(
+      new Set([
+        'END',
+        ...(state.activeAugroup ? [state.activeAugroup] : []),
+        ...existingGroups,
+      ])
+    ).sort();
+    const matched = groups.filter((g) => g.toLowerCase().startsWith(arg));
+    if (matched.length === 0) return null;
+    return { prefix, candidates: matched };
+  }
+  if (cmd === 'autocmd' || cmd === 'au' || cmd === 'doautocmd' || cmd === 'doau') {
+    const lastSpace = rest.lastIndexOf(' ');
+    const prefix =
+      lastSpace >= 0 ? `${rawCmdToken} ${rest.slice(0, lastSpace + 1)}` : `${rawCmdToken} `;
+    const arg = (lastSpace >= 0 ? rest.slice(lastSpace + 1) : rest).toLowerCase();
+    const matched = AUTOCMD_EVENTS.filter((ev) => ev.toLowerCase().startsWith(arg));
+    if (matched.length === 0) return null;
+    return { prefix, candidates: [...matched] };
+  }
+
+  // 9. 스크립트 변수 (:let, :unlet, :unl)
+  if (cmd === 'let' || cmd === 'unlet' || cmd === 'unl') {
+    if (!rest.includes(' ') && !rest.includes('=')) {
+      const prefix = `${rawCmdToken} `;
+      const scopeMatch = rest.match(/^([gbwts]):(.*)$/);
+      const scope = scopeMatch ? scopeMatch[1] : undefined;
+      const rawArg = scopeMatch ? scopeMatch[2] : rest;
+      const arg = rawArg.toLowerCase();
+
+      const store =
+        scope === 'b'
+          ? state.bufferVars?.[state.currentBufferId ?? 1] ?? {}
+          : scope === 'w'
+            ? state.windowVars?.[state.activePaneIndex ?? 0] ?? {}
+            : scope === 't'
+              ? state.tabVars?.[state.currentTabId ?? 1] ?? {}
+              : scope === 's'
+                ? state.scriptVars ?? {}
+                : { ...(state.globalVars ?? {}), ...(state.scriptVars ?? {}) };
+
+      const vars = Object.keys(store).sort();
+      const matched = vars
+        .filter((v) => v.toLowerCase().startsWith(arg))
+        .map((v) => (scope ? `${scope}:${v}` : v));
+      if (matched.length === 0) return null;
+      return { prefix, candidates: matched };
+    }
+  }
+
+  // 10. 등록된 키매핑/약어 해제 (:unmap, :nunmap, :iunmap, :vunmap, :xunmap, :ounmap, :cunmap, :unabbrev, :iunabbrev, :cunabbrev)
+  if (
+    cmd === 'unmap' ||
+    cmd === 'unm' ||
+    cmd === 'nunmap' ||
+    cmd === 'nun' ||
+    cmd === 'iunmap' ||
+    cmd === 'iu' ||
+    cmd === 'vunmap' ||
+    cmd === 'vu' ||
+    cmd === 'xunmap' ||
+    cmd === 'xu' ||
+    cmd === 'ounmap' ||
+    cmd === 'oun' ||
+    cmd === 'cunmap' ||
+    cmd === 'cu'
+  ) {
+    const prefix = `${rawCmdToken} `;
+    const arg = rest.toLowerCase();
+    const bufId = state.currentBufferId ?? 1;
+    const allKeys = [
+      ...Object.keys(state.userKeymaps ?? {}),
+      ...Object.keys(state.bufferKeymaps?.[bufId] ?? {}),
+    ];
+    const lhsSet = new Set<string>();
+    for (const k of allKeys) {
+      const colonIdx = k.indexOf(':');
+      lhsSet.add(colonIdx >= 0 ? k.slice(colonIdx + 1) : k);
+    }
+    const matched = Array.from(lhsSet)
+      .sort()
+      .filter((lhs) => lhs.toLowerCase().startsWith(arg));
+    if (matched.length === 0) return null;
+    return { prefix, candidates: matched };
+  }
+
+  if (
+    cmd === 'unabbrev' ||
+    cmd === 'una' ||
+    cmd === 'iunabbrev' ||
+    cmd === 'iuna' ||
+    cmd === 'cunabbrev' ||
+    cmd === 'cuna'
+  ) {
+    const prefix = `${rawCmdToken} `;
+    const arg = rest.toLowerCase();
+    const bufId = state.currentBufferId ?? 1;
+    const allKeys = [
+      ...Object.keys(state.abbreviations ?? {}),
+      ...Object.keys(state.bufferAbbreviations?.[bufId] ?? {}),
+    ];
+    const lhsSet = new Set<string>();
+    for (const k of allKeys) {
+      const colonIdx = k.indexOf(':');
+      lhsSet.add(colonIdx >= 0 ? k.slice(colonIdx + 1) : k);
+    }
+    const matched = Array.from(lhsSet)
+      .sort()
+      .filter((lhs) => lhs.toLowerCase().startsWith(arg));
+    if (matched.length === 0) return null;
+    return { prefix, candidates: matched };
+  }
+
   return null;
+}
+
+/**
+ * 와일드메뉴 후보 중 특정 인덱스 항목을 즉시 선택합니다.
+ */
+export function selectWildmenuCandidate(
+  state: VimEditorState,
+  index: number
+): VimEditorState {
+  if (!state.wildmenu?.active || state.wildmenu.candidates.length === 0) {
+    return state;
+  }
+  const { candidates, prefix } = state.wildmenu;
+  const clamped = Math.max(0, Math.min(index, candidates.length - 1));
+  const candidate = candidates[clamped];
+  return {
+    ...state,
+    commandBuffer: `${prefix}${candidate}`,
+    commandCursorCol: undefined,
+    wildmenu: {
+      ...state.wildmenu,
+      selectedIndex: clamped,
+    },
+  };
 }
 
 /**

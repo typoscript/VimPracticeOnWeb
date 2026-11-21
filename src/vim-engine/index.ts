@@ -79,6 +79,16 @@ export {
   findCompletionPrefix,
   scanBufferWords,
 } from './completion';
+export {
+  AVAILABLE_COMMANDS,
+  AVAILABLE_OPTIONS,
+  calculateCompletions,
+  handleTabCompletion,
+  selectWildmenuCandidate,
+  cancelWildmenu,
+  acceptWildmenu,
+  listCmdlineCompletions,
+} from './wildmenu';
 
 // ---- 순정 Vim 정규식 → JavaScript RegExp ----
 export { compileVimRegex, translateVimPattern, escapeVimPattern } from './vimRegex';

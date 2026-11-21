@@ -2,10 +2,12 @@ import { describe, it, expect } from 'vitest';
 import {
   calculateCompletions,
   handleTabCompletion,
+  selectWildmenuCandidate,
   cancelWildmenu,
   acceptWildmenu,
 } from './wildmenu';
 import { handleKey } from './vimEngine';
+import { executeCommandLine } from './commandLine';
 import { VimEditorState } from './types';
 
 describe('wildmenu engine (:set wildmenu, Tab completion)', () => {
@@ -243,6 +245,93 @@ describe('wildmenu engine (:set wildmenu, Tab completion)', () => {
       // ArrowLeft -> 이전 후보 (service.ts)
       state = handleKey(state, 'ArrowLeft');
       expect(state.commandBuffer).toBe('e service.ts');
+    });
+
+    it(':setlocal / :setglobal 옵션 및 opt=val 열거형 값 자동완성을 지원한다', () => {
+      const state = createBaseState();
+
+      const localRes = calculateCompletions(state, 'setlocal rnu');
+      expect(localRes?.prefix).toBe('setlocal ');
+      expect(localRes?.candidates).toEqual(['relativenumber']);
+
+      const fdmRes = calculateCompletions(state, 'set foldmethod=in');
+      expect(fdmRes?.prefix).toBe('set foldmethod=');
+      expect(fdmRes?.candidates).toEqual(['indent']);
+
+      const veRes = calculateCompletions(state, 'set ve+=o');
+      expect(veRes?.prefix).toBe('set ve+=');
+      expect(veRes?.candidates).toEqual(['onemore']);
+
+      const icmRes = calculateCompletions(state, 'set inccommand=');
+      expect(icmRes?.prefix).toBe('set inccommand=');
+      expect(icmRes?.candidates).toEqual(['nosplit', 'split']);
+    });
+
+    it('사용자 정의 명령(:command), 사용자/내장 함수(:call/:delfunction), 도움말(:help), 자동명령(:autocmd), 파이프(|) 뒤 자동완성을 지원한다', () => {
+      let state = createBaseState();
+      state = executeCommandLine(state, 'command! MyBuild echo "build"');
+      state = executeCommandLine(state, 'let g:my_flag = 1');
+      state = executeCommandLine(state, 'nnoremap <leader>x dd');
+      state = executeCommandLine(state, 'iabbrev teh the');
+      state = {
+        ...state,
+        userFunctions: {
+          MyHelper: {
+            name: 'MyHelper',
+            params: [],
+            varargs: false,
+            range: false,
+            abort: false,
+            body: ['return 1'],
+          },
+        },
+      };
+
+      // 1) 커맨드 시작부에서 사용자 정의 명령 포함
+      const cmdRes = calculateCompletions(state, 'MyB');
+      expect(cmdRes?.candidates).toEqual(['MyBuild']);
+
+      // 2) :delcommand 뒤 사용자 정의 명령 완성
+      const delcRes = calculateCompletions(state, 'delcommand My');
+      expect(delcRes?.prefix).toBe('delcommand ');
+      expect(delcRes?.candidates).toEqual(['MyBuild']);
+
+      // 3) :call 뒤 사용자 정의 함수 및 내장 함수 완성
+      const callUserRes = calculateCompletions(state, 'call MyH');
+      expect(callUserRes?.candidates).toEqual(['MyHelper']);
+      const callBuiltinRes = calculateCompletions(state, 'call getcmd');
+      expect(callBuiltinRes?.candidates).toEqual(['getcmdline', 'getcmdpos', 'getcmdtype']);
+
+      // 4) :help 뒤 토픽/태그 완성
+      const helpRes = calculateCompletions(state, 'help quick');
+      expect(helpRes?.prefix).toBe('help ');
+      expect(helpRes?.candidates).toContain('quickref');
+
+      // 5) :autocmd 이벤트 이름 완성
+      const auRes = calculateCompletions(state, 'autocmd BufWri');
+      expect(auRes?.candidates).toEqual(['BufWrite', 'BufWritePost', 'BufWritePre']);
+
+      // 6) :unlet 변수, :nunmap 매핑, :iunabbrev 약어 완성
+      expect(calculateCompletions(state, 'unlet g:my')?.candidates).toEqual(['g:my_flag']);
+      expect(calculateCompletions(state, 'nunmap <lea')?.candidates).toEqual(['<leader>x']);
+      expect(calculateCompletions(state, 'iunabbrev te')?.candidates).toEqual(['teh']);
+
+      // 7) 파이프(|) 뒤 커맨드/옵션 완성 및 selectWildmenuCandidate 직접 선택
+      const pipedRes = calculateCompletions(state, 'set nu | setl rnu');
+      expect(pipedRes?.prefix).toBe('set nu | setl ');
+      expect(pipedRes?.candidates).toEqual(['relativenumber']);
+
+      let cmdState: VimEditorState = {
+        ...state,
+        mode: 'COMMAND',
+        commandType: ':',
+        commandBuffer: 'call getcmd',
+      };
+      cmdState = handleTabCompletion(cmdState);
+      expect(cmdState.commandBuffer).toBe('call getcmdline');
+      cmdState = selectWildmenuCandidate(cmdState, 2);
+      expect(cmdState.commandBuffer).toBe('call getcmdtype');
+      expect(cmdState.wildmenu?.selectedIndex).toBe(2);
     });
   });
 });
