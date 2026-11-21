@@ -44,6 +44,8 @@ export interface StatusBarProps {
   flashActive?: boolean;
   /** oil.nvim 디렉터리 버퍼 활성화 여부 (:Oil) */
   oilActive?: boolean;
+  /** harpoon.nvim 현재 파일 핀 슬롯 번호 (1-based) */
+  harpoonSlot?: number | null;
   /** 현재 검색 매치 카운트 ([current/total]) */
   searchCount?: { current: number; total: number } | null;
 }
@@ -71,6 +73,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   spellActive,
   flashActive,
   oilActive,
+  harpoonSlot,
   searchCount,
 }) => {
   const displayMode =
@@ -248,6 +251,11 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         {searchCount && searchCount.total > 0 && (
           <span className="status-search-count" data-testid="status-search-count">
             [{searchCount.current}/{searchCount.total}]
+          </span>
+        )}
+        {harpoonSlot && (
+          <span className="status-harpoon-badge" data-testid="status-harpoon-badge">
+            [⚓ #{harpoonSlot}]
           </span>
         )}
         {oilActive && (

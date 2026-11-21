@@ -36,6 +36,7 @@ import {
   formatNetrwBookmarks,
 } from './netrwEngine';
 import { openOilBuffer, closeOilBuffer, applyOilBufferChanges } from './oilEngine';
+import { executeHarpoonCommand } from './harpoonEngine';
 import { executeFindFileCommand, openFuzzyFinder } from './fuzzyFinder';
 import { openHelp, closeHelp } from './helpEngine';
 import { triggerAutocmd } from './autocmdEngine';
@@ -295,6 +296,14 @@ function tryExecuteNetrwAndBufferSwitchCommand(
   const oilMatch = cleanCmdRaw.match(/^Oil(?:\s+(.*))?$/i);
   if (oilMatch) {
     return finishEx(openOilBuffer(state, oilMatch[1]?.trim()));
+  }
+
+  // harpoon.nvim 스타일 파일 핀 & 빠른 전환: :Harpoon, :HarpoonAdd, :HarpoonMenu, :HarpoonNext, :HarpoonPrev, :HarpoonRemove, :HarpoonClear
+  const harpoonMatch = cleanCmdRaw.match(
+    /^(Harpoon(?:Add|Menu|Next|Prev|Remove|Clear)?)(?:\s+(.*))?$/i
+  );
+  if (harpoonMatch) {
+    return finishEx(executeHarpoonCommand(state, harpoonMatch[1], harpoonMatch[2] ?? ''));
   }
 
   // 순정 파일 탐색기 Netrw 열기: :Explore, :E, :Vexplore, :Ve, :Sexplore, :Se, :Hexplore, :He, :Texplore, :Te

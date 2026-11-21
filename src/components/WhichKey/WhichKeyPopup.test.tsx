@@ -4,6 +4,8 @@ import { createVimState, handleKey, executeCommandLine, getGitLineSigns } from '
 import { WhichKeyPopup } from './WhichKeyPopup';
 import { resolveWhichKeyData } from './whichKeyCatalog';
 import { Editor } from '../Editor/Editor';
+import { HarpoonMenu } from '../HarpoonMenu/HarpoonMenu';
+import { StatusBar } from '../StatusBar/StatusBar';
 
 describe('which-key.nvim 스타일 실시간 키 가이드 팝업', () => {
   it('g / gr / z / ] / [ / Ctrl-w / d / di / Insert Ctrl-x 대기 시 적절한 후보 목록을 생성한다', () => {
@@ -133,5 +135,36 @@ describe('which-key.nvim 스타일 실시간 키 가이드 팝업', () => {
     const secondLabel = s.flashJump!.matches[1].label;
     expect(screen.getByTestId(`flash-label-${firstLabel}`)).toHaveTextContent(firstLabel);
     expect(screen.getByTestId(`flash-label-${secondLabel}`)).toHaveTextContent(secondLabel);
+  });
+
+  it('HarpoonMenu 팝업 렌더링·슬롯 클릭·닫기 및 StatusBar 핀 배지를 검증한다', () => {
+    const onPressKey = vi.fn();
+    let s = createVimState(['export const a = 1;'], { line: 0, col: 0 }, {
+      primaryFilename: 'workspace/a.ts',
+      virtualFiles: {
+        'workspace/a.ts': ['export const a = 1;'],
+        'workspace/b.ts': ['export const b = 2;'],
+      },
+    });
+    s = executeCommandLine(s, ':HarpoonAdd', handleKey);
+    s = executeCommandLine(s, ':HarpoonAdd workspace/b.ts', handleKey);
+    s = executeCommandLine(s, ':HarpoonMenu', handleKey);
+
+    render(
+      <>
+        <HarpoonMenu editorState={s} onPressKey={onPressKey} />
+        <StatusBar mode={s.mode} cursor={s.cursor} harpoonSlot={1} />
+      </>
+    );
+
+    expect(screen.getByTestId('harpoon-menu-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('harpoon-menu-count')).toHaveTextContent('2');
+    expect(screen.getByTestId('status-harpoon-badge')).toHaveTextContent('[⚓ #1]');
+
+    fireEvent.click(screen.getByTestId('harpoon-item-2'));
+    expect(onPressKey).toHaveBeenCalledWith('2');
+
+    fireEvent.click(screen.getByTestId('harpoon-menu-close'));
+    expect(onPressKey).toHaveBeenCalledWith('Escape');
   });
 });

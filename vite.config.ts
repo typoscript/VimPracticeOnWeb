@@ -50,6 +50,7 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'bufferEngine.ts',
       'bufferLifecycle.ts',
       'oilEngine.ts',
+      'harpoonEngine.ts',
       'tabEngine.ts',
       'splitWindowCore.ts',
       'splitWindow.ts',

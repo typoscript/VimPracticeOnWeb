@@ -4,9 +4,10 @@ import { getGitHunks } from '../../vim-engine';
 const keysOf = (s: string): string[] => [...s];
 
 /**
- * Part 6: 현대 Neovim 실전 워크플로우 (레슨 101 ~ 106)
+ * Part 6: 현대 Neovim 실전 워크플로우 (레슨 101 ~ 109)
  * Telescope :LiveGrep, Neovim 0.11 LSP(grn/grr/gra/gO), Treesitter(daf/daa/cif/]f),
- * gitsigns.nvim(]h/:Gitsigns), Neovim Lua(:lua vim.opt) + 순정 고급 편집(U/Q)
+ * gitsigns.nvim(]h/:Gitsigns), Neovim Lua(:lua vim.opt) + 순정 고급 편집(U/Q),
+ * flash.nvim(gs/dgs/cgs), oil.nvim(:Oil), harpoon.nvim(:HarpoonAdd/:HarpoonMenu)
  */
 export const MISSIONS_PART6: Mission[] = [
   {
@@ -310,6 +311,153 @@ export const MISSIONS_PART6: Mission[] = [
       const linesOk =
         state.lines.length === target.length && state.lines.every((l, i) => l === target[i]);
       return linesOk && state.options?.shiftwidth === 4;
+    },
+  },
+  {
+    id: 107,
+    title: '레슨 107: flash.nvim 화면 라벨 점프(gs) & 원격 범위 연산(dgs/cgs)',
+    description:
+      'j/k 나 단어 이동을 여러 번 누를 필요 없이, 화면 어디든 검색 문자 + 라벨 한 타로 순간이동하고 범위 삭제·수정까지 결합하는 flash.nvim 워크플로우를 마스터해 보세요.\n\n1) gs (화면 라벨 점프):\n   - gs 를 누른 뒤 가고 싶은 문자를 타이핑하면 일치 위치에 충돌 없는 홈로우 라벨이 즉시 표시됩니다.\n   - 라벨 키를 누르거나 Enter 로 가장 가까운 매치로 바로 점프합니다. (Ctrl-o 로 복귀 가능)\n\n2) dgs / cgs / ygs (원격 범위 연산):\n   - 커서 위치부터 Flash 타겟 직전까지 한 번에 삭제(dgs), 수정(cgs), 복사(ygs)합니다.\n\n미션:\n1. gs rem<Enter> 로 2번째 줄의 remove_me 로 즉시 점프한 뒤, dgs tar<Enter> 로 target 앞까지 한 방에 삭제하세요.\n2. gs old<Enter> 로 4번째 줄의 oldToken 으로 점프한 뒤, cgs ;<Enter> newToken<Esc> 로 토큰 이름을 교체하세요!',
+    hint: 'gs rem<Enter> → dgs tar<Enter> → gs old<Enter> → cgs ;<Enter> newToken<Esc>',
+    par: 35,
+    primaryFilename: 'src/router.ts',
+    initialLines: [
+      'const first = "keep";',
+      'const second = "remove_me target";',
+      'function handler() {',
+      '  return oldToken;',
+      '}',
+    ],
+    targetLines: [
+      'const first = "keep";',
+      'const second = "target";',
+      'function handler() {',
+      '  return newToken;',
+      '}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    optimalKeys: [
+      'g',
+      's',
+      ...keysOf('rem'),
+      'Enter',
+      'd',
+      'g',
+      's',
+      ...keysOf('tar'),
+      'Enter',
+      'g',
+      's',
+      ...keysOf('old'),
+      'Enter',
+      'c',
+      'g',
+      's',
+      ';',
+      'Enter',
+      ...keysOf('newToken'),
+      'Escape',
+    ],
+    checkComplete: (state) => {
+      const target = [
+        'const first = "keep";',
+        'const second = "target";',
+        'function handler() {',
+        '  return newToken;',
+        '}',
+      ];
+      return state.lines.length === target.length && state.lines.every((l, i) => l === target[i]);
+    },
+  },
+  {
+    id: 108,
+    title: '레슨 108: oil.nvim 버퍼 기반 파일시스템 편집(:Oil · dd/cw/o · :w)',
+    description:
+      '파일 탐색기를 일반 Vim 버퍼처럼 다루는 oil.nvim(:Oil)으로 파일 삭제·이름 변경·신규 생성을 익숙한 Vim 편집 명령만으로 일괄 처리해 보세요.\n\n1) :Oil [경로]:\n   - 현재 파일이 속한 디렉터리 항목을 /001 utils/, /002 app.ts 형식의 편집 버퍼로 엽니다.\n   - Enter 로 파일·하위 폴더 열기, - 로 상위 폴더 이동, :q 로 원래 버퍼 복귀가 가능합니다.\n\n2) 버퍼 편집 후 :w 일괄 반영:\n   - dd 로 줄을 지우면 파일/폴더 삭제, 이름 부분을 cw/c$ 로 고치면 내용 보존 이름 변경, o 로 새 줄에 이름을 쓰면 신규 파일·폴더(끝에 /)가 생성되며 :w 시 VFS 에 반영됩니다.\n\n미션:\n1. :Oil<Enter> 로 proj 디렉터리 버퍼를 여세요.\n2. G dd 로 legacy.ts 를 삭제하고, fa c$ main.ts<Esc> 로 app.ts 를 main.ts 로 이름 변경하세요.\n3. o config.ts<Esc> 로 새 파일을 추가한 뒤 :w<Enter> 로 파일시스템에 일괄 반영하세요!',
+    hint: ':Oil<Enter> → Gdd → fa c$ main.ts<Esc> → o config.ts<Esc> → :w<Enter>',
+    par: 36,
+    primaryFilename: 'proj/app.ts',
+    initialLines: ['export const app = "v1";'],
+    targetLines: ['/001 utils/', '/002 config.ts', '/003 main.ts'],
+    initialVirtualFiles: {
+      'proj/app.ts': ['export const app = "v1";'],
+      'proj/legacy.ts': ['export const old = true;'],
+      'proj/utils/helper.ts': ['export const help = 1;'],
+    },
+    initialCursor: { line: 0, col: 0 },
+    optimalKeys: [
+      ...keysOf(':Oil'),
+      'Enter',
+      'G',
+      'd',
+      'd',
+      'f',
+      'a',
+      'c',
+      '$',
+      ...keysOf('main.ts'),
+      'Escape',
+      'o',
+      ...keysOf('config.ts'),
+      'Escape',
+      ...keysOf(':w'),
+      'Enter',
+    ],
+    checkComplete: (state) => {
+      const vfs = state.virtualFiles ?? {};
+      const renamedOk = vfs['proj/main.ts']?.[0] === 'export const app = "v1";' && !('proj/app.ts' in vfs);
+      const deletedOk = !('proj/legacy.ts' in vfs);
+      const createdOk = 'proj/config.ts' in vfs;
+      return renamedOk && deletedOk && createdOk;
+    },
+  },
+  {
+    id: 109,
+    title: '레슨 109: harpoon.nvim 파일 핀 & 원키 프로젝트 전환(:HarpoonAdd · :HarpoonMenu)',
+    description:
+      '수십 개 파일 중 지금 작업 중인 핵심 파일 2~4개만 슬롯(#1~#9)에 고정해 두고, 숫자 한 타로 번개처럼 오가는 harpoon.nvim 워크플로우를 익혀 보세요.\n\n1) :HarpoonAdd / :HarpoonRemove / :HarpoonClear:\n   - 현재 버퍼를 Harpoon 핀 슬롯에 순서대로 등록하거나 제거합니다.\n\n2) :HarpoonMenu & :Harpoon [1-9] / :HarpoonNext / :HarpoonPrev:\n   - :HarpoonMenu 팝업에서 숫자 키(1~9)를 누르면 해당 파일로 1타에 즉시 전환됩니다. (j/k 이동, J/K 순서 변경, d 삭제)\n\n미션:\n1. :HarpoonAdd<Enter> 로 현재 파일(workspace/api.ts)을 #1 슬롯에 고정하세요.\n2. :e workspace/db.ts<Enter> 로 이동한 뒤 :HarpoonAdd<Enter> 로 #2 슬롯에 고정하고, f" ci" prod-db<Esc> 로 호스트를 수정하세요.\n3. :HarpoonMenu<Enter> 를 열고 1 을 눌러 #1(workspace/api.ts)로 즉시 복귀한 뒤 f1 r2 로 버전을 "v2" 로 올리세요!',
+    hint: ':HarpoonAdd<Enter> → :e workspace/db.ts<Enter> → :HarpoonAdd<Enter> → f" ci" prod-db<Esc> → :HarpoonMenu<Enter> → 1 → f1 r2',
+    par: 78,
+    primaryFilename: 'workspace/api.ts',
+    initialLines: ['export const version = "v1";'],
+    targetLines: ['export const version = "v2";'],
+    initialVirtualFiles: {
+      'workspace/api.ts': ['export const version = "v1";'],
+      'workspace/db.ts': ['export const dbHost = "old-db";'],
+    },
+    initialCursor: { line: 0, col: 0 },
+    optimalKeys: [
+      ...keysOf(':HarpoonAdd'),
+      'Enter',
+      ...keysOf(':e workspace/db.ts'),
+      'Enter',
+      ...keysOf(':HarpoonAdd'),
+      'Enter',
+      'f',
+      '"',
+      'c',
+      'i',
+      '"',
+      ...keysOf('prod-db'),
+      'Escape',
+      ...keysOf(':HarpoonMenu'),
+      'Enter',
+      '1',
+      'f',
+      '1',
+      'r',
+      '2',
+    ],
+    checkComplete: (state) => {
+      const pinned = state.harpoonList ?? [];
+      const hasBothPins = pinned.includes('workspace/api.ts') && pinned.includes('workspace/db.ts');
+      const apiOk =
+        state.primaryFilename === 'workspace/api.ts' &&
+        state.lines[0] === 'export const version = "v2";';
+      const dbBuf = state.buffers?.find((b) => b.name === 'workspace/db.ts');
+      const dbLines = dbBuf?.lines ?? state.virtualFiles?.['workspace/db.ts'] ?? [];
+      const dbOk = dbLines[0] === 'export const dbHost = "prod-db";';
+      return hasBothPins && apiOk && dbOk;
     },
   },
 ];

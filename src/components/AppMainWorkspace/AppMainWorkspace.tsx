@@ -11,6 +11,7 @@ import { MacroDebugger } from '../MacroDebugger/MacroDebugger';
 import { VimGrammarASTViewer } from '../VimGrammarASTViewer/VimGrammarASTViewer';
 import { ActionTimelinePanel } from '../ActionTimelinePanel/ActionTimelinePanel';
 import { WhichKeyPopup } from '../WhichKey/WhichKeyPopup';
+import { HarpoonMenu } from '../HarpoonMenu/HarpoonMenu';
 import { AppTab } from '../AppHeader/AppHeader';
 import { EditorViewport } from '../EditorViewport/EditorViewport';
 import { VimEditorState, VimMode, computeSearchCount } from '../../vim-engine';
@@ -329,6 +330,11 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
             onDisable={panels.onToggleWhichKey}
           />
 
+          <HarpoonMenu
+            editorState={displayEditorState}
+            onPressKey={editor.processKeyInput}
+          />
+
           <Keycaster recentKeys={editor.recentKeys} />
           <StatusBar
             mode={displayEditorState.mode}
@@ -352,6 +358,12 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
             spellActive={displayEditorState.options?.spell}
             flashActive={Boolean(displayEditorState.flashJump?.isOpen)}
             oilActive={Boolean(displayEditorState.oilSession?.isOpen)}
+            harpoonSlot={(() => {
+              const cur = displayEditorState.primaryFilename;
+              if (!cur || !displayEditorState.harpoonList?.length) return null;
+              const idx = displayEditorState.harpoonList.indexOf(cur);
+              return idx >= 0 ? idx + 1 : null;
+            })()}
             searchCount={(() => {
               const shm = displayEditorState.options?.shortmess ?? '';
               if (shm.includes('S')) return null;

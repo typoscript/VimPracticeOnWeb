@@ -1327,4 +1327,9 @@ export const EN: Record<string, string> = {
   "Which-Key 가이드": "Which-Key Guide",
   "g/z/[/]/Ctrl-w/연산자/리더키 대기 시 후속 키 실시간 안내": "Live next-key hints for g/z/[/]/Ctrl-w/operators/leader",
   "🧭 Which-Key: {state}": "🧭 Which-Key: {state}",
+  "Harpoon 빠른 파일 전환": "Harpoon Quick File Switcher",
+  "Harpoon 닫기": "Close Harpoon",
+  "고정된 파일이 없습니다. a 키로 현재 파일을 핀 등록하세요.": "No pinned files yet. Press a to pin the current file.",
+  "현재 파일": "Current file",
+  "1-9 점프 · j/k 이동 · J/K 순서 · d 삭제 · a 현재 파일 추가 · Esc 닫기": "1-9 jump · j/k move · J/K reorder · d remove · a pin current · Esc close",
 };

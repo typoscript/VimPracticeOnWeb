@@ -482,3 +482,17 @@ export {
   handleOilNavigationKey,
 } from './oilEngine';
 export type { OilEntrySnapshot, OilSessionState } from './types';
+
+// ---- harpoon.nvim 스타일 파일 핀 & 원키 프로젝트 전환 (:HarpoonAdd, :HarpoonMenu, :Harpoon [N]) ----
+export {
+  addHarpoonFile,
+  removeHarpoonFile,
+  clearHarpoonList,
+  openHarpoonMenu,
+  closeHarpoonMenu,
+  selectHarpoonSlot,
+  cycleHarpoonFile,
+  handleHarpoonMenuKey,
+  executeHarpoonCommand,
+} from './harpoonEngine';
+export type { HarpoonMenuState } from './types';

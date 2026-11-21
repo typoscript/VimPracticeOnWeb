@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 185개 테스트 파일, 2,205개 테스트 100% 통과 필수)*
+  *(현재 186개 테스트 파일, 2,210개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 106)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 109)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -209,6 +209,9 @@
 - **`flash.nvim` 화면 라벨 점프 & `oil.nvim` 버퍼 기반 파일시스템 편집기 (`src/vim-engine/flashJumpEngine.ts`, `src/vim-engine/oilEngine.ts`, `EditorLineRenderer.tsx`, `StatusBar.tsx`)**:
   - **Flash 화면 점프 (`gs`, `dgs`/`cgs`/`ygs`, Visual `gs`, `:Flash [query]`)**: 검색 문자 입력 시 커서와 가까운 매치부터 홈로우 라벨(`asdfghjkl...`, 매치 직후 문자 충돌 자동 회피)을 배정해 에디터 본문에 네온 라벨 배지(`.flash-label-badge`)와 상태바 `-- FLASH --` 를 표시합니다. 라벨 키 즉시 점프(`Ctrl-o` 점프 리스트 기록), `Enter` 첫 매치 점프, `Backspace`/`Esc` 수정·취소, Visual 선택 확장, `dgs`/`cgs`/`ygs` 원격 범위 연산(Undo·레지스터 연동)을 지원합니다.
   - **Oil 디렉터리 버퍼 편집 (`:Oil [dir]`, `Enter`, `-`, `:w`, `:q`)**: 현재 디렉터리 항목을 `/001 dir/`, `/002 file.ts` 형식의 일반 Vim 편집 버퍼(`oil://...`, 상태바 `[OIL]` 배지)로 열어 `o`(신규 파일·`/` 끝 폴더 생성), `cw`(파일/폴더 이름 변경 + 내용 보존 + 열린 버퍼명 갱신), `dd`(삭제), `u`(Undo)로 편집하고 `:w` 로 VFS 에 일괄 반영합니다. `Enter` 로 하위 폴더 진입·파일 열기, `-` 로 상위 폴더 이동, `:q` 로 이전 버퍼 복귀를 지원합니다.
+- **`harpoon.nvim` 파일 핀 & 원키 프로젝트 전환 + 현대 Neovim 실전 커리큘럼 완성 (레슨 107 ~ 109, `src/vim-engine/harpoonEngine.ts`, `src/components/HarpoonMenu/`, `src/data/missions/part6ModernNeovim.ts`)**:
+  - **Harpoon 엔진 & UI**: `:HarpoonAdd [path]`, `:HarpoonRemove [slot|path]`, `:HarpoonClear`, `:Harpoon [1-9]`, `:HarpoonNext`/`:HarpoonPrev`, `:HarpoonMenu` 플로팅 팝업(`j`/`k` 이동, `J`/`K` 순서 변경, `d` 삭제, `a` 현재 파일 추가, `1-9`·`Enter`·클릭 즉시 전환, `Esc`/`q` 닫기) 및 `StatusBar` `[⚓ #N]` 슬롯 배지를 구현했습니다.
+  - **실전 레슨 107~109**: `flash.nvim` `gs`/`dgs`/`cgs`(레슨 107), `oil.nvim` `:Oil`+`dd`/`cw`/`o`+`:w`(레슨 108), `harpoon.nvim` `:HarpoonAdd`+`:HarpoonMenu`+`1`(레슨 109) 미션을 추가해 현대 Neovim 커리큘럼을 완성했습니다.
 
 ---
 

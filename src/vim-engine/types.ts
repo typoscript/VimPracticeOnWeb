@@ -917,6 +917,10 @@ export interface VimEditorState {
   flashJump?: FlashJumpSession | null;
   /** oil.nvim 스타일 버퍼 기반 파일시스템 편집 세션 (:Oil) */
   oilSession?: OilSessionState | null;
+  /** harpoon.nvim 스타일 고정 파일 목록 (:HarpoonAdd, :HarpoonMenu, :Harpoon [N]) */
+  harpoonList?: string[];
+  /** harpoon.nvim 빠른 파일 전환 팝업 메뉴 상태 */
+  harpoonMenu?: HarpoonMenuState | null;
   /** 순정 Vim Undo Tree 노드 맵 (seq -> UndoTreeNode) */
   undoTreeNodes?: Record<number, UndoTreeNode>;
   /** 현재 활성화된 변경 시퀀스 번호 */
@@ -1080,5 +1084,10 @@ export interface HelpSession {
   tagStack: Array<{ topic: string; cursor: CursorPosition }>;
 }
 
+
+export interface HarpoonMenuState {
+  isOpen: boolean;
+  selectedIndex: number;
+}
 
 export type VimState = VimEditorState;

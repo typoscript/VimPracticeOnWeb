@@ -11,6 +11,7 @@ import { triggerAutocmd, triggerWindowAndTabAutocmds } from './autocmdEngine';
 import { handleCommandLineWindowKey } from './cmdlineWindow';
 import { handleNetrwKey } from './netrwEngine';
 import { handleOilNavigationKey } from './oilEngine';
+import { handleHarpoonMenuKey } from './harpoonEngine';
 import { handleFuzzyFinderKey } from './fuzzyFinder';
 import { handleHelpKey } from './helpEngine';
 import { syncLiveLspDiagnostics } from './lspEngine';
@@ -59,6 +60,7 @@ function finishInsertNormalSession(
     !nextState.fuzzyFinder?.isOpen &&
     !nextState.helpSession?.isOpen &&
     !nextState.flashJump?.isOpen &&
+    !nextState.harpoonMenu?.isOpen &&
     !nextState.functionDraft
   ) {
     const currentLineText = nextState.lines[nextState.cursor.line] ?? '';
@@ -98,6 +100,11 @@ export function rawHandleKey(
   // flash.nvim 스타일 화면 라벨 점프 세션 처리 (gs, dgs/cgs/ygs, :Flash)
   if (state.flashJump?.isOpen) {
     return handleFlashJumpKey(state, key);
+  }
+
+  // harpoon.nvim 빠른 파일 전환 팝업 메뉴 처리 (:HarpoonMenu)
+  if (state.harpoonMenu?.isOpen) {
+    return handleHarpoonMenuKey(state, key);
   }
 
   // LSP 심볼 이름 변경 프롬프트 (grn) 처리
