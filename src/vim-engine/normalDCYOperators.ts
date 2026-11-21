@@ -71,6 +71,9 @@ function startSearchOperator(
       count,
       initialCursor: { ...state.cursor },
     },
+    searchOriginCursor: { ...state.cursor },
+    searchOriginViewport: state.viewport ? { ...state.viewport } : undefined,
+    incsearchStepOffset: 0,
     pendingKeys: undefined,
   };
 }

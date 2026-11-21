@@ -145,6 +145,27 @@ export interface ConfirmSubstituteSession {
   tildeText?: string;
 }
 
+export interface IncCommandPreviewMatch {
+  line: number;
+  col: number;
+  length: number;
+  matchedText: string;
+  replacement: string;
+}
+
+export interface IncCommandPreview {
+  range: { startLine: number; endLine: number };
+  pattern: string;
+  replacement: string;
+  flags: string;
+  /** 두 번째 구분자(/old/new)가 입력되어 치환 문자열 미리보기가 활성화되었는지 여부 */
+  hasReplacement: boolean;
+  /** 미리보기 치환이 반영된 전체 버퍼 줄 목록 */
+  previewLines: string[];
+  /** 각 매치 및 치환 정보 목록 */
+  matches: IncCommandPreviewMatch[];
+}
+
 export interface VimBuffer {
   id: number;
   name: string;
@@ -250,6 +271,10 @@ export interface VimOptions {
   smartcase: boolean;
   /** 검색어 하이라이트 여부 (:set hls / nohls) */
   hlsearch: boolean;
+  /** 증분 검색 활성화 여부 (:set is / nois, :set incsearch / noincsearch) */
+  incsearch?: boolean;
+  /** 실시간 치환 미리보기 모드 (:set icm=nosplit / split / "", :set inccommand=...) */
+  inccommand?: '' | 'nosplit' | 'split';
   /** 자동 줄바꿈 여부 (:set wrap / nowrap) */
   wrap: boolean;
   /** 현재 커서 라인 하이라이트 (:set cul / nocul) */
@@ -625,6 +650,14 @@ export interface VimEditorState {
     count?: number;
     initialCursor: CursorPosition;
   } | null;
+  /** 검색(/, ?) 진입 시점의 원래 커서 위치 (incsearch 및 Esc 복원용) */
+  searchOriginCursor?: CursorPosition;
+  /** 검색(/, ?) 진입 시점의 원래 뷰포트 (incsearch 취소 시 복원용) */
+  searchOriginViewport?: ViewportState;
+  /** incsearch 입력 중 Ctrl-g / Ctrl-t 로 순회한 매치 오프셋 */
+  incsearchStepOffset?: number;
+  /** :s/pat/rep/ 입력 중 실시간 치환 미리보기 상태 (:set inccommand=nosplit|split) */
+  incCommandPreview?: IncCommandPreview | null;
   /** :s/.../.../gc 대화형 치환 확인 세션 */
   confirmSubstitute?: ConfirmSubstituteSession | null;
   /** REPLACE (R) 모드에서 백스페이스 시 복원할 원래 문자 스택 */

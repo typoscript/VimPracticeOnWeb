@@ -184,4 +184,48 @@ describe('EditorViewport', () => {
     fireEvent.click(screen.getByTitle('커맨드라인 윈도우 닫기 (Esc)'));
     expect(props.onCloseCommandLineWindow).toHaveBeenCalledTimes(1);
   });
+
+  it('inccommand=split 상태에서 실시간 치환 미리보기 인라인 배지와 하단 프리뷰 분할 창을 렌더링한다', () => {
+    const base = makeBaseState({
+      lines: ['const oldVal = 1;', 'return oldVal;'],
+      mode: 'COMMAND',
+      commandType: ':',
+      commandBuffer: '%s/oldVal/newVal/g',
+      options: {
+        number: true,
+        relativenumber: false,
+        ignorecase: false,
+        smartcase: false,
+        hlsearch: true,
+        incsearch: true,
+        inccommand: 'split',
+        wrap: true,
+        cursorline: true,
+        tabstop: 2,
+        shiftwidth: 2,
+        expandtab: true,
+        list: false,
+        wildmenu: true,
+      },
+      incCommandPreview: {
+        range: { startLine: 0, endLine: 1 },
+        pattern: 'oldVal',
+        replacement: 'newVal',
+        flags: 'g',
+        hasReplacement: true,
+        previewLines: ['const newVal = 1;', 'return newVal;'],
+        matches: [
+          { line: 0, col: 6, length: 6, matchedText: 'oldVal', replacement: 'newVal' },
+          { line: 1, col: 7, length: 6, matchedText: 'oldVal', replacement: 'newVal' },
+        ],
+      },
+    });
+    const props = createProps({ editorState: base, displayEditorState: base });
+    render(<EditorViewport {...props} />);
+
+    expect(screen.getAllByTestId('inccommand-replacement')).toHaveLength(2);
+    expect(screen.getByTestId('inccommand-split-preview')).toBeInTheDocument();
+    expect(screen.getByTestId('inccommand-split-row-1')).toHaveTextContent('const newVal = 1;');
+    expect(screen.getByTestId('inccommand-split-row-2')).toHaveTextContent('return newVal;');
+  });
 });

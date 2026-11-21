@@ -6,6 +6,7 @@ import {
   FoldRange,
   CompletionSession,
   ConfirmSubstituteSession,
+  IncCommandPreview,
   BlockInsertSession,
   VimOptions,
   DiffHunk,
@@ -58,6 +59,8 @@ export interface EditorProps {
   insertRegisterPending?: boolean;
   /** :s/.../.../gc 대화형 치환 확인 세션 */
   confirmSubstitute?: ConfirmSubstituteSession | null;
+  /** :s/pat/rep/ 입력 중 실시간 치환 미리보기 상태 (:set inccommand=nosplit|split) */
+  incCommandPreview?: IncCommandPreview | null;
   /** 비주얼 블록(Ctrl+v) 다중 줄 동시 삽입 세션 (실시간 멀티커서/고스트 프리뷰용) */
   blockInsertSession?: BlockInsertSession | null;
   /** 순정 Vim 환경 옵션 설정 (:set nu, :set rnu, :set ic 등) */
@@ -106,6 +109,7 @@ export const Editor: React.FC<EditorProps> = ({
   insertNormalSession,
   insertRegisterPending,
   confirmSubstitute,
+  incCommandPreview,
   blockInsertSession,
   options,
   diffHunks,
@@ -227,6 +231,9 @@ export const Editor: React.FC<EditorProps> = ({
               : lineIdx + 1;
 
             const lineMatches = allMatches.filter((m) => m.line === lineIdx);
+            const lineIncMatches = incCommandPreview
+              ? incCommandPreview.matches.filter((m) => m.line === lineIdx)
+              : undefined;
             const marksOnLine = marks
               ? Object.entries(marks)
                   .filter(([_, pos]) => pos.row === lineIdx)
@@ -340,6 +347,8 @@ export const Editor: React.FC<EditorProps> = ({
                         insertNormalSession,
                         insertRegisterPending,
                         confirmSubstitute,
+                        incCommandMatches: lineIncMatches,
+                        incCommandHasReplacement: incCommandPreview?.hasReplacement,
                         blockInsertSession,
                         spellErrors: options?.spell
                           ? findSpellErrorsInLine(lineText, lineIdx, { spellGoodWords, spellWrongWords })

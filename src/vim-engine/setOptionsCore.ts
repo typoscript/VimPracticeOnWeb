@@ -7,6 +7,8 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   ignorecase: false,
   smartcase: false,
   hlsearch: true,
+  incsearch: true,
+  inccommand: 'nosplit',
   wrap: true,
   cursorline: true,
   tabstop: 2,
@@ -40,6 +42,10 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   smartcase: 'smartcase',
   hls: 'hlsearch',
   hlsearch: 'hlsearch',
+  is: 'incsearch',
+  incsearch: 'incsearch',
+  icm: 'inccommand',
+  inccommand: 'inccommand',
   wrap: 'wrap',
   cul: 'cursorline',
   cursorline: 'cursorline',
@@ -247,6 +253,7 @@ export function formatOptionsList(
     'ignorecase',
     'smartcase',
     'hlsearch',
+    'incsearch',
     'wrap',
     'cursorline',
     'list',
@@ -290,6 +297,7 @@ export function formatOptionsList(
     'grepprg',
     'nrformats',
     'listchars',
+    'inccommand',
   ];
 
   for (const k of stringKeys) {
@@ -376,6 +384,7 @@ const BOOLEAN_OPTION_KEYS = new Set<keyof VimOptions>([
   'ignorecase',
   'smartcase',
   'hlsearch',
+  'incsearch',
   'wrap',
   'cursorline',
   'list',

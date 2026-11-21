@@ -470,4 +470,104 @@ describe('setEngine (:set Option System)', () => {
       expect(badEolLen.commandMessage).toContain('E1511');
     });
   });
+
+  describe(':set incsearch (is) & :set inccommand (icm)', () => {
+    it('incsearch 활성 시 / 입력 중 실시간으로 커서가 매치로 이동하고 Ctrl-g/Ctrl-t 순회 및 Esc 원복이 동작한다', () => {
+      let state: VimEditorState = {
+        lines: ['first line', 'target one', 'target two'],
+        cursor: { line: 0, col: 2 },
+        mode: 'NORMAL',
+      };
+
+      state = handleKey(state, '/');
+      for (const ch of 'target') {
+        state = handleKey(state, ch);
+      }
+      // Enter 전에도 실시간으로 첫 매치(line 1, col 0)로 이동
+      expect(state.mode).toBe('SEARCH');
+      expect(state.cursor).toEqual({ line: 1, col: 0 });
+
+      // Ctrl-g: 다음 매치(line 2, col 0)로 미리보기 이동
+      state = handleKey(state, 'Ctrl-g');
+      expect(state.cursor).toEqual({ line: 2, col: 0 });
+
+      // Ctrl-t: 이전 매치(line 1, col 0)로 복귀
+      state = handleKey(state, 'Ctrl-t');
+      expect(state.cursor).toEqual({ line: 1, col: 0 });
+
+      // Escape 취소 시 검색 시작 전 원래 커서(line 0, col 2)로 복원
+      const cancelled = handleKey(state, 'Escape');
+      expect(cancelled.mode).toBe('NORMAL');
+      expect(cancelled.cursor).toEqual({ line: 0, col: 2 });
+
+      // Ctrl-g 후 Enter 확정 시 두 번째 매치(line 2, col 0)에 확정되고 점프 리스트에 원래 위치 기록
+      state = handleKey(state, 'Ctrl-g');
+      state = handleKey(state, 'Enter');
+      expect(state.mode).toBe('NORMAL');
+      expect(state.cursor).toEqual({ line: 2, col: 0 });
+
+      // :set noincsearch (nois) 시 타이핑 중에는 커서가 움직이지 않음
+      state = executeSetCommand(state, 'nois');
+      expect(getOptions(state).incsearch).toBe(false);
+      state = { ...state, cursor: { line: 0, col: 0 } };
+      state = handleKey(state, '/');
+      for (const ch of 'target') {
+        state = handleKey(state, ch);
+      }
+      expect(state.cursor).toEqual({ line: 0, col: 0 });
+    });
+
+    it('inccommand=nosplit|split 활성 시 :%s/old/new/g 타이핑 중 실시간 치환 미리보기(incCommandPreview)를 계산한다', () => {
+      let state: VimEditorState = {
+        lines: ['foo bar foo', 'hello foo'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      expect(getOptions(state).inccommand).toBe('nosplit');
+
+      // :%s/foo 입력 중 (두 번째 구분자 전) -> 매치 하이라이트만 계산
+      state = handleKey(state, ':');
+      for (const ch of '%s/foo') {
+        state = handleKey(state, ch);
+      }
+      expect(state.incCommandPreview).toBeDefined();
+      expect(state.incCommandPreview?.hasReplacement).toBe(false);
+      expect(state.incCommandPreview?.matches.length).toBe(3);
+
+      // /baz 추가 입력 (:s/foo/baz) -> g 플래그 전이므로 줄당 첫 매치만 치환 미리보기
+      for (const ch of '/baz') {
+        state = handleKey(state, ch);
+      }
+      expect(state.incCommandPreview?.hasReplacement).toBe(true);
+      expect(state.incCommandPreview?.previewLines).toEqual(['baz bar foo', 'hello baz']);
+
+      // /g 추가 입력 (:%s/foo/baz/g) -> 모든 매치 치환 미리보기
+      for (const ch of '/g') {
+        state = handleKey(state, ch);
+      }
+      expect(state.incCommandPreview?.previewLines).toEqual(['baz bar baz', 'hello baz']);
+
+      // Esc 취소 시 incCommandPreview 초기화 및 원본 버퍼 유지
+      state = handleKey(state, 'Escape');
+      expect(state.incCommandPreview).toBeUndefined();
+      expect(state.lines).toEqual(['foo bar foo', 'hello foo']);
+
+      // :set icm=split / :set icm= / 잘못된 값 E474 검증
+      state = executeSetCommand(state, 'icm=split');
+      expect(getOptions(state).inccommand).toBe('split');
+
+      const badIcm = executeSetCommand(state, 'icm=invalid');
+      expect(badIcm.bell).toBe(true);
+      expect(badIcm.commandMessage).toContain('E474');
+
+      state = executeSetCommand(state, 'icm=');
+      expect(getOptions(state).inccommand).toBe('');
+      state = handleKey(state, ':');
+      for (const ch of '%s/foo/baz/g') {
+        state = handleKey(state, ch);
+      }
+      expect(state.incCommandPreview).toBeNull();
+    });
+  });
 });

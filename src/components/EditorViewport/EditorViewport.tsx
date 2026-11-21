@@ -160,6 +160,7 @@ export function EditorViewport({
             insertNormalSession={isActive ? editorState.insertNormalSession : undefined}
             insertRegisterPending={isActive ? editorState.insertRegisterPending : undefined}
             confirmSubstitute={isActive ? editorState.confirmSubstitute : undefined}
+            incCommandPreview={isActive ? editorState.incCommandPreview : undefined}
             blockInsertSession={isActive ? editorState.blockInsertSession : pane.blockInsertSession}
             options={displayEditorState.options}
             spellGoodWords={displayEditorState.spellGoodWords}
@@ -312,6 +313,7 @@ export function EditorViewport({
             insertNormalSession={displayEditorState.insertNormalSession}
             insertRegisterPending={displayEditorState.insertRegisterPending}
             confirmSubstitute={displayEditorState.confirmSubstitute}
+            incCommandPreview={displayEditorState.incCommandPreview}
             blockInsertSession={displayEditorState.blockInsertSession}
             options={displayEditorState.options}
             spellGoodWords={displayEditorState.spellGoodWords}
@@ -344,6 +346,41 @@ export function EditorViewport({
             onClose={onCloseLocationListWindow}
           />
         )}
+
+        {/* Neovim :set inccommand=split 실시간 치환 미리보기 분할 창 */}
+        {displayEditorState.options?.inccommand === 'split' &&
+          displayEditorState.incCommandPreview &&
+          displayEditorState.incCommandPreview.matches.length > 0 && (
+            <div
+              className="inccommand-split-preview"
+              data-testid="inccommand-split-preview"
+            >
+              <div className="inccommand-split-header">
+                <span className="inccommand-split-title">[Preview]</span>
+                <span className="inccommand-split-meta">
+                  :{displayEditorState.commandBuffer} ({displayEditorState.incCommandPreview.matches.length})
+                </span>
+              </div>
+              <div className="inccommand-split-body">
+                {Array.from(
+                  new Set(displayEditorState.incCommandPreview.matches.map((m) => m.line))
+                )
+                  .slice(0, 8)
+                  .map((lineNo) => (
+                    <div
+                      key={lineNo}
+                      className="inccommand-split-row"
+                      data-testid={`inccommand-split-row-${lineNo + 1}`}
+                    >
+                      <span className="inccommand-split-lnum">|{lineNo + 1}|</span>
+                      <span className="inccommand-split-text">
+                        {displayEditorState.incCommandPreview!.previewLines[lineNo] ?? ''}
+                      </span>
+                    </div>
+                  ))}
+              </div>
+            </div>
+          )}
       </div>
 
       {/* 커맨드라인 윈도우 (Command-line Window: q:, q/, q?, Ctrl-f) */}

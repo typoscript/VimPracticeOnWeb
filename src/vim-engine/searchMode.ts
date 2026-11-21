@@ -3,6 +3,7 @@ import { clampCursor } from './cursor';
 import { pushUndoSnapshot } from './operators';
 import { syncRegisters } from './registers';
 import {
+  applySearchOffset,
   findMatches,
   findNextMatch,
   findPrevMatch,
@@ -13,6 +14,7 @@ import {
 } from './search';
 import { starSearchPattern } from './vimRegex';
 import { recordJump } from './marks';
+import { getOptions } from './setEngine';
 import { addHistory, navigateHistory, openCommandLineWindow } from './cmdlineWindow';
 import {
   insertTextIntoCmdline,
@@ -286,6 +288,74 @@ export function executeGn(
 }
 
 /**
+ * SEARCH 모드(/, ?)에서 'incsearch' 가 활성화된 경우 실시간 매치 위치로 커서를 이동합니다.
+ * stepDelta: Ctrl-g(+1) / Ctrl-t(-1) 로 다음/이전 일치 항목 순회
+ */
+export function applyIncsearchPreview(
+  state: VimEditorState,
+  stepDelta = 0
+): VimEditorState {
+  if (state.mode !== 'SEARCH') return state;
+  const opts = getOptions(state);
+  if (opts.incsearch === false) return state;
+
+  const originCursor =
+    state.searchOperator?.initialCursor ?? state.searchOriginCursor ?? state.cursor;
+  const rawQuery = state.commandBuffer ?? '';
+  const backward = state.commandType === '?';
+  const delimChar = backward ? '?' : '/';
+  const parsedQuery = parseSearchQuery(rawQuery, delimChar);
+  const pattern = parsedQuery.pattern;
+
+  if (!pattern) {
+    return {
+      ...state,
+      cursor: originCursor,
+      viewport: state.searchOriginViewport ?? state.viewport,
+      incsearchStepOffset: 0,
+    };
+  }
+
+  const matches = findMatches(state.lines, pattern, opts);
+  if (matches.length === 0) {
+    return {
+      ...state,
+      cursor: originCursor,
+      viewport: state.searchOriginViewport ?? state.viewport,
+      incsearchStepOffset: 0,
+    };
+  }
+
+  const firstFound = findSearchTarget(
+    state.lines,
+    matches,
+    originCursor,
+    parsedQuery.offset,
+    !backward,
+    true
+  )!;
+  const baseIdx = Math.max(
+    0,
+    matches.findIndex((m) => m.line === firstFound.match.line && m.col === firstFound.match.col)
+  );
+  const nextStepOffset =
+    stepDelta === 0 ? 0 : (state.incsearchStepOffset ?? 0) + stepDelta;
+  const dirSign = backward ? -1 : 1;
+  const effectiveIdx =
+    (((baseIdx + nextStepOffset * dirSign) % matches.length) + matches.length) %
+    matches.length;
+  const chosenMatch = matches[effectiveIdx];
+  const targetPos = applySearchOffset(state.lines, chosenMatch, parsedQuery.offset);
+
+  return {
+    ...state,
+    cursor: targetPos,
+    incsearchStepOffset: nextStepOffset,
+    hlsearchSuppressed: undefined,
+  };
+}
+
+/**
  * 검색 쿼리 문자열을 파싱 및 실행합니다.
  */
 export function executeSearchQuery(
@@ -293,12 +363,21 @@ export function executeSearchQuery(
   rawQuery: string,
   isReplayingDot = false
 ): VimEditorState {
+  const returnCursor =
+    state.searchOperator?.initialCursor ?? state.searchOriginCursor ?? state.cursor;
+  const cleanSearchTemp = {
+    searchOriginCursor: undefined,
+    searchOriginViewport: undefined,
+    incsearchStepOffset: undefined,
+  };
+
   if (rawQuery.length === 0) {
-    const returnCursor = state.searchOperator?.initialCursor ?? state.cursor;
     return {
       ...state,
+      ...cleanSearchTemp,
       mode: 'NORMAL',
       cursor: returnCursor,
+      viewport: state.searchOriginViewport ?? state.viewport,
       commandBuffer: undefined,
       commandType: undefined,
       commandMessage: undefined,
@@ -311,11 +390,12 @@ export function executeSearchQuery(
   const direction: 'forward' | 'backward' = backward ? 'backward' : 'forward';
   const parsedQuery = parseSearchQuery(rawQuery, delimChar);
   const offset = parsedQuery.offset;
-  const returnCursor = state.searchOperator?.initialCursor ?? state.cursor;
   const failBase = {
     ...state,
+    ...cleanSearchTemp,
     mode: 'NORMAL' as const,
     cursor: returnCursor,
+    viewport: state.searchOriginViewport ?? state.viewport,
     commandBuffer: undefined,
     commandType: undefined,
     searchOperator: undefined,
@@ -331,7 +411,8 @@ export function executeSearchQuery(
     pattern = state.lastSearchQuery;
   }
 
-  const matches = findMatches(state.lines, pattern, state.options);
+  const opts = getOptions(state);
+  const matches = findMatches(state.lines, pattern, opts);
   if (matches.length === 0) {
     return {
       ...failBase,
@@ -343,8 +424,22 @@ export function executeSearchQuery(
   }
 
   const found = findSearchTarget(state.lines, matches, returnCursor, offset, !backward, true)!;
-  const targetMatch = found.match;
-  const targetPos = found.target;
+  let targetMatch = found.match;
+  let targetPos = found.target;
+
+  const stepOffset = state.incsearchStepOffset ?? 0;
+  if (stepOffset !== 0 && opts.incsearch !== false) {
+    const baseIdx = Math.max(
+      0,
+      matches.findIndex((m) => m.line === found.match.line && m.col === found.match.col)
+    );
+    const dirSign = backward ? -1 : 1;
+    const effectiveIdx =
+      (((baseIdx + stepOffset * dirSign) % matches.length) + matches.length) %
+      matches.length;
+    targetMatch = matches[effectiveIdx];
+    targetPos = applySearchOffset(state.lines, targetMatch, offset);
+  }
 
   // 연산자(d/pat/e, c?pat?b, y/pat/+1 등) 결합 처리
   if (state.searchOperator) {
@@ -352,13 +447,21 @@ export function executeSearchQuery(
     const startPos = state.searchOperator.initialCursor;
     const isLinewise = offset?.type === 'line';
 
-    const res = executeSearchOperator(state, op, startPos, targetPos, isLinewise, offset?.type === 'end');
+    const res = executeSearchOperator(
+      { ...state, ...cleanSearchTemp, cursor: returnCursor },
+      op,
+      startPos,
+      targetPos,
+      isLinewise,
+      offset?.type === 'end'
+    );
     const synced = syncRegisters(state, res, op === 'y');
     const opKeys = [op, delimChar, ...rawQuery.split(''), 'Enter'];
 
     if (op === 'c') {
       return {
         ...synced,
+        ...cleanSearchTemp,
         lastSearchQuery: pattern,
         lastSearchOffset: offset,
         lastSearchDirection: direction,
@@ -371,6 +474,7 @@ export function executeSearchQuery(
 
     return {
       ...synced,
+      ...cleanSearchTemp,
       mode: 'NORMAL',
       lastSearchQuery: pattern,
       lastSearchOffset: offset,
@@ -386,15 +490,17 @@ export function executeSearchQuery(
     (m) => m.line === targetMatch.line && m.col === targetMatch.col
   );
 
-  const stateWithJump = recordJump(state);
+  const stateWithJump = recordJump({ ...state, cursor: returnCursor });
 
   return {
     ...stateWithJump,
+    ...cleanSearchTemp,
     mode: 'NORMAL',
     cursor: targetPos,
     lastSearchQuery: pattern,
     lastSearchOffset: offset,
     lastSearchDirection: direction,
+    hlsearchSuppressed: undefined,
     commandBuffer: undefined,
     commandType: undefined,
     commandMessage: msg('검색 일치 ({v}/{matchesCount}): {pattern}', { v: matchIdx + 1, matchesCount: matches.length, pattern }),
@@ -436,28 +542,41 @@ export function repeatSearch(state: VimEditorState, reverse: boolean): VimEditor
  */
 export function handleSearchModeKey(state: VimEditorState, key: string, isReplayingDot = false): VimEditorState {
   const searchDigraph = handleCmdlineDigraphStep(state, key);
-  if (searchDigraph) return searchDigraph;
+  if (searchDigraph) return applyIncsearchPreview(searchDigraph);
 
   const searchCtrlR = handleCmdlineCtrlRStep(
     state,
     key,
     state.commandType === '?' ? '?' : '/'
   );
-  if (searchCtrlR) return searchCtrlR;
+  if (searchCtrlR) return applyIncsearchPreview(searchCtrlR);
 
   if (isCmdlineCancelKey(key)) {
-    const returnCursor = state.searchOperator?.initialCursor ?? state.cursor;
+    const returnCursor =
+      state.searchOperator?.initialCursor ?? state.searchOriginCursor ?? state.cursor;
     return {
       ...state,
       mode: 'NORMAL',
       cursor: returnCursor,
+      viewport: state.searchOriginViewport ?? state.viewport,
       commandBuffer: undefined,
       commandType: undefined,
       commandCursorCol: undefined,
       digraphPending: undefined,
       insertRegisterPending: undefined,
       searchOperator: undefined,
+      searchOriginCursor: undefined,
+      searchOriginViewport: undefined,
+      incsearchStepOffset: undefined,
     };
+  }
+
+  // incsearch 활성 중 Ctrl-g(다음 매치) / Ctrl-t(이전 매치) 실시간 이동
+  if (key === 'Ctrl-g' || key === 'Ctrl+g' || key === 'ctrl-g' || key === '<C-g>') {
+    return applyIncsearchPreview(state, 1);
+  }
+  if (key === 'Ctrl-t' || key === 'Ctrl+t' || key === 'ctrl-t' || key === '<C-t>') {
+    return applyIncsearchPreview(state, -1);
   }
 
   if (key === 'Ctrl-f' || key === 'Ctrl+f' || key === 'ctrl-f') {
@@ -469,32 +588,37 @@ export function handleSearchModeKey(state: VimEditorState, key: string, isReplay
   }
 
   if (key === 'ArrowUp' || key === 'Ctrl-p' || key === 'Ctrl+p' || key === 'ctrl-p') {
-    return navigateHistory(state, 'up', '/');
+    return applyIncsearchPreview(navigateHistory(state, 'up', '/'));
   }
 
   if (key === 'ArrowDown' || key === 'Ctrl-n' || key === 'Ctrl+n' || key === 'ctrl-n') {
-    return navigateHistory(state, 'down', '/');
+    return applyIncsearchPreview(navigateHistory(state, 'down', '/'));
   }
 
   if (isBackspaceKey(key)) {
     if (state.commandBuffer && state.commandBuffer.length > 0) {
-      return deleteCmdlineCharBackward(state);
+      return applyIncsearchPreview(deleteCmdlineCharBackward(state));
     }
-    const returnCursor = state.searchOperator?.initialCursor ?? state.cursor;
+    const returnCursor =
+      state.searchOperator?.initialCursor ?? state.searchOriginCursor ?? state.cursor;
     return {
       ...state,
       mode: 'NORMAL',
       cursor: returnCursor,
+      viewport: state.searchOriginViewport ?? state.viewport,
       commandBuffer: undefined,
       commandType: undefined,
       commandCursorCol: undefined,
       digraphPending: undefined,
       searchOperator: undefined,
+      searchOriginCursor: undefined,
+      searchOriginViewport: undefined,
+      incsearchStepOffset: undefined,
     };
   }
 
   const commonEdit = handleCmdlineCommonEditKey(state, key);
-  if (commonEdit) return commonEdit;
+  if (commonEdit) return applyIncsearchPreview(commonEdit);
 
   if (key === 'Enter') {
     const rawQuery = state.commandBuffer ?? '';
@@ -506,9 +630,9 @@ export function handleSearchModeKey(state: VimEditorState, key: string, isReplay
     return executeSearchQuery(nextState, rawQuery, isReplayingDot);
   }
 
-  // 일반 타이핑 문자 삽입 (커서 위치 반영)
+  // 일반 타이핑 문자 삽입 (커서 위치 반영 및 incsearch 실시간 이동)
   if (key.length === 1) {
-    return insertTextIntoCmdline(state, key);
+    return applyIncsearchPreview(insertTextIntoCmdline(state, key));
   }
 
   return state;

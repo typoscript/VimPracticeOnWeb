@@ -1,6 +1,7 @@
 import { VimEditorState } from './types';
 import { evaluateVimExpression } from './expressionParser';
 import { executeCommandLine } from './commandLine';
+import { computeIncCommandPreview } from './exSubstitute';
 import { addHistory, navigateHistory, openCommandLineWindow } from './cmdlineWindow';
 import { handleTabCompletion, cancelWildmenu, acceptWildmenu, listCmdlineCompletions } from './wildmenu';
 import { expandCmdlineAbbrev } from './abbrevEngine';
@@ -70,7 +71,20 @@ function exitCommandLineToNormal(state: VimEditorState): VimEditorState {
     literalNextPending: undefined,
     pendingKeymapPrefix: undefined,
     filterOperatorKeys: undefined,
+    incCommandPreview: undefined,
     wildmenu: null,
+  };
+}
+
+/** COMMAND 모드(:) 상태에서 inccommand 미리보기를 최신화합니다. */
+function syncIncCommandPreview(state: VimEditorState): VimEditorState {
+  if (state.mode !== 'COMMAND' || (state.commandType && state.commandType !== ':')) {
+    return state.incCommandPreview !== undefined ? { ...state, incCommandPreview: undefined } : state;
+  }
+  const preview = computeIncCommandPreview(state);
+  return {
+    ...state,
+    incCommandPreview: preview,
   };
 }
 
@@ -262,6 +276,7 @@ function handleCommandLineEnter(
       return {
         ...res,
         filterOperatorKeys: undefined,
+        incCommandPreview: undefined,
         lastChangeKeys: [...s.filterOperatorKeys, ...shellTail.split(''), 'Enter'],
       };
     }
@@ -272,6 +287,7 @@ function handleCommandLineEnter(
     digraphPending: undefined,
     pendingKeymapPrefix: undefined,
     filterOperatorKeys: undefined,
+    incCommandPreview: undefined,
   };
 }
 
@@ -279,6 +295,18 @@ function handleCommandLineEnter(
  * COMMAND 모드(: 또는 =) 키 입력 처리
  */
 export function handleCommandLineModeKey(
+  state: VimEditorState,
+  key: string,
+  runHandleKey: RunHandleKeyFn,
+  dispatchKey?: DispatchKeyFn,
+  macroDepth = 0
+): VimEditorState {
+  return syncIncCommandPreview(
+    handleCommandLineModeKeyInner(state, key, runHandleKey, dispatchKey, macroDepth)
+  );
+}
+
+function handleCommandLineModeKeyInner(
   state: VimEditorState,
   key: string,
   runHandleKey: RunHandleKeyFn,

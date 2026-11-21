@@ -4,6 +4,7 @@ import {
   VimMode,
   SearchMatch,
   ConfirmSubstituteSession,
+  IncCommandPreviewMatch,
   BlockInsertSession,
   SpellError,
   SyntaxToken,
@@ -28,6 +29,8 @@ export interface RenderLineOptions {
   insertNormalSession?: boolean;
   insertRegisterPending?: boolean;
   confirmSubstitute?: ConfirmSubstituteSession | null;
+  incCommandMatches?: IncCommandPreviewMatch[];
+  incCommandHasReplacement?: boolean;
   blockInsertSession?: BlockInsertSession | null;
   spellErrors?: SpellError[];
   lineDiagnostics?: LspDiagnostic[];
@@ -74,6 +77,8 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     insertNormalSession,
     insertRegisterPending,
     confirmSubstitute,
+    incCommandMatches,
+    incCommandHasReplacement,
     blockInsertSession,
     spellErrors,
     lineDiagnostics,
@@ -95,6 +100,7 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     lineIdx <= Math.max(visualAnchor.line, cursor.line);
 
   const hasSearchMatches = lineMatches.length > 0;
+  const hasIncMatches = (incCommandMatches?.length ?? 0) > 0;
   const hasSpellErrors = (spellErrors?.length ?? 0) > 0;
   const hasDiagnostics = (lineDiagnostics?.length ?? 0) > 0;
 
@@ -131,6 +137,7 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     targetCol === null &&
     !isLineInVisualRange &&
     !hasSearchMatches &&
+    !hasIncMatches &&
     !hasSpellErrors &&
     !hasDiagnostics
   ) {
@@ -151,6 +158,7 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     targetCol === null &&
     !isLineInVisualRange &&
     !hasSearchMatches &&
+    !hasIncMatches &&
     !hasSpellErrors &&
     !hasDiagnostics &&
     !listMode
@@ -218,6 +226,8 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
       confirmSubstitute.currentMatch.line === lineIdx &&
       i >= confirmSubstitute.currentMatch.col &&
       i < confirmSubstitute.currentMatch.col + confirmSubstitute.currentMatch.length;
+    const incMatchAtStart = incCommandMatches?.find((m) => m.col === i);
+    const isIncMatch = incCommandMatches?.some((m) => i >= m.col && i < m.col + m.length) ?? false;
 
     let listCharClass = '';
     let listCharDisplay: string | null = null;
@@ -301,6 +311,12 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
       classNames += ' char-confirm-substitute';
     }
 
+    if (isIncMatch) {
+      classNames += incCommandHasReplacement
+        ? ' inccommand-match-replaced'
+        : ' inccommand-match';
+    }
+
     const isSpell = spellErrors?.some((e) => i >= e.startCol && i < e.endCol);
     if (isSpell) {
       classNames += ' spell-error';
@@ -315,6 +331,18 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
       classNames += ' target-marker';
     }
 
+    if (incCommandHasReplacement && incMatchAtStart) {
+      elements.push(
+        <span
+          key={`inc-rep-${i}`}
+          className="vim-char inccommand-replacement"
+          data-testid="inccommand-replacement"
+        >
+          {incMatchAtStart.replacement}
+        </span>
+      );
+    }
+
     elements.push(
       <span
         key={i}
@@ -326,6 +354,8 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
             ? 'vim-block-secondary-cursor'
             : isSelected
             ? 'visual-selected-char'
+            : isIncMatch
+            ? 'inccommand-match'
             : isSearchMatch
             ? 'search-match'
             : isTarget

@@ -698,4 +698,78 @@
   opacity: 0.85;
 }
 
+/* Neovim :set inccommand=nosplit|split 실시간 치환 미리보기 하이라이트 */
+.inccommand-match {
+  background-color: rgba(249, 226, 175, 0.28);
+  color: #f9e2af;
+  border-bottom: 1px dashed #f9e2af;
+}
+
+.inccommand-match-replaced {
+  background-color: rgba(243, 139, 168, 0.2);
+  color: #f38ba8;
+  text-decoration: line-through;
+  opacity: 0.65;
+}
+
+.inccommand-replacement {
+  background-color: rgba(166, 227, 161, 0.26);
+  color: #a6e3a1;
+  font-weight: 700;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+
+.inccommand-split-preview {
+  border-top: 1px solid var(--border-color, #313244);
+  background-color: var(--bg-surface, #181825);
+  max-height: 150px;
+  display: flex;
+  flex-direction: column;
+  font-family: 'Fira Code', 'JetBrains Mono', monospace;
+  font-size: 0.8rem;
+}
+
+.inccommand-split-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 10px;
+  background-color: rgba(137, 180, 250, 0.14);
+  border-bottom: 1px solid var(--border-color, #313244);
+  font-size: 0.74rem;
+}
+
+.inccommand-split-title {
+  color: #89b4fa;
+  font-weight: 700;
+}
+
+.inccommand-split-meta {
+  color: var(--text-muted, #a6adc8);
+}
+
+.inccommand-split-body {
+  overflow-y: auto;
+  padding: 4px 10px;
+}
+
+.inccommand-split-row {
+  display: flex;
+  gap: 8px;
+  line-height: 1.45;
+  white-space: pre;
+}
+
+.inccommand-split-lnum {
+  color: #f9e2af;
+  user-select: none;
+  min-width: 3.5ch;
+}
+
+.inccommand-split-text {
+  color: var(--text-primary, #cdd6f4);
+}
+
+
 

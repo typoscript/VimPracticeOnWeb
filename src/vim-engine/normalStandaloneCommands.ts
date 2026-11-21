@@ -366,6 +366,9 @@ export function handleNormalEditingAndMotionFallback(
           count: parsed.totalCount,
           initialCursor: { ...state.cursor },
         },
+        searchOriginCursor: { ...state.cursor },
+        searchOriginViewport: state.viewport ? { ...state.viewport } : undefined,
+        incsearchStepOffset: 0,
         pendingKeys: undefined,
         commandMessage: undefined,
       };
@@ -375,6 +378,9 @@ export function handleNormalEditingAndMotionFallback(
       mode: 'SEARCH',
       commandType: key,
       commandBuffer: '',
+      searchOriginCursor: { ...state.cursor },
+      searchOriginViewport: state.viewport ? { ...state.viewport } : undefined,
+      incsearchStepOffset: 0,
       pendingKeys: undefined,
       commandMessage: undefined,
     };

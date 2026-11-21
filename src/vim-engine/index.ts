@@ -24,6 +24,7 @@ export * from './types';
 // ---- 화면(UI) 쪽에서 쓰는 보조 함수 ----
 export { isPositionSelected } from './visual';
 export { findMatches } from './search';
+export { computeIncCommandPreview } from './exSubstitute';
 export { computeDiffHunks } from './diffEngine';
 export {
   splitWindow,

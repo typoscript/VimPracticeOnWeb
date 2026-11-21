@@ -41,6 +41,7 @@ type BooleanOrSyntaxOptionKey =
   | 'ignorecase'
   | 'smartcase'
   | 'hlsearch'
+  | 'incsearch'
   | 'wrap'
   | 'cursorline'
   | 'expandtab'
@@ -72,6 +73,7 @@ const BOOLEAN_OR_SYNTAX_KEYS = new Set<BooleanOrSyntaxOptionKey>([
   'ignorecase',
   'smartcase',
   'hlsearch',
+  'incsearch',
   'wrap',
   'cursorline',
   'expandtab',
@@ -175,6 +177,8 @@ function handleOptionQuery(ctx: SetDraftContext, token: string): VimEditorState 
       val = 'bin,hex';
     } else if (optKey === 'listchars') {
       val = DEFAULT_VIM_OPTIONS.listchars;
+    } else if (optKey === 'inccommand') {
+      val = DEFAULT_VIM_OPTIONS.inccommand ?? 'nosplit';
     }
   }
 
@@ -356,6 +360,19 @@ function handleOptionAssignment(ctx: SetDraftContext, token: string): VimEditorS
   if (optKey === 'syntax') {
     writeScopedOption(ctx, 'syntax', rawVal);
     ctx.appliedList.push(`syntax=${rawVal}`);
+    return null;
+  }
+  if (optKey === 'inccommand') {
+    const icmVal = rawVal.toLowerCase();
+    if (icmVal !== '' && icmVal !== 'nosplit' && icmVal !== 'split') {
+      return {
+        ...ctx.state,
+        bell: true,
+        commandMessage: msg('E474: 잘못된 인수입니다: {token}', { token }),
+      };
+    }
+    writeScopedOption(ctx, 'inccommand', icmVal as '' | 'nosplit' | 'split');
+    ctx.appliedList.push(`inccommand=${icmVal}`);
     return null;
   }
   if (optKey === 'foldmethod') {
