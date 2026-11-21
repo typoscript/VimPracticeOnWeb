@@ -19,6 +19,11 @@ import { virtualReplaceChar } from './replaceMode';
 import { openCommandLineWindow } from './cmdlineWindow';
 import { openHelp } from './helpEngine';
 import { openLspHover } from './lspEngine';
+import {
+  openLspRename,
+  findLspReferences,
+  openLspCodeActionMenu,
+} from './lspRefactorEngine';
 import { findMatchingBracket } from './bracketMatch';
 import { computePercentJumpTarget } from './extraMotions';
 import { moveToNextParagraph, moveToPrevParagraph } from './advancedMotions';
@@ -171,8 +176,13 @@ export function handleNormalMacroAndDot(
     return { ...curState, lastChangeKeys: replayKeys };
   }
 
-  // 3. 'r' (단일 문자 교체) / 'gr' (가상 단일 문자 교체) 대기 상태
+  // 3. 'r' (단일 문자 교체) / 'gr' (Neovim 0.11 LSP grn/grr/gra 또는 가상 단일 문자 교체) 대기 상태
   if (parsed.operator === 'r' || parsed.operator === 'gr') {
+    if (parsed.operator === 'gr' && parsed.count1 === undefined && parsed.count2 === undefined) {
+      if (key === 'n') return openLspRename(state);
+      if (key === 'r') return findLspReferences(state);
+      if (key === 'a') return openLspCodeActionMenu(state);
+    }
     if (key.length === 1 || (parsed.operator === 'gr' && key === 'Tab')) {
       if (parsed.operator === 'gr') {
         const res = virtualReplaceChar(state, key, parsed.totalCount);

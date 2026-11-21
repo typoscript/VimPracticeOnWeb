@@ -187,3 +187,181 @@ describe('lspEngine (Neovim-style LSP hover & diagnostics)', () => {
     expect(emptyJump.commandMessage).toBe('No diagnostics found');
   });
 });
+
+describe('lspRefactorEngine (Neovim 0.11 grn / grr / gra / gO)', () => {
+  afterEach(() => {
+    configureVimEngine({ locale: 'ko' });
+  });
+
+  it('grn opens interactive rename prompt and renames symbol across current buffer, open buffers, VFS, and lspSymbols with undo', () => {
+    let state = createVimState(
+      [
+        'function parsePort(raw: string): number {',
+        '  const parsePortEx = 1;',
+        '  return parsePort("80");',
+        '}',
+      ],
+      { line: 0, col: 10 },
+      {
+        primaryFilename: 'service.ts',
+        buffers: [
+          {
+            id: 1,
+            name: 'service.ts',
+            lines: [
+              'function parsePort(raw: string): number {',
+              '  const parsePortEx = 1;',
+              '  return parsePort("80");',
+              '}',
+            ],
+            cursor: { line: 0, col: 10 },
+          },
+          {
+            id: 2,
+            name: 'index.ts',
+            lines: ['import { parsePort } from "./service";', 'const p = parsePort("3000");'],
+            cursor: { line: 0, col: 0 },
+          },
+        ],
+        currentBufferId: 1,
+        virtualFiles: {
+          'service.ts': [
+            'function parsePort(raw: string): number {',
+            '  const parsePortEx = 1;',
+            '  return parsePort("80");',
+            '}',
+          ],
+          'index.ts': ['import { parsePort } from "./service";', 'const p = parsePort("3000");'],
+        },
+        lspSymbols: { ...sampleSymbols },
+      }
+    );
+
+    // Open rename prompt with grn
+    state = sendKeys(state, 'grn');
+    expect(state.lspRename?.isOpen).toBe(true);
+    expect(state.lspRename?.oldName).toBe('parsePort');
+    expect(state.lspRename?.newName).toBe('parsePort');
+    expect(state.lspRename?.occurrenceCount).toBe(4);
+    expect(state.lspRename?.fileCount).toBe(2);
+
+    // Clear with Ctrl-u, type new name, press Enter
+    state = handleKey(state, 'Ctrl-u');
+    for (const ch of 'readPort') state = handleKey(state, ch);
+    state = handleKey(state, 'Enter');
+
+    expect(state.lspRename).toBeNull();
+    expect(state.lines[0]).toBe('function readPort(raw: string): number {');
+    // Whole-word boundary preserved: parsePortEx untouched
+    expect(state.lines[1]).toBe('  const parsePortEx = 1;');
+    expect(state.lines[2]).toBe('  return readPort("80");');
+    // Open buffer & VFS updated
+    expect(state.buffers?.[1].lines[0]).toBe('import { readPort } from "./service";');
+    expect(state.virtualFiles?.['index.ts'][1]).toBe('const p = readPort("3000");');
+    // lspSymbols re-keyed
+    expect(state.lspSymbols?.['readPort']?.symbol).toBe('readPort');
+    expect(state.lspSymbols?.['parsePort']).toBeUndefined();
+
+    // Single undo restores current buffer
+    state = handleKey(state, 'u');
+    expect(state.lines[0]).toBe('function parsePort(raw: string): number {');
+
+    // Escape cancels rename cleanly
+    state = sendKeys(state, 'grn');
+    expect(state.lspRename?.isOpen).toBe(true);
+    state = handleKey(state, 'Escape');
+    expect(state.lspRename).toBeNull();
+
+    // :LspRename {newName} works directly via Ex command
+    state = runExCommand(state, 'LspRename decodePort');
+    expect(state.lines[0]).toBe('function decodePort(raw: string): number {');
+  });
+
+  it('grr finds whole-word symbol references across project files and opens Quickfix list', () => {
+    let state = createVimState(
+      ['export function computeTax(n: number) {', '  return computeTax(n - 1);', '}'],
+      { line: 0, col: 18 },
+      {
+        primaryFilename: 'tax.ts',
+        virtualFiles: {
+          'tax.ts': ['export function computeTax(n: number) {', '  return computeTax(n - 1);', '}'],
+          'billing.ts': ['const total = computeTax(100);', 'const computeTaxRate = 0.1;'],
+        },
+      }
+    );
+
+    state = sendKeys(state, 'grr');
+    expect(state.quickfix?.isOpen).toBe(true);
+    expect(state.quickfix?.items.map((it) => `${it.filename}:${it.line}:${it.col}`)).toEqual([
+      'tax.ts:1:17',
+      'tax.ts:2:10',
+      'billing.ts:1:15',
+    ]);
+    expect(state.commandMessage).toContain('computeTax');
+    expect(state.commandMessage).toContain('3개');
+  });
+
+  it('gra opens code action menu with diagnostic quickfixes and built-in refactors, applying with number/Enter and clearing live diagnostics', () => {
+    let state = makeLspState();
+    // Jump to diag-1: const port: number = "8080";
+    state = sendKeys(state, ']d');
+    state = sendKeys(state, 'gra');
+    expect(state.lspCodeActionMenu?.isOpen).toBe(true);
+    expect(state.lspCodeActionMenu?.actions[0].title).toContain('8080');
+
+    // Press '1' to apply first quickfix -> "8080" becomes 8080 and diagnostic clears live!
+    state = handleKey(state, '1');
+    expect(state.lspCodeActionMenu).toBeNull();
+    expect(state.lines[1]).toBe('  const port: number = 8080;');
+    expect(state.lspDiagnostics).toHaveLength(2);
+
+    // Undo restores the line
+    state = handleKey(state, 'u');
+    expect(state.lines[1]).toBe('  const port: number = "8080";');
+
+    // Built-in refactor on `var x == y`
+    let refState = createVimState(['var ok = a == b;'], { line: 0, col: 0 });
+    refState = sendKeys(refState, 'gra');
+    expect(refState.lspCodeActionMenu?.actions.length).toBeGreaterThanOrEqual(2);
+    // Navigate down with j and press Enter to apply strict equality
+    refState = handleKey(refState, 'j');
+    refState = handleKey(refState, 'Enter');
+    expect(refState.lines[0]).toBe('var ok = a === b;');
+  });
+
+  it('gO extracts document symbols into Location List and opens :lopen', () => {
+    let state = createVimState(
+      [
+        'interface User { id: string }',
+        'export class UserService {',
+        '  async fetchUser(id: string) {',
+        '    return id;',
+        '  }',
+        '}',
+        'export const formatUser = (u: User) => u.id;',
+      ],
+      { line: 0, col: 0 },
+      { primaryFilename: 'user.ts' }
+    );
+
+    state = sendKeys(state, 'gO');
+    expect(state.locationList?.isOpen).toBe(true);
+    expect(state.locationList?.items.map((it) => `${it.line}:${it.text}`)).toEqual([
+      '1:[interface] User',
+      '2:[class] UserService',
+      '3:[method] fetchUser',
+      '7:[function] formatUser',
+    ]);
+
+    // Empty doc with no symbols rings bell
+    const emptyRes = sendKeys(createVimState(['// just a comment']), 'gO');
+    expect(emptyRes.bell).toBe(true);
+  });
+
+  it('preserves Virtual Replace gr{char} for non-LSP characters and counts', () => {
+    let s = createVimState(['\tabc']);
+    s = runExCommand(s, 'set ts=4');
+    s = sendKeys(s, 'grX');
+    expect(s.lines).toEqual(['X\tabc']);
+  });
+});

@@ -33,6 +33,12 @@ import {
 } from './locationListEngine';
 import { ErrorExprUserFn } from './errorformat';
 import { syncDiagnosticsToLocationList } from './lspEngine';
+import {
+  openLspRename,
+  findLspReferences,
+  openLspCodeActionMenu,
+  openLspDocumentSymbols,
+} from './lspRefactorEngine';
 import { callUserFunction } from './vimscriptEngine';
 import { msg } from './messages';
 import { finishEx } from './exWorkspaceCommands';
@@ -284,6 +290,23 @@ export function tryExecuteQuickfixExCommand(
   // LSP 진단(Diagnostics) 로케이션 리스트 열기: :diagnostics, :diag
   if (cleanCmd === 'diagnostics' || cleanCmd === 'diagnostic' || cleanCmd === 'diag') {
     return finishEx(syncDiagnosticsToLocationList(state, true));
+  }
+
+  // Neovim 0.11 LSP 리팩토링 Ex 명령: :LspRename [newName], :LspReferences [sym], :LspCodeAction, :LspSymbols
+  const lspRenameMatch = cleanCmdRaw.match(/^LspRename(?:\s+(.*))?$/i);
+  if (lspRenameMatch) {
+    const arg = lspRenameMatch[1]?.trim();
+    return finishEx(openLspRename(state, arg ? arg : undefined));
+  }
+  const lspRefMatch = cleanCmdRaw.match(/^LspReferences?(?:\s+(.*))?$/i);
+  if (lspRefMatch) {
+    return finishEx(findLspReferences(state, lspRefMatch[1]?.trim() || undefined));
+  }
+  if (/^LspCodeActions?$/i.test(cleanCmdRaw)) {
+    return finishEx(openLspCodeActionMenu(state));
+  }
+  if (/^LspSymbols?$/i.test(cleanCmdRaw)) {
+    return finishEx(openLspDocumentSymbols(state));
   }
 
   return (

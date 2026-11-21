@@ -12,6 +12,8 @@ import {
   DiffHunk,
   LspDiagnostic,
   LspHoverState,
+  LspRenameSession,
+  LspCodeActionMenuState,
   CustomMatchEntry,
 } from '../../vim-engine';
 import {
@@ -89,6 +91,16 @@ export interface EditorProps {
   lspHover?: LspHoverState | null;
   /** LSP 호버 창 닫기 콜백 */
   onCloseLspHover?: () => void;
+  /** Neovim 0.11 LSP 이름 변경 프롬프트 세션 (grn) */
+  lspRename?: LspRenameSession | null;
+  /** LSP 이름 변경 취소 콜백 */
+  onCancelLspRename?: () => void;
+  /** Neovim 0.11 LSP 코드 액션 선택 팝업 (gra) */
+  lspCodeActionMenu?: LspCodeActionMenuState | null;
+  /** LSP 코드 액션 적용 콜백 */
+  onApplyLspCodeAction?: (index: number) => void;
+  /** LSP 코드 액션 팝업 닫기 콜백 */
+  onCloseLspCodeAction?: () => void;
   /** 커스텀 정규식 하이라이트 매치 (:match, matchadd()) */
   customMatches?: CustomMatchEntry[];
 }
@@ -128,6 +140,11 @@ export const Editor: React.FC<EditorProps> = ({
   lspDiagnostics,
   lspHover,
   onCloseLspHover,
+  lspRename,
+  onCancelLspRename,
+  lspCodeActionMenu,
+  onApplyLspCodeAction,
+  onCloseLspCodeAction,
   customMatches,
 }) => {
   const explicitFt =
@@ -427,6 +444,79 @@ export const Editor: React.FC<EditorProps> = ({
                           </div>
                           <pre className="lsp-hover-signature">{lspHover.signature}</pre>
                           <p className="lsp-hover-doc">{lspHover.documentation}</p>
+                        </div>
+                      )}
+                      {lspRename?.isOpen && lspRename.line === lineIdx && (
+                        <div
+                          className={`lsp-hover-popup lsp-rename-popup ${lines.length - 1 - lineIdx < 6 && lineIdx >= 4 ? 'open-upward' : ''}`}
+                          data-testid="lsp-rename-popup"
+                          style={{ left: `calc(${Math.min(cursor.col, 36)} * 1ch)` }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="lsp-hover-header">
+                            <span className="lsp-hover-kind lsp-rename-badge">RENAME</span>
+                            <span className="lsp-hover-symbol">{lspRename.oldName}</span>
+                            <span className="lsp-hover-source">
+                              {t('{count}개 위치 · {files}개 파일', {
+                                count: lspRename.occurrenceCount,
+                                files: lspRename.fileCount,
+                              })}
+                            </span>
+                            <button
+                              type="button"
+                              className="lsp-hover-close"
+                              onClick={() => onCancelLspRename?.()}
+                              aria-label={t('이름 변경 닫기')}
+                            >
+                              Esc
+                            </button>
+                          </div>
+                          <div className="lsp-rename-input" data-testid="lsp-rename-input">
+                            <span className="lsp-rename-arrow">→</span>
+                            <span className="lsp-rename-value">{lspRename.newName}</span>
+                            <span className="lsp-rename-caret" />
+                          </div>
+                          <div className="lsp-popup-hint">{t('Enter 적용 · Esc 취소')}</div>
+                        </div>
+                      )}
+                      {lspCodeActionMenu?.isOpen && lspCodeActionMenu.line === lineIdx && (
+                        <div
+                          className={`lsp-hover-popup lsp-code-action-popup ${lines.length - 1 - lineIdx < 6 && lineIdx >= 4 ? 'open-upward' : ''}`}
+                          data-testid="lsp-code-action-popup"
+                          style={{ left: `calc(${Math.min(cursor.col, 36)} * 1ch)` }}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="lsp-hover-header">
+                            <span className="lsp-hover-kind lsp-action-badge">CODE ACTION</span>
+                            <button
+                              type="button"
+                              className="lsp-hover-close"
+                              onClick={() => onCloseLspCodeAction?.()}
+                              aria-label={t('코드 액션 닫기')}
+                            >
+                              Esc
+                            </button>
+                          </div>
+                          <div className="lsp-code-action-list">
+                            {lspCodeActionMenu.actions.map((act, idx) => (
+                              <button
+                                key={act.id}
+                                type="button"
+                                className={`lsp-code-action-item ${idx === lspCodeActionMenu.selectedIndex ? 'selected' : ''}`}
+                                data-testid={`lsp-code-action-${idx}`}
+                                onClick={() => onApplyLspCodeAction?.(idx)}
+                              >
+                                <span className="lsp-action-num">{idx + 1}.</span>
+                                {act.kind && (
+                                  <span className={`lsp-action-kind kind-${act.kind}`}>
+                                    {act.kind}
+                                  </span>
+                                )}
+                                <span className="lsp-action-title">{act.title}</span>
+                              </button>
+                            ))}
+                          </div>
+                          <div className="lsp-popup-hint">{t('숫자/Enter 선택 · Esc 취소')}</div>
                         </div>
                       )}
                       {isCursorLine &&

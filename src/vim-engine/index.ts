@@ -65,6 +65,22 @@ export {
   closeLspHover,
 } from './lspEngine';
 export {
+  findWholeWordMatchesInLine,
+  openLspRename,
+  applyLspRename,
+  cancelLspRename,
+  handleLspRenameKey,
+  findLspReferences,
+  collectCodeActionsAtCursor,
+  openLspCodeActionMenu,
+  closeLspCodeActionMenu,
+  applyLspCodeAction,
+  handleLspCodeActionKey,
+  extractDocumentSymbols,
+  openLspDocumentSymbols,
+} from './lspRefactorEngine';
+export type { LspDocumentSymbol } from './lspRefactorEngine';
+export {
   DEFAULT_ERRORFORMAT,
   splitErrorformatEntries,
   compileErrorformatPattern,

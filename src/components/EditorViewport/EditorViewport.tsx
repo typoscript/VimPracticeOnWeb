@@ -29,6 +29,9 @@ interface EditorViewportProps {
   onNewTabPage: () => void;
   onJumpToMark: (markChar: string) => void;
   onCloseLspHover: () => void;
+  onCancelLspRename?: () => void;
+  onApplyLspCodeAction?: (index: number) => void;
+  onCloseLspCodeAction?: () => void;
   onJumpQuickfixItem: (index: number) => void;
   onCloseQuickfixWindow: () => void;
   onJumpLocationListItem: (index: number) => void;
@@ -62,6 +65,9 @@ export function EditorViewport({
   onNewTabPage,
   onJumpToMark,
   onCloseLspHover,
+  onCancelLspRename,
+  onApplyLspCodeAction,
+  onCloseLspCodeAction,
   onJumpQuickfixItem,
   onCloseQuickfixWindow,
   onJumpLocationListItem,
@@ -329,6 +335,11 @@ export function EditorViewport({
             lspDiagnostics={displayEditorState.lspDiagnostics}
             lspHover={displayEditorState.lspHover}
             onCloseLspHover={onCloseLspHover}
+            lspRename={displayEditorState.lspRename}
+            onCancelLspRename={onCancelLspRename}
+            lspCodeActionMenu={displayEditorState.lspCodeActionMenu}
+            onApplyLspCodeAction={onApplyLspCodeAction}
+            onCloseLspCodeAction={onCloseLspCodeAction}
             customMatches={displayEditorState.customMatches}
           />
         )}

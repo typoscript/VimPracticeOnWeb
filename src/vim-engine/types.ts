@@ -864,6 +864,12 @@ export interface VimEditorState {
   lspSymbols?: Record<string, LspHoverSymbol>;
   /** 현재 열린 LSP 호버 플로팅 창 (K) */
   lspHover?: LspHoverState | null;
+  /** 현재 열린 LSP 심볼 이름 변경 프롬프트 세션 (grn, :LspRename) */
+  lspRename?: LspRenameSession | null;
+  /** 버퍼/미션별 사용자 정의 LSP 코드 액션 목록 (gra, :LspCodeAction) */
+  lspCodeActions?: LspCodeAction[];
+  /** 현재 열린 LSP 코드 액션 선택 팝업 메뉴 (gra) */
+  lspCodeActionMenu?: LspCodeActionMenuState | null;
   /** :echom / :echomsg 로 기록된 메시지 이력 (:messages 조회용) */
   messageHistory?: string[];
   /** 직전 Ex 명령의 마지막 출력 메시지 (Normal g< 재표시용) */
@@ -937,6 +943,42 @@ export interface LspHoverState {
   source?: string;
   line: number;
   col: number;
+}
+
+export interface LspRenameSession {
+  isOpen: boolean;
+  oldName: string;
+  newName: string;
+  line: number;
+  col: number;
+  occurrenceCount: number;
+  fileCount: number;
+}
+
+export interface LspCodeActionEdit {
+  /** 0-based 대상 줄 번호 */
+  line: number;
+  /** 새 줄 내용 (null 이면 해당 줄 삭제) */
+  newText: string | null;
+}
+
+export interface LspCodeAction {
+  id: string;
+  title: string;
+  kind?: 'quickfix' | 'refactor' | 'source';
+  /** 지정 시 해당 0-based 줄에서만 노출 */
+  line?: number;
+  /** 지정 시 해당 ID 의 진단이 존재하는 줄에서 노출 */
+  diagnosticId?: string;
+  edits: LspCodeActionEdit[];
+}
+
+export interface LspCodeActionMenuState {
+  isOpen: boolean;
+  line: number;
+  col: number;
+  selectedIndex: number;
+  actions: LspCodeAction[];
 }
 
 /** 순정 Vim 도움말 세션 (:help, K, F1) */

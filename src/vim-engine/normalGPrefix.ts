@@ -22,6 +22,7 @@ import { formatRange } from './formatEngine';
 import { gotoFileUnderCursor } from './gotoFileEngine';
 import { getWordAtCursor } from './search';
 import { executeCommandLine } from './commandLine';
+import { openLspDocumentSymbols } from './lspRefactorEngine';
 import { joinLines, executeCaseMotion } from './lineOperators';
 import { msg } from './messages';
 import { executeGn, executeWordSearch } from './searchMode';
@@ -332,6 +333,9 @@ export function handleNormalGOperator(
   if (key === '0' || key === '$' || key === 'm' || key === 'M') {
     const moved = moveByExtraMotion(state, `g${key}`, parsedTotalCount);
     return { handled: true, state: key === '$' ? { ...moved, stickyDollar: true } : moved };
+  }
+  if (key === 'O') {
+    return { handled: true, state: openLspDocumentSymbols(state) };
   }
   if (key === 'o') {
     const target = computeByteOffsetTarget(state.lines, parsedCount1 ?? 1);

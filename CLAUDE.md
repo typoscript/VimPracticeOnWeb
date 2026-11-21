@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 179개 테스트 파일, 2,151개 테스트 100% 통과 필수)*
+  *(현재 179개 테스트 파일, 2,157개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -189,6 +189,11 @@
   - **Virtual Replace (`gR`/`gr`) & `Ctrl-x` 태그·옴니 완성 (`replaceMode.ts`, `normalGPrefix.ts`, `normalStandaloneCommands.ts`, `completion.ts`, `insertMode.ts`, `StatusBar.tsx`)**: 탭 폭의 화면 열 정렬을 유지하며 덮어쓰는 `gR` (`-- VREPLACE --`, `Backspace` 원본 복원, `.` 반복)과 `[count]gr{char}`, 그리고 프로젝트 심볼 태그(`Ctrl-x Ctrl-]`) 및 LSP/옴니(`Ctrl-x Ctrl-o`) 자동완성을 구현했습니다.
   - **창/탭 로컬 작업 디렉터리 & 로컬 아규먼트 리스트 (`vfs.ts`, `windowTree.ts`, `splitWindowCore.ts`, `tabEngine.ts`, `argEngine.ts`, `exWorkspaceCommands.ts`, `exBatchAndUndoCommands.ts`, `vimscriptBuiltinsExtra.ts`)**: 분할 창별 `:lcd` 격리·탭별 `:tcd`·전역 `:cd`·직전 디렉터리 복귀(`:cd -`/`:lcd -`/`:tcd -`, `E186`), `getcwd([winnr [, tabnr]])` 및 `haslocaldir([winnr [, tabnr]])` Vimscript 내장 함수, 창별 로컬 아규먼트 리스트(`:arglocal`/`:argl`) 및 전역 복귀(`:argglobal`/`:argg`)를 구현했습니다.
 - **Telescope 스타일 `:LiveGrep` 본문 검색 + 코드 미리보기 (`:LiveGrep [pattern]`, `:Rg`, `src/vim-engine/fuzzyFinder.ts`, `src/components/FuzzyFinder/`)**: 퍼지 파인더에 `grep` 모드를 추가해 가상 파일 시스템 전체 본문을 Vim 정규식(`compileVimRegex`, `ignorecase`/`smartcase` 반영)으로 실시간 검색(`searchGrepMatches`, 줄마다 첫 일치, 최대 200건, 잘못된 패턴은 빈 결과)하고, 좌측 결과 리스트·우측 `syntaxEngine` 구문 강조 코드 미리보기(매치 줄·매치 문자열 하이라이트)를 제공합니다. `Enter`/`Ctrl-v`/`Ctrl-s`/`Ctrl-t` 는 일치 줄·열로 정확히 점프하며, `Ctrl-q`(`sendGrepToQuickfix`)는 모든 결과를 퀵픽스 리스트로 보내고 퀵픽스 창을 엽니다.
+- **Neovim 0.11+ LSP 리팩토링 풀세트 (`grn`, `grr`, `gra`, `gO`, `:LspRename`, `:LspReferences`, `:LspCodeAction`, `:LspSymbols`, `src/vim-engine/lspRefactorEngine.ts`, `Editor.tsx`)**:
+  - **다중 파일 심볼 이름 변경 (`grn`, `:LspRename [newName]`)**: 커서 아래 식별자에 대한 인라인 플로팅 프롬프트(`lsp-rename-popup`, `Ctrl-u`/`Ctrl-w`/`Backspace`/`Enter`/`Esc`)를 열어 현재 버퍼·열린 버퍼·분할 창·VFS·`lspSymbols` 전체에서 식별자 경계를 지켜 일괄 치환하고 단일 Undo(`u`)를 지원합니다.
+  - **프로젝트 전체 참조 검색 (`grr`, `:LspReferences [symbol]`)**: VFS·열린 버퍼 전체에서 식별자 참조를 수집해 퀵픽스 리스트(`:copen`)에 채우고 즉시 창을 엽니다.
+  - **코드 액션 팝업 (`gra`, `:LspCodeAction`)**: 사용자 정의 `lspCodeActions`, 진단 기반 자동 Quick Fix(문자열 숫자 리터럴 변환, 미사용 변수 삭제/`_` 접두), 내장 코드 리팩토링(`var`/`let`→`const`, `==`/`!=`→`===`/`!==`, `console.log` 제거, 끝 공백 정리)을 번호(`1`~`9`)·`j`/`k`·`Enter`·클릭으로 즉시 적용하며 Undo 및 실시간 진단 해소를 지원합니다.
+  - **문서 심볼 아웃라인 (`gO`, `:LspSymbols`)**: 현재 버퍼의 함수·클래스·인터페이스·타입·메서드·상수·마크다운 헤딩을 추출해 로케이션 리스트(`:lopen`)로 열어 즉시 탐색할 수 있습니다. (기존 `grX`/`2grX` Virtual Replace 와 완전 공존)
 
 ---
 

@@ -93,6 +93,7 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'folding.ts',
       'engineHelpers.ts',
       'lspEngine.ts',
+      'lspRefactorEngine.ts',
       'surroundEngine.ts',
     ],
   },

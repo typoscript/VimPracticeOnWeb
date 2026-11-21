@@ -840,3 +840,102 @@
 
 
 
+
+/* Neovim 0.11 LSP Rename (grn) & Code Action (gra) 팝업 */
+.lsp-rename-badge {
+  background-color: rgba(249, 226, 175, 0.2);
+  color: #f9e2af;
+}
+
+.lsp-rename-input {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background-color: rgba(17, 17, 27, 0.75);
+  border: 1px solid var(--accent-primary, #89b4fa);
+  border-radius: 5px;
+  padding: 0.35rem 0.55rem;
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: var(--text-primary, #cdd6f4);
+}
+
+.lsp-rename-arrow {
+  color: #fab387;
+  font-weight: 700;
+}
+
+.lsp-rename-caret {
+  display: inline-block;
+  width: 7px;
+  height: 15px;
+  background-color: var(--accent-primary, #89b4fa);
+}
+
+.lsp-action-badge {
+  background-color: rgba(166, 227, 161, 0.2);
+  color: #a6e3a1;
+}
+
+.lsp-code-action-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.lsp-code-action-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 0.32rem 0.45rem;
+  color: var(--text-primary, #cdd6f4);
+  font-family: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.lsp-code-action-item:hover,
+.lsp-code-action-item.selected {
+  background-color: rgba(137, 180, 250, 0.16);
+  border-color: rgba(137, 180, 250, 0.45);
+}
+
+.lsp-action-num {
+  color: #fab387;
+  font-weight: 700;
+  font-family: monospace;
+}
+
+.lsp-action-kind {
+  font-size: 0.65rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 3px;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.lsp-action-kind.kind-quickfix {
+  background-color: rgba(243, 139, 168, 0.2);
+  color: #f38ba8;
+}
+
+.lsp-action-kind.kind-refactor {
+  background-color: rgba(137, 180, 250, 0.2);
+  color: #89b4fa;
+}
+
+.lsp-action-kind.kind-source {
+  background-color: rgba(166, 227, 161, 0.2);
+  color: #a6e3a1;
+}
+
+.lsp-popup-hint {
+  margin-top: 0.4rem;
+  font-size: 0.68rem;
+  color: var(--text-muted, #6c7086);
+}

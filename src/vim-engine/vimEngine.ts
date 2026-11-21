@@ -13,6 +13,7 @@ import { handleNetrwKey } from './netrwEngine';
 import { handleFuzzyFinderKey } from './fuzzyFinder';
 import { handleHelpKey } from './helpEngine';
 import { syncLiveLspDiagnostics } from './lspEngine';
+import { handleLspRenameKey, handleLspCodeActionKey } from './lspRefactorEngine';
 import { handleSpellSuggestKey } from './spellEngine';
 import { recordUndoTreeChange } from './undoTreeEngine';
 import { computeSpecialMarksUpdate } from './marks';
@@ -89,6 +90,17 @@ export function rawHandleKey(
   // z= 맞춤법 교체 추천 세션 처리
   if (state.spellSuggest) {
     return handleSpellSuggestKey(state, key);
+  }
+
+  // LSP 심볼 이름 변경 프롬프트 (grn) 처리
+  if (state.lspRename?.isOpen) {
+    return handleLspRenameKey(state, key);
+  }
+
+  // LSP 코드 액션 선택 팝업 (gra) 처리
+  if (state.lspCodeActionMenu?.isOpen) {
+    const res = handleLspCodeActionKey(state, key);
+    return syncLiveLspDiagnostics(state, res);
   }
 
   // 대화형 치환 확인 프롬프트 (:s/.../.../gc) 처리

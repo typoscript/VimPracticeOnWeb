@@ -435,4 +435,13 @@ export const EN_MESSAGES: Record<string, string> = {
   "{count}개 일치 ({lines}줄)": "{count} matches on {lines} lines",
   "E186: 이전 디렉터리가 없습니다": "E186: No previous directory",
   "[LiveGrep] {count}개 일치 항목을 퀵픽스로 보냈습니다": "[LiveGrep] Sent {count} matches to quickfix",
+  "LSP: 이름이 변경되지 않았습니다": "LSP: Symbol name unchanged",
+  "[LSP] \"{oldName}\" → \"{newName}\" ({count}개 위치, {files}개 파일 변경)": "[LSP] Renamed \"{oldName}\" to \"{newName}\" ({count} occurrences in {files} files)",
+  "LSP: 이름 변경이 취소되었습니다": "LSP: Rename cancelled",
+  "LSP: \"{symbol}\" 참조를 찾을 수 없습니다": "LSP: No references found for \"{symbol}\"",
+  "[LSP] \"{symbol}\" 참조 {count}개 ({files}개 파일)": "[LSP] {count} references for \"{symbol}\" ({files} files)",
+  "LSP: 현재 위치에서 사용할 수 있는 코드 액션이 없습니다": "LSP: No code actions available",
+  "[LSP] 코드 액션 적용: {title}": "[LSP] Applied code action: {title}",
+  "LSP: 현재 문서에 심볼이 없습니다": "LSP: No document symbols found",
+  "[LSP] 문서 심볼 {count}개 (:lopen)": "[LSP] {count} document symbols (:lopen)",
 };

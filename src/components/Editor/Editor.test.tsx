@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { DEFAULT_VIM_OPTIONS } from '../../vim-engine';
 import { Editor } from './Editor';
 
@@ -390,5 +390,66 @@ describe('Editor Component', () => {
     expect(ghostPreviews).toHaveLength(2);
     expect(ghostPreviews[0]).toHaveTextContent('prefix_');
     expect(ghostPreviews[1]).toHaveTextContent('prefix_');
+  });
+
+  it('renders Neovim 0.11 LSP rename prompt and code action popup with click handlers', () => {
+    const onCancelRename = vi.fn();
+    const onApplyAction = vi.fn();
+    const onCloseAction = vi.fn();
+
+    const { rerender } = render(
+      <Editor
+        lines={['function parsePort() {}']}
+        cursor={{ line: 0, col: 9 }}
+        mode="NORMAL"
+        primaryFilename="service.ts"
+        lspRename={{
+          isOpen: true,
+          oldName: 'parsePort',
+          newName: 'readPort',
+          line: 0,
+          col: 9,
+          occurrenceCount: 3,
+          fileCount: 2,
+        }}
+        onCancelLspRename={onCancelRename}
+      />
+    );
+
+    expect(screen.getByTestId('lsp-rename-popup')).toBeInTheDocument();
+    expect(screen.getByTestId('lsp-rename-input')).toHaveTextContent('readPort');
+    fireEvent.click(screen.getByLabelText('이름 변경 닫기'));
+    expect(onCancelRename).toHaveBeenCalledTimes(1);
+
+    rerender(
+      <Editor
+        lines={['const port: number = "8080";']}
+        cursor={{ line: 0, col: 21 }}
+        mode="NORMAL"
+        primaryFilename="service.ts"
+        lspCodeActionMenu={{
+          isOpen: true,
+          line: 0,
+          col: 21,
+          selectedIndex: 0,
+          actions: [
+            {
+              id: 'fix-1',
+              title: 'Convert "8080" to number 8080',
+              kind: 'quickfix',
+              edits: [{ line: 0, newText: 'const port: number = 8080;' }],
+            },
+          ],
+        }}
+        onApplyLspCodeAction={onApplyAction}
+        onCloseLspCodeAction={onCloseAction}
+      />
+    );
+
+    expect(screen.getByTestId('lsp-code-action-popup')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('lsp-code-action-0'));
+    expect(onApplyAction).toHaveBeenCalledWith(0);
+    fireEvent.click(screen.getByLabelText('코드 액션 닫기'));
+    expect(onCloseAction).toHaveBeenCalledTimes(1);
   });
 });

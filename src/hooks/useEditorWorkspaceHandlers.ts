@@ -21,6 +21,10 @@ import {
   closeLocationListWindow,
   jumpToLocationListItem,
   closeLspHover,
+  cancelLspRename,
+  applyLspCodeAction,
+  closeLspCodeActionMenu,
+  syncLiveLspDiagnostics,
   selectCompletionCandidate,
   selectWildmenuCandidate,
   setMark,
@@ -137,6 +141,22 @@ export function useEditorWorkspaceHandlers({
 
   const handleCloseLspHover = useCallback(
     () => applyAndFocus((prev) => closeLspHover(prev)),
+    [applyAndFocus]
+  );
+
+  const handleCancelLspRename = useCallback(
+    () => applyAndFocus((prev) => cancelLspRename(prev)),
+    [applyAndFocus]
+  );
+
+  const handleApplyLspCodeAction = useCallback(
+    (index: number) =>
+      applyAndFocus((prev) => syncLiveLspDiagnostics(prev, applyLspCodeAction(prev, index))),
+    [applyAndFocus]
+  );
+
+  const handleCloseLspCodeAction = useCallback(
+    () => applyAndFocus((prev) => closeLspCodeActionMenu(prev)),
     [applyAndFocus]
   );
 
@@ -267,6 +287,9 @@ export function useEditorWorkspaceHandlers({
       onNewTabPage: handleNewTabPage,
       onJumpToMark: handleJumpToMark,
       onCloseLspHover: handleCloseLspHover,
+      onCancelLspRename: handleCancelLspRename,
+      onApplyLspCodeAction: handleApplyLspCodeAction,
+      onCloseLspCodeAction: handleCloseLspCodeAction,
       onJumpQuickfixItem: handleJumpQuickfixItem,
       onCloseQuickfixWindow: handleCloseQuickfixWindow,
       onJumpLocationListItem: handleJumpLocationListItem,
@@ -286,6 +309,9 @@ export function useEditorWorkspaceHandlers({
       handleNewTabPage,
       handleJumpToMark,
       handleCloseLspHover,
+      handleCancelLspRename,
+      handleApplyLspCodeAction,
+      handleCloseLspCodeAction,
       handleJumpQuickfixItem,
       handleCloseQuickfixWindow,
       handleJumpLocationListItem,
