@@ -4,6 +4,88 @@ import { splitWindow } from './splitWindow';
 import { openNewTab } from './tabEngine';
 import { buildVfsMap } from './vfs';
 import { msg } from './messages';
+import { clampCursor } from './cursor';
+import { compileVimRegex } from './vimRegex';
+import { getOptions } from './setEngine';
+import { setQuickfixList, openQuickfixWindow } from './quickfixEngine';
+
+/** :LiveGrep 결과 최대 개수 */
+export const LIVE_GREP_MAX_RESULTS = 200;
+
+export interface GrepMatchItem {
+  path: string;
+  /** 0-based 줄 번호 */
+  line: number;
+  /** 0-based 매치 시작 열 */
+  col: number;
+  length: number;
+  text: string;
+}
+
+/**
+ * 가상 파일 시스템 전체 본문을 Vim 정규식으로 검색합니다 (:LiveGrep).
+ * 줄마다 첫 번째 일치만 보고하며, 잘못된 패턴이나 빈 쿼리는 빈 결과를 돌려줍니다.
+ */
+export function searchGrepMatches(
+  files: Record<string, string[]>,
+  query: string,
+  opts: { ignorecase?: boolean; smartcase?: boolean; max?: number } = {}
+): GrepMatchItem[] {
+  if (!query) return [];
+  let re: RegExp;
+  try {
+    re = compileVimRegex(query, { ignorecase: opts.ignorecase, smartcase: opts.smartcase });
+  } catch {
+    return [];
+  }
+  const max = opts.max ?? LIVE_GREP_MAX_RESULTS;
+  const results: GrepMatchItem[] = [];
+  const paths = Object.keys(files)
+    .filter((p) => !p.startsWith('Netrw') && !p.startsWith('/'))
+    .sort();
+  for (const path of paths) {
+    const lines = files[path] ?? [];
+    for (let i = 0; i < lines.length; i++) {
+      const m = re.exec(lines[i]);
+      if (m) {
+        results.push({ path, line: i, col: m.index, length: m[0].length, text: lines[i] });
+        if (results.length >= max) return results;
+      }
+    }
+  }
+  return results;
+}
+
+function grepOptions(state: VimEditorState) {
+  const o = getOptions(state);
+  return { ignorecase: o.ignorecase, smartcase: o.smartcase };
+}
+
+function currentGrepMatches(state: VimEditorState): GrepMatchItem[] {
+  if (!state.fuzzyFinder) return [];
+  return searchGrepMatches(state.virtualFiles ?? {}, state.fuzzyFinder.query, grepOptions(state));
+}
+
+/**
+ * Ctrl-q: 현재 :LiveGrep 결과 전체를 퀵픽스 리스트로 보내고 퀵픽스 창을 엽니다.
+ */
+export function sendGrepToQuickfix(state: VimEditorState): VimEditorState {
+  if (!state.fuzzyFinder?.isOpen || state.fuzzyFinder.mode !== 'grep') return state;
+  const matches = currentGrepMatches(state);
+  if (matches.length === 0) return closeFuzzyFinder(state);
+  const items = matches.map((m) => ({
+    filename: m.path,
+    line: m.line + 1,
+    col: m.col + 1,
+    text: m.text.trim(),
+  }));
+  const closed: VimEditorState = { ...state, fuzzyFinder: null };
+  const withList = setQuickfixList(closed, items, true);
+  return {
+    ...openQuickfixWindow(withList),
+    commandMessage: msg('[LiveGrep] {count}개 일치 항목을 퀵픽스로 보냈습니다', { count: items.length }),
+  };
+}
 
 export interface FuzzyMatchResult {
   matches: boolean;
@@ -122,7 +204,8 @@ export function searchBuffersFuzzy(
  */
 export function openFuzzyFinder(
   state: VimEditorState,
-  mode: 'files' | 'buffers' = 'files'
+  mode: 'files' | 'buffers' | 'grep' = 'files',
+  initialQuery = ''
 ): VimEditorState {
   const synced = syncCurrentBuffer(ensureBuffers(state));
   const vfs = state.virtualFiles
@@ -132,7 +215,7 @@ export function openFuzzyFinder(
   const finderState: FuzzyFinderState = {
     isOpen: true,
     mode,
-    query: '',
+    query: initialQuery,
     selectedIndex: 0,
   };
 
@@ -188,7 +271,9 @@ export function moveFuzzyFinderSelection(
   const total =
     mode === 'files'
       ? searchFilesFuzzy(vfs, state.fuzzyFinder.query).length
-      : searchBuffersFuzzy(state.buffers ?? [], state.fuzzyFinder.query).length;
+      : mode === 'grep'
+        ? currentGrepMatches(state).length
+        : searchBuffersFuzzy(state.buffers ?? [], state.fuzzyFinder.query).length;
 
   if (total === 0) return state;
 
@@ -219,7 +304,16 @@ export function selectFuzzyFinderItem(
   const vfs = state.virtualFiles ?? {};
 
   let targetPath = '';
-  if (mode === 'files') {
+  let jump: { line: number; col: number } | undefined;
+  if (mode === 'grep') {
+    const results = currentGrepMatches(state);
+    if (results.length === 0) {
+      return closeFuzzyFinder(state);
+    }
+    const hit = results[selectedIdx] ?? results[0];
+    targetPath = hit.path;
+    jump = { line: hit.line, col: hit.col };
+  } else if (mode === 'files') {
     const results = searchFilesFuzzy(vfs, query);
     if (results.length === 0) {
       return closeFuzzyFinder(state);
@@ -239,36 +333,56 @@ export function selectFuzzyFinderItem(
   };
 
   const fileLines = vfs[targetPath] ?? [''];
+  const cursorAt = (lines: string[]) =>
+    jump
+      ? clampCursor(lines, jump, 'NORMAL')
+      : { line: 0, col: 0 };
+  const withJumpInPanes = (s: VimEditorState): VimEditorState => {
+    if (!jump || !s.splitPanes) return s;
+    let idx = -1;
+    s.splitPanes.forEach((p, i) => {
+      if (p.filename === targetPath) idx = i;
+    });
+    if (idx < 0) return s;
+    const panes = s.splitPanes.map((p, i) =>
+      i === idx ? { ...p, cursor: cursorAt(p.lines) } : p
+    );
+    return idx === (s.activePaneIndex ?? 0)
+      ? { ...s, splitPanes: panes, cursor: cursorAt(s.lines) }
+      : { ...s, splitPanes: panes };
+  };
 
   if (action === 'vsplit') {
     const splitted = splitWindow(closedState, 'vertical', fileLines, targetPath);
-    return {
+    return withJumpInPanes({
       ...splitted,
       commandMessage: msg('[퍼지 파인더] 열기: {path}', { path: targetPath }),
-    };
+    });
   }
   if (action === 'split') {
     const splitted = splitWindow(closedState, 'horizontal', fileLines, targetPath);
-    return {
+    return withJumpInPanes({
       ...splitted,
       commandMessage: msg('[퍼지 파인더] 열기: {path}', { path: targetPath }),
-    };
+    });
   }
   if (action === 'tab') {
     const tabbed = openNewTab(closedState, targetPath);
     return {
       ...tabbed,
       lines: [...fileLines],
-      cursor: { line: 0, col: 0 },
+      cursor: cursorAt(fileLines),
       commandMessage: msg('[퍼지 파인더] 열기: {path}', { path: targetPath }),
     };
   }
 
   // 기본 open (현재 버퍼에서 열기)
   const edited = editBuffer(closedState, targetPath);
+  const openedLines = vfs[targetPath] ? [...vfs[targetPath]] : edited.lines;
   const updated = {
     ...edited,
-    lines: vfs[targetPath] ? [...vfs[targetPath]] : edited.lines,
+    lines: openedLines,
+    cursor: jump ? cursorAt(openedLines) : edited.cursor,
     commandMessage: msg('[퍼지 파인더] 열기: {path}', { path: targetPath }),
   };
   return syncCurrentBuffer(updated);
@@ -354,6 +468,11 @@ export function handleFuzzyFinderKey(
   // 새 탭 열기 (Ctrl-t)
   if (key === '<C-t>' || key === 'Ctrl-t') {
     return selectFuzzyFinderItem(state, 'tab');
+  }
+
+  // :LiveGrep 결과를 퀵픽스로 전송 (Ctrl-q)
+  if (key === '<C-q>' || key === 'Ctrl-q') {
+    return sendGrepToQuickfix(state);
   }
 
   // 아래로 이동

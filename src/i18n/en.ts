@@ -1158,6 +1158,9 @@ export const EN: Record<string, string> = {
 
   // Fuzzy Finder (:find, :Files, :Buffers)
   "검색어를 입력하세요...": "Type to search...",
+  "정규식 패턴을 입력하세요...": "Type a Vim regex pattern...",
+  "퀵픽스 전송": "To quickfix",
+  "미리볼 파일이 없습니다.": "No file to preview.",
   "개": "items",
   "일치하는 항목이 없습니다.": "No matching items found.",
   "세로 분할": "Vertical split",

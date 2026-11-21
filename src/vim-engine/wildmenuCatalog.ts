@@ -151,6 +151,7 @@ export const AVAILABLE_COMMANDS: string[] = [
   'lfirst',
   'lgetexpr',
   'list',
+  'LiveGrep',
   'll',
   'llast',
   'llist',

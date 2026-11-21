@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 179개 테스트 파일, 2,146개 테스트 100% 통과 필수)*
+  *(현재 179개 테스트 파일, 2,151개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -188,6 +188,7 @@
   - **`:set formatoptions` (`setOptionsCore.ts`, `setOptionAssigners.ts`, `operators.ts`, `lineOperators.ts`, `formatEngine.ts`, `insertMode.ts`)**: 버퍼 로컬 `formatoptions`/`fo`(기본 `'tcqj'`, `=`/`+=`/`^=`/`-=`/`?`, `E474` 검증)와 `r`(Insert `Enter` 주석 리더 자동 삽입), `o`(Normal `o`/`O` 주석 리더 자동 삽입), `j`(`J` 결합 시 중복 주석 리더 제거), `q`(`gq` 주석 문단 리플로우 제어), `t`/`c`(`textwidth` 일반 텍스트/주석 자동 줄바꿈 및 리더 연속)을 구현했습니다.
   - **Virtual Replace (`gR`/`gr`) & `Ctrl-x` 태그·옴니 완성 (`replaceMode.ts`, `normalGPrefix.ts`, `normalStandaloneCommands.ts`, `completion.ts`, `insertMode.ts`, `StatusBar.tsx`)**: 탭 폭의 화면 열 정렬을 유지하며 덮어쓰는 `gR` (`-- VREPLACE --`, `Backspace` 원본 복원, `.` 반복)과 `[count]gr{char}`, 그리고 프로젝트 심볼 태그(`Ctrl-x Ctrl-]`) 및 LSP/옴니(`Ctrl-x Ctrl-o`) 자동완성을 구현했습니다.
   - **창/탭 로컬 작업 디렉터리 & 로컬 아규먼트 리스트 (`vfs.ts`, `windowTree.ts`, `splitWindowCore.ts`, `tabEngine.ts`, `argEngine.ts`, `exWorkspaceCommands.ts`, `exBatchAndUndoCommands.ts`, `vimscriptBuiltinsExtra.ts`)**: 분할 창별 `:lcd` 격리·탭별 `:tcd`·전역 `:cd`·직전 디렉터리 복귀(`:cd -`/`:lcd -`/`:tcd -`, `E186`), `getcwd([winnr [, tabnr]])` 및 `haslocaldir([winnr [, tabnr]])` Vimscript 내장 함수, 창별 로컬 아규먼트 리스트(`:arglocal`/`:argl`) 및 전역 복귀(`:argglobal`/`:argg`)를 구현했습니다.
+- **Telescope 스타일 `:LiveGrep` 본문 검색 + 코드 미리보기 (`:LiveGrep [pattern]`, `:Rg`, `src/vim-engine/fuzzyFinder.ts`, `src/components/FuzzyFinder/`)**: 퍼지 파인더에 `grep` 모드를 추가해 가상 파일 시스템 전체 본문을 Vim 정규식(`compileVimRegex`, `ignorecase`/`smartcase` 반영)으로 실시간 검색(`searchGrepMatches`, 줄마다 첫 일치, 최대 200건, 잘못된 패턴은 빈 결과)하고, 좌측 결과 리스트·우측 `syntaxEngine` 구문 강조 코드 미리보기(매치 줄·매치 문자열 하이라이트)를 제공합니다. `Enter`/`Ctrl-v`/`Ctrl-s`/`Ctrl-t` 는 일치 줄·열로 정확히 점프하며, `Ctrl-q`(`sendGrepToQuickfix`)는 모든 결과를 퀵픽스 리스트로 보내고 퀵픽스 창을 엽니다.
 
 ---
 

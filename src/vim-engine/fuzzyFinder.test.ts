@@ -9,6 +9,7 @@ import {
   updateFuzzyFinderQuery,
   moveFuzzyFinderSelection,
   selectFuzzyFinderItem,
+  searchGrepMatches,
 } from './index';
 import { executeCommandLine } from './commandLine';
 
@@ -151,5 +152,54 @@ describe('Vim Pure Fuzzy Finder Engine (:find, :Files, :Buffers, fuzzyMatch)', (
     expect(state.fuzzyFinder).toBeNull();
     expect(state.primaryFilename).toBe('src/utils/math.ts');
     expect(state.lines).toEqual(['export const add = (a, b) => a + b;']);
+  });
+});
+
+describe(':LiveGrep (본문 정규식 검색 + 퀵픽스 전송)', () => {
+  const files = {
+    'src/a.ts': ['const foo = 1;', 'function bar() {}', 'foo(bar)'],
+    'src/b.ts': ['// FOO upper', 'let x = 2;'],
+    'docs/c.md': ['nothing here'],
+  };
+
+  function grepState(query: string) {
+    let s: any = createVimState(['main']);
+    s = { ...s, virtualFiles: files };
+    s = execEx(s, 'LiveGrep');
+    return updateFuzzyFinderQuery(s, query);
+  }
+
+  it(':LiveGrep [pattern] 이 grep 모드 팝업을 열고 초기 쿼리를 채운다', () => {
+    const s = execEx({ ...createVimState(['main']), virtualFiles: files }, 'LiveGrep foo');
+    expect(s.fuzzyFinder).toMatchObject({ isOpen: true, mode: 'grep', query: 'foo' });
+  });
+
+  it('Vim 정규식으로 파일 본문을 검색하며 줄마다 첫 일치만 반환한다 (잘못된 패턴·빈 쿼리는 빈 결과)', () => {
+    const res = searchGrepMatches(files, 'foo');
+    expect(res.map((r) => `${r.path}:${r.line}:${r.col}`)).toEqual(['src/a.ts:0:6', 'src/a.ts:2:0']);
+    expect(searchGrepMatches(files, '\\(function\\|let\\) \\w\\+').map((r) => r.path)).toEqual(['src/a.ts', 'src/b.ts']);
+    expect(searchGrepMatches(files, 'foo', { ignorecase: true }).length).toBe(3);
+    expect(searchGrepMatches(files, '').length).toBe(0);
+    expect(searchGrepMatches(files, '\\(').length).toBe(0);
+  });
+
+  it('Enter 로 일치 줄·열에 정확히 점프하고 Ctrl-j 로 선택을 이동한다', () => {
+    let s = grepState('foo');
+    s = handleKey(s, 'Ctrl-j');
+    s = handleKey(s, 'Enter');
+    expect(s.fuzzyFinder).toBeNull();
+    expect(s.primaryFilename).toBe('src/a.ts');
+    expect(s.cursor).toEqual({ line: 2, col: 0 });
+  });
+
+  it('Ctrl-q 가 모든 결과를 퀵픽스 리스트로 보내고 창을 연다', () => {
+    let s = grepState('foo');
+    s = handleKey(s, 'Ctrl-q');
+    expect(s.fuzzyFinder).toBeNull();
+    expect(s.quickfix?.items.map((i: any) => `${i.filename}:${i.line}:${i.col}`)).toEqual([
+      'src/a.ts:1:7',
+      'src/a.ts:3:1',
+    ]);
+    expect(s.quickfix?.isOpen).toBe(true);
   });
 });

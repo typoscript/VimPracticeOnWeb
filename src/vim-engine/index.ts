@@ -337,11 +337,15 @@ export {
   selectFuzzyFinderItem,
   executeFindFileCommand,
   handleFuzzyFinderKey,
+  searchGrepMatches,
+  sendGrepToQuickfix,
+  LIVE_GREP_MAX_RESULTS,
 } from './fuzzyFinder';
 export type {
   FuzzyMatchResult,
   FuzzyFileItem,
   FuzzyBufferItem,
+  GrepMatchItem,
 } from './fuzzyFinder';
 
 // ---- 순정 Vim 내장 도움말 시스템 (:help, K, F1, 태그 점프) ----

@@ -434,4 +434,5 @@ export const EN_MESSAGES: Record<string, string> = {
   "\"{filename}\" 새 탭으로 열렸습니다": "\"{filename}\" opened in new tab",
   "{count}개 일치 ({lines}줄)": "{count} matches on {lines} lines",
   "E186: 이전 디렉터리가 없습니다": "E186: No previous directory",
+  "[LiveGrep] {count}개 일치 항목을 퀵픽스로 보냈습니다": "[LiveGrep] Sent {count} matches to quickfix",
 };

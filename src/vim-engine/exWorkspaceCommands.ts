@@ -219,6 +219,10 @@ function tryExecuteBufferListAndCwdCommand(
   if (/^(?:Files|FZF|fzf)$/.test(cleanCmdRaw)) {
     return finishEx(openFuzzyFinder(state, 'files'));
   }
+  const liveGrepMatch = cleanCmdRaw.match(/^(?:LiveGrep|Rg)(?:\s+(.*))?$/);
+  if (liveGrepMatch) {
+    return finishEx(openFuzzyFinder(state, 'grep', liveGrepMatch[1]?.trim() ?? ''));
+  }
   if (/^(?:Buffers)$/.test(cleanCmdRaw)) {
     return finishEx(openFuzzyFinder(state, 'buffers'));
   }

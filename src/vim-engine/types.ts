@@ -283,7 +283,7 @@ export interface NetrwState {
 
 export interface FuzzyFinderState {
   isOpen: boolean;
-  mode: 'files' | 'buffers';
+  mode: 'files' | 'buffers' | 'grep';
   query: string;
   selectedIndex: number;
 }

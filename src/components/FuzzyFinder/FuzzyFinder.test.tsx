@@ -101,3 +101,26 @@ describe('FuzzyFinder Component', () => {
     expect(screen.getByText('[+]')).toBeInTheDocument();
   });
 });
+
+describe('FuzzyFinder LiveGrep 모드', () => {
+  it('결과 리스트와 구문 강조 코드 미리보기(매치 하이라이트)를 렌더링한다', () => {
+    let state: any = createVimState(['x']);
+    state = {
+      ...state,
+      virtualFiles: {
+        'src/app.ts': ['const a = 1;', 'function hello() {', '  return 42;', '}'],
+      },
+    };
+    state = openFuzzyFinder(state, 'grep', 'hello');
+
+    render(<FuzzyFinder state={state} onSelectAction={() => {}} onClose={() => {}} />);
+
+    expect(screen.getByText('LIVEGREP')).toBeInTheDocument();
+    expect(screen.getAllByText('src/app.ts:2').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('grep-preview')).toBeInTheDocument();
+    const hit = screen.getByTestId('grep-preview-hit');
+    expect(hit.querySelector('.grep-match-hl')?.textContent).toBe('hello');
+    expect(hit.querySelector('.syn-keyword')?.textContent).toBe('function');
+    expect(screen.getByText('Ctrl+q')).toBeInTheDocument();
+  });
+});
