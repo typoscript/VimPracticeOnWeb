@@ -103,6 +103,7 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
     files: [
       'diffEngine.ts',
       'gitSignsEngine.ts',
+      'luaEngine.ts',
       'netrwEngine.ts',
       'fuzzyFinder.ts',
       'spellEngine.ts',
@@ -144,8 +145,9 @@ export function resolveManualChunk(id: string): string | undefined {
   }
   if (normalized.includes('/src/vim-engine/')) return 'vim-engine';
 
-  // 영어 사전은 영어 모드 진입 시에만 지연 로딩되는 별도 청크로 분리합니다
-  if (/\/src\/i18n\/en(Content)?\.ts$/.test(normalized)) return 'i18n-en';
+  // 영어 사전은 UI 사전(i18n-en-ui)과 레슨/콘텐츠 사전(i18n-en-content)으로 분리해 300 kB 상한 여유를 유지합니다
+  if (/\/src\/i18n\/en\.ts$/.test(normalized)) return 'i18n-en-ui';
+  if (/\/src\/i18n\/enContent\.ts$/.test(normalized)) return 'i18n-en-content';
   // 레슨 커리큘럼 데이터는 앱 로직과 별도 캐시 청크로 분리합니다
   if (/\/src\/data\/missions(?:\/.*)?\.ts$/.test(normalized)) return 'curriculum';
   return undefined;

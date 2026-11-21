@@ -454,3 +454,11 @@ export {
   executeGitsignsCommand,
 } from './gitSignsEngine';
 export type { GitHunk, GitHunkPreviewState } from './types';
+
+// ---- Neovim Lua 미니 레이어 (:lua, :=expr, :luafile, :source init.lua) ----
+export {
+  executeLuaChunk,
+  executeLuaPrintExpr,
+  executeLuaFile,
+  formatLuaValue,
+} from './luaEngine';

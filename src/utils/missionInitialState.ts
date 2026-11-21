@@ -92,6 +92,7 @@ export function buildMissionInitialState(
     argList: m.initialArgs ? { files: [...m.initialArgs], currentIndex: 0 } : undefined,
     folds: m.initialFolds ? [...m.initialFolds] : undefined,
     virtualFiles: m.initialVirtualFiles ? { ...m.initialVirtualFiles } : undefined,
+    gitBaseLines: m.initialGitBaseLines ? [...m.initialGitBaseLines] : undefined,
     userKeymaps: compileUserKeymaps(activePresets, leaderKey, customKeymaps),
     leaderKey,
   };

@@ -22,13 +22,13 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 183개 테스트 파일, 2,188개 테스트 100% 통과 필수)*
+  *(현재 184개 테스트 파일, 2,194개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
 - **로컬 개발 서버 실행**:
   `npm run dev`
-- **번들 분할**: 아케이드·던전·도장 탭과 커스텀 미션·분석·데일리·설정 내보내기·BYOC 모달은 `App.tsx`에서 `React.lazy`로 지연 로딩되고, `vite.config.ts`(`resolveManualChunk` · `ENGINE_CHUNK_LAYERS`)에서 React는 `react-vendor`, 대용량 정적 데이터(`spellData`·`helpData`·`messagesEn`)는 `vim-engine-data`, 순수 코어·Vimscript 기반은 `vim-engine-core`, 작업공간·버퍼·창·옵션·탐색 서비스는 `vim-engine-services`, 모션·연산자·텍스트 객체·폴딩은 `vim-engine-editing`, Ex·셸 명령은 `vim-engine-ex`, 최상위 모드 디스패처는 `vim-engine`, 영문 번역 사전은 `i18n-en`, 레슨 데이터는 `curriculum` 청크로 분리해 모든 번들 청크를 300 kB 이하(엔진 청크 각 160 kB 미만, 단방향 비순환 계층)로 유지합니다. 모달은 `useOpenedOnce`로 처음 열 때 불러온 뒤 마운트를 유지합니다. 이 화면들을 테스트할 때는 처음 나타나는 요소를 `await screen.findBy...`로 기다리세요.
+- **번들 분할**: 아케이드·던전·도장 탭과 커스텀 미션·분석·데일리·설정 내보내기·BYOC 모달은 `App.tsx`에서 `React.lazy`로 지연 로딩되고, `vite.config.ts`(`resolveManualChunk` · `ENGINE_CHUNK_LAYERS`)에서 React는 `react-vendor`, 대용량 정적 데이터(`spellData`·`helpData`·`messagesEn`)는 `vim-engine-data`, 순수 코어·Vimscript 기반은 `vim-engine-core`, 작업공간·버퍼·창·옵션·탐색 서비스는 `vim-engine-services`, 모션·연산자·텍스트 객체·폴딩은 `vim-engine-editing`, Ex·셸 명령은 `vim-engine-ex`, 최상위 모드 디스패처는 `vim-engine`, 영문 번역 사전은 `i18n-en-ui`·`i18n-en-content`, 레슨 데이터는 `curriculum` 청크로 분리해 모든 번들 청크를 300 kB 이하(엔진 청크 각 160 kB 미만, 단방향 비순환 계층)로 유지합니다. 모달은 `useOpenedOnce`로 처음 열 때 불러온 뒤 마운트를 유지합니다. 이 화면들을 테스트할 때는 처음 나타나는 요소를 `await screen.findBy...`로 기다리세요.
 - **한/영 화면 언어 (`src/i18n/`)**: 화면 문구는 한국어 원문을 키로 쓰는 `t('한국어', { name })` 로 출력하고, 영어는 `src/i18n/en.ts` 의 `{ 한국어: English }` 사전에서 찾습니다(자리표시자 `{name}` 은 원문과 같아야 함). 모듈 최상위 상수는 `localized({...})` 로 감싸 읽을 때 번역되게 하고, localStorage 에 남기는 값은 번역하지 말고 `i18nKey('한국어')` 로 원문을 저장한 뒤 화면에서 `t(key)` 로 번역하세요. 언어는 `useLocale()`/`setLocale()` (저장 키 `vim_locale_v1`, 없으면 브라우저 언어), 헤더의 `toggle-locale-btn` 으로 바꿉니다. 테스트는 `setup.ts` 에서 한국어로 고정됩니다. 레슨·던전·자유 연습장 본문은 `src/data` 에 한국어 원문 그대로 두고 화면에서 `t(mission.title)` 처럼 번역하며, 영어는 `src/i18n/enContent.ts`(`EN_CONTENT`)에 있습니다. 레슨 에디터 버퍼(`initialLines`/`targetLines`)는 `checkComplete` 가 그대로 비교하므로 번역하지 말고 영어로 작성하세요. ⚠ 새 문구나 레슨을 추가하면 `en.ts`/`enContent.ts` 에도 넣어야 `src/i18n/i18nCoverage.test.ts` 가 통과합니다. 엔진 메시지(`commandMessage`, Vim script 에러)는 엔진 안의 `msg('한국어', { name })`(`src/vim-engine/messages.ts`)로 만들고, `configureVimEngine({ locale: 'en' })` 이면 `src/vim-engine/messagesEn.ts` 의 실제 Vim 영어 문구(`E492: Not an editor command: foo`, `3 fewer lines`)를 씁니다. 앱의 `setLocale()` 이 엔진 locale 도 함께 맞춥니다. ⚠ 엔진에 새 메시지를 추가하면 `messagesEn.ts` 에도 넣어야 `src/vim-engine/messages.test.ts` 가 통과합니다(E번호·자리표시자 일치 검사).
 
 - **작업 완료 체크리스트 (모든 에이전트 공통)**: 변경 후 `npm test -- --run`, `npm run build`, `npm run check:vim-engine` 가 모두 통과해야 합니다. 화면 문구·레슨·엔진 메시지를 추가했다면 영어 사전(`src/i18n/en.ts`, `src/i18n/enContent.ts`, `src/vim-engine/messagesEn.ts`)도 함께 채우세요. 규약이 바뀌면 이 문서의 현황·테스트 개수를 갱신하세요. (`CLAUDE.md`/`AGENTS.md` 중 하나만 고쳐도 커밋할 때 자동으로 맞춰집니다)
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 100)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 106)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -204,6 +204,8 @@
   - **키매핑 전 모드 & Insert 완성/들여쓰기 (`keymapEngine.ts`, `exListAndToolCommands.ts`, `visualMode.ts`, `completion.ts`, `insertMode.ts`, `wildmenuCatalog.ts`)**: Select 모드 `:smap`/`:snoremap`/`:sunmap`/`:smapclear`, Insert+Cmdline 동시 `:map!`/`:noremap!`/`:unmap!`/`:mapclear!`, 전 모드 `*mapclear` (`<buffer>` 포함), Insert `Ctrl-x Ctrl-v`(Vim 명령·함수 완성)·`Ctrl-x s`/`Ctrl-x Ctrl-s`(맞춤법 추천 완성)·`0 Ctrl-d`/`^ Ctrl-d`(선행 들여쓰기 즉시 제거)를 구현했습니다.
 - **`which-key.nvim` 실시간 단축키 가이드 팝업 (`src/components/WhichKey/WhichKeyPopup.tsx`, `whichKeyCatalog.ts`, `ViewPanelsDropdown.tsx`)**: `g`/`gr`/`z`/`[`/`]`/`Ctrl-w`/`"`/`m`/`'`/`ys`/`cs`/`ds`/연산자 대기(`d`/`c`/`y`/`>`/`<`/`=`/`gc`/`gq`/`gu`/`gU`/`g~`)/텍스트 객체(`di`/`da`/`vi` 등)/Insert `Ctrl-x`·`Ctrl-r` 및 사용자 정의 `:nmap`/`<leader>` 다중 키 매핑 대기 시 에디터 하단에 후속 키 가이드를 실시간 표시하며, 클릭 실행·한/영 자동 전환·패널 메뉴 토글(`vim_which_key_v1`)을 지원합니다.
 - **`gitsigns.nvim` 스타일 Git Hunk 거터 & 조작 (`src/vim-engine/gitSignsEngine.ts`, `normalBracketPrefix.ts`, `visualPrefixes.ts`, `exListAndToolCommands.ts`, `Editor.tsx`)**: 버퍼 최초 편집 시 `gitBaseLines` 원본 스냅샷을 자동 캡처해 거터에 `+`(추가)/`~`(수정)/`_`(삭제) 사인을 실시간 표시합니다. `]h`/`[h`(NORMAL·VISUAL 및 카운트·`wrapscan` 지원), `:Gitsigns preview_hunk`(인라인 diff 플로팅 미리보기 + Stage/Reset 버튼 + Esc/이동 자동 닫힘), `:Gitsigns reset_hunk`(단일 Hunk 원복 + `u` Undo), `:Gitsigns reset_buffer`, `:Gitsigns stage_hunk`, `:Gitsigns undo_stage_hunk`, `:Gitsigns status` 를 구현했습니다.
+- **Neovim Lua 미니 레이어 (`src/vim-engine/luaEngine.ts`, `exListAndToolCommands.ts`, `wildmenuCatalog.ts`)**: `eval`/`Function` 없이 순수 TypeScript 토크나이저·재귀 하강 파서로 `:lua {code}`, `:= {expr}`, `:luafile {file}`, `:source init.lua`(`.lua` 자동 분기)를 실행합니다. `vim.opt`/`vim.o`/`vim.bo`/`vim.wo`(`=`, `:append`, `:remove`, `:prepend`, `:get`), `vim.g`/`vim.b`/`vim.w`/`vim.t`(`vim.g.mapleader` 연동), `vim.keymap.set`/`del`(단일·다중 모드 테이블 및 `silent`/`expr`/`buffer`/`nowait`/`remap`), `vim.cmd`, `vim.fn.*`, `vim.api.*`(`nvim_get_current_line`, `nvim_set_current_line`, `nvim_buf_get_lines`, `nvim_buf_set_lines`, `nvim_buf_line_count`, `nvim_win_get_cursor`, `nvim_win_set_cursor`, `nvim_set_keymap`, `nvim_command` 등), `vim.inspect`, `vim.notify`, `print`, `local` 별칭·테이블·`if`/`for`/`ipairs`/`pairs`/`while` 제어문을 지원합니다.
+- **`i18n-en` 번들 안전 분리 & 현대 Neovim 실전 커리큘럼 확장 (레슨 101 ~ 106, `vite.config.ts`, `src/data/missions/part6ModernNeovim.ts`)**: 영어 번들 사전을 `i18n-en-ui`(`en.ts`, ~99 kB)와 `i18n-en-content`(`enContent.ts`, ~203 kB)로 분리해 300 kB 상한 여유를 확보하고, Telescope `:LiveGrep`+`Ctrl-q`(레슨 101), LSP `gra`/`grn`(레슨 102), LSP `gO`/`grr`(레슨 103), Treesitter `daf`/`daa`/`cif`/`]f`(레슨 104), `gitsigns.nvim` `]h`/`:Gitsigns`(레슨 105), Neovim Lua `:lua vim.opt` + `U`/`Q`(레슨 106) 6개 실전 미션을 추가했습니다.
 
 ---
 

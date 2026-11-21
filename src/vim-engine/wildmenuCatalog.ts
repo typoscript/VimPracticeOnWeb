@@ -177,6 +177,8 @@ export const AVAILABLE_COMMANDS: string[] = [
   'lpfile',
   'lprev',
   'ls',
+  'lua',
+  'luafile',
   'lvimgrep',
   'lvimgrepadd',
   'lwindow',

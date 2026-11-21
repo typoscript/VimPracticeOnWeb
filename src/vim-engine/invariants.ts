@@ -250,10 +250,18 @@ export function assertValidVimState(
     }
   }
 
-  // 3. Undo ('u') 검증 (NORMAL 모드에서 대기 키 없이 'u' 입력 시에만 실행됨)
+  // 3. Undo ('u') 검증 (NORMAL 모드에서 대기 키 및 모달/팝업 오버레이 없이 'u' 입력 시에만 실행됨)
   if (
     prevState.mode === 'NORMAL' &&
     !prevState.pendingKeys &&
+    !prevState.fuzzyFinder?.isOpen &&
+    !prevState.netrw?.isOpen &&
+    !prevState.helpSession?.isOpen &&
+    !prevState.cmdlineWindow &&
+    !prevState.lspRename?.isOpen &&
+    !prevState.lspCodeActionMenu?.isOpen &&
+    !prevState.confirmSubstitute &&
+    !prevState.spellSuggest &&
     key === 'u' &&
     prevState.undoStack &&
     prevState.undoStack.length > 0

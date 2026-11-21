@@ -37,6 +37,7 @@ import { executeUserCommandDefinition } from './userCommandEngine';
 import { executeDigraphCommand } from './digraphs';
 import { addSpellGoodWord, addSpellWrongWord, undoSpellWord } from './spellEngine';
 import { executeGitsignsCommand } from './gitSignsEngine';
+import { executeLuaChunk, executeLuaFile, executeLuaPrintExpr } from './luaEngine';
 import { compileVimRegex } from './vimRegex';
 import { describeCharAt } from './engineHelpers';
 import { msg } from './messages';
@@ -164,10 +165,31 @@ function tryExecuteOptionAndScriptCommand(
     });
   }
 
-  // 스크립트 소싱/런타임/세션 저장: :source, :runtime, :mksession
+  // Neovim Lua 실행: :lua {code}, :luafile {file}, :={expr}
+  const luaPrintMatch = cleanCmdRaw.match(/^=\s*([\s\S]+)$/);
+  if (luaPrintMatch) {
+    return finishEx(executeLuaPrintExpr(state, luaPrintMatch[1], runEx));
+  }
+  const luaFileMatch = cleanCmdRaw.match(/^luaf(?:i(?:l(?:e)?)?)?\s+(.+)$/i);
+  if (luaFileMatch) {
+    return finishEx(executeLuaFile(state, luaFileMatch[1], runEx));
+  }
+  const luaMatch = cleanCmdRaw.match(/^lua(?:\s+([\s\S]+))?$/i);
+  if (luaMatch) {
+    return finishEx(executeLuaChunk(state, luaMatch[1] ?? '', runEx));
+  }
+
+  // 스크립트 소싱/런타임/세션 저장: :source (.lua 자동 분기), :runtime, :mksession
   const sourceMatch = cleanCmdRaw.match(/^(?:source|so)(?:\s+(.*))?$/i);
   if (sourceMatch) {
-    return finishEx(sourceScript(state, sourceMatch[1]?.trim() || '%', runEx));
+    const target = sourceMatch[1]?.trim() || '%';
+    const isLuaTarget =
+      target.toLowerCase().endsWith('.lua') ||
+      (target === '%' && Boolean(state.primaryFilename?.toLowerCase().endsWith('.lua')));
+    if (isLuaTarget) {
+      return finishEx(executeLuaFile(state, target, runEx));
+    }
+    return finishEx(sourceScript(state, target, runEx));
   }
   const runtimeMatch = cleanCmdRaw.match(/^(?:runtime|ru)(!)?(?:\s+(.*))?$/i);
   if (runtimeMatch) {

@@ -52,5 +52,7 @@ export interface Mission {
   initialLspDiagnostics?: LspDiagnostic[];
   /** Neovim 스타일 LSP 호버 심볼 사전 (K) */
   initialLspSymbols?: Record<string, LspHoverSymbol>;
+  /** gitsigns.nvim 기준선(HEAD) 스냅샷 (]h/[h, :Gitsigns 미션용) */
+  initialGitBaseLines?: string[];
   checkComplete: (state: VimEditorState) => boolean;
 }

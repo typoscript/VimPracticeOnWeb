@@ -46,11 +46,11 @@ describe('Vite 번들 청크 분리 규칙 (resolveManualChunk)', () => {
     }
   });
 
-  it('react-vendor·i18n-en·curriculum 청크와 일반 앱 파일을 올바르게 구분한다', () => {
+  it('react-vendor·i18n-en-ui·i18n-en-content·curriculum 청크와 일반 앱 파일을 올바르게 구분한다', () => {
     expect(resolveManualChunk('/repo/node_modules/react/index.js')).toBe('react-vendor');
     expect(resolveManualChunk('/repo/node_modules/react-dom/client.js')).toBe('react-vendor');
-    expect(resolveManualChunk('/repo/src/i18n/en.ts')).toBe('i18n-en');
-    expect(resolveManualChunk('/repo/src/i18n/enContent.ts')).toBe('i18n-en');
+    expect(resolveManualChunk('/repo/src/i18n/en.ts')).toBe('i18n-en-ui');
+    expect(resolveManualChunk('/repo/src/i18n/enContent.ts')).toBe('i18n-en-content');
     expect(resolveManualChunk('/repo/src/data/missions.ts')).toBe('curriculum');
     expect(resolveManualChunk('/repo/src/data/missions/part1Basics.ts')).toBe('curriculum');
     expect(resolveManualChunk('/repo/src/App.tsx')).toBeUndefined();
