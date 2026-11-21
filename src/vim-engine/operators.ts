@@ -1,5 +1,6 @@
 import { StateSnapshot, VimEditorState } from './types';
 import { clampCursor, getFirstNonBlankCol, getMaxCol } from './cursor';
+import { getOptions } from './setOptionsCore';
 import { areLinesEqual, ensureUndoTreeInitialized, recordUndoTreeChange, jumpUndoSeq } from './undoTreeEngine';
 
 const MAX_HISTORY = 50;
@@ -442,16 +443,35 @@ export function appendAtLineEnd(state: VimEditorState): VimEditorState {
 }
 
 /**
+ * autoindent / smartindent 옵션에 따라 새 줄의 자동 들여쓰기 문자열을 계산합니다.
+ */
+export function computeAutoIndent(
+  prevLine: string,
+  opts: ReturnType<typeof getOptions>,
+  triggerSmartOpen = true
+): string {
+  if (!opts.autoindent && !opts.smartindent) return '';
+  const baseIndent = prevLine.match(/^[ \t]*/)?.[0] ?? '';
+  if (opts.smartindent && triggerSmartOpen && prevLine.trimEnd().endsWith('{')) {
+    const sw = opts.shiftwidth || 2;
+    const unit = opts.expandtab !== false ? ' '.repeat(sw) : '\t';
+    return baseIndent + unit;
+  }
+  return baseIndent;
+}
+
+/**
  * 'o': 현재 줄 아래에 새 빈 줄을 삽입하고 INSERT 모드 진입
  */
 export function openLineBelow(state: VimEditorState): VimEditorState {
   const stateWithSnapshot = pushUndoSnapshot(state);
   const { line } = state.cursor;
   const targetLine = line + 1;
+  const indent = computeAutoIndent(state.lines[line] ?? '', getOptions(state), true);
 
   const nextLines = [
     ...state.lines.slice(0, targetLine),
-    '',
+    indent,
     ...state.lines.slice(targetLine),
   ];
 
@@ -459,7 +479,7 @@ export function openLineBelow(state: VimEditorState): VimEditorState {
     ...stateWithSnapshot,
     lines: nextLines,
     mode: 'INSERT',
-    cursor: { line: targetLine, col: 0 },
+    cursor: { line: targetLine, col: indent.length },
     pendingKeys: undefined,
   };
 }
@@ -470,10 +490,11 @@ export function openLineBelow(state: VimEditorState): VimEditorState {
 export function openLineAbove(state: VimEditorState): VimEditorState {
   const stateWithSnapshot = pushUndoSnapshot(state);
   const { line } = state.cursor;
+  const indent = computeAutoIndent(state.lines[line] ?? '', getOptions(state), false);
 
   const nextLines = [
     ...state.lines.slice(0, line),
-    '',
+    indent,
     ...state.lines.slice(line),
   ];
 
@@ -481,7 +502,7 @@ export function openLineAbove(state: VimEditorState): VimEditorState {
     ...stateWithSnapshot,
     lines: nextLines,
     mode: 'INSERT',
-    cursor: { line, col: 0 },
+    cursor: { line, col: indent.length },
     pendingKeys: undefined,
   };
 }

@@ -704,5 +704,92 @@ describe('setEngine (:set Option System)', () => {
       expect(getOptions(state).relativenumber).toBe(true);
       expect(getOptions(state).wrap).toBe(false);
     });
+
+    it(':set autoindent(ai) / smartindent(si) 가 Enter, o/O, 닫는 중괄호(}) 들여쓰기를 자동 처리한다', () => {
+      let state: VimEditorState = {
+        lines: ['  function foo() {'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      // :set ai si sw=2
+      for (const ch of ':set ai si sw=2') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+      expect(getOptions(state).autoindent).toBe(true);
+      expect(getOptions(state).smartindent).toBe(true);
+
+      // o 입력: { 로 끝나는 줄 아래이므로 2+2 = 4칸 자동 들여쓰기
+      state = handleKey(state, 'o');
+      for (const ch of 'return 1;') state = handleKey(state, ch);
+      // Enter 입력: 4칸 들여쓰기 유지 후 '}' 입력 시 smartindent가 2칸으로 내어쓰기
+      state = handleKey(state, 'Enter');
+      state = handleKey(state, '}');
+      state = handleKey(state, 'Escape');
+
+      expect(state.lines).toEqual([
+        '  function foo() {',
+        '    return 1;',
+        '  }',
+      ]);
+
+      // O 입력: 현재 줄(2칸 들여쓰기) 위에 2칸 들여쓰기 상속
+      state = handleKey(state, 'O');
+      for (const ch of '// end') state = handleKey(state, ch);
+      state = handleKey(state, 'Escape');
+      expect(state.lines[2]).toBe('  // end');
+    });
+
+    it(':set shiftround(sr) 가 >> / << 및 :> / :< 시 shiftwidth 배수로 들여쓰기를 정렬한다', () => {
+      let state: VimEditorState = {
+        lines: ['   abc', '     def'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+
+      for (const ch of ':set sw=4 sr') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+
+      // 3칸 공백에서 >> -> 4칸(sw 배수)으로 반올림 정렬
+      state = handleKey(state, '>');
+      state = handleKey(state, '>');
+      expect(state.lines[0]).toBe('    abc');
+
+      // 2번째 줄(5칸 공백)에서 << -> 4칸(sw 배수)으로 내림 정렬
+      state = handleKey(state, 'j');
+      state = handleKey(state, '<');
+      state = handleKey(state, '<');
+      expect(state.lines[1]).toBe('    def');
+    });
+
+    it(':set matchpairs+=<:> 로 % 괄호 점프 쌍을 확장하고 E474 검증 및 리셋(&)을 지원한다', () => {
+      let state: VimEditorState = {
+        lines: ['const x: Array<number> = 1;'],
+        cursor: { line: 0, col: 14 }, // '<'
+        mode: 'NORMAL',
+      };
+
+      // 기본 mps 에서는 '<' 가 매칭 괄호가 아니므로 % 실패(bell)
+      const before = handleKey(state, '%');
+      expect(before.bell).toBe(true);
+
+      // :set mps+=<:> 추가 후 '<' <-> '>' 점프 성공
+      for (const ch of ':set mps+=<:>') state = handleKey(state, ch);
+      state = handleKey(state, 'Enter');
+      expect(getOptions(state).matchpairs).toBe('(:),{:},[:],<:>');
+
+      state = handleKey(state, '%');
+      expect(state.cursor.col).toBe(21); // '>'
+      state = handleKey(state, '%');
+      expect(state.cursor.col).toBe(14); // '<'
+
+      // 잘못된 형식은 E474 에러
+      const bad = executeSetCommand(state, 'mps=abc');
+      expect(bad.bell).toBe(true);
+      expect(bad.commandMessage).toContain('E474');
+
+      // :set mps& 기본값 복원
+      const reset = executeSetCommand(state, 'mps&');
+      expect(getOptions(reset).matchpairs).toBe('(:),{:},[:]');
+    });
   });
 });

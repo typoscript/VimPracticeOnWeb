@@ -33,6 +33,10 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   readonly: false,
   iskeyword: '@,48-57,_,192-255',
   virtualedit: '',
+  autoindent: false,
+  smartindent: false,
+  shiftround: false,
+  matchpairs: '(:),{:},[:]',
 };
 
 export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
@@ -103,6 +107,14 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   iskeyword: 'iskeyword',
   ve: 'virtualedit',
   virtualedit: 'virtualedit',
+  ai: 'autoindent',
+  autoindent: 'autoindent',
+  si: 'smartindent',
+  smartindent: 'smartindent',
+  sr: 'shiftround',
+  shiftround: 'shiftround',
+  mps: 'matchpairs',
+  matchpairs: 'matchpairs',
 };
 
 export const WINDOW_LOCAL_OPTION_KEYS = new Set<keyof VimOptions>([
@@ -297,6 +309,9 @@ export function formatOptionsList(
     'scrollbind',
     'modifiable',
     'readonly',
+    'autoindent',
+    'smartindent',
+    'shiftround',
   ];
 
   const numericKeys: (keyof VimOptions)[] = ['tabstop', 'shiftwidth', 'textwidth', 'scrolloff', 'sidescroll', 'sidescrolloff'];
@@ -336,6 +351,7 @@ export function formatOptionsList(
     'inccommand',
     'iskeyword',
     'virtualedit',
+    'matchpairs',
   ];
 
   for (const k of stringKeys) {
@@ -433,6 +449,9 @@ const BOOLEAN_OPTION_KEYS = new Set<keyof VimOptions>([
   'scrollbind',
   'modifiable',
   'readonly',
+  'autoindent',
+  'smartindent',
+  'shiftround',
 ]);
 
 /** '&nu', '&g:sw', '&l:wrap' 문자열에서 스코프와 정규화된 옵션 키를 해석합니다. */

@@ -529,19 +529,35 @@ function handleInsertEditingKey(
     return { ...state, currentChangeKeys: nextChangeKeys };
   }
 
-  // Enter: 줄 분할 및 다음 줄 맨 앞으로 이동 (비주얼 블록 삽입 중 Enter 입력 시 다중 줄 세션 해제)
+  // Enter: 줄 분할 및 다음 줄 이동 (autoindent / smartindent 지원, 비주얼 블록 삽입 중 Enter 입력 시 다중 줄 세션 해제)
   if (key === 'Enter') {
     const nextChangeKeys = appendCurrentChange(state, 'Enter', isReplayingDot);
+    const opts = getOptions(state);
+    const beforeCursor = currentLine.slice(0, col);
+    const afterCursor = currentLine.slice(col);
+    let indent = '';
+    let nextLineBody = afterCursor;
+    if (opts.autoindent || opts.smartindent) {
+      const baseIndent = beforeCursor.match(/^[ \t]*/)?.[0] ?? '';
+      if (opts.smartindent && beforeCursor.trimEnd().endsWith('{')) {
+        const sw = opts.shiftwidth || 2;
+        const unit = opts.expandtab !== false ? ' '.repeat(sw) : '\t';
+        indent = baseIndent + unit;
+      } else {
+        indent = baseIndent;
+      }
+      nextLineBody = afterCursor.replace(/^[ \t]+/, '');
+    }
     const nextLines = [
       ...state.lines.slice(0, line),
-      currentLine.slice(0, col),
-      currentLine.slice(col),
+      beforeCursor,
+      indent + nextLineBody,
       ...state.lines.slice(line + 1),
     ];
     return {
       ...state,
       lines: nextLines,
-      cursor: { line: line + 1, col: 0 },
+      cursor: { line: line + 1, col: indent.length },
       blockInsertSession: null,
       currentChangeKeys: nextChangeKeys,
       currentInsertText: (state.currentInsertText ?? '') + '\n',
@@ -603,11 +619,37 @@ function handleInsertEditingKey(
     }
     const nextChangeKeys = appendCurrentChange(state, key, isReplayingDot);
     const nextLines = [...state.lines];
-    nextLines[line] = currentLine.slice(0, col) + key + currentLine.slice(col);
+    let targetCol = col;
+    let prefixBefore = currentLine.slice(0, col);
+    if (
+      key === '}' &&
+      !state.blockInsertSession &&
+      getOptions(state).smartindent &&
+      prefixBefore.length > 0 &&
+      /^[ \t]+$/.test(prefixBefore)
+    ) {
+      const opts = getOptions(state);
+      const sw = opts.shiftwidth || 2;
+      if (prefixBefore.endsWith('\t')) {
+        prefixBefore = prefixBefore.slice(0, -1);
+      } else {
+        let removeCount = 0;
+        while (
+          removeCount < sw &&
+          prefixBefore.length > removeCount &&
+          prefixBefore[prefixBefore.length - 1 - removeCount] === ' '
+        ) {
+          removeCount++;
+        }
+        prefixBefore = prefixBefore.slice(0, prefixBefore.length - removeCount);
+      }
+      targetCol = prefixBefore.length;
+    }
+    nextLines[line] = prefixBefore + key + currentLine.slice(col);
     return {
       ...state,
       lines: nextLines,
-      cursor: { line, col: col + 1 },
+      cursor: { line, col: targetCol + 1 },
       pendingKeys: isKeymapPrefix(state, 'i', key) ? key : undefined,
       currentChangeKeys: nextChangeKeys,
       currentInsertText: (state.currentInsertText ?? '') + key,

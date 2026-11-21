@@ -331,6 +331,14 @@ export interface VimOptions {
   iskeyword?: string;
   /** 줄 끝 너머 가상 커서 이동 허용 모드 (:set ve=block,onemore,all,insert) */
   virtualedit?: string;
+  /** 새 줄 생성 시 이전 줄 들여쓰기 자동 유지 (:set ai / noai, :set autoindent) */
+  autoindent?: boolean;
+  /** C/JS 스타일 블록({ / }) 스마트 자동 들여쓰기 (:set si / nosi, :set smartindent) */
+  smartindent?: boolean;
+  /** >> / << 들여쓰기 시 shiftwidth 배수로 정렬 (:set sr / nosr, :set shiftround) */
+  shiftround?: boolean;
+  /** % 괄호 매칭 쌍 정의 (:set mps=(:),{:},[:],<:>, :set matchpairs) */
+  matchpairs?: string;
 }
 
 /** 맞춤법 검사기 오탈자 정보 */

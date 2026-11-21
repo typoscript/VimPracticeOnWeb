@@ -2,6 +2,7 @@ import { getVimEngineConfig } from './config';
 import { VimEditorState } from './types';
 import { setActiveCursorContext } from './cursor';
 import { setActiveIskeyword } from './wordMotion';
+import { setActiveMatchpairs } from './bracketMatch';
 import { getOptions } from './setEngine';
 import { msg } from './messages';
 import { deepFreeze, assertValidVimState } from './invariants';
@@ -82,6 +83,7 @@ export function rawHandleKey(
 ): VimEditorState {
   const effectiveOpts = getOptions(state);
   setActiveIskeyword(effectiveOpts.iskeyword);
+  setActiveMatchpairs(effectiveOpts.matchpairs);
   setActiveCursorContext(state.mode, effectiveOpts.virtualedit);
 
   // z= 맞춤법 교체 추천 세션 처리

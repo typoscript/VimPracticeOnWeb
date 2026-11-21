@@ -2,6 +2,7 @@ import { VimEditorState, VimOptions } from './types';
 import { msg } from './messages';
 import { setActiveCursorContext } from './cursor';
 import { setActiveIskeyword } from './wordMotion';
+import { DEFAULT_MATCHPAIRS, parseMatchpairs, setActiveMatchpairs } from './bracketMatch';
 import { applyFiletypeIndent, getFiletypeCommentString } from './ftpluginEngine';
 import { detectFiletype } from './syntaxEngine';
 import {
@@ -54,7 +55,10 @@ type BooleanOrSyntaxOptionKey =
   | 'syntax'
   | 'scrollbind'
   | 'modifiable'
-  | 'readonly';
+  | 'readonly'
+  | 'autoindent'
+  | 'smartindent'
+  | 'shiftround';
 
 const VALID_FOLDMETHODS: readonly FoldMethod[] = ['manual', 'indent', 'marker', 'syntax', 'expr'];
 const VALID_NRFORMATS = new Set(['bin', 'octal', 'hex', 'alpha', 'unsigned', 'blank']);
@@ -90,6 +94,9 @@ const BOOLEAN_OR_SYNTAX_KEYS = new Set<BooleanOrSyntaxOptionKey>([
   'scrollbind',
   'modifiable',
   'readonly',
+  'autoindent',
+  'smartindent',
+  'shiftround',
 ]);
 
 const DEFAULT_ERRORFORMAT = '%f:%l:%c:%m,%f:%l:%m,%f(%l\\,%c):%m';
@@ -201,6 +208,8 @@ function handleOptionQuery(ctx: SetDraftContext, token: string): VimEditorState 
       val = DEFAULT_VIM_OPTIONS.iskeyword ?? '@,48-57,_,192-255';
     } else if (optKey === 'virtualedit') {
       val = DEFAULT_VIM_OPTIONS.virtualedit ?? '';
+    } else if (optKey === 'matchpairs') {
+      val = DEFAULT_MATCHPAIRS;
     }
   }
 
@@ -422,6 +431,52 @@ function handleVirtualeditAssignment(
   return null;
 }
 
+function handleMatchpairsAssignment(
+  ctx: SetDraftContext,
+  mod: string,
+  rawVal: string,
+  token: string
+): VimEditorState | null {
+  const parsedNew = parseMatchpairs(rawVal);
+  if (!parsedNew.ok) {
+    return {
+      ...ctx.state,
+      bell: true,
+      commandMessage: msg('E474: 잘못된 인수입니다: {token}', { token }),
+    };
+  }
+  const newTokens = parsedNew.pairs.map(([o, c]) => `${o}:${c}`);
+  const curRaw =
+    ctx.nextLocal.matchpairs ?? ctx.nextGlobal.matchpairs ?? DEFAULT_MATCHPAIRS;
+  const parsedCur = parseMatchpairs(curRaw);
+  const curTokens = parsedCur.ok ? parsedCur.pairs.map(([o, c]) => `${o}:${c}`) : [];
+
+  let nextTokens: string[];
+  if (mod === '+') {
+    nextTokens = [...curTokens];
+    for (const t of newTokens) {
+      if (!nextTokens.includes(t)) nextTokens.push(t);
+    }
+  } else if (mod === '^') {
+    nextTokens = [...newTokens];
+    for (const t of curTokens) {
+      if (!nextTokens.includes(t)) nextTokens.push(t);
+    }
+  } else if (mod === '-') {
+    nextTokens = curTokens.filter((t) => !newTokens.includes(t));
+  } else {
+    nextTokens = [];
+    for (const t of newTokens) {
+      if (!nextTokens.includes(t)) nextTokens.push(t);
+    }
+  }
+
+  const nextVal = nextTokens.join(',');
+  writeScopedOption(ctx, 'matchpairs', nextVal);
+  ctx.appliedList.push(`matchpairs=${nextVal}`);
+  return null;
+}
+
 function handleOptionAssignment(ctx: SetDraftContext, token: string): VimEditorState | null {
   const eqIdx = token.indexOf('=');
   const rawKeyWithMod = token.slice(0, eqIdx);
@@ -444,6 +499,9 @@ function handleOptionAssignment(ctx: SetDraftContext, token: string): VimEditorS
   }
   if (optKey === 'virtualedit') {
     return handleVirtualeditAssignment(ctx, mod, rawVal, token);
+  }
+  if (optKey === 'matchpairs') {
+    return handleMatchpairsAssignment(ctx, mod, rawVal, token);
   }
   if (optKey === 'errorformat' || optKey === 'grepprg') {
     const currentStr =
@@ -709,6 +767,7 @@ export function executeSetCommand(
   };
 
   setActiveIskeyword(nextEffective.iskeyword);
+  setActiveMatchpairs(nextEffective.matchpairs);
   setActiveCursorContext(state.mode, nextEffective.virtualedit);
 
   const hasPaneLocalUpdates = Object.keys(ctx.nextPaneLocal).length > 0;

@@ -285,7 +285,69 @@ export function executeCaseMotion(
 }
 
 /**
- * >> / <<: 현재 줄 및 count개 줄 들여쓰기 / 내어쓰기 (shiftwidth / expandtab 설정 반영)
+ * 단일 줄에 들여쓰기/내어쓰기를 적용합니다. shiftround 옵션이 켜져 있으면 shiftwidth 배수로 정렬합니다.
+ */
+export function shiftLineIndent(
+  line: string,
+  direction: 'in' | 'out',
+  sw: number,
+  ts: number,
+  et: boolean,
+  shiftround: boolean,
+  times = 1
+): string {
+  const unit = et ? ' '.repeat(sw) : '\t';
+  if (direction === 'in' && line.length === 0) return line;
+
+  if (shiftround) {
+    let idx = 0;
+    let curWidth = 0;
+    while (idx < line.length) {
+      const ch = line[idx];
+      if (ch === ' ') {
+        curWidth += 1;
+        idx++;
+      } else if (ch === '\t') {
+        curWidth += ts - (curWidth % ts);
+        idx++;
+      } else {
+        break;
+      }
+    }
+    const body = line.slice(idx);
+    const nextWidth =
+      direction === 'in'
+        ? (Math.floor(curWidth / sw) + times) * sw
+        : Math.max(0, (Math.ceil(curWidth / sw) - times) * sw);
+    const rebuiltIndent = et
+      ? ' '.repeat(nextWidth)
+      : '\t'.repeat(Math.floor(nextWidth / ts)) + ' '.repeat(nextWidth % ts);
+    return rebuiltIndent + body;
+  }
+
+  let res = line;
+  if (direction === 'in') {
+    res = unit.repeat(times) + res;
+  } else {
+    for (let t = 0; t < times; t++) {
+      if (res.startsWith(unit)) {
+        res = res.slice(unit.length);
+      } else if (res.startsWith('\t')) {
+        res = res.slice(1);
+      } else if (res.startsWith(' ')) {
+        let spaces = 0;
+        while (spaces < sw && res[spaces] === ' ') {
+          spaces++;
+        }
+        res = res.slice(spaces);
+      }
+    }
+  }
+  return res;
+}
+
+/**
+ * >> / <<: 현재 줄 및 count개 줄 들여쓰기 / 내어쓰기 (shiftwidth / expandtab / shiftround 설정 반영)
  */
 export function indentLines(
   state: VimEditorState,
@@ -298,28 +360,13 @@ export function indentLines(
 
   const opts = getOptions(state);
   const sw = opts.shiftwidth || 2;
+  const ts = opts.tabstop || sw;
   const et = opts.expandtab !== false;
-  const indentStr = et ? ' '.repeat(sw) : '\t';
+  const sr = Boolean(opts.shiftround);
 
   const newLines = [...state.lines];
   for (let i = startLine; i <= endLine; i++) {
-    const line = newLines[i];
-    if (direction === 'in') {
-      // Vim 은 빈 줄을 들여쓰지 않습니다
-      if (line.length > 0) newLines[i] = indentStr + line;
-    } else {
-      if (line.startsWith(indentStr)) {
-        newLines[i] = line.slice(indentStr.length);
-      } else if (line.startsWith('\t')) {
-        newLines[i] = line.slice(1);
-      } else if (line.startsWith(' ')) {
-        let spaces = 0;
-        while (spaces < sw && line[spaces] === ' ') {
-          spaces++;
-        }
-        newLines[i] = line.slice(spaces);
-      }
-    }
+    newLines[i] = shiftLineIndent(newLines[i], direction, sw, ts, et, sr, 1);
   }
 
   const newCursor = moveToFirstNonBlank(newLines, { line: startLine, col: 0 });
@@ -349,7 +396,9 @@ export function indentVisual(
 
   const opts = getOptions(state);
   const sw = opts.shiftwidth || 2;
+  const ts = opts.tabstop || sw;
   const et = opts.expandtab !== false;
+  const sr = Boolean(opts.shiftround);
   const indentStr = et ? ' '.repeat(sw) : '\t';
 
   const newLines = [...state.lines];
@@ -390,22 +439,7 @@ export function indentVisual(
   }
 
   for (let i = minLine; i <= maxLine; i++) {
-    const line = newLines[i];
-    if (direction === 'in') {
-      newLines[i] = indentStr + line;
-    } else {
-      if (line.startsWith(indentStr)) {
-        newLines[i] = line.slice(indentStr.length);
-      } else if (line.startsWith('\t')) {
-        newLines[i] = line.slice(1);
-      } else if (line.startsWith(' ')) {
-        let spaces = 0;
-        while (spaces < sw && line[spaces] === ' ') {
-          spaces++;
-        }
-        newLines[i] = line.slice(spaces);
-      }
-    }
+    newLines[i] = shiftLineIndent(newLines[i], direction, sw, ts, et, sr, 1);
   }
 
   const newCursor = moveToFirstNonBlank(newLines, { line: minLine, col: 0 });

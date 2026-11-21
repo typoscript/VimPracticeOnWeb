@@ -6,6 +6,7 @@ import { msg } from './messages';
 import { getRegisterContent, syncRegisters } from './registers';
 import { getOptions } from './setEngine';
 import { moveToFirstNonBlank } from './motions';
+import { shiftLineIndent } from './lineOperators';
 import type { KeyRunner } from './exSubstitute';
 
 /**
@@ -519,33 +520,16 @@ export function executeShiftRange(
 
   const opts = getOptions(state);
   const sw = opts.shiftwidth || 2;
+  const ts = opts.tabstop || sw;
   const et = opts.expandtab !== false;
-  const indentUnit = et ? ' '.repeat(sw) : '\t';
+  const sr = Boolean(opts.shiftround);
   const times = Math.max(1, shiftCount);
 
   const stateWithUndo = pushUndoSnapshot(state);
   const nextLines = [...state.lines];
 
   for (let i = startLine; i <= endLine; i++) {
-    let line = nextLines[i];
-    if (direction === 'in') {
-      if (line.length > 0) {
-        line = indentUnit.repeat(times) + line;
-      }
-    } else {
-      for (let t = 0; t < times; t++) {
-        if (line.startsWith(indentUnit)) {
-          line = line.slice(indentUnit.length);
-        } else if (line.startsWith('\t')) {
-          line = line.slice(1);
-        } else if (line.startsWith(' ')) {
-          let spaces = 0;
-          while (spaces < sw && line[spaces] === ' ') spaces++;
-          line = line.slice(spaces);
-        }
-      }
-    }
-    nextLines[i] = line;
+    nextLines[i] = shiftLineIndent(nextLines[i], direction, sw, ts, et, sr, times);
   }
 
   const nextCursor = moveToFirstNonBlank(nextLines, { line: endLine, col: 0 });

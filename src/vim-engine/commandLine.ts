@@ -1,6 +1,7 @@
 import { VimEditorState } from './types';
 import { clampCursor, setActiveCursorContext } from './cursor';
 import { setActiveIskeyword } from './wordMotion';
+import { setActiveMatchpairs } from './bracketMatch';
 import { getOptions } from './setEngine';
 import { executeShellCommand, executeFilterRange, executeWriteShell } from './shellEngine';
 import { retabRange } from './formatEngine';
@@ -511,6 +512,7 @@ export function executeCommandLine(
 
   const startOpts = getOptions(state);
   setActiveIskeyword(startOpts.iskeyword);
+  setActiveMatchpairs(startOpts.matchpairs);
   setActiveCursorContext(state.mode, startOpts.virtualedit);
 
   const finalize = (res: VimEditorState): VimEditorState => {
@@ -530,6 +532,7 @@ export function executeCommandLine(
     }
     const endOpts = getOptions(res);
     setActiveIskeyword(endOpts.iskeyword);
+    setActiveMatchpairs(endOpts.matchpairs);
     setActiveCursorContext(res.mode, endOpts.virtualedit);
     const synced = syncActivePane(res);
     return skipWindowAutocmds
