@@ -93,6 +93,12 @@
   font-weight: 700;
 }
 
+.mode-flash {
+  background-color: #ff007c;
+  color: #ffffff;
+  font-weight: 800;
+}
+
 .status-filename {
   color: #a6adc8;
   font-size: 12px;
@@ -197,6 +203,17 @@
   background-color: rgba(247, 118, 142, 0.2);
   color: #f7768e;
   border: 1px solid rgba(247, 118, 142, 0.4);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.status-oil-badge {
+  background-color: rgba(148, 226, 213, 0.18);
+  color: #94e2d5;
+  border: 1px solid rgba(148, 226, 213, 0.42);
   padding: 1px 6px;
   border-radius: 3px;
   font-size: 11px;

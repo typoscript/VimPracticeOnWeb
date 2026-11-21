@@ -40,6 +40,10 @@ export interface StatusBarProps {
   functionDraft?: { name: string; lines: number } | null;
   /** 맞춤법 검사기 활성화 여부 (:set spell) */
   spellActive?: boolean;
+  /** flash.nvim 라벨 점프 세션 활성화 여부 (gs, :Flash) */
+  flashActive?: boolean;
+  /** oil.nvim 디렉터리 버퍼 활성화 여부 (:Oil) */
+  oilActive?: boolean;
   /** 현재 검색 매치 카운트 ([current/total]) */
   searchCount?: { current: number; total: number } | null;
 }
@@ -65,10 +69,14 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   showWildmenuBar = true,
   onSelectWildmenuCandidate,
   spellActive,
+  flashActive,
+  oilActive,
   searchCount,
 }) => {
   const displayMode =
-    insertCtrlXMode
+    flashActive
+      ? '-- FLASH --'
+      : insertCtrlXMode
       ? '-- ^X mode (^]^D^E^F^I^K^L^N^O^Ps^U^V^Y) --'
       : insertNormalSession
       ? 'INSERT (normal)'
@@ -88,7 +96,9 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       ? 'SELECT BLOCK'
       : mode;
   const modeClass =
-    insertCtrlXMode
+    flashActive
+      ? 'mode-flash'
+      : insertCtrlXMode
       ? 'mode-insert-ctrlx'
       : insertNormalSession || insertRegisterPending
       ? 'mode-insert-normal'
@@ -238,6 +248,11 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         {searchCount && searchCount.total > 0 && (
           <span className="status-search-count" data-testid="status-search-count">
             [{searchCount.current}/{searchCount.total}]
+          </span>
+        )}
+        {oilActive && (
+          <span className="status-oil-badge" data-testid="status-oil-badge">
+            [OIL]
           </span>
         )}
         {spellActive && (

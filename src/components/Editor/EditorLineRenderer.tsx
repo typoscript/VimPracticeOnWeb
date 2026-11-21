@@ -6,6 +6,7 @@ import {
   CustomMatchSpan,
   ConfirmSubstituteSession,
   IncCommandPreviewMatch,
+  FlashJumpMatch,
   BlockInsertSession,
   SpellError,
   SyntaxToken,
@@ -33,6 +34,7 @@ export interface RenderLineOptions {
   confirmSubstitute?: ConfirmSubstituteSession | null;
   incCommandMatches?: IncCommandPreviewMatch[];
   incCommandHasReplacement?: boolean;
+  flashMatches?: FlashJumpMatch[];
   blockInsertSession?: BlockInsertSession | null;
   spellErrors?: SpellError[];
   lineDiagnostics?: LspDiagnostic[];
@@ -83,6 +85,7 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     confirmSubstitute,
     incCommandMatches,
     incCommandHasReplacement,
+    flashMatches,
     blockInsertSession,
     spellErrors,
     lineDiagnostics,
@@ -113,6 +116,7 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
   const hasSearchMatches = lineMatches.length > 0;
   const hasCustomMatches = (lineCustomMatches?.length ?? 0) > 0;
   const hasIncMatches = (incCommandMatches?.length ?? 0) > 0;
+  const hasFlashMatches = (flashMatches?.length ?? 0) > 0;
   const hasSpellErrors = (spellErrors?.length ?? 0) > 0;
   const hasDiagnostics = (lineDiagnostics?.length ?? 0) > 0;
 
@@ -151,6 +155,7 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     !hasSearchMatches &&
     !hasCustomMatches &&
     !hasIncMatches &&
+    !hasFlashMatches &&
     !hasSpellErrors &&
     !hasDiagnostics &&
     cursorColumnCol === null
@@ -174,6 +179,7 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     !hasSearchMatches &&
     !hasCustomMatches &&
     !hasIncMatches &&
+    !hasFlashMatches &&
     !hasSpellErrors &&
     !hasDiagnostics &&
     !listMode &&
@@ -274,6 +280,21 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
       i < confirmSubstitute.currentMatch.col + confirmSubstitute.currentMatch.length;
     const incMatchAtStart = incCommandMatches?.find((m) => m.col === i);
     const isIncMatch = incCommandMatches?.some((m) => i >= m.col && i < m.col + m.length) ?? false;
+    const flashLabelAtStart = flashMatches?.find((m) => m.col === i);
+    const isFlashMatch = flashMatches?.some((m) => i >= m.col && i < m.col + m.length) ?? false;
+
+    if (flashLabelAtStart) {
+      elements.push(
+        <span
+          key={i}
+          className="vim-char flash-label-badge"
+          data-testid={`flash-label-${flashLabelAtStart.label}`}
+        >
+          {flashLabelAtStart.label}
+        </span>
+      );
+      continue;
+    }
 
     let listCharClass = '';
     let listCharDisplay: string | null = null;
@@ -365,6 +386,10 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
       classNames += incCommandHasReplacement
         ? ' inccommand-match-replaced'
         : ' inccommand-match';
+    }
+
+    if (isFlashMatch) {
+      classNames += ' flash-match-char';
     }
 
     const isSpell = spellErrors?.some((e) => i >= e.startCol && i < e.endCol);

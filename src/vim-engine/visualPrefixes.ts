@@ -27,6 +27,7 @@ import {
   evaluateMotionWithCount,
 } from './engineHelpers';
 import { jumpGitHunk } from './gitSignsEngine';
+import { openFlashJump } from './flashJumpEngine';
 
 /**
  * Visual 모드 'z' 접두 명령 처리 (수평 스크롤 zh/zl/zH/zL/ze/zs, 수동 폴드 zf)
@@ -151,6 +152,11 @@ export function handleVisualGSubcommand(
     }
     if (key === 'd') {
       return goToDeclaration(state);
+    }
+    if (key === 's') {
+      return openFlashJump(state, {
+        visualMode: state.mode as 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK',
+      });
     }
     if (key === 'p' || key === 'P') {
       const snap = state.visualAnchor

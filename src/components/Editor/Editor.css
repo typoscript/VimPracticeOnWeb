@@ -1048,3 +1048,24 @@
   background-color: rgba(166, 227, 161, 0.14);
   color: #a6e3a1;
 }
+
+/* flash.nvim 스타일 화면 라벨 점프 오버레이 */
+.editor-flash-active .line-content {
+  color: rgba(205, 214, 244, 0.42);
+}
+
+.flash-match-char {
+  background-color: rgba(249, 226, 175, 0.28);
+  color: #f9e2af;
+  font-weight: 700;
+  border-radius: 2px;
+}
+
+.flash-label-badge {
+  background-color: #ff007c;
+  color: #ffffff;
+  font-weight: 800;
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(255, 0, 124, 0.65);
+  z-index: 5;
+}

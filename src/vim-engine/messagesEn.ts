@@ -485,4 +485,13 @@ export const EN_MESSAGES: Record<string, string> = {
   "Lua 구문 오류: 대입할 수 없는 좌변입니다": "Lua syntax error: invalid assignment target",
   "Lua 구문 오류: 예상치 못한 토큰입니다: {tok}": "Lua syntax error: unexpected token: {tok}",
   "[Lua] \"{sourceName}\" 실행 완료": "[Lua] Executed \"{sourceName}\"",
+  "[Flash] \"{query}\" ({count}개 일치 · 라벨 키로 점프)": "[Flash] \"{query}\" ({count} matches · press label to jump)",
+  "[Flash] 일치하는 위치가 없습니다: \"{query}\"": "[Flash] No match for \"{query}\"",
+  "[Flash] 점프할 검색 문자를 입력하세요 (Esc 취소)": "[Flash] Type characters to jump (Esc to cancel)",
+  "[Flash] {len}자 복사 완료": "[Flash] Yanked {len} chars",
+  "[Flash] {line}행 {col}열로 점프": "[Flash] Jumped to line {line}, col {col}",
+  "[Oil] \"{dir}\" 열림 (dd 삭제 · cw 이름변경 · o 생성 · :w 반영 · Enter 열기 · - 상위)": "[Oil] Opened \"{dir}\" (dd delete · cw rename · o create · :w save · Enter open · - parent)",
+  "[Oil] 탐색기 버퍼를 닫았습니다": "[Oil] Closed file explorer buffer",
+  "[Oil] 변경 사항이 없습니다": "[Oil] No filesystem changes",
+  "[Oil] 반영 완료 (생성 {created} · 이름변경 {renamed} · 삭제 {deleted})": "[Oil] Applied changes (created {created} · renamed {renamed} · deleted {deleted})",
 };

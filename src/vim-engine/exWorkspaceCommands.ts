@@ -35,6 +35,7 @@ import {
   goToNetrwBookmark,
   formatNetrwBookmarks,
 } from './netrwEngine';
+import { openOilBuffer, closeOilBuffer, applyOilBufferChanges } from './oilEngine';
 import { executeFindFileCommand, openFuzzyFinder } from './fuzzyFinder';
 import { openHelp, closeHelp } from './helpEngine';
 import { triggerAutocmd } from './autocmdEngine';
@@ -290,6 +291,12 @@ function tryExecuteNetrwAndBufferSwitchCommand(
   cleanCmdRaw: string,
   runEx: ExCommandRunner
 ): VimEditorState | null {
+  // oil.nvim 스타일 버퍼 기반 디렉터리 편집기: :Oil [dir]
+  const oilMatch = cleanCmdRaw.match(/^Oil(?:\s+(.*))?$/i);
+  if (oilMatch) {
+    return finishEx(openOilBuffer(state, oilMatch[1]?.trim()));
+  }
+
   // 순정 파일 탐색기 Netrw 열기: :Explore, :E, :Vexplore, :Ve, :Sexplore, :Se, :Hexplore, :He, :Texplore, :Te
   const netrwMatch = cleanCmdRaw.match(
     /^(?:Explore|E|Vexplore|Ve|Sexplore|Se|Hexplore|He|Texplore|Te)(?:\s+(.*))?$/
@@ -434,6 +441,9 @@ function tryExecuteSaveQuitAndHelpCommand(
   runEx: ExCommandRunner
 ): VimEditorState | null {
   const writeCurrentBuffer = (curState: VimEditorState, force = false): VimEditorState => {
+    if (curState.oilSession?.isOpen) {
+      return finishEx(applyOilBufferChanges(curState));
+    }
     if (!force && getOptions(curState).readonly === true) {
       return finishEx(curState, {
         bell: true,
@@ -461,6 +471,7 @@ function tryExecuteSaveQuitAndHelpCommand(
   };
 
   const quitCurrentWindow = (curState: VimEditorState, force = false): VimEditorState => {
+    if (curState.oilSession?.isOpen) return finishEx(closeOilBuffer(curState));
     if (curState.helpSession?.isOpen) return finishEx(closeHelp(curState));
     if (curState.splitDirection && curState.splitDirection !== 'none') {
       return finishEx(closeSplitWindow(curState));

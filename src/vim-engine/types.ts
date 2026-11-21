@@ -597,6 +597,38 @@ export interface GitHunkPreviewState {
   line: number;
 }
 
+export interface FlashJumpMatch {
+  line: number;
+  col: number;
+  length: number;
+  label: string;
+}
+
+export interface FlashJumpSession {
+  isOpen: boolean;
+  query: string;
+  matches: FlashJumpMatch[];
+  operator?: 'd' | 'c' | 'y';
+  visualMode?: 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK';
+}
+
+export interface OilEntrySnapshot {
+  id: string;
+  originalPath: string;
+  originalName: string;
+  isDir: boolean;
+}
+
+export interface OilSessionState {
+  isOpen: boolean;
+  currentDir: string;
+  returnBufferId?: number;
+  returnFilename?: string;
+  returnLines?: string[];
+  returnCursor?: CursorPosition;
+  entries: OilEntrySnapshot[];
+}
+
 export interface UndoTreeNode {
   seq: number;
   parentSeq: number | null;
@@ -881,6 +913,10 @@ export interface VimEditorState {
   gitBaseHistory?: string[][];
   /** :Gitsigns preview_hunk 플로팅 미리보기 세션 */
   gitHunkPreview?: GitHunkPreviewState | null;
+  /** flash.nvim 스타일 화면 전체 라벨 점프 세션 (gs / :Flash) */
+  flashJump?: FlashJumpSession | null;
+  /** oil.nvim 스타일 버퍼 기반 파일시스템 편집 세션 (:Oil) */
+  oilSession?: OilSessionState | null;
   /** 순정 Vim Undo Tree 노드 맵 (seq -> UndoTreeNode) */
   undoTreeNodes?: Record<number, UndoTreeNode>;
   /** 현재 활성화된 변경 시퀀스 번호 */

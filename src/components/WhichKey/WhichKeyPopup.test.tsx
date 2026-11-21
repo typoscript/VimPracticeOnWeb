@@ -108,4 +108,30 @@ describe('which-key.nvim 스타일 실시간 키 가이드 팝업', () => {
     fireEvent.click(screen.getByTestId('git-hunk-reset-btn'));
     expect(onReset).toHaveBeenCalledTimes(1);
   });
+
+  it('Editor 에서 Flash 라벨 배지(flash-label-*)와 WhichKey gs 항목을 렌더링한다', () => {
+    const base = createVimState(['const alpha = 1;', 'const beta = 2;']);
+    const afterG = handleKey(base, 'g');
+    const gData = resolveWhichKeyData(afterG);
+    expect(gData?.items.some((i) => i.key === 's')).toBe(true);
+
+    let s = handleKey(afterG, 's');
+    s = handleKey(s, 'c');
+    s = handleKey(s, 'o');
+    expect(s.flashJump?.matches.length).toBe(2);
+
+    render(
+      <Editor
+        lines={s.lines}
+        cursor={s.cursor}
+        mode={s.mode}
+        flashJump={s.flashJump}
+      />
+    );
+
+    const firstLabel = s.flashJump!.matches[0].label;
+    const secondLabel = s.flashJump!.matches[1].label;
+    expect(screen.getByTestId(`flash-label-${firstLabel}`)).toHaveTextContent(firstLabel);
+    expect(screen.getByTestId(`flash-label-${secondLabel}`)).toHaveTextContent(secondLabel);
+  });
 });

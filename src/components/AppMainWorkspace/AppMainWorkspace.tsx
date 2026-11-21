@@ -350,6 +350,8 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
             showWildmenuBar={displayEditorState.options?.wildmenu ?? true}
             onSelectWildmenuCandidate={editor.onSelectWildmenuCandidate}
             spellActive={displayEditorState.options?.spell}
+            flashActive={Boolean(displayEditorState.flashJump?.isOpen)}
+            oilActive={Boolean(displayEditorState.oilSession?.isOpen)}
             searchCount={(() => {
               const shm = displayEditorState.options?.shortmess ?? '';
               if (shm.includes('S')) return null;

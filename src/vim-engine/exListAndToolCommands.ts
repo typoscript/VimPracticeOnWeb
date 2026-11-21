@@ -37,6 +37,7 @@ import { executeUserCommandDefinition } from './userCommandEngine';
 import { executeDigraphCommand } from './digraphs';
 import { addSpellGoodWord, addSpellWrongWord, undoSpellWord } from './spellEngine';
 import { executeGitsignsCommand } from './gitSignsEngine';
+import { openFlashJump } from './flashJumpEngine';
 import { executeLuaChunk, executeLuaFile, executeLuaPrintExpr } from './luaEngine';
 import { compileVimRegex } from './vimRegex';
 import { describeCharAt } from './engineHelpers';
@@ -476,6 +477,12 @@ function tryExecuteMappingAndMiscToolCommand(
   const gitsignsMatch = cleanCmdRaw.match(/^(?:Gitsigns|Gitsign|GitHunk)(?:\s+(.*))?$/i);
   if (gitsignsMatch) {
     return finishEx(executeGitsignsCommand(state, gitsignsMatch[1] ?? ''));
+  }
+
+  // :Flash [query] — flash.nvim 스타일 화면 라벨 점프 세션 열기
+  const flashMatch = cleanCmdRaw.match(/^Flash(?:\s+(.*))?$/i);
+  if (flashMatch) {
+    return finishEx(openFlashJump(state, { query: flashMatch[1]?.trim() }));
   }
 
   return null;

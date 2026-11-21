@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 184개 테스트 파일, 2,194개 테스트 100% 통과 필수)*
+  *(현재 185개 테스트 파일, 2,205개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -206,6 +206,9 @@
 - **`gitsigns.nvim` 스타일 Git Hunk 거터 & 조작 (`src/vim-engine/gitSignsEngine.ts`, `normalBracketPrefix.ts`, `visualPrefixes.ts`, `exListAndToolCommands.ts`, `Editor.tsx`)**: 버퍼 최초 편집 시 `gitBaseLines` 원본 스냅샷을 자동 캡처해 거터에 `+`(추가)/`~`(수정)/`_`(삭제) 사인을 실시간 표시합니다. `]h`/`[h`(NORMAL·VISUAL 및 카운트·`wrapscan` 지원), `:Gitsigns preview_hunk`(인라인 diff 플로팅 미리보기 + Stage/Reset 버튼 + Esc/이동 자동 닫힘), `:Gitsigns reset_hunk`(단일 Hunk 원복 + `u` Undo), `:Gitsigns reset_buffer`, `:Gitsigns stage_hunk`, `:Gitsigns undo_stage_hunk`, `:Gitsigns status` 를 구현했습니다.
 - **Neovim Lua 미니 레이어 (`src/vim-engine/luaEngine.ts`, `exListAndToolCommands.ts`, `wildmenuCatalog.ts`)**: `eval`/`Function` 없이 순수 TypeScript 토크나이저·재귀 하강 파서로 `:lua {code}`, `:= {expr}`, `:luafile {file}`, `:source init.lua`(`.lua` 자동 분기)를 실행합니다. `vim.opt`/`vim.o`/`vim.bo`/`vim.wo`(`=`, `:append`, `:remove`, `:prepend`, `:get`), `vim.g`/`vim.b`/`vim.w`/`vim.t`(`vim.g.mapleader` 연동), `vim.keymap.set`/`del`(단일·다중 모드 테이블 및 `silent`/`expr`/`buffer`/`nowait`/`remap`), `vim.cmd`, `vim.fn.*`, `vim.api.*`(`nvim_get_current_line`, `nvim_set_current_line`, `nvim_buf_get_lines`, `nvim_buf_set_lines`, `nvim_buf_line_count`, `nvim_win_get_cursor`, `nvim_win_set_cursor`, `nvim_set_keymap`, `nvim_command` 등), `vim.inspect`, `vim.notify`, `print`, `local` 별칭·테이블·`if`/`for`/`ipairs`/`pairs`/`while` 제어문을 지원합니다.
 - **`i18n-en` 번들 안전 분리 & 현대 Neovim 실전 커리큘럼 확장 (레슨 101 ~ 106, `vite.config.ts`, `src/data/missions/part6ModernNeovim.ts`)**: 영어 번들 사전을 `i18n-en-ui`(`en.ts`, ~99 kB)와 `i18n-en-content`(`enContent.ts`, ~203 kB)로 분리해 300 kB 상한 여유를 확보하고, Telescope `:LiveGrep`+`Ctrl-q`(레슨 101), LSP `gra`/`grn`(레슨 102), LSP `gO`/`grr`(레슨 103), Treesitter `daf`/`daa`/`cif`/`]f`(레슨 104), `gitsigns.nvim` `]h`/`:Gitsigns`(레슨 105), Neovim Lua `:lua vim.opt` + `U`/`Q`(레슨 106) 6개 실전 미션을 추가했습니다.
+- **`flash.nvim` 화면 라벨 점프 & `oil.nvim` 버퍼 기반 파일시스템 편집기 (`src/vim-engine/flashJumpEngine.ts`, `src/vim-engine/oilEngine.ts`, `EditorLineRenderer.tsx`, `StatusBar.tsx`)**:
+  - **Flash 화면 점프 (`gs`, `dgs`/`cgs`/`ygs`, Visual `gs`, `:Flash [query]`)**: 검색 문자 입력 시 커서와 가까운 매치부터 홈로우 라벨(`asdfghjkl...`, 매치 직후 문자 충돌 자동 회피)을 배정해 에디터 본문에 네온 라벨 배지(`.flash-label-badge`)와 상태바 `-- FLASH --` 를 표시합니다. 라벨 키 즉시 점프(`Ctrl-o` 점프 리스트 기록), `Enter` 첫 매치 점프, `Backspace`/`Esc` 수정·취소, Visual 선택 확장, `dgs`/`cgs`/`ygs` 원격 범위 연산(Undo·레지스터 연동)을 지원합니다.
+  - **Oil 디렉터리 버퍼 편집 (`:Oil [dir]`, `Enter`, `-`, `:w`, `:q`)**: 현재 디렉터리 항목을 `/001 dir/`, `/002 file.ts` 형식의 일반 Vim 편집 버퍼(`oil://...`, 상태바 `[OIL]` 배지)로 열어 `o`(신규 파일·`/` 끝 폴더 생성), `cw`(파일/폴더 이름 변경 + 내용 보존 + 열린 버퍼명 갱신), `dd`(삭제), `u`(Undo)로 편집하고 `:w` 로 VFS 에 일괄 반영합니다. `Enter` 로 하위 폴더 진입·파일 열기, `-` 로 상위 폴더 이동, `:q` 로 이전 버퍼 복귀를 지원합니다.
 
 ---
 

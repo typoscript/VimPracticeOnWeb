@@ -194,6 +194,7 @@ export function EditorViewport({
             onCloseGitHunkPreview={onCloseGitHunkPreview}
             onResetGitHunk={onResetGitHunk}
             onStageGitHunk={onStageGitHunk}
+            flashJump={isActive ? editorState.flashJump : undefined}
           />
         </div>
       );
@@ -359,6 +360,7 @@ export function EditorViewport({
             onCloseGitHunkPreview={onCloseGitHunkPreview}
             onResetGitHunk={onResetGitHunk}
             onStageGitHunk={onStageGitHunk}
+            flashJump={displayEditorState.flashJump}
           />
         )}
 

@@ -10,10 +10,12 @@ import { executeCommandLine, handleConfirmSubstituteKey } from './commandLine';
 import { triggerAutocmd, triggerWindowAndTabAutocmds } from './autocmdEngine';
 import { handleCommandLineWindowKey } from './cmdlineWindow';
 import { handleNetrwKey } from './netrwEngine';
+import { handleOilNavigationKey } from './oilEngine';
 import { handleFuzzyFinderKey } from './fuzzyFinder';
 import { handleHelpKey } from './helpEngine';
 import { syncLiveLspDiagnostics } from './lspEngine';
 import { handleLspRenameKey, handleLspCodeActionKey } from './lspRefactorEngine';
+import { handleFlashJumpKey } from './flashJumpEngine';
 import { handleSpellSuggestKey } from './spellEngine';
 import { recordUndoTreeChange } from './undoTreeEngine';
 import { computeSpecialMarksUpdate } from './marks';
@@ -56,6 +58,7 @@ function finishInsertNormalSession(
     !nextState.netrw?.isOpen &&
     !nextState.fuzzyFinder?.isOpen &&
     !nextState.helpSession?.isOpen &&
+    !nextState.flashJump?.isOpen &&
     !nextState.functionDraft
   ) {
     const currentLineText = nextState.lines[nextState.cursor.line] ?? '';
@@ -92,6 +95,11 @@ export function rawHandleKey(
     return handleSpellSuggestKey(state, key);
   }
 
+  // flash.nvim 스타일 화면 라벨 점프 세션 처리 (gs, dgs/cgs/ygs, :Flash)
+  if (state.flashJump?.isOpen) {
+    return handleFlashJumpKey(state, key);
+  }
+
   // LSP 심볼 이름 변경 프롬프트 (grn) 처리
   if (state.lspRename?.isOpen) {
     return handleLspRenameKey(state, key);
@@ -124,6 +132,14 @@ export function rawHandleKey(
     const netrwHandled = handleNetrwKey(state, key);
     if (netrwHandled !== null) {
       return netrwHandled;
+    }
+  }
+
+  // oil.nvim 스타일 디렉터리 버퍼 탐색 키(Enter/-) 처리 (편집 키는 일반 Vim 엔진으로 통과)
+  if (state.oilSession?.isOpen) {
+    const oilHandled = handleOilNavigationKey(state, key);
+    if (oilHandled !== null) {
+      return oilHandled;
     }
   }
 
@@ -387,6 +403,7 @@ export function rawHandleKey(
     nextState.lines !== state.lines &&
     (nextState.currentBufferId ?? 1) === (state.currentBufferId ?? 1) &&
     !nextState.netrw?.isOpen &&
+    !nextState.oilSession?.isOpen &&
     !nextState.helpSession?.isOpen &&
     !nextState.cmdlineWindow
   ) {

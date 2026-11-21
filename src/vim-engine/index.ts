@@ -462,3 +462,23 @@ export {
   executeLuaFile,
   formatLuaValue,
 } from './luaEngine';
+
+// ---- flash.nvim 스타일 화면 전체 라벨 점프 (gs, dgs/cgs/ygs, :Flash) ----
+export {
+  computeFlashMatches,
+  openFlashJump,
+  cancelFlashJump,
+  executeFlashJumpToMatch,
+  handleFlashJumpKey,
+} from './flashJumpEngine';
+export type { FlashJumpMatch, FlashJumpSession } from './types';
+
+// ---- oil.nvim 스타일 버퍼 기반 파일시스템 편집 (:Oil, Enter, -, :w) ----
+export {
+  buildOilDirectoryEntries,
+  openOilBuffer,
+  closeOilBuffer,
+  applyOilBufferChanges,
+  handleOilNavigationKey,
+} from './oilEngine';
+export type { OilEntrySnapshot, OilSessionState } from './types';

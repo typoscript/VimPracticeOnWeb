@@ -16,6 +16,7 @@ import {
   LspCodeActionMenuState,
   CustomMatchEntry,
   GitHunkPreviewState,
+  FlashJumpSession,
 } from '../../vim-engine';
 import {
   findMatches,
@@ -114,6 +115,8 @@ export interface EditorProps {
   onResetGitHunk?: () => void;
   /** 현재 Git Hunk 스테이징 콜백 */
   onStageGitHunk?: () => void;
+  /** flash.nvim 스타일 화면 라벨 점프 세션 (gs, :Flash) */
+  flashJump?: FlashJumpSession | null;
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -162,6 +165,7 @@ export const Editor: React.FC<EditorProps> = ({
   onCloseGitHunkPreview,
   onResetGitHunk,
   onStageGitHunk,
+  flashJump,
 }) => {
   const explicitFt =
     options?.filetype ||
@@ -225,7 +229,7 @@ export const Editor: React.FC<EditorProps> = ({
 
   return (
     <div
-      className={`editor-container ${isWrap ? 'editor-wrap' : 'editor-nowrap'} ${isListMode ? 'editor-list-mode' : ''} ${!isFocused ? 'editor-unfocused' : ''} ${isBellFlashing ? 'editor-bell' : ''}`}
+      className={`editor-container ${isWrap ? 'editor-wrap' : 'editor-nowrap'} ${isListMode ? 'editor-list-mode' : ''} ${!isFocused ? 'editor-unfocused' : ''} ${isBellFlashing ? 'editor-bell' : ''} ${flashJump?.isOpen ? 'editor-flash-active' : ''}`}
       data-testid="editor-container"
       data-wrap={String(isWrap)}
       data-left-col={leftCol}
@@ -288,6 +292,9 @@ export const Editor: React.FC<EditorProps> = ({
                 : undefined;
             const lineIncMatches = incCommandPreview
               ? incCommandPreview.matches.filter((m) => m.line === lineIdx)
+              : undefined;
+            const lineFlashMatches = flashJump?.isOpen
+              ? flashJump.matches.filter((m) => m.line === lineIdx)
               : undefined;
             const marksOnLine = marks
               ? Object.entries(marks)
@@ -427,6 +434,7 @@ export const Editor: React.FC<EditorProps> = ({
                         confirmSubstitute,
                         incCommandMatches: lineIncMatches,
                         incCommandHasReplacement: incCommandPreview?.hasReplacement,
+                        flashMatches: lineFlashMatches,
                         blockInsertSession,
                         spellErrors: options?.spell
                           ? findSpellErrorsInLine(lineText, lineIdx, { spellGoodWords, spellWrongWords })

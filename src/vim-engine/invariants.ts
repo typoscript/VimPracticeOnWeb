@@ -260,6 +260,7 @@ export function assertValidVimState(
     !prevState.cmdlineWindow &&
     !prevState.lspRename?.isOpen &&
     !prevState.lspCodeActionMenu?.isOpen &&
+    !prevState.flashJump?.isOpen &&
     !prevState.confirmSubstitute &&
     !prevState.spellSuggest &&
     key === 'u' &&

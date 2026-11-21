@@ -23,6 +23,7 @@ import { gotoFileUnderCursor } from './gotoFileEngine';
 import { getWordAtCursor } from './search';
 import { executeCommandLine } from './commandLine';
 import { openLspDocumentSymbols } from './lspRefactorEngine';
+import { openFlashJump } from './flashJumpEngine';
 import { joinLines, executeCaseMotion } from './lineOperators';
 import { msg } from './messages';
 import { executeGn, executeWordSearch } from './searchMode';
@@ -105,6 +106,12 @@ export function handleNormalOpGPrefix(
       return { handled: true, state: { ...synced, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys } };
     }
     return { handled: true, state: synced };
+  }
+
+  const flashOpMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([cdy])([1-9][0-9]*)?g$/);
+  if (flashOpMatch && key === 's') {
+    const op = flashOpMatch[2] as 'd' | 'c' | 'y';
+    return { handled: true, state: openFlashJump(state, { operator: op }) };
   }
 
   if (state.pendingKeys?.match(/^([1-9][0-9]*)?([cdy])([1-9][0-9]*)?g$/)) {
@@ -474,6 +481,9 @@ export function handleNormalGOperator(
         pendingKeys: (parsedCount1 ? String(parsedCount1) : '') + 'gr',
       },
     };
+  }
+  if (key === 's') {
+    return { handled: true, state: openFlashJump(state) };
   }
   if (key === '~' || key === 'u' || key === 'U' || key === '?' || key === 'c' || key === 'q' || key === 'w') {
     return {
