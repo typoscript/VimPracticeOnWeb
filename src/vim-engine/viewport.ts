@@ -100,16 +100,37 @@ export function adjustViewport(
   };
 }
 
+function resolveScrollAnchor(
+  state: VimEditorState,
+  moveFirstNonBlank: boolean,
+  targetLine1Based?: number
+): { line: number; cursor: VimEditorState['cursor'] } {
+  const line =
+    targetLine1Based !== undefined
+      ? Math.max(0, Math.min(state.lines.length - 1, targetLine1Based - 1))
+      : state.cursor.line;
+  const cursor = moveFirstNonBlank
+    ? moveToFirstNonBlank(state.lines, { line, col: 0 })
+    : clampCursor(state.lines, { line, col: state.cursor.col }, 'NORMAL');
+  return { line, cursor };
+}
+
 /**
- * zz: 현재 커서 행이 화면 정중앙에 오도록 뷰포트를 스크롤합니다.
+ * zz / z.: 현재(또는 [count]) 행이 화면 정중앙에 오도록 뷰포트를 스크롤합니다.
  */
-export function scrollToCenter(state: VimEditorState): VimEditorState {
+export function scrollToCenter(
+  state: VimEditorState,
+  moveFirstNonBlank = false,
+  targetLine1Based?: number
+): VimEditorState {
   const vp = getViewport(state);
+  const { line, cursor } = resolveScrollAnchor(state, moveFirstNonBlank, targetLine1Based);
   const midOffset = Math.floor(vp.visibleRows / 2);
-  const newTop = Math.max(0, state.cursor.line - midOffset);
+  const newTop = Math.max(0, line - midOffset);
 
   return {
     ...state,
+    cursor,
     viewport: {
       ...vp,
       topRow: newTop,
@@ -119,30 +140,42 @@ export function scrollToCenter(state: VimEditorState): VimEditorState {
 }
 
 /**
- * zt: 현재 커서 행이 화면 최상단(scrolloff 적용)에 오도록 뷰포트를 스크롤합니다.
+ * zt / z<CR>: 현재(또는 [count]) 행이 화면 최상단(scrolloff 적용)에 오도록 뷰포트를 스크롤합니다.
  */
-export function scrollToTop(state: VimEditorState): VimEditorState {
+export function scrollToTop(
+  state: VimEditorState,
+  moveFirstNonBlank = false,
+  targetLine1Based?: number
+): VimEditorState {
   const vp = getViewport(state);
+  const { line, cursor } = resolveScrollAnchor(state, moveFirstNonBlank, targetLine1Based);
   const effSo = getEffectiveScrolloff(vp.visibleRows, getScrolloff(state));
   return {
     ...state,
+    cursor,
     viewport: {
       ...vp,
-      topRow: Math.max(0, state.cursor.line - effSo),
+      topRow: Math.max(0, line - effSo),
     },
     pendingKeys: undefined,
   };
 }
 
 /**
- * zb: 현재 커서 행이 화면 최하단(scrolloff 적용)에 오도록 뷰포트를 스크롤합니다.
+ * zb / z-: 현재(또는 [count]) 행이 화면 최하단(scrolloff 적용)에 오도록 뷰포트를 스크롤합니다.
  */
-export function scrollToBottom(state: VimEditorState): VimEditorState {
+export function scrollToBottom(
+  state: VimEditorState,
+  moveFirstNonBlank = false,
+  targetLine1Based?: number
+): VimEditorState {
   const vp = getViewport(state);
+  const { line, cursor } = resolveScrollAnchor(state, moveFirstNonBlank, targetLine1Based);
   const effSo = getEffectiveScrolloff(vp.visibleRows, getScrolloff(state));
-  const newTop = Math.max(0, state.cursor.line - (vp.visibleRows - 1 - effSo));
+  const newTop = Math.max(0, line - (vp.visibleRows - 1 - effSo));
   return {
     ...state,
+    cursor,
     viewport: {
       ...vp,
       topRow: newTop,

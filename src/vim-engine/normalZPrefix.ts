@@ -122,9 +122,12 @@ export function handleNormalZPrefix(
   if (state.pendingKeys === 'z' || parsedOperator === 'z') {
     const horiz = handleHorizontalViewportKey(state, key, parsedCount1 ?? 1);
     if (horiz) return horiz;
-    if (key === 'z') return scrollToCenter(state);
-    if (key === 't') return scrollToTop(state);
-    if (key === 'b') return scrollToBottom(state);
+    if (key === 'z') return scrollToCenter(state, false, parsedCount1);
+    if (key === 't') return scrollToTop(state, false, parsedCount1);
+    if (key === 'b') return scrollToBottom(state, false, parsedCount1);
+    if (key === 'Enter') return scrollToTop(state, true, parsedCount1);
+    if (key === '.') return scrollToCenter(state, true, parsedCount1);
+    if (key === '-') return scrollToBottom(state, true, parsedCount1);
     if (key === 'c') return foldClose(state);
     if (key === 'C') return foldRecursive(state, 'close');
     if (key === 'o') return foldOpen(state);

@@ -21,6 +21,7 @@ import {
   acceptCompletion,
   startFilenameCompletion,
   startWholeLineCompletion,
+  startDictionaryCompletion,
 } from './completion';
 import { getOptions } from './setEngine';
 import { parseWhichwrapFlags } from './setOptionsCore';
@@ -355,6 +356,9 @@ function handleInsertCompletionStep(
     }
     if (key === 'Ctrl-l' || key === 'Ctrl+l' || key === 'l') {
       return { handled: true, state: startWholeLineCompletion(state, 'next') };
+    }
+    if (key === 'Ctrl-k' || key === 'Ctrl+k' || key === 'ctrl-k' || key === 'k') {
+      return { handled: true, state: startDictionaryCompletion(state, 'next') };
     }
     if (key === 'Ctrl-n' || key === 'Ctrl+n' || key === 'n') {
       return { handled: true, state: startOrCycleCompletion({ ...state, insertCtrlXMode: false }, 'next') };
@@ -866,6 +870,12 @@ export function handleInsertModeKey(
       ...state,
       insertCtrlGPending: true,
     };
+  }
+
+  if (state.insertCtrlXMode) {
+    const compRes = handleInsertCompletionStep(state, key);
+    if (compRes.handled) return compRes.state;
+    state = compRes.state;
   }
 
   const literalRes = handleInsertLiteralNext(state, key, isReplayingDot);

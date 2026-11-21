@@ -1,5 +1,6 @@
 import { VimEditorState } from './types';
 import { buildVfsMap } from './vfs';
+import { DEFAULT_SPELL_WORDS } from './spellData';
 
 function syncBlockInsertCompletion(
   state: VimEditorState,
@@ -295,6 +296,93 @@ export function startWholeLineCompletion(
       selectedIndex: initialIndex,
       originalWord: currentLine,
       type: 'line',
+    },
+  };
+}
+
+/**
+ * 내장 영단어 사전(DEFAULT_SPELL_WORDS) 및 사용자 사전(spellGoodWords)에서 접두사와 일치하는 단어를 수집합니다.
+ */
+export function scanDictionaryWords(
+  prefix: string,
+  extraGoodWords?: string[],
+  limit = 50
+): string[] {
+  if (!prefix) return [];
+  const lowerPrefix = prefix.toLowerCase();
+  const isTitleCase = prefix[0] >= 'A' && prefix[0] <= 'Z' && prefix.slice(1) === prefix.slice(1).toLowerCase();
+  const isAllUpper = prefix.length > 1 && prefix === prefix.toUpperCase() && prefix !== lowerPrefix;
+
+  const matched = new Set<string>();
+  const addIfMatch = (raw: string) => {
+    const lw = raw.toLowerCase();
+    if (lw.startsWith(lowerPrefix) && lw !== lowerPrefix) {
+      if (isAllUpper) matched.add(lw.toUpperCase());
+      else if (isTitleCase) matched.add(lw[0].toUpperCase() + lw.slice(1));
+      else matched.add(lw);
+    }
+  };
+
+  if (extraGoodWords) {
+    for (const w of extraGoodWords) addIfMatch(w);
+  }
+  for (const w of DEFAULT_SPELL_WORDS) {
+    addIfMatch(w);
+  }
+
+  return Array.from(matched).sort().slice(0, limit);
+}
+
+/**
+ * Ctrl+x Ctrl+k 사전(Dictionary) 자동완성을 시작합니다.
+ */
+export function startDictionaryCompletion(
+  state: VimEditorState,
+  direction: 'next' | 'prev' = 'next'
+): VimEditorState {
+  const { line, col } = state.cursor;
+  const currentLine = state.lines[line] ?? '';
+  const found = findCompletionPrefix(currentLine, col, 1);
+
+  if (!found) {
+    return {
+      ...state,
+      insertCtrlXMode: false,
+      commandMessage: '-- Pattern not found --',
+    };
+  }
+
+  const candidates = scanDictionaryWords(found.prefix, state.spellGoodWords);
+  if (candidates.length === 0) {
+    return {
+      ...state,
+      insertCtrlXMode: false,
+      commandMessage: '-- Pattern not found --',
+    };
+  }
+
+  const initialIndex = direction === 'next' ? 0 : candidates.length - 1;
+  const chosen = candidates[initialIndex];
+  const newLine =
+    currentLine.slice(0, found.startCol) + chosen + currentLine.slice(col);
+  const nextLines = [...state.lines];
+  nextLines[line] = newLine;
+  const nextCol = found.startCol + chosen.length;
+
+  return {
+    ...state,
+    lines: nextLines,
+    cursor: { line, col: nextCol },
+    blockInsertSession: syncBlockInsertCompletion(state, newLine, nextCol),
+    insertCtrlXMode: false,
+    commandMessage: undefined,
+    completionSession: {
+      prefix: found.prefix,
+      prefixStartCol: found.startCol,
+      candidates,
+      selectedIndex: initialIndex,
+      originalWord: found.prefix,
+      type: 'dictionary',
     },
   };
 }

@@ -114,6 +114,13 @@ export function handleVisualGSubcommand(
     if (key === 'v') {
       return reselectLastVisual(state);
     }
+    if (key === 'V') {
+      return {
+        ...state,
+        pendingKeys: undefined,
+        selectVisualOneShot: undefined,
+      };
+    }
     if (key === 'e' || key === 'E' || key === '_') {
       return moveByExtraMotion(state, `g${key}`, parsed.totalCount);
     }

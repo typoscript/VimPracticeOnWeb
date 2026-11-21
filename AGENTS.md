@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 174개 테스트 파일, 2,112개 테스트 100% 통과 필수)*
+  *(현재 178개 테스트 파일, 2,130개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -178,6 +178,11 @@
   - **고급 점프 모션 & 맞춤법 등록 취소 (`extraMotions.ts`, `normalStandaloneCommands.ts`, `normalDCYOperators.ts`, `gotoFileEngine.ts`, `engineHelpers.ts`, `spellEngine.ts`, `normalZPrefix.ts`, `exListAndToolCommands.ts`)**: `[count]%`(백분율 줄 점프 및 `d`/`c`/`y`/`v` 결합), `[count]go`(1-based UTF-8 바이트 오프셋 점프 및 연산자 결합), `Ctrl-w gf`/`Ctrl-w gF`(새 탭 열기)·`Ctrl-w ]`/`Ctrl-w g]`(분할 창 태그 점프), `zug`/`zuw`/`zuG`/`zuW` 및 `:spellgood`/`:spellwrong`/`:spellundo`(`:speu`) Ex 명령을 구현했습니다.
   - **Insert 리터럴/들여쓰기 맞춤 레지스터 삽입 & `g<` (`insertSpecialKeys.ts`, `commandLine.ts`, `normalGPrefix.ts`)**: Insert 모드 `Ctrl-r Ctrl-o`/`Ctrl-r Ctrl-r`(자동 들여쓰기 미적용 리터럴 삽입)·`Ctrl-r Ctrl-p`(현재 줄 들여쓰기 맞춤 삽입)과 Normal 모드 `g<`(직전 Ex 명령 출력 재표시)를 구현했습니다.
   - **Select 모드 (`visualMode.ts`, `visual.ts`, `vimEngine.ts`, `normalGPrefix.ts`, `StatusBar.tsx`, `EditorLineRenderer.tsx`)**: `SELECT` / `SELECT_LINE` / `SELECT_BLOCK` 진입(`gh`, `gH`, `g<C-h>`, Visual `Ctrl-g` 토글), 방향키/Home/End 선택 확장, `Ctrl-o` 일회성 Visual 명령, `Backspace`/`Delete` 및 출력 문자 입력 시 선택 영역 즉시 교체·INSERT 전환과 UI 배지/선택 하이라이트를 구현했습니다.
+- **순정 Vim/Neovim 실전 편집·폴딩·완성 4종 확장 (`:s` `n`/`e`/`p`/`l`/`#`, 폴딩 `zm`/`zr`/`zv`/`zx`/`zX`/`zO`/`zC`/`zA`/`zi`/`foldenable`, `textwidth` 자동 줄바꿈/`startofline`/`smarttab`, `Ctrl-x Ctrl-k` 사전 완성/`z<CR>`/`z.`/`z-`/`gV`)**:
+  - **`:substitute` 고급 플래그 (`exSubstitute.ts`, `commandLine.ts`, `messagesEn.ts`)**: 버퍼를 수정하지 않고 일치 횟수와 줄 수만 보고하는 `n` 플래그(`:%s/pat//gn`, `inccommand` 미리보기 비변이 연동), 불일치 시 `E486`·bell을 억제하는 `e` 플래그, 치환 결과 줄 출력(`p`/`l`/`#`) 플래그를 구현했습니다.
+  - **코드 폴딩 심화 & 윈도우 로컬 `foldenable` (`folding.ts`, `normalZPrefix.ts`, `setOptionsCore.ts`, `EditorViewport.tsx`)**: `foldlevel` 단계 조절(`zm`/`zr` 및 `zR`/`zM` 연동), 커서 줄 폴드 펼치기(`zv`), `foldlevel` 재적용(`zx`/`zX`), 재귀 열기/닫기/토글(`zO`/`zC`/`zA`), `:set foldenable`/`nofoldenable`(`fen`/`nofen`) 및 `zi` 토글을 구현했습니다.
+  - **편집·이동 정밀 옵션 3종 (`insertMode.ts`, `setOptionsCore.ts`, `extraMotions.ts`, `normalStandaloneCommands.ts`, `normalGPrefix.ts`, `viewport.ts`)**: `:set textwidth`(`tw > 0`) Insert 모드 입력 중 공백 경계 실시간 자동 줄바꿈(`autoindent` 연동), `:set startofline`(`sol`, `G`/`gg`/`[count]%`/`Ctrl-f`/`Ctrl-b` 첫 비공백 이동 제어), `:set smarttab`(`sta`, 줄 앞 `Tab`/`Backspace` 시 `shiftwidth` 적용)을 구현했습니다.
+  - **Insert 사전 자동완성 & 뷰포트/비주얼 변형 (`completion.ts`, `insertMode.ts`, `viewport.ts`, `normalZPrefix.ts`, `normalGPrefix.ts`, `visualPrefixes.ts`)**: 내장 영단어 사전(`spellData.ts`)과 사용자 사전(`spellGoodWords`) 기반 `Ctrl-x Ctrl-k` 팝업 완성(대소문자 보존, `Ctrl-n`/`p`/`e` 순환·취소), 첫 비공백 이동을 동반하는 `[count]z<CR>`/`z.`/`z-` 뷰포트 정렬, `gV` 재선택 방지 명령을 구현했습니다.
 
 ---
 

@@ -473,8 +473,8 @@ export interface CompletionSession {
   candidates: string[];
   selectedIndex: number; // 0-indexed into candidates
   originalWord: string;
-  /** 자동완성 종류: 단어(keyword), 파일 경로(file), 전체 라인(line) */
-  type?: 'keyword' | 'file' | 'line';
+  /** 자동완성 종류: 단어(keyword), 파일 경로(file), 전체 라인(line), 사전(dictionary) */
+  type?: 'keyword' | 'file' | 'line' | 'dictionary';
 }
 
 export interface LastVisualSelection {

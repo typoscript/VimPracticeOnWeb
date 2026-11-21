@@ -348,6 +348,16 @@ export function handleNormalGOperator(
   if (key === 'v') {
     return { handled: true, state: reselectLastVisual(state) };
   }
+  if (key === 'V') {
+    return {
+      handled: true,
+      state: {
+        ...state,
+        pendingKeys: undefined,
+        selectVisualOneShot: undefined,
+      },
+    };
+  }
   if (key === 'h') {
     return {
       handled: true,

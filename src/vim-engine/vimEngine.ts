@@ -185,9 +185,9 @@ export function rawHandleKey(
     nextState = handleSelectModeKey(state, key, rawHandleKey, macroDepth);
   } else if (state.mode === 'VISUAL' || state.mode === 'VISUAL_LINE' || state.mode === 'VISUAL_BLOCK') {
     nextState = handleVisualModeKey(state, key, rawHandleKey, macroDepth);
-    // Select 모드 Ctrl-o 일회성 Visual 명령 완료 시 다시 Select 모드로 복귀
+    // Select 모드 Ctrl-o 일회성 Visual 명령 완료 시 다시 Select 모드로 복귀 (gV 로 취소 가능)
     if (state.selectVisualOneShot) {
-      if (key === 'Escape') {
+      if (key === 'Escape' || !nextState.selectVisualOneShot) {
         nextState = { ...nextState, selectVisualOneShot: undefined };
       } else if (!nextState.pendingKeys) {
         if (
