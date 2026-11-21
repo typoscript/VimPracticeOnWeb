@@ -24,6 +24,9 @@ import {
   setTroubleMode,
   closeTroublePanel,
   TroubleMode,
+  jumpUndoSeq,
+  travelUndoTime,
+  closeUndotreePanel,
   closeLspHover,
   cancelLspRename,
   applyLspCodeAction,
@@ -158,6 +161,26 @@ export function useEditorWorkspaceHandlers({
 
   const handleCloseTroublePanel = useCallback(
     () => applyAndFocus((prev) => closeTroublePanel(prev)),
+    [applyAndFocus]
+  );
+
+  const handleJumpUndoSeq = useCallback(
+    (seq: number) => applyAndFocus((prev) => jumpUndoSeq(prev, seq)),
+    [applyAndFocus]
+  );
+
+  const handleTravelUndoOlder = useCallback(
+    () => applyAndFocus((prev) => travelUndoTime(prev, 'older', 1)),
+    [applyAndFocus]
+  );
+
+  const handleTravelUndoNewer = useCallback(
+    () => applyAndFocus((prev) => travelUndoTime(prev, 'newer', 1)),
+    [applyAndFocus]
+  );
+
+  const handleCloseUndotreePanel = useCallback(
+    () => applyAndFocus((prev) => closeUndotreePanel(prev)),
     [applyAndFocus]
   );
 
@@ -337,6 +360,10 @@ export function useEditorWorkspaceHandlers({
       onJumpTroubleItem: handleJumpTroubleItem,
       onChangeTroubleMode: handleChangeTroubleMode,
       onCloseTroublePanel: handleCloseTroublePanel,
+      onJumpUndoSeq: handleJumpUndoSeq,
+      onTravelUndoOlder: handleTravelUndoOlder,
+      onTravelUndoNewer: handleTravelUndoNewer,
+      onCloseUndotreePanel: handleCloseUndotreePanel,
       onSwitchCommandLineWindowType: handleSwitchCommandLineWindowType,
       onClearCommandLineHistory: handleClearCommandLineHistory,
       onCloseCommandLineWindow: handleCloseCommandLineWindow,
@@ -365,6 +392,10 @@ export function useEditorWorkspaceHandlers({
       handleJumpTroubleItem,
       handleChangeTroubleMode,
       handleCloseTroublePanel,
+      handleJumpUndoSeq,
+      handleTravelUndoOlder,
+      handleTravelUndoNewer,
+      handleCloseUndotreePanel,
       handleSwitchCommandLineWindowType,
       handleClearCommandLineHistory,
       handleCloseCommandLineWindow,

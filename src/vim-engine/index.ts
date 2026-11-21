@@ -25,6 +25,16 @@ export * from './types';
 export { isPositionSelected } from './visual';
 export { findMatches } from './search';
 export { computeIncCommandPreview } from './exSubstitute';
+export {
+  ensureUndoTreeInitialized,
+  jumpUndoSeq,
+  travelUndoTime,
+  buildUndotreeGraphRows,
+  openUndotreePanel,
+  closeUndotreePanel,
+  toggleUndotreePanel,
+} from './undoTreeEngine';
+export type { UndotreeGraphRow } from './undoTreeEngine';
 export { computeDiffHunks } from './diffEngine';
 export {
   splitWindow,

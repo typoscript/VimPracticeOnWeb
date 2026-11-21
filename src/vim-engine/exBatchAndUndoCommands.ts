@@ -1,7 +1,15 @@
 import { VimEditorState } from './types';
 import { undo, redo } from './operators';
 import { msg } from './messages';
-import { formatUndoList, jumpUndoSeq, travelEarlier, travelLater } from './undoTreeEngine';
+import {
+  formatUndoList,
+  jumpUndoSeq,
+  travelEarlier,
+  travelLater,
+  openUndotreePanel,
+  closeUndotreePanel,
+  toggleUndotreePanel,
+} from './undoTreeEngine';
 import { bufdo } from './bufferEngine';
 import { tabdo } from './tabEngine';
 import { windo, syncScrollbind } from './splitWindow';
@@ -163,6 +171,17 @@ export function tryExecuteBatchAndUndoExCommand(
       ...finishNormalEx(state),
       commandMessage: formatUndoList(state),
     };
+  }
+
+  // mbbill/undotree 스타일 시각적 Undo Tree 분할 패널: :UndotreeToggle / :Undotree / :UndotreeShow / :UndotreeHide
+  if (cleanCmd === 'undotreetoggle' || cleanCmd === 'undotree') {
+    return finishNormalEx(toggleUndotreePanel(state));
+  }
+  if (cleanCmd === 'undotreeshow') {
+    return finishNormalEx(openUndotreePanel(state));
+  }
+  if (cleanCmd === 'undotreehide') {
+    return finishNormalEx(closeUndotreePanel(state));
   }
 
   // 이전/이후 상태로 시간 여행: :earlier / :later

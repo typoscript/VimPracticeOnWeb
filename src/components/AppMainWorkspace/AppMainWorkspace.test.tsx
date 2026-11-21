@@ -130,23 +130,32 @@ describe('AppMainWorkspace', () => {
     expect(screen.getByTestId('status-bar')).toBeInTheDocument();
   });
 
-  it('renders sandbox panel and fires BYOC and reset callbacks', () => {
+  it('renders sandbox panel and fires BYOC, reset, and quick-try chip callbacks', () => {
     const onOpenBYOCModal = vi.fn();
     const onResetSandbox = vi.fn();
+    const processKeyInput = vi.fn();
+    const onFocus = vi.fn();
     const base = makeProps({ currentTab: 'sandbox' });
     render(
       <AppMainWorkspace
         {...base}
         mission={{ ...base.mission, onOpenBYOCModal, onResetSandbox }}
+        editor={{ ...base.editor, processKeyInput, onFocus }}
       />
     );
 
     expect(screen.getByTestId('sandbox-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('sandbox-quick-try')).toBeInTheDocument();
     fireEvent.click(screen.getByTestId('open-byoc-modal-btn'));
     expect(onOpenBYOCModal).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByTestId('sandbox-reset-btn'));
     expect(onResetSandbox).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByTestId('sandbox-chip-oil'));
+    expect(onFocus).toHaveBeenCalled();
+    expect(processKeyInput).toHaveBeenCalledWith(':');
+    expect(processKeyInput).toHaveBeenCalledWith('Enter');
   });
 
   it('renders conditional Grammar AST, DiffViewer, VirtualKeyboard, and ActionTimeline panels', async () => {

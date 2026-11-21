@@ -925,6 +925,8 @@ export interface VimEditorState {
   harpoonMenu?: HarpoonMenuState | null;
   /** trouble.nvim 스타일 프로젝트 진단·TODO·퀵픽스 통합 패널 상태 (:Trouble) */
   troublePanel?: TroubleSessionState | null;
+  /** mbbill/undotree 스타일 시각적 Undo Tree 분할 패널 상태 (:UndotreeToggle) */
+  undotreePanel?: { isOpen: boolean } | null;
   /** vim-visual-multi 스타일 다중 커서 선택·동시 편집 세션 (g Ctrl-n / :MultiCursor) */
   multiCursor?: MultiCursorSession | null;
   /** 순정 Vim Undo Tree 노드 맵 (seq -> UndoTreeNode) */

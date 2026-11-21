@@ -9,7 +9,7 @@ import {
 
 describe('missionFilters module', () => {
   it('모든 카테고리 태그 정보와 라벨을 반환한다', () => {
-    expect(MISSION_CATEGORY_TAGS.length).toBe(7);
+    expect(MISSION_CATEGORY_TAGS.length).toBe(8);
     expect(getTagLabel('all')).toBe('전체');
     expect(getTagLabel('basic')).toBe('기초');
     expect(getTagLabel('motion')).toBe('모션');
@@ -17,6 +17,7 @@ describe('missionFilters module', () => {
     expect(getTagLabel('ex')).toBe('Ex 커맨드');
     expect(getTagLabel('vimscript')).toBe('Vimscript');
     expect(getTagLabel('netrw')).toBe('Netrw');
+    expect(getTagLabel('neovim')).toBe('Neovim');
   });
 
   it('각 미션에 적절한 카테고리 태그가 부여된다', () => {
@@ -25,6 +26,7 @@ describe('missionFilters module', () => {
     const lesson17 = MISSIONS.find((m) => m.id === 17)!;
     const lesson56 = MISSIONS.find((m) => m.id === 56)!;
     const lesson64 = MISSIONS.find((m) => m.id === 64)!;
+    const lesson107 = MISSIONS.find((m) => m.id === 107)!;
 
     expect(getMissionTags(lesson1)).toContain('basic');
     expect(getMissionTags(lesson1)).toContain('motion');
@@ -32,6 +34,7 @@ describe('missionFilters module', () => {
     expect(getMissionTags(lesson17)).toContain('ex');
     expect(getMissionTags(lesson56)).toContain('vimscript');
     expect(getMissionTags(lesson64)).toContain('netrw');
+    expect(getMissionTags(lesson107)).toContain('neovim');
   });
 
   it('카테고리 태그로 필터링한다', () => {
@@ -42,6 +45,13 @@ describe('missionFilters module', () => {
     expect(netrwMissions.length).toBeGreaterThan(0);
     expect(netrwMissions.some((m) => m.id === 39)).toBe(true);
     expect(netrwMissions.some((m) => m.id === 64)).toBe(true);
+
+    const neovimMissions = filterMissions(MISSIONS, {
+      searchQuery: '',
+      category: 'neovim',
+    });
+    expect(neovimMissions.length).toBe(12);
+    expect(neovimMissions.every((m) => m.id >= 101 && m.id <= 112)).toBe(true);
 
     const textObjectMissions = filterMissions(MISSIONS, {
       searchQuery: '',

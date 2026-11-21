@@ -486,3 +486,168 @@ export function formatUndoList(state: VimEditorState): string {
 
   return rows.join('\n');
 }
+
+export interface UndotreeGraphRow {
+  seq: number;
+  parentSeq: number | null;
+  branchCol: number;
+  graphPrefix: string;
+  isCurrent: boolean;
+  isLeaf: boolean;
+  saveNumber?: number;
+  timestamp: number;
+  lines: string[];
+  parentLines: string[] | null;
+  addedCount: number;
+  removedCount: number;
+}
+
+function countLineDelta(prevLines: string[] | null, nextLines: string[]): { added: number; removed: number } {
+  if (!prevLines) return { added: 0, removed: 0 };
+  const prevCounts = new Map<string, number>();
+  for (const line of prevLines) {
+    prevCounts.set(line, (prevCounts.get(line) ?? 0) + 1);
+  }
+  let matched = 0;
+  for (const line of nextLines) {
+    const cnt = prevCounts.get(line) ?? 0;
+    if (cnt > 0) {
+      prevCounts.set(line, cnt - 1);
+      matched++;
+    }
+  }
+  return {
+    added: Math.max(0, nextLines.length - matched),
+    removed: Math.max(0, prevLines.length - matched),
+  };
+}
+
+/**
+ * mbbill/undotree 스타일의 분기형 Undo Tree 시각화 행 목록을 생성합니다. (최신 시퀀스 상단, 루트 #0 하단)
+ */
+export function buildUndotreeGraphRows(state: VimEditorState): UndotreeGraphRow[] {
+  const prepared = recordUndoTreeChange(ensureUndoTreeInitialized(state));
+  const nodes = prepared.undoTreeNodes ?? {};
+  const curSeq = prepared.currentUndoSeq ?? 0;
+  const allNodes = Object.values(nodes).sort((a, b) => a.seq - b.seq);
+  if (allNodes.length === 0) return [];
+
+  // 부모 -> 자식 목록 구성 (오름차순: 첫 자식은 같은 브랜치 열 유지, 추가 자식은 새 브랜치 열 할당)
+  const childrenMap = new Map<number, number[]>();
+  for (const n of allNodes) {
+    if (n.parentSeq !== null && nodes[n.parentSeq]) {
+      const list = childrenMap.get(n.parentSeq) ?? [];
+      list.push(n.seq);
+      childrenMap.set(n.parentSeq, list);
+    }
+  }
+
+  const branchColMap = new Map<number, number>();
+  let nextBranchCol = 1;
+  for (const n of allNodes) {
+    if (n.parentSeq === null || !nodes[n.parentSeq]) {
+      branchColMap.set(n.seq, 0);
+    } else {
+      const siblings = childrenMap.get(n.parentSeq) ?? [];
+      const parentCol = branchColMap.get(n.parentSeq) ?? 0;
+      if (siblings[0] === n.seq) {
+        branchColMap.set(n.seq, parentCol);
+      } else {
+        branchColMap.set(n.seq, nextBranchCol++);
+      }
+    }
+  }
+
+  const maxCol = Math.max(0, ...Array.from(branchColMap.values()));
+
+  // 최신 seq 가 위쪽, 루트 #0 이 맨 아래 (mbbill/undotree 표준 레이아웃)
+  const descending = [...allNodes].sort((a, b) => b.seq - a.seq);
+  const activeCols = new Set<number>();
+
+  return descending.map((node) => {
+    const col = branchColMap.get(node.seq) ?? 0;
+    const parentNode = node.parentSeq !== null ? nodes[node.parentSeq] ?? null : null;
+    const parentCol = parentNode ? (branchColMap.get(parentNode.seq) ?? 0) : col;
+    const isLeaf = (childrenMap.get(node.seq)?.length ?? 0) === 0;
+
+    // 현재 행 그래프 문자열 생성
+    const colsToDraw = Math.max(col, ...Array.from(activeCols), 0);
+    const cells: string[] = [];
+    for (let c = 0; c <= Math.min(colsToDraw, maxCol); c++) {
+      if (c === col) {
+        cells.push(node.seq === curSeq ? '@' : '*');
+      } else if (activeCols.has(c)) {
+        cells.push('|');
+      } else {
+        cells.push(' ');
+      }
+    }
+
+    // 아래쪽(부모 방향) 연결 추적 갱신
+    if (parentNode) {
+      if (parentCol === col) {
+        activeCols.add(col);
+      } else {
+        activeCols.delete(col);
+        activeCols.add(parentCol);
+      }
+    } else {
+      activeCols.delete(col);
+    }
+
+    const prefixBase = cells.join(' ');
+    const branchMergeSuffix = parentNode && parentCol !== col ? ' /' : '';
+    const delta = countLineDelta(parentNode ? parentNode.lines : null, node.lines);
+
+    return {
+      seq: node.seq,
+      parentSeq: node.parentSeq,
+      branchCol: col,
+      graphPrefix: `${prefixBase}${branchMergeSuffix}`.trimEnd(),
+      isCurrent: node.seq === curSeq,
+      isLeaf,
+      saveNumber: node.saveNumber,
+      timestamp: node.timestamp,
+      lines: node.lines,
+      parentLines: parentNode ? parentNode.lines : null,
+      addedCount: delta.added,
+      removedCount: delta.removed,
+    };
+  });
+}
+
+/**
+ * 시각적 Undo Tree 패널을 엽니다 (:UndotreeShow).
+ */
+export function openUndotreePanel(state: VimEditorState): VimEditorState {
+  const prepared = recordUndoTreeChange(ensureUndoTreeInitialized(state));
+  const count = Object.keys(prepared.undoTreeNodes ?? {}).length;
+  return {
+    ...prepared,
+    undotreePanel: { isOpen: true },
+    commandMessage: msg('[Undotree] 시각적 Undo 트리 열림 ({count}개 노드 · 클릭 또는 :undo N 으로 이동)', {
+      count,
+    }),
+  };
+}
+
+/**
+ * 시각적 Undo Tree 패널을 닫습니다 (:UndotreeHide).
+ */
+export function closeUndotreePanel(state: VimEditorState): VimEditorState {
+  return {
+    ...state,
+    undotreePanel: null,
+    commandMessage: msg('[Undotree] 패널을 닫았습니다'),
+  };
+}
+
+/**
+ * 시각적 Undo Tree 패널을 토글합니다 (:UndotreeToggle / :Undotree).
+ */
+export function toggleUndotreePanel(state: VimEditorState): VimEditorState {
+  if (state.undotreePanel?.isOpen) {
+    return closeUndotreePanel(state);
+  }
+  return openUndotreePanel(state);
+}

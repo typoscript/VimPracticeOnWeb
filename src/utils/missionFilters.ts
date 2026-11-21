@@ -8,7 +8,8 @@ export type MissionCategoryTag =
   | 'textobject'
   | 'ex'
   | 'vimscript'
-  | 'netrw';
+  | 'netrw'
+  | 'neovim';
 
 export interface CategoryTagInfo {
   id: MissionCategoryTag;
@@ -23,6 +24,7 @@ export const MISSION_CATEGORY_TAGS: CategoryTagInfo[] = [
   { id: 'ex', label: i18nKey('Ex 커맨드') },
   { id: 'vimscript', label: i18nKey('Vimscript') },
   { id: 'netrw', label: i18nKey('Netrw') },
+  { id: 'neovim', label: i18nKey('Neovim') },
 ];
 
 export function getTagLabel(tagId: MissionCategoryTag): string {
@@ -35,6 +37,7 @@ const TEXTOBJECT_IDS = [14, 25, 52, 54, 58, 76, 104, 110];
 const EX_IDS = [17, 22, 24, 32, 35, 36, 37, 38, 46, 48, 49, 55, 59, 63, 65, 78, 79, 80, 81, 82, 84, 85, 101, 102, 103, 105, 106, 108, 109, 111];
 const VIMSCRIPT_IDS = [40, 51, 55, 56, 57, 61, 62, 63, 106];
 const NETRW_IDS = [24, 33, 34, 38, 39, 42, 64, 101, 108, 109, 111];
+const NEOVIM_IDS = [101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112];
 
 export function getMissionTags(mission: Mission): MissionCategoryTag[] {
   const tags: MissionCategoryTag[] = [];
@@ -57,6 +60,9 @@ export function getMissionTags(mission: Mission): MissionCategoryTag[] {
   }
   if (NETRW_IDS.includes(id)) {
     tags.push('netrw');
+  }
+  if (NEOVIM_IDS.includes(id)) {
+    tags.push('neovim');
   }
 
   // Fallback if no category matched

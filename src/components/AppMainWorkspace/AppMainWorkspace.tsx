@@ -13,7 +13,7 @@ import { EditorViewport } from '../EditorViewport/EditorViewport';
 import { VimEditorState, VimMode, computeSearchCount } from '../../vim-engine';
 import { Mission } from '../../types/mission';
 import { LessonProgress } from '../../utils/storage';
-import { t } from '../../i18n';
+import { t, i18nKey } from '../../i18n';
 
 // 첫 화면에 닫혀 있는 탭·보조 패널은 처음 열 때 별도 청크로 불러옵니다 (index.js 초기 번들 경량화)
 const ArcadeSurvival = lazy(() =>
@@ -47,6 +47,68 @@ const WhichKeyPopup = lazy(() =>
 const HarpoonMenu = lazy(() =>
   import('../HarpoonMenu/HarpoonMenu').then((m) => ({ default: m.HarpoonMenu }))
 );
+
+const SANDBOX_QUICK_TRY_CHIPS: ReadonlyArray<{
+  id: string;
+  label: string;
+  titleKey: string;
+  keys: readonly string[];
+}> = [
+  {
+    id: 'oil',
+    label: '📁 :Oil',
+    titleKey: i18nKey('파일시스템 버퍼 편집 (:Oil)'),
+    keys: ['Escape', ...':Oil'.split(''), 'Enter'],
+  },
+  {
+    id: 'trouble',
+    label: '🩺 :Trouble',
+    titleKey: i18nKey('프로젝트 TODO · 진단 트리 (:Trouble)'),
+    keys: ['Escape', ...':Trouble'.split(''), 'Enter'],
+  },
+  {
+    id: 'harpoon',
+    label: '⚓ :HarpoonMenu',
+    titleKey: i18nKey('핀 파일 빠른 전환 (:HarpoonMenu)'),
+    keys: ['Escape', ...':HarpoonMenu'.split(''), 'Enter'],
+  },
+  {
+    id: 'livegrep',
+    label: '🔎 :LiveGrep',
+    titleKey: i18nKey('프로젝트 전체 검색 (:LiveGrep)'),
+    keys: ['Escape', ...':LiveGrep'.split(''), 'Enter'],
+  },
+  {
+    id: 'undotree',
+    label: '🌿 :UndotreeToggle',
+    titleKey: i18nKey('시각적 Undo 트리 (:UndotreeToggle)'),
+    keys: ['Escape', ...':UndotreeToggle'.split(''), 'Enter'],
+  },
+  {
+    id: 'flash',
+    label: '⚡ gs',
+    titleKey: i18nKey('화면 라벨 점프 (gs)'),
+    keys: ['Escape', 'g', 's'],
+  },
+  {
+    id: 'gitsigns',
+    label: '🔀 ]h',
+    titleKey: i18nKey('Git Hunk 이동 (]h)'),
+    keys: ['Escape', ']', 'h'],
+  },
+  {
+    id: 'multicursor',
+    label: '✨ :MultiCursor user',
+    titleKey: i18nKey('다중 커서 편집 (g Ctrl-n)'),
+    keys: ['Escape', ...':MultiCursor user'.split(''), 'Enter'],
+  },
+  {
+    id: 'lua',
+    label: '🌙 :source init.lua',
+    titleKey: i18nKey('Lua 설정 즉시 적용 (:source init.lua)'),
+    keys: ['Escape', ...':source init.lua'.split(''), 'Enter'],
+  },
+];
 
 function useOpenedOnce(isOpen: boolean): boolean {
   const [opened, setOpened] = useState(isOpen);
@@ -135,6 +197,10 @@ export interface WorkspaceEditorProps {
     | 'onJumpTroubleItem'
     | 'onChangeTroubleMode'
     | 'onCloseTroublePanel'
+    | 'onJumpUndoSeq'
+    | 'onTravelUndoOlder'
+    | 'onTravelUndoNewer'
+    | 'onCloseUndotreePanel'
     | 'onSwitchCommandLineWindowType'
     | 'onClearCommandLineHistory'
     | 'onCloseCommandLineWindow'
@@ -302,28 +368,53 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
 
           {currentTab === 'sandbox' && (
             <div className="sandbox-panel" data-testid="sandbox-panel">
-              <div className="sandbox-info">
-                <span className="sandbox-badge">🧪 SANDBOX</span>
-                <span className="sandbox-desc">
-                  {t('미션 제약 없이 모든 Vim 키보드 명령어를 자유롭게 실험해 볼 수 있습니다.')}
-                </span>
+              <div className="sandbox-top-row">
+                <div className="sandbox-info">
+                  <span className="sandbox-badge">🧪 SANDBOX</span>
+                  <span className="sandbox-desc">
+                    {t('미션 제약 없이 모든 Vim 키보드 명령어를 자유롭게 실험해 볼 수 있습니다.')}
+                  </span>
+                </div>
+                <div className="sandbox-actions">
+                  <button
+                    className="sandbox-byoc-btn"
+                    onClick={mission.onOpenBYOCModal}
+                    data-testid="open-byoc-modal-btn"
+                    title={t('내 실제 업무 코드를 붙여넣어 자동 리팩토링 미션 생성')}
+                  >
+                    {t('✨ 내 코드로 리팩토링 미션 생성 (BYOC)')}
+                  </button>
+                  <button
+                    className="sandbox-reset-btn"
+                    onClick={mission.onResetSandbox}
+                    data-testid="sandbox-reset-btn"
+                  >
+                    {t('🔄 코드 초기화')}
+                  </button>
+                </div>
               </div>
-              <div className="sandbox-actions">
-                <button
-                  className="sandbox-byoc-btn"
-                  onClick={mission.onOpenBYOCModal}
-                  data-testid="open-byoc-modal-btn"
-                  title={t('내 실제 업무 코드를 붙여넣어 자동 리팩토링 미션 생성')}
-                >
-                  {t('✨ 내 코드로 리팩토링 미션 생성 (BYOC)')}
-                </button>
-                <button
-                  className="sandbox-reset-btn"
-                  onClick={mission.onResetSandbox}
-                  data-testid="sandbox-reset-btn"
-                >
-                  {t('🔄 코드 초기화')}
-                </button>
+              <div className="sandbox-quick-try" data-testid="sandbox-quick-try">
+                <span className="sandbox-quick-try-label">{t('바로 체험:')}</span>
+                <div className="sandbox-quick-try-chips">
+                  {SANDBOX_QUICK_TRY_CHIPS.map((chip) => (
+                    <button
+                      key={chip.id}
+                      type="button"
+                      className="sandbox-quick-chip"
+                      data-testid={`sandbox-chip-${chip.id}`}
+                      title={t(chip.titleKey)}
+                      tabIndex={-1}
+                      onClick={() => {
+                        editor.onFocus();
+                        for (const k of chip.keys) {
+                          editor.processKeyInput(k);
+                        }
+                      }}
+                    >
+                      {chip.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}

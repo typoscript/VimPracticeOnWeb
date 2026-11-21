@@ -16,6 +16,9 @@ import { t } from '../../i18n';
 const TroublePanel = lazy(() =>
   import('../TroublePanel/TroublePanel').then((m) => ({ default: m.TroublePanel }))
 );
+const UndotreePanel = lazy(() =>
+  import('../UndotreePanel/UndotreePanel').then((m) => ({ default: m.UndotreePanel }))
+);
 
 interface EditorViewportProps {
   editorState: VimEditorState;
@@ -49,6 +52,10 @@ interface EditorViewportProps {
   onJumpTroubleItem?: (index: number) => void;
   onChangeTroubleMode?: (mode: TroubleMode) => void;
   onCloseTroublePanel?: () => void;
+  onJumpUndoSeq?: (seq: number) => void;
+  onTravelUndoOlder?: () => void;
+  onTravelUndoNewer?: () => void;
+  onCloseUndotreePanel?: () => void;
   onSwitchCommandLineWindowType: (type: ':' | '/') => void;
   onClearCommandLineHistory: (type: ':' | '/' | '?') => void;
   onCloseCommandLineWindow: () => void;
@@ -91,6 +98,10 @@ export function EditorViewport({
   onJumpTroubleItem,
   onChangeTroubleMode,
   onCloseTroublePanel,
+  onJumpUndoSeq,
+  onTravelUndoOlder,
+  onTravelUndoNewer,
+  onCloseUndotreePanel,
   onSwitchCommandLineWindowType,
   onClearCommandLineHistory,
   onCloseCommandLineWindow,
@@ -406,6 +417,19 @@ export function EditorViewport({
               onJump={(idx) => onJumpTroubleItem?.(idx)}
               onChangeMode={(mode) => onChangeTroubleMode?.(mode)}
               onClose={() => onCloseTroublePanel?.()}
+            />
+          </Suspense>
+        )}
+
+        {/* mbbill/undotree 시각적 Undo Tree 분할 패널 (:UndotreeToggle) */}
+        {displayEditorState.undotreePanel?.isOpen && (
+          <Suspense fallback={null}>
+            <UndotreePanel
+              editorState={displayEditorState}
+              onJumpSeq={(seq) => onJumpUndoSeq?.(seq)}
+              onTravelOlder={() => onTravelUndoOlder?.()}
+              onTravelNewer={() => onTravelUndoNewer?.()}
+              onClose={() => onCloseUndotreePanel?.()}
             />
           </Suspense>
         )}

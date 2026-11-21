@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 189개 테스트 파일, 2,246개 테스트 100% 통과 필수)*
+  *(현재 191개 테스트 파일, 2,250개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -224,6 +224,9 @@
   - **Neovim 골든 회귀 스위트 95 → 116건**: 실제 `nvim --headless` 대비 `X`/`2X.`/`U`/`UU`/`Q`, Ex `;` 범위·`:keepjumps`·`:keepmarks`, Float/수학 내장 함수·`:const`, Insert `0<C-d>`/`^<C-d>`, 강제 모션(`dvj`/`dVw`/`d<C-v>lj`), Select 모드 `gh`, `diW`, `50%`, `7go` 21건을 추가하고, 실제 Neovim 과의 비교에서 발견된 `U` 줄 단위 실행 취소의 `u`/`Ctrl-r` 시 스냅샷 초기화(`u_clearline`) 및 `U`/`UU` 커서 열 복원(`originalCol`/`toggledCol`) 불일치를 수정해 116건 100% 일치시켰습니다.
   - **`vim-engine-neovim` 청크 계층 리밸런싱**: `ENGINE_CHUNK_LAYERS` 에 `vim-engine-editing` 과 `vim-engine-ex` 사이 단방향 비순환 계층 `vim-engine-neovim`(77 kB)을 신설해 `vim-engine-services`(136 kB)·`vim-engine-editing`(124 kB)·`vim-engine-ex`(107 kB)를 모두 150 kB 미만으로 균형 분리했습니다.
   - **Sandbox 멀티파일 작업공간 업그레이드**: 자유 연습장 진입 시 `sandbox.ts`, `src/api.ts`(`TODO`), `src/worker.ts`(`FIXME`/`NOTE`), `init.lua` 가상 파일과 초기 Git diff 기준선(`gitBaseLines`), Harpoon 기본 핀(`harpoonList`)을 함께 제공해 `:Trouble`, `:LiveGrep`, `:Oil`, `:HarpoonMenu`, `]h`, `:source init.lua` 를 즉시 체험할 수 있습니다.
+- **`mbbill/undotree` 시각적 Undo Tree 분할 패널 & Sandbox 퀵런처 & `Neovim` 커리큘럼 필터 (`src/vim-engine/undoTreeEngine.ts`, `src/components/UndotreePanel/`, `AppMainWorkspace.tsx`, `src/utils/missionFilters.ts`)**:
+  - **Undotree 시각 패널 (`:UndotreeToggle`, `:Undotree`, `:UndotreeShow`, `:UndotreeHide`)**: 기존 분기형 `undoTreeNodes` 상태를 기반으로 최신 노드 상단·루트 `#0` 하단의 ASCII 브랜치 그래프(`buildUndotreeGraphRows`), 저장 스냅샷 배지(`S1`), 변경 줄 델타(`+N`/`-M`), 우측 실시간 Diff 미리보기, `g-`/`g+` 시간 여행 및 노드 클릭 즉시 복원을 `React.lazy` 분할 패널로 구현했습니다.
+  - **Sandbox 퀵런처 칩 바 & `Neovim` 필터 태그**: 자유 연습장 상단에 9종 원클릭 체험 칩(`:Oil`, `:Trouble`, `:HarpoonMenu`, `:LiveGrep`, `:UndotreeToggle`, `gs`, `]h`, `:MultiCursor user`, `:source init.lua`)을 추가하고, `LessonSelectModal` 카테고리 필터에 **`Neovim`** 태그(레슨 101~112 모아보기)를 추가했습니다.
 
 ---
 

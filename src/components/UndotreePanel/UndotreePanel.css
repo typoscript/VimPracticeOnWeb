@@ -1,0 +1,247 @@
+.undotree-panel-container {
+  margin-top: 6px;
+  background-color: #181825;
+  border: 1px solid #94e2d5;
+  border-radius: 8px;
+  overflow: hidden;
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-size: 12px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+.undotree-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.4rem 0.7rem;
+  background-color: #1e1e2e;
+  border-bottom: 1px solid #313244;
+}
+
+.undotree-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.undotree-badge {
+  background-color: #94e2d5;
+  color: #11111b;
+  font-weight: 800;
+  font-size: 10.5px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  letter-spacing: 0.04em;
+}
+
+.undotree-title {
+  color: #cdd6f4;
+  font-weight: 700;
+}
+
+.undotree-stats {
+  color: #a6adc8;
+  font-size: 11px;
+}
+
+.undotree-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.undotree-nav-btn {
+  background-color: #313244;
+  border: 1px solid #45475a;
+  color: #94e2d5;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.undotree-nav-btn:hover {
+  border-color: #94e2d5;
+  background-color: rgba(148, 226, 213, 0.16);
+}
+
+.undotree-close-btn {
+  background: transparent;
+  border: none;
+  color: #a6adc8;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0 4px;
+}
+
+.undotree-close-btn:hover {
+  color: #f38ba8;
+}
+
+.undotree-panel-body {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) minmax(240px, 1.35fr);
+  max-height: 215px;
+}
+
+.undotree-graph-pane {
+  overflow-y: auto;
+  border-right: 1px solid #313244;
+  padding: 0.35rem 0.45rem;
+}
+
+.undotree-node-row {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #bac2de;
+  transition: background-color 0.12s ease;
+}
+
+.undotree-node-row:hover,
+.undotree-node-row.hovered {
+  background-color: rgba(148, 226, 213, 0.12);
+}
+
+.undotree-node-row.current {
+  background-color: rgba(148, 226, 213, 0.2);
+  color: #cdd6f4;
+  font-weight: 700;
+}
+
+.undotree-graph-ascii {
+  color: #94e2d5;
+  white-space: pre;
+  font-weight: 700;
+  min-width: 18px;
+}
+
+.undotree-seq {
+  color: #89b4fa;
+  font-weight: 700;
+}
+
+.undotree-root-tag {
+  background-color: rgba(137, 180, 250, 0.16);
+  color: #89b4fa;
+  font-size: 10px;
+  padding: 0 5px;
+  border-radius: 3px;
+}
+
+.undotree-current-pill {
+  background-color: #94e2d5;
+  color: #11111b;
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 0 5px;
+  border-radius: 3px;
+}
+
+.undotree-save-tag {
+  background-color: rgba(249, 226, 175, 0.18);
+  color: #f9e2af;
+  font-size: 10px;
+  padding: 0 4px;
+  border-radius: 3px;
+  font-weight: 700;
+}
+
+.undotree-delta {
+  display: inline-flex;
+  gap: 4px;
+  font-size: 10.5px;
+  margin-left: auto;
+}
+
+.undotree-delta .delta-add {
+  color: #a6e3a1;
+}
+
+.undotree-delta .delta-del {
+  color: #f38ba8;
+}
+
+.undotree-age {
+  color: #6c7086;
+  font-size: 10.5px;
+  min-width: 24px;
+  text-align: right;
+}
+
+.undotree-diff-pane {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.undotree-diff-header {
+  padding: 0.3rem 0.6rem;
+  font-size: 11px;
+  color: #a6adc8;
+  background-color: rgba(49, 50, 68, 0.45);
+  border-bottom: 1px solid #313244;
+  font-weight: 600;
+}
+
+.undotree-diff-lines {
+  overflow-y: auto;
+  padding: 0.3rem 0.5rem;
+  flex: 1;
+}
+
+.undotree-diff-line {
+  display: flex;
+  gap: 0.45rem;
+  line-height: 1.45;
+  padding: 0 4px;
+  border-radius: 3px;
+  white-space: pre;
+  overflow-x: hidden;
+  text-overflow: ellipsis;
+}
+
+.undotree-diff-line.diff-added {
+  background-color: rgba(166, 227, 161, 0.14);
+  color: #a6e3a1;
+}
+
+.undotree-diff-line.diff-removed {
+  background-color: rgba(243, 139, 168, 0.14);
+  color: #f38ba8;
+}
+
+.undotree-diff-line.diff-context {
+  color: #9399b2;
+}
+
+.undotree-diff-sign {
+  width: 10px;
+  flex-shrink: 0;
+  font-weight: 700;
+}
+
+.undotree-diff-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 680px) {
+  .undotree-panel-body {
+    grid-template-columns: 1fr;
+    max-height: 280px;
+  }
+
+  .undotree-graph-pane {
+    border-right: none;
+    border-bottom: 1px solid #313244;
+    max-height: 135px;
+  }
+}

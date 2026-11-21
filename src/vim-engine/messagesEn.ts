@@ -519,4 +519,6 @@ export const EN_MESSAGES: Record<string, string> = {
   "[MultiCursor] 더 이상 추가할 \"{query}\" 매치가 없습니다 ({count}개)": "[MultiCursor] No more matches for \"{query}\" ({count})",
   "[MultiCursor] {count}개 선택 영역 삭제 완료": "[MultiCursor] Deleted {count} selections",
   "[MultiCursor INSERT] {count}개 커서 동시 입력 중 (Esc 종료)": "[MultiCursor INSERT] Editing {count} cursors (Esc to finish)",
+  "[Undotree] 시각적 Undo 트리 열림 ({count}개 노드 · 클릭 또는 :undo N 으로 이동)": "[Undotree] Visual undo tree opened ({count} nodes · click or :undo N to jump)",
+  "[Undotree] 패널을 닫았습니다": "[Undotree] Panel closed",
 };

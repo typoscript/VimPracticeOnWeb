@@ -374,6 +374,11 @@
   color: #f5c2e7;
 }
 
+.tag-neovim {
+  background-color: rgba(148, 226, 213, 0.2);
+  color: #94e2d5;
+}
+
 .lesson-card-footer {
   display: flex;
   justify-content: space-between;
