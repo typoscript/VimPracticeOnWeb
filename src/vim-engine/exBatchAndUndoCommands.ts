@@ -1,5 +1,6 @@
 import { VimEditorState } from './types';
 import { undo, redo } from './operators';
+import { msg } from './messages';
 import { formatUndoList, jumpUndoSeq, travelEarlier, travelLater } from './undoTreeEngine';
 import { bufdo } from './bufferEngine';
 import { tabdo } from './tabEngine';
@@ -163,6 +164,21 @@ export function tryExecuteBatchAndUndoExCommand(
   const undoJumpMatch = trimmed.match(/^:?\s*u(?:ndo)?\s+(\d+)$/i);
   if (undoJumpMatch) {
     return finishNormalEx(jumpUndoSeq(state, parseInt(undoJumpMatch[1], 10)));
+  }
+
+  // 다음 변경을 직전 Undo 블록과 병합: :undojoin / :undoj
+  if (/^undoj(?:o(?:i(?:n)?)?)?$/i.test(cleanCmd)) {
+    if (state.lastActionWasUndo) {
+      return finishNormalEx({
+        ...state,
+        bell: true,
+        commandMessage: msg('E790: undojoin 은 실행 취소(undo) 직후에 사용할 수 없습니다'),
+      });
+    }
+    return finishNormalEx({
+      ...state,
+      pendingUndoJoin: true,
+    });
   }
 
   // 단순 실행 취소 및 재실행: :u, :undo, :red, :redo

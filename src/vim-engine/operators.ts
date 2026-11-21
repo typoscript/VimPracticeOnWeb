@@ -9,6 +9,14 @@ const MAX_HISTORY = 50;
  * 상태 변경 전 실행 취소(Undo) 스냅샷을 푸시하고 Redo 스택을 초기화합니다.
  */
 export function pushUndoSnapshot(state: VimEditorState): VimEditorState {
+  if (state.pendingUndoJoin) {
+    return {
+      ...state,
+      pendingUndoJoin: undefined,
+      undoJoinMerged: true,
+      lastActionWasUndo: undefined,
+    };
+  }
   // 상태 변경 전 Undo Tree 루트 및 기존 버퍼 변경사항 확정 기록
   const treeState = recordUndoTreeChange(ensureUndoTreeInitialized(state));
 
@@ -47,6 +55,8 @@ export function pushUndoSnapshot(state: VimEditorState): VimEditorState {
     redoStack: [],
     changeList: currentChangeList,
     changeIndex: currentChangeList.length,
+    pendingUndoJoin: undefined,
+    lastActionWasUndo: undefined,
   };
 }
 
@@ -599,6 +609,8 @@ export function undo(state: VimEditorState): VimEditorState {
     currentUndoSeq: currentSeq,
     undoTimeIndex: timeIdx,
     pendingKeys: undefined,
+    pendingUndoJoin: undefined,
+    lastActionWasUndo: true,
   };
 }
 

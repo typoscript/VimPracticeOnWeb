@@ -11,6 +11,8 @@ import {
   WINDOW_LOCAL_OPTION_KEYS,
   parseListcharsEntries,
   parseListchars,
+  parseColorcolumn,
+  validateColorcolumn,
   getGlobalOptions,
   getLocalOptions,
   getOptions,
@@ -23,6 +25,7 @@ export {
   DEFAULT_VIM_OPTIONS,
   OPTION_ALIASES,
   parseListchars,
+  parseColorcolumn,
   getGlobalOptions,
   getLocalOptions,
   getOptions,
@@ -48,6 +51,7 @@ type BooleanOrSyntaxOptionKey =
   | 'incsearch'
   | 'wrap'
   | 'cursorline'
+  | 'cursorcolumn'
   | 'expandtab'
   | 'list'
   | 'wildmenu'
@@ -86,6 +90,7 @@ const BOOLEAN_OR_SYNTAX_KEYS = new Set<BooleanOrSyntaxOptionKey>([
   'incsearch',
   'wrap',
   'cursorline',
+  'cursorcolumn',
   'expandtab',
   'list',
   'wildmenu',
@@ -212,6 +217,8 @@ function handleOptionQuery(ctx: SetDraftContext, token: string): VimEditorState 
       val = DEFAULT_MATCHPAIRS;
     } else if (optKey === 'shortmess') {
       val = DEFAULT_VIM_OPTIONS.shortmess ?? 'filnxtToOF';
+    } else if (optKey === 'colorcolumn') {
+      val = DEFAULT_VIM_OPTIONS.colorcolumn ?? '';
     }
   }
 
@@ -528,6 +535,51 @@ function handleOptionAssignment(ctx: SetDraftContext, token: string): VimEditorS
     }
     writeScopedOption(ctx, 'shortmess', nextVal);
     ctx.appliedList.push(`shortmess=${nextVal}`);
+    return null;
+  }
+  if (optKey === 'colorcolumn') {
+    if (!validateColorcolumn(rawVal)) {
+      return {
+        ...ctx.state,
+        bell: true,
+        commandMessage: msg('E474: 잘못된 인수입니다: {token}', { token }),
+      };
+    }
+    const curRaw =
+      (ctx.isSplit ? ctx.nextPaneLocal.colorcolumn : undefined) ??
+      ctx.nextLocal.colorcolumn ??
+      ctx.nextGlobal.colorcolumn ??
+      '';
+    const curParts = curRaw
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean);
+    const newParts = rawVal
+      .split(',')
+      .map((p) => p.trim())
+      .filter(Boolean);
+    let nextParts: string[];
+    if (mod === '+') {
+      nextParts = [...curParts];
+      for (const p of newParts) {
+        if (!nextParts.includes(p)) nextParts.push(p);
+      }
+    } else if (mod === '^') {
+      nextParts = [...newParts];
+      for (const p of curParts) {
+        if (!nextParts.includes(p)) nextParts.push(p);
+      }
+    } else if (mod === '-') {
+      nextParts = curParts.filter((p) => !newParts.includes(p));
+    } else {
+      nextParts = [];
+      for (const p of newParts) {
+        if (!nextParts.includes(p)) nextParts.push(p);
+      }
+    }
+    const nextVal = nextParts.join(',');
+    writeScopedOption(ctx, 'colorcolumn', nextVal);
+    ctx.appliedList.push(`colorcolumn=${nextVal}`);
     return null;
   }
   if (optKey === 'errorformat' || optKey === 'grepprg') {

@@ -41,6 +41,7 @@ export interface RenderLineOptions {
   listMode?: boolean;
   listchars?: ParsedListchars;
   tabstop?: number;
+  cursorColumnCol?: number | null;
 }
 
 function renderSyntaxSpans(text: string, tokens: SyntaxToken[]): React.ReactNode {
@@ -90,6 +91,7 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     listMode,
     listchars,
     tabstop = 2,
+    cursorColumnCol = null,
   } = opts;
   const isCursorLine = cursor.line === lineIdx;
   const cursorCol = isCursorLine ? cursor.col : null;
@@ -144,7 +146,8 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     !hasCustomMatches &&
     !hasIncMatches &&
     !hasSpellErrors &&
-    !hasDiagnostics
+    !hasDiagnostics &&
+    cursorColumnCol === null
   ) {
     if (listMode && listchars?.eol) {
       return (
@@ -167,7 +170,8 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     !hasIncMatches &&
     !hasSpellErrors &&
     !hasDiagnostics &&
-    !listMode
+    !listMode &&
+    cursorColumnCol === null
   ) {
     if (!isSyntaxEnabled || !syntaxLanguage || syntaxLanguage === 'text' || text.length === 0) {
       return text;
@@ -199,7 +203,8 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     chars.length - 1,
     cursorCol !== null ? cursorCol : 0,
     blockSecondaryCol !== null ? blockSecondaryCol : 0,
-    targetCol !== null ? targetCol : 0
+    targetCol !== null ? targetCol : 0,
+    cursorColumnCol !== null ? cursorColumnCol : 0
   );
 
   let eolRenderedOnCursor = false;
@@ -368,6 +373,10 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
 
     if (isTarget) {
       classNames += ' target-marker';
+    }
+
+    if (cursorColumnCol !== null && i === cursorColumnCol && !isCursor) {
+      classNames += ' cursor-column-cell';
     }
 
     if (incCommandHasReplacement && incMatchAtStart) {

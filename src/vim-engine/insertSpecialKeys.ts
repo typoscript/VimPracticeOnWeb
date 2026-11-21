@@ -265,6 +265,8 @@ function exitInsertToNormal(state: VimEditorState, isReplayingDot: boolean): Vim
     cursor: clampCursor(state.lines, { line, col: nextCol }, 'NORMAL'),
     pendingKeys: undefined,
     digraphPending: undefined,
+    insertCtrlGPending: undefined,
+    insertStartCol: undefined,
     lastChangeKeys: nextLastChange,
     currentChangeKeys: undefined,
     lastInsertedText: resolveLastInsertedText(state),

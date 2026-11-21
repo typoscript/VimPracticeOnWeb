@@ -244,12 +244,14 @@ export function rawHandleKey(
 
   setActiveCursorContext(nextState.mode, getOptions(nextState).virtualedit);
 
-  // INSERT 모드 신규 진입(Ctrl-o 일회성 복귀 제외) 시 직전 입력 텍스트 버퍼 초기화
+  // INSERT 모드 신규 진입(Ctrl-o 일회성 복귀 제외) 시 직전 입력 텍스트 버퍼 및 시작 열 초기화
   if (state.mode !== 'INSERT' && nextState.mode === 'INSERT' && !state.insertNormalSession) {
     nextState = {
       ...nextState,
       currentInsertText: undefined,
       digraphPending: undefined,
+      insertCtrlGPending: undefined,
+      insertStartCol: nextState.cursor.col,
     };
   }
 

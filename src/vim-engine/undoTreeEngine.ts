@@ -51,7 +51,25 @@ export function recordUndoTreeChange(state: VimEditorState): VimEditorState {
 
   // 현재 노드의 텍스트와 정확히 일치한다면 변경 없음
   if (curNode && areLinesEqual(curNode.lines, initialized.lines)) {
-    return initialized;
+    return initialized.undoJoinMerged ? { ...initialized, undoJoinMerged: undefined } : initialized;
+  }
+
+  // :undojoin 으로 직전 변경 블록에 병합된 경우 현재 노드를 제자리 갱신 (새 Undo 노드·스택 생성 방지)
+  if (initialized.undoJoinMerged && curNode && curSeq > 0) {
+    const updatedNode: UndoTreeNode = {
+      ...curNode,
+      timestamp: Date.now(),
+      lines: [...initialized.lines],
+      cursor: { ...initialized.cursor },
+    };
+    return {
+      ...initialized,
+      undoJoinMerged: undefined,
+      undoTreeNodes: {
+        ...nodes,
+        [curSeq]: updatedNode,
+      },
+    };
   }
 
   const newSeq = (initialized.maxUndoSeq ?? 0) + 1;

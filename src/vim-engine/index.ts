@@ -227,6 +227,7 @@ export {
   getLocalOptions,
   formatOptionsList,
   parseListchars,
+  parseColorcolumn,
   DEFAULT_VIM_OPTIONS,
   OPTION_ALIASES,
 } from './setEngine';

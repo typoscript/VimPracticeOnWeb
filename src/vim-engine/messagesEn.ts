@@ -425,4 +425,5 @@ export const EN_MESSAGES: Record<string, string> = {
   "커스텀 하이라이트 매치가 모두 해제되었습니다 (:clearmatches)": "All custom match highlights cleared (:clearmatches)",
   "커스텀 하이라이트 매치 해제 ({cmd})": "Custom match highlight cleared ({cmd})",
   "[하이라이트 매치] {group}: /{pattern}/": "[Match Highlight] {group}: /{pattern}/",
+  "E790: undojoin 은 실행 취소(undo) 직후에 사용할 수 없습니다": "E790: undojoin is not allowed after undo",
 };

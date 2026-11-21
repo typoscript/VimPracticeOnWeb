@@ -238,4 +238,36 @@ describe('EditorViewport', () => {
     const { container } = render(<EditorViewport {...props} />);
     expect(container.querySelectorAll('.custom-match-todo')).toHaveLength(4);
   });
+
+  it(':set colorcolumn=10 및 :set cursorcolumn 시 세로 가이드선과 커서 열 셀을 렌더링한다', () => {
+    const base = makeBaseState({
+      lines: ['abcdefghijkl', '0123456789ab'],
+      cursor: { line: 0, col: 3 },
+      options: {
+        number: true,
+        relativenumber: false,
+        ignorecase: false,
+        smartcase: false,
+        hlsearch: true,
+        incsearch: true,
+        wrap: true,
+        cursorline: true,
+        cursorcolumn: true,
+        colorcolumn: '10',
+        tabstop: 2,
+        shiftwidth: 2,
+        expandtab: true,
+        list: false,
+        wildmenu: true,
+      },
+    });
+    const props = createProps({ editorState: base, displayEditorState: base });
+    const { container } = render(<EditorViewport {...props} />);
+
+    const editorEl = screen.getByTestId('editor-container');
+    expect(editorEl).toHaveAttribute('data-cursorcolumn', 'true');
+    expect(editorEl).toHaveAttribute('data-colorcolumn', '10');
+    expect(screen.getAllByTestId('colorcolumn-guide-10')).toHaveLength(2);
+    expect(container.querySelectorAll('.cursor-column-cell')).toHaveLength(1);
+  });
 });

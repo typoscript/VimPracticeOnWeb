@@ -38,6 +38,8 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   shiftround: false,
   matchpairs: '(:),{:},[:]',
   shortmess: 'filnxtToOF',
+  colorcolumn: '',
+  cursorcolumn: false,
 };
 
 export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
@@ -118,6 +120,10 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   matchpairs: 'matchpairs',
   shm: 'shortmess',
   shortmess: 'shortmess',
+  cc: 'colorcolumn',
+  colorcolumn: 'colorcolumn',
+  cuc: 'cursorcolumn',
+  cursorcolumn: 'cursorcolumn',
 };
 
 export const WINDOW_LOCAL_OPTION_KEYS = new Set<keyof VimOptions>([
@@ -125,6 +131,8 @@ export const WINDOW_LOCAL_OPTION_KEYS = new Set<keyof VimOptions>([
   'relativenumber',
   'wrap',
   'cursorline',
+  'cursorcolumn',
+  'colorcolumn',
   'list',
   'listchars',
   'spell',
@@ -230,6 +238,41 @@ export function parseListcharsEntries(
 }
 
 /**
+ * colorcolumn 옵션 문자열의 유효성을 검사합니다. (예: "80", "80,100", "+1,-2", "")
+ */
+export function validateColorcolumn(raw: string): boolean {
+  if (raw.trim() === '') return true;
+  for (const part of raw.split(',')) {
+    const t = part.trim();
+    if (!t) continue;
+    if (!/^[+-]?\d+$/.test(t)) return false;
+  }
+  return true;
+}
+
+/**
+ * colorcolumn 옵션 문자열을 0-based 컬럼 인덱스 배열로 변환합니다.
+ */
+export function parseColorcolumn(raw?: string, textwidth = 0): number[] {
+  if (!raw || raw.trim() === '') return [];
+  const cols = new Set<number>();
+  for (const part of raw.split(',')) {
+    const t = part.trim();
+    if (!t) continue;
+    if (t.startsWith('+') || t.startsWith('-')) {
+      if (textwidth <= 0) continue;
+      const delta = parseInt(t, 10);
+      const target = textwidth + delta;
+      if (target > 0) cols.add(target - 1);
+    } else {
+      const absCol = parseInt(t, 10);
+      if (absCol > 0) cols.add(absCol - 1);
+    }
+  }
+  return Array.from(cols).sort((a, b) => a - b);
+}
+
+/**
  * listchars 문자열을 파싱해 키별 표시 문자를 반환합니다.
  */
 export function parseListchars(raw?: string): ParsedListchars {
@@ -305,6 +348,7 @@ export function formatOptionsList(
     'incsearch',
     'wrap',
     'cursorline',
+    'cursorcolumn',
     'list',
     'expandtab',
     'spell',
@@ -356,6 +400,7 @@ export function formatOptionsList(
     'virtualedit',
     'matchpairs',
     'shortmess',
+    'colorcolumn',
   ];
 
   for (const k of stringKeys) {
@@ -445,6 +490,7 @@ const BOOLEAN_OPTION_KEYS = new Set<keyof VimOptions>([
   'incsearch',
   'wrap',
   'cursorline',
+  'cursorcolumn',
   'list',
   'wildmenu',
   'expandtab',

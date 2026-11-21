@@ -1,5 +1,6 @@
 import { VimEditorState } from './types';
 import { clampCursor } from './cursor';
+import { pushUndoSnapshot } from './operators';
 import { executeCommandLine } from './commandLine';
 import {
   MAX_REMAP_DEPTH,
@@ -675,8 +676,46 @@ export function handleInsertModeKey(
       ...state,
       pendingKeys: undefined,
       insertRegisterPending: undefined,
+      insertCtrlGPending: undefined,
       literalNextPending: undefined,
       digraphPending: undefined,
+    };
+  }
+
+  // Ctrl-g 서브명령 (Ctrl-g u: Undo 중단점 삽입, Ctrl-g j/k: Insert 시작 열 기준 상하 이동)
+  if (state.insertCtrlGPending) {
+    const cleared: VimEditorState = { ...state, insertCtrlGPending: undefined };
+    if (key === 'u' || key === 'Ctrl-u' || key === 'Ctrl+u' || key === 'ctrl-u') {
+      return pushUndoSnapshot(cleared);
+    }
+    if (key === 'j' || key === 'Ctrl-j' || key === 'Ctrl+j' || key === 'ArrowDown') {
+      const targetLine = Math.min(cleared.lines.length - 1, cleared.cursor.line + 1);
+      const startCol = cleared.insertStartCol ?? cleared.cursor.col;
+      const targetCol = Math.min((cleared.lines[targetLine] ?? '').length, startCol);
+      return {
+        ...pushUndoSnapshot(cleared),
+        cursor: { line: targetLine, col: targetCol },
+      };
+    }
+    if (key === 'k' || key === 'Ctrl-k' || key === 'Ctrl+k' || key === 'ArrowUp') {
+      const targetLine = Math.max(0, cleared.cursor.line - 1);
+      const startCol = cleared.insertStartCol ?? cleared.cursor.col;
+      const targetCol = Math.min((cleared.lines[targetLine] ?? '').length, startCol);
+      return {
+        ...pushUndoSnapshot(cleared),
+        cursor: { line: targetLine, col: targetCol },
+      };
+    }
+    if (key === 'Escape') {
+      return cleared;
+    }
+    state = cleared;
+  }
+
+  if (key === 'Ctrl-g' || key === 'Ctrl+g' || key === 'ctrl-g' || key === '<C-g>') {
+    return {
+      ...state,
+      insertCtrlGPending: true,
     };
   }
 

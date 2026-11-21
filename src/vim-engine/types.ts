@@ -356,6 +356,10 @@ export interface VimOptions {
   matchpairs?: string;
   /** 상태 메시지 축약 플래그 (:set shm=filnxtToOF, S 포함 시 검색 카운트 숨김) */
   shortmess?: string;
+  /** 세로 컬럼 가이드선 (:set cc=80,100 또는 :set cc=+1, :set colorcolumn) */
+  colorcolumn?: string;
+  /** 커서 위치 세로 열 강조 여부 (:set cuc / nocuc, :set cursorcolumn) */
+  cursorcolumn?: boolean;
 }
 
 /** 맞춤법 검사기 오탈자 정보 */
@@ -829,6 +833,16 @@ export interface VimEditorState {
   customMatches?: CustomMatchEntry[];
   /** matchadd() 다음 자동 할당 ID (기본 4부터 시작; 1~3은 :match/:2match/:3match 예약) */
   nextMatchId?: number;
+  /** Insert 모드 Ctrl-g 대기 상태 (Ctrl-g u / Ctrl-g j / Ctrl-g k) */
+  insertCtrlGPending?: boolean;
+  /** 현재 Insert 세션 진입 시 시작 열 (Ctrl-g j / k 열 정렬용) */
+  insertStartCol?: number;
+  /** :undojoin 실행 후 다음 변경을 직전 Undo 블록에 병합할지 여부 */
+  pendingUndoJoin?: boolean;
+  /** :undojoin 병합이 방금 적용되어 Undo Tree 현재 노드를 제자리 갱신해야 하는지 여부 */
+  undoJoinMerged?: boolean;
+  /** 직전 작업이 undo 였는지 여부 (:undojoin E790 검증용) */
+  lastActionWasUndo?: boolean;
 }
 
 export type LspDiagnosticSeverity = 'error' | 'warning' | 'info' | 'hint';

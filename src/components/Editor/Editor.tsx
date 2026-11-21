@@ -20,6 +20,7 @@ import {
   findSpellErrorsInLine,
   detectFiletype,
   parseListchars,
+  parseColorcolumn,
 } from '../../vim-engine';
 import './Editor.css';
 import { t } from '../../i18n';
@@ -174,6 +175,8 @@ export const Editor: React.FC<EditorProps> = ({
   const isRelative = options?.relativenumber ?? relativeLineNumbers;
   const isHlSearch = options?.hlsearch ?? true;
   const isListMode = options?.list ?? false;
+  const isCursorColumn = options?.cursorcolumn ?? false;
+  const colorColumnIndices = parseColorcolumn(options?.colorcolumn, options?.textwidth ?? 0);
   const listcharsConfig = isListMode ? parseListchars(options?.listchars) : undefined;
   const tabstop = Math.max(1, options?.tabstop ?? 2);
   const searchOpts = options ? { ignorecase: options.ignorecase, smartcase: options.smartcase } : undefined;
@@ -194,6 +197,12 @@ export const Editor: React.FC<EditorProps> = ({
       data-wrap={String(isWrap)}
       data-left-col={leftCol}
       data-list={isListMode ? 'true' : undefined}
+      data-cursorcolumn={isCursorColumn ? 'true' : undefined}
+      data-colorcolumn={
+        colorColumnIndices.length > 0
+          ? colorColumnIndices.map((c) => c + 1).join(',')
+          : undefined
+      }
       onClick={onFocus}
     >
       {!isFocused && (
@@ -338,6 +347,15 @@ export const Editor: React.FC<EditorProps> = ({
                   <span className="line-num-text">{lineNumberDisplay}</span>
                 </div>
                 <div className="line-content">
+                  {colorColumnIndices.map((ccIdx) => (
+                    <span
+                      key={`cc-${ccIdx}`}
+                      className="colorcolumn-guide"
+                      data-testid={`colorcolumn-guide-${ccIdx + 1}`}
+                      style={{ left: `${ccIdx}ch` }}
+                      aria-hidden="true"
+                    />
+                  ))}
                   {isFoldedHeader ? (
                     <div
                       className="folded-summary"
@@ -373,6 +391,7 @@ export const Editor: React.FC<EditorProps> = ({
                         listMode: isListMode,
                         listchars: listcharsConfig,
                         tabstop,
+                        cursorColumnCol: isCursorColumn ? cursor.col : null,
                       })}
                       {primaryLineDiagnostic && (
                         <span
