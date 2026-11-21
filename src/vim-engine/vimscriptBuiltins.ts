@@ -537,6 +537,35 @@ const COMMON_STATIC_BUILTINS: Record<string, Builtin> = {
   copy: { min: 1, max: 1, fn: (_c, [v]) => v },
   deepcopy: { min: 1, max: 1, fn: (_c, [v]) => v },
   abs: { min: 1, max: 1, fn: (_c, [n]) => Math.abs(toNumber(n)) },
+  float2nr: { min: 1, max: 1, fn: (_c, [n]) => Math.trunc(toNumber(n)) },
+  round: { min: 1, max: 1, fn: (_c, [n]) => Math.round(toNumber(n)) },
+  floor: { min: 1, max: 1, fn: (_c, [n]) => Math.floor(toNumber(n)) },
+  ceil: { min: 1, max: 1, fn: (_c, [n]) => Math.ceil(toNumber(n)) },
+  trunc: { min: 1, max: 1, fn: (_c, [n]) => Math.trunc(toNumber(n)) },
+  sqrt: { min: 1, max: 1, fn: (_c, [n]) => Math.sqrt(toNumber(n)) },
+  pow: { min: 2, max: 2, fn: (_c, [x, y]) => Math.pow(toNumber(x), toNumber(y)) },
+  fmod: {
+    min: 2,
+    max: 2,
+    fn: (_c, [x, y]) => {
+      const b = toNumber(y);
+      return b === 0 ? 0 : toNumber(x) % b;
+    },
+  },
+  str2float: {
+    min: 1,
+    max: 1,
+    fn: (_c, [s]) => {
+      const n = parseFloat(toVimString(s));
+      return Number.isFinite(n) ? n : 0;
+    },
+  },
+  sin: { min: 1, max: 1, fn: (_c, [n]) => Math.sin(toNumber(n)) },
+  cos: { min: 1, max: 1, fn: (_c, [n]) => Math.cos(toNumber(n)) },
+  tan: { min: 1, max: 1, fn: (_c, [n]) => Math.tan(toNumber(n)) },
+  log: { min: 1, max: 1, fn: (_c, [n]) => Math.log(toNumber(n)) },
+  log10: { min: 1, max: 1, fn: (_c, [n]) => Math.log10(toNumber(n)) },
+  exp: { min: 1, max: 1, fn: (_c, [n]) => Math.exp(toNumber(n)) },
   has: {
     min: 1,
     max: 1,
@@ -743,7 +772,9 @@ export function createBuiltinRegistry(
       const name = funcref.name;
       if (/^[A-Z]/.test(name) || name.startsWith('g:') || name.startsWith('s:')) {
         const subCtx = funcref.dict ? { ...ctx, locals: { ...(ctx.locals ?? {}), self: funcref.dict } } : ctx;
-        return subCtx.callUserFunction(subCtx, name.replace(/^g:/, ''), allArgs);
+        const val = subCtx.callUserFunction(subCtx, name.replace(/^g:/, ''), allArgs);
+        ctx.state = subCtx.state;
+        return val;
       }
       const builtin = BUILTINS[name];
       if (builtin) {

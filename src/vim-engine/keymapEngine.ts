@@ -3,7 +3,7 @@ import { clampCursor } from './cursor';
 import { msg } from './messages';
 import { evaluateScriptExpression, ExRunner } from './vimscriptEngine';
 
-export type KeymapMode = 'n' | 'i' | 'v' | 'x' | 'o' | 'c';
+export type KeymapMode = 'n' | 'i' | 'v' | 'x' | 's' | 'o' | 'c';
 
 /** 재귀 키매핑 최대 허용 깊이 */
 export const MAX_REMAP_DEPTH = 15;
@@ -380,10 +380,12 @@ export function parseKeySequence(rhs: string, leaderKey = ' '): string[] {
   return tokens;
 }
 
-function resolveKeymapModePrefix(cmdType: string): KeymapMode | 'all' {
+function resolveKeymapModePrefix(cmdType: string): KeymapMode | 'all' | 'ic' {
   const cmd = cmdType.toLowerCase();
+  if (cmd.endsWith('!')) return 'ic';
   if (cmd.startsWith('i')) return 'i';
   if (cmd.startsWith('x')) return 'x';
+  if (cmd.startsWith('s')) return 's';
   if (cmd.startsWith('o')) return 'o';
   if (cmd.startsWith('c')) return 'c';
   if (cmd.startsWith('v')) return 'v';
@@ -408,7 +410,7 @@ export function resolveKeymapWithMeta(
 
   const leaderKey = state.leaderKey || ' ';
   const variants = getKeyVariants(keySequence, leaderKey);
-  const strictModeOnly = mode === 'x' || mode === 'o' || mode === 'c';
+  const strictModeOnly = mode === 'x' || mode === 's' || mode === 'o' || mode === 'c';
 
   const lookupIn = (map: Record<string, string> | undefined, isBuf: boolean): ResolvedKeymap | null => {
     if (!map) return null;
@@ -460,13 +462,13 @@ export function isKeymapPrefix(
     for (const [k] of Object.entries(map)) {
       let targetLhs = k;
       let targetMode = 'all';
-      if (/^[nivxoc]:/.test(k)) {
+      if (/^[nivxsoc]:/.test(k)) {
         targetMode = k[0];
         targetLhs = k.slice(2);
       }
 
       if (targetMode !== 'all' && targetMode !== mode) continue;
-      if (targetMode === 'all' && (mode === 'x' || mode === 'o' || mode === 'c')) continue;
+      if (targetMode === 'all' && (mode === 'x' || mode === 's' || mode === 'o' || mode === 'c')) continue;
 
       for (const v of variants) {
         if (targetLhs.length > v.length && targetLhs.startsWith(v)) {
@@ -517,7 +519,7 @@ export function formatKeymapsList(
       let mode = ' ';
       let lhs = rawKey;
 
-      if (/^[nivxoc]:/.test(rawKey)) {
+      if (/^[nivxsoc]:/.test(rawKey)) {
         mode = rawKey[0];
         lhs = rawKey.slice(2);
       }
@@ -525,7 +527,9 @@ export function formatKeymapsList(
       const keyId = `${isBuf ? '@' : ''}${mode}:${lhs}:${rhs}`;
       if (seen.has(keyId)) continue;
 
-      if (modeFilter === 'x' || modeFilter === 'o' || modeFilter === 'c') {
+      if (modeFilter === 'ic') {
+        if (mode !== 'i' && mode !== 'c') continue;
+      } else if (modeFilter === 'x' || modeFilter === 's' || modeFilter === 'o' || modeFilter === 'c') {
         if (mode !== modeFilter) continue;
       } else if (modeFilter !== 'all' && modeFilter !== 'map') {
         if (mode !== modeFilter && mode !== ' ') continue;
@@ -551,8 +555,12 @@ export function formatKeymapsList(
         ? msg('일반 (Normal)')
         : modeFilter === 'i'
         ? msg('입력 (Insert)')
+        : modeFilter === 'ic'
+        ? msg('입력/명령행 (Insert/Cmdline)')
         : modeFilter === 'v' || modeFilter === 'x'
         ? msg('비주얼 (Visual)')
+        : modeFilter === 's'
+        ? msg('셀렉트 (Select)')
         : modeFilter === 'o'
         ? msg('연산자 대기 (Operator-pending)')
         : modeFilter === 'c'
@@ -566,10 +574,14 @@ export function formatKeymapsList(
         ? 'Normal'
         : modeFilter === 'i'
         ? 'Insert'
+        : modeFilter === 'ic'
+        ? 'Insert/Cmdline'
         : modeFilter === 'v'
         ? 'Visual'
         : modeFilter === 'x'
         ? 'Visual-x'
+        : modeFilter === 's'
+        ? 'Select'
         : modeFilter === 'o'
         ? 'Operator-pending'
         : modeFilter === 'c'
@@ -599,8 +611,14 @@ export function registerKeymap(
 
   const leaderKey = state.leaderKey || ' ';
   const variants = getKeyVariants(lhs, leaderKey);
-  const modes: KeymapMode[] = modePrefix === 'all' ? ['n', 'i', 'v'] : [modePrefix];
-  const strictMode = modePrefix === 'x' || modePrefix === 'o' || modePrefix === 'c';
+  const modes: KeymapMode[] =
+    modePrefix === 'all' ? ['n', 'i', 'v'] : modePrefix === 'ic' ? ['i', 'c'] : [modePrefix];
+  const strictMode =
+    modePrefix === 'x' ||
+    modePrefix === 's' ||
+    modePrefix === 'o' ||
+    modePrefix === 'c' ||
+    modePrefix === 'ic';
   const bufId = state.currentBufferId ?? 1;
 
   const targetMap = modifiers.buffer
@@ -667,7 +685,12 @@ export function unregisterKeymap(
 ): VimEditorState {
   const cmd = cmdType.toLowerCase();
   const modePrefix = resolveKeymapModePrefix(cmd);
-  const strictMode = modePrefix === 'x' || modePrefix === 'o' || modePrefix === 'c';
+  const strictMode =
+    modePrefix === 'x' ||
+    modePrefix === 's' ||
+    modePrefix === 'o' ||
+    modePrefix === 'c' ||
+    modePrefix === 'ic';
 
   const bufId = state.currentBufferId ?? 1;
   const targetMap = options.buffer
@@ -676,7 +699,12 @@ export function unregisterKeymap(
   const nextMeta = state.keymapMeta ? { ...state.keymapMeta } : undefined;
   const leaderKey = state.leaderKey || ' ';
   const variants = getKeyVariants(lhs, leaderKey);
-  const modes: KeymapMode[] = modePrefix === 'all' ? ['n', 'i', 'v', 'x', 'o', 'c'] : [modePrefix];
+  const modes: KeymapMode[] =
+    modePrefix === 'all'
+      ? ['n', 'i', 'v', 'x', 's', 'o', 'c']
+      : modePrefix === 'ic'
+      ? ['i', 'c']
+      : [modePrefix];
 
   let deletedCount = 0;
   for (const v of variants) {
@@ -716,5 +744,75 @@ export function unregisterKeymap(
       : { userKeymaps: targetMap }),
     ...(nextMeta ? { keymapMeta: nextMeta } : {}),
     commandMessage: msg('[키매핑 해제] {cmd}: {lhs}', { cmd, lhs }),
+  };
+}
+
+/**
+ * Clears all keymaps for the specified mode (:mapclear[!], :nmapclear, :imapclear, :vmapclear, :xmapclear, :smapclear, :omapclear, :cmapclear).
+ */
+export function clearKeymaps(
+  state: VimEditorState,
+  cmdType: string,
+  options: { buffer?: boolean } = {}
+): VimEditorState {
+  const cmd = cmdType.toLowerCase();
+  const modePrefix = resolveKeymapModePrefix(cmd);
+  const modesToClear: Set<string> = new Set(
+    modePrefix === 'all'
+      ? ['n', 'v', 'x', 's', 'o']
+      : modePrefix === 'ic'
+      ? ['i', 'c']
+      : [modePrefix]
+  );
+  const clearBare = modePrefix === 'all';
+  const bufId = state.currentBufferId ?? 1;
+  const sourceMap = options.buffer
+    ? state.bufferKeymaps?.[bufId] ?? {}
+    : state.userKeymaps ?? {};
+  const nextMap: Record<string, string> = {};
+  let removed = 0;
+
+  for (const [k, v] of Object.entries(sourceMap)) {
+    const modeMatch = k.match(/^([nivxsoc]):/);
+    if (modeMatch) {
+      if (modesToClear.has(modeMatch[1])) {
+        removed++;
+        continue;
+      }
+    } else if (clearBare) {
+      removed++;
+      continue;
+    }
+    nextMap[k] = v;
+  }
+
+  let nextMeta = state.keymapMeta;
+  if (state.keymapMeta) {
+    nextMeta = {};
+    for (const [mk, mv] of Object.entries(state.keymapMeta)) {
+      const isBufMeta = mk.startsWith(`b:${bufId}:`);
+      if (Boolean(options.buffer) !== isBufMeta) {
+        nextMeta[mk] = mv;
+        continue;
+      }
+      const stripped = isBufMeta ? mk.slice(`b:${bufId}:`.length) : mk;
+      const modeMatch = stripped.match(/^([nivxsoc]):/);
+      if (modeMatch && modesToClear.has(modeMatch[1])) continue;
+      if (!modeMatch && clearBare) continue;
+      nextMeta[mk] = mv;
+    }
+  }
+
+  return {
+    ...state,
+    mode: 'NORMAL',
+    visualAnchor: undefined,
+    commandBuffer: undefined,
+    commandType: undefined,
+    ...(options.buffer
+      ? { bufferKeymaps: { ...(state.bufferKeymaps ?? {}), [bufId]: nextMap } }
+      : { userKeymaps: nextMap }),
+    ...(nextMeta ? { keymapMeta: nextMeta } : {}),
+    commandMessage: msg('[키매핑 초기화] {cmd} ({count}개 삭제)', { cmd, count: removed }),
   };
 }

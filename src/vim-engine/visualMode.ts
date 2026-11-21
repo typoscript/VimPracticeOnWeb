@@ -881,6 +881,63 @@ export function handleSelectModeKey(
     };
   }
 
+  // Select 모드 커스텀 키매핑 (:smap/:snoremap 우선, :vmap/:vnoremap 폴백)
+  if (!state.keymapsDisabled && !state.pendingKeys && macroDepth <= MAX_REMAP_DEPTH) {
+    const leaderKey = state.leaderKey || ' ';
+    const prefix = state.pendingKeymapPrefix ?? '';
+    const runSelectEx = (s: VimEditorState, cmd: string) =>
+      executeCommandLine(s, cmd, (st, k) => dispatchKey(st, k, false, 0));
+    const runSelectResolved = (
+      baseState: VimEditorState,
+      res: NonNullable<ReturnType<typeof resolveKeymapWithMeta>>
+    ) =>
+      runKeymapTokens(
+        baseState,
+        res,
+        macroDepth,
+        (runState, rhs, _isNoremap, nextDepth) => {
+          const tokens = parseKeySequence(rhs, leaderKey);
+          let s: VimEditorState = runState;
+          for (const tok of tokens) {
+            s = dispatchKey(s, tok, false, nextDepth);
+            if (s.bell) break;
+          }
+          return s;
+        },
+        runSelectEx
+      );
+
+    if (prefix && key === 'Timeout') {
+      const prevRes = resolveKeymapWithMeta(state, 's', prefix) ?? resolveKeymapWithMeta(state, 'v', prefix);
+      if (prevRes) {
+        return runSelectResolved({ ...state, pendingKeymapPrefix: undefined }, prevRes);
+      }
+      return { ...state, pendingKeymapPrefix: undefined };
+    }
+
+    const candidate = prefix + key;
+    const exactRes = resolveKeymapWithMeta(state, 's', candidate) ?? resolveKeymapWithMeta(state, 'v', candidate);
+    const hasLonger = isKeymapPrefix(state, 's', candidate) || isKeymapPrefix(state, 'v', candidate);
+    if (exactRes && (!hasLonger || exactRes.nowait)) {
+      return runSelectResolved({ ...state, pendingKeymapPrefix: undefined }, exactRes);
+    }
+    if (hasLonger) {
+      return { ...state, pendingKeymapPrefix: candidate };
+    }
+    if (prefix) {
+      const prevRes = resolveKeymapWithMeta(state, 's', prefix) ?? resolveKeymapWithMeta(state, 'v', prefix);
+      if (prevRes) {
+        const afterPrev = runSelectResolved({ ...state, pendingKeymapPrefix: undefined }, prevRes);
+        return dispatchKey(afterPrev, key, false, macroDepth);
+      }
+      let s: VimEditorState = { ...state, pendingKeymapPrefix: undefined };
+      for (const ch of prefix) {
+        s = dispatchKey(s, ch, false, macroDepth);
+      }
+      return dispatchKey(s, key, false, macroDepth);
+    }
+  }
+
   // 방향키 / Home / End: 선택 영역 확장
   if (
     key === 'ArrowLeft' ||

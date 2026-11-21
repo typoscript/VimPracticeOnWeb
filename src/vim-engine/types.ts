@@ -58,6 +58,10 @@ export interface UserFunction {
   range: boolean;
   /** abort 속성: 본문에서 에러가 나면 즉시 중단 */
   abort: boolean;
+  /** dict 속성: 딕셔너리 메서드로 호출 시 self 바인딩 허용 */
+  dict?: boolean;
+  /** closure 속성: 바깥 함수 스코프 변수 캡처 허용 */
+  closure?: boolean;
   body: string[];
 }
 
@@ -477,8 +481,8 @@ export interface CompletionSession {
   candidates: string[];
   selectedIndex: number; // 0-indexed into candidates
   originalWord: string;
-  /** 자동완성 종류: 단어(keyword), 파일 경로(file), 전체 라인(line), 사전(dictionary), 태그(tag), 옴니(omni) */
-  type?: 'keyword' | 'file' | 'line' | 'dictionary' | 'tag' | 'omni';
+  /** 자동완성 종류: 단어(keyword), 파일 경로(file), 전체 라인(line), 사전(dictionary), 태그(tag), 옴니(omni), Vim 명령/함수(vim), 맞춤법(spell) */
+  type?: 'keyword' | 'file' | 'line' | 'dictionary' | 'tag' | 'omni' | 'vim' | 'spell';
 }
 
 export interface LastVisualSelection {
@@ -609,7 +613,17 @@ export interface VimEditorState {
   /** 현재 매크로 녹화 상태 */
   recordingMacro?: { register: string; keys: string[] } | null;
   /** 가장 마지막에 실행했던 매크로 레지스터 이름 (@@ 재실행용) */
+  /** 마지막 실행한 매크로 레지스터 (@@, Q 반복용) */
   lastPlayedMacro?: string | null;
+  /** 마지막으로 녹화를 완료한 매크로 레지스터 (Q 반복용) */
+  lastRecordedMacro?: string | null;
+  /** 현재 줄 단위 실행 취소(U) 스냅샷 */
+  lineUndoSnapshot?: {
+    line: number;
+    originalText: string;
+    toggledText?: string;
+    bufferId?: number;
+  } | null;
   /** 직전 키가 실패했음을 나타내는 일시적 신호 (Vim의 벨/에러). 매 키 입력 시작 시 제거되며, 매크로·`.`·`:normal`·키매핑 재생은 이 신호에서 중단됩니다. */
   bell?: boolean;
   /** 직전 줄 내 문자 탐색 정보 (';' 및 ',' 반복용) */
@@ -688,6 +702,10 @@ export interface VimEditorState {
   userFunctions?: Record<string, UserFunction>;
   /** 전역 변수 (:let g:x = ..., 함수 밖의 :let x = ...) */
   globalVars?: Record<string, VimScriptValue>;
+  /** :const / :lockvar 로 잠긴 변수 테이블 (키: `${scope}:${name}` 또는 `b:${id}:${name}`) */
+  lockedVars?: Record<string, 'const' | 'lock'>;
+  /** :echohl 로 지정된 마지막 하이라이트 그룹 */
+  lastEchoHl?: string;
   /** 커맨드라인에서 입력 중인 함수 정의 */
   functionDraft?: FunctionDraft | null;
   /** 리더 키 (Leader Key, 기본값: ' ') */

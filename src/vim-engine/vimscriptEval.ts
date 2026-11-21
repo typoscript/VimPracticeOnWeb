@@ -334,16 +334,34 @@ class Evaluator {
   }
 
   private multiplicative(): VimScriptValue {
+    let leftStart = this.pos;
     let left = this.unary();
+    let leftEnd = this.pos;
+    let leftHasFloat = this.tokens
+      .slice(leftStart, leftEnd)
+      .some((tok) => tok.type === 'num' && tok.isFloat);
     while (this.isOp('*') || this.isOp('/') || this.isOp('%')) {
       const op = String(this.peek().value);
       this.pos++;
       const l = toNumber(left);
+      const rightStart = this.pos;
       const r = toNumber(this.unary());
+      const rightHasFloat = this.tokens
+        .slice(rightStart, this.pos)
+        .some((tok) => tok.type === 'num' && tok.isFloat);
+      const anyFloat = leftHasFloat || rightHasFloat || !Number.isInteger(l) || !Number.isInteger(r);
       if (op === '*') left = l * r;
-      // Vim: 0으로 나누면 에러 대신 특수 값을 돌려줍니다 (정수 나눗셈, 0 방향 버림)
-      else if (op === '/') left = r === 0 ? (l === 0 ? -0x7fffffff : l > 0 ? 0x7fffffff : -0x7fffffff) : Math.trunc(l / r);
-      else left = r === 0 ? 0 : l % r;
+      // Vim: 정수끼리는 0 방향 버림 나눗셈, 어느 한쪽이라도 실수(float)이면 부동소수점 나눗셈
+      else if (op === '/') {
+        if (anyFloat) {
+          left = r === 0 ? (l === 0 ? NaN : l > 0 ? Infinity : -Infinity) : l / r;
+        } else {
+          left = r === 0 ? (l === 0 ? -0x7fffffff : l > 0 ? 0x7fffffff : -0x7fffffff) : Math.trunc(l / r);
+        }
+      } else left = r === 0 ? 0 : l % r;
+      leftHasFloat = anyFloat;
+      leftStart = rightStart;
+      leftEnd = this.pos;
     }
     return left;
   }

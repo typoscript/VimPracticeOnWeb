@@ -21,7 +21,7 @@ export function finish(state: VimEditorState, commandMessage?: string, bell = fa
 
 export function signature(fn: UserFunction): string {
   const params = [...fn.params, ...(fn.varargs ? ['...'] : [])].join(', ');
-  return `function ${fn.name}(${params})${fn.range ? ' range' : ''}${fn.abort ? ' abort' : ''}`;
+  return `function ${fn.name}(${params})${fn.range ? ' range' : ''}${fn.abort ? ' abort' : ''}${fn.dict ? ' dict' : ''}${fn.closure ? ' closure' : ''}`;
 }
 
 type Header = Omit<UserFunction, 'body'>;
@@ -55,13 +55,25 @@ export function parseFunctionHeader(rest: string): Header | string {
 
   let range = false;
   let abort = false;
+  let dict = false;
+  let closure = false;
   for (const word of m[3].split(/\s+/).filter((w) => w.length > 0)) {
     if (word === 'range') range = true;
     else if (word === 'abort') abort = true;
-    else if (word !== 'dict' && word !== 'closure') return msg('E488: 불필요한 문자가 있습니다: {word}', { word });
+    else if (word === 'dict') dict = true;
+    else if (word === 'closure') closure = true;
+    else return msg('E488: 불필요한 문자가 있습니다: {word}', { word });
   }
 
-  return { name, params, varargs, range, abort };
+  return {
+    name,
+    params,
+    varargs,
+    range,
+    abort,
+    ...(dict ? { dict: true } : {}),
+    ...(closure ? { closure: true } : {}),
+  };
 }
 
 export function formatFunctionList(state: VimEditorState): string {

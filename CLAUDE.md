@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 180개 테스트 파일, 2,163개 테스트 100% 통과 필수)*
+  *(현재 181개 테스트 파일, 2,178개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -198,6 +198,10 @@
   - **함수·클래스 텍스트 객체 (`af`/`if`, `ac`/`ic`)**: JS/TS/Go/Rust 중괄호 기반 함수·화살표 함수·클래스 메서드·클래스/인터페이스/구조체 및 Python 들여쓰기 기반 `def`/`class` 를 감지하며 중첩 시 가장 안쪽 블록부터 `[count]` 로 바깥 블록까지 확장합니다. `d`/`c`/`y`/`v`/`>`/`<`/`=`/`gc`/`gq`/`gu`/`gU`/`g~` 와 `.` 반복을 모두 지원합니다.
   - **인자·매개변수 텍스트 객체 (`aa`/`ia`)**: 단일 줄·멀티라인 `(...)`/`[...]` 내부에서 중첩 호출·문자열 리터럴 쉼표를 보존하며 최상위 인자 경계를 계산합니다. `aa` 는 앞·중간 인자의 뒤 쉼표+공백과 마지막 인자의 앞 쉼표를 정리해 불필요한 쉼표(dangling comma)를 남기지 않습니다.
   - **함수 시작/끝 이동 (`]f`/`[f`/`]F`/`[F`)**: NORMAL·VISUAL·연산자 대기(`d]f`, `y[f` 등) 및 `[count]` 를 지원하며 대상이 없으면 bell 을 울립니다.
+- **순정 Vim 100% 완성 패치 (노멀 `X`/`U`/`Q`, Ex `;` 범위·`:keepjumps`/`:keepmarks`/`:lockmarks`, Vimscript Float/수학·`:const`/`:lockvar`·`:echoerr`/`:echon`/`:echohl`·Heredoc·`dict`/`closure`, `:smap`/`:map!`/`*mapclear`, Insert `Ctrl-x Ctrl-v`/`Ctrl-x s`/`0 Ctrl-d`/`^ Ctrl-d`)**:
+  - **노멀·Ex 문법 보강 (`operators.ts`, `normalStandaloneCommands.ts`, `vimEngine.ts`, `exRange.ts`, `commandLine.ts`)**: 커서 왼쪽 문자 삭제 `[count]X`(레지스터·`.`·Undo 연동), 줄 단위 실행 취소·토글 `U`(`lineUndoSnapshot`), Neovim 기본 마지막 매크로 재실행 `[count]Q`(`lastRecordedMacro`/`lastPlayedMacro`), 첫 주소 이동 후 상대 평가하는 Ex 세미콜론 범위(`;`) 및 연쇄 범위, `:keepjumps`/`:keepmarks`/`:lockmarks` Ex 모디파이어를 구현했습니다.
+  - **Vimscript 문법 완성 (`vimscriptLexer.ts`, `vimscriptValues.ts`, `vimscriptEval.ts`, `vimscriptBuiltins.ts`, `vimscriptFunctions.ts`, `vimscriptEngine.ts`, `sourceEngine.ts`)**: 부동소수점 리터럴(`3.14`, `1.5e-2`)·실수 나눗셈·`v:t_*` 상수·수학 내장 함수(`float2nr`, `round`, `floor`, `ceil`, `trunc`, `sqrt`, `pow`, `fmod`, `str2float`, `sin`/`cos`/`tan`/`log`/`log10`/`exp`), `:function` `dict`/`closure` 속성 보존 및 `self` 바인딩, 불변 `:const`·`:lockvar`/`:unlockvar`(`E46`/`E741`), `:echoerr`/`:echon`/`:echohl`, Heredoc(`:let/:const var =<< [trim] END ... END`, `E990`)을 구현했습니다.
+  - **키매핑 전 모드 & Insert 완성/들여쓰기 (`keymapEngine.ts`, `exListAndToolCommands.ts`, `visualMode.ts`, `completion.ts`, `insertMode.ts`, `wildmenuCatalog.ts`)**: Select 모드 `:smap`/`:snoremap`/`:sunmap`/`:smapclear`, Insert+Cmdline 동시 `:map!`/`:noremap!`/`:unmap!`/`:mapclear!`, 전 모드 `*mapclear` (`<buffer>` 포함), Insert `Ctrl-x Ctrl-v`(Vim 명령·함수 완성)·`Ctrl-x s`/`Ctrl-x Ctrl-s`(맞춤법 추천 완성)·`0 Ctrl-d`/`^ Ctrl-d`(선행 들여쓰기 즉시 제거)를 구현했습니다.
 
 ---
 

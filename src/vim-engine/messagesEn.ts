@@ -444,4 +444,11 @@ export const EN_MESSAGES: Record<string, string> = {
   "[LSP] 코드 액션 적용: {title}": "[LSP] Applied code action: {title}",
   "LSP: 현재 문서에 심볼이 없습니다": "LSP: No document symbols found",
   "[LSP] 문서 심볼 {count}개 (:lopen)": "[LSP] {count} document symbols (:lopen)",
+  "E741: 값이 잠겨 있어 변경할 수 없습니다: {name}": "E741: Value is locked: {name}",
+  "E990: Heredoc 종료 표식을 찾을 수 없습니다: {marker}": "E990: Missing end marker: {marker}",
+  "E15: :const 에는 = 만 쓸 수 있습니다: {line}": "E15: Invalid expression for :const: {line}",
+  "E471: 인자가 필요합니다": "E471: Argument required",
+  "입력/명령행 (Insert/Cmdline)": "Insert/Cmdline",
+  "셀렉트 (Select)": "Select",
+  "[키매핑 초기화] {cmd} ({count}개 삭제)": "[Keymaps cleared] {cmd} ({count} removed)",
 };

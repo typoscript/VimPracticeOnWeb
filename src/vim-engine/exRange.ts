@@ -236,28 +236,51 @@ export function extractRangeAndCommand(
   }
 
   let consumed = res1.consumed;
-  const rest = raw.slice(consumed);
-  const sepMatch = rest.match(/^\s*([,;])\s*/);
+  let prevLine = res1.line;
+  let rangeStart = res1.line;
+  let rangeEnd = res1.line;
+  let hasSecond = false;
+  let workingState = state;
 
-  if (sepMatch) {
-    const afterSep = rest.slice(sepMatch[0].length);
-    const res2 = parseSingleAddress(afterSep, state, res1.line, true);
-    if (res2?.error) {
-      return { range: null, hasRange: true, command: '', error: res2.error };
+  for (;;) {
+    const rest = raw.slice(consumed);
+    const sepMatch = rest.match(/^\s*([,;])\s*/);
+    if (!sepMatch) break;
+
+    const isSemicolon = sepMatch[1] === ';';
+    const clampedPrev = Math.max(0, Math.min(Math.max(0, totalLines - 1), prevLine));
+    if (isSemicolon) {
+      workingState = { ...workingState, cursor: { line: clampedPrev, col: 0 } };
     }
-    if (res2 && res2.consumed > 0) {
-      consumed += sepMatch[0].length + res2.consumed;
-      const startLine = Math.max(0, Math.min(res1.line, res2.line));
-      const endLine = Math.min(Math.max(0, totalLines - 1), Math.max(res1.line, res2.line));
-      const cmd = raw.slice(consumed).trimStart();
-      return {
-        range: { startLine, endLine },
-        hasRange: true,
-        command: cmd,
-      };
-    } else {
+    const afterSep = rest.slice(sepMatch[0].length);
+    const resNext = parseSingleAddress(
+      afterSep,
+      workingState,
+      isSemicolon ? clampedPrev : prevLine,
+      true
+    );
+    if (resNext?.error) {
+      return { range: null, hasRange: true, command: '', error: resNext.error };
+    }
+    if (!resNext || resNext.consumed === 0) {
       return { range: null, hasRange: true, command: '', error: msg('E16: 유효하지 않은 범위입니다') };
     }
+    consumed += sepMatch[0].length + resNext.consumed;
+    rangeStart = prevLine;
+    rangeEnd = resNext.line;
+    prevLine = resNext.line;
+    hasSecond = true;
+  }
+
+  if (hasSecond) {
+    const startLine = Math.max(0, Math.min(rangeStart, rangeEnd));
+    const endLine = Math.min(Math.max(0, totalLines - 1), Math.max(rangeStart, rangeEnd));
+    const cmd = raw.slice(consumed).trimStart();
+    return {
+      range: { startLine, endLine },
+      hasRange: true,
+      command: cmd,
+    };
   } else {
     // 단일 주소 범위
     const targetLine = Math.max(0, Math.min(Math.max(0, totalLines - 1), res1.line));

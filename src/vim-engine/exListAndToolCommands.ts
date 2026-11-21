@@ -24,6 +24,7 @@ import {
   cycleTagMatch,
 } from './tagEngine';
 import {
+  clearKeymaps,
   registerKeymap,
   unregisterKeymap,
   formatKeymapsList,
@@ -274,25 +275,39 @@ function tryExecuteMappingAndMiscToolCommand(
     });
   }
 
-  // 키매핑 목록 조회: :map, :nmap, :imap, :vmap, :xmap, :omap, :cmap 등 (인자 없음)
-  const listMatch = trimmed.match(
-    /^:?\s*(map|nmap|imap|vmap|xmap|omap|cmap|noremap|nnoremap|inoremap|vnoremap|xnoremap|onoremap|cnoremap)$/i
+  // 키매핑 초기화: :mapclear[!], :nmapclear, :imapclear, :vmapclear, :xmapclear, :smapclear, :omapclear, :cmapclear
+  const mapclearMatch = trimmed.match(
+    /^:?\s*([nivxsoc]?mapclear!?)(?:\s+(.*))?$/i
   );
-  if (listMatch) {
-    const cmd = listMatch[1].toLowerCase();
-    let modeFilter = 'all';
-    if (cmd.startsWith('i')) modeFilter = 'i';
-    else if (cmd.startsWith('n') && !cmd.startsWith('nore')) modeFilter = 'n';
-    else if (cmd.startsWith('v')) modeFilter = 'v';
-    else if (cmd.startsWith('x')) modeFilter = 'x';
-    else if (cmd.startsWith('o')) modeFilter = 'o';
-    else if (cmd.startsWith('c')) modeFilter = 'c';
-    return finishEx(state, { commandMessage: formatKeymapsList(state, modeFilter) });
+  if (mapclearMatch) {
+    const bufferOnly = /^<buffer>$/i.test((mapclearMatch[2] ?? '').trim());
+    return clearKeymaps(state, mapclearMatch[1], { buffer: bufferOnly });
   }
 
-  // 커스텀 키매핑 등록 또는 단일 키 조회(:nmap {lhs}, :imap <buffer> {lhs})
+  const resolveListModeFilter = (rawCmd: string): string => {
+    const cmd = rawCmd.toLowerCase();
+    if (cmd.endsWith('!')) return 'ic';
+    if (cmd.startsWith('i')) return 'i';
+    if (cmd.startsWith('n') && !cmd.startsWith('nore')) return 'n';
+    if (cmd.startsWith('v')) return 'v';
+    if (cmd.startsWith('x')) return 'x';
+    if (cmd.startsWith('s')) return 's';
+    if (cmd.startsWith('o')) return 'o';
+    if (cmd.startsWith('c')) return 'c';
+    return 'all';
+  };
+
+  // 키매핑 목록 조회: :map[!], :nmap, :imap, :vmap, :xmap, :smap, :omap, :cmap 등 (인자 없음)
+  const listMatch = trimmed.match(
+    /^:?\s*(map!|noremap!|map|nmap|imap|vmap|xmap|smap|omap|cmap|noremap|nnoremap|inoremap|vnoremap|xnoremap|snoremap|onoremap|cnoremap)$/i
+  );
+  if (listMatch) {
+    return finishEx(state, { commandMessage: formatKeymapsList(state, resolveListModeFilter(listMatch[1])) });
+  }
+
+  // 커스텀 키매핑 등록 또는 단일 키 조회(:nmap {lhs}, :imap <buffer> {lhs}, :smap, :map!)
   const mapMatch = trimmed.match(
-    /^:?\s*(nmap|nnoremap|imap|inoremap|vmap|vnoremap|xmap|xnoremap|omap|onoremap|cmap|cnoremap|map|noremap)\s+([\s\S]+)$/i
+    /^:?\s*(nmap|nnoremap|imap|inoremap|vmap|vnoremap|xmap|xnoremap|smap|snoremap|omap|onoremap|cmap|cnoremap|map!|noremap!|map|noremap)\s+([\s\S]+)$/i
   );
   if (mapMatch) {
     const parsed = parseMapRest(mapMatch[2]);
@@ -301,16 +316,8 @@ function tryExecuteMappingAndMiscToolCommand(
     }
     const query = parseMapQuery(mapMatch[2]);
     if (query) {
-      const cmd = mapMatch[1].toLowerCase();
-      let modeFilter = 'all';
-      if (cmd.startsWith('i')) modeFilter = 'i';
-      else if (cmd.startsWith('n') && !cmd.startsWith('nore')) modeFilter = 'n';
-      else if (cmd.startsWith('v')) modeFilter = 'v';
-      else if (cmd.startsWith('x')) modeFilter = 'x';
-      else if (cmd.startsWith('o')) modeFilter = 'o';
-      else if (cmd.startsWith('c')) modeFilter = 'c';
       return finishEx(state, {
-        commandMessage: formatKeymapsList(state, modeFilter, {
+        commandMessage: formatKeymapsList(state, resolveListModeFilter(mapMatch[1]), {
           lhsFilter: query.lhs || undefined,
           bufferOnly: query.bufferOnly,
         }),
@@ -324,9 +331,9 @@ function tryExecuteMappingAndMiscToolCommand(
     return userCmdDef;
   }
 
-  // 키매핑 해제: :unmap, :nunmap, :iunmap, :vunmap, :xunmap, :ounmap, :cunmap
+  // 키매핑 해제: :unmap[!], :nunmap, :iunmap, :vunmap, :xunmap, :sunmap, :ounmap, :cunmap
   const unmapMatch = trimmed.match(
-    /^:?\s*(unmap|nunmap|iunmap|vunmap|xunmap|ounmap|cunmap)\s+([\s\S]+)$/i
+    /^:?\s*(unmap!|unmap|nunmap|iunmap|vunmap|xunmap|sunmap|ounmap|cunmap)\s+([\s\S]+)$/i
   );
   if (unmapMatch) {
     const parsed = parseUnmapRest(unmapMatch[2]);

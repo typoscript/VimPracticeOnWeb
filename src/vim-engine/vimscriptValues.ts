@@ -33,6 +33,8 @@ export interface EvalContext {
   state: VimEditorState;
   /** 함수 지역 변수 (l:) — 없으면 함수 밖 */
   locals?: Record<string, VimScriptValue>;
+  /** 함수 지역 잠금 변수 (:const / :lockvar) */
+  lockedLocals?: Record<string, 'const' | 'lock'>;
   /** 함수 인자 (a:) */
   args?: Record<string, VimScriptValue>;
   /** map() / filter() 표현식 안의 v:val, v:key */
@@ -151,7 +153,8 @@ export function addValues(a: VimScriptValue, b: VimScriptValue): VimScriptValue 
 }
 
 export function typeCode(v: VimScriptValue): number {
-  return typeof v === 'number' ? 0 : typeof v === 'string' ? 1 : isList(v) ? 3 : isDict(v) ? 4 : isFuncref(v) ? 2 : 0;
+  if (typeof v === 'number') return Number.isInteger(v) ? 0 : 5;
+  return typeof v === 'string' ? 1 : isList(v) ? 3 : isDict(v) ? 4 : isFuncref(v) ? 2 : 0;
 }
 
 /** == 비교 (리스트·딕셔너리는 내용 비교) */
@@ -257,7 +260,20 @@ export function resolveVariableName(ctx: Pick<EvalContext, 'locals'>, name: stri
 function getScopeStore(ctx: EvalContext, scope: VarScope): Record<string, VimScriptValue> {
   const s = ctx.state;
   if (scope === 'v') {
-    return { true: 1, false: 0, exception: '', throwpoint: '', ...(ctx.vvars ?? {}) };
+    return {
+      true: 1,
+      false: 0,
+      t_number: 0,
+      t_string: 1,
+      t_func: 2,
+      t_list: 3,
+      t_dict: 4,
+      t_float: 5,
+      t_bool: 6,
+      exception: '',
+      throwpoint: '',
+      ...(ctx.vvars ?? {}),
+    };
   }
   if (scope === 'a') return ctx.args ?? {};
   if (scope === 'l') return ctx.locals ?? {};
@@ -350,7 +366,62 @@ export function readVariable(ctx: EvalContext, name: string): VimScriptValue {
   throw new VimScriptError(msg('E121: 정의되지 않은 변수입니다: {name}', { name }));
 }
 
-/** 변수에 값을 씁니다. (a: / v: 는 읽기 전용) */
+function getVarLockKey(ctx: EvalContext, scope: VarScope, key: string): string {
+  const s = ctx.state;
+  if (scope === 'b') return `b:${s.currentBufferId ?? 1}:${key}`;
+  if (scope === 'w') return `w:${s.activePaneIndex ?? 0}:${key}`;
+  if (scope === 't') return `t:${s.currentTabId ?? 1}:${key}`;
+  return `${scope}:${key}`;
+}
+
+export function getVariableLockKind(ctx: EvalContext, name: string): 'const' | 'lock' | null {
+  const { scope, key } = resolveVariableName(ctx, name);
+  if (!key) return null;
+  if (scope === 'l') return ctx.lockedLocals?.[key] ?? null;
+  return ctx.state.lockedVars?.[getVarLockKey(ctx, scope, key)] ?? null;
+}
+
+export function lockVariable(ctx: EvalContext, name: string, kind: 'const' | 'lock'): void {
+  const { scope, key } = resolveVariableName(ctx, name);
+  if (!key || scope === 'a' || scope === 'v') return;
+  if (scope === 'l') {
+    if (!ctx.lockedLocals) ctx.lockedLocals = {};
+    ctx.lockedLocals[key] = kind;
+    return;
+  }
+  const lk = getVarLockKey(ctx, scope, key);
+  ctx.state = {
+    ...ctx.state,
+    lockedVars: { ...(ctx.state.lockedVars ?? {}), [lk]: kind },
+  };
+}
+
+export function unlockVariable(ctx: EvalContext, name: string): void {
+  const { scope, key } = resolveVariableName(ctx, name);
+  if (!key || scope === 'a' || scope === 'v') return;
+  if (scope === 'l') {
+    if (ctx.lockedLocals?.[key] === 'lock') delete ctx.lockedLocals[key];
+    return;
+  }
+  const lk = getVarLockKey(ctx, scope, key);
+  if (ctx.state.lockedVars?.[lk] === 'lock') {
+    const next = { ...ctx.state.lockedVars };
+    delete next[lk];
+    ctx.state = { ...ctx.state, lockedVars: next };
+  }
+}
+
+function assertVariableWritable(ctx: EvalContext, name: string): void {
+  const lockKind = getVariableLockKind(ctx, name);
+  if (lockKind === 'const') {
+    throw new VimScriptError(msg('E46: 읽기 전용 변수는 바꿀 수 없습니다: {name}', { name }));
+  }
+  if (lockKind === 'lock') {
+    throw new VimScriptError(msg('E741: 값이 잠겨 있어 변경할 수 없습니다: {name}', { name }));
+  }
+}
+
+/** 변수에 값을 씁니다. (a: / v: 및 :const/:lockvar 변수는 읽기 전용) */
 export function writeVariable(ctx: EvalContext, name: string, value: VimScriptValue): void {
   const { scope, key } = resolveVariableName(ctx, name);
   if (scope === 'a' || scope === 'v') throw new VimScriptError(msg('E46: 읽기 전용 변수는 바꿀 수 없습니다: {name}', { name }));
@@ -359,6 +430,7 @@ export function writeVariable(ctx: EvalContext, name: string, value: VimScriptVa
     updateScopeStore(ctx, scope, { ...value.items });
     return;
   }
+  assertVariableWritable(ctx, name);
   if (scope === 'l' && ctx.locals) {
     ctx.locals[key] = value;
     return;
@@ -369,6 +441,7 @@ export function writeVariable(ctx: EvalContext, name: string, value: VimScriptVa
 export function deleteVariable(ctx: EvalContext, name: string, force: boolean): void {
   const { scope, key } = resolveVariableName(ctx, name);
   if (scope === 'a' || scope === 'v') throw new VimScriptError(msg('E46: 읽기 전용 변수는 바꿀 수 없습니다: {name}', { name }));
+  assertVariableWritable(ctx, name);
   const store = getScopeStore(ctx, scope);
   if (!key || !(key in store)) {
     if (force) return;
@@ -384,9 +457,10 @@ export function deleteVariable(ctx: EvalContext, name: string, force: boolean): 
 }
 
 /** :redir 세션이 활성화된 경우 출력 문자열을 대상 변수 또는 레지스터에 추가합니다. */
-export function appendRedirText(state: VimEditorState, text: string): VimEditorState {
+export function appendRedirText(state: VimEditorState, text: string, noNewline = false): VimEditorState {
   const session = state.redirSession;
   if (!session) return state;
+  const sep = noNewline ? '' : '\n';
   if (session.target.startsWith('@')) {
     const reg = session.target[1] === '"' ? '"' : session.target[1].toLowerCase();
     const prev = readRegister(state, reg);
@@ -394,7 +468,7 @@ export function appendRedirText(state: VimEditorState, text: string): VimEditorS
       ...state,
       registers: {
         ...(state.registers ?? {}),
-        [reg]: { type: 'char', content: `${prev}\n${text}` },
+        [reg]: { type: 'char', content: `${prev}${sep}${text}` },
       },
     };
   }
@@ -405,7 +479,7 @@ export function appendRedirText(state: VimEditorState, text: string): VimEditorS
     ...state,
     globalVars: {
       ...(state.globalVars ?? {}),
-      [key]: `${prev}\n${text}`,
+      [key]: `${prev}${sep}${text}`,
     },
   };
 }

@@ -158,6 +158,7 @@ export function rawHandleKey(
         ...state,
         registers: newRegisters,
         recordingMacro: null,
+        lastRecordedMacro: targetReg,
         pendingKeys: undefined,
       };
     }
@@ -325,6 +326,49 @@ export function rawHandleKey(
   // Undo tree 동기화: NORMAL 모드이고 대기 키가 없을 때 버퍼 내용 변경 감지 및 확정
   if (nextState.mode === 'NORMAL' && !nextState.pendingKeys) {
     nextState = recordUndoTreeChange(nextState);
+  }
+
+  // 줄 단위 실행 취소(U) 스냅샷 자동 갱신
+  if (
+    key !== 'U' &&
+    nextState.lines !== state.lines &&
+    (nextState.currentBufferId ?? 1) === (state.currentBufferId ?? 1)
+  ) {
+    if (nextState.lines.length === state.lines.length) {
+      let changedLine = -1;
+      let multiChanged = false;
+      for (let i = 0; i < state.lines.length; i++) {
+        if (state.lines[i] !== nextState.lines[i]) {
+          if (changedLine === -1) changedLine = i;
+          else {
+            multiChanged = true;
+            break;
+          }
+        }
+      }
+      if (!multiChanged && changedLine >= 0) {
+        const curBufId = nextState.currentBufferId ?? 1;
+        const prevSnap = nextState.lineUndoSnapshot;
+        if (prevSnap && prevSnap.line === changedLine && (prevSnap.bufferId ?? 1) === curBufId) {
+          if (prevSnap.toggledText !== undefined) {
+            nextState = { ...nextState, lineUndoSnapshot: { ...prevSnap, toggledText: undefined } };
+          }
+        } else {
+          nextState = {
+            ...nextState,
+            lineUndoSnapshot: {
+              line: changedLine,
+              originalText: state.lines[changedLine],
+              bufferId: curBufId,
+            },
+          };
+        }
+      } else if (multiChanged && nextState.lineUndoSnapshot) {
+        nextState = { ...nextState, lineUndoSnapshot: null };
+      }
+    } else if (nextState.lineUndoSnapshot) {
+      nextState = { ...nextState, lineUndoSnapshot: null };
+    }
   }
 
   // 특수 마크('., '[, ']) 자동 갱신 (버퍼 변경 시)

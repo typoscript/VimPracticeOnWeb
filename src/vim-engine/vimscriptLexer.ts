@@ -1,16 +1,17 @@
 import { msg } from './messages';
 import { VimScriptError, toNumber } from './vimscriptValues';
 
-export type Token = (
-  | { type: 'num'; value: number }
+export type TokenBody =
+  | { type: 'num'; value: number; isFloat?: boolean }
   | { type: 'str'; value: string }
   | { type: 'name'; value: string }
   | { type: 'reg'; value: string }
   | { type: 'opt'; value: string }
   | { type: 'env'; value: string }
   | { type: 'op'; value: string }
-  | { type: 'eof'; value?: undefined }
-) & { space: boolean; start: number; end: number };
+  | { type: 'eof'; value?: undefined };
+
+export type Token = TokenBody & { space: boolean; start: number; end: number };
 
 const OPERATORS = [
   '==#', '==?', '!=#', '!=?', '>=#', '>=?', '<=#', '<=?', '=~#', '=~?', '!~#', '!~?',
@@ -25,7 +26,7 @@ export function tokenize(src: string): Token[] {
   const tokens: Token[] = [];
   let i = 0;
   let space = false;
-  const push = (t: Omit<Token, 'space' | 'start' | 'end'>, start: number, end: number) => {
+  const push = (t: TokenBody, start: number, end: number) => {
     tokens.push({ ...t, space, start, end } as Token);
     space = false;
   };
@@ -36,11 +37,13 @@ export function tokenize(src: string): Token[] {
       i++;
       continue;
     }
-    // 숫자
-    const num = src.slice(i).match(/^(0[xX][0-9a-fA-F]+|\d+)/);
+    // 숫자 (16진 정수, 부동소수점, 10진 정수 — d.key / 1 . 2 와 충돌하지 않도록 소수점 뒤에 숫자가 올 때만 실수)
+    const num = src.slice(i).match(/^(0[xX][0-9a-fA-F]+|\d+\.\d+(?:[eE][+-]?\d+)?|\d+)/);
     if (num) {
       const len = num[1].length;
-      push({ type: 'num', value: toNumber(num[1]) }, i, i + len);
+      const isFloat = num[1].includes('.');
+      const val = isFloat ? parseFloat(num[1]) : toNumber(num[1]);
+      push(isFloat ? { type: 'num', value: val, isFloat: true } : { type: 'num', value: val }, i, i + len);
       i += len;
       continue;
     }

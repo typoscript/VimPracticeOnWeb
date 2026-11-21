@@ -263,6 +263,82 @@ export function deleteChar(state: VimEditorState, count = 1): VimEditorState {
 }
 
 /**
+ * 'X' / '[count]X': 커서 앞(왼쪽)의 count개 글자를 삭제합니다 (dh 와 동일).
+ */
+export function deleteCharBefore(state: VimEditorState, count = 1): VimEditorState {
+  const { line, col } = state.cursor;
+  const currentLine = state.lines[line] ?? '';
+
+  if (col === 0 || currentLine.length === 0) {
+    return { ...state, pendingKeys: undefined };
+  }
+
+  const stateWithSnapshot = pushUndoSnapshot(state);
+  const startCol = Math.max(0, col - Math.max(1, count));
+  const deletedContent = currentLine.slice(startCol, col);
+  const newLine = currentLine.slice(0, startCol) + currentLine.slice(col);
+
+  const nextLines = [...state.lines];
+  nextLines[line] = newLine;
+
+  const clampedCursor = clampCursor(nextLines, { line, col: startCol }, 'NORMAL');
+
+  return {
+    ...stateWithSnapshot,
+    lines: nextLines,
+    cursor: clampedCursor,
+    clipboard: {
+      type: 'text',
+      content: deletedContent,
+    },
+    pendingKeys: undefined,
+  };
+}
+
+/**
+ * 'U': 현재 줄에서 마지막으로 편집하기 전 원래 내용으로 되돌립니다. 다시 U 를 누르면 토글됩니다 (:help U).
+ */
+export function undoCurrentLine(state: VimEditorState): VimEditorState {
+  const snap = state.lineUndoSnapshot;
+  const { line } = state.cursor;
+  const curBufId = state.currentBufferId ?? 1;
+
+  if (!snap || snap.line !== line || (snap.bufferId ?? 1) !== curBufId) {
+    return { ...state, pendingKeys: undefined };
+  }
+
+  const currentLine = state.lines[line] ?? '';
+  let replacement: string;
+  let nextToggled: string | undefined;
+
+  if (currentLine !== snap.originalText) {
+    replacement = snap.originalText;
+    nextToggled = currentLine;
+  } else if (snap.toggledText !== undefined && snap.toggledText !== currentLine) {
+    replacement = snap.toggledText;
+    nextToggled = undefined;
+  } else {
+    return { ...state, pendingKeys: undefined };
+  }
+
+  const stateWithSnapshot = pushUndoSnapshot(state);
+  const nextLines = [...state.lines];
+  nextLines[line] = replacement;
+  const clampedCursor = clampCursor(nextLines, { line, col: 0 }, 'NORMAL');
+
+  return {
+    ...stateWithSnapshot,
+    lines: nextLines,
+    cursor: clampedCursor,
+    pendingKeys: undefined,
+    lineUndoSnapshot: {
+      ...snap,
+      toggledText: nextToggled,
+    },
+  };
+}
+
+/**
  * 'cw' / 'c[count]w': 커서 위치부터 단어 끝까지 삭제 후 클립보드에 저장하고 INSERT 모드로 진입합니다.
  */
 export function changeWord(state: VimEditorState, count = 1): VimEditorState {

@@ -119,10 +119,10 @@ function executePipedCommands(
 }
 
 const EX_MODIFIER_RE =
-  /^:?\s*(sil(?:e(?:n(?:t)?)?)?|keepp(?:a(?:t(?:t(?:e(?:r(?:n(?:s)?)?)?)?)?)?)?|noa(?:u(?:t(?:o(?:c(?:m(?:d)?)?)?)?)?)?|verb(?:o(?:s(?:e)?)?)?)(!)?(?:\s+(.*))?$/;
+  /^:?\s*(sil(?:e(?:n(?:t)?)?)?|keepp(?:a(?:t(?:t(?:e(?:r(?:n(?:s)?)?)?)?)?)?)?|keepj(?:u(?:m(?:p(?:s)?)?)?)?|keepm(?:a(?:r(?:k(?:s)?)?)?)?|lockm(?:a(?:r(?:k(?:s)?)?)?)?|noa(?:u(?:t(?:o(?:c(?:m(?:d)?)?)?)?)?)?|verb(?:o(?:s(?:e)?)?)?)(!)?(?:\s+(.*))?$/;
 
 /**
- * 선행 Ex 모디파이어(:silent[!], :keeppatterns, :noautocmd, :verbose)를 벗겨내고 래핑 실행합니다.
+ * 선행 Ex 모디파이어(:silent[!], :keeppatterns, :keepjumps, :keepmarks, :lockmarks, :noautocmd, :verbose)를 벗겨내고 래핑 실행합니다.
  */
 function tryExecuteWithModifiers(
   state: VimEditorState,
@@ -134,6 +134,8 @@ function tryExecuteWithModifiers(
   let silent = false;
   let silentBang = false;
   let keeppatterns = false;
+  let keepjumps = false;
+  let keepmarks = false;
   let noautocmd = false;
 
   for (;;) {
@@ -147,6 +149,10 @@ function tryExecuteWithModifiers(
       if (bang) silentBang = true;
     } else if (mod.startsWith('keepp')) {
       keeppatterns = true;
+    } else if (mod.startsWith('keepj')) {
+      keepjumps = true;
+    } else if (mod.startsWith('keepm') || mod.startsWith('lockm')) {
+      keepmarks = true;
     } else if (mod.startsWith('noa')) {
       noautocmd = true;
     }
@@ -166,6 +172,20 @@ function tryExecuteWithModifiers(
         hlsearchSuppressed: state.hlsearchSuppressed,
       }
     : null;
+  const savedJumps = keepjumps
+    ? {
+        jumpList: state.jumpList,
+        jumpIndex: state.jumpIndex,
+        lastJumpPos: state.lastJumpPos,
+      }
+    : null;
+  const savedMarks = keepmarks
+    ? {
+        marks: state.marks,
+        lastBracketMarks: state.lastBracketMarks,
+        lastChangeMark: state.lastChangeMark,
+      }
+    : null;
 
   let res = runInner(noautocmd ? { ...state, noautocmdSuppressed: true } : state, rest);
 
@@ -174,6 +194,12 @@ function tryExecuteWithModifiers(
   }
   if (savedSearch) {
     res = { ...res, ...savedSearch };
+  }
+  if (savedJumps) {
+    res = { ...res, ...savedJumps };
+  }
+  if (savedMarks) {
+    res = { ...res, ...savedMarks };
   }
   if (silentBang) {
     res = { ...res, bell: undefined, commandMessage: undefined };

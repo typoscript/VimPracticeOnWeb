@@ -3,6 +3,7 @@ import { clampCursor, getFirstNonBlankCol, getMaxCol } from './cursor';
 import { moveToLastLine } from './motions';
 import {
   deleteChar,
+  deleteCharBefore,
   changeLine,
   changeToEndOfLine,
   replaceChar,
@@ -11,6 +12,7 @@ import {
   openLineBelow,
   openLineAbove,
   undo,
+  undoCurrentLine,
   redo,
   pushUndoSnapshot,
 } from './operators';
@@ -59,8 +61,61 @@ import {
   ParsedPending,
 } from './engineHelpers';
 
+function replayMacroRegister(
+  state: VimEditorState,
+  targetReg: string,
+  count: number,
+  macroDepth: number,
+  runHandleKey: RunHandleKeyFn
+): VimEditorState {
+  if (targetReg === ':') {
+    const lastCmd = state.commandHistory?.[state.commandHistory.length - 1];
+    if (!lastCmd) {
+      return {
+        ...ringBell(state),
+        pendingKeys: undefined,
+        commandMessage: msg('E30: 이전에 실행한 명령행이 없습니다'),
+      };
+    }
+    let curState: VimEditorState = {
+      ...state,
+      pendingKeys: undefined,
+      lastPlayedMacro: ':',
+    };
+    for (let c = 0; c < count && !curState.bell; c++) {
+      if (macroDepth >= 100) break;
+      curState = executeCommandLine(curState, lastCmd, runHandleKey);
+    }
+    return { ...curState, lastPlayedMacro: ':' };
+  }
+
+  const regEntry = state.registers?.[targetReg];
+  if (!regEntry || !regEntry.content) {
+    return { ...state, pendingKeys: undefined, lastPlayedMacro: targetReg };
+  }
+
+  const macroKeys = Array.isArray(regEntry.content)
+    ? regEntry.content
+    : parseMacroStringToKeys(regEntry.content);
+  let curState: VimEditorState = {
+    ...state,
+    pendingKeys: undefined,
+    lastPlayedMacro: targetReg,
+  };
+
+  for (let c = 0; c < count && !curState.bell; c++) {
+    if (macroDepth >= 100) break;
+    for (const mk of macroKeys) {
+      curState = runHandleKey(curState, mk, false, macroDepth + 1);
+      if (curState.bell) break;
+    }
+  }
+
+  return { ...curState, lastPlayedMacro: targetReg };
+}
+
 /**
- * 매크로 녹화(q), 매크로 재생(@{reg}/@@/@:), 도트 반복(.), 단일 문자 교체(r)를 처리합니다.
+ * 매크로 녹화(q), 매크로 재생(@{reg}/@@/@:), Q 반복, 도트 반복(.), 단일 문자 교체(r)를 처리합니다.
  */
 export function handleNormalMacroAndDot(
   state: VimEditorState,
@@ -109,50 +164,19 @@ export function handleNormalMacroAndDot(
       return { ...state, pendingKeys: undefined };
     }
 
-    if (targetReg === ':') {
-      const lastCmd = state.commandHistory?.[state.commandHistory.length - 1];
-      if (!lastCmd) {
-        return {
-          ...ringBell(state),
-          pendingKeys: undefined,
-          commandMessage: msg('E30: 이전에 실행한 명령행이 없습니다'),
-        };
-      }
-      let curState: VimEditorState = {
-        ...state,
-        pendingKeys: undefined,
-        lastPlayedMacro: ':',
-      };
-      for (let c = 0; c < parsed.totalCount && !curState.bell; c++) {
-        if (macroDepth >= 100) break;
-        curState = executeCommandLine(curState, lastCmd, runHandleKey);
-      }
-      return { ...curState, lastPlayedMacro: ':' };
+    return replayMacroRegister(state, targetReg, parsed.totalCount, macroDepth, runHandleKey);
+  }
+
+  // 1-3. Neovim 기본 Q: 마지막 실행/녹화한 매크로(또는 q 레지스터) 즉시 반복 ([count]Q)
+  if (key === 'Q' && !parsed.operator) {
+    const targetReg =
+      state.lastPlayedMacro ??
+      state.lastRecordedMacro ??
+      (state.registers?.['q']?.content ? 'q' : null);
+    if (!targetReg) {
+      return ringBell({ ...state, pendingKeys: undefined });
     }
-
-    const regEntry = state.registers?.[targetReg];
-    if (!regEntry || !regEntry.content) {
-      return { ...state, pendingKeys: undefined, lastPlayedMacro: targetReg };
-    }
-
-    const macroKeys = Array.isArray(regEntry.content)
-      ? regEntry.content
-      : parseMacroStringToKeys(regEntry.content);
-    let curState: VimEditorState = {
-      ...state,
-      pendingKeys: undefined,
-      lastPlayedMacro: targetReg,
-    };
-
-    for (let c = 0; c < parsed.totalCount && !curState.bell; c++) {
-      if (macroDepth >= 100) break;
-      for (const mk of macroKeys) {
-        curState = runHandleKey(curState, mk, false, macroDepth + 1);
-        if (curState.bell) break;
-      }
-    }
-
-    return { ...curState, lastPlayedMacro: targetReg };
+    return replayMacroRegister(state, targetReg, parsed.totalCount, macroDepth, runHandleKey);
   }
 
   // 2. 직전 변경 반복 ('.' Dot Repeat — "1p ~ "8p 후 . 반복 시 번호 레지스터를 1씩 자동 증가)
@@ -435,6 +459,7 @@ export function handleNormalEditingAndMotionFallback(
   if (key === 'n' || key === 'N') return repeatSearch(state, key === 'N');
   if (key === '*' || key === '#') return executeWordSearch(state, key === '*' ? 'forward' : 'backward', true);
   if (key === 'u') return undo(state);
+  if (key === 'U') return undoCurrentLine(state);
   if (key === 'Ctrl-r' || key === 'ctrl+r') return redo(state);
   if (key === 'p' || key === 'P') {
     return executePutVariant(state, key === 'P', parsed.totalCount, undefined, [key], isReplayingDot);
@@ -502,6 +527,13 @@ export function handleNormalEditingAndMotionFallback(
     const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'x'] : ['x'];
     return {
       ...syncRegisters(state, deleteChar(state, parsed.totalCount), false),
+      lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
+    };
+  }
+  if (key === 'X') {
+    const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'X'] : ['X'];
+    return {
+      ...syncRegisters(state, deleteCharBefore(state, parsed.totalCount), false),
       lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
     };
   }

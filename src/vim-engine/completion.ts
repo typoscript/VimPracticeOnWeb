@@ -390,7 +390,7 @@ export function startDictionaryCompletion(
 function startSymbolListCompletion(
   state: VimEditorState,
   symbols: readonly string[],
-  type: 'tag' | 'omni',
+  type: 'tag' | 'omni' | 'vim' | 'spell',
   direction: 'next' | 'prev' = 'next'
 ): VimEditorState {
   const { line, col } = state.cursor;
@@ -464,6 +464,72 @@ export function startOmniCompletion(
 ): VimEditorState {
   const lspKeys = state.lspSymbols ? Object.keys(state.lspSymbols) : [];
   return startSymbolListCompletion(state, [...lspKeys, ...extraSymbols], 'omni', direction);
+}
+
+/**
+ * Ctrl+x Ctrl+v Vim 명령어·내장 함수 자동완성을 시작합니다.
+ */
+export function startVimCommandCompletion(
+  state: VimEditorState,
+  vimItems: readonly string[],
+  direction: 'next' | 'prev' = 'next'
+): VimEditorState {
+  const userFns = state.userFunctions ? Object.keys(state.userFunctions) : [];
+  const userCmds = state.userCommands ? Object.keys(state.userCommands) : [];
+  return startSymbolListCompletion(state, [...vimItems, ...userFns, ...userCmds], 'vim', direction);
+}
+
+/**
+ * Ctrl+x s / Ctrl+x Ctrl+s 맞춤법 추천 자동완성을 시작합니다.
+ */
+export function startSpellCompletion(
+  state: VimEditorState,
+  suggestions: readonly string[],
+  direction: 'next' | 'prev' = 'next'
+): VimEditorState {
+  const { line, col } = state.cursor;
+  const currentLine = state.lines[line] ?? '';
+  const found = findCompletionPrefix(currentLine, col, 1);
+  if (!found || suggestions.length === 0) {
+    return {
+      ...state,
+      insertCtrlXMode: false,
+      commandMessage: '-- Pattern not found --',
+    };
+  }
+
+  const candidates = Array.from(new Set(suggestions.filter((w) => w.length > 0 && w !== found.prefix)));
+  if (candidates.length === 0) {
+    return {
+      ...state,
+      insertCtrlXMode: false,
+      commandMessage: '-- Pattern not found --',
+    };
+  }
+
+  const initialIndex = direction === 'next' ? 0 : candidates.length - 1;
+  const chosen = candidates[initialIndex];
+  const newLine = currentLine.slice(0, found.startCol) + chosen + currentLine.slice(col);
+  const nextLines = [...state.lines];
+  nextLines[line] = newLine;
+  const nextCol = found.startCol + chosen.length;
+
+  return {
+    ...state,
+    lines: nextLines,
+    cursor: { line, col: nextCol },
+    blockInsertSession: syncBlockInsertCompletion(state, newLine, nextCol),
+    insertCtrlXMode: false,
+    commandMessage: undefined,
+    completionSession: {
+      prefix: found.prefix,
+      prefixStartCol: found.startCol,
+      candidates,
+      selectedIndex: initialIndex,
+      originalWord: found.prefix,
+      type: 'spell',
+    },
+  };
 }
 
 /**

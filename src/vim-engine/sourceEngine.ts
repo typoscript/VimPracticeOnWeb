@@ -1,7 +1,13 @@
 import { VimEditorState } from './types';
 import { executeSetCommand } from './setEngine';
 import { buildVfsMap, getVfsFile, resolveVfsFilename } from './vfs';
-import { registerKeymap, unregisterKeymap, parseMapRest, parseUnmapRest } from './keymapEngine';
+import {
+  clearKeymaps,
+  registerKeymap,
+  unregisterKeymap,
+  parseMapRest,
+  parseUnmapRest,
+} from './keymapEngine';
 import { executeAbbrevCommand } from './abbrevEngine';
 import { executeUserCommandDefinition } from './userCommandEngine';
 import {
@@ -9,6 +15,7 @@ import {
   executeScriptBlock,
   isEndFunctionLine,
   isFunctionHeaderLine,
+  parseHeredocStart,
 } from './vimscriptEngine';
 import { isSessionScript, restoreSession } from './sessionEngine';
 import { msg } from './messages';
@@ -19,10 +26,24 @@ export type SourceExRunner = (state: VimEditorState, command: string) => VimEdit
 const BLOCK_OPEN_RE = /^:?\s*(if|wh(?:i(?:le?)?)?|for|try)\b/;
 const BLOCK_CLOSE_RE = /^:?\s*(en(?:d(?:if?)?)?|endw(?:h(?:i(?:le?)?)?)?|endfo(?:r)?|endt(?:r(?:y)?)?)\b/;
 
-/** Vim script 줄 이음(\)과 인라인 연속 주석("\\)을 하나의 논리 줄로 결합합니다. */
+/** Vim script 줄 이음(\)과 인라인 연속 주석("\\)을 하나의 논리 줄로 결합합니다. Heredoc 본문은 원문 그대로 유지합니다. */
 function joinLineContinuations(rawLines: string[]): string[] {
   const joined: string[] = [];
+  let heredocMarker: string | null = null;
   for (const raw of rawLines) {
+    if (heredocMarker !== null) {
+      joined.push(raw);
+      if (raw.trimEnd() === heredocMarker) {
+        heredocMarker = null;
+      }
+      continue;
+    }
+    const hd = parseHeredocStart(raw);
+    if (hd) {
+      joined.push(raw);
+      heredocMarker = hd.marker;
+      continue;
+    }
     const trimmed = raw.trimStart();
     if (trimmed.startsWith('"\\ ') || trimmed === '"\\') {
       continue;
@@ -132,6 +153,22 @@ export function sourceScript(state: VimEditorState, targetFile = '%', runEx?: So
       continue;
     }
 
+    // 0.3. Heredoc 블록 (:let/:const var =<< [trim] END ... END)
+    const hdStart = parseHeredocStart(line);
+    if (hdStart && runEx) {
+      const hdBlock: string[] = [logicalLines[idx]];
+      let end = idx + 1;
+      while (end < logicalLines.length) {
+        hdBlock.push(logicalLines[end]);
+        if (logicalLines[end].trimEnd() === hdStart.marker) break;
+        end++;
+      }
+      curState = executeScriptBlock(curState, hdBlock, runEx);
+      idx = end;
+      appliedCount++;
+      continue;
+    }
+
     // 0.5. 다중 줄 제어문 블록 (if/while/for/try ... endif/endwhile/endfor/endtry)
     if (BLOCK_OPEN_RE.test(line) && runEx) {
       const { block, endIdx } = collectControlBlock(logicalLines, idx);
@@ -150,8 +187,17 @@ export function sourceScript(state: VimEditorState, targetFile = '%', runEx?: So
       continue;
     }
 
-    // 2. 키매핑 명령어 (inoremap, nnoremap, vnoremap, nmap, imap, vmap, map, noremap 및 <buffer>/<silent>/<expr>)
-    const mapMatch = line.match(/^([a-zA-Z]*map|noremap)\s+([\s\S]+)$/i);
+    // 2. 키매핑 초기화 (:mapclear[!], :nmapclear, :imapclear, :vmapclear, :xmapclear, :smapclear, :omapclear, :cmapclear)
+    const mapclearMatch = line.match(/^([nivxsoc]?mapclear!?)(?:\s+(.*))?$/i);
+    if (mapclearMatch) {
+      const bufferOnly = /^<buffer>$/i.test((mapclearMatch[2] ?? '').trim());
+      curState = clearKeymaps(curState, mapclearMatch[1], { buffer: bufferOnly });
+      appliedCount++;
+      continue;
+    }
+
+    // 2.5. 키매핑 명령어 (inoremap, nnoremap, vnoremap, snoremap, map!, noremap!, unmap!, nmap, imap, vmap, smap, map, noremap 등)
+    const mapMatch = line.match(/^([a-zA-Z]*map!?|noremap!?)\s+([\s\S]+)$/i);
     if (mapMatch) {
       const cmdType = mapMatch[1];
       const lowerCmd = cmdType.toLowerCase();

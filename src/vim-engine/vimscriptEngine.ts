@@ -17,7 +17,12 @@ import {
   unsetLValue,
   writeLValue,
 } from './vimscriptEval';
-import { appendRedirText } from './vimscriptValues';
+import {
+  appendRedirText,
+  lockVariable,
+  readVariable,
+  unlockVariable,
+} from './vimscriptValues';
 import { pushUndoSnapshot } from './operators';
 import { msg } from './messages';
 import {
@@ -60,6 +65,34 @@ export type { ExRunner };
  * 이 모듈은 commandLine.ts에 의존하지 않으며, Ex 명령 실행은 호출부가 넘겨주는 runner가 담당합니다.
  */
 
+const HEREDOC_START_RE = /^(let|const)\s+([A-Za-z_][\w:]*)\s*=\s*<<\s*(?:(trim)\s+)?(\S+)\s*$/;
+
+/** `:let var =<< [trim] END` 또는 `:const var =<< [trim] END` 시작 줄을 파싱합니다. */
+export function parseHeredocStart(
+  rawLine: string
+): { keyword: 'let' | 'const'; varName: string; trim: boolean; marker: string } | null {
+  const m = rawLine.trim().replace(/^:\s*/, '').match(HEREDOC_START_RE);
+  if (!m) return null;
+  return {
+    keyword: m[1] as 'let' | 'const',
+    varName: m[2],
+    trim: m[3] === 'trim',
+    marker: m[4],
+  };
+}
+
+function trimHeredocBody(rawLines: string[], trim: boolean): string[] {
+  if (!trim) return rawLines;
+  let minIndent = Infinity;
+  for (const l of rawLines) {
+    if (l.trim().length === 0) continue;
+    const lead = l.match(/^[ \t]*/)?.[0].length ?? 0;
+    if (lead < minIndent) minIndent = lead;
+  }
+  if (!Number.isFinite(minIndent) || minIndent === 0) return rawLines;
+  return rawLines.map((l) => (l.length >= minIndent ? l.slice(minIndent) : l.trimStart()));
+}
+
 /** Vim의 'maxfuncdepth' 기본값 */
 const MAX_FUNC_DEPTH = 100;
 /** while 무한 루프 방지 */
@@ -90,7 +123,8 @@ export function callUserFunction(
   runEx: ExRunner,
   depth = 0,
   firstline = state.cursor.line + 1,
-  lastline = state.cursor.line + 1
+  lastline = state.cursor.line + 1,
+  selfDict?: VimScriptValue
 ): CallResult {
   const fn = state.userFunctions?.[name];
   if (!fn) return { state, value: 0, error: msg('E117: 알 수 없는 함수입니다: {name}', { name }) };
@@ -109,11 +143,11 @@ export function callUserFunction(
 
   const ctx: EvalContext = {
     state,
-    locals: {},
+    locals: selfDict !== undefined ? { self: selfDict } : {},
     args: aArgs,
     runEx,
     callUserFunction: (c, n, a) => {
-      const r = callUserFunction(c.state, n, a, runEx, depth + 1);
+      const r = callUserFunction(c.state, n, a, runEx, depth + 1, undefined, undefined, c.locals?.self);
       c.state = r.state;
       if (r.error) throw new VimScriptError(r.error);
       return r.value;
@@ -320,7 +354,37 @@ export function runScriptLines(
         throw new VimScriptError(excStr);
       }
 
-      if (!executing()) continue;
+      if (!executing()) {
+        // 비활성 분기에서도 heredoc 본문은 마커까지 건너뛰어 제어 키워드 오인식을 방지
+        const skippedHd = parseHeredocStart(line);
+        if (skippedHd) {
+          let j = pc + 1;
+          while (j < lines.length && lines[j].trimEnd() !== skippedHd.marker) j++;
+          pc = j;
+        }
+        continue;
+      }
+
+      // 1.5. Heredoc (:let/:const var =<< [trim] END ... END)
+      const heredoc = parseHeredocStart(line);
+      if (heredoc) {
+        const bodyLines: string[] = [];
+        let endIdx = pc + 1;
+        while (endIdx < lines.length && lines[endIdx].trimEnd() !== heredoc.marker) {
+          bodyLines.push(lines[endIdx]);
+          endIdx++;
+        }
+        if (endIdx >= lines.length) {
+          throw new VimScriptError(msg('E990: Heredoc 종료 표식을 찾을 수 없습니다: {marker}', { marker: heredoc.marker }));
+        }
+        const finalLines = trimHeredocBody(bodyLines, heredoc.trim);
+        writeLValue(ctx, parseLValue(heredoc.varName, ctx), finalLines);
+        if (heredoc.keyword === 'const') {
+          lockVariable(ctx, heredoc.varName, 'const');
+        }
+        pc = endIdx;
+        continue;
+      }
 
       // 2. return
       if (word === 'return' || word === 'retu') {
@@ -384,16 +448,40 @@ function runScriptCommand(ctx: EvalContext, line: string, runEx: ExRunner): bool
   const cmd = word[1];
   const rest = line.slice(word[0].length).trim();
 
-  if (cmd === 'let') {
+  if (cmd === 'let' || cmd === 'const') {
     const parts = splitLet(rest);
     if (!parts) throw new VimScriptError(msg('E15: 잘못된 :let 구문입니다: {line}', { line }));
+    if (cmd === 'const' && parts.op !== '=') {
+      throw new VimScriptError(msg('E15: :const 에는 = 만 쓸 수 있습니다: {line}', { line }));
+    }
     const value = evaluateVimScript(parts.expr, ctx);
     if (parts.target.startsWith('[')) {
       if (parts.op !== '=') throw new VimScriptError(msg('E15: 리스트 풀기에는 = 만 쓸 수 있습니다: {line}', { line }));
-      assignTargets(ctx, parts.target, value);
+      const assignedNames = assignTargets(ctx, parts.target, value);
+      if (cmd === 'const') {
+        for (const n of assignedNames) lockVariable(ctx, n, 'const');
+      }
     } else {
       const lv = parseLValue(parts.target, ctx);
       writeLValue(ctx, lv, parts.op === '=' ? value : combine(readLValue(ctx, lv), parts.op, value));
+      if (cmd === 'const' && lv.path.length === 0) {
+        lockVariable(ctx, lv.base, 'const');
+      }
+    }
+    return true;
+  }
+
+  if (cmd === 'lockv' || cmd === 'lockvar' || cmd === 'unlo' || cmd === 'unlockvar') {
+    const isLock = cmd === 'lockv' || cmd === 'lockvar';
+    const argBody = rest.replace(/^\d+\s+/, '').trim();
+    const targets = splitTargets(argBody);
+    if (targets.length === 0) {
+      throw new VimScriptError(msg('E471: 인자가 필요합니다'));
+    }
+    for (const target of targets) {
+      readVariable(ctx, target);
+      if (isLock) lockVariable(ctx, target, 'lock');
+      else unlockVariable(ctx, target);
     }
     return true;
   }
@@ -414,6 +502,29 @@ function runScriptCommand(ctx: EvalContext, line: string, runEx: ExRunner): bool
     let nextState: VimEditorState = { ...ctx.state, commandMessage: text, messageHistory: nextHistory };
     if (nextState.redirSession) nextState = appendRedirText(nextState, text);
     ctx.state = nextState;
+    return true;
+  }
+
+  if (cmd === 'echon') {
+    const text = evaluateVimScriptList(rest, ctx).map(displayValue).join('');
+    const combined = `${ctx.state.commandMessage ?? ''}${text}`;
+    let nextState: VimEditorState = { ...ctx.state, commandMessage: combined };
+    if (nextState.redirSession) nextState = appendRedirText(nextState, text, true);
+    ctx.state = nextState;
+    return true;
+  }
+
+  if (cmd === 'echoe' || cmd === 'echoerr') {
+    const text = evaluateVimScriptList(rest, ctx).map(displayValue).join(' ');
+    const nextHistory = [...(ctx.state.messageHistory ?? []), text].slice(-200);
+    let nextState: VimEditorState = { ...ctx.state, commandMessage: text, messageHistory: nextHistory };
+    if (nextState.redirSession) nextState = appendRedirText(nextState, text);
+    ctx.state = nextState;
+    throw new VimScriptError(text);
+  }
+
+  if (cmd === 'echoh' || cmd === 'echohl') {
+    ctx.state = { ...ctx.state, lastEchoHl: rest.trim() || 'None' };
     return true;
   }
 
@@ -489,12 +600,13 @@ function combine(current: VimScriptValue, op: string, value: VimScriptValue): Vi
   return toVimString(current) + toVimString(value);
 }
 
-/** 대입 대상 하나 또는 리스트 풀기([a, b] / [a, b; rest])에 값을 씁니다. (:let, :for 공용) */
-function assignTargets(ctx: EvalContext, target: string, value: VimScriptValue): void {
+/** 대입 대상 하나 또는 리스트 풀기([a, b] / [a, b; rest])에 값을 씁니다. (:let, :const, :for 공용) */
+function assignTargets(ctx: EvalContext, target: string, value: VimScriptValue): string[] {
   const t = target.trim();
   if (!t.startsWith('[')) {
-    writeLValue(ctx, parseLValue(t, ctx), value);
-    return;
+    const lv = parseLValue(t, ctx);
+    writeLValue(ctx, lv, value);
+    return lv.path.length === 0 ? [lv.base] : [];
   }
   if (!t.endsWith(']')) throw new VimScriptError(msg('E475: 잘못된 대입 대상입니다: {target}', { target }));
   if (!isList(value)) throw new VimScriptError(msg('E714: 리스트 풀기에는 리스트가 필요합니다'));
@@ -502,8 +614,18 @@ function assignTargets(ctx: EvalContext, target: string, value: VimScriptValue):
   const names = namesPart.split(',').map((n) => n.trim()).filter((n) => n.length > 0);
   if (value.length < names.length) throw new VimScriptError(msg('E688: 리스트 항목보다 대상이 더 많습니다'));
   if (value.length > names.length && !restName) throw new VimScriptError(msg('E687: 리스트 항목보다 대상이 더 적습니다'));
-  names.forEach((n, i) => writeLValue(ctx, parseLValue(n, ctx), value[i]));
-  if (restName) writeLValue(ctx, parseLValue(restName, ctx), value.slice(names.length));
+  const assigned: string[] = [];
+  names.forEach((n, i) => {
+    const lv = parseLValue(n, ctx);
+    writeLValue(ctx, lv, value[i]);
+    if (lv.path.length === 0) assigned.push(lv.base);
+  });
+  if (restName) {
+    const lv = parseLValue(restName, ctx);
+    writeLValue(ctx, lv, value.slice(names.length));
+    if (lv.path.length === 0) assigned.push(lv.base);
+  }
+  return assigned;
 }
 
 /** 함수 밖(커맨드라인·.vimrc)에서 사용하는 평가 컨텍스트 */
@@ -512,7 +634,7 @@ function topLevelContext(state: VimEditorState, runEx: ExRunner, firstline?: num
     state,
     runEx,
     callUserFunction: (c, n, a) => {
-      const r = callUserFunction(c.state, n, a, runEx, 0, firstline, lastline);
+      const r = callUserFunction(c.state, n, a, runEx, 0, firstline, lastline, c.locals?.self);
       c.state = r.state;
       if (r.error) throw new VimScriptError(r.error);
       return r.value;
@@ -632,7 +754,13 @@ export function executeScriptCommandLine(state: VimEditorState, commandLine: str
 
   // let mapleader 는 기존 리더 키 설정 경로에서 처리
   if (/^let\s+(g:)?mapleader\b/.test(line)) return null;
-  if (!/^(let|unl|unlet|ec|echo|echom|echomsg|exe|execute)(!?)(\s|$)/.test(line)) return null;
+  if (
+    !/^(let|const|lockv|lockvar|unlo|unlockvar|unl|unlet|ec|echo|echom|echomsg|echon|echoe|echoerr|echoh|echohl|exe|execute)(!?)(\s|$)/.test(
+      line
+    )
+  ) {
+    return null;
+  }
 
   const ctx = topLevelContext(state, runEx);
   try {
@@ -640,7 +768,7 @@ export function executeScriptCommandLine(state: VimEditorState, commandLine: str
   } catch (err) {
     return finish(ctx.state, err instanceof Error ? err.message : String(err), true);
   }
-  const keepMessage = /^(ec|echo|echom|echomsg|exe|execute)\b/.test(line);
+  const keepMessage = /^(ec|echo|echom|echomsg|echon|echoh|echohl|exe|execute)\b/.test(line);
   return finish(ctx.state, keepMessage ? ctx.state.commandMessage : undefined);
 }
 

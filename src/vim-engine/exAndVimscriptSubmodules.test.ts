@@ -124,6 +124,7 @@ describe('vimscriptFunctions submodule', () => {
       varargs: true,
       range: true,
       abort: true,
+      dict: true,
     });
 
     expect(parseFunctionHeader('MissingParens')).toContain('E124');

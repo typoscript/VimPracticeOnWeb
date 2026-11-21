@@ -24,8 +24,12 @@ import {
   startDictionaryCompletion,
   startTagCompletion,
   startOmniCompletion,
+  startVimCommandCompletion,
+  startSpellCompletion,
 } from './completion';
 import { buildProjectTags } from './tagEngine';
+import { AVAILABLE_COMMANDS, BUILTIN_VIM_FUNCTIONS } from './wildmenuCatalog';
+import { getSpellSuggestions } from './spellEngine';
 import { getOptions } from './setEngine';
 import { parseWhichwrapFlags, hasFormatOption, extractCommentPrefix } from './setOptionsCore';
 import { recordChangePosition } from './advancedMotions';
@@ -371,6 +375,19 @@ function handleInsertCompletionStep(
       const tagNames = buildProjectTags(state).map((t) => t.name);
       return { handled: true, state: startOmniCompletion(state, tagNames, 'next') };
     }
+    if (key === 'Ctrl-v' || key === 'Ctrl+v' || key === 'ctrl-v' || key === '<C-v>' || key === 'v') {
+      return {
+        handled: true,
+        state: startVimCommandCompletion(state, [...AVAILABLE_COMMANDS, ...BUILTIN_VIM_FUNCTIONS], 'next'),
+      };
+    }
+    if (key === 'Ctrl-s' || key === 'Ctrl+s' || key === 'ctrl-s' || key === '<C-s>' || key === 's') {
+      const currentLine = state.lines[line] ?? '';
+      const before = currentLine.slice(0, col);
+      const wordMatch = before.match(/[A-Za-z]+$/);
+      const suggestions = wordMatch ? getSpellSuggestions(wordMatch[0], state, 12) : [];
+      return { handled: true, state: startSpellCompletion(state, suggestions, 'next') };
+    }
     if (key === 'Ctrl-n' || key === 'Ctrl+n' || key === 'n') {
       return { handled: true, state: startOrCycleCompletion({ ...state, insertCtrlXMode: false }, 'next') };
     }
@@ -424,12 +441,25 @@ function handleInsertEditingKey(
   const { line, col } = state.cursor;
   const currentLine = state.lines[line] ?? '';
 
-  // Ctrl+t / Ctrl+d: 현재 줄 들여쓰기 증감
+  // Ctrl+t / Ctrl+d: 현재 줄 들여쓰기 증감 (0 Ctrl-d / ^ Ctrl-d 는 모든 선행 들여쓰기 즉시 제거)
   if (key === 'Ctrl-t' || key === 'Ctrl+t' || key === 'Alt-t' || key === 'Alt+t') {
     return adjustInsertLineIndent(state, currentLine, 1, appendCurrentChange(state, 'Ctrl-t', isReplayingDot));
   }
   if (key === 'Ctrl-d' || key === 'Ctrl+d' || key === 'Alt-d' || key === 'Alt+d') {
-    return adjustInsertLineIndent(state, currentLine, -1, appendCurrentChange(state, 'Ctrl-d', isReplayingDot));
+    const nextChangeKeys = appendCurrentChange(state, 'Ctrl-d', isReplayingDot);
+    const beforeCursor = currentLine.slice(0, col);
+    if (/^[ \t]*[0^]$/.test(beforeCursor)) {
+      const nextLines = [...state.lines];
+      nextLines[line] = currentLine.slice(col);
+      return {
+        ...state,
+        lines: nextLines,
+        cursor: { line, col: 0 },
+        currentChangeKeys: nextChangeKeys,
+        currentInsertText: trimInsertText(state.currentInsertText, 1),
+      };
+    }
+    return adjustInsertLineIndent(state, currentLine, -1, nextChangeKeys);
   }
 
   // Ctrl+w: 커서 앞의 단어 하나 즉시 삭제
