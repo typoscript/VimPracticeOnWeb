@@ -1069,3 +1069,15 @@
   box-shadow: 0 0 8px rgba(255, 0, 124, 0.65);
   z-index: 5;
 }
+
+/* vim-visual-multi 다중 커서 선택 및 동시 입력 커서 */
+.multi-cursor-selection {
+  background-color: rgba(137, 220, 235, 0.28);
+  border-bottom: 2px solid #89dceb;
+  border-radius: 2px;
+}
+
+.multi-cursor-caret {
+  box-shadow: inset 2px 0 0 #f5c2e7;
+  background-color: rgba(245, 194, 231, 0.25);
+}

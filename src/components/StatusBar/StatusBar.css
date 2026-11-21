@@ -99,6 +99,12 @@
   font-weight: 800;
 }
 
+.mode-multicursor {
+  background-color: #89dceb;
+  color: #11111b;
+  font-weight: 800;
+}
+
 .status-filename {
   color: #a6adc8;
   font-size: 12px;

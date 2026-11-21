@@ -262,6 +262,7 @@ export function assertValidVimState(
     !prevState.lspCodeActionMenu?.isOpen &&
     !prevState.flashJump?.isOpen &&
     !prevState.harpoonMenu?.isOpen &&
+    !prevState.multiCursor?.isOpen &&
     !prevState.confirmSubstitute &&
     !prevState.spellSuggest &&
     key === 'u' &&

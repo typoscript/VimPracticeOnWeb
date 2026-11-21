@@ -38,6 +38,7 @@ import { executeDigraphCommand } from './digraphs';
 import { addSpellGoodWord, addSpellWrongWord, undoSpellWord } from './spellEngine';
 import { executeGitsignsCommand } from './gitSignsEngine';
 import { openFlashJump } from './flashJumpEngine';
+import { startMultiCursor } from './multiCursorEngine';
 import { executeLuaChunk, executeLuaFile, executeLuaPrintExpr } from './luaEngine';
 import { compileVimRegex } from './vimRegex';
 import { describeCharAt } from './engineHelpers';
@@ -483,6 +484,13 @@ function tryExecuteMappingAndMiscToolCommand(
   const flashMatch = cleanCmdRaw.match(/^Flash(?:\s+(.*))?$/i);
   if (flashMatch) {
     return finishEx(openFlashJump(state, { query: flashMatch[1]?.trim() }));
+  }
+
+  // :MultiCursor[!] [query] / :MultiCursorAll [query] — vim-visual-multi 다중 커서 시작
+  const multiMatch = cleanCmdRaw.match(/^(MultiCursorAll|MultiCursor)(!)?(?:\s+(.*))?$/i);
+  if (multiMatch) {
+    const selectAll = multiMatch[1].toLowerCase() === 'multicursorall' || multiMatch[2] === '!';
+    return finishEx(startMultiCursor(state, { query: multiMatch[3]?.trim(), selectAll }));
   }
 
   return null;

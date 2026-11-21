@@ -46,6 +46,8 @@ export interface StatusBarProps {
   oilActive?: boolean;
   /** harpoon.nvim 현재 파일 핀 슬롯 번호 (1-based) */
   harpoonSlot?: number | null;
+  /** vim-visual-multi 다중 커서 활성 정보 */
+  multiCursorInfo?: { count: number; submode: 'select' | 'insert' } | null;
   /** 현재 검색 매치 카운트 ([current/total]) */
   searchCount?: { current: number; total: number } | null;
 }
@@ -74,10 +76,15 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   flashActive,
   oilActive,
   harpoonSlot,
+  multiCursorInfo,
   searchCount,
 }) => {
   const displayMode =
-    flashActive
+    multiCursorInfo
+      ? multiCursorInfo.submode === 'insert'
+        ? `-- MULTI INSERT (${multiCursorInfo.count}) --`
+        : `-- MULTI (${multiCursorInfo.count}) --`
+      : flashActive
       ? '-- FLASH --'
       : insertCtrlXMode
       ? '-- ^X mode (^]^D^E^F^I^K^L^N^O^Ps^U^V^Y) --'
@@ -99,7 +106,9 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       ? 'SELECT BLOCK'
       : mode;
   const modeClass =
-    flashActive
+    multiCursorInfo
+      ? 'mode-multicursor'
+      : flashActive
       ? 'mode-flash'
       : insertCtrlXMode
       ? 'mode-insert-ctrlx'

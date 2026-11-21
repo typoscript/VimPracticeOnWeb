@@ -1,8 +1,10 @@
+import { lazy, Suspense } from 'react';
 import { Editor } from '../Editor/Editor';
 import { QuickfixPanel } from '../QuickfixPanel';
 import {
   VimEditorState,
   WindowLayoutNode,
+  TroubleMode,
   ensureBuffers,
   ensureTabPages,
   getEffectiveWindowTree,
@@ -10,6 +12,10 @@ import {
   CursorPosition,
 } from '../../vim-engine';
 import { t } from '../../i18n';
+
+const TroublePanel = lazy(() =>
+  import('../TroublePanel/TroublePanel').then((m) => ({ default: m.TroublePanel }))
+);
 
 interface EditorViewportProps {
   editorState: VimEditorState;
@@ -40,6 +46,9 @@ interface EditorViewportProps {
   onCloseQuickfixWindow: () => void;
   onJumpLocationListItem: (index: number) => void;
   onCloseLocationListWindow: () => void;
+  onJumpTroubleItem?: (index: number) => void;
+  onChangeTroubleMode?: (mode: TroubleMode) => void;
+  onCloseTroublePanel?: () => void;
   onSwitchCommandLineWindowType: (type: ':' | '/') => void;
   onClearCommandLineHistory: (type: ':' | '/' | '?') => void;
   onCloseCommandLineWindow: () => void;
@@ -79,6 +88,9 @@ export function EditorViewport({
   onCloseQuickfixWindow,
   onJumpLocationListItem,
   onCloseLocationListWindow,
+  onJumpTroubleItem,
+  onChangeTroubleMode,
+  onCloseTroublePanel,
   onSwitchCommandLineWindowType,
   onClearCommandLineHistory,
   onCloseCommandLineWindow,
@@ -195,6 +207,7 @@ export function EditorViewport({
             onResetGitHunk={onResetGitHunk}
             onStageGitHunk={onStageGitHunk}
             flashJump={isActive ? editorState.flashJump : undefined}
+            multiCursor={isActive ? editorState.multiCursor : undefined}
           />
         </div>
       );
@@ -361,6 +374,7 @@ export function EditorViewport({
             onResetGitHunk={onResetGitHunk}
             onStageGitHunk={onStageGitHunk}
             flashJump={displayEditorState.flashJump}
+            multiCursor={displayEditorState.multiCursor}
           />
         )}
 
@@ -382,6 +396,18 @@ export function EditorViewport({
             onJump={onJumpLocationListItem}
             onClose={onCloseLocationListWindow}
           />
+        )}
+
+        {/* trouble.nvim 프로젝트 진단·TODO 통합 허브 (:Trouble) */}
+        {displayEditorState.troublePanel?.isOpen && (
+          <Suspense fallback={null}>
+            <TroublePanel
+              state={displayEditorState.troublePanel}
+              onJump={(idx) => onJumpTroubleItem?.(idx)}
+              onChangeMode={(mode) => onChangeTroubleMode?.(mode)}
+              onClose={() => onCloseTroublePanel?.()}
+            />
+          </Suspense>
         )}
 
         {/* Neovim :set inccommand=split 실시간 치환 미리보기 분할 창 */}

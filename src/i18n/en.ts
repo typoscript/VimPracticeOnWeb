@@ -1346,4 +1346,7 @@ export const EN: Record<string, string> = {
   "설정이 저장되고 에디터에 즉시 적용되었습니다 (키맵 {maps}개 · 리더키 {leader})": "Config saved and applied live ({maps} keymaps · leader {leader})",
   "설정이 저장되었습니다 (현재 비활성화 또는 빈 스크립트)": "Config saved (disabled or empty script)",
   "스크립트 실행 오류: {err}": "Script error: {err}",
+  "Trouble 통합 진단 · TODO": "Trouble Diagnostics & TODO Hub",
+  "Trouble 패널 닫기": "Close Trouble panel",
+  "표시할 진단이나 TODO 항목이 없습니다.": "No diagnostics or TODO items to display.",
 };

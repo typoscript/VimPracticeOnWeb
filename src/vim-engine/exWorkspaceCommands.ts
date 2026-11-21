@@ -37,6 +37,7 @@ import {
 } from './netrwEngine';
 import { openOilBuffer, closeOilBuffer, applyOilBufferChanges } from './oilEngine';
 import { executeHarpoonCommand } from './harpoonEngine';
+import { executeTroubleCommand } from './troubleEngine';
 import { executeFindFileCommand, openFuzzyFinder } from './fuzzyFinder';
 import { openHelp, closeHelp } from './helpEngine';
 import { triggerAutocmd } from './autocmdEngine';
@@ -304,6 +305,14 @@ function tryExecuteNetrwAndBufferSwitchCommand(
   );
   if (harpoonMatch) {
     return finishEx(executeHarpoonCommand(state, harpoonMatch[1], harpoonMatch[2] ?? ''));
+  }
+
+  // trouble.nvim 스타일 프로젝트 진단·TODO·퀵픽스 통합 허브: :Trouble [mode|next|prev|toggle|close]
+  const troubleMatch = cleanCmdRaw.match(
+    /^(Trouble(?:Toggle|Close|Next|Prev)?)(?:\s+(.*))?$/i
+  );
+  if (troubleMatch) {
+    return finishEx(executeTroubleCommand(state, troubleMatch[1], troubleMatch[2] ?? ''));
   }
 
   // 순정 파일 탐색기 Netrw 열기: :Explore, :E, :Vexplore, :Ve, :Sexplore, :Se, :Hexplore, :He, :Texplore, :Te

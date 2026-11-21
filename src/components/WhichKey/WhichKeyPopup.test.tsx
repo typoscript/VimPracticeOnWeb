@@ -5,6 +5,7 @@ import { WhichKeyPopup } from './WhichKeyPopup';
 import { resolveWhichKeyData } from './whichKeyCatalog';
 import { Editor } from '../Editor/Editor';
 import { HarpoonMenu } from '../HarpoonMenu/HarpoonMenu';
+import { TroublePanel } from '../TroublePanel/TroublePanel';
 import { StatusBar } from '../StatusBar/StatusBar';
 
 describe('which-key.nvim 스타일 실시간 키 가이드 팝업', () => {
@@ -174,5 +175,48 @@ describe('which-key.nvim 스타일 실시간 키 가이드 팝업', () => {
 
     fireEvent.click(screen.getByTestId('harpoon-menu-close'));
     expect(onPressKey).toHaveBeenCalledWith('Escape');
+  });
+
+  it('TroublePanel 트리 렌더링·모드 필터·점프·닫기와 다중 커서 Editor/StatusBar 렌더링을 검증한다', () => {
+    const onJump = vi.fn();
+    const onChangeMode = vi.fn();
+    const onClose = vi.fn();
+
+    let s = createVimState(['// TODO: fix bug', 'const foo = foo;'], { line: 1, col: 6 }, {
+      primaryFilename: 'src/demo.ts',
+    });
+    s = executeCommandLine(s, ':Trouble todo', handleKey);
+    s = handleKey(handleKey(s, 'g'), 'Ctrl-n');
+    s = handleKey(s, 'Ctrl-n');
+
+    render(
+      <>
+        <Editor lines={s.lines} cursor={s.cursor} mode={s.mode} multiCursor={s.multiCursor} />
+        <StatusBar
+          mode={s.mode}
+          cursor={s.cursor}
+          multiCursorInfo={{ count: 2, submode: 'select' }}
+        />
+        <TroublePanel
+          state={s.troublePanel!}
+          onJump={onJump}
+          onChangeMode={onChangeMode}
+          onClose={onClose}
+        />
+      </>
+    );
+
+    expect(screen.getByTestId('status-mode')).toHaveTextContent('-- MULTI (2) --');
+    expect(screen.getAllByTestId('multi-cursor-selection').length).toBeGreaterThan(0);
+    expect(screen.getByTestId('trouble-panel')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId('trouble-mode-diagnostics'));
+    expect(onChangeMode).toHaveBeenCalledWith('diagnostics');
+
+    fireEvent.click(screen.getByTestId('trouble-item-0'));
+    expect(onJump).toHaveBeenCalledWith(0);
+
+    fireEvent.click(screen.getByTestId('trouble-close-btn'));
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

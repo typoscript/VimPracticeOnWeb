@@ -24,6 +24,7 @@ import { getWordAtCursor } from './search';
 import { executeCommandLine } from './commandLine';
 import { openLspDocumentSymbols } from './lspRefactorEngine';
 import { openFlashJump } from './flashJumpEngine';
+import { startMultiCursor } from './multiCursorEngine';
 import { joinLines, executeCaseMotion } from './lineOperators';
 import { msg } from './messages';
 import { executeGn, executeWordSearch } from './searchMode';
@@ -487,6 +488,9 @@ export function handleNormalGOperator(
   }
   if (key === 's') {
     return { handled: true, state: openFlashJump(state) };
+  }
+  if (key === 'Ctrl-n' || key === 'Ctrl+n' || key === 'ctrl-n' || key === '<C-n>') {
+    return { handled: true, state: startMultiCursor(state) };
   }
   if (key === '~' || key === 'u' || key === 'U' || key === '?' || key === 'c' || key === 'q' || key === 'w') {
     return {

@@ -18,6 +18,7 @@ export interface WhichKeyPanelData {
 const G_PREFIX_ITEMS: WhichKeyItem[] = [
   { key: 'g', labelKo: '파일 맨 위', labelEn: 'Top of file' },
   { key: 's', labelKo: 'Flash 화면 라벨 점프', labelEn: 'Flash label jump' },
+  { key: 'Ctrl-n', labelKo: '다중 커서 선택 (Multi-Cursor)', labelEn: 'Multi-cursor select' },
   { key: 'd', labelKo: '정의로 이동 (LSP)', labelEn: 'Go to definition' },
   { key: 'r', labelKo: '+LSP / 가상 치환', labelEn: '+LSP / Virtual replace', group: true },
   { key: 'O', labelKo: '문서 심볼 (LSP)', labelEn: 'Document symbols' },

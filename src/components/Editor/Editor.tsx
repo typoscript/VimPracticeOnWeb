@@ -17,6 +17,7 @@ import {
   CustomMatchEntry,
   GitHunkPreviewState,
   FlashJumpSession,
+  MultiCursorSession,
 } from '../../vim-engine';
 import {
   findMatches,
@@ -117,6 +118,8 @@ export interface EditorProps {
   onStageGitHunk?: () => void;
   /** flash.nvim 스타일 화면 라벨 점프 세션 (gs, :Flash) */
   flashJump?: FlashJumpSession | null;
+  /** vim-visual-multi 스타일 다중 커서 세션 (g Ctrl-n, :MultiCursor) */
+  multiCursor?: MultiCursorSession | null;
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -166,6 +169,7 @@ export const Editor: React.FC<EditorProps> = ({
   onResetGitHunk,
   onStageGitHunk,
   flashJump,
+  multiCursor,
 }) => {
   const explicitFt =
     options?.filetype ||
@@ -295,6 +299,12 @@ export const Editor: React.FC<EditorProps> = ({
               : undefined;
             const lineFlashMatches = flashJump?.isOpen
               ? flashJump.matches.filter((m) => m.line === lineIdx)
+              : undefined;
+            const lineMultiSelections = multiCursor?.isOpen
+              ? multiCursor.selections.filter((s) => s.line === lineIdx)
+              : undefined;
+            const lineMultiCursorCols = multiCursor?.isOpen
+              ? multiCursor.cursors.filter((c) => c.line === lineIdx).map((c) => c.col)
               : undefined;
             const marksOnLine = marks
               ? Object.entries(marks)
@@ -435,6 +445,8 @@ export const Editor: React.FC<EditorProps> = ({
                         incCommandMatches: lineIncMatches,
                         incCommandHasReplacement: incCommandPreview?.hasReplacement,
                         flashMatches: lineFlashMatches,
+                        multiSelections: lineMultiSelections,
+                        multiCursorCols: lineMultiCursorCols,
                         blockInsertSession,
                         spellErrors: options?.spell
                           ? findSpellErrorsInLine(lineText, lineIdx, { spellGoodWords, spellWrongWords })

@@ -500,3 +500,28 @@ export type { HarpoonMenuState } from './types';
 // ---- mini.ai 스타일 Next/Last 텍스트 객체 (in/an/il/al) ----
 export { getMiniAiNextLastRange } from './textObjects';
 export type { MiniAiScope } from './textObjects';
+
+// ---- trouble.nvim 스타일 프로젝트 진단·TODO·퀵픽스 통합 허브 (:Trouble) ----
+export {
+  collectTroubleItems,
+  openTroublePanel,
+  closeTroublePanel,
+  toggleTroublePanel,
+  setTroubleMode,
+  jumpToTroubleItem,
+  executeTroubleCommand,
+} from './troubleEngine';
+export type {
+  TroubleMode,
+  TroubleSeverity,
+  TroubleItem,
+  TroubleSessionState,
+} from './types';
+
+// ---- vim-visual-multi 스타일 다중 커서 선택·동시 편집 (g Ctrl-n / :MultiCursor) ----
+export {
+  startMultiCursor,
+  exitMultiCursor,
+  handleMultiCursorKey,
+} from './multiCursorEngine';
+export type { MultiCursorSelection, MultiCursorSession } from './types';

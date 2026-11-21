@@ -132,6 +132,9 @@ export interface WorkspaceEditorProps {
     | 'onCloseQuickfixWindow'
     | 'onJumpLocationListItem'
     | 'onCloseLocationListWindow'
+    | 'onJumpTroubleItem'
+    | 'onChangeTroubleMode'
+    | 'onCloseTroublePanel'
     | 'onSwitchCommandLineWindowType'
     | 'onClearCommandLineHistory'
     | 'onCloseCommandLineWindow'
@@ -409,6 +412,17 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
               const idx = displayEditorState.harpoonList.indexOf(cur);
               return idx >= 0 ? idx + 1 : null;
             })()}
+            multiCursorInfo={
+              displayEditorState.multiCursor?.isOpen
+                ? {
+                    count:
+                      displayEditorState.multiCursor.submode === 'insert'
+                        ? displayEditorState.multiCursor.cursors.length
+                        : displayEditorState.multiCursor.selections.length,
+                    submode: displayEditorState.multiCursor.submode,
+                  }
+                : null
+            }
             searchCount={(() => {
               const shm = displayEditorState.options?.shortmess ?? '';
               if (shm.includes('S')) return null;

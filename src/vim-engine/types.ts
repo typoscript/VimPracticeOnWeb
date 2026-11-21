@@ -921,6 +921,10 @@ export interface VimEditorState {
   harpoonList?: string[];
   /** harpoon.nvim 빠른 파일 전환 팝업 메뉴 상태 */
   harpoonMenu?: HarpoonMenuState | null;
+  /** trouble.nvim 스타일 프로젝트 진단·TODO·퀵픽스 통합 패널 상태 (:Trouble) */
+  troublePanel?: TroubleSessionState | null;
+  /** vim-visual-multi 스타일 다중 커서 선택·동시 편집 세션 (g Ctrl-n / :MultiCursor) */
+  multiCursor?: MultiCursorSession | null;
   /** 순정 Vim Undo Tree 노드 맵 (seq -> UndoTreeNode) */
   undoTreeNodes?: Record<number, UndoTreeNode>;
   /** 현재 활성화된 변경 시퀀스 번호 */
@@ -1088,6 +1092,41 @@ export interface HelpSession {
 export interface HarpoonMenuState {
   isOpen: boolean;
   selectedIndex: number;
+}
+
+export type TroubleMode = 'all' | 'diagnostics' | 'todo' | 'quickfix';
+export type TroubleSeverity = 'error' | 'warning' | 'info' | 'todo';
+
+export interface TroubleItem {
+  id: string;
+  filename: string;
+  line: number;
+  col: number;
+  severity: TroubleSeverity;
+  tag?: string;
+  message: string;
+  source: 'diagnostics' | 'todo' | 'quickfix';
+}
+
+export interface TroubleSessionState {
+  isOpen: boolean;
+  mode: TroubleMode;
+  selectedIndex: number;
+  items: TroubleItem[];
+}
+
+export interface MultiCursorSelection {
+  line: number;
+  startCol: number;
+  endCol: number;
+}
+
+export interface MultiCursorSession {
+  isOpen: boolean;
+  submode: 'select' | 'insert';
+  query: string;
+  selections: MultiCursorSelection[];
+  cursors: CursorPosition[];
 }
 
 export type VimState = VimEditorState;

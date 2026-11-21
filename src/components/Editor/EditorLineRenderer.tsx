@@ -7,6 +7,7 @@ import {
   ConfirmSubstituteSession,
   IncCommandPreviewMatch,
   FlashJumpMatch,
+  MultiCursorSelection,
   BlockInsertSession,
   SpellError,
   SyntaxToken,
@@ -35,6 +36,8 @@ export interface RenderLineOptions {
   incCommandMatches?: IncCommandPreviewMatch[];
   incCommandHasReplacement?: boolean;
   flashMatches?: FlashJumpMatch[];
+  multiSelections?: MultiCursorSelection[];
+  multiCursorCols?: number[];
   blockInsertSession?: BlockInsertSession | null;
   spellErrors?: SpellError[];
   lineDiagnostics?: LspDiagnostic[];
@@ -86,6 +89,8 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     incCommandMatches,
     incCommandHasReplacement,
     flashMatches,
+    multiSelections,
+    multiCursorCols,
     blockInsertSession,
     spellErrors,
     lineDiagnostics,
@@ -117,6 +122,7 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
   const hasCustomMatches = (lineCustomMatches?.length ?? 0) > 0;
   const hasIncMatches = (incCommandMatches?.length ?? 0) > 0;
   const hasFlashMatches = (flashMatches?.length ?? 0) > 0;
+  const hasMultiCursor = (multiSelections?.length ?? 0) > 0 || (multiCursorCols?.length ?? 0) > 0;
   const hasSpellErrors = (spellErrors?.length ?? 0) > 0;
   const hasDiagnostics = (lineDiagnostics?.length ?? 0) > 0;
 
@@ -156,6 +162,7 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     !hasCustomMatches &&
     !hasIncMatches &&
     !hasFlashMatches &&
+    !hasMultiCursor &&
     !hasSpellErrors &&
     !hasDiagnostics &&
     cursorColumnCol === null
@@ -180,6 +187,7 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     !hasCustomMatches &&
     !hasIncMatches &&
     !hasFlashMatches &&
+    !hasMultiCursor &&
     !hasSpellErrors &&
     !hasDiagnostics &&
     !listMode &&
@@ -211,12 +219,15 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
 
   // 커서 또는 타겟, 비주얼 선택, 검색 매치가 있는 줄 처리
   const chars = text.length === 0 ? [' '] : text.split('');
+  const maxMultiCol =
+    multiCursorCols && multiCursorCols.length > 0 ? Math.max(...multiCursorCols) : 0;
   const maxIdx = Math.max(
     chars.length - 1,
     cursorCol !== null ? cursorCol : 0,
     blockSecondaryCol !== null ? blockSecondaryCol : 0,
     targetCol !== null ? targetCol : 0,
-    cursorColumnCol !== null ? cursorColumnCol : 0
+    cursorColumnCol !== null ? cursorColumnCol : 0,
+    maxMultiCol
   );
 
   let eolRenderedOnCursor = false;
@@ -392,6 +403,16 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
       classNames += ' flash-match-char';
     }
 
+    const isMultiSelected =
+      multiSelections?.some((s) => i >= s.startCol && i <= s.endCol) ?? false;
+    const isMultiCaret = multiCursorCols?.includes(i) ?? false;
+    if (isMultiSelected) {
+      classNames += ' multi-cursor-selection';
+    }
+    if (isMultiCaret) {
+      classNames += ' multi-cursor-caret';
+    }
+
     const isSpell = spellErrors?.some((e) => i >= e.startCol && i < e.endCol);
     if (isSpell) {
       classNames += ' spell-error';
@@ -429,6 +450,10 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
         data-testid={
           isCursor
             ? 'vim-cursor'
+            : isMultiCaret
+            ? 'multi-cursor-caret'
+            : isMultiSelected
+            ? 'multi-cursor-selection'
             : isBlockSecondaryCursor
             ? 'vim-block-secondary-cursor'
             : isSelected

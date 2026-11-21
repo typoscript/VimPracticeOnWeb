@@ -20,6 +20,10 @@ import {
   closeHelp,
   closeLocationListWindow,
   jumpToLocationListItem,
+  jumpToTroubleItem,
+  setTroubleMode,
+  closeTroublePanel,
+  TroubleMode,
   closeLspHover,
   cancelLspRename,
   applyLspCodeAction,
@@ -139,6 +143,21 @@ export function useEditorWorkspaceHandlers({
 
   const handleCloseLocationListWindow = useCallback(
     () => applyAndFocus((prev) => closeLocationListWindow(prev)),
+    [applyAndFocus]
+  );
+
+  const handleJumpTroubleItem = useCallback(
+    (index: number) => applyAndFocus((prev) => jumpToTroubleItem(prev, index)),
+    [applyAndFocus]
+  );
+
+  const handleChangeTroubleMode = useCallback(
+    (mode: TroubleMode) => applyAndFocus((prev) => setTroubleMode(prev, mode)),
+    [applyAndFocus]
+  );
+
+  const handleCloseTroublePanel = useCallback(
+    () => applyAndFocus((prev) => closeTroublePanel(prev)),
     [applyAndFocus]
   );
 
@@ -315,6 +334,9 @@ export function useEditorWorkspaceHandlers({
       onCloseQuickfixWindow: handleCloseQuickfixWindow,
       onJumpLocationListItem: handleJumpLocationListItem,
       onCloseLocationListWindow: handleCloseLocationListWindow,
+      onJumpTroubleItem: handleJumpTroubleItem,
+      onChangeTroubleMode: handleChangeTroubleMode,
+      onCloseTroublePanel: handleCloseTroublePanel,
       onSwitchCommandLineWindowType: handleSwitchCommandLineWindowType,
       onClearCommandLineHistory: handleClearCommandLineHistory,
       onCloseCommandLineWindow: handleCloseCommandLineWindow,
@@ -340,6 +362,9 @@ export function useEditorWorkspaceHandlers({
       handleCloseQuickfixWindow,
       handleJumpLocationListItem,
       handleCloseLocationListWindow,
+      handleJumpTroubleItem,
+      handleChangeTroubleMode,
+      handleCloseTroublePanel,
       handleSwitchCommandLineWindowType,
       handleClearCommandLineHistory,
       handleCloseCommandLineWindow,

@@ -17,6 +17,7 @@ import { handleHelpKey } from './helpEngine';
 import { syncLiveLspDiagnostics } from './lspEngine';
 import { handleLspRenameKey, handleLspCodeActionKey } from './lspRefactorEngine';
 import { handleFlashJumpKey } from './flashJumpEngine';
+import { handleMultiCursorKey } from './multiCursorEngine';
 import { handleSpellSuggestKey } from './spellEngine';
 import { recordUndoTreeChange } from './undoTreeEngine';
 import { computeSpecialMarksUpdate } from './marks';
@@ -61,6 +62,7 @@ function finishInsertNormalSession(
     !nextState.helpSession?.isOpen &&
     !nextState.flashJump?.isOpen &&
     !nextState.harpoonMenu?.isOpen &&
+    !nextState.multiCursor?.isOpen &&
     !nextState.functionDraft
   ) {
     const currentLineText = nextState.lines[nextState.cursor.line] ?? '';
@@ -105,6 +107,11 @@ export function rawHandleKey(
   // harpoon.nvim 빠른 파일 전환 팝업 메뉴 처리 (:HarpoonMenu)
   if (state.harpoonMenu?.isOpen) {
     return handleHarpoonMenuKey(state, key);
+  }
+
+  // vim-visual-multi 다중 커서 세션 처리 (g Ctrl-n / :MultiCursor)
+  if (state.multiCursor?.isOpen) {
+    return handleMultiCursorKey(state, key);
   }
 
   // LSP 심볼 이름 변경 프롬프트 (grn) 처리
