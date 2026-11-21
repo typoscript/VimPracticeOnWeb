@@ -248,7 +248,7 @@ export function handleVisualTextObject(state: VimEditorState, key: string): VimE
     if (key === 'p') {
       return executeParagraphObjectOperator(state, 'v', `${modifier}p` as ParagraphObjectType, count) ?? ringBell(state);
     }
-    const validTargets = ['w', 'W', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't', 's', '<', '>'];
+    const validTargets = ['w', 'W', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't', 's', '<', '>', 'f', 'c', 'a'];
     if (validTargets.includes(key)) {
       let targetChar = key;
       if (key === 'b' || key === ')') targetChar = '(';
@@ -282,7 +282,7 @@ export function handleVisualBracketPrefix(state: VimEditorState, key: string): V
     const bracket = visualBracket[2];
     const isPaired = (bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'));
     const isSection = key === '[' || key === ']';
-    const isMethod = key === 'm' || key === 'M';
+    const isMethod = key === 'm' || key === 'M' || key === 'f' || key === 'F';
     if (isPaired || isSection || isMethod) {
       return moveByExtraMotion(state, `${bracket}${key}`, count);
     }

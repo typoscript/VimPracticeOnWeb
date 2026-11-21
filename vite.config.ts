@@ -83,6 +83,7 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'numberOperators.ts',
       'lineOperators.ts',
       'textObjectsExtended.ts',
+      'treesitterTextObjects.ts',
       'tagTextObject.ts',
       'textObjects.ts',
       'extraMotions.ts',

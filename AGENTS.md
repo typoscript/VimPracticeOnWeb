@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 179개 테스트 파일, 2,157개 테스트 100% 통과 필수)*
+  *(현재 180개 테스트 파일, 2,163개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -194,6 +194,10 @@
   - **프로젝트 전체 참조 검색 (`grr`, `:LspReferences [symbol]`)**: VFS·열린 버퍼 전체에서 식별자 참조를 수집해 퀵픽스 리스트(`:copen`)에 채우고 즉시 창을 엽니다.
   - **코드 액션 팝업 (`gra`, `:LspCodeAction`)**: 사용자 정의 `lspCodeActions`, 진단 기반 자동 Quick Fix(문자열 숫자 리터럴 변환, 미사용 변수 삭제/`_` 접두), 내장 코드 리팩토링(`var`/`let`→`const`, `==`/`!=`→`===`/`!==`, `console.log` 제거, 끝 공백 정리)을 번호(`1`~`9`)·`j`/`k`·`Enter`·클릭으로 즉시 적용하며 Undo 및 실시간 진단 해소를 지원합니다.
   - **문서 심볼 아웃라인 (`gO`, `:LspSymbols`)**: 현재 버퍼의 함수·클래스·인터페이스·타입·메서드·상수·마크다운 헤딩을 추출해 로케이션 리스트(`:lopen`)로 열어 즉시 탐색할 수 있습니다. (기존 `grX`/`2grX` Virtual Replace 와 완전 공존)
+- **Treesitter 스타일 구조적 텍스트 객체 & 함수 점프 (`af`/`if`, `ac`/`ic`, `aa`/`ia`, `]f`/`[f`/`]F`/`[F`, `src/vim-engine/treesitterTextObjects.ts`, `textObjects.ts`, `extraMotions.ts`, `normalBracketPrefix.ts`, `visualPrefixes.ts`)**:
+  - **함수·클래스 텍스트 객체 (`af`/`if`, `ac`/`ic`)**: JS/TS/Go/Rust 중괄호 기반 함수·화살표 함수·클래스 메서드·클래스/인터페이스/구조체 및 Python 들여쓰기 기반 `def`/`class` 를 감지하며 중첩 시 가장 안쪽 블록부터 `[count]` 로 바깥 블록까지 확장합니다. `d`/`c`/`y`/`v`/`>`/`<`/`=`/`gc`/`gq`/`gu`/`gU`/`g~` 와 `.` 반복을 모두 지원합니다.
+  - **인자·매개변수 텍스트 객체 (`aa`/`ia`)**: 단일 줄·멀티라인 `(...)`/`[...]` 내부에서 중첩 호출·문자열 리터럴 쉼표를 보존하며 최상위 인자 경계를 계산합니다. `aa` 는 앞·중간 인자의 뒤 쉼표+공백과 마지막 인자의 앞 쉼표를 정리해 불필요한 쉼표(dangling comma)를 남기지 않습니다.
+  - **함수 시작/끝 이동 (`]f`/`[f`/`]F`/`[F`)**: NORMAL·VISUAL·연산자 대기(`d]f`, `y[f` 등) 및 `[count]` 를 지원하며 대상이 없으면 bell 을 울립니다.
 
 ---
 

@@ -427,3 +427,12 @@ export {
 
 // ---- 개발용 불변성 검사 ----
 export { withInvariantCheck, assertValidVimState, deepFreeze } from './invariants';
+
+// ---- Treesitter 스타일 구조적 텍스트 객체 (af/if, ac/ic, aa/ia) 및 함수 점프 (]f/[f/]F/[F) ----
+export {
+  getTreesitterObjectRange,
+  detectFunctions,
+  detectClasses,
+  findFunctionJumpTarget,
+} from './treesitterTextObjects';
+export type { TreesitterObjectType, StructuralNode } from './treesitterTextObjects';

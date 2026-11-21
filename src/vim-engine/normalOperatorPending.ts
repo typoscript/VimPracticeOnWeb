@@ -358,7 +358,7 @@ export function handleNormalTextObjectAndFindPending(
       return { handled: true, state: finalizeOpResult(res) };
     }
 
-    const validTargets = ['w', 'W', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't', 's', '<', '>'];
+    const validTargets = ['w', 'W', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't', 's', '<', '>', 'f', 'c', 'a'];
     if (validTargets.includes(key)) {
       let targetChar = key;
       if (key === 'b' || key === ')') targetChar = '(';

@@ -7,6 +7,15 @@ import { moveToFirstNonBlank } from './motions';
 import { getTagTextObjectRange } from './tagTextObject';
 export { getTagTextObjectRange };
 import {
+  TreesitterObjectType,
+  getTreesitterObjectRange,
+  detectFunctions,
+  detectClasses,
+  findFunctionJumpTarget,
+} from './treesitterTextObjects';
+export type { TreesitterObjectType };
+export { getTreesitterObjectRange, detectFunctions, detectClasses, findFunctionJumpTarget };
+import {
   TextObjectRange,
   IndentObjectType,
   IndentObjectRange,
@@ -352,6 +361,18 @@ export function getTextObjectRange(
     return getTagTextObjectRange(lines, cursor, objectType[0] as 'i' | 'a');
   }
 
+  // 5. Treesitter 스타일 구조적 텍스트 객체: af/if (함수), ac/ic (클래스), aa/ia (인자)
+  if (
+    objectType === 'af' ||
+    objectType === 'if' ||
+    objectType === 'ac' ||
+    objectType === 'ic' ||
+    objectType === 'aa' ||
+    objectType === 'ia'
+  ) {
+    return getTreesitterObjectRange(lines, cursor, objectType);
+  }
+
   return null;
 }
 
@@ -365,14 +386,18 @@ export function executeTextObjectOperator(
   count = 1
 ): VimEditorState {
   let curState = state;
-  // 문장 객체(is, as)는 [count] 를 범위 계산에 반영하여 한 번만 적용합니다
+  // 문장(is, as) 및 구조적 블록(af, if, ac, ic)은 [count] 를 범위 계산에 반영하여 한 번만 적용합니다
   const isSentence = objectType === 'is' || objectType === 'as';
-  const steps = isSentence ? 1 : count;
+  const isStructuralBlock =
+    objectType === 'af' || objectType === 'if' || objectType === 'ac' || objectType === 'ic';
+  const steps = isSentence || isStructuralBlock ? 1 : count;
 
   for (let step = 0; step < steps; step++) {
     const range = isSentence
       ? getSentenceObjectRange(curState.lines, curState.cursor, objectType as 'is' | 'as', count)
-      : getTextObjectRange(curState.lines, curState.cursor, objectType);
+      : isStructuralBlock
+        ? getTreesitterObjectRange(curState.lines, curState.cursor, objectType as TreesitterObjectType, count)
+        : getTextObjectRange(curState.lines, curState.cursor, objectType);
     if (!range) {
       if (operator === 'c') {
         return {

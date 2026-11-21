@@ -54,7 +54,7 @@ export function handleNormalBracketPrefix(
     if ((bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'))) {
       return { handled: true, state: moveByExtraMotion(state, `${bracket}${key}`, bCount) };
     }
-    if (key === '[' || key === ']' || key === 'm' || key === 'M') {
+    if (key === '[' || key === ']' || key === 'm' || key === 'M' || key === 'f' || key === 'F') {
       return { handled: true, state: moveByExtraMotion(state, `${bracket}${key}`, bCount) };
     }
     if (key === 'd' || key === 'D') {
@@ -164,7 +164,7 @@ export function handleNormalBracketPrefix(
     const bracket = opBracketMatch[4];
     const isPaired = (bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'));
     const isSection = key === '[' || key === ']';
-    const isMethod = key === 'm' || key === 'M';
+    const isMethod = key === 'm' || key === 'M' || key === 'f' || key === 'F';
     if (isPaired || isSection || isMethod) {
       const op = opBracketMatch[2] as 'd' | 'c' | 'y';
       const total = (opBracketMatch[1] ? parseInt(opBracketMatch[1], 10) : 1) * (opBracketMatch[3] ? parseInt(opBracketMatch[3], 10) : 1);

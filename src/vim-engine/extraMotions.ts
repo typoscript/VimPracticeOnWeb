@@ -1,6 +1,6 @@
 import { CursorPosition } from './types';
 import { isKeywordChar } from './wordMotion';
-import { getSentenceStarts } from './textObjects';
+import { getSentenceStarts, findFunctionJumpTarget } from './textObjects';
 
 /**
  * 보조 모션 (:help motion.txt)
@@ -23,7 +23,8 @@ export interface MotionResult {
 
 export const EXTRA_MOTION_KEYS = new Set([
   '(', ')', '+', '-', 'Enter', '|', 'ge', 'gE', 'g_', '[(', '[{', '])', ']}',
-  '[[', ']]', '[]', '][', '[m', ']m', '[M', ']M', 'g0', 'g$', 'gm', 'gM', 'go',
+  '[[', ']]', '[]', '][', '[m', ']m', '[M', ']M', '[f', ']f', '[F', ']F',
+  'g0', 'g$', 'gm', 'gM', 'go',
 ]);
 
 /**
@@ -313,6 +314,14 @@ export function evaluateExtraMotion(
         }
       }
       return null;
+    }
+    // ]f, [f, ]F, [F: Treesitter 스타일 다음/이전 함수 시작·끝 점프
+    case ']f':
+    case '[f':
+    case ']F':
+    case '[F': {
+      const target = findFunctionJumpTarget(lines, cursor, key, n);
+      return target ? { target, kind: 'exclusive' } : null;
     }
     case 'g0':
       return { target: { line: cursor.line, col: 0 }, kind: 'exclusive' };

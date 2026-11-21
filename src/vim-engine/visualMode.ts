@@ -610,7 +610,11 @@ export function handleVisualModeKey(
     return { ...state, pendingKeys: undefined };
   }
 
-  if (key === 'f' || key === 'F' || key === 't' || key === 'T') {
+  if (
+    (key === 'f' || key === 'F' || key === 't' || key === 'T') &&
+    !state.pendingKeys?.endsWith('[') &&
+    !state.pendingKeys?.endsWith(']')
+  ) {
     return {
       ...state,
       pendingKeys: (state.pendingKeys ?? '') + key,
