@@ -4,11 +4,11 @@ import { getGitHunks } from '../../vim-engine';
 const keysOf = (s: string): string[] => [...s];
 
 /**
- * Part 6: 현대 Neovim 실전 워크플로우 (레슨 101 ~ 110)
+ * Part 6: 현대 Neovim 실전 워크플로우 (레슨 101 ~ 112)
  * Telescope :LiveGrep, Neovim 0.11 LSP(grn/grr/gra/gO), Treesitter(daf/daa/cif/]f),
  * gitsigns.nvim(]h/:Gitsigns), Neovim Lua(:lua vim.opt) + 순정 고급 편집(U/Q),
  * flash.nvim(gs/dgs/cgs), oil.nvim(:Oil), harpoon.nvim(:HarpoonAdd/:HarpoonMenu),
- * mini.ai Next/Last 텍스트 객체(cin"/din(/cil")
+ * mini.ai Next/Last 텍스트 객체(cin"/din(/cil"), trouble.nvim(:Trouble), 다중 커서(g Ctrl-n)
  */
 export const MISSIONS_PART6: Mission[] = [
   {
@@ -506,6 +506,108 @@ export const MISSIONS_PART6: Mission[] = [
         'const prev = "fixed"; const next = "keep";',
       ];
       return state.lines.length === target.length && state.lines.every((l, i) => l === target[i]);
+    },
+  },
+  {
+    id: 111,
+    title: '레슨 111: trouble.nvim 프로젝트 진단·TODO 통합 허브(:Trouble todo · :TroubleNext)',
+    description:
+      '프로젝트 전체 파일에 흩어져 있는 TODO / FIXME 주석과 LSP 진단을 파일별 트리로 한눈에 모아 보여주는 trouble.nvim(:Trouble)으로 크로스 파일 이슈를 깔끔하게 청산해 보세요.\n\n1) :Trouble [all|diagnostics|todo|quickfix]:\n   - 하단에 파일별 트리 패널을 열고 모든 진단·TODO 항목을 수집합니다.\n\n2) :TroubleNext / :TroublePrev / :TroubleClose:\n   - 다음·이전 항목의 파일과 줄로 즉시 전환·점프하고 작업 후 패널을 닫습니다.\n\n미션:\n1. :Trouble todo<Enter> 로 프로젝트 전체 TODO/FIXME 트리를 여세요.\n2. 현재 파일(proj/api.ts)의 TODO 줄을 dd 로 지우고 f1 r2 로 "/v2/users" 로 바꾸세요.\n3. :TroubleNext<Enter> 로 proj/worker.ts 의 FIXME 로 점프해 dd 로 지우고 f1 r3 로 retries 를 3으로 올린 뒤 :TroubleClose<Enter> 와 Ctrl-^ 로 proj/api.ts 로 복귀하세요!',
+    hint: ':Trouble todo<Enter> → dd f1 r2 → :TroubleNext<Enter> → dd f1 r3 → :TroubleClose<Enter> → Ctrl-^',
+    par: 58,
+    primaryFilename: 'proj/api.ts',
+    initialLines: [
+      '// TODO: switch endpoint to v2',
+      'export const endpoint = "/v1/users";',
+    ],
+    targetLines: [
+      'export const endpoint = "/v2/users";',
+    ],
+    initialVirtualFiles: {
+      'proj/api.ts': [
+        '// TODO: switch endpoint to v2',
+        'export const endpoint = "/v1/users";',
+      ],
+      'proj/worker.ts': [
+        '// FIXME: raise retry limit',
+        'export const retries = 1;',
+      ],
+    },
+    initialCursor: { line: 0, col: 0 },
+    optimalKeys: [
+      ...keysOf(':Trouble todo'),
+      'Enter',
+      'd',
+      'd',
+      'f',
+      '1',
+      'r',
+      '2',
+      ...keysOf(':TroubleNext'),
+      'Enter',
+      'd',
+      'd',
+      'f',
+      '1',
+      'r',
+      '3',
+      ...keysOf(':TroubleClose'),
+      'Enter',
+      'Ctrl-^',
+    ],
+    checkComplete: (state) => {
+      const apiOk =
+        state.primaryFilename === 'proj/api.ts' &&
+        state.lines.length === 1 &&
+        state.lines[0] === 'export const endpoint = "/v2/users";';
+      const workerBuf = state.buffers?.find((b) => b.name === 'proj/worker.ts');
+      const workerLines = workerBuf?.lines ?? state.virtualFiles?.['proj/worker.ts'] ?? [];
+      const workerOk =
+        workerLines.length === 1 && workerLines[0] === 'export const retries = 3;';
+      const usedTrouble = state.troublePanel !== undefined && state.troublePanel !== null;
+      return apiOk && workerOk && usedTrouble && !state.troublePanel?.isOpen;
+    },
+  },
+  {
+    id: 112,
+    title: '레슨 112: vim-visual-multi 다중 커서 선택·건너뛰기·동시 치환(g Ctrl-n · Ctrl-x)',
+    description:
+      'VS Code 의 Ctrl-d 처럼 같은 단어를 하나씩 점진 선택하고, 필요 없는 위치는 건너뛰며(Ctrl-x) 여러 곳을 한 번에 동시 수정하는 다중 커서 워크플로우를 마스터해 보세요.\n\n1) g Ctrl-n (다중 커서 시작) & Ctrl-n (다음 매치 추가):\n   - 커서 아래 단어를 선택해 다중 커서 모드로 진입하고, Ctrl-n 을 누를 때마다 다음 동일 단어가 선택에 추가됩니다.\n\n2) Ctrl-x (현재 매치 건너뛰기) & c / i / a / d (동시 편집):\n   - 직전에 추가된 매치를 선택 해제하고 다음 매치로 건너뜁니다. c 를 누르면 모든 선택 영역이 동시에 지워지고 멀티 커서 입력 모드로 전환됩니다.\n\n미션:\n1. 1번째 줄의 첫 item 위에서 g Ctrl-n 을 눌러 다중 커서를 시작하고, Ctrl-n 을 두 번 눌러 3번째 item(const keep = item;)까지 선택하세요.\n2. Ctrl-x 를 눌러 keep 줄의 item 은 건너뛰고 마지막 줄의 item 을 선택하세요.\n3. c node<Esc> 로 선택된 3곳의 item 을 한 번에 node 로 동시 치환하세요!',
+    hint: 'g Ctrl-n → Ctrl-n → Ctrl-n → Ctrl-x → c node<Esc>',
+    par: 13,
+    primaryFilename: 'src/multi.ts',
+    initialLines: [
+      'const item = load(item);',
+      'const keep = item;',
+      'const last = item;',
+    ],
+    targetLines: [
+      'const node = load(node);',
+      'const keep = item;',
+      'const last = node;',
+    ],
+    initialCursor: { line: 0, col: 6 },
+    optimalKeys: [
+      'g',
+      'Ctrl-n',
+      'Ctrl-n',
+      'Ctrl-n',
+      'Ctrl-x',
+      'c',
+      ...keysOf('node'),
+      'Escape',
+    ],
+    checkComplete: (state) => {
+      const target = [
+        'const node = load(node);',
+        'const keep = item;',
+        'const last = node;',
+      ];
+      return (
+        !state.multiCursor?.isOpen &&
+        state.lines.length === target.length &&
+        state.lines.every((l, i) => l === target[i])
+      );
     },
   },
 ];

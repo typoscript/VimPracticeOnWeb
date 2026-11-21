@@ -104,7 +104,7 @@ flowchart TD
 
 ---
 
-## 🎯 튜토리얼 커리큘럼 (Lessons 1 ~ 110)
+## 🎯 튜토리얼 커리큘럼 (Lessons 1 ~ 112)
 
 ### 🟢 기초 이동 및 텍스트 편집 (레슨 1 ~ 10)
 1. **레슨 1**: 기본 방향 이동 (`h`, `j`, `k`, `l`)
@@ -216,7 +216,7 @@ flowchart TD
 99. **레슨 99**: 덮어쓰기 모드(`R`), `[count]r` & 비주얼 블록 치환(`Ctrl-v r`) 마스터하기
 100. **레슨 100**: [대단원] 정규식 캡처·매크로·`vim-surround`·다중 파일 배치(`:vimgrep` + `:cdo` + `Ctrl-^`) 종합 마스터 챌린지
 
-### 🚀 현대 Neovim 실전 트랙 (레슨 101 ~ 110)
+### 🚀 현대 Neovim 실전 트랙 (레슨 101 ~ 112)
 101. **레슨 101**: Telescope `:LiveGrep` 본문 검색 & `Ctrl-q` 퀵픽스 일괄 치환
 102. **레슨 102**: Neovim 0.11 LSP 리팩토링 — `gra` 코드 액션 & `grn` 다중 파일 이름 변경
 103. **레슨 103**: Neovim 0.11 LSP 탐색 — `gO` 문서 심볼 아웃라인 & `grr` 참조 검색
@@ -227,6 +227,8 @@ flowchart TD
 108. **레슨 108**: `oil.nvim` 버퍼 기반 파일시스템 편집(`:Oil` · `dd`/`cw`/`o` · `:w`)
 109. **레슨 109**: `harpoon.nvim` 파일 핀 & 원키 프로젝트 전환(`:HarpoonAdd` · `:HarpoonMenu`)
 110. **레슨 110**: `mini.ai` Next/Last 텍스트 객체(`cin"` · `din(` · `cil"`) 원격 편집 마스터
+111. **레슨 111**: `trouble.nvim` 프로젝트 진단·TODO 통합 허브(`:Trouble todo` · `:TroubleNext`)
+112. **레슨 112**: `vim-visual-multi` 다중 커서 선택·건너뛰기·동시 치환(`g Ctrl-n` · `Ctrl-x`)
 
 ---
 

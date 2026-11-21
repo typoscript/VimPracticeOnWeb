@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 110)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 112)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -219,6 +219,7 @@
 - **`trouble.nvim` 프로젝트 진단·TODO 통합 허브 & `vim-visual-multi` 다중 커서 (`src/vim-engine/troubleEngine.ts`, `src/vim-engine/multiCursorEngine.ts`, `src/components/TroublePanel/`, `EditorLineRenderer.tsx`)**:
   - **Trouble 통합 허브 (`:Trouble [all|diagnostics|todo|quickfix|next|prev|toggle|close]`, `:TroubleToggle`, `:TroubleClose`, `:TroubleNext`, `:TroublePrev`)**: LSP 진단, 프로젝트 전체 VFS의 `TODO`/`FIXME`/`HACK`/`BUG`/`WARN`/`NOTE` 주석, 퀵픽스 항목을 파일별 트리로 묶어 지연 로딩(`React.lazy`)된 하단 패널에 표시하고 원클릭 파일 전환·점프 및 모드 필터링을 제공합니다.
   - **다중 커서 (`g Ctrl-n`, `:MultiCursor[!] [query]`, `:MultiCursorAll [query]`)**: 커서 아래 단어와 동일한 토큰을 `Ctrl-n`(추가)·`Ctrl-x`(건너뛰기)·`Ctrl-p`(취소)로 점진 선택해 `c`/`i`/`a`/`d`/`Backspace`/`Delete`로 여러 위치(같은 줄 다중 매치 포함)를 동시에 편집하고 단일 Undo(`u`)로 복원합니다. `EditorLineRenderer` 멀티 선택·커서 렌더링, `StatusBar` `-- MULTI (N) --` / `-- MULTI INSERT (N) --` 배지, Which-Key `g Ctrl-n` 안내를 연동했습니다.
+  - **실전 레슨 111~112**: `trouble.nvim` `:Trouble todo` + `:TroubleNext` 크로스 파일 이슈 해결(레슨 111)과 `vim-visual-multi` `g Ctrl-n` + `Ctrl-x` 건너뛰기·동시 치환(레슨 112)을 추가해 현대 Neovim 실전 커리큘럼을 112강으로 확장했습니다.
 
 ---
 
