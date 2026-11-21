@@ -3,6 +3,7 @@ import {
   CursorPosition,
   VimMode,
   SearchMatch,
+  CustomMatchSpan,
   ConfirmSubstituteSession,
   IncCommandPreviewMatch,
   BlockInsertSession,
@@ -25,6 +26,7 @@ export interface RenderLineOptions {
   visualAnchor?: CursorPosition;
   visualBlockEndOfLine?: boolean;
   lineMatches: SearchMatch[];
+  lineCustomMatches?: CustomMatchSpan[];
   isFocused: boolean;
   insertNormalSession?: boolean;
   insertRegisterPending?: boolean;
@@ -73,6 +75,7 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     visualAnchor,
     visualBlockEndOfLine,
     lineMatches,
+    lineCustomMatches,
     isFocused,
     insertNormalSession,
     insertRegisterPending,
@@ -100,6 +103,7 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     lineIdx <= Math.max(visualAnchor.line, cursor.line);
 
   const hasSearchMatches = lineMatches.length > 0;
+  const hasCustomMatches = (lineCustomMatches?.length ?? 0) > 0;
   const hasIncMatches = (incCommandMatches?.length ?? 0) > 0;
   const hasSpellErrors = (spellErrors?.length ?? 0) > 0;
   const hasDiagnostics = (lineDiagnostics?.length ?? 0) > 0;
@@ -137,6 +141,7 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     targetCol === null &&
     !isLineInVisualRange &&
     !hasSearchMatches &&
+    !hasCustomMatches &&
     !hasIncMatches &&
     !hasSpellErrors &&
     !hasDiagnostics
@@ -158,6 +163,7 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     targetCol === null &&
     !isLineInVisualRange &&
     !hasSearchMatches &&
+    !hasCustomMatches &&
     !hasIncMatches &&
     !hasSpellErrors &&
     !hasDiagnostics &&
@@ -220,6 +226,35 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     const isSearchMatch = lineMatches.some(
       (m) => i >= m.col && i < m.col + m.length
     );
+    let customMatchGroupClass = '';
+    if (lineCustomMatches && lineCustomMatches.length > 0) {
+      let activeCustom: CustomMatchSpan | null = null;
+      for (const cm of lineCustomMatches) {
+        if (i >= cm.col && i < cm.col + cm.length) {
+          activeCustom = cm;
+        }
+      }
+      if (activeCustom) {
+        const g = activeCustom.group.toLowerCase();
+        const variant =
+          g.includes('error')
+            ? 'error'
+            : g.includes('warn')
+              ? 'warning'
+              : g.includes('todo')
+                ? 'todo'
+                : g.includes('diffadd')
+                  ? 'diffadd'
+                  : g.includes('diffdel')
+                    ? 'diffdelete'
+                    : g.includes('visual')
+                      ? 'visual'
+                      : g.includes('search')
+                        ? 'search'
+                        : 'default';
+        customMatchGroupClass = ` custom-match custom-match-${variant}`;
+      }
+    }
     const isTrailingCursor = (isCursor || isBlockSecondaryCursor) && i >= text.length;
     const isConfirmMatch =
       confirmSubstitute &&
@@ -305,6 +340,10 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
 
     if (isSearchMatch) {
       classNames += ' search-match';
+    }
+
+    if (customMatchGroupClass) {
+      classNames += customMatchGroupClass;
     }
 
     if (isConfirmMatch) {

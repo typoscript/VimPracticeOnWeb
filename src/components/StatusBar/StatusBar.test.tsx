@@ -184,4 +184,24 @@ describe('StatusBar Component', () => {
     expect(pendingCursor?.textContent).toBe('?');
     expect(screen.getByTestId('commandline-prompt')).toHaveTextContent('/a?b');
   });
+
+  it('searchCount가 주어지면 [current/total] 검색 카운트 배지를 렌더링한다', () => {
+    const { rerender } = render(
+      <StatusBar
+        mode="NORMAL"
+        cursor={{ line: 0, col: 0 }}
+        searchCount={{ current: 2, total: 5 }}
+      />
+    );
+    expect(screen.getByTestId('status-search-count')).toHaveTextContent('[2/5]');
+
+    rerender(
+      <StatusBar
+        mode="NORMAL"
+        cursor={{ line: 0, col: 0 }}
+        searchCount={null}
+      />
+    );
+    expect(screen.queryByTestId('status-search-count')).not.toBeInTheDocument();
+  });
 });

@@ -771,5 +771,52 @@
   color: var(--text-primary, #cdd6f4);
 }
 
+/* :match / :2match / :3match / matchadd() 커스텀 패턴 하이라이트 */
+.custom-match {
+  border-radius: 2px;
+}
+
+.custom-match-error {
+  background-color: rgba(243, 139, 168, 0.38);
+  color: #fff;
+  box-shadow: inset 0 -1px 0 #f38ba8;
+}
+
+.custom-match-warning {
+  background-color: rgba(249, 226, 175, 0.32);
+  color: #f9e2af;
+  box-shadow: inset 0 -1px 0 #f9e2af;
+}
+
+.custom-match-todo {
+  background-color: rgba(250, 179, 135, 0.35);
+  color: #11111b;
+  font-weight: 700;
+}
+
+.custom-match-search {
+  background-color: rgba(137, 180, 250, 0.32);
+  box-shadow: inset 0 -1px 0 #89b4fa;
+}
+
+.custom-match-diffadd {
+  background-color: rgba(166, 227, 161, 0.3);
+  color: #a6e3a1;
+}
+
+.custom-match-diffdelete {
+  background-color: rgba(243, 139, 168, 0.28);
+  text-decoration: line-through;
+}
+
+.custom-match-visual {
+  background-color: rgba(203, 166, 247, 0.32);
+}
+
+.custom-match-default {
+  background-color: rgba(148, 226, 213, 0.28);
+  box-shadow: inset 0 -1px 0 #94e2d5;
+}
+
 
 

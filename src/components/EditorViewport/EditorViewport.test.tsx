@@ -228,4 +228,14 @@ describe('EditorViewport', () => {
     expect(screen.getByTestId('inccommand-split-row-1')).toHaveTextContent('const newVal = 1;');
     expect(screen.getByTestId('inccommand-split-row-2')).toHaveTextContent('return newVal;');
   });
+
+  it(':match / matchadd() 커스텀 하이라이트 매치가 에디터 문자에 그룹 클래스로 렌더링된다', () => {
+    const base = makeBaseState({
+      lines: ['TODO: fix bug'],
+      customMatches: [{ id: 1, group: 'Todo', pattern: 'TODO', priority: 10 }],
+    });
+    const props = createProps({ editorState: base, displayEditorState: base });
+    const { container } = render(<EditorViewport {...props} />);
+    expect(container.querySelectorAll('.custom-match-todo')).toHaveLength(4);
+  });
 });

@@ -37,6 +37,7 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   smartindent: false,
   shiftround: false,
   matchpairs: '(:),{:},[:]',
+  shortmess: 'filnxtToOF',
 };
 
 export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
@@ -115,6 +116,8 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   shiftround: 'shiftround',
   mps: 'matchpairs',
   matchpairs: 'matchpairs',
+  shm: 'shortmess',
+  shortmess: 'shortmess',
 };
 
 export const WINDOW_LOCAL_OPTION_KEYS = new Set<keyof VimOptions>([
@@ -352,6 +355,7 @@ export function formatOptionsList(
     'iskeyword',
     'virtualedit',
     'matchpairs',
+    'shortmess',
   ];
 
   for (const k of stringKeys) {

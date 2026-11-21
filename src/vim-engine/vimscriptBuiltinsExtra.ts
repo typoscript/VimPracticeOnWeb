@@ -1,7 +1,8 @@
 import { VimEditorState, VimScriptValue } from './types';
 import { clampCursor } from './cursor';
 import { msg } from './messages';
-import { readOptionForScript, writeOptionForScript } from './setOptionsCore';
+import { compileVimRegex, computeSearchCount } from './vimRegex';
+import { getOptions, readOptionForScript, writeOptionForScript } from './setOptionsCore';
 import {
   VimScriptError,
   EvalContext,
@@ -1286,6 +1287,120 @@ export const EXTRA_BUILTINS: Record<string, ExtraBuiltin> = {
       ctx.state = {
         ...s,
         commandCursorCol: targetCol >= buf.length ? undefined : targetCol,
+      };
+      return 0;
+    },
+  },
+
+  // ---- 검색 카운트 & 커스텀 패턴 하이라이트 (searchcount / matchadd / matchdelete / getmatches / clearmatches) ----
+  searchcount: {
+    min: 0,
+    max: 1,
+    fn: (ctx, [optsArg]) => {
+      const s = ctx.state;
+      const vimOpts = getOptions(s);
+      let pattern = s.lastSearchQuery ?? '';
+      let maxcount = 99;
+      let cursor = { ...s.cursor };
+      if (optsArg !== undefined && isDict(optsArg)) {
+        if ('pattern' in optsArg.items) {
+          pattern = toVimString(optsArg.items.pattern);
+        }
+        if ('maxcount' in optsArg.items) {
+          maxcount = Math.max(0, Math.trunc(toNumber(optsArg.items.maxcount)));
+        }
+        if ('pos' in optsArg.items && isList(optsArg.items.pos) && optsArg.items.pos.length >= 2) {
+          const lnum = Math.max(1, Math.trunc(toNumber(optsArg.items.pos[0])));
+          const col = Math.max(1, Math.trunc(toNumber(optsArg.items.pos[1])));
+          cursor = { line: lnum - 1, col: col - 1 };
+        }
+      }
+      const res = computeSearchCount(s.lines, pattern, cursor, {
+        ignorecase: vimOpts.ignorecase,
+        smartcase: vimOpts.smartcase,
+        maxcount,
+      });
+      return makeDict({
+        current: res.current,
+        total: res.total,
+        exact_match: res.exact_match,
+        incomplete: res.incomplete,
+        maxcount: res.maxcount,
+      });
+    },
+  },
+  matchadd: {
+    min: 2,
+    max: 4,
+    fn: (ctx, [groupArg, patternArg, priorityArg, idArg]) => {
+      const group = toVimString(groupArg).trim();
+      const pattern = toVimString(patternArg);
+      const priority = priorityArg !== undefined ? Math.trunc(toNumber(priorityArg)) : 10;
+      if (!group || !pattern) return -1;
+      try {
+        compileVimRegex(pattern);
+      } catch {
+        return -1;
+      }
+      const existing = ctx.state.customMatches ?? [];
+      let assignedId: number;
+      if (idArg !== undefined) {
+        const reqId = Math.trunc(toNumber(idArg));
+        if (reqId === -1) {
+          const maxExisting = existing.reduce((acc, m) => Math.max(acc, m.id), 3);
+          assignedId = Math.max(ctx.state.nextMatchId ?? 4, maxExisting + 1);
+        } else if (reqId <= 0 || existing.some((m) => m.id === reqId)) {
+          return -1;
+        } else {
+          assignedId = reqId;
+        }
+      } else {
+        const maxExisting = existing.reduce((acc, m) => Math.max(acc, m.id), 3);
+        assignedId = Math.max(ctx.state.nextMatchId ?? 4, maxExisting + 1);
+      }
+      ctx.state = {
+        ...ctx.state,
+        customMatches: [...existing, { id: assignedId, group, pattern, priority }],
+        nextMatchId: Math.max(ctx.state.nextMatchId ?? 4, assignedId + 1),
+      };
+      return assignedId;
+    },
+  },
+  matchdelete: {
+    min: 1,
+    max: 1,
+    fn: (ctx, [idArg]) => {
+      const targetId = Math.trunc(toNumber(idArg));
+      const existing = ctx.state.customMatches ?? [];
+      const next = existing.filter((m) => m.id !== targetId);
+      if (next.length === existing.length) return -1;
+      ctx.state = {
+        ...ctx.state,
+        customMatches: next.length > 0 ? next : undefined,
+      };
+      return 0;
+    },
+  },
+  getmatches: {
+    min: 0,
+    max: 0,
+    fn: (ctx) =>
+      (ctx.state.customMatches ?? []).map((m) =>
+        makeDict({
+          group: m.group,
+          pattern: m.pattern,
+          priority: m.priority,
+          id: m.id,
+        })
+      ),
+  },
+  clearmatches: {
+    min: 0,
+    max: 0,
+    fn: (ctx) => {
+      ctx.state = {
+        ...ctx.state,
+        customMatches: undefined,
       };
       return 0;
     },

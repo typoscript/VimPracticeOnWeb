@@ -91,8 +91,20 @@ export {
 } from './wildmenu';
 
 // ---- 순정 Vim 정규식 → JavaScript RegExp ----
-export { compileVimRegex, translateVimPattern, escapeVimPattern } from './vimRegex';
-export type { CompileOptions, VimPatternInfo } from './vimRegex';
+export {
+  compileVimRegex,
+  translateVimPattern,
+  escapeVimPattern,
+  computeSearchCount,
+  computeCustomMatchSpans,
+} from './vimRegex';
+export type {
+  CompileOptions,
+  VimPatternInfo,
+  ComputeSearchCountOptions,
+  ComputedSearchCount,
+  CustomMatchSpan,
+} from './vimRegex';
 
 // ---- Vim script 표현식 & 함수/람다/예외 처리 ----
 export {

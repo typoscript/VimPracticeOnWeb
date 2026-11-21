@@ -114,6 +114,21 @@ export interface SearchMatch {
   length: number;
 }
 
+export interface SearchCountResult {
+  current: number;
+  total: number;
+  exact_match: number;
+  incomplete: number;
+  maxcount: number;
+}
+
+export interface CustomMatchEntry {
+  id: number;
+  group: string;
+  pattern: string;
+  priority: number;
+}
+
 export type SearchOffsetType = 'start' | 'end' | 'line';
 
 export interface SearchOffset {
@@ -339,6 +354,8 @@ export interface VimOptions {
   shiftround?: boolean;
   /** % 괄호 매칭 쌍 정의 (:set mps=(:),{:},[:],<:>, :set matchpairs) */
   matchpairs?: string;
+  /** 상태 메시지 축약 플래그 (:set shm=filnxtToOF, S 포함 시 검색 카운트 숨김) */
+  shortmess?: string;
 }
 
 /** 맞춤법 검사기 오탈자 정보 */
@@ -808,6 +825,10 @@ export interface VimEditorState {
   scriptFinished?: boolean;
   /** 현재 :source 실행 중첩 깊이 (:finish 검증용) */
   scriptSourcingDepth?: number;
+  /** 커스텀 정규식 하이라이트 매치 목록 (:match, :2match, :3match, matchadd()) */
+  customMatches?: CustomMatchEntry[];
+  /** matchadd() 다음 자동 할당 ID (기본 4부터 시작; 1~3은 :match/:2match/:3match 예약) */
+  nextMatchId?: number;
 }
 
 export type LspDiagnosticSeverity = 'error' | 'warning' | 'info' | 'hint';

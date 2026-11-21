@@ -384,3 +384,139 @@ export function escapeVimPattern(text: string): string {
 export function starSearchPattern(word: string, wholeWord = true): string {
   return wholeWord && /^\w+$/.test(word) ? `\\<${word}\\>` : escapeVimPattern(word);
 }
+
+export interface ComputeSearchCountOptions {
+  ignorecase?: boolean;
+  smartcase?: boolean;
+  maxcount?: number;
+}
+
+export interface ComputedSearchCount {
+  current: number;
+  total: number;
+  exact_match: number;
+  incomplete: number;
+  maxcount: number;
+}
+
+/**
+ * 순정 Vim searchcount() 규약으로 현재 커서 기준 매치 번호(current)와 전체 개수(total)를 계산합니다.
+ */
+export function computeSearchCount(
+  lines: string[],
+  pattern: string,
+  cursor: { line: number; col: number },
+  opts: ComputeSearchCountOptions = {}
+): ComputedSearchCount {
+  const maxcount = opts.maxcount !== undefined ? opts.maxcount : 99;
+  if (!pattern || pattern.length === 0) {
+    return { current: 0, total: 0, exact_match: 0, incomplete: 0, maxcount };
+  }
+
+  let regex: RegExp;
+  try {
+    regex = compileVimRegex(pattern, {
+      ignorecase: opts.ignorecase,
+      smartcase: opts.smartcase,
+      flags: 'g',
+    });
+  } catch {
+    return { current: 0, total: 0, exact_match: 0, incomplete: 0, maxcount };
+  }
+
+  let total = 0;
+  let current = 0;
+  let exactMatch = 0;
+  let incomplete = 0;
+
+  for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+    const lineText = lines[lineIdx] ?? '';
+    regex.lastIndex = 0;
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(lineText)) !== null) {
+      total++;
+      const mCol = m.index;
+      if (lineIdx < cursor.line || (lineIdx === cursor.line && mCol <= cursor.col)) {
+        current = total;
+        if (lineIdx === cursor.line && mCol === cursor.col) {
+          exactMatch = 1;
+        }
+      }
+      if (maxcount > 0 && total > maxcount) {
+        incomplete = 2;
+        return {
+          current: Math.min(current, maxcount + 1),
+          total: maxcount + 1,
+          exact_match: exactMatch,
+          incomplete,
+          maxcount,
+        };
+      }
+      if (m.index === regex.lastIndex) {
+        regex.lastIndex++;
+      }
+    }
+  }
+
+  return { current, total, exact_match: exactMatch, incomplete, maxcount };
+}
+
+export interface CustomMatchSpan {
+  id: number;
+  group: string;
+  priority: number;
+  line: number;
+  col: number;
+  length: number;
+}
+
+/**
+ * 등록된 :match / matchadd() 항목들을 버퍼 전체 줄에 매칭하여 하이라이트 스팬 목록을 계산합니다.
+ */
+export function computeCustomMatchSpans(
+  lines: string[],
+  customMatches?: ReadonlyArray<{ id: number; group: string; pattern: string; priority: number }>,
+  opts?: { ignorecase?: boolean; smartcase?: boolean }
+): CustomMatchSpan[] {
+  if (!customMatches || customMatches.length === 0) return [];
+  const spans: CustomMatchSpan[] = [];
+  const sorted = [...customMatches].sort((a, b) => a.priority - b.priority || a.id - b.id);
+
+  for (const entry of sorted) {
+    if (!entry.pattern) continue;
+    let regex: RegExp;
+    try {
+      regex = compileVimRegex(entry.pattern, {
+        ignorecase: opts?.ignorecase,
+        smartcase: opts?.smartcase,
+        flags: 'g',
+      });
+    } catch {
+      continue;
+    }
+
+    for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+      const lineText = lines[lineIdx] ?? '';
+      regex.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      while ((m = regex.exec(lineText)) !== null) {
+        const len = m[0].length;
+        if (len > 0) {
+          spans.push({
+            id: entry.id,
+            group: entry.group,
+            priority: entry.priority,
+            line: lineIdx,
+            col: m.index,
+            length: len,
+          });
+        }
+        if (m.index === regex.lastIndex) {
+          regex.lastIndex++;
+        }
+      }
+    }
+  }
+
+  return spans;
+}

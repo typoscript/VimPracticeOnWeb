@@ -12,9 +12,11 @@ import {
   DiffHunk,
   LspDiagnostic,
   LspHoverState,
+  CustomMatchEntry,
 } from '../../vim-engine';
 import {
   findMatches,
+  computeCustomMatchSpans,
   findSpellErrorsInLine,
   detectFiletype,
   parseListchars,
@@ -86,6 +88,8 @@ export interface EditorProps {
   lspHover?: LspHoverState | null;
   /** LSP 호버 창 닫기 콜백 */
   onCloseLspHover?: () => void;
+  /** 커스텀 정규식 하이라이트 매치 (:match, matchadd()) */
+  customMatches?: CustomMatchEntry[];
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -123,6 +127,7 @@ export const Editor: React.FC<EditorProps> = ({
   lspDiagnostics,
   lspHover,
   onCloseLspHover,
+  customMatches,
 }) => {
   const explicitFt =
     options?.filetype ||
@@ -177,6 +182,10 @@ export const Editor: React.FC<EditorProps> = ({
   const allMatches = searchQuery && searchQuery.length > 0 && isHlSearch
     ? findMatches(lines, searchQuery, searchOpts)
     : [];
+  const allCustomMatchSpans =
+    customMatches && customMatches.length > 0
+      ? computeCustomMatchSpans(lines, customMatches, searchOpts)
+      : [];
 
   return (
     <div
@@ -231,6 +240,10 @@ export const Editor: React.FC<EditorProps> = ({
               : lineIdx + 1;
 
             const lineMatches = allMatches.filter((m) => m.line === lineIdx);
+            const lineCustomMatches =
+              allCustomMatchSpans.length > 0
+                ? allCustomMatchSpans.filter((m) => m.line === lineIdx)
+                : undefined;
             const lineIncMatches = incCommandPreview
               ? incCommandPreview.matches.filter((m) => m.line === lineIdx)
               : undefined;
@@ -343,6 +356,7 @@ export const Editor: React.FC<EditorProps> = ({
                         visualAnchor,
                         visualBlockEndOfLine,
                         lineMatches,
+                        lineCustomMatches,
                         isFocused,
                         insertNormalSession,
                         insertRegisterPending,

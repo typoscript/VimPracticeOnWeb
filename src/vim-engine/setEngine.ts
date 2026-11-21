@@ -210,6 +210,8 @@ function handleOptionQuery(ctx: SetDraftContext, token: string): VimEditorState 
       val = DEFAULT_VIM_OPTIONS.virtualedit ?? '';
     } else if (optKey === 'matchpairs') {
       val = DEFAULT_MATCHPAIRS;
+    } else if (optKey === 'shortmess') {
+      val = DEFAULT_VIM_OPTIONS.shortmess ?? 'filnxtToOF';
     }
   }
 
@@ -502,6 +504,31 @@ function handleOptionAssignment(ctx: SetDraftContext, token: string): VimEditorS
   }
   if (optKey === 'matchpairs') {
     return handleMatchpairsAssignment(ctx, mod, rawVal, token);
+  }
+  if (optKey === 'shortmess') {
+    const curVal =
+      ctx.nextLocal.shortmess ?? ctx.nextGlobal.shortmess ?? DEFAULT_VIM_OPTIONS.shortmess ?? 'filnxtToOF';
+    let nextVal = rawVal;
+    if (mod === '+') {
+      nextVal = curVal;
+      for (const ch of rawVal) {
+        if (!nextVal.includes(ch)) nextVal += ch;
+      }
+    } else if (mod === '^') {
+      let prep = '';
+      for (const ch of rawVal) {
+        if (!prep.includes(ch)) prep += ch;
+      }
+      for (const ch of curVal) {
+        if (!prep.includes(ch)) prep += ch;
+      }
+      nextVal = prep;
+    } else if (mod === '-') {
+      nextVal = [...curVal].filter((ch) => !rawVal.includes(ch)).join('');
+    }
+    writeScopedOption(ctx, 'shortmess', nextVal);
+    ctx.appliedList.push(`shortmess=${nextVal}`);
+    return null;
   }
   if (optKey === 'errorformat' || optKey === 'grepprg') {
     const currentStr =

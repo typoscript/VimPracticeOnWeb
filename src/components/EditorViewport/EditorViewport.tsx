@@ -174,6 +174,7 @@ export function EditorViewport({
             bellSignal={isActive ? bellCount : undefined}
             onSelectCompletionItem={onSelectCompletionCandidate}
             primaryFilename={paneFilename}
+            customMatches={displayEditorState.customMatches}
           />
         </div>
       );
@@ -328,6 +329,7 @@ export function EditorViewport({
             lspDiagnostics={displayEditorState.lspDiagnostics}
             lspHover={displayEditorState.lspHover}
             onCloseLspHover={onCloseLspHover}
+            customMatches={displayEditorState.customMatches}
           />
         )}
 

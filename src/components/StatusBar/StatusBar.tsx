@@ -36,6 +36,8 @@ export interface StatusBarProps {
   functionDraft?: { name: string; lines: number } | null;
   /** 맞춤법 검사기 활성화 여부 (:set spell) */
   spellActive?: boolean;
+  /** 현재 검색 매치 카운트 ([current/total]) */
+  searchCount?: { current: number; total: number } | null;
 }
 
 export const StatusBar: React.FC<StatusBarProps> = ({
@@ -57,6 +59,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   functionDraft,
   showWildmenuBar = true,
   spellActive,
+  searchCount,
 }) => {
   const displayMode =
     insertCtrlXMode
@@ -214,6 +217,11 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       </div>
 
       <div className="status-bar-right">
+        {searchCount && searchCount.total > 0 && (
+          <span className="status-search-count" data-testid="status-search-count">
+            [{searchCount.current}/{searchCount.total}]
+          </span>
+        )}
         {spellActive && (
           <span className="status-spell-badge" data-testid="status-spell-badge">
             [SPELL]

@@ -12,7 +12,7 @@ import { VimGrammarASTViewer } from '../VimGrammarASTViewer/VimGrammarASTViewer'
 import { ActionTimelinePanel } from '../ActionTimelinePanel/ActionTimelinePanel';
 import { AppTab } from '../AppHeader/AppHeader';
 import { EditorViewport } from '../EditorViewport/EditorViewport';
-import { VimEditorState, VimMode } from '../../vim-engine';
+import { VimEditorState, VimMode, computeSearchCount } from '../../vim-engine';
 import { Mission } from '../../types/mission';
 import { LessonProgress } from '../../utils/storage';
 import { t } from '../../i18n';
@@ -331,6 +331,29 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
             wildmenu={displayEditorState.wildmenu}
             showWildmenuBar={displayEditorState.options?.wildmenu ?? true}
             spellActive={displayEditorState.options?.spell}
+            searchCount={(() => {
+              const shm = displayEditorState.options?.shortmess ?? '';
+              if (shm.includes('S')) return null;
+              const activePattern =
+                displayEditorState.mode === 'SEARCH'
+                  ? (displayEditorState.commandBuffer ?? '').split(
+                      displayEditorState.commandType === '?' ? '?' : '/'
+                    )[0]
+                  : displayEditorState.hlsearchSuppressed
+                    ? ''
+                    : (displayEditorState.lastSearchQuery ?? '');
+              if (!activePattern) return null;
+              const sc = computeSearchCount(
+                displayEditorState.lines,
+                activePattern,
+                displayEditorState.cursor,
+                {
+                  ignorecase: displayEditorState.options?.ignorecase,
+                  smartcase: displayEditorState.options?.smartcase,
+                }
+              );
+              return sc.total > 0 ? { current: sc.current, total: sc.total } : null;
+            })()}
             functionDraft={
               displayEditorState.functionDraft
                 ? {

@@ -34,6 +34,7 @@ import {
 import { executeAbbrevCommand } from './abbrevEngine';
 import { executeUserCommandDefinition } from './userCommandEngine';
 import { executeDigraphCommand } from './digraphs';
+import { compileVimRegex } from './vimRegex';
 import { describeCharAt } from './engineHelpers';
 import { msg } from './messages';
 import { tryExecuteQuickfixExCommand } from './exQuickfixCommands';
@@ -344,6 +345,79 @@ function tryExecuteMappingAndMiscToolCommand(
       commandCursorCol: undefined,
       digraphPending: undefined,
       commandMessage: describeCharAt(curLine, state.cursor.col),
+    });
+  }
+
+  // :clearmatches — 모든 커스텀 하이라이트 매치 해제
+  if (/^clearm(?:a(?:t(?:c(?:h(?:e(?:s)?)?)?)?)?)?$/i.test(cleanCmdRaw)) {
+    return finishEx(state, {
+      customMatches: undefined,
+      commandMessage: msg('커스텀 하이라이트 매치가 모두 해제되었습니다 (:clearmatches)'),
+    });
+  }
+
+  // :match / :2match / :3match [{group} /{pat}/ | none]
+  const matchCmd = cleanCmdRaw.match(/^([23])?mat(?:c(?:h)?)?(?:\s+(.*))?$/i);
+  if (matchCmd) {
+    const slotId = matchCmd[1] === '2' ? 2 : matchCmd[1] === '3' ? 3 : 1;
+    const cmdName = matchCmd[1] ? `:${matchCmd[1]}match` : ':match';
+    const rawArg = (matchCmd[2] ?? '').trim();
+    const existing = state.customMatches ?? [];
+
+    if (!rawArg || /^none$/i.test(rawArg)) {
+      const next = existing.filter((m) => m.id !== slotId);
+      return finishEx(state, {
+        customMatches: next.length > 0 ? next : undefined,
+        commandMessage: msg('커스텀 하이라이트 매치 해제 ({cmd})', { cmd: cmdName }),
+      });
+    }
+
+    const groupAndPat = rawArg.match(/^([A-Za-z_][A-Za-z0-9_]*)\s+([^\w\s])([\s\S]*)$/);
+    if (!groupAndPat) {
+      return finishEx(state, {
+        bell: true,
+        commandMessage: msg('E475: 잘못된 인수입니다: {arg}', { arg: rawArg }),
+      });
+    }
+    const group = groupAndPat[1];
+    const delim = groupAndPat[2];
+    const restAfterDelim = groupAndPat[3];
+    // 끝 구분자(unescaped delim) 탐색
+    let endDelimIdx = -1;
+    for (let i = 0; i < restAfterDelim.length; i++) {
+      if (restAfterDelim[i] === '\\') {
+        i++;
+        continue;
+      }
+      if (restAfterDelim[i] === delim) {
+        endDelimIdx = i;
+        break;
+      }
+    }
+    const pattern =
+      endDelimIdx >= 0 ? restAfterDelim.slice(0, endDelimIdx) : restAfterDelim;
+    if (!pattern) {
+      return finishEx(state, {
+        bell: true,
+        commandMessage: msg('E475: 잘못된 인수입니다: {arg}', { arg: rawArg }),
+      });
+    }
+    try {
+      compileVimRegex(pattern);
+    } catch {
+      return finishEx(state, {
+        bell: true,
+        commandMessage: msg('E475: 잘못된 인수입니다: {arg}', { arg: rawArg }),
+      });
+    }
+
+    const next = [
+      ...existing.filter((m) => m.id !== slotId),
+      { id: slotId, group, pattern, priority: 10 },
+    ];
+    return finishEx(state, {
+      customMatches: next,
+      commandMessage: msg('[하이라이트 매치] {group}: /{pattern}/', { group, pattern }),
     });
   }
 

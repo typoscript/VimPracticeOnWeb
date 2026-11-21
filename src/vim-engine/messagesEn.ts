@@ -422,4 +422,7 @@ export const EN_MESSAGES: Record<string, string> = {
   "E555: 태그 스택의 맨 아래입니다 (at bottom of tag stack)": "E555: at bottom of tag stack",
   "E21: 'modifiable' 옵션이 꺼져 있어 변경할 수 없습니다": "E21: Cannot make changes, 'modifiable' is off",
   "E45: 'readonly' 옵션이 설정되어 있습니다 (덮어쓰려면 ! 추가)": "E45: 'readonly' option is set (add ! to override)",
+  "커스텀 하이라이트 매치가 모두 해제되었습니다 (:clearmatches)": "All custom match highlights cleared (:clearmatches)",
+  "커스텀 하이라이트 매치 해제 ({cmd})": "Custom match highlight cleared ({cmd})",
+  "[하이라이트 매치] {group}: /{pattern}/": "[Match Highlight] {group}: /{pattern}/",
 };
