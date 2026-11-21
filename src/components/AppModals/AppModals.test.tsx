@@ -80,7 +80,7 @@ describe('AppModals', () => {
     setLocale('ko');
   });
 
-  it('초기 닫힘 상태에서는 지연 모달/퍼지 파인더/도움말을 마운트하지 않으며 레슨 모달을 열고 닫는다', () => {
+  it('초기 닫힘 상태에서는 지연 모달/퍼지 파인더/도움말을 마운트하지 않으며 레슨 모달을 열고 닫는다', async () => {
     const base = createProps();
     const { rerender } = render(<AppModals {...base} />);
 
@@ -94,7 +94,7 @@ describe('AppModals', () => {
         lesson={{ ...base.lesson, isOpen: true, onClose }}
       />
     );
-    expect(screen.getByTestId('lesson-modal-content')).toBeInTheDocument();
+    expect(await screen.findByTestId('lesson-modal-content')).toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId('modal-close-btn'));
     expect(onClose).toHaveBeenCalledTimes(1);
@@ -106,7 +106,7 @@ describe('AppModals', () => {
     expect(await screen.findByTestId('daily-modal')).toBeInTheDocument();
   });
 
-  it('fuzzyFinder 와 helpSession 이 열려 있으면 오버레이를 렌더링한다', () => {
+  it('fuzzyFinder 와 helpSession 이 열려 있으면 오버레이를 렌더링한다', async () => {
     const state = createBaseState({
       fuzzyFinder: {
         isOpen: true,
@@ -125,7 +125,7 @@ describe('AppModals', () => {
     });
     render(<AppModals {...createProps({ editorState: state })} />);
 
-    expect(screen.getByTestId('fuzzy-finder-modal')).toBeInTheDocument();
-    expect(screen.getByTestId('help-viewer-window')).toBeInTheDocument();
+    expect(await screen.findByTestId('fuzzy-finder-modal')).toBeInTheDocument();
+    expect(await screen.findByTestId('help-viewer-window')).toBeInTheDocument();
   });
 });

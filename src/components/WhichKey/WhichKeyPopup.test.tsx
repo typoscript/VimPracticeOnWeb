@@ -31,6 +31,14 @@ describe('which-key.nvim 스타일 실시간 키 가이드 팝업', () => {
     expect(diData?.prefix).toBe('di');
     expect(diData?.items.some((i) => i.key === 'f')).toBe(true);
     expect(diData?.items.some((i) => i.key === 'a')).toBe(true);
+    expect(diData?.items.some((i) => i.key === 'n')).toBe(true);
+    expect(diData?.items.some((i) => i.key === 'l')).toBe(true);
+
+    const afterDin = handleKey(afterDi, 'n');
+    const dinData = resolveWhichKeyData(afterDin);
+    expect(dinData?.prefix).toBe('din');
+    expect(dinData?.items.some((i) => i.key === '"')).toBe(true);
+    expect(dinData?.items.some((i) => i.key === '(')).toBe(true);
 
     const insertCtrlX = handleKey({ ...base, mode: 'INSERT' }, 'Ctrl-x');
     const cxData = resolveWhichKeyData(insertCtrlX);

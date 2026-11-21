@@ -155,7 +155,7 @@ describe('Split Windows & Register Inspector Integration', () => {
     expect(screen.queryByTestId('locationlist-window')).not.toBeInTheDocument();
   });
 
-  it('마크 & 점프 리스트 비주얼 맵 패널이 토글 및 Ex 명령(:marks, :jumps)으로 동작한다', () => {
+  it('마크 & 점프 리스트 비주얼 맵 패널이 토글 및 Ex 명령(:marks, :jumps)으로 동작한다', async () => {
     render(<App />);
 
     // 1. 드롭다운 토글 버튼 클릭 시 패널 열림
@@ -163,7 +163,7 @@ describe('Split Windows & Register Inspector Integration', () => {
     expect(toggleBtn).toBeInTheDocument();
 
     fireEvent.click(toggleBtn);
-    expect(screen.getByTestId('marks-jump-visualizer')).toBeInTheDocument();
+    expect(await screen.findByTestId('marks-jump-visualizer')).toBeInTheDocument();
 
     // 2. 패널 닫기 버튼 클릭 시 패널 닫힘
     fireEvent.click(screen.getByTestId('close-marks-visualizer-btn'));

@@ -132,7 +132,7 @@ export function handleNormalCommentFormatOrCaseG(
   isReplayingDot: boolean,
   runHandleKey: RunHandleKeyFn
 ): VimEditorState | null {
-  const gcMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?g([cqw])([1-9][0-9]*)?([iagfFtT'`\[\]])?$/);
+  const gcMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?g([cqw])([1-9][0-9]*)?([ia][nl]|[iagfFtT'`\[\]])?$/);
   if (gcMatch) {
     const [, c1, opChar, c2, prefix] = gcMatch;
     const applyLines = (s: number, e: number): VimEditorState =>
@@ -153,8 +153,11 @@ export function handleNormalCommentFormatOrCaseG(
     if (!prefix && "iagfFtT'`[]".includes(key)) {
       return { ...state, pendingKeys: state.pendingKeys + key };
     }
+    if ((prefix === 'i' || prefix === 'a') && (key === 'n' || key === 'l')) {
+      return { ...state, pendingKeys: state.pendingKeys + key };
+    }
     const count = (c1 ? parseInt(c1, 10) : 1) * (c2 ? parseInt(c2, 10) : 1);
-    const range = findShiftRange(state, prefix ? [prefix, key] : [key], count, runHandleKey);
+    const range = findShiftRange(state, prefix ? [...prefix.split(''), key] : [key], count, runHandleKey);
     if (!range) return ringBell(state);
     const res = applyLines(range.startLine, range.endLine);
     if (res.bell) return res;

@@ -1,17 +1,13 @@
-import React, { lazy, Suspense } from 'react';
+import React, { lazy, Suspense, useState } from 'react';
 import { MissionPanel } from '../MissionPanel/MissionPanel';
 import { Keycaster } from '../Keycaster/Keycaster';
 import { DiffViewer } from '../DiffViewer/DiffViewer';
 import { VirtualKeyboard } from '../VirtualKeyboard/VirtualKeyboard';
-import { SpeedrunPanel } from '../SpeedrunPanel/SpeedrunPanel';
+import type { SpeedrunPanel as SpeedrunPanelType } from '../SpeedrunPanel/SpeedrunPanel';
 import { StatusBar } from '../StatusBar/StatusBar';
 import { RegisterInspector } from '../RegisterInspector/RegisterInspector';
-import { MarksJumpVisualizer } from '../MarksJumpVisualizer/MarksJumpVisualizer';
-import { MacroDebugger } from '../MacroDebugger/MacroDebugger';
-import { VimGrammarASTViewer } from '../VimGrammarASTViewer/VimGrammarASTViewer';
+import type { MarksJumpVisualizer as MarksJumpVisualizerType } from '../MarksJumpVisualizer/MarksJumpVisualizer';
 import { ActionTimelinePanel } from '../ActionTimelinePanel/ActionTimelinePanel';
-import { WhichKeyPopup } from '../WhichKey/WhichKeyPopup';
-import { HarpoonMenu } from '../HarpoonMenu/HarpoonMenu';
 import { AppTab } from '../AppHeader/AppHeader';
 import { EditorViewport } from '../EditorViewport/EditorViewport';
 import { VimEditorState, VimMode, computeSearchCount } from '../../vim-engine';
@@ -19,7 +15,7 @@ import { Mission } from '../../types/mission';
 import { LessonProgress } from '../../utils/storage';
 import { t } from '../../i18n';
 
-// 첫 화면에 필요 없는 게임 탭 화면은 처음 열 때 별도 청크로 불러옵니다 (초기 번들 크기 절감)
+// 첫 화면에 닫혀 있는 탭·보조 패널은 처음 열 때 별도 청크로 불러옵니다 (index.js 초기 번들 경량화)
 const ArcadeSurvival = lazy(() =>
   import('../ArcadeSurvival/ArcadeSurvival').then((m) => ({ default: m.ArcadeSurvival }))
 );
@@ -29,12 +25,40 @@ const DungeonRPG = lazy(() =>
 const HardcoreDojo = lazy(() =>
   import('../HardcoreDojo/HardcoreDojo').then((m) => ({ default: m.HardcoreDojo }))
 );
+const SpeedrunPanel = lazy(() =>
+  import('../SpeedrunPanel/SpeedrunPanel').then((m) => ({ default: m.SpeedrunPanel }))
+);
+const MarksJumpVisualizer = lazy(() =>
+  import('../MarksJumpVisualizer/MarksJumpVisualizer').then((m) => ({
+    default: m.MarksJumpVisualizer,
+  }))
+);
+const MacroDebugger = lazy(() =>
+  import('../MacroDebugger/MacroDebugger').then((m) => ({ default: m.MacroDebugger }))
+);
+const VimGrammarASTViewer = lazy(() =>
+  import('../VimGrammarASTViewer/VimGrammarASTViewer').then((m) => ({
+    default: m.VimGrammarASTViewer,
+  }))
+);
+const WhichKeyPopup = lazy(() =>
+  import('../WhichKey/WhichKeyPopup').then((m) => ({ default: m.WhichKeyPopup }))
+);
+const HarpoonMenu = lazy(() =>
+  import('../HarpoonMenu/HarpoonMenu').then((m) => ({ default: m.HarpoonMenu }))
+);
+
+function useOpenedOnce(isOpen: boolean): boolean {
+  const [opened, setOpened] = useState(isOpen);
+  if (isOpen && !opened) setOpened(true);
+  return opened || isOpen;
+}
 
 type MissionPanelProps = React.ComponentProps<typeof MissionPanel>;
-type SpeedrunPanelProps = React.ComponentProps<typeof SpeedrunPanel>;
+type SpeedrunPanelProps = React.ComponentProps<typeof SpeedrunPanelType>;
 type EditorViewportProps = React.ComponentProps<typeof EditorViewport>;
 type RegisterInspectorProps = React.ComponentProps<typeof RegisterInspector>;
-type MarksVisualizerProps = React.ComponentProps<typeof MarksJumpVisualizer>;
+type MarksVisualizerProps = React.ComponentProps<typeof MarksJumpVisualizerType>;
 type ActionTimelineProps = React.ComponentProps<typeof ActionTimelinePanel>;
 
 export interface WorkspaceAudioProps {
@@ -180,6 +204,17 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
   panels,
 }) => {
   const { editorState, displayEditorState } = editor;
+  const marksLoaded = useOpenedOnce(panels.showMarksVisualizer);
+  const macroDebuggerLoaded = useOpenedOnce(panels.showMacroDebugger);
+  const whichKeyLoaded = useOpenedOnce(
+    Boolean(
+      (panels.showWhichKey ?? true) &&
+        (displayEditorState.pendingKeys ||
+          displayEditorState.pendingKeymapPrefix ||
+          displayEditorState.insertCtrlXMode ||
+          displayEditorState.insertRegisterPending)
+    )
+  );
   const tabLoadingFallback = (
     <div className="lazy-tab-loading" data-testid="lazy-tab-loading">
       {t('불러오는 중…')}
@@ -192,16 +227,18 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
         currentTab !== 'arcade' &&
         currentTab !== 'dungeon' &&
         currentTab !== 'dojo' && (
-          <VimGrammarASTViewer
-            currentKeySequence={editorState.pendingKeys || ''}
-            activeRegister={editorState.activeRegister}
-            onSelectCandidate={(token) => {
-              for (const ch of token) {
-                editor.processKeyInput(ch);
-              }
-            }}
-            onClose={panels.onCloseGrammarAST}
-          />
+          <Suspense fallback={null}>
+            <VimGrammarASTViewer
+              currentKeySequence={editorState.pendingKeys || ''}
+              activeRegister={editorState.activeRegister}
+              onSelectCandidate={(token) => {
+                for (const ch of token) {
+                  editor.processKeyInput(ch);
+                }
+              }}
+              onClose={panels.onCloseGrammarAST}
+            />
+          </Suspense>
         )}
 
       {currentTab === 'arcade' ? (
@@ -289,18 +326,20 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
           )}
 
           {currentTab === 'speedrun' && (
-            <SpeedrunPanel
-              status={speedrun.status}
-              currentStageIndex={speedrun.currentStage}
-              totalStages={speedrun.totalStages}
-              currentMissionTitle={speedrun.activeMission ? t(speedrun.activeMission.title) : undefined}
-              elapsedSeconds={speedrun.elapsedSeconds}
-              totalKeystrokes={speedrun.keystrokes}
-              bestRecord={speedrun.bestRecord}
-              isNewRecord={speedrun.isNewRecord}
-              onStart={speedrun.onStart}
-              onRestart={speedrun.onStart}
-            />
+            <Suspense fallback={null}>
+              <SpeedrunPanel
+                status={speedrun.status}
+                currentStageIndex={speedrun.currentStage}
+                totalStages={speedrun.totalStages}
+                currentMissionTitle={speedrun.activeMission ? t(speedrun.activeMission.title) : undefined}
+                elapsedSeconds={speedrun.elapsedSeconds}
+                totalKeystrokes={speedrun.keystrokes}
+                bestRecord={speedrun.bestRecord}
+                isNewRecord={speedrun.isNewRecord}
+                onStart={speedrun.onStart}
+                onRestart={speedrun.onStart}
+              />
+            </Suspense>
           )}
 
           <EditorViewport
@@ -323,17 +362,23 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
             {...editor.viewportHandlers}
           />
 
-          <WhichKeyPopup
-            editorState={displayEditorState}
-            enabled={panels.showWhichKey ?? true}
-            onPressKey={editor.processKeyInput}
-            onDisable={panels.onToggleWhichKey}
-          />
+          <Suspense fallback={null}>
+            {whichKeyLoaded && (
+              <WhichKeyPopup
+                editorState={displayEditorState}
+                enabled={panels.showWhichKey ?? true}
+                onPressKey={editor.processKeyInput}
+                onDisable={panels.onToggleWhichKey}
+              />
+            )}
 
-          <HarpoonMenu
-            editorState={displayEditorState}
-            onPressKey={editor.processKeyInput}
-          />
+            {displayEditorState.harpoonMenu?.isOpen && (
+              <HarpoonMenu
+                editorState={displayEditorState}
+                onPressKey={editor.processKeyInput}
+              />
+            )}
+          </Suspense>
 
           <Keycaster recentKeys={editor.recentKeys} />
           <StatusBar
@@ -410,25 +455,31 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
             onDeleteRegister={panels.onDeleteRegister}
           />
 
-          <MarksJumpVisualizer
-            isOpen={panels.showMarksVisualizer}
-            onClose={panels.onToggleMarksVisualizer}
-            marks={displayEditorState.marks}
-            jumpList={displayEditorState.jumpList}
-            jumpIndex={displayEditorState.jumpIndex}
-            lines={displayEditorState.lines}
-            currentCursor={displayEditorState.cursor}
-            primaryFilename={displayEditorState.primaryFilename}
-            {...panels.marksHandlers}
-          />
+          <Suspense fallback={null}>
+            {marksLoaded && (
+              <MarksJumpVisualizer
+                isOpen={panels.showMarksVisualizer}
+                onClose={panels.onToggleMarksVisualizer}
+                marks={displayEditorState.marks}
+                jumpList={displayEditorState.jumpList}
+                jumpIndex={displayEditorState.jumpIndex}
+                lines={displayEditorState.lines}
+                currentCursor={displayEditorState.cursor}
+                primaryFilename={displayEditorState.primaryFilename}
+                {...panels.marksHandlers}
+              />
+            )}
 
-          <MacroDebugger
-            isOpen={panels.showMacroDebugger}
-            onToggle={panels.onToggleMacroDebugger}
-            baseState={panels.timelineBaseState}
-            onPreviewFrame={panels.onPreviewMacroFrame}
-            onRunMacro={panels.onRunMacroFromDebugger}
-          />
+            {macroDebuggerLoaded && (
+              <MacroDebugger
+                isOpen={panels.showMacroDebugger}
+                onToggle={panels.onToggleMacroDebugger}
+                baseState={panels.timelineBaseState}
+                onPreviewFrame={panels.onPreviewMacroFrame}
+                onRunMacro={panels.onRunMacroFromDebugger}
+              />
+            )}
+          </Suspense>
 
           {panels.showDiffView && panels.activeMissionForDiff && (
             <DiffViewer

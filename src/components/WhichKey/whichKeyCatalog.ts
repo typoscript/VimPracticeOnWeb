@@ -129,6 +129,8 @@ const TEXT_OBJECT_ITEMS: WhichKeyItem[] = [
   { key: 'c', labelKo: '클래스 (Treesitter)', labelEn: 'Class (Treesitter)' },
   { key: 'a', labelKo: '인자 (Treesitter)', labelEn: 'Argument (Treesitter)' },
   { key: 'i', labelKo: '들여쓰기 블록', labelEn: 'Indent block' },
+  { key: 'n', labelKo: '+다음 객체 (mini.ai next)', labelEn: '+Next object (mini.ai)', group: true },
+  { key: 'l', labelKo: '+이전 객체 (mini.ai last)', labelEn: '+Last object (mini.ai)', group: true },
 ];
 
 const INSERT_CTRL_X_ITEMS: WhichKeyItem[] = [
@@ -386,6 +388,25 @@ export function resolveWhichKeyData(state: VimEditorState): WhichKeyPanelData | 
         { key: '{', labelKo: '중괄호 {...}', labelEn: 'Curly braces' },
         { key: '[', labelKo: '대괄호 [...]', labelEn: 'Square brackets' },
         { key: 't', labelKo: 'HTML 태그', labelEn: 'HTML tag' },
+      ],
+    };
+  }
+
+  // mini.ai Next/Last 텍스트 객체 (din, dan, cil, cal, vin 등)
+  if (/^(?:[dcy><=]|g[uU~cq])?[ia][nl]$/.test(stripped)) {
+    const isNext = stripped.endsWith('n');
+    return {
+      prefix: stripped,
+      titleKo: isNext ? 'mini.ai 다음 텍스트 객체 (Next)' : 'mini.ai 이전 텍스트 객체 (Last)',
+      titleEn: isNext ? 'mini.ai Next Text Object' : 'mini.ai Last Text Object',
+      items: [
+        { key: '"', labelKo: '큰따옴표 "..."', labelEn: 'Double quotes' },
+        { key: "'", labelKo: "작은따옴표 '...'", labelEn: 'Single quotes' },
+        { key: '`', labelKo: '백틱 `...`', labelEn: 'Backticks' },
+        { key: '(', labelKo: '소괄호 (...)', labelEn: 'Parentheses' },
+        { key: '{', labelKo: '중괄호 {...}', labelEn: 'Curly braces' },
+        { key: '[', labelKo: '대괄호 [...]', labelEn: 'Square brackets' },
+        { key: '<', labelKo: '꺾쇠 <...>', labelEn: 'Angle brackets' },
       ],
     };
   }

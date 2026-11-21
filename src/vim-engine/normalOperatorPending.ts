@@ -196,8 +196,8 @@ export function handleNormalFilterShiftEqualPending(
     };
   }
 
-  // >{motion} / <{motion} / >{텍스트 객체}
-  const shiftMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([<>])([1-9][0-9]*)?([iagfFtT'`\[\]])?$/);
+  // >{motion} / <{motion} / >{텍스트 객체} (mini.ai >in{ / <al( 포함)
+  const shiftMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([<>])([1-9][0-9]*)?([ia][nl]|[iagfFtT'`\[\]])?$/);
   if (shiftMatch && key !== shiftMatch[2]) {
     const [, c1, dir, c2, prefix] = shiftMatch;
     if (!prefix && (/^[1-9]$/.test(key) || (key === '0' && c2))) {
@@ -206,8 +206,11 @@ export function handleNormalFilterShiftEqualPending(
     if (!prefix && "iagfFtT'`[]".includes(key)) {
       return { handled: true, state: { ...state, pendingKeys: state.pendingKeys + key } };
     }
+    if ((prefix === 'i' || prefix === 'a') && (key === 'n' || key === 'l')) {
+      return { handled: true, state: { ...state, pendingKeys: state.pendingKeys + key } };
+    }
     const count = (c1 ? parseInt(c1, 10) : 1) * (c2 ? parseInt(c2, 10) : 1);
-    const range = findShiftRange(state, prefix ? [prefix, key] : [key], count, runHandleKey);
+    const range = findShiftRange(state, prefix ? [...prefix.split(''), key] : [key], count, runHandleKey);
     if (!range) return { handled: true, state: ringBell(state) };
     const res = indentLines(
       { ...state, cursor: { line: range.startLine, col: 0 }, pendingKeys: undefined },
@@ -322,9 +325,59 @@ export function handleNormalTextObjectAndFindPending(
   key: string,
   isReplayingDot: boolean
 ): PrefixStepResult | null {
+  // 1-a. mini.ai 스타일 Next/Last 텍스트 객체 대기 상태 (din", cin(, yil{, =in{, gUin" 등)
+  const miniAiPendingMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([dcyv=]|g[uU~?])([1-9][0-9]*)?([ia])([nl])$/);
+  if (miniAiPendingMatch) {
+    const count =
+      (miniAiPendingMatch[1] ? parseInt(miniAiPendingMatch[1], 10) : 1) *
+      (miniAiPendingMatch[3] ? parseInt(miniAiPendingMatch[3], 10) : 1);
+    const op = miniAiPendingMatch[2] as 'd' | 'c' | 'y' | 'v' | '=' | 'gu' | 'gU' | 'g~' | 'g?';
+    const modifier = miniAiPendingMatch[4] as 'i' | 'a';
+    const scope = miniAiPendingMatch[5] as 'n' | 'l';
+    const validMiniTargets = ['"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', '<', '>'];
+    if (validMiniTargets.includes(key)) {
+      let targetChar = key;
+      if (key === 'b' || key === ')') targetChar = '(';
+      else if (key === 'B' || key === '}') targetChar = '{';
+      else if (key === ']') targetChar = '[';
+      else if (key === '>') targetChar = '<';
+      const objType: TextObjectType = `${modifier}${scope}${targetChar}` as TextObjectType;
+      const res = executeTextObjectOperator(state, op, objType, count);
+      const synced = syncRegisters(state, res, op === 'y');
+      const opSeq = op.length > 1 ? op.split('') : [op];
+      const opKeys = count > 1 ? [String(count), ...opSeq, modifier, scope, key] : [...opSeq, modifier, scope, key];
+      if (op === 'c' && synced.mode === 'INSERT') {
+        return {
+          handled: true,
+          state: {
+            ...synced,
+            currentChangeKeys: isReplayingDot ? state.currentChangeKeys : opKeys,
+          },
+        };
+      }
+      if (!synced.bell && (op === 'd' || op === '=' || op === 'gu' || op === 'gU' || op === 'g~')) {
+        return {
+          handled: true,
+          state: {
+            ...synced,
+            lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys,
+          },
+        };
+      }
+      return { handled: true, state: synced };
+    }
+    return { handled: false, state: { ...state, pendingKeys: undefined } };
+  }
+
   // 1. 텍스트 객체 대기 상태 (diw, cai, dap, =i{, gUai 등)
   const textObjPendingMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([dcyv=]|g[uU~?])([1-9][0-9]*)?([ia])$/);
   if (textObjPendingMatch) {
+    if (key === 'n' || key === 'l') {
+      return {
+        handled: true,
+        state: { ...state, pendingKeys: (state.pendingKeys ?? '') + key },
+      };
+    }
     const count =
       (textObjPendingMatch[1] ? parseInt(textObjPendingMatch[1], 10) : 1) *
       (textObjPendingMatch[3] ? parseInt(textObjPendingMatch[3], 10) : 1);

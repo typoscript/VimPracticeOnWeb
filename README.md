@@ -104,7 +104,7 @@ flowchart TD
 
 ---
 
-## 🎯 튜토리얼 커리큘럼 (Lessons 1 ~ 109)
+## 🎯 튜토리얼 커리큘럼 (Lessons 1 ~ 110)
 
 ### 🟢 기초 이동 및 텍스트 편집 (레슨 1 ~ 10)
 1. **레슨 1**: 기본 방향 이동 (`h`, `j`, `k`, `l`)
@@ -216,7 +216,7 @@ flowchart TD
 99. **레슨 99**: 덮어쓰기 모드(`R`), `[count]r` & 비주얼 블록 치환(`Ctrl-v r`) 마스터하기
 100. **레슨 100**: [대단원] 정규식 캡처·매크로·`vim-surround`·다중 파일 배치(`:vimgrep` + `:cdo` + `Ctrl-^`) 종합 마스터 챌린지
 
-### 🚀 현대 Neovim 실전 트랙 (레슨 101 ~ 109)
+### 🚀 현대 Neovim 실전 트랙 (레슨 101 ~ 110)
 101. **레슨 101**: Telescope `:LiveGrep` 본문 검색 & `Ctrl-q` 퀵픽스 일괄 치환
 102. **레슨 102**: Neovim 0.11 LSP 리팩토링 — `gra` 코드 액션 & `grn` 다중 파일 이름 변경
 103. **레슨 103**: Neovim 0.11 LSP 탐색 — `gO` 문서 심볼 아웃라인 & `grr` 참조 검색
@@ -226,6 +226,7 @@ flowchart TD
 107. **레슨 107**: `flash.nvim` 화면 라벨 점프(`gs`) & 원격 범위 연산(`dgs`/`cgs`)
 108. **레슨 108**: `oil.nvim` 버퍼 기반 파일시스템 편집(`:Oil` · `dd`/`cw`/`o` · `:w`)
 109. **레슨 109**: `harpoon.nvim` 파일 핀 & 원키 프로젝트 전환(`:HarpoonAdd` · `:HarpoonMenu`)
+110. **레슨 110**: `mini.ai` Next/Last 텍스트 객체(`cin"` · `din(` · `cil"`) 원격 편집 마스터
 
 ---
 
@@ -258,7 +259,7 @@ flowchart TD
 ## 🛠️ 기술 스택 (Tech Stack)
 
 - **Core**: React 19, TypeScript, Vite
-- **Testing**: Vitest, React Testing Library (186개 파일, 2,210개 단위/통합 테스트 100% 통과)
+- **Testing**: Vitest, React Testing Library (187개 파일, 2,214개 단위/통합 테스트 100% 통과)
 - **Styling**: Modern Pure CSS (Catppuccin Macchiato 테마)
 - **Zero Dependencies**: 외부 에디터(CodeMirror, Monaco 등) 및 무거운 UI 프레임워크 없는 순수 TypeScript 아키텍처
 

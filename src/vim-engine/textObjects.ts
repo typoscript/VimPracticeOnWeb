@@ -15,6 +15,9 @@ import {
 } from './treesitterTextObjects';
 export type { TreesitterObjectType };
 export { getTreesitterObjectRange, detectFunctions, detectClasses, findFunctionJumpTarget };
+import { MiniAiScope, getMiniAiNextLastRange } from './miniAiTextObjects';
+export type { MiniAiScope };
+export { getMiniAiNextLastRange };
 import {
   TextObjectRange,
   IndentObjectType,
@@ -76,11 +79,25 @@ function getCharClass(ch: string | undefined): CharClass {
 export function getTextObjectRange(
   lines: string[],
   cursor: CursorPosition,
-  objectType: TextObjectType
+  objectType: TextObjectType,
+  count = 1
 ): TextObjectRange | null {
   const lineText = lines[cursor.line] ?? '';
   if (lines.length === 0) {
     return null;
+  }
+
+  // 0. mini.ai 스타일 Next/Last 텍스트 객체 (in"/an"/il"/al", in(/an(/il(/al{ 등)
+  const miniAiMatch = objectType.match(/^([ia])([nl])(.)$/);
+  if (miniAiMatch) {
+    return getMiniAiNextLastRange(
+      lines,
+      cursor,
+      miniAiMatch[1] as 'i' | 'a',
+      miniAiMatch[2] as MiniAiScope,
+      miniAiMatch[3],
+      count
+    );
   }
 
   const col = Math.min(cursor.col, Math.max(0, lineText.length - 1));
@@ -390,15 +407,19 @@ export function executeTextObjectOperator(
   const isSentence = objectType === 'is' || objectType === 'as';
   const isStructuralBlock =
     objectType === 'af' || objectType === 'if' || objectType === 'ac' || objectType === 'ic';
-  const steps = isSentence || isStructuralBlock ? 1 : count;
+  const isMiniAi = /^[ia][nl].$/.test(objectType);
+  const steps = isSentence || isStructuralBlock || isMiniAi ? 1 : count;
 
   for (let step = 0; step < steps; step++) {
     const range = isSentence
       ? getSentenceObjectRange(curState.lines, curState.cursor, objectType as 'is' | 'as', count)
       : isStructuralBlock
         ? getTreesitterObjectRange(curState.lines, curState.cursor, objectType as TreesitterObjectType, count)
-        : getTextObjectRange(curState.lines, curState.cursor, objectType);
+        : getTextObjectRange(curState.lines, curState.cursor, objectType, count);
     if (!range) {
+      if (isMiniAi) {
+        return { ...curState, bell: true, pendingKeys: undefined };
+      }
       if (operator === 'c') {
         return {
           ...pushUndoSnapshot(curState),

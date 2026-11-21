@@ -245,8 +245,32 @@ export function handleVisualDirectGCombo(
  * Visual 모드 텍스트 객체 선택 (i 또는 a 대기 및 대상 처리: iw, aw, i", ii, ip 등)
  */
 export function handleVisualTextObject(state: VimEditorState, key: string): VimEditorState | null {
+  const visualMiniAiMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([ia])([nl])$/);
+  if (visualMiniAiMatch) {
+    const count = visualMiniAiMatch[1] ? parseInt(visualMiniAiMatch[1], 10) : 1;
+    const modifier = visualMiniAiMatch[2] as 'i' | 'a';
+    const scope = visualMiniAiMatch[3] as 'n' | 'l';
+    const validMiniTargets = ['"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', '<', '>'];
+    if (validMiniTargets.includes(key)) {
+      let targetChar = key;
+      if (key === 'b' || key === ')') targetChar = '(';
+      else if (key === 'B' || key === '}') targetChar = '{';
+      else if (key === ']') targetChar = '[';
+      else if (key === '>') targetChar = '<';
+      const objType: TextObjectType = `${modifier}${scope}${targetChar}` as TextObjectType;
+      return executeTextObjectOperator(state, 'v', objType, count);
+    }
+    return { ...state, pendingKeys: undefined };
+  }
+
   const visualObjMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([ia])$/);
   if (visualObjMatch) {
+    if (key === 'n' || key === 'l') {
+      return {
+        ...state,
+        pendingKeys: (state.pendingKeys ?? '') + key,
+      };
+    }
     const count = visualObjMatch[1] ? parseInt(visualObjMatch[1], 10) : 1;
     const modifier = visualObjMatch[2] as 'i' | 'a';
     if (key === 'i' || key === 'I') {

@@ -149,7 +149,7 @@ describe('AppMainWorkspace', () => {
     expect(onResetSandbox).toHaveBeenCalledTimes(1);
   });
 
-  it('renders conditional Grammar AST, DiffViewer, VirtualKeyboard, and ActionTimeline panels', () => {
+  it('renders conditional Grammar AST, DiffViewer, VirtualKeyboard, and ActionTimeline panels', async () => {
     const base = makeProps();
     render(
       <AppMainWorkspace
@@ -164,7 +164,7 @@ describe('AppMainWorkspace', () => {
       />
     );
 
-    expect(screen.getByTestId('vim-grammar-ast-viewer')).toBeInTheDocument();
+    expect(await screen.findByTestId('vim-grammar-ast-viewer')).toBeInTheDocument();
     expect(screen.getByTestId('diff-viewer')).toBeInTheDocument();
     expect(screen.getByTestId('virtual-keyboard')).toBeInTheDocument();
     expect(screen.getByTestId('action-timeline-panel')).toBeInTheDocument();

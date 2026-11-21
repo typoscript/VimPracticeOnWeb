@@ -4,10 +4,11 @@ import { getGitHunks } from '../../vim-engine';
 const keysOf = (s: string): string[] => [...s];
 
 /**
- * Part 6: 현대 Neovim 실전 워크플로우 (레슨 101 ~ 109)
+ * Part 6: 현대 Neovim 실전 워크플로우 (레슨 101 ~ 110)
  * Telescope :LiveGrep, Neovim 0.11 LSP(grn/grr/gra/gO), Treesitter(daf/daa/cif/]f),
  * gitsigns.nvim(]h/:Gitsigns), Neovim Lua(:lua vim.opt) + 순정 고급 편집(U/Q),
- * flash.nvim(gs/dgs/cgs), oil.nvim(:Oil), harpoon.nvim(:HarpoonAdd/:HarpoonMenu)
+ * flash.nvim(gs/dgs/cgs), oil.nvim(:Oil), harpoon.nvim(:HarpoonAdd/:HarpoonMenu),
+ * mini.ai Next/Last 텍스트 객체(cin"/din(/cil")
  */
 export const MISSIONS_PART6: Mission[] = [
   {
@@ -458,6 +459,53 @@ export const MISSIONS_PART6: Mission[] = [
       const dbLines = dbBuf?.lines ?? state.virtualFiles?.['workspace/db.ts'] ?? [];
       const dbOk = dbLines[0] === 'export const dbHost = "prod-db";';
       return hasBothPins && apiOk && dbOk;
+    },
+  },
+  {
+    id: 110,
+    title: '레슨 110: mini.ai Next/Last 텍스트 객체(cin" · din( · cil") 원격 편집 마스터',
+    description:
+      '커서를 따옴표나 괄호 안으로 옮길 필요 없이, 버퍼의 다음(n: Next) 또는 이전(l: Last) 짝을 원격으로 겨냥해 즉시 삭제·수정·복사하는 mini.ai 텍스트 객체로 110강 대장정을 마무리해 보세요!\n\n1) Next 텍스트 객체 (in / an):\n   - cin" / din( / yan{ 처럼 i/a 뒤에 n 을 붙이면 커서 뒤(다음 줄 포함) 가장 가까운 짝을 찾아 바로 편집합니다.\n\n2) Last 텍스트 객체 (il / al):\n   - cil" / dil( 처럼 i/a 뒤에 l 을 붙이면 커서 앞쪽의 가장 가까운 이전 짝을 되돌아가며 바로 편집합니다.\n\n미션:\n1. 1번째 줄 맨 앞에서 cin" hello<Esc> 로 따옴표 밖에서 바로 "old_msg" 를 "hello" 로 바꾸세요.\n2. 줄을 내리지 않고 바로 din( 으로 2번째 줄 compute(bad_arg) 의 인자를 비우세요.\n3. G 로 마지막 줄 세미콜론 위치로 내려간 뒤 cil" fixed<Esc> 로 앞선 "old_prev" 를 "fixed" 로 교체해 110강을 완료하세요!',
+    hint: 'cin" hello<Esc> → din( → G → cil" fixed<Esc>',
+    par: 28,
+    primaryFilename: 'src/miniAi.ts',
+    initialLines: [
+      'const greeting = "old_msg";',
+      'const result = compute(bad_arg);',
+      'const prev = "old_prev"; const next = "keep";',
+    ],
+    targetLines: [
+      'const greeting = "hello";',
+      'const result = compute();',
+      'const prev = "fixed"; const next = "keep";',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    optimalKeys: [
+      'c',
+      'i',
+      'n',
+      '"',
+      ...keysOf('hello'),
+      'Escape',
+      'd',
+      'i',
+      'n',
+      '(',
+      'G',
+      'c',
+      'i',
+      'l',
+      '"',
+      ...keysOf('fixed'),
+      'Escape',
+    ],
+    checkComplete: (state) => {
+      const target = [
+        'const greeting = "hello";',
+        'const result = compute();',
+        'const prev = "fixed"; const next = "keep";',
+      ];
+      return state.lines.length === target.length && state.lines.every((l, i) => l === target[i]);
     },
   },
 ];

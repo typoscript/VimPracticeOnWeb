@@ -7,7 +7,7 @@ describe('Vim Grammar AST Inspector & BYOC Integration', () => {
     localStorage.clear();
   });
 
-  it('toggles Grammar AST Inspector and synchronizes with editor typing', () => {
+  it('toggles Grammar AST Inspector and synchronizes with editor typing', async () => {
     render(<App />);
 
     // Initially AST viewer is hidden (default false)
@@ -20,7 +20,7 @@ describe('Vim Grammar AST Inspector & BYOC Integration', () => {
     // Click to turn ON
     fireEvent.click(toggleAstBtn);
     expect(toggleAstBtn).toHaveTextContent('🧩 문법 AST: ON');
-    expect(screen.getByTestId('vim-grammar-ast-viewer')).toBeInTheDocument();
+    expect(await screen.findByTestId('vim-grammar-ast-viewer')).toBeInTheDocument();
 
     // Type '2' then 'd' in editor
     act(() => {

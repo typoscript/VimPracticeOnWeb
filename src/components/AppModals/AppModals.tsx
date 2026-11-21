@@ -1,7 +1,4 @@
 import { useState, lazy, Suspense } from 'react';
-import { LessonSelectModal } from '../LessonSelectModal/LessonSelectModal';
-import { FuzzyFinder } from '../FuzzyFinder/FuzzyFinder';
-import { HelpViewer } from '../HelpViewer/HelpViewer';
 import { MISSIONS } from '../../data/missions';
 import { VimEditorState, VimMode } from '../../vim-engine';
 import { LessonProgress } from '../../utils/storage';
@@ -9,6 +6,17 @@ import { VimTheme } from '../../utils/theme';
 import { CustomMissionData } from '../../utils/customMission';
 import { CustomKeymapItem } from '../../utils/keymapStorage';
 
+const LessonSelectModal = lazy(() =>
+  import('../LessonSelectModal/LessonSelectModal').then((m) => ({
+    default: m.LessonSelectModal,
+  }))
+);
+const FuzzyFinder = lazy(() =>
+  import('../FuzzyFinder/FuzzyFinder').then((m) => ({ default: m.FuzzyFinder }))
+);
+const HelpViewer = lazy(() =>
+  import('../HelpViewer/HelpViewer').then((m) => ({ default: m.HelpViewer }))
+);
 const CustomMissionModal = lazy(() =>
   import('../CustomMissionModal/CustomMissionModal').then((m) => ({
     default: m.CustomMissionModal,
@@ -119,6 +127,7 @@ export function AppModals({
   fuzzyFinderHandlers,
   helpHandlers,
 }: AppModalsProps) {
+  const lessonModalLoaded = useOpenedOnce(lesson.isOpen);
   const customModalLoaded = useOpenedOnce(customMission.isOpen);
   const analyticsModalLoaded = useOpenedOnce(analytics.isOpen);
   const dailyModalLoaded = useOpenedOnce(daily.isOpen);
@@ -126,18 +135,19 @@ export function AppModals({
   const byocModalLoaded = useOpenedOnce(byoc.isOpen);
 
   return (
-    <>
-      <LessonSelectModal
-        isOpen={lesson.isOpen}
-        onClose={lesson.onClose}
-        missions={MISSIONS}
-        currentMissionId={lesson.currentMissionId}
-        progress={lesson.progress}
-        onSelectLesson={lesson.onSelectById}
-      />
+    <Suspense fallback={null}>
+      {lessonModalLoaded && (
+        <LessonSelectModal
+          isOpen={lesson.isOpen}
+          onClose={lesson.onClose}
+          missions={MISSIONS}
+          currentMissionId={lesson.currentMissionId}
+          progress={lesson.progress}
+          onSelectLesson={lesson.onSelectById}
+        />
+      )}
 
-      <Suspense fallback={null}>
-        {customModalLoaded && (
+      {customModalLoaded && (
           <CustomMissionModal
             isOpen={customMission.isOpen}
             onClose={customMission.onClose}
@@ -191,8 +201,6 @@ export function AppModals({
             onStartMission={byoc.onPlay}
           />
         )}
-      </Suspense>
-
       {editorState.fuzzyFinder?.isOpen && (
         <FuzzyFinder
           state={editorState}
@@ -210,6 +218,6 @@ export function AppModals({
           onClose={helpHandlers.onClose}
         />
       )}
-    </>
+    </Suspense>
   );
 }

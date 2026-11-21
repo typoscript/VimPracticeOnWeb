@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 186개 테스트 파일, 2,210개 테스트 100% 통과 필수)*
+  *(현재 187개 테스트 파일, 2,214개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 109)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 110)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -212,6 +212,9 @@
 - **`harpoon.nvim` 파일 핀 & 원키 프로젝트 전환 + 현대 Neovim 실전 커리큘럼 완성 (레슨 107 ~ 109, `src/vim-engine/harpoonEngine.ts`, `src/components/HarpoonMenu/`, `src/data/missions/part6ModernNeovim.ts`)**:
   - **Harpoon 엔진 & UI**: `:HarpoonAdd [path]`, `:HarpoonRemove [slot|path]`, `:HarpoonClear`, `:Harpoon [1-9]`, `:HarpoonNext`/`:HarpoonPrev`, `:HarpoonMenu` 플로팅 팝업(`j`/`k` 이동, `J`/`K` 순서 변경, `d` 삭제, `a` 현재 파일 추가, `1-9`·`Enter`·클릭 즉시 전환, `Esc`/`q` 닫기) 및 `StatusBar` `[⚓ #N]` 슬롯 배지를 구현했습니다.
   - **실전 레슨 107~109**: `flash.nvim` `gs`/`dgs`/`cgs`(레슨 107), `oil.nvim` `:Oil`+`dd`/`cw`/`o`+`:w`(레슨 108), `harpoon.nvim` `:HarpoonAdd`+`:HarpoonMenu`+`1`(레슨 109) 미션을 추가해 현대 Neovim 커리큘럼을 완성했습니다.
+- **`mini.ai` 스타일 Next/Last 텍스트 객체 (`in`/`an`/`il`/`al`) + 레슨 110 + `index.js` 초기 번들 경량화 (`src/vim-engine/miniAiTextObjects.ts`, `AppMainWorkspace.tsx`, `AppModals.tsx`)**:
+  - **Next/Last 텍스트 객체**: 커서가 따옴표(`"`, `'`, `` ` ``)·괄호(`()`, `{}`, `[]`, `<>`, `b`, `B`) 밖에 있어도 버퍼 전체에서 다음(`n`: `cin"`, `din(`, `dan"`, `>in{`, `gUin"`) 또는 이전(`l`: `cil"`, `yil[`, `val(`) 짝을 찾아 원격으로 편집하며 `[count]`·도트 반복(`.`)·Visual 선택·Which-Key 실시간 안내를 지원합니다. **레슨 110**을 추가해 전체 커리큘럼 **110강**을 완성했습니다.
+  - **초기 번들 경량화**: 첫 화면에서 닫혀 있는 7종 보조 패널·모달(`MarksJumpVisualizer`, `MacroDebugger`, `VimGrammarASTViewer`, `SpeedrunPanel`, `LessonSelectModal`, `FuzzyFinder`, `HelpViewer`)을 `React.lazy` + `Suspense`로 분리해 메인 `index.js` 청크를 `259.91 kB` → `< 200 kB` 로 대폭 경량화했습니다.
 
 ---
 

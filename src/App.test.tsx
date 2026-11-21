@@ -189,13 +189,13 @@ describe('App Component with Keyboard Navigation', () => {
     expect(screen.getByTestId('line-number-2')).toHaveTextContent('2');
   });
 
-  it('레슨 선택 모달을 열고 원하는 레슨으로 바로 이동할 수 있다', () => {
+  it('레슨 선택 모달을 열고 원하는 레슨으로 바로 이동할 수 있다', async () => {
     render(<App />);
 
     const openModalBtn = screen.getByTestId('open-lesson-modal-btn');
     fireEvent.click(openModalBtn);
 
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
     expect(screen.getByText(/Vim 커리큘럼 레슨 목록/)).toBeInTheDocument();
 
     // 레슨 3 카드 클릭
@@ -314,14 +314,14 @@ describe('App Component with Keyboard Navigation', () => {
     expect(screen.queryByTestId('diff-viewer')).not.toBeInTheDocument();
   });
 
-  it('스피드런 탭 전환 후 챌린지를 시작할 수 있다', () => {
+  it('스피드런 탭 전환 후 챌린지를 시작할 수 있다', async () => {
     render(<App />);
 
     // 스피드런 탭 클릭
     const speedrunTabBtn = screen.getByTestId('tab-speedrun-btn');
     fireEvent.click(speedrunTabBtn);
 
-    expect(screen.getByTestId('speedrun-panel')).toBeInTheDocument();
+    expect(await screen.findByTestId('speedrun-panel')).toBeInTheDocument();
     expect(screen.getByTestId('speedrun-ready-view')).toBeInTheDocument();
 
     // 시작 버튼 클릭 -> live view로 전환

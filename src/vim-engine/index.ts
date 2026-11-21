@@ -496,3 +496,7 @@ export {
   executeHarpoonCommand,
 } from './harpoonEngine';
 export type { HarpoonMenuState } from './types';
+
+// ---- mini.ai 스타일 Next/Last 텍스트 객체 (in/an/il/al) ----
+export { getMiniAiNextLastRange } from './textObjects';
+export type { MiniAiScope } from './textObjects';
