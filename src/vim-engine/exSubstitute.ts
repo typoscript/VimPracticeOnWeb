@@ -332,6 +332,8 @@ export function executeSubstitution(
   }
 
   const isGlobal = flags.includes('g');
+  const isCountOnly = flags.includes('n');
+  const suppressNoMatchError = flags.includes('e');
   const isIgnoreCase = resolveSubstituteIgnoreCase(pattern, flags, state);
   const tildeText = state.lastSubstitute?.replacement;
   const replacement = options.replacementExpanded ? newText : expandReplacementTilde(newText, tildeText);
@@ -351,6 +353,54 @@ export function executeSubstitution(
     lastSearchQuery: pattern,
   };
 
+  // 매치 개수 카운트 전용 플래그 (n): 버퍼를 변경하지 않고 일치 횟수와 줄 수만 보고 (:help :s_n)
+  if (isCountOnly) {
+    let matchCount = 0;
+    let matchedLines = 0;
+    for (let l = range.startLine; l <= range.endLine && l < state.lines.length; l++) {
+      const line = state.lines[l] ?? '';
+      if (isGlobal) {
+        regex.lastIndex = 0;
+        let lineHits = 0;
+        let m: RegExpExecArray | null;
+        while ((m = regex.exec(line)) !== null) {
+          lineHits++;
+          if (m.index === regex.lastIndex) regex.lastIndex++;
+        }
+        if (lineHits > 0) {
+          matchCount += lineHits;
+          matchedLines++;
+        }
+      } else if (testRegex.test(line)) {
+        matchCount++;
+        matchedLines++;
+      }
+    }
+    if (matchCount === 0) {
+      if (suppressNoMatchError) {
+        return {
+          ...state,
+          ...remembered,
+          mode: 'NORMAL',
+          visualAnchor: undefined,
+          commandBuffer: undefined,
+          commandType: undefined,
+          commandMessage: undefined,
+        };
+      }
+      return substituteError({ ...state, ...remembered }, msg('E486: 패턴을 찾을 수 없습니다: {pattern}', { pattern }));
+    }
+    return {
+      ...state,
+      ...remembered,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      commandMessage: msg('{count}개 일치 ({lines}줄)', { count: matchCount, lines: matchedLines }),
+    };
+  }
+
   // 대화형 확인 플래그 (c) 처리 (:s/old/new/gc)
   if (flags.includes('c')) {
     let firstMatch: ConfirmSubstituteMatch | null;
@@ -369,6 +419,17 @@ export function executeSubstitution(
     }
 
     if (!firstMatch) {
+      if (suppressNoMatchError) {
+        return {
+          ...state,
+          ...remembered,
+          mode: 'NORMAL',
+          visualAnchor: undefined,
+          commandBuffer: undefined,
+          commandType: undefined,
+          commandMessage: undefined,
+        };
+      }
       return substituteError({ ...state, ...remembered }, msg('E486: 패턴을 찾을 수 없습니다: {pattern}', { pattern }));
     }
 
@@ -399,6 +460,7 @@ export function executeSubstitution(
 
   const replacer = makeReplacer(replacement, state, options.runEx);
   let totalSubCount = 0;
+  let lastModifiedLine = -1;
 
   let nextLines = [...state.lines];
   try {
@@ -413,25 +475,60 @@ export function executeSubstitution(
         regex.lastIndex = 0;
       }
 
+      let lineMatched = false;
       nextLines[l] = line.replace(regex, (...args) => {
         totalSubCount++;
+        lineMatched = true;
         const match = args[0] as string;
         const offsetIndex = args.findIndex((arg, idx) => idx > 0 && typeof arg === 'number');
         const groups = (offsetIndex > 1 ? args.slice(1, offsetIndex) : []) as (string | undefined)[];
         return replacer(match, groups, l);
       });
+      if (lineMatched) lastModifiedLine = l;
     }
   } catch (err) {
     return substituteError(state, err instanceof Error ? err.message : String(err));
   }
 
   if (totalSubCount === 0) {
+    if (suppressNoMatchError) {
+      return {
+        ...state,
+        ...remembered,
+        mode: 'NORMAL',
+        visualAnchor: undefined,
+        commandBuffer: undefined,
+        commandType: undefined,
+        commandMessage: undefined,
+      };
+    }
     return substituteError({ ...state, ...remembered }, msg('E486: 패턴을 찾을 수 없습니다: {pattern}', { pattern }));
   }
 
   nextLines = splitReplacedLines(nextLines);
   const stateWithSnapshot = pushUndoSnapshot(state);
   const nextCursor = clampCursor(nextLines, state.cursor, 'NORMAL');
+
+  let resultMessage = msg('{totalSubCount}개 항목을 치환했습니다.', { totalSubCount });
+  if (lastModifiedLine >= 0 && (flags.includes('#') || flags.includes('l') || flags.includes('p'))) {
+    const outIdx = Math.min(lastModifiedLine, nextLines.length - 1);
+    const outLine = nextLines[outIdx] ?? '';
+    if (flags.includes('#')) {
+      resultMessage = `${String(outIdx + 1).padStart(6, ' ')}  ${outLine}`;
+    } else if (flags.includes('l')) {
+      let escaped = '';
+      for (let c = 0; c < outLine.length; c++) {
+        const ch = outLine[c];
+        const code = outLine.charCodeAt(c);
+        if (ch === '\t') escaped += '^I';
+        else if (code < 32) escaped += `^${String.fromCharCode(code + 64)}`;
+        else escaped += ch;
+      }
+      resultMessage = `${escaped}$`;
+    } else {
+      resultMessage = outLine;
+    }
+  }
 
   return {
     ...stateWithSnapshot,
@@ -442,7 +539,7 @@ export function executeSubstitution(
     visualAnchor: undefined,
     commandBuffer: undefined,
     commandType: undefined,
-    commandMessage: msg('{totalSubCount}개 항목을 치환했습니다.', { totalSubCount }),
+    commandMessage: resultMessage,
     lastChangeKeys: [':', commandStr, 'Enter'],
   };
 }
@@ -808,7 +905,9 @@ export function computeIncCommandPreview(
     return null;
   }
 
-  const replacer = parsed.hasReplacement ? makeReplacer(replacement, state) : null;
+  const isCountOnly = parsed.flags.includes('n');
+  const applyPreviewReplace = parsed.hasReplacement && !isCountOnly;
+  const replacer = applyPreviewReplace ? makeReplacer(replacement, state) : null;
   const previewLines = [...state.lines];
   const matches: IncCommandPreviewMatch[] = [];
 
@@ -843,7 +942,7 @@ export function computeIncCommandPreview(
         replacement: repText,
       });
 
-      if (parsed.hasReplacement) {
+      if (applyPreviewReplace) {
         outLine += lineText.slice(lastEnd, mCol) + repText;
         lastEnd = mCol + mText.length;
       }
@@ -857,7 +956,7 @@ export function computeIncCommandPreview(
       }
     }
 
-    if (parsed.hasReplacement && lineMatchCount > 0) {
+    if (applyPreviewReplace && lineMatchCount > 0) {
       outLine += lineText.slice(lastEnd);
       previewLines[l] = outLine;
     }
@@ -868,7 +967,7 @@ export function computeIncCommandPreview(
     pattern,
     replacement,
     flags: parsed.flags,
-    hasReplacement: parsed.hasReplacement,
+    hasReplacement: applyPreviewReplace,
     previewLines,
     matches,
   };

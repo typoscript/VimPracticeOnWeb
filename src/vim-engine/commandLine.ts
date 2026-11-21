@@ -317,7 +317,7 @@ function tryExecuteRangeExCommand(
   }
 
   // 직전 치환 반복: :&, :&&, :s
-  const repeatSub = cmdTrimmed.match(/^(?:&(&?)|s)([cegiInI]*)$/);
+  const repeatSub = cmdTrimmed.match(/^(?:&(&?)|s)([cegiInpl#]*)$/);
   if (repeatSub && (cmdTrimmed.startsWith('&') || cmdTrimmed === 's')) {
     const last = state.lastSubstitute;
     if (!last) {

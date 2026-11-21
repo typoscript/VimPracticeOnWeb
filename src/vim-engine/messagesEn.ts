@@ -432,4 +432,5 @@ export const EN_MESSAGES: Record<string, string> = {
   "\"{word}\" 단어를 오탈자 목록에서 제거했습니다": "Removed \"{word}\" from wrong word list",
   "\"{word}\" 단어를 맞춤법 목록에서 제거했습니다": "Removed \"{word}\" from spell word list",
   "\"{filename}\" 새 탭으로 열렸습니다": "\"{filename}\" opened in new tab",
+  "{count}개 일치 ({lines}줄)": "{count} matches on {lines} lines",
 };
