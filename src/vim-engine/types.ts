@@ -665,6 +665,8 @@ export interface VimEditorState {
   insertNormalSession?: boolean;
   /** Insert 모드 및 Command 모드 Ctrl+r 레지스터 입력 대기 상태 */
   insertRegisterPending?: boolean;
+  /** Insert 모드 Ctrl+r 세부 삽입 모드 ('normal' | 'literal'(Ctrl-o/Ctrl-r) | 'indent'(Ctrl-p)) */
+  insertRegisterMode?: 'normal' | 'literal' | 'indent';
   /** Ctrl+r = 또는 "= 표현식 레지스터 계산 완료 후 복귀할 컨텍스트 */
   expressionReturnContext?: {
     mode: 'INSERT' | 'COMMAND' | 'NORMAL' | 'SEARCH';
@@ -823,6 +825,8 @@ export interface VimEditorState {
   lspHover?: LspHoverState | null;
   /** :echom / :echomsg 로 기록된 메시지 이력 (:messages 조회용) */
   messageHistory?: string[];
+  /** 직전 Ex 명령의 마지막 출력 메시지 (Normal g< 재표시용) */
+  lastCommandOutput?: string;
   /** :redir 출력 리디렉션 세션 (:redir => g:var / :redir END) */
   redirSession?: { target: string; append: boolean } | null;
   /** :noautocmd 모디파이어 실행 중 자동 명령 억제 여부 */

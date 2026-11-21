@@ -535,9 +535,13 @@ export function executeCommandLine(
     setActiveMatchpairs(endOpts.matchpairs);
     setActiveCursorContext(res.mode, endOpts.virtualedit);
     const synced = syncActivePane(res);
+    const withLastOutput =
+      synced.commandMessage && synced.commandMessage.length > 0
+        ? { ...synced, lastCommandOutput: synced.commandMessage }
+        : synced;
     return skipWindowAutocmds
-      ? synced
-      : triggerWindowAndTabAutocmds(prevState, synced, runEx);
+      ? withLastOutput
+      : triggerWindowAndTabAutocmds(prevState, withLastOutput, runEx);
   };
 
   // 1-0a. Ex 명령 모디파이어 (:silent[!], :keeppatterns, :noautocmd, :verbose)

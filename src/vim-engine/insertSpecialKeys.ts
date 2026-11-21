@@ -4,6 +4,7 @@ import { getRegisterContent } from './registers';
 import { recordChangePosition } from './advancedMotions';
 import { lookupDigraph } from './digraphs';
 import { insertTextAtCursor } from './engineHelpers';
+import { getOptions } from './setOptionsCore';
 
 export function resolveLastInsertedText(state: VimEditorState, candidate?: string): string | undefined {
   const txt = candidate !== undefined ? candidate : state.currentInsertText;
@@ -186,8 +187,46 @@ export function handleInsertDigraph(
   return { handled: false, state };
 }
 
+function formatIndentAdjustedRegisterText(text: string, currentLine: string, col: number): string {
+  const curIndent = currentLine.match(/^[ \t]*/)?.[0] ?? '';
+  const beforeCursor = currentLine.slice(0, col);
+  const rawLines = text.split('\n');
+  if (rawLines.length === 1) {
+    return beforeCursor.trim() === '' ? rawLines[0].replace(/^[ \t]+/, '') : rawLines[0];
+  }
+  const nonEmptyIndents = rawLines
+    .filter((l) => l.trim().length > 0)
+    .map((l) => l.match(/^[ \t]*/)?.[0].length ?? 0);
+  const minIndent = nonEmptyIndents.length > 0 ? Math.min(...nonEmptyIndents) : 0;
+  return rawLines
+    .map((line, idx) => {
+      if (idx === 0) {
+        const leadLen = line.match(/^[ \t]*/)?.[0].length ?? 0;
+        return line.slice(Math.min(minIndent, leadLen));
+      }
+      if (line.trim().length === 0) return '';
+      const leadLen = line.match(/^[ \t]*/)?.[0].length ?? 0;
+      return curIndent + line.slice(Math.min(minIndent, leadLen));
+    })
+    .join('\n');
+}
+
+function applyAutoindentToRegisterText(text: string, currentLine: string, col: number): string {
+  const rawLines = text.split('\n');
+  if (rawLines.length <= 1) return text;
+  let runningIndent = currentLine.slice(0, col).match(/^[ \t]*/)?.[0] ?? '';
+  const out = [rawLines[0]];
+  for (let i = 1; i < rawLines.length; i++) {
+    const line = rawLines[i];
+    const combined = runningIndent + line;
+    out.push(combined);
+    runningIndent = combined.match(/^[ \t]*/)?.[0] ?? '';
+  }
+  return out.join('\n');
+}
+
 /**
- * Ctrl+r 레지스터 삽입 및 대기 상태 (INSERT_REGISTER_PENDING)
+ * Ctrl+r / Ctrl+r Ctrl+o / Ctrl+r Ctrl+r / Ctrl+r Ctrl+p 레지스터 삽입 및 대기 상태
  */
 export function handleInsertRegister(
   state: VimEditorState,
@@ -196,7 +235,40 @@ export function handleInsertRegister(
 ): VimEditorState | null {
   if (state.insertRegisterPending) {
     if (key === 'Escape' || key === 'Ctrl-c' || key === 'Ctrl+c') {
-      return { ...state, insertRegisterPending: undefined };
+      return { ...state, insertRegisterPending: undefined, insertRegisterMode: undefined };
+    }
+
+    const regMode = state.insertRegisterMode ?? 'normal';
+
+    // Ctrl-r Ctrl-o / Ctrl-r Ctrl-r: 리터럴(자동 들여쓰기·약어 미적용) 삽입 모드
+    if (
+      regMode === 'normal' &&
+      (key === 'Ctrl-o' ||
+        key === 'Ctrl+o' ||
+        key === 'ctrl-o' ||
+        key === '<C-o>' ||
+        key === 'Ctrl-r' ||
+        key === 'Ctrl+r' ||
+        key === 'ctrl-r' ||
+        key === '<C-r>')
+    ) {
+      return {
+        ...state,
+        insertRegisterPending: true,
+        insertRegisterMode: 'literal',
+      };
+    }
+
+    // Ctrl-r Ctrl-p: 현재 줄 들여쓰기에 맞춰 리터럴 삽입 모드
+    if (
+      regMode === 'normal' &&
+      (key === 'Ctrl-p' || key === 'Ctrl+p' || key === 'ctrl-p' || key === '<C-p>')
+    ) {
+      return {
+        ...state,
+        insertRegisterPending: true,
+        insertRegisterMode: 'indent',
+      };
     }
 
     // Ctrl+r = (표현식 레지스터 입력 프롬프트)
@@ -207,6 +279,7 @@ export function handleInsertRegister(
         commandType: '=',
         commandBuffer: '',
         insertRegisterPending: undefined,
+        insertRegisterMode: undefined,
         expressionReturnContext: {
           mode: 'INSERT',
           cursor: state.cursor,
@@ -218,24 +291,37 @@ export function handleInsertRegister(
     const regKey = key.length === 1 ? key : undefined;
     if (regKey) {
       const regClip = getRegisterContent(state, regKey);
-      const textToInsert = regClip?.content ?? '';
+      const rawText = regClip?.content ?? '';
+      const currentLine = state.lines[state.cursor.line] ?? '';
+      let textToInsert = rawText;
+
+      if (rawText.length > 0) {
+        if (regMode === 'indent') {
+          textToInsert = formatIndentAdjustedRegisterText(rawText, currentLine, state.cursor.col);
+        } else if (regMode === 'normal' && getOptions(state).autoindent && rawText.includes('\n')) {
+          textToInsert = applyAutoindentToRegisterText(rawText, currentLine, state.cursor.col);
+        }
+      }
 
       let nextState: VimEditorState = {
         ...state,
         insertRegisterPending: undefined,
+        insertRegisterMode: undefined,
       };
 
       if (textToInsert.length > 0) {
         nextState = insertTextAtCursor(nextState, textToInsert);
         if (!isReplayingDot && state.currentChangeKeys) {
-          nextState.currentChangeKeys = [...state.currentChangeKeys, 'Ctrl-r', regKey];
+          const modeKey =
+            regMode === 'literal' ? ['Ctrl-o'] : regMode === 'indent' ? ['Ctrl-p'] : [];
+          nextState.currentChangeKeys = [...state.currentChangeKeys, 'Ctrl-r', ...modeKey, regKey];
         }
       }
 
       return nextState;
     }
 
-    return { ...state, insertRegisterPending: undefined };
+    return { ...state, insertRegisterPending: undefined, insertRegisterMode: undefined };
   }
 
   // Ctrl+r: 레지스터 즉시 삽입 대기 상태 진입
@@ -243,6 +329,7 @@ export function handleInsertRegister(
     return {
       ...state,
       insertRegisterPending: true,
+      insertRegisterMode: 'normal',
     };
   }
 

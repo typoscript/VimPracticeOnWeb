@@ -209,6 +209,21 @@ export function handleNormalGOperator(
   if (key === 'a') {
     return { handled: true, state: { ...state, pendingKeys: undefined, commandMessage: describeCharAt(currentLine, state.cursor.col) } };
   }
+  if (key === '<') {
+    const lastOut =
+      state.lastCommandOutput ??
+      (state.messageHistory && state.messageHistory.length > 0
+        ? state.messageHistory[state.messageHistory.length - 1]
+        : undefined);
+    return {
+      handled: true,
+      state: {
+        ...state,
+        pendingKeys: undefined,
+        commandMessage: lastOut ?? msg('메시지 기록이 비어 있습니다'),
+      },
+    };
+  }
   if (key === '8') {
     return { handled: true, state: { ...state, pendingKeys: undefined, commandMessage: describeCharUtf8Bytes(currentLine, state.cursor.col) } };
   }

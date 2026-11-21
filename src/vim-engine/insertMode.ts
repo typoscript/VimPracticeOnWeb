@@ -771,6 +771,7 @@ export function handleInsertModeKey(
       ...state,
       pendingKeys: undefined,
       insertRegisterPending: undefined,
+      insertRegisterMode: undefined,
       insertCtrlGPending: undefined,
       literalNextPending: undefined,
       digraphPending: undefined,
