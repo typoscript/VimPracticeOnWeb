@@ -23,6 +23,12 @@ describe('StatusBar Component', () => {
     rerender(<StatusBar mode="VISUAL" cursor={{ line: 0, col: 0 }} />);
     expect(screen.getByTestId('status-mode')).toHaveTextContent('VISUAL');
     expect(screen.getByTestId('status-mode')).toHaveClass('mode-visual');
+
+    rerender(<StatusBar mode="REPLACE" cursor={{ line: 0, col: 0 }} />);
+    expect(screen.getByTestId('status-mode')).toHaveTextContent('-- REPLACE --');
+
+    rerender(<StatusBar mode="REPLACE" virtualReplace cursor={{ line: 0, col: 0 }} />);
+    expect(screen.getByTestId('status-mode')).toHaveTextContent('-- VREPLACE --');
   });
 
   it('COMMAND 모드 또는 SEARCH 모드일 때 커맨드라인 프롬프트를 렌더링한다', () => {

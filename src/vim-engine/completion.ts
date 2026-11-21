@@ -387,6 +387,85 @@ export function startDictionaryCompletion(
   };
 }
 
+function startSymbolListCompletion(
+  state: VimEditorState,
+  symbols: readonly string[],
+  type: 'tag' | 'omni',
+  direction: 'next' | 'prev' = 'next'
+): VimEditorState {
+  const { line, col } = state.cursor;
+  const currentLine = state.lines[line] ?? '';
+  const found = findCompletionPrefix(currentLine, col, 0);
+  const prefix = found ? found.prefix : '';
+  const startCol = found ? found.startCol : col;
+
+  const seen = new Set<string>();
+  const candidates: string[] = [];
+  for (const name of symbols) {
+    if (!name || seen.has(name)) continue;
+    if (prefix.length === 0 || (name.startsWith(prefix) && name !== prefix)) {
+      seen.add(name);
+      candidates.push(name);
+    }
+  }
+  candidates.sort();
+
+  if (candidates.length === 0) {
+    return {
+      ...state,
+      insertCtrlXMode: false,
+      commandMessage: '-- Pattern not found --',
+    };
+  }
+
+  const initialIndex = direction === 'next' ? 0 : candidates.length - 1;
+  const chosen = candidates[initialIndex];
+  const newLine = currentLine.slice(0, startCol) + chosen + currentLine.slice(col);
+  const nextLines = [...state.lines];
+  nextLines[line] = newLine;
+  const nextCol = startCol + chosen.length;
+
+  return {
+    ...state,
+    lines: nextLines,
+    cursor: { line, col: nextCol },
+    blockInsertSession: syncBlockInsertCompletion(state, newLine, nextCol),
+    insertCtrlXMode: false,
+    commandMessage: undefined,
+    completionSession: {
+      prefix,
+      prefixStartCol: startCol,
+      candidates,
+      selectedIndex: initialIndex,
+      originalWord: prefix,
+      type,
+    },
+  };
+}
+
+/**
+ * Ctrl+x Ctrl+] 태그(Tag) 자동완성을 시작합니다.
+ */
+export function startTagCompletion(
+  state: VimEditorState,
+  tagNames: readonly string[],
+  direction: 'next' | 'prev' = 'next'
+): VimEditorState {
+  return startSymbolListCompletion(state, tagNames, 'tag', direction);
+}
+
+/**
+ * Ctrl+x Ctrl+o 옴니(Omni/LSP) 자동완성을 시작합니다.
+ */
+export function startOmniCompletion(
+  state: VimEditorState,
+  extraSymbols: readonly string[] = [],
+  direction: 'next' | 'prev' = 'next'
+): VimEditorState {
+  const lspKeys = state.lspSymbols ? Object.keys(state.lspSymbols) : [];
+  return startSymbolListCompletion(state, [...lspKeys, ...extraSymbols], 'omni', direction);
+}
+
 /**
  * Ctrl+n (next) 또는 Ctrl+p (prev) 입력 시 자동완성을 시작하거나 후보를 순환 교체합니다.
  */

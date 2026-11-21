@@ -771,6 +771,9 @@ export function switchPaneFocusCore(
     locationList: state.locationList,
     scrollbind: prevCurPane?.scrollbind ?? state.options?.scrollbind ?? false,
     diff: prevCurPane?.diff,
+    cwd: prevCurPane?.cwd,
+    prevCwd: prevCurPane?.prevCwd,
+    localArgList: state.usesLocalArgList ? (state.argList ?? null) : prevCurPane?.localArgList,
   };
 
   const updatedPanes = state.splitPanes.map((p, i) => (i === curIdx ? currentPane : p));
@@ -804,6 +807,13 @@ export function switchPaneFocusCore(
             false,
         };
 
+  const activeTabCwd = state.tabPages?.find((t) => t.id === (state.currentTabId ?? 1))?.cwd;
+  const nextCwd = targetPane.cwd ?? activeTabCwd ?? state.globalCwd ?? state.cwd;
+  const nextUsesLocalArgs = targetPane.localArgList !== undefined;
+  const nextArgList = nextUsesLocalArgs
+    ? targetPane.localArgList
+    : (state.globalArgList !== undefined ? state.globalArgList : state.argList);
+
   return {
     ...state,
     lines: [...targetPane.lines],
@@ -821,6 +831,9 @@ export function switchPaneFocusCore(
     splitPanes: newPanes,
     locationList: targetPane.locationList,
     options: nextOptions,
+    ...(nextCwd !== undefined ? { cwd: nextCwd } : {}),
+    argList: nextArgList,
+    usesLocalArgList: nextUsesLocalArgs,
   };
 }
 

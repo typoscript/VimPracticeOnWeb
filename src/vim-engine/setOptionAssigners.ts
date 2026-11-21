@@ -54,6 +54,9 @@ const VALID_NRFORMATS = new Set(['bin', 'octal', 'hex', 'alpha', 'unsigned', 'bl
 const VALID_VIRTUALEDIT = new Set(['block', 'insert', 'all', 'onemore', 'none']);
 const VALID_WILDMODE_ATOMS = new Set(['', 'full', 'longest', 'list', 'lastused']);
 const VALID_WHICHWRAP_FLAGS = new Set(['b', 's', 'h', 'l', '<', '>', '~', '[', ']']);
+const VALID_FORMATOPTIONS_FLAGS = new Set([
+  't', 'c', 'r', 'o', 'q', 'w', 'a', 'n', '2', 'v', 'b', 'l', 'm', 'M', 'B', '1', 'j', 'p', '/',
+]);
 const NUMERIC_OPTION_KEYS = new Set<NumericOptionKey>([
   'tabstop',
   'shiftwidth',
@@ -553,6 +556,46 @@ function handleWhichwrapAssignment(
   return null;
 }
 
+function handleFormatoptionsAssignment(
+  ctx: SetDraftContext,
+  mod: string,
+  rawVal: string,
+  token: string
+): VimEditorState | null {
+  for (const ch of rawVal) {
+    if (!VALID_FORMATOPTIONS_FLAGS.has(ch)) {
+      return {
+        ...ctx.state,
+        bell: true,
+        commandMessage: msg('E474: 잘못된 인수입니다: {token}', { token }),
+      };
+    }
+  }
+  const curVal =
+    ctx.nextLocal.formatoptions ?? ctx.nextGlobal.formatoptions ?? DEFAULT_VIM_OPTIONS.formatoptions ?? 'tcqj';
+  let nextVal = rawVal;
+  if (mod === '+') {
+    nextVal = curVal;
+    for (const ch of rawVal) {
+      if (!nextVal.includes(ch)) nextVal += ch;
+    }
+  } else if (mod === '^') {
+    let prep = '';
+    for (const ch of rawVal) {
+      if (!prep.includes(ch)) prep += ch;
+    }
+    for (const ch of curVal) {
+      if (!prep.includes(ch)) prep += ch;
+    }
+    nextVal = prep;
+  } else if (mod === '-') {
+    nextVal = [...curVal].filter((ch) => !rawVal.includes(ch)).join('');
+  }
+  writeScopedOption(ctx, 'formatoptions', nextVal);
+  ctx.appliedList.push(`formatoptions=${nextVal}`);
+  return null;
+}
+
 export function handleOptionAssignment(ctx: SetDraftContext, token: string): VimEditorState | null {
   const eqIdx = token.indexOf('=');
   const rawKeyWithMod = token.slice(0, eqIdx);
@@ -573,6 +616,7 @@ export function handleOptionAssignment(ctx: SetDraftContext, token: string): Vim
   if (optKey === 'colorcolumn') return handleColorcolumnAssignment(ctx, mod, rawVal, token);
   if (optKey === 'wildmode') return handleWildmodeAssignment(ctx, mod, rawVal, token);
   if (optKey === 'whichwrap') return handleWhichwrapAssignment(ctx, mod, rawVal, token);
+  if (optKey === 'formatoptions') return handleFormatoptionsAssignment(ctx, mod, rawVal, token);
 
   if (optKey === 'errorformat' || optKey === 'grepprg') {
     const currentStr =

@@ -9,6 +9,8 @@ import { cdo, cfdo } from './quickfixEngine';
 import { ldo, lfdo } from './locationListEngine';
 import {
   setArgs,
+  setLocalArgs,
+  setGlobalArgs,
   addArgs,
   deleteArgs,
   nextArg,
@@ -92,6 +94,20 @@ export function tryExecuteBatchAndUndoExCommand(
       ? lfdo(state, cmdToRun, runEx, isBang)
       : ldo(state, cmdToRun, runEx, false, isBang);
     return finishNormalEx(res);
+  }
+
+  // 창 로컬 아규먼트 리스트: :arglocal / :argl [file1 file2 ...]
+  const arglocalMatch = cleanCmdRaw.match(/^argl(?:ocal)?(?:\s+(.*))?$/i);
+  if (arglocalMatch) {
+    const filesStr = arglocalMatch[1]?.trim();
+    return finishNormalEx(setLocalArgs(state, filesStr ? filesStr.split(/\s+/) : undefined));
+  }
+
+  // 전역 아규먼트 리스트 복귀/설정: :argglobal / :argg [file1 file2 ...]
+  const argglobalMatch = cleanCmdRaw.match(/^argg(?:lobal)?(?:\s+(.*))?$/i);
+  if (argglobalMatch) {
+    const filesStr = argglobalMatch[1]?.trim();
+    return finishNormalEx(setGlobalArgs(state, filesStr ? filesStr.split(/\s+/) : undefined));
   }
 
   // 아규먼트 추가: :argadd {file} ...

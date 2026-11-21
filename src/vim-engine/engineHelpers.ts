@@ -88,8 +88,8 @@ export function parsePending(pendingKeys?: string): ParsedPending {
     return { count1: c, totalCount: c };
   }
 
-  // 2. 연산자 및 카운트 조합: "d", "2d", "d2", "2d3", "c", "r", "y", "v", "g", "gu", "gU", "g~", "gc", "@", ">", "<", "=", "!", "m", "'", "`"
-  const opMatch = pendingKeys.match(/^([1-9][0-9]*)?(g[uU~?cqw]|[a-zA-Z@'`><=!])([0-9]*)$/);
+  // 2. 연산자 및 카운트 조합: "d", "2d", "d2", "2d3", "c", "r", "gr", "y", "v", "g", "gu", "gU", "g~", "gc", "@", ">", "<", "=", "!", "m", "'", "`"
+  const opMatch = pendingKeys.match(/^([1-9][0-9]*)?(g[uU~?cqwr]|[a-zA-Z@'`><=!])([0-9]*)$/);
   if (opMatch) {
     const count1 = opMatch[1] ? parseInt(opMatch[1], 10) : undefined;
     const operator = opMatch[2];

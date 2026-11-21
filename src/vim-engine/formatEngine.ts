@@ -4,6 +4,7 @@ import { pushUndoSnapshot } from './operators';
 import { clampCursor } from './cursor';
 import { recordChangePosition } from './advancedMotions';
 import { executeSetCommand, getOptions } from './setEngine';
+import { hasFormatOption } from './setOptionsCore';
 
 /**
  * 순정 Vim 텍스트 포매팅 엔진: gq{motion} / gw{motion} / gqq / Visual gq, :retab.
@@ -18,6 +19,8 @@ export interface FormatOptions {
   textwidth: number;
   tabstop: number;
   expandtab: boolean;
+  /** formatoptions 'q' 포함 여부 (false 면 주석 리더를 일반 텍스트로 취급) */
+  formatComments?: boolean;
 }
 
 export interface FormatCursor {
@@ -62,17 +65,17 @@ export function displayWidth(text: string, tabstop: number): number {
   return w;
 }
 
-function parseFormatLine(line: string): ParsedLine {
+function parseFormatLine(line: string, formatComments = true): ParsedLine {
   const indentMatch = line.match(/^[ \t]*/);
   const indent = indentMatch ? indentMatch[0] : '';
   const body = line.slice(indent.length);
 
   let leader: string | null = null;
   let kind: LeaderKind | null = null;
-  if (body.startsWith('//')) {
+  if (formatComments && body.startsWith('//')) {
     leader = '//';
     kind = 'comment';
-  } else if (/^[#%>](?=[ \t]|$)/.test(body)) {
+  } else if (formatComments && /^[#%>](?=[ \t]|$)/.test(body)) {
     leader = body[0];
     kind = 'comment';
   } else if (/^-(?=[ \t]|$)/.test(body)) {
@@ -137,7 +140,7 @@ function reflowParagraph(
   const lineStart: number[] = [];
   const restStartCol: number[] = [];
   for (let i = para.start; i <= para.end; i++) {
-    const p = parseFormatLine(lines[i]);
+    const p = parseFormatLine(lines[i], opts.formatComments !== false);
     const text = i === para.start ? p.rest : p.rest.replace(/^[ \t]+/, '');
     restStartCol.push(p.prefix.length + (p.rest.length - text.length));
     if (i === para.start) {
@@ -240,8 +243,9 @@ export function formatLineRange(
   let mappedCursor: FormatCursor | undefined;
 
   let i = start;
+  const fmtComments = opts.formatComments !== false;
   while (i <= end) {
-    const parsed = parseFormatLine(lines[i]);
+    const parsed = parseFormatLine(lines[i], fmtComments);
     if (parsed.blank) {
       if (trackCursor && trackCursor.line === i) {
         mappedCursor = { line: start + result.length, col: trackCursor.col };
@@ -253,7 +257,7 @@ export function formatLineRange(
     // 문단 끝 찾기
     let j = i;
     while (j + 1 <= end) {
-      const next = parseFormatLine(lines[j + 1]);
+      const next = parseFormatLine(lines[j + 1], fmtComments);
       if (next.blank) break;
       if (next.kind === 'list') break;
       const sameLeader = next.leader === parsed.leader;
@@ -294,6 +298,7 @@ export function getFormatOptions(state: VimEditorState): FormatOptions {
     textwidth: o.textwidth ?? 0,
     tabstop: o.tabstop,
     expandtab: o.expandtab,
+    formatComments: hasFormatOption(o, 'q'),
   };
 }
 

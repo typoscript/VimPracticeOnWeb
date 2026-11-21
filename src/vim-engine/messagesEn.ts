@@ -433,4 +433,5 @@ export const EN_MESSAGES: Record<string, string> = {
   "\"{word}\" 단어를 맞춤법 목록에서 제거했습니다": "Removed \"{word}\" from spell word list",
   "\"{filename}\" 새 탭으로 열렸습니다": "\"{filename}\" opened in new tab",
   "{count}개 일치 ({lines}줄)": "{count} matches on {lines} lines",
+  "E186: 이전 디렉터리가 없습니다": "E186: No previous directory",
 };

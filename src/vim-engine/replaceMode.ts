@@ -1,10 +1,115 @@
 import { VimEditorState } from './types';
-import { getMaxCol } from './cursor';
+import { clampCursor, getMaxCol } from './cursor';
+import { pushUndoSnapshot } from './operators';
 import { getOptions, parseWhichwrapFlags } from './setOptionsCore';
 
+function visualColAt(line: string, col: number, tabstop: number): number {
+  let vcol = 0;
+  for (let i = 0; i < col && i < line.length; i++) {
+    vcol += line[i] === '\t' ? tabstop - (vcol % tabstop) : 1;
+  }
+  return vcol;
+}
+
 /**
- * REPLACE (R) 모드 키 입력 처리:
- * 1:1 글자 덮어쓰기 및 Backspace 시 원본 글자 복원
+ * 한 문자를 Virtual Replace 규칙으로 덮어씁니다 (탭 폭 보존).
+ * 탭의 화면 너비가 2 이상이면 문자를 탭 앞에 삽입해 뒤쪽 문자의 화면 열 위치를 유지합니다.
+ */
+function applyVirtualReplaceSingle(
+  line: string,
+  col: number,
+  ch: string,
+  tabstop: number
+): { newLine: string; nextCol: number } {
+  const ts = Math.max(1, tabstop);
+  if (ch === '\t') {
+    const startVcol = visualColAt(line, col, ts);
+    const targetVcol = startVcol + (ts - (startVcol % ts));
+    let endIdx = col;
+    let curV = startVcol;
+    while (endIdx < line.length && curV < targetVcol) {
+      const c = line[endIdx];
+      const w = c === '\t' ? ts - (curV % ts) : 1;
+      curV += w;
+      endIdx++;
+    }
+    const extraSpaces = curV > targetVcol ? ' '.repeat(curV - targetVcol) : '';
+    const newLine = line.slice(0, col) + '\t' + extraSpaces + line.slice(endIdx);
+    return { newLine, nextCol: col + 1 };
+  }
+
+  if (col >= line.length) {
+    const padding = ' '.repeat(col - line.length);
+    return { newLine: line + padding + ch, nextCol: col + 1 };
+  }
+
+  const existing = line[col];
+  if (existing === '\t') {
+    const vcol = visualColAt(line, col, ts);
+    const tabWidth = ts - (vcol % ts);
+    if (tabWidth > 1) {
+      // 탭이 아직 화면 열을 남기고 있으므로 새 문자를 탭 앞에 삽입하여 뒤 텍스트의 화면 열 유지
+      const newLine = line.slice(0, col) + ch + line.slice(col);
+      return { newLine, nextCol: col + 1 };
+    }
+    // 탭의 마지막 화면 열을 채웠으므로 탭 자체를 교체
+    const newLine = line.slice(0, col) + ch + line.slice(col + 1);
+    return { newLine, nextCol: col + 1 };
+  }
+
+  const newLine = line.slice(0, col) + ch + line.slice(col + 1);
+  return { newLine, nextCol: col + 1 };
+}
+
+/**
+ * [count]gr{char}: 화면 레이아웃(탭 폭)을 보존하며 count개 문자를 교체합니다.
+ */
+export function virtualReplaceChar(
+  state: VimEditorState,
+  char: string,
+  count = 1
+): VimEditorState | null {
+  const { line, col } = state.cursor;
+  const currentLine = state.lines[line] ?? '';
+  if (currentLine.length === 0) return null;
+
+  const opts = getOptions(state);
+  const ts = Math.max(1, opts.tabstop || 8);
+  const n = Math.max(1, count);
+
+  // 교체 대상의 남은 화면 열이 count보다 작으면 실패 (bell)
+  const startVcol = visualColAt(currentLine, col, ts);
+  const endVcol = visualColAt(currentLine, currentLine.length, ts);
+  if (endVcol - startVcol < n) {
+    return null;
+  }
+
+  const stateWithSnapshot = pushUndoSnapshot(state);
+  let curLine = currentLine;
+  let curCol = col;
+  const replaceCh = char === 'Tab' ? '\t' : char;
+
+  for (let i = 0; i < n; i++) {
+    const res = applyVirtualReplaceSingle(curLine, curCol, replaceCh, ts);
+    curLine = res.newLine;
+    curCol = res.nextCol;
+  }
+
+  const nextLines = [...state.lines];
+  nextLines[line] = curLine;
+  const finalCol = Math.max(0, curCol - 1);
+
+  return {
+    ...stateWithSnapshot,
+    lines: nextLines,
+    cursor: clampCursor(nextLines, { line, col: finalCol }, 'NORMAL'),
+    pendingKeys: undefined,
+  };
+}
+
+/**
+ * REPLACE (R) / Virtual Replace (gR) 모드 키 입력 처리:
+ * 1:1 글자 덮어쓰기(또는 탭 폭 보존 가상 덮어쓰기) 및 Backspace 시 원본 복원
  */
 export function handleReplaceModeKey(
   state: VimEditorState,
@@ -12,6 +117,8 @@ export function handleReplaceModeKey(
   isReplayingDot = false,
   _macroDepth = 0
 ): VimEditorState {
+  const isVirtual = Boolean(state.virtualReplace);
+
   if (key === 'Escape') {
     const curLine = state.lines[state.cursor.line] ?? '';
     const maxCol = getMaxCol(curLine, 'NORMAL');
@@ -22,6 +129,7 @@ export function handleReplaceModeKey(
       mode: 'NORMAL',
       cursor: { line: state.cursor.line, col: newCol },
       replaceStack: undefined,
+      virtualReplace: undefined,
       currentChangeKeys: undefined,
       lastChangeKeys: isReplayingDot ? state.lastChangeKeys : nextLastChange,
     };
@@ -39,7 +147,9 @@ export function handleReplaceModeKey(
     const curLine = state.lines[lineIdx] ?? '';
     let newLine: string;
 
-    if (last.char === '') {
+    if (last.prevLine !== undefined) {
+      newLine = last.prevLine;
+    } else if (last.char === '') {
       // 줄 끝을 초과하여 덧붙여졌던 문자 삭제
       newLine = curLine.slice(0, last.col) + curLine.slice(last.col + 1);
     } else {
@@ -110,12 +220,32 @@ export function handleReplaceModeKey(
     return { ...state, cursor: { line: Math.min(state.lines.length - 1, state.cursor.line + 1), col: state.cursor.col } };
   }
 
-  // 단일 입력 문자 1:1 덮어쓰기
-  if (key.length === 1) {
+  // 단일 입력 문자 또는 Tab 덮어쓰기
+  if (key.length === 1 || (isVirtual && key === 'Tab')) {
     const lineIdx = state.cursor.line;
     const col = state.cursor.col;
     const curLine = state.lines[lineIdx] ?? '';
     const stack = state.replaceStack ?? [];
+    const defaultStart = isVirtual ? ['g', 'R'] : ['R'];
+    const nextChangeKeys = state.currentChangeKeys
+      ? [...state.currentChangeKeys, key]
+      : [...defaultStart, key];
+
+    if (isVirtual) {
+      const ts = Math.max(1, getOptions(state).tabstop || 8);
+      const ch = key === 'Tab' ? '\t' : key;
+      const { newLine, nextCol } = applyVirtualReplaceSingle(curLine, col, ch, ts);
+      const nextLines = [...state.lines];
+      nextLines[lineIdx] = newLine;
+      const newStack = [...stack, { char: curLine[col] ?? '', line: lineIdx, col, prevLine: curLine }];
+      return {
+        ...state,
+        lines: nextLines,
+        cursor: { line: lineIdx, col: nextCol },
+        replaceStack: newStack,
+        currentChangeKeys: isReplayingDot ? state.currentChangeKeys : nextChangeKeys,
+      };
+    }
 
     let newLine: string;
     let oldChar = '';
@@ -132,9 +262,6 @@ export function handleReplaceModeKey(
     const nextLines = [...state.lines];
     nextLines[lineIdx] = newLine;
     const newStack = [...stack, { char: oldChar, line: lineIdx, col }];
-    const nextChangeKeys = state.currentChangeKeys
-      ? [...state.currentChangeKeys, key]
-      : ['R', key];
 
     return {
       ...state,

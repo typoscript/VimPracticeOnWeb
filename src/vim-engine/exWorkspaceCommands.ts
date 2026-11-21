@@ -234,7 +234,11 @@ function tryExecuteBufferListAndCwdCommand(
   }
   const cdMatch = cleanCmdRaw.match(/^(cd|chd|chdir|lcd|lchd|lchdir|tcd|tchd|tchdir)(?:\s+(.*))?$/);
   if (cdMatch) {
-    const scope = cdMatch[1].startsWith('t') ? 'tab' : 'global';
+    const scope = cdMatch[1].startsWith('l')
+      ? 'window'
+      : cdMatch[1].startsWith('t')
+        ? 'tab'
+        : 'global';
     return finishEx(changeWorkingDirectory(state, cdMatch[2], scope));
   }
 

@@ -19,6 +19,36 @@ export function switchToArgFile(state: VimEditorState, filename: string): VimEdi
   return editBuffer(synced, cleanName);
 }
 
+function isSplitActive(state: VimEditorState): boolean {
+  return Boolean(state.splitDirection && state.splitDirection !== 'none' && state.splitPanes);
+}
+
+function cloneArgList(al: ArgListState | null | undefined): ArgListState | null {
+  if (!al) return null;
+  return { files: [...al.files], currentIndex: al.currentIndex };
+}
+
+/** 현재 창이 로컬 아규먼트 리스트(:arglocal) 사용 중이면 창 로컬에만, 아니면 전역에도 반영합니다. */
+function writeArgList(state: VimEditorState, nextArgList: ArgListState | null): VimEditorState {
+  if (state.usesLocalArgList) {
+    const nextPanes = isSplitActive(state)
+      ? state.splitPanes!.map((pane, idx) =>
+          idx === (state.activePaneIndex ?? 0) ? { ...pane, localArgList: nextArgList } : pane
+        )
+      : state.splitPanes;
+    return {
+      ...state,
+      argList: nextArgList,
+      ...(nextPanes ? { splitPanes: nextPanes } : {}),
+    };
+  }
+  return {
+    ...state,
+    argList: nextArgList,
+    globalArgList: nextArgList,
+  };
+}
+
 /**
  * 아규먼트 리스트(:args)를 새 파일 목록으로 설정하고 첫 번째 파일로 전환합니다.
  */
@@ -36,18 +66,75 @@ export function setArgs(state: VimEditorState, files: string[]): VimEditorState 
     currentIndex: 0,
   };
 
-  const switched = switchToArgFile(
-    {
-      ...state,
-      argList: nextArgList,
-    },
-    cleanFiles[0]
-  );
+  const base = writeArgList(state, nextArgList);
+  const switched = switchToArgFile(base, cleanFiles[0]);
+  const finalState = writeArgList(switched, nextArgList);
 
   return {
-    ...switched,
-    argList: nextArgList,
-    commandMessage: formatArgs({ ...switched, argList: nextArgList }),
+    ...finalState,
+    commandMessage: formatArgs(finalState),
+  };
+}
+
+/**
+ * 창 로컬 아규먼트 리스트를 활성화하거나 새 파일 목록으로 설정합니다 (:arglocal [files...]).
+ */
+export function setLocalArgs(state: VimEditorState, files?: string[]): VimEditorState {
+  const cleanFiles = files ? files.map((f) => f.trim()).filter((f) => f.length > 0) : [];
+  const preservedGlobal =
+    state.globalArgList !== undefined
+      ? state.globalArgList
+      : !state.usesLocalArgList
+        ? cloneArgList(state.argList)
+        : null;
+
+  const baseState: VimEditorState = {
+    ...state,
+    globalArgList: preservedGlobal,
+    usesLocalArgList: true,
+  };
+
+  if (cleanFiles.length > 0) {
+    return setArgs(baseState, cleanFiles);
+  }
+
+  const copiedLocal = cloneArgList(state.argList ?? preservedGlobal);
+  const finalState = writeArgList(baseState, copiedLocal);
+  return {
+    ...finalState,
+    commandMessage: formatArgs(finalState),
+  };
+}
+
+/**
+ * 현재 창을 전역 아규먼트 리스트로 복귀시키거나 전역 목록을 재설정합니다 (:argglobal [files...]).
+ */
+export function setGlobalArgs(state: VimEditorState, files?: string[]): VimEditorState {
+  const cleanFiles = files ? files.map((f) => f.trim()).filter((f) => f.length > 0) : [];
+  const nextPanes = isSplitActive(state)
+    ? state.splitPanes!.map((pane, idx) =>
+        idx === (state.activePaneIndex ?? 0) ? { ...pane, localArgList: undefined } : pane
+      )
+    : state.splitPanes;
+
+  const restoredGlobal =
+    state.globalArgList !== undefined ? cloneArgList(state.globalArgList) : cloneArgList(state.argList);
+
+  const baseState: VimEditorState = {
+    ...state,
+    usesLocalArgList: false,
+    argList: restoredGlobal,
+    globalArgList: restoredGlobal,
+    ...(nextPanes ? { splitPanes: nextPanes } : {}),
+  };
+
+  if (cleanFiles.length > 0) {
+    return setArgs(baseState, cleanFiles);
+  }
+
+  return {
+    ...baseState,
+    commandMessage: formatArgs(baseState),
   };
 }
 
@@ -80,10 +167,10 @@ export function addArgs(state: VimEditorState, newFiles: string[]): VimEditorSta
     currentIndex: state.argList?.currentIndex ?? 0,
   };
 
+  const updated = writeArgList(state, nextArgList);
   return {
-    ...state,
-    argList: nextArgList,
-    commandMessage: formatArgs({ ...state, argList: nextArgList }),
+    ...updated,
+    commandMessage: formatArgs(updated),
   };
 }
 
@@ -104,8 +191,7 @@ export function deleteArgs(state: VimEditorState, pattern: string): VimEditorSta
 
   if (remaining.length === 0) {
     return {
-      ...state,
-      argList: null,
+      ...writeArgList(state, null),
       commandMessage: msg('아규먼트 리스트가 비워졌습니다'),
     };
   }
@@ -116,10 +202,10 @@ export function deleteArgs(state: VimEditorState, pattern: string): VimEditorSta
     currentIndex: newIdx,
   };
 
+  const updated = writeArgList(state, nextArgList);
   return {
-    ...state,
-    argList: nextArgList,
-    commandMessage: formatArgs({ ...state, argList: nextArgList }),
+    ...updated,
+    commandMessage: formatArgs(updated),
   };
 }
 
@@ -151,17 +237,9 @@ export function nextArg(state: VimEditorState, count = 1): VimEditorState {
     currentIndex: targetIdx,
   };
 
-  const switched = switchToArgFile(
-    {
-      ...state,
-      argList: nextArgList,
-    },
-    targetFile
-  );
-
+  const switched = switchToArgFile(writeArgList(state, nextArgList), targetFile);
   return {
-    ...switched,
-    argList: nextArgList,
+    ...writeArgList(switched, nextArgList),
     commandMessage: `(${targetIdx + 1} of ${al.files.length}): ${targetFile}`,
   };
 }
@@ -194,17 +272,9 @@ export function prevArg(state: VimEditorState, count = 1): VimEditorState {
     currentIndex: targetIdx,
   };
 
-  const switched = switchToArgFile(
-    {
-      ...state,
-      argList: nextArgList,
-    },
-    targetFile
-  );
-
+  const switched = switchToArgFile(writeArgList(state, nextArgList), targetFile);
   return {
-    ...switched,
-    argList: nextArgList,
+    ...writeArgList(switched, nextArgList),
     commandMessage: `(${targetIdx + 1} of ${al.files.length}): ${targetFile}`,
   };
 }
@@ -227,17 +297,9 @@ export function firstArg(state: VimEditorState): VimEditorState {
     currentIndex: 0,
   };
 
-  const switched = switchToArgFile(
-    {
-      ...state,
-      argList: nextArgList,
-    },
-    targetFile
-  );
-
+  const switched = switchToArgFile(writeArgList(state, nextArgList), targetFile);
   return {
-    ...switched,
-    argList: nextArgList,
+    ...writeArgList(switched, nextArgList),
     commandMessage: `(1 of ${al.files.length}): ${targetFile}`,
   };
 }
@@ -261,17 +323,9 @@ export function lastArg(state: VimEditorState): VimEditorState {
     currentIndex: targetIdx,
   };
 
-  const switched = switchToArgFile(
-    {
-      ...state,
-      argList: nextArgList,
-    },
-    targetFile
-  );
-
+  const switched = switchToArgFile(writeArgList(state, nextArgList), targetFile);
   return {
-    ...switched,
-    argList: nextArgList,
+    ...writeArgList(switched, nextArgList),
     commandMessage: `(${targetIdx + 1} of ${al.files.length}): ${targetFile}`,
   };
 }

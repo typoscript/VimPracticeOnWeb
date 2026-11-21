@@ -449,6 +449,28 @@ export function handleNormalGOperator(
     }
     return { handled: true, state: { ...tjumpTag(state, word), pendingKeys: undefined } };
   }
+  if (key === 'R') {
+    return {
+      handled: true,
+      state: {
+        ...pushUndoSnapshot(state),
+        mode: 'REPLACE',
+        virtualReplace: true,
+        replaceStack: [],
+        pendingKeys: undefined,
+        currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['g', 'R'],
+      },
+    };
+  }
+  if (key === 'r') {
+    return {
+      handled: true,
+      state: {
+        ...state,
+        pendingKeys: (parsedCount1 ? String(parsedCount1) : '') + 'gr',
+      },
+    };
+  }
   if (key === '~' || key === 'u' || key === 'U' || key === '?' || key === 'c' || key === 'q' || key === 'w') {
     return {
       handled: true,

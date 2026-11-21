@@ -78,6 +78,8 @@ export {
   selectCompletionCandidate,
   findCompletionPrefix,
   scanBufferWords,
+  startTagCompletion,
+  startOmniCompletion,
 } from './completion';
 export {
   AVAILABLE_COMMANDS,

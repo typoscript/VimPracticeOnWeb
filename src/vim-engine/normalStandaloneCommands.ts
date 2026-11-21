@@ -15,6 +15,7 @@ import {
   pushUndoSnapshot,
 } from './operators';
 import { syncRegisters, parseMacroStringToKeys } from './registers';
+import { virtualReplaceChar } from './replaceMode';
 import { openCommandLineWindow } from './cmdlineWindow';
 import { openHelp } from './helpEngine';
 import { openLspHover } from './lspEngine';
@@ -170,9 +171,19 @@ export function handleNormalMacroAndDot(
     return { ...curState, lastChangeKeys: replayKeys };
   }
 
-  // 3. 'r' (단일 문자 교체) 대기 상태
-  if (parsed.operator === 'r') {
-    if (key.length === 1) {
+  // 3. 'r' (단일 문자 교체) / 'gr' (가상 단일 문자 교체) 대기 상태
+  if (parsed.operator === 'r' || parsed.operator === 'gr') {
+    if (key.length === 1 || (parsed.operator === 'gr' && key === 'Tab')) {
+      if (parsed.operator === 'gr') {
+        const res = virtualReplaceChar(state, key, parsed.totalCount);
+        if (!res) return ringBell(state);
+        const changeKeys =
+          parsed.totalCount > 1 ? [String(parsed.totalCount), 'g', 'r', key] : ['g', 'r', key];
+        return {
+          ...res,
+          lastChangeKeys: isReplayingDot ? state.lastChangeKeys : changeKeys,
+        };
+      }
       const currentLine = state.lines[state.cursor.line] ?? '';
       if (state.cursor.col + parsed.totalCount > currentLine.length) return ringBell(state);
       const res = replaceChar(state, key, parsed.totalCount);

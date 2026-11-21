@@ -111,6 +111,17 @@ export function switchTab(state: VimEditorState, targetId: number): VimEditorSta
     return syncedState;
   }
 
+  const targetPane =
+    targetTab.splitPanes && targetTab.splitDirection && targetTab.splitDirection !== 'none'
+      ? targetTab.splitPanes[targetTab.activePaneIndex ?? 0]
+      : undefined;
+  const restoredCwd = targetPane?.cwd ?? targetTab.cwd ?? syncedState.globalCwd ?? syncedState.cwd;
+  const nextUsesLocalArgs = targetPane ? targetPane.localArgList !== undefined : false;
+  const restoredArgList =
+    targetPane && targetPane.localArgList !== undefined
+      ? targetPane.localArgList
+      : (syncedState.globalArgList !== undefined ? syncedState.globalArgList : syncedState.argList);
+
   return {
     ...syncedState,
     lines: [...targetTab.lines],
@@ -132,7 +143,10 @@ export function switchTab(state: VimEditorState, targetId: number): VimEditorSta
     currentBufferId: targetTab.currentBufferId,
     alternateBufferId: targetTab.alternateBufferId,
     currentTabId: targetTab.id,
-    cwd: targetTab.cwd ?? syncedState.globalCwd ?? syncedState.cwd,
+    cwd: restoredCwd,
+    windowCwd: undefined,
+    argList: restoredArgList,
+    usesLocalArgList: nextUsesLocalArgs,
     commandMessage: msg('탭 {id}: {filename}', { id: targetTab.id, filename: targetTab.filename }),
   };
 }
@@ -196,6 +210,9 @@ export function openNewTab(state: VimEditorState, filename?: string): VimEditorS
     primaryFilename: tabName,
     secondaryFilename: undefined,
     cwd: syncedState.globalCwd ?? syncedState.cwd,
+    windowCwd: undefined,
+    argList: syncedState.globalArgList !== undefined ? syncedState.globalArgList : syncedState.argList,
+    usesLocalArgList: false,
     commandMessage: msg('"{tabName}" [새 탭 {nextId}]', { tabName, nextId }),
   };
 }

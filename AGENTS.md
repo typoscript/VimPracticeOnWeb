@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 178개 테스트 파일, 2,130개 테스트 100% 통과 필수)*
+  *(현재 179개 테스트 파일, 2,146개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -183,6 +183,11 @@
   - **코드 폴딩 심화 & 윈도우 로컬 `foldenable` (`folding.ts`, `normalZPrefix.ts`, `setOptionsCore.ts`, `EditorViewport.tsx`)**: `foldlevel` 단계 조절(`zm`/`zr` 및 `zR`/`zM` 연동), 커서 줄 폴드 펼치기(`zv`), `foldlevel` 재적용(`zx`/`zX`), 재귀 열기/닫기/토글(`zO`/`zC`/`zA`), `:set foldenable`/`nofoldenable`(`fen`/`nofen`) 및 `zi` 토글을 구현했습니다.
   - **편집·이동 정밀 옵션 3종 (`insertMode.ts`, `setOptionsCore.ts`, `extraMotions.ts`, `normalStandaloneCommands.ts`, `normalGPrefix.ts`, `viewport.ts`)**: `:set textwidth`(`tw > 0`) Insert 모드 입력 중 공백 경계 실시간 자동 줄바꿈(`autoindent` 연동), `:set startofline`(`sol`, `G`/`gg`/`[count]%`/`Ctrl-f`/`Ctrl-b` 첫 비공백 이동 제어), `:set smarttab`(`sta`, 줄 앞 `Tab`/`Backspace` 시 `shiftwidth` 적용)을 구현했습니다.
   - **Insert 사전 자동완성 & 뷰포트/비주얼 변형 (`completion.ts`, `insertMode.ts`, `viewport.ts`, `normalZPrefix.ts`, `normalGPrefix.ts`, `visualPrefixes.ts`)**: 내장 영단어 사전(`spellData.ts`)과 사용자 사전(`spellGoodWords`) 기반 `Ctrl-x Ctrl-k` 팝업 완성(대소문자 보존, `Ctrl-n`/`p`/`e` 순환·취소), 첫 비공백 이동을 동반하는 `[count]z<CR>`/`z.`/`z-` 뷰포트 정렬, `gV` 재선택 방지 명령을 구현했습니다.
+- **순정 Vim 엔진 디테일 4종 확장 (`forced motionwise` `dv`/`dV`/`d<C-v>`, `:set formatoptions`, Virtual Replace `gR`/`gr` & `Ctrl-x Ctrl-]`/`Ctrl-x Ctrl-o`, 창/탭 로컬 `:lcd`/`:tcd` & `:arglocal`/`:argglobal`)**:
+  - **연산자 모션 강제 지정 (`forcedMotion.ts`, `normalMode.ts`)**: `d`/`c`/`y` 연산자 대기 중 `v`(문자 단위 강제·포함↔배타 토글), `V`(줄 단위 강제), `Ctrl-v`(직사각형 블록 강제) 지정(`dvj`, `dvw`, `dve`, `dVw`, `d<C-v>j`, `c<C-v>j`, `y<C-v>j`, 2타 모션·카운트·`.` 반복 지원)을 구현했습니다.
+  - **`:set formatoptions` (`setOptionsCore.ts`, `setOptionAssigners.ts`, `operators.ts`, `lineOperators.ts`, `formatEngine.ts`, `insertMode.ts`)**: 버퍼 로컬 `formatoptions`/`fo`(기본 `'tcqj'`, `=`/`+=`/`^=`/`-=`/`?`, `E474` 검증)와 `r`(Insert `Enter` 주석 리더 자동 삽입), `o`(Normal `o`/`O` 주석 리더 자동 삽입), `j`(`J` 결합 시 중복 주석 리더 제거), `q`(`gq` 주석 문단 리플로우 제어), `t`/`c`(`textwidth` 일반 텍스트/주석 자동 줄바꿈 및 리더 연속)을 구현했습니다.
+  - **Virtual Replace (`gR`/`gr`) & `Ctrl-x` 태그·옴니 완성 (`replaceMode.ts`, `normalGPrefix.ts`, `normalStandaloneCommands.ts`, `completion.ts`, `insertMode.ts`, `StatusBar.tsx`)**: 탭 폭의 화면 열 정렬을 유지하며 덮어쓰는 `gR` (`-- VREPLACE --`, `Backspace` 원본 복원, `.` 반복)과 `[count]gr{char}`, 그리고 프로젝트 심볼 태그(`Ctrl-x Ctrl-]`) 및 LSP/옴니(`Ctrl-x Ctrl-o`) 자동완성을 구현했습니다.
+  - **창/탭 로컬 작업 디렉터리 & 로컬 아규먼트 리스트 (`vfs.ts`, `windowTree.ts`, `splitWindowCore.ts`, `tabEngine.ts`, `argEngine.ts`, `exWorkspaceCommands.ts`, `exBatchAndUndoCommands.ts`, `vimscriptBuiltinsExtra.ts`)**: 분할 창별 `:lcd` 격리·탭별 `:tcd`·전역 `:cd`·직전 디렉터리 복귀(`:cd -`/`:lcd -`/`:tcd -`, `E186`), `getcwd([winnr [, tabnr]])` 및 `haslocaldir([winnr [, tabnr]])` Vimscript 내장 함수, 창별 로컬 아규먼트 리스트(`:arglocal`/`:argl`) 및 전역 복귀(`:argglobal`/`:argg`)를 구현했습니다.
 
 ---
 

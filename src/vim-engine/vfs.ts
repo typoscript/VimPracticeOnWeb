@@ -4,9 +4,102 @@ import { msg } from './messages';
 
 export const DEFAULT_VFS_CWD = '/workspace';
 
-/** 현재 작업 디렉터리 경로를 반환합니다. */
+/** 현재 활성 창/탭/전역 계층을 반영한 유효 작업 디렉터리 경로를 반환합니다. */
 export function getEffectiveCwd(state: VimEditorState): string {
-  return state.cwd || DEFAULT_VFS_CWD;
+  const isSplit = Boolean(
+    state.splitDirection && state.splitDirection !== 'none' && state.splitPanes
+  );
+  if (isSplit) {
+    const paneCwd = state.splitPanes![state.activePaneIndex ?? 0]?.cwd;
+    if (paneCwd) return paneCwd;
+  } else if (state.windowCwd) {
+    return state.windowCwd;
+  }
+  const activeTabCwd = state.tabPages?.find((t) => t.id === (state.currentTabId ?? 1))?.cwd;
+  if (activeTabCwd) return activeTabCwd;
+  return state.globalCwd || state.cwd || DEFAULT_VFS_CWD;
+}
+
+/** getcwd([winnr [, tabnr]]) 용 지정 창/탭의 작업 디렉터리를 반환합니다. */
+export function getCwdForWindow(
+  state: VimEditorState,
+  winnr?: number,
+  tabnr?: number
+): string {
+  const globalDir = state.globalCwd || state.cwd || DEFAULT_VFS_CWD;
+  if (winnr === -1 && (tabnr === undefined || tabnr === 0)) {
+    return globalDir;
+  }
+  if (tabnr !== undefined && tabnr > 0 && state.tabPages) {
+    const tab = state.tabPages[tabnr - 1];
+    if (!tab) return '';
+    if (winnr === -1) return tab.cwd ?? globalDir;
+    const isCurTab = tab.id === (state.currentTabId ?? 1);
+    const panes = isCurTab ? state.splitPanes : tab.splitPanes;
+    const winIdx =
+      winnr && winnr > 0
+        ? winnr - 1
+        : isCurTab
+          ? (state.activePaneIndex ?? 0)
+          : (tab.activePaneIndex ?? 0);
+    if (panes && panes[winIdx]?.cwd) return panes[winIdx].cwd!;
+    if (isCurTab && !panes && state.windowCwd) return state.windowCwd;
+    return tab.cwd ?? globalDir;
+  }
+  if (winnr !== undefined && winnr > 0) {
+    const activeTabCwd = state.tabPages?.find((t) => t.id === (state.currentTabId ?? 1))?.cwd;
+    if (state.splitPanes && state.splitDirection && state.splitDirection !== 'none') {
+      const pane = state.splitPanes[winnr - 1];
+      if (!pane) return '';
+      return pane.cwd ?? activeTabCwd ?? globalDir;
+    }
+    return winnr === 1 ? getEffectiveCwd(state) : '';
+  }
+  return getEffectiveCwd(state);
+}
+
+/** haslocaldir([winnr [, tabnr]]) 용: 창 로컬(:lcd)=1, 탭 로컬(:tcd)=2, 전역(:cd)=0 */
+export function getLocalDirScope(
+  state: VimEditorState,
+  winnr?: number,
+  tabnr?: number
+): 0 | 1 | 2 {
+  if (tabnr !== undefined && tabnr > 0 && state.tabPages) {
+    const tab = state.tabPages[tabnr - 1];
+    if (!tab) return 0;
+    const isCurTab = tab.id === (state.currentTabId ?? 1);
+    const panes = isCurTab ? state.splitPanes : tab.splitPanes;
+    const winIdx =
+      winnr && winnr > 0
+        ? winnr - 1
+        : isCurTab
+          ? (state.activePaneIndex ?? 0)
+          : (tab.activePaneIndex ?? 0);
+    if (panes && panes[winIdx]?.cwd) return 1;
+    if (isCurTab && !panes && state.windowCwd) return 1;
+    return tab.cwd ? 2 : 0;
+  }
+  const activeTabCwd = state.tabPages?.find((t) => t.id === (state.currentTabId ?? 1))?.cwd;
+  const isSplit = Boolean(
+    state.splitDirection && state.splitDirection !== 'none' && state.splitPanes
+  );
+  if (winnr !== undefined && winnr > 0) {
+    if (isSplit) {
+      const pane = state.splitPanes![winnr - 1];
+      if (!pane) return 0;
+      if (pane.cwd) return 1;
+      return activeTabCwd ? 2 : 0;
+    }
+    if (winnr !== 1) return 0;
+    if (state.windowCwd) return 1;
+    return activeTabCwd ? 2 : 0;
+  }
+  if (isSplit) {
+    if (state.splitPanes![state.activePaneIndex ?? 0]?.cwd) return 1;
+  } else if (state.windowCwd) {
+    return 1;
+  }
+  return activeTabCwd ? 2 : 0;
 }
 
 /** configureVimEngine({ workspaceFiles }) 로 지정한 가상 워크스페이스 파일 */
@@ -146,37 +239,93 @@ export function resolveVfsFilename(state: VimEditorState, filename: string): str
 
 /**
  * :cd / :lcd / :tcd 명령으로 가상 작업 디렉터리를 변경합니다.
+ * - global (:cd): 전역 작업 디렉터리 변경 (활성 창/탭 로컬 오버라이드 해제)
+ * - tab (:tcd): 현재 탭 로컬 작업 디렉터리 변경 (활성 창 로컬 오버라이드 해제)
+ * - window (:lcd): 현재 창 전용 작업 디렉터리 변경 (다른 창·전역에 영향 없음)
  */
 export function changeWorkingDirectory(
   state: VimEditorState,
   rawDir?: string,
-  scope: 'global' | 'tab' = 'global'
+  scope: 'global' | 'tab' | 'window' = 'global'
 ): VimEditorState {
   const arg = rawDir?.trim();
-  const prevGlobal = state.globalCwd ?? getEffectiveCwd(state);
-  const nextCwd = !arg ? DEFAULT_VFS_CWD : normalizeVirtualCwd(getEffectiveCwd(state), arg);
+  const curCwd = getEffectiveCwd(state);
+  const prevGlobal = state.globalCwd ?? state.cwd ?? DEFAULT_VFS_CWD;
+  const isSplit = Boolean(
+    state.splitDirection && state.splitDirection !== 'none' && state.splitPanes
+  );
+  const activeIdx = state.activePaneIndex ?? 0;
+  const curTabId = state.currentTabId ?? 1;
 
-  if (arg) {
-    let exists = nextCwd === '/' || nextCwd === DEFAULT_VFS_CWD;
-
-    if (!exists && nextCwd.startsWith(`${DEFAULT_VFS_CWD}/`)) {
-      const relDir = nextCwd.slice(DEFAULT_VFS_CWD.length + 1);
-      const allDirs = getAvailableDirectories(state);
-      exists = allDirs.includes(relDir);
-    }
-
-    if (!exists) {
+  let nextCwd: string;
+  if (arg === '-') {
+    const storedPrev =
+      scope === 'window' && isSplit
+        ? (state.splitPanes![activeIdx]?.prevCwd ?? state.prevCwd)
+        : scope === 'tab'
+          ? (state.tabPages?.find((t) => t.id === curTabId)?.prevCwd ?? state.prevCwd)
+          : state.prevCwd;
+    if (!storedPrev) {
       return {
         ...state,
-        commandMessage: msg('E344: cdpath에서 "{dir}" 디렉터리를 찾을 수 없습니다', { dir: arg }),
+        commandMessage: msg('E186: 이전 디렉터리가 없습니다'),
         bell: true,
       };
     }
+    nextCwd = storedPrev;
+  } else {
+    nextCwd = !arg ? DEFAULT_VFS_CWD : normalizeVirtualCwd(curCwd, arg);
+
+    if (arg) {
+      let exists = nextCwd === '/' || nextCwd === DEFAULT_VFS_CWD;
+
+      if (!exists && nextCwd.startsWith(`${DEFAULT_VFS_CWD}/`)) {
+        const relDir = nextCwd.slice(DEFAULT_VFS_CWD.length + 1);
+        const allDirs = getAvailableDirectories(state);
+        exists = allDirs.includes(relDir);
+      }
+
+      if (!exists) {
+        return {
+          ...state,
+          commandMessage: msg('E344: cdpath에서 "{dir}" 디렉터리를 찾을 수 없습니다', { dir: arg }),
+          bell: true,
+        };
+      }
+    }
   }
 
+  if (scope === 'window') {
+    const nextSplitPanes = isSplit
+      ? state.splitPanes!.map((pane, idx) =>
+          idx === activeIdx ? { ...pane, cwd: nextCwd, prevCwd: curCwd } : pane
+        )
+      : state.splitPanes;
+    return {
+      ...state,
+      cwd: nextCwd,
+      globalCwd: prevGlobal,
+      windowCwd: isSplit ? state.windowCwd : nextCwd,
+      prevCwd: curCwd,
+      ...(nextSplitPanes ? { splitPanes: nextSplitPanes } : {}),
+      commandMessage: nextCwd,
+    };
+  }
+
+  // :cd 또는 :tcd 는 현재 창의 :lcd 오버라이드를 해제합니다
+  const clearedSplitPanes = isSplit
+    ? state.splitPanes!.map((pane, idx) =>
+        idx === activeIdx ? { ...pane, cwd: undefined } : pane
+      )
+    : state.splitPanes;
+
   const nextTabPages = state.tabPages?.map((tab) =>
-    tab.id === (state.currentTabId ?? 1)
-      ? { ...tab, cwd: scope === 'tab' ? nextCwd : undefined }
+    tab.id === curTabId
+      ? {
+          ...tab,
+          cwd: scope === 'tab' ? nextCwd : undefined,
+          ...(scope === 'tab' ? { prevCwd: curCwd } : {}),
+        }
       : tab
   );
 
@@ -184,6 +333,9 @@ export function changeWorkingDirectory(
     ...state,
     cwd: nextCwd,
     globalCwd: scope === 'tab' ? prevGlobal : nextCwd,
+    windowCwd: undefined,
+    prevCwd: curCwd,
+    ...(clearedSplitPanes ? { splitPanes: clearedSplitPanes } : {}),
     ...(nextTabPages ? { tabPages: nextTabPages } : {}),
     commandMessage: nextCwd,
   };

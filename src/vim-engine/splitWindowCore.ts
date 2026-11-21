@@ -29,6 +29,12 @@ export function loadPaneIntoTopLevel(
   state: VimEditorState,
   pane: SplitPaneState
 ): Partial<VimEditorState> {
+  const activeTabCwd = state.tabPages?.find((t) => t.id === (state.currentTabId ?? 1))?.cwd;
+  const nextCwd = pane.cwd ?? activeTabCwd ?? state.globalCwd ?? state.cwd;
+  const nextUsesLocalArgs = pane.localArgList !== undefined;
+  const nextArgList = nextUsesLocalArgs
+    ? pane.localArgList
+    : (state.globalArgList !== undefined ? state.globalArgList : state.argList);
   return {
     lines: [...pane.lines],
     cursor: { ...pane.cursor },
@@ -41,6 +47,10 @@ export function loadPaneIntoTopLevel(
     pendingKeys: undefined,
     locationList: pane.locationList,
     options: withPaneLocalOptions(state, pane),
+    ...(nextCwd !== undefined ? { cwd: nextCwd } : {}),
+    windowCwd: pane.cwd,
+    argList: nextArgList,
+    usesLocalArgList: nextUsesLocalArgs,
   };
 }
 
@@ -149,6 +159,10 @@ export function splitWindow(
       undoStack: newBufId === curBufId && curPane.undoStack ? [...curPane.undoStack] : [],
       redoStack: newBufId === curBufId && curPane.redoStack ? [...curPane.redoStack] : [],
       scrollbind: newWinScb,
+      cwd: curPane.cwd,
+      localArgList: curPane.localArgList
+        ? { files: [...curPane.localArgList.files], currentIndex: curPane.localArgList.currentIndex }
+        : curPane.localArgList,
     };
 
     const nextRawPanes = [...panesWithIds, newPane];
@@ -222,6 +236,10 @@ export function splitWindow(
     blockInsertSession: state.blockInsertSession,
     locationList: state.locationList,
     scrollbind: curScb,
+    cwd: state.windowCwd,
+    localArgList: state.usesLocalArgList
+      ? (state.argList ? { files: [...state.argList.files], currentIndex: state.argList.currentIndex } : null)
+      : undefined,
   };
 
   const p1Lines = isImplicitSameBuffer
@@ -238,6 +256,10 @@ export function splitWindow(
     undoStack: isImplicitSameBuffer && state.undoStack ? [...state.undoStack] : [],
     redoStack: isImplicitSameBuffer && state.redoStack ? [...state.redoStack] : [],
     scrollbind: newWinScb,
+    cwd: state.windowCwd,
+    localArgList: state.usesLocalArgList
+      ? (state.argList ? { files: [...state.argList.files], currentIndex: state.argList.currentIndex } : null)
+      : undefined,
   };
 
   const placeNewFirst = placement === 'aboveleft' || placement === 'topleft';
@@ -380,6 +402,8 @@ export function closeOtherPanes(state: VimEditorState): VimEditorState {
     windowLayout: undefined,
     splitRatio: undefined,
     windowVars: keptVars,
+    windowCwd: activePane.cwd,
+    usesLocalArgList: activePane.localArgList !== undefined,
     commandMessage: msg('현재 창만 유지되었습니다 (:only)'),
   };
 }

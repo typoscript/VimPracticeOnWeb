@@ -317,6 +317,7 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
           <StatusBar
             mode={displayEditorState.mode}
             cursor={displayEditorState.cursor}
+            virtualReplace={displayEditorState.virtualReplace}
             insertNormalSession={displayEditorState.insertNormalSession}
             insertRegisterPending={displayEditorState.insertRegisterPending}
             insertCtrlXMode={displayEditorState.insertCtrlXMode}

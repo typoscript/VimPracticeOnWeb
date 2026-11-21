@@ -1,6 +1,6 @@
 import { StateSnapshot, VimEditorState } from './types';
 import { clampCursor, getFirstNonBlankCol, getMaxCol } from './cursor';
-import { getOptions } from './setOptionsCore';
+import { getOptions, hasFormatOption, extractCommentPrefix } from './setOptionsCore';
 import { areLinesEqual, ensureUndoTreeInitialized, recordUndoTreeChange, jumpUndoSeq } from './undoTreeEngine';
 
 const MAX_HISTORY = 50;
@@ -477,7 +477,10 @@ export function openLineBelow(state: VimEditorState): VimEditorState {
   const stateWithSnapshot = pushUndoSnapshot(state);
   const { line } = state.cursor;
   const targetLine = line + 1;
-  const indent = computeAutoIndent(state.lines[line] ?? '', getOptions(state), true);
+  const opts = getOptions(state);
+  const curLine = state.lines[line] ?? '';
+  const comment = hasFormatOption(opts, 'o') ? extractCommentPrefix(curLine) : null;
+  const indent = comment ? comment.contPrefix : computeAutoIndent(curLine, opts, true);
 
   const nextLines = [
     ...state.lines.slice(0, targetLine),
@@ -500,7 +503,13 @@ export function openLineBelow(state: VimEditorState): VimEditorState {
 export function openLineAbove(state: VimEditorState): VimEditorState {
   const stateWithSnapshot = pushUndoSnapshot(state);
   const { line } = state.cursor;
-  const indent = computeAutoIndent(state.lines[line] ?? '', getOptions(state), false);
+  const opts = getOptions(state);
+  const curLine = state.lines[line] ?? '';
+  const comment = hasFormatOption(opts, 'o') ? extractCommentPrefix(curLine) : null;
+  const indent =
+    comment && comment.leader !== '/*'
+      ? comment.fullPrefix
+      : computeAutoIndent(curLine, opts, false);
 
   const nextLines = [
     ...state.lines.slice(0, line),

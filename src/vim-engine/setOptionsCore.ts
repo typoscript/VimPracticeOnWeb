@@ -15,6 +15,7 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   shiftwidth: 2,
   expandtab: true,
   textwidth: 0,
+  formatoptions: 'tcqj',
   scrolloff: 0,
   sidescroll: 0,
   sidescrolloff: 0,
@@ -75,6 +76,8 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   expandtab: 'expandtab',
   tw: 'textwidth',
   textwidth: 'textwidth',
+  fo: 'formatoptions',
+  formatoptions: 'formatoptions',
   so: 'scrolloff',
   scrolloff: 'scrolloff',
   ss: 'sidescroll',
@@ -429,6 +432,7 @@ export function formatOptionsList(
     'colorcolumn',
     'wildmode',
     'whichwrap',
+    'formatoptions',
   ];
 
   for (const k of stringKeys) {
@@ -548,6 +552,28 @@ export function parseWhichwrapFlags(raw?: string): Set<string> {
     if (trimmed) flags.add(trimmed);
   }
   return flags;
+}
+
+export function hasFormatOption(opts: Pick<VimOptions, 'formatoptions'>, flag: string): boolean {
+  const fo = opts.formatoptions !== undefined ? opts.formatoptions : (DEFAULT_VIM_OPTIONS.formatoptions ?? 'tcqj');
+  return fo.includes(flag);
+}
+
+/** 줄 앞의 주석 리더(//, #, %, >, --, /*, *)를 추출합니다 (formatoptions r/o/j/c 용). */
+export function extractCommentPrefix(
+  line: string
+): { indent: string; leader: string; ws: string; fullPrefix: string; contPrefix: string } | null {
+  const m = line.match(/^([ \t]*)(\/\/|\/\*|\*|--|[#%>])([ \t]*)/);
+  if (!m) return null;
+  const [, indent, leader, ws] = m;
+  const rest = line.slice(m[0].length);
+  if ((leader === '#' || leader === '%' || leader === '>' || leader === '--' || leader === '*') && ws.length === 0 && rest.length > 0) {
+    return null;
+  }
+  if (leader === '/*' && rest.includes('*/')) return null;
+  const fullPrefix = indent + leader + (ws || (rest.length > 0 || leader === '//' || leader === '*' ? ' ' : ''));
+  const contPrefix = leader === '/*' ? `${indent} * ` : fullPrefix;
+  return { indent, leader, ws, fullPrefix, contPrefix };
 }
 
 /** '&nu', '&g:sw', '&l:wrap' 문자열에서 스코프와 정규화된 옵션 키를 해석합니다. */

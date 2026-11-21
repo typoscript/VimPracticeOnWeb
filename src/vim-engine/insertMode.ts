@@ -22,9 +22,12 @@ import {
   startFilenameCompletion,
   startWholeLineCompletion,
   startDictionaryCompletion,
+  startTagCompletion,
+  startOmniCompletion,
 } from './completion';
+import { buildProjectTags } from './tagEngine';
 import { getOptions } from './setEngine';
-import { parseWhichwrapFlags } from './setOptionsCore';
+import { parseWhichwrapFlags, hasFormatOption, extractCommentPrefix } from './setOptionsCore';
 import { recordChangePosition } from './advancedMotions';
 import {
   AbbrevReplayCtx,
@@ -360,6 +363,14 @@ function handleInsertCompletionStep(
     if (key === 'Ctrl-k' || key === 'Ctrl+k' || key === 'ctrl-k' || key === 'k') {
       return { handled: true, state: startDictionaryCompletion(state, 'next') };
     }
+    if (key === 'Ctrl-]' || key === 'Ctrl+]' || key === 'ctrl-]' || key === '<C-]>' || key === ']') {
+      const tagNames = buildProjectTags(state).map((t) => t.name);
+      return { handled: true, state: startTagCompletion(state, tagNames, 'next') };
+    }
+    if (key === 'Ctrl-o' || key === 'Ctrl+o' || key === 'ctrl-o' || key === '<C-o>' || key === 'o') {
+      const tagNames = buildProjectTags(state).map((t) => t.name);
+      return { handled: true, state: startOmniCompletion(state, tagNames, 'next') };
+    }
     if (key === 'Ctrl-n' || key === 'Ctrl+n' || key === 'n') {
       return { handled: true, state: startOrCycleCompletion({ ...state, insertCtrlXMode: false }, 'next') };
     }
@@ -574,7 +585,7 @@ function handleInsertEditingKey(
     return { ...state, currentChangeKeys: nextChangeKeys };
   }
 
-  // Enter: 줄 분할 및 다음 줄 이동 (autoindent / smartindent 지원, 비주얼 블록 삽입 중 Enter 입력 시 다중 줄 세션 해제)
+  // Enter: 줄 분할 및 다음 줄 이동 (autoindent / smartindent / formatoptions 'r' 주석 연속 지원)
   if (key === 'Enter') {
     const nextChangeKeys = appendCurrentChange(state, 'Enter', isReplayingDot);
     const opts = getOptions(state);
@@ -582,7 +593,11 @@ function handleInsertEditingKey(
     const afterCursor = currentLine.slice(col);
     let indent = '';
     let nextLineBody = afterCursor;
-    if (opts.autoindent || opts.smartindent) {
+    const comment = hasFormatOption(opts, 'r') ? extractCommentPrefix(beforeCursor) : null;
+    if (comment && col >= comment.indent.length + comment.leader.length) {
+      indent = comment.contPrefix;
+      nextLineBody = afterCursor.replace(/^[ \t]+/, '');
+    } else if (opts.autoindent || opts.smartindent) {
       const baseIndent = beforeCursor.match(/^[ \t]*/)?.[0] ?? '';
       if (opts.smartindent && beforeCursor.trimEnd().endsWith('{')) {
         const sw = opts.shiftwidth || 2;
@@ -762,17 +777,29 @@ function handleInsertEditingKey(
     const opts = getOptions(state);
     const tw = opts.textwidth ?? 0;
 
-    // textwidth > 0 실시간 자동 줄바꿈 (:help 'textwidth')
-    if (tw > 0 && !state.blockInsertSession && newLine.length > tw && key !== ' ' && key !== '\t') {
+    // textwidth > 0 실시간 자동 줄바꿈 (:help 'textwidth', 'formatoptions' t / c)
+    const lineComment = extractCommentPrefix(newLine);
+    const allowAutoWrap = lineComment
+      ? hasFormatOption(opts, 'c')
+      : hasFormatOption(opts, 't');
+    if (
+      tw > 0 &&
+      allowAutoWrap &&
+      !state.blockInsertSession &&
+      newLine.length > tw &&
+      key !== ' ' &&
+      key !== '\t'
+    ) {
       const leadIndent = newLine.match(/^[ \t]*/)?.[0] ?? '';
+      const minBreak = lineComment ? lineComment.fullPrefix.length : leadIndent.length;
       let breakIdx = -1;
-      for (let i = Math.min(tw, newCol - 1); i >= leadIndent.length; i--) {
+      for (let i = Math.min(tw, newCol - 1); i >= minBreak; i--) {
         if (newLine[i] === ' ' || newLine[i] === '\t') {
           breakIdx = i;
           break;
         }
       }
-      if (breakIdx >= leadIndent.length) {
+      if (breakIdx >= minBreak) {
         const head = newLine.slice(0, breakIdx).replace(/[ \t]+$/, '');
         let tailStart = breakIdx + 1;
         while (tailStart < newCol && (newLine[tailStart] === ' ' || newLine[tailStart] === '\t')) {
@@ -780,7 +807,11 @@ function handleInsertEditingKey(
         }
         const tailBeforeCursor = newLine.slice(tailStart, newCol);
         const tailAfterCursor = newLine.slice(newCol);
-        const nextIndent = opts.autoindent || opts.smartindent ? leadIndent : '';
+        const nextIndent = lineComment
+          ? lineComment.contPrefix
+          : opts.autoindent || opts.smartindent
+            ? leadIndent
+            : '';
         const wrappedLines = [
           ...state.lines.slice(0, line),
           head,

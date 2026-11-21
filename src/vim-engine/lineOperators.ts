@@ -1,7 +1,7 @@
 import { VimEditorState } from './types';
 import { pushUndoSnapshot } from './operators';
 import { getOptions } from './setEngine';
-import { parseWhichwrapFlags } from './setOptionsCore';
+import { parseWhichwrapFlags, hasFormatOption, extractCommentPrefix } from './setOptionsCore';
 import {
   moveToFirstNonBlank,
   moveToNextWord,
@@ -35,9 +35,24 @@ export function joinLines(state: VimEditorState, count = 1, insertSpace = true):
 
   let currentJoined = state.lines[currentLineIdx];
   let firstJoinCol = currentJoined.length;
+  const stripCommentLeader = insertSpace && hasFormatOption(getOptions(state), 'j');
+  const baseComment = stripCommentLeader ? extractCommentPrefix(currentJoined) : null;
 
   for (let i = currentLineIdx + 1; i <= maxJoinLine; i++) {
-    const nextLineTrimmed = (state.lines[i] ?? '').trimStart();
+    const rawNext = state.lines[i] ?? '';
+    let nextLineTrimmed = rawNext.trimStart();
+    if (stripCommentLeader && baseComment) {
+      const nextComment = extractCommentPrefix(rawNext);
+      const compatibleLeader =
+        nextComment &&
+        (nextComment.leader === baseComment.leader ||
+          (baseComment.leader === '/*' && nextComment.leader === '*'));
+      if (compatibleLeader) {
+        nextLineTrimmed = rawNext.slice(
+          nextComment.indent.length + nextComment.leader.length + nextComment.ws.length
+        );
+      }
+    }
     if (!insertSpace) {
       if (i === currentLineIdx + 1) firstJoinCol = currentJoined.length;
       currentJoined += nextLineTrimmed;
@@ -45,6 +60,8 @@ export function joinLines(state: VimEditorState, count = 1, insertSpace = true):
       if (currentJoined.length === 0) {
         currentJoined = nextLineTrimmed;
         if (i === currentLineIdx + 1) firstJoinCol = 0;
+      } else if (nextLineTrimmed.length === 0) {
+        if (i === currentLineIdx + 1) firstJoinCol = currentJoined.length;
       } else if (currentJoined.endsWith(' ')) {
         if (i === currentLineIdx + 1) firstJoinCol = currentJoined.length - 1;
         currentJoined += nextLineTrimmed;

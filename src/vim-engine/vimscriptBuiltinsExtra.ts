@@ -16,7 +16,9 @@ import {
 import {
   buildVfsMap,
   getAvailableDirectories,
+  getCwdForWindow,
   getEffectiveCwd,
+  getLocalDirScope,
   getVfsFile,
 } from './vfs';
 import {
@@ -555,8 +557,21 @@ export const EXTRA_BUILTINS: Record<string, ExtraBuiltin> = {
   // ---- VFS 파일·디렉터리·경로 ----
   getcwd: {
     min: 0,
-    max: 0,
-    fn: (ctx) => getEffectiveCwd(ctx.state),
+    max: 2,
+    fn: (ctx, args) => {
+      const winnr = args[0] !== undefined ? Math.trunc(toNumber(args[0])) : undefined;
+      const tabnr = args[1] !== undefined ? Math.trunc(toNumber(args[1])) : undefined;
+      return getCwdForWindow(ctx.state, winnr, tabnr);
+    },
+  },
+  haslocaldir: {
+    min: 0,
+    max: 2,
+    fn: (ctx, args) => {
+      const winnr = args[0] !== undefined ? Math.trunc(toNumber(args[0])) : undefined;
+      const tabnr = args[1] !== undefined ? Math.trunc(toNumber(args[1])) : undefined;
+      return getLocalDirScope(ctx.state, winnr, tabnr);
+    },
   },
   fnamemodify: {
     min: 2,

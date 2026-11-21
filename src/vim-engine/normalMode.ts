@@ -41,6 +41,7 @@ import {
   handleNormalDCYCombineShortcut,
   handleNormalDCYOperators,
 } from './normalDCYOperators';
+import { handleForcedMotionStep } from './forcedMotion';
 import {
   handleNormalMacroAndDot,
   handleNormalViewportAndNavOps,
@@ -81,10 +82,16 @@ export function handleNormalModeKey(
     return {
       ...state,
       pendingKeys: undefined,
+      forcedMotionwise: undefined,
       pendingKeymapPrefix: undefined,
       activeRegister: undefined,
       lspHover: state.lspHover?.isOpen ? null : state.lspHover,
     };
+  }
+
+  // 연산자 모션 강제 지정 활성 상태 (dv / dV / d<C-v> — :help o_v, o_V, o_CTRL-V)
+  if (state.forcedMotionwise) {
+    return handleForcedMotionStep(state, key, isReplayingDot, runHandleKey);
   }
 
   // LSP 호버 창이 열린 상태에서 q 를 누르면 매크로 녹화 대신 호버 팝업을 닫음
@@ -179,6 +186,15 @@ export function handleNormalModeKey(
   if (key === 'Ctrl-t' || key === 'Ctrl+t' || key === 'ctrl-t' || key === '<C-t>') {
     return { ...popTagStack(state, parsed.count1 || 1), pendingKeys: undefined };
   }
+  // 연산자 대기 중 v / V / Ctrl-v 로 모션 단위 강제 지정 진입 (dv, dV, d<C-v>, cv, yV 등)
+  if (parsed.operator === 'd' || parsed.operator === 'c' || parsed.operator === 'y') {
+    if (key === 'v') return { ...state, forcedMotionwise: 'char' };
+    if (key === 'V') return { ...state, forcedMotionwise: 'line' };
+    if (key === 'Ctrl+v' || key === 'Ctrl-v' || key === 'ctrl-v' || key === '<C-v>') {
+      return { ...state, forcedMotionwise: 'block' };
+    }
+  }
+
   if (key === 'Ctrl+v' || key === 'Ctrl-v' || key === 'ctrl-v') {
     return {
       ...state,

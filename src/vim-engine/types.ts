@@ -230,6 +230,8 @@ export interface VimTabPage {
   alternateBufferId?: number;
   /** 탭 로컬 작업 디렉터리 (:tcd) */
   cwd?: string;
+  /** 탭 로컬 직전 작업 디렉터리 (:tcd -) */
+  prevCwd?: string;
 }
 
 export interface CommandLineWindowSession {
@@ -313,6 +315,8 @@ export interface VimOptions {
   expandtab: boolean;
   /** 자동 줄바꿈·gq 포맷 폭 (:set tw=40, 0 이면 gq 는 79열 기준) */
   textwidth?: number;
+  /** 자동 포매팅·주석 연속 옵션 (:set fo=tcqj, :set formatoptions+=ro) */
+  formatoptions?: string;
   /** 커서 위아래로 유지할 여유 줄 수 (:set so=5, :set scrolloff=5) */
   scrolloff?: number;
   /** 수평 스크롤 시 한 번에 이동할 열 수 (:set ss=5, :set sidescroll=5) */
@@ -473,8 +477,8 @@ export interface CompletionSession {
   candidates: string[];
   selectedIndex: number; // 0-indexed into candidates
   originalWord: string;
-  /** 자동완성 종류: 단어(keyword), 파일 경로(file), 전체 라인(line), 사전(dictionary) */
-  type?: 'keyword' | 'file' | 'line' | 'dictionary';
+  /** 자동완성 종류: 단어(keyword), 파일 경로(file), 전체 라인(line), 사전(dictionary), 태그(tag), 옴니(omni) */
+  type?: 'keyword' | 'file' | 'line' | 'dictionary' | 'tag' | 'omni';
 }
 
 export interface LastVisualSelection {
@@ -543,6 +547,12 @@ export interface SplitPaneState {
   localOptions?: Partial<VimOptions>;
   /** 해당 분할 창의 로케이션 리스트 (:lopen, :lclose, :lnext, :lprev, :lvimgrep) */
   locationList?: QuickfixState | null;
+  /** 해당 분할 창의 창 로컬 작업 디렉터리 (:lcd) */
+  cwd?: string;
+  /** 해당 분할 창의 직전 작업 디렉터리 (:lcd -) */
+  prevCwd?: string;
+  /** 해당 분할 창의 창 로컬 아규먼트 리스트 (:arglocal). undefined 이면 전역 아규먼트 리스트를 공유 */
+  localArgList?: ArgListState | null;
 }
 
 export interface DiffHunk {
@@ -632,6 +642,14 @@ export interface VimEditorState {
   cwd?: string;
   /** 전역 작업 디렉터리 (:cd 기준, 탭 전환 시 탭 로컬 :tcd가 없는 탭에 복원) */
   globalCwd?: string;
+  /** 단일 창 상태의 창 로컬 작업 디렉터리 (:lcd) */
+  windowCwd?: string;
+  /** 직전 작업 디렉터리 (:cd -, :lcd -, :tcd -) */
+  prevCwd?: string;
+  /** 연산자 대기 중 모션 강제 지정 (dv / dV / d<C-v> — :help o_v / o_V / o_CTRL-V) */
+  forcedMotionwise?: 'char' | 'line' | 'block';
+  /** Virtual Replace 모드(gR) 활성 여부 (mode === 'REPLACE' 와 함께 사용) */
+  virtualReplace?: boolean;
   /** 주 창 파일명 (예: source.ts) */
   primaryFilename?: string;
   /** 보조 창 파일명 (예: target.ts) */
@@ -732,8 +750,8 @@ export interface VimEditorState {
   incCommandPreview?: IncCommandPreview | null;
   /** :s/.../.../gc 대화형 치환 확인 세션 */
   confirmSubstitute?: ConfirmSubstituteSession | null;
-  /** REPLACE (R) 모드에서 백스페이스 시 복원할 원래 문자 스택 */
-  replaceStack?: { char: string; line: number; col: number }[];
+  /** REPLACE (R) / Virtual Replace (gR) 모드에서 백스페이스 시 복원할 원래 문자/줄 스택 */
+  replaceStack?: { char: string; line: number; col: number; prevLine?: string }[];
   /** 열려 있는 버퍼 목록 (:ls, :b, :bn, :bp, :bd) */
   buffers?: VimBuffer[];
   /** 현재 활성화된 버퍼 ID */
@@ -760,6 +778,10 @@ export interface VimEditorState {
   locationList?: QuickfixState | null;
   /** 아규먼트 리스트 (Arglist: :args, :argdo, :next, :prev) */
   argList?: ArgListState | null;
+  /** 전역 아규먼트 리스트 (:argglobal 공유 저장소) */
+  globalArgList?: ArgListState | null;
+  /** 현재 활성 창이 로컬 아규먼트 리스트(:arglocal)를 사용 중인지 여부 */
+  usesLocalArgList?: boolean;
   /** Netrw 순정 파일 탐색기 상태 (:Explore, :edit ., :E) */
   netrw?: NetrwState | null;
   /** Netrw 디렉터리 북마크 목록 (mb, gb, :Bookmark) */

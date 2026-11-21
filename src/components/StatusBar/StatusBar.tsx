@@ -20,6 +20,8 @@ export interface StatusBarProps {
   digraphPending?: string | null;
   /** 커맨드/검색 실행 결과 알림 메시지 */
   commandMessage?: string;
+  /** Virtual Replace 모드(gR) 여부 */
+  virtualReplace?: boolean;
   /** Insert 모드 일회성 Normal 명령 실행 세션 (Ctrl+o) */
   insertNormalSession?: boolean;
   /** Insert 모드 레지스터 삽입 대기 상태 (Ctrl+r) */
@@ -53,6 +55,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   commandCursorCol,
   digraphPending,
   commandMessage,
+  virtualReplace,
   insertNormalSession,
   insertRegisterPending,
   insertCtrlXMode,
@@ -72,7 +75,9 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       : insertRegisterPending
       ? 'INSERT (register)'
       : mode === 'REPLACE'
-      ? '-- REPLACE --'
+      ? virtualReplace
+        ? '-- VREPLACE --'
+        : '-- REPLACE --'
       : mode === 'VISUAL_LINE'
       ? 'VISUAL LINE'
       : mode === 'VISUAL_BLOCK'
