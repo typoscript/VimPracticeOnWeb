@@ -5,7 +5,13 @@ import {
   computeDiffHunks,
 } from '../vim-engine';
 import { Mission } from '../types/mission';
-import { sandboxInitialLines } from '../data/sandbox';
+import {
+  SANDBOX_HARPOON_LIST,
+  SANDBOX_PRIMARY_FILENAME,
+  createSandboxGitBaseLines,
+  createSandboxVirtualFiles,
+  sandboxInitialLines,
+} from '../data/sandbox';
 import { compileUserKeymaps, CustomKeymapItem } from './keymapStorage';
 import { UserInitConfig, applyUserInitConfigToState } from './userInitConfig';
 
@@ -135,12 +141,17 @@ export function buildSandboxInitialState({
   customKeymaps,
   userInitConfig,
 }: UserKeymapSettings): VimEditorState {
+  const lines = sandboxInitialLines();
   const base: VimEditorState = {
-    lines: sandboxInitialLines(),
+    lines,
     cursor: { line: 0, col: 0 },
     mode: 'NORMAL',
     undoStack: [],
     redoStack: [],
+    primaryFilename: SANDBOX_PRIMARY_FILENAME,
+    virtualFiles: createSandboxVirtualFiles(lines),
+    gitBaseLines: createSandboxGitBaseLines(lines),
+    harpoonList: [...SANDBOX_HARPOON_LIST],
     userKeymaps: compileUserKeymaps(activePresets, leaderKey, customKeymaps),
     leaderKey,
   };

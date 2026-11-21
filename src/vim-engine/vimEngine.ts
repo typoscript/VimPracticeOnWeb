@@ -360,6 +360,14 @@ export function rawHandleKey(
 
   // 줄 단위 실행 취소(U) 스냅샷 자동 갱신
   if (
+    state.mode === 'NORMAL' &&
+    (key === 'u' || key === 'Ctrl+r') &&
+    nextState.lines !== state.lines
+  ) {
+    if (nextState.lineUndoSnapshot) {
+      nextState = { ...nextState, lineUndoSnapshot: null };
+    }
+  } else if (
     key !== 'U' &&
     nextState.lines !== state.lines &&
     (nextState.currentBufferId ?? 1) === (state.currentBufferId ?? 1)
@@ -389,6 +397,7 @@ export function rawHandleKey(
             lineUndoSnapshot: {
               line: changedLine,
               originalText: state.lines[changedLine],
+              originalCol: state.cursor.col,
               bufferId: curBufId,
             },
           };

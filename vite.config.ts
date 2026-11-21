@@ -49,9 +49,6 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'registers.ts',
       'bufferEngine.ts',
       'bufferLifecycle.ts',
-      'oilEngine.ts',
-      'harpoonEngine.ts',
-      'troubleEngine.ts',
       'tabEngine.ts',
       'splitWindowCore.ts',
       'splitWindow.ts',
@@ -97,21 +94,29 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'foldingDetection.ts',
       'folding.ts',
       'engineHelpers.ts',
+      'surroundEngine.ts',
+    ],
+  },
+  {
+    name: 'vim-engine-neovim',
+    files: [
+      'diffEngine.ts',
+      'gitSignsEngine.ts',
+      'oilEngine.ts',
+      'harpoonEngine.ts',
+      'troubleEngine.ts',
       'lspEngine.ts',
       'lspRefactorEngine.ts',
       'flashJumpEngine.ts',
       'multiCursorEngine.ts',
-      'surroundEngine.ts',
+      'luaEngine.ts',
+      'fuzzyFinder.ts',
     ],
   },
   {
     name: 'vim-engine-ex',
     files: [
-      'diffEngine.ts',
-      'gitSignsEngine.ts',
-      'luaEngine.ts',
       'netrwEngine.ts',
-      'fuzzyFinder.ts',
       'spellEngine.ts',
       'cmdlineWindow.ts',
       'exSubstitute.ts',
@@ -138,8 +143,8 @@ const ENGINE_FILE_TO_CHUNK = new Map<string, string>(
  * Vite/Rollup 프로덕션 번들의 청크 분리 규칙.
  * 대용량 정적 데이터('vim-engine-data'), 순수 코어('vim-engine-core'),
  * 작업공간/옵션 서비스('vim-engine-services'), 모션·편집·텍스트 객체('vim-engine-editing'),
- * Ex·셸 명령('vim-engine-ex'), 최상위 모드 디스패처('vim-engine')를
- * 순환 참조 없이 200 kB 전후의 청크로 분리합니다.
+ * 모던 Neovim 확장('vim-engine-neovim'), Ex·셸 명령('vim-engine-ex'),
+ * 최상위 모드 디스패처('vim-engine')를 순환 참조 없이 160 kB 미만의 청크로 분리합니다.
  */
 export function resolveManualChunk(id: string): string | undefined {
   const normalized = id.replace(/\\/g, '/');

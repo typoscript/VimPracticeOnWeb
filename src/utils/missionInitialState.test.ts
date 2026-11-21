@@ -49,6 +49,13 @@ describe('missionInitialState', () => {
 
     const sandboxState = buildSandboxInitialState(keymapSettings);
     expect(sandboxState.lines.length).toBeGreaterThan(0);
+    expect(sandboxState.primaryFilename).toBe('sandbox.ts');
+    expect(sandboxState.virtualFiles).toBeDefined();
+    expect(Object.keys(sandboxState.virtualFiles ?? {})).toEqual(
+      expect.arrayContaining(['sandbox.ts', 'src/api.ts', 'src/worker.ts', 'init.lua'])
+    );
+    expect(sandboxState.gitBaseLines).toHaveLength(sandboxState.lines.length);
+    expect(sandboxState.harpoonList).toEqual(['sandbox.ts', 'src/api.ts', 'src/worker.ts']);
     expect(resolveStatusFilename(sandboxState, 'sandbox', baseMission, 0)).toBe('sandbox.ts');
     expect(resolveStatusFilename(sandboxState, 'course', baseMission, 0)).toBe('app.ts');
     expect(resolveStatusFilename(sandboxState, 'custom', baseMission, 0)).toBe('custom_golf.txt');

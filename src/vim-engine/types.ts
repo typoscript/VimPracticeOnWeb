@@ -682,7 +682,9 @@ export interface VimEditorState {
   lineUndoSnapshot?: {
     line: number;
     originalText: string;
+    originalCol?: number;
     toggledText?: string;
+    toggledCol?: number;
     bufferId?: number;
   } | null;
   /** 직전 키가 실패했음을 나타내는 일시적 신호 (Vim의 벨/에러). 매 키 입력 시작 시 제거되며, 매크로·`.`·`:normal`·키매핑 재생은 이 신호에서 중단됩니다. */

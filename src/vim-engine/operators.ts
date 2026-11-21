@@ -310,13 +310,19 @@ export function undoCurrentLine(state: VimEditorState): VimEditorState {
   const currentLine = state.lines[line] ?? '';
   let replacement: string;
   let nextToggled: string | undefined;
+  let nextToggledCol: number | undefined;
+  let targetCol = 0;
 
   if (currentLine !== snap.originalText) {
     replacement = snap.originalText;
     nextToggled = currentLine;
+    nextToggledCol = state.cursor.col;
+    targetCol = snap.originalCol ?? 0;
   } else if (snap.toggledText !== undefined && snap.toggledText !== currentLine) {
     replacement = snap.toggledText;
     nextToggled = undefined;
+    nextToggledCol = undefined;
+    targetCol = snap.toggledCol ?? 0;
   } else {
     return { ...state, pendingKeys: undefined };
   }
@@ -324,7 +330,7 @@ export function undoCurrentLine(state: VimEditorState): VimEditorState {
   const stateWithSnapshot = pushUndoSnapshot(state);
   const nextLines = [...state.lines];
   nextLines[line] = replacement;
-  const clampedCursor = clampCursor(nextLines, { line, col: 0 }, 'NORMAL');
+  const clampedCursor = clampCursor(nextLines, { line, col: targetCol }, 'NORMAL');
 
   return {
     ...stateWithSnapshot,
@@ -334,6 +340,7 @@ export function undoCurrentLine(state: VimEditorState): VimEditorState {
     lineUndoSnapshot: {
       ...snap,
       toggledText: nextToggled,
+      toggledCol: nextToggledCol,
     },
   };
 }
