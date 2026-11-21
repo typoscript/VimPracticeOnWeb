@@ -428,4 +428,8 @@ export const EN_MESSAGES: Record<string, string> = {
   "E790: undojoin 은 실행 취소(undo) 직후에 사용할 수 없습니다": "E790: undojoin is not allowed after undo",
   "E384: 파일 맨 위까지 검색했으나 찾지 못했습니다: {pattern}": "E384: search hit TOP without match for: {pattern}",
   "E385: 파일 맨 아래까지 검색했으나 찾지 못했습니다: {pattern}": "E385: search hit BOTTOM without match for: {pattern}",
+  "\"{word}\" 단어를 사용자 사전에서 제거했습니다": "Removed \"{word}\" from user dictionary",
+  "\"{word}\" 단어를 오탈자 목록에서 제거했습니다": "Removed \"{word}\" from wrong word list",
+  "\"{word}\" 단어를 맞춤법 목록에서 제거했습니다": "Removed \"{word}\" from spell word list",
+  "\"{filename}\" 새 탭으로 열렸습니다": "\"{filename}\" opened in new tab",
 };

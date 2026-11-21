@@ -5,6 +5,9 @@ import { evaluateExtraMotion } from './extraMotions';
 import { executeOperatorMotion } from './operatorMotion';
 import { syncRegisters, putFromRegister } from './registers';
 import { gotoFileUnderCursor } from './gotoFileEngine';
+import { getWordAtCursor } from './search';
+import { jumpToTag, tjumpTag } from './tagEngine';
+import { nextTab, prevTab } from './tabEngine';
 import {
   moveLeft,
   moveRight,
@@ -505,6 +508,12 @@ export function handleCtrlWKey(
   if (key === 'F') {
     return { ...gotoFileUnderCursor(state, { withLineNumber: true, split: true }), pendingKeys: undefined };
   }
+  if (key === ']' || key === 'Ctrl-]' || key === 'Ctrl+]') {
+    return splitAndJumpToTag(state, false, count);
+  }
+  if (key === 'g') {
+    return { ...state, pendingKeys: `${state.pendingKeys ?? 'Ctrl-w'} g` };
+  }
 
   // 창 크기 조절: =, +, -, >, <, _, |
   if (key === '=') {
@@ -533,6 +542,70 @@ export function handleCtrlWKey(
     ...state,
     pendingKeys: undefined,
   };
+}
+
+function splitAndJumpToTag(
+  state: VimEditorState,
+  useTjump: boolean,
+  count?: number
+): VimEditorState {
+  const curLine = state.lines[state.cursor.line] ?? '';
+  const word = getWordAtCursor(curLine, state.cursor.col);
+  if (!word) {
+    return {
+      ...ringBell(state),
+      commandMessage: msg('E349: 커서 위치에 식별자가 없습니다 (no identifier under cursor)'),
+    };
+  }
+  const splitState = splitWindow(state, 'horizontal');
+  const jumped = useTjump
+    ? tjumpTag(splitState, word)
+    : jumpToTag(splitState, word, count || 1);
+  const activeIdx = jumped.activePaneIndex ?? 0;
+  const syncedPanes = jumped.splitPanes
+    ? jumped.splitPanes.map((pane, idx) =>
+        idx === activeIdx
+          ? {
+              ...pane,
+              lines: [...jumped.lines],
+              cursor: { ...jumped.cursor },
+              filename: jumped.primaryFilename ?? pane.filename,
+              bufferId: jumped.currentBufferId ?? pane.bufferId,
+            }
+          : pane
+      )
+    : jumped.splitPanes;
+  return {
+    ...jumped,
+    splitPanes: syncedPanes,
+    pendingKeys: undefined,
+  };
+}
+
+/**
+ * Ctrl-w g 접두 키 시퀀스 (Ctrl-w gf, Ctrl-w gF, Ctrl-w g], Ctrl-w gt, Ctrl-w gT)를 처리합니다.
+ */
+export function handleCtrlWGKey(
+  state: VimEditorState,
+  key: string,
+  count?: number
+): VimEditorState {
+  if (key === 'f') {
+    return { ...gotoFileUnderCursor(state, { withLineNumber: false, tab: true }), pendingKeys: undefined };
+  }
+  if (key === 'F') {
+    return { ...gotoFileUnderCursor(state, { withLineNumber: true, tab: true }), pendingKeys: undefined };
+  }
+  if (key === ']' || key === 'Ctrl-]' || key === 'Ctrl+]') {
+    return splitAndJumpToTag(state, true, count);
+  }
+  if (key === 't') {
+    return { ...nextTab(state, count), pendingKeys: undefined };
+  }
+  if (key === 'T') {
+    return { ...prevTab(state, count ?? 1), pendingKeys: undefined };
+  }
+  return { ...state, pendingKeys: undefined };
 }
 
 /** 붙여넣을 내용이 없어 버퍼도 실행 취소 기록도 바뀌지 않았는지 */

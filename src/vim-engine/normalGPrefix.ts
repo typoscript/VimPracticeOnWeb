@@ -15,6 +15,7 @@ import {
   traverseChangeList,
 } from './advancedMotions';
 import { executeLinewiseObjectOperator } from './textObjects';
+import { computeByteOffsetTarget } from './extraMotions';
 import { toggleCommentRange, getCommentTextObjectRange } from './commentEngine';
 import { formatRange } from './formatEngine';
 import { gotoFileUnderCursor } from './gotoFileEngine';
@@ -65,7 +66,8 @@ export function handleNormalOpGPrefix(
       key === '0' ||
       key === '$' ||
       key === 'm' ||
-      key === 'M')
+      key === 'M' ||
+      key === 'o')
   ) {
     const op = gMotionOpMatch[2] as 'd' | 'c' | 'y';
     const total = (gMotionOpMatch[1] ? parseInt(gMotionOpMatch[1], 10) : 1) * (gMotionOpMatch[3] ? parseInt(gMotionOpMatch[3], 10) : 1);
@@ -307,6 +309,18 @@ export function handleNormalGOperator(
   if (key === '0' || key === '$' || key === 'm' || key === 'M') {
     const moved = moveByExtraMotion(state, `g${key}`, parsedTotalCount);
     return { handled: true, state: key === '$' ? { ...moved, stickyDollar: true } : moved };
+  }
+  if (key === 'o') {
+    const target = computeByteOffsetTarget(state.lines, parsedCount1 ?? 1);
+    return {
+      handled: true,
+      state: {
+        ...recordJump(state),
+        cursor: clampCursor(state.lines, target, 'NORMAL'),
+        stickyDollar: false,
+        pendingKeys: undefined,
+      },
+    };
   }
   if (key === 'v') {
     return { handled: true, state: reselectLastVisual(state) };

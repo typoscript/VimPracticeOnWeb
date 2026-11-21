@@ -18,6 +18,8 @@ import { syncRegisters } from './registers';
 import { diffObtain, diffPut } from './diffEngine';
 import { deleteVisualSelection, yankVisualSelection } from './visual';
 import { findMatchingBracket } from './bracketMatch';
+import { computePercentJumpTarget } from './extraMotions';
+import { executeLinewiseObjectOperator } from './textObjects';
 import { deleteParagraph, changeParagraph, yankParagraph } from './advancedMotions';
 import { moveFind, executeFindOperator } from './findChar';
 import { deleteFoldOrLine, yankFoldOrLine } from './folding';
@@ -91,10 +93,39 @@ export function handleNormalDCYCombineShortcut(
     (parsed.operator === 'd' || parsed.operator === 'c' || parsed.operator === 'y' || parsed.operator === 'v') &&
     key === '%'
   ) {
+    const op = parsed.operator;
+    const hasCount = parsed.count1 !== undefined || parsed.count2 !== undefined;
+    if (hasCount) {
+      const pctTarget = computePercentJumpTarget(state.lines, parsed.totalCount, state.cursor.col);
+      if (!pctTarget) return ringBell(state);
+      if (op === 'v') {
+        return {
+          ...state,
+          mode: 'VISUAL',
+          visualAnchor: state.cursor,
+          cursor: pctTarget,
+          pendingKeys: undefined,
+        };
+      }
+      const range = {
+        startLine: Math.min(state.cursor.line, pctTarget.line),
+        endLine: Math.max(state.cursor.line, pctTarget.line),
+      };
+      const res = executeLinewiseObjectOperator(state, op, range);
+      const synced = syncRegisters(state, res, op === 'y');
+      const opKeys = [op, String(parsed.totalCount), '%'];
+      if (op === 'c') {
+        return { ...synced, currentChangeKeys: isReplayingDot ? state.currentChangeKeys : opKeys };
+      }
+      if (op === 'd') {
+        return { ...synced, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys };
+      }
+      return synced;
+    }
+
     const matchPos = findMatchingBracket(state.lines, state.cursor);
     if (!matchPos) return ringBell(state);
 
-    const op = parsed.operator;
     if (op === 'v') {
       return {
         ...state,

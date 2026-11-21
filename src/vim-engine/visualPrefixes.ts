@@ -117,6 +117,9 @@ export function handleVisualGSubcommand(
     if (key === 'e' || key === 'E' || key === '_') {
       return moveByExtraMotion(state, `g${key}`, parsed.totalCount);
     }
+    if (key === 'o') {
+      return moveByExtraMotion(state, 'go', parsed.count1 ?? 1);
+    }
     if (key === '?') {
       return changeCaseVisual(state, 'rot13');
     }

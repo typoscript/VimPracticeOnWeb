@@ -20,7 +20,13 @@ import {
   jumpToNextFold,
   jumpToPrevFold,
 } from './folding';
-import { startSpellSuggest, addSpellGoodWord, addSpellWrongWord } from './spellEngine';
+import {
+  startSpellSuggest,
+  addSpellGoodWord,
+  addSpellWrongWord,
+  undoSpellGoodWord,
+  undoSpellWrongWord,
+} from './spellEngine';
 import { ringBell } from './engineHelpers';
 
 /**
@@ -95,6 +101,17 @@ export function handleNormalZPrefix(
     return { ...state, bell: true, pendingKeys: undefined };
   }
 
+  // zu{g|G|w|W}: 맞춤법 사용자 등록 취소 (zug / zuw)
+  if (state.pendingKeys === 'zu') {
+    if (key === 'g' || key === 'G') {
+      return { ...undoSpellGoodWord(state), pendingKeys: undefined };
+    }
+    if (key === 'w' || key === 'W') {
+      return { ...undoSpellWrongWord(state), pendingKeys: undefined };
+    }
+    return { ...state, pendingKeys: undefined };
+  }
+
   // zz, zt, zb, zh/zl/zH/zL/ze/zs: 뷰포트 정렬 및 zc, zo, za, zM, zR, zd, zD, zE, zf: 코드 폴딩
   if (state.pendingKeys === 'z' || parsedOperator === 'z') {
     const horiz = handleHorizontalViewportKey(state, key, parsedCount1 ?? 1);
@@ -113,9 +130,10 @@ export function handleNormalZPrefix(
     if (key === 'j') return jumpToNextFold(state, parsedCount1 ?? 1);
     if (key === 'k') return jumpToPrevFold(state, parsedCount1 ?? 1);
     if (key === 'f') return { ...state, pendingKeys: 'zf' };
+    if (key === 'u') return { ...state, pendingKeys: 'zu' };
     if (key === '=') return { ...startSpellSuggest(state), pendingKeys: undefined };
-    if (key === 'g') return { ...addSpellGoodWord(state), pendingKeys: undefined };
-    if (key === 'w') return { ...addSpellWrongWord(state), pendingKeys: undefined };
+    if (key === 'g' || key === 'G') return { ...addSpellGoodWord(state), pendingKeys: undefined };
+    if (key === 'w' || key === 'W') return { ...addSpellWrongWord(state), pendingKeys: undefined };
     return { ...state, pendingKeys: undefined };
   }
 

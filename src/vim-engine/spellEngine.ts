@@ -434,15 +434,15 @@ function applySpellReplacement(
 }
 
 /**
- * 커서 위치의 단어를 양호한 단어로 등록합니다 ('zg').
+ * 커서 위치(또는 지정 단어)를 양호한 단어로 등록합니다 ('zg' / ':spellgood').
  */
-export function addSpellGoodWord(state: VimEditorState): VimEditorState {
-  const target = getWordAtCursor(state);
-  if (!target) {
+export function addSpellGoodWord(state: VimEditorState, explicitWord?: string): VimEditorState {
+  const word = explicitWord?.trim() || getWordAtCursor(state)?.word;
+  if (!word) {
     return { ...state, bell: true };
   }
 
-  const lower = target.word.toLowerCase();
+  const lower = word.toLowerCase();
   const currentGood = state.spellGoodWords ?? [];
   const currentWrong = state.spellWrongWords ?? [];
 
@@ -453,20 +453,20 @@ export function addSpellGoodWord(state: VimEditorState): VimEditorState {
     ...state,
     spellGoodWords: nextGood,
     spellWrongWords: nextWrong,
-    commandMessage: msg('"{word}" 단어가 사전에 추가되었습니다', { word: target.word }),
+    commandMessage: msg('"{word}" 단어가 사전에 추가되었습니다', { word }),
   };
 }
 
 /**
- * 커서 위치의 단어를 오탈자로 등록합니다 ('zw').
+ * 커서 위치(또는 지정 단어)를 오탈자로 등록합니다 ('zw' / ':spellwrong').
  */
-export function addSpellWrongWord(state: VimEditorState): VimEditorState {
-  const target = getWordAtCursor(state);
-  if (!target) {
+export function addSpellWrongWord(state: VimEditorState, explicitWord?: string): VimEditorState {
+  const word = explicitWord?.trim() || getWordAtCursor(state)?.word;
+  if (!word) {
     return { ...state, bell: true };
   }
 
-  const lower = target.word.toLowerCase();
+  const lower = word.toLowerCase();
   const currentGood = state.spellGoodWords ?? [];
   const currentWrong = state.spellWrongWords ?? [];
 
@@ -477,6 +477,67 @@ export function addSpellWrongWord(state: VimEditorState): VimEditorState {
     ...state,
     spellGoodWords: nextGood,
     spellWrongWords: nextWrong,
-    commandMessage: msg('"{word}" 단어가 오탈자로 등록되었습니다', { word: target.word }),
+    commandMessage: msg('"{word}" 단어가 오탈자로 등록되었습니다', { word }),
+  };
+}
+
+/**
+ * 'zg' / 'zG' 등록을 취소하여 사용자 사전에서 단어를 제거합니다 ('zug' / 'zuG').
+ */
+export function undoSpellGoodWord(state: VimEditorState, explicitWord?: string): VimEditorState {
+  const word = explicitWord?.trim() || getWordAtCursor(state)?.word;
+  if (!word) {
+    return { ...state, bell: true };
+  }
+
+  const lower = word.toLowerCase();
+  const currentGood = state.spellGoodWords ?? [];
+  const nextGood = currentGood.filter((w) => w !== lower);
+
+  return {
+    ...state,
+    spellGoodWords: nextGood,
+    commandMessage: msg('"{word}" 단어를 사용자 사전에서 제거했습니다', { word }),
+  };
+}
+
+/**
+ * 'zw' / 'zW' 등록을 취소하여 오탈자 목록에서 단어를 제거합니다 ('zuw' / 'zuW').
+ */
+export function undoSpellWrongWord(state: VimEditorState, explicitWord?: string): VimEditorState {
+  const word = explicitWord?.trim() || getWordAtCursor(state)?.word;
+  if (!word) {
+    return { ...state, bell: true };
+  }
+
+  const lower = word.toLowerCase();
+  const currentWrong = state.spellWrongWords ?? [];
+  const nextWrong = currentWrong.filter((w) => w !== lower);
+
+  return {
+    ...state,
+    spellWrongWords: nextWrong,
+    commandMessage: msg('"{word}" 단어를 오탈자 목록에서 제거했습니다', { word }),
+  };
+}
+
+/**
+ * ':spellundo {word}' 명령: 사용자 사전과 오탈자 목록 모두에서 해당 단어를 제거합니다.
+ */
+export function undoSpellWord(state: VimEditorState, explicitWord?: string): VimEditorState {
+  const word = explicitWord?.trim() || getWordAtCursor(state)?.word;
+  if (!word) {
+    return { ...state, bell: true };
+  }
+
+  const lower = word.toLowerCase();
+  const nextGood = (state.spellGoodWords ?? []).filter((w) => w !== lower);
+  const nextWrong = (state.spellWrongWords ?? []).filter((w) => w !== lower);
+
+  return {
+    ...state,
+    spellGoodWords: nextGood,
+    spellWrongWords: nextWrong,
+    commandMessage: msg('"{word}" 단어를 맞춤법 목록에서 제거했습니다', { word }),
   };
 }

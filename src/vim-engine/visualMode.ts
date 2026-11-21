@@ -38,6 +38,7 @@ import {
 import { setMark, isValidMarkJumpChar, resolveMarkPosition } from './marks';
 import { joinLines, changeCaseVisual, indentVisual, modifyNumberVisual, formatIndentVisual } from './lineOperators';
 import { findMatchingBracket } from './bracketMatch';
+import { computePercentJumpTarget } from './extraMotions';
 import {
   parsePending,
   ringBell,
@@ -46,6 +47,7 @@ import {
   isFailedMotion,
   evaluateMotionWithCount,
   handleCtrlWKey,
+  handleCtrlWGKey,
   getOppositeMotion,
   DispatchKeyFn,
 } from './engineHelpers';
@@ -126,7 +128,12 @@ export function handleVisualModeKey(
     };
   }
 
-  // 윈도우 분할 및 포커스 제어 ([count]Ctrl-w)
+  // 윈도우 분할 및 포커스 제어 ([count]Ctrl-w, Ctrl-w g)
+  if (state.pendingKeys?.endsWith('Ctrl-w g') || state.pendingKeys?.endsWith('Ctrl+w g')) {
+    const countMatch = state.pendingKeys.match(/^(\d+)/);
+    const wCount = countMatch ? parseInt(countMatch[1], 10) : undefined;
+    return handleCtrlWGKey(state, key, wCount);
+  }
   if (state.pendingKeys?.endsWith('Ctrl-w') || state.pendingKeys?.endsWith('Ctrl+w')) {
     const countMatch = state.pendingKeys.match(/^(\d+)/);
     const wCount = countMatch ? parseInt(countMatch[1], 10) : undefined;
@@ -494,8 +501,19 @@ export function handleVisualModeKey(
     return { ...state, cursor: res.cursor, viewport: res.viewport, pendingKeys: undefined };
   }
 
-  // '%' 키: 짝이 되는 괄호로 선택 영역 확장
+  // '%' 키: 카운트가 있으면 [count]% 파일 백분율 줄 점프, 없으면 짝이 되는 괄호로 선택 영역 확장
   if (key === '%') {
+    if (parsed.count1 !== undefined) {
+      const pctTarget = computePercentJumpTarget(state.lines, parsed.count1, state.cursor.col);
+      if (pctTarget) {
+        return {
+          ...state,
+          cursor: pctTarget,
+          pendingKeys: undefined,
+        };
+      }
+      return ringBell(state);
+    }
     const matchPos = findMatchingBracket(state.lines, state.cursor);
     if (matchPos) {
       return {

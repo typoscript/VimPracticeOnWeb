@@ -5,6 +5,7 @@ import { recordJump } from './marks';
 import { editBuffer, syncCurrentBuffer } from './bufferEngine';
 import { buildVfsMap } from './vfs';
 import { splitWindow, switchPaneFocus } from './splitWindow';
+import { openNewTab } from './tabEngine';
 
 const FILENAME_CHAR_RE = /[A-Za-z0-9_./~\-+@]/;
 
@@ -143,11 +144,11 @@ export function resolveFileFromProject(
 }
 
 /**
- * gf / gF / Ctrl-w f: 커서 아래 파일 경로를 열어 이동합니다.
+ * gf / gF / Ctrl-w f / Ctrl-w gf / Ctrl-w gF: 커서 아래 파일 경로를 열어 이동합니다.
  */
 export function gotoFileUnderCursor(
   state: VimEditorState,
-  options: { withLineNumber?: boolean; split?: boolean } = {}
+  options: { withLineNumber?: boolean; split?: boolean; tab?: boolean } = {}
 ): VimEditorState {
   let target: ExtractedFileTarget | null = null;
 
@@ -206,6 +207,30 @@ export function gotoFileUnderCursor(
     visualAnchor: undefined,
     pendingKeys: undefined,
   });
+
+  if (options.tab) {
+    const synced = syncCurrentBuffer(jumpedState);
+    const tabbed = openNewTab(synced, resolved.filename);
+    const targetRow = target.targetLine ? target.targetLine - 1 : 0;
+    const nextCursor = clampCursor(resolved.lines, { line: targetRow, col: 0 }, 'NORMAL');
+    const curTabId = tabbed.currentTabId;
+    const nextTabPages = tabbed.tabPages
+      ? tabbed.tabPages.map((t) =>
+          t.id === curTabId
+            ? { ...t, filename: resolved.filename, primaryFilename: resolved.filename, lines: [...resolved.lines], cursor: nextCursor }
+            : t
+        )
+      : tabbed.tabPages;
+    return {
+      ...tabbed,
+      lines: [...resolved.lines],
+      cursor: nextCursor,
+      primaryFilename: resolved.filename,
+      tabPages: nextTabPages,
+      pendingKeys: undefined,
+      commandMessage: msg('"{filename}" 새 탭으로 열렸습니다', { filename: resolved.filename }),
+    };
+  }
 
   if (options.split) {
     const synced = syncCurrentBuffer(jumpedState);

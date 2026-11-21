@@ -19,6 +19,7 @@ import { openCommandLineWindow } from './cmdlineWindow';
 import { openHelp } from './helpEngine';
 import { openLspHover } from './lspEngine';
 import { findMatchingBracket } from './bracketMatch';
+import { computePercentJumpTarget } from './extraMotions';
 import { moveToNextParagraph, moveToPrevParagraph } from './advancedMotions';
 import { moveFind } from './findChar';
 import { getWordAtCursor } from './search';
@@ -198,8 +199,15 @@ export function handleNormalViewportAndNavOps(
   isReplayingDot: boolean,
   runHandleKey: RunHandleKeyFn
 ): VimEditorState | null {
-  // 단독 %: 괄호 짝 점프
-  if (key === '%' && !state.pendingKeys) {
+  // %: 카운트가 있으면 [count]% 파일 백분율 줄 점프, 없으면 괄호 짝 점프
+  if (key === '%' && !parsed.operator) {
+    if (parsed.count1 !== undefined) {
+      const pctTarget = computePercentJumpTarget(state.lines, parsed.count1, state.cursor.col);
+      if (pctTarget) {
+        return { ...recordJump(state), cursor: pctTarget, pendingKeys: undefined };
+      }
+      return ringBell(state);
+    }
     const matchPos = findMatchingBracket(state.lines, state.cursor);
     if (matchPos) {
       return { ...recordJump(state), cursor: matchPos, pendingKeys: undefined };

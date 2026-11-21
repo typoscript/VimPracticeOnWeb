@@ -19,6 +19,7 @@ import {
   parsePending,
   applyOperatorMotion,
   handleCtrlWKey,
+  handleCtrlWGKey,
   DispatchKeyFn,
   RunHandleKeyFn,
 } from './engineHelpers';
@@ -134,7 +135,12 @@ export function handleNormalModeKey(
     return { ...state, pendingKeys: undefined };
   }
 
-  // 1-0-b. 윈도우 분할 및 포커스 제어 ([count]Ctrl-w)
+  // 1-0-b. 윈도우 분할 및 포커스 제어 ([count]Ctrl-w, Ctrl-w g)
+  if (state.pendingKeys?.endsWith('Ctrl-w g') || state.pendingKeys?.endsWith('Ctrl+w g')) {
+    const countMatch = state.pendingKeys.match(/^(\d+)/);
+    const wCount = countMatch ? parseInt(countMatch[1], 10) : undefined;
+    return handleCtrlWGKey(state, key, wCount);
+  }
   if (state.pendingKeys?.endsWith('Ctrl-w') || state.pendingKeys?.endsWith('Ctrl+w')) {
     const countMatch = state.pendingKeys.match(/^(\d+)/);
     const wCount = countMatch ? parseInt(countMatch[1], 10) : undefined;

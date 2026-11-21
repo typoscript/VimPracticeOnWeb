@@ -34,6 +34,7 @@ import {
 import { executeAbbrevCommand } from './abbrevEngine';
 import { executeUserCommandDefinition } from './userCommandEngine';
 import { executeDigraphCommand } from './digraphs';
+import { addSpellGoodWord, addSpellWrongWord, undoSpellWord } from './spellEngine';
 import { compileVimRegex } from './vimRegex';
 import { describeCharAt } from './engineHelpers';
 import { msg } from './messages';
@@ -425,6 +426,20 @@ function tryExecuteMappingAndMiscToolCommand(
   const digMatch = cleanCmdRaw.match(/^(?:dig|digraph|digraphs)(?:!)?(?:\s+(.*))?$/i);
   if (digMatch) {
     return executeDigraphCommand(state, digMatch[1] ?? '');
+  }
+
+  // :spellgood / :spellwrong / :spellundo
+  const spellGoodMatch = cleanCmdRaw.match(/^spe(?:l(?:l(?:g(?:o(?:o(?:d)?)?)?)?)?)?!?(?:\s+(.*))?$/i);
+  if (spellGoodMatch) {
+    return finishEx(addSpellGoodWord(state, spellGoodMatch[1]));
+  }
+  const spellWrongMatch = cleanCmdRaw.match(/^spellw(?:r(?:o(?:n(?:g)?)?)?)?!?(?:\s+(.*))?$/i);
+  if (spellWrongMatch) {
+    return finishEx(addSpellWrongWord(state, spellWrongMatch[1]));
+  }
+  const spellUndoMatch = cleanCmdRaw.match(/^(?:speu|spellu(?:n(?:d(?:o)?)?)?)!?(?:\s+(.*))?$/i);
+  if (spellUndoMatch) {
+    return finishEx(undoSpellWord(state, spellUndoMatch[1]));
   }
 
   return null;

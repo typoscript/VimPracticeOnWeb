@@ -23,8 +23,58 @@ export interface MotionResult {
 
 export const EXTRA_MOTION_KEYS = new Set([
   '(', ')', '+', '-', 'Enter', '|', 'ge', 'gE', 'g_', '[(', '[{', '])', ']}',
-  '[[', ']]', '[]', '][', '[m', ']m', '[M', ']M', 'g0', 'g$', 'gm', 'gM',
+  '[[', ']]', '[]', '][', '[m', ']m', '[M', ']M', 'g0', 'g$', 'gm', 'gM', 'go',
 ]);
+
+/**
+ * [count]% 점프 대상 계산 (1..100 범위, Neovim 기본 nostartofline 규칙에 따라 열 유지/클램프). 범위를 벗어나면 null.
+ */
+export function computePercentJumpTarget(
+  lines: string[],
+  percent: number,
+  currentCol = 0
+): CursorPosition | null {
+  if (percent < 1 || percent > 100 || lines.length === 0) return null;
+  const line1Based = Math.floor((percent * lines.length + 99) / 100);
+  const line = Math.max(0, Math.min(lines.length - 1, line1Based - 1));
+  const maxCol = Math.max(0, (lines[line] ?? '').length - 1);
+  return { line, col: Math.max(0, Math.min(currentCol, maxCol)) };
+}
+
+function utf8CharByteLen(cp: number): number {
+  if (cp <= 0x7f) return 1;
+  if (cp <= 0x7ff) return 2;
+  if (cp <= 0xffff) return 3;
+  return 4;
+}
+
+/**
+ * [count]go 바이트 오프셋 점프 (1-based UTF-8 바이트 위치, 줄바꿈 '\n' 1바이트 포함).
+ */
+export function computeByteOffsetTarget(lines: string[], byteOffset1Based: number): CursorPosition {
+  if (lines.length === 0) return { line: 0, col: 0 };
+  let rem = Math.max(0, byteOffset1Based - 1);
+  for (let l = 0; l < lines.length; l++) {
+    const text = lines[l] ?? '';
+    for (let col = 0; col < text.length; ) {
+      const cp = text.codePointAt(col) ?? 0;
+      const step = cp > 0xffff ? 2 : 1;
+      const bLen = utf8CharByteLen(cp);
+      if (rem < bLen) {
+        return { line: l, col };
+      }
+      rem -= bLen;
+      col += step;
+    }
+    // 줄바꿈('\n') 1바이트
+    if (rem === 0) {
+      return { line: l, col: Math.max(0, text.length - 1) };
+    }
+    rem -= 1;
+  }
+  const lastLine = lines.length - 1;
+  return { line: lastLine, col: Math.max(0, (lines[lastLine] ?? '').length - 1) };
+}
 
 function firstNonBlankCol(text: string): number {
   const m = text.match(/^\s*/);
@@ -275,6 +325,8 @@ export function evaluateExtraMotion(
       const len = (lines[cursor.line] ?? '').length;
       return { target: { line: cursor.line, col: Math.min(Math.max(0, len - 1), Math.floor(len / 2)) }, kind: 'exclusive' };
     }
+    case 'go':
+      return { target: computeByteOffsetTarget(lines, n), kind: 'exclusive' };
   }
   return null;
 }
