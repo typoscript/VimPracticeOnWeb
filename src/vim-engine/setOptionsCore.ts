@@ -45,6 +45,8 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   wrapscan: true,
   whichwrap: 'b,s',
   softtabstop: 0,
+  startofline: false,
+  smarttab: false,
 };
 
 export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
@@ -139,6 +141,10 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   whichwrap: 'whichwrap',
   sts: 'softtabstop',
   softtabstop: 'softtabstop',
+  sol: 'startofline',
+  startofline: 'startofline',
+  sta: 'smarttab',
+  smarttab: 'smarttab',
 };
 
 export const WINDOW_LOCAL_OPTION_KEYS = new Set<keyof VimOptions>([
@@ -377,6 +383,8 @@ export function formatOptionsList(
     'shiftround',
     'wrapscan',
     'foldenable',
+    'startofline',
+    'smarttab',
   ];
 
   const numericKeys: (keyof VimOptions)[] = ['tabstop', 'shiftwidth', 'softtabstop', 'textwidth', 'scrolloff', 'sidescroll', 'sidescrolloff'];
@@ -525,6 +533,8 @@ const BOOLEAN_OPTION_KEYS = new Set<keyof VimOptions>([
   'shiftround',
   'wrapscan',
   'foldenable',
+  'startofline',
+  'smarttab',
 ]);
 
 /**

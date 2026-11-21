@@ -381,6 +381,10 @@ export interface VimOptions {
   whichwrap?: string;
   /** Insert 모드 Tab/Backspace 소프트 탭 정지 폭 (:set sts=4, -1이면 shiftwidth, :set softtabstop) */
   softtabstop?: number;
+  /** G / gg / [count]% / Ctrl-f / Ctrl-b 이동 시 첫 공백 아닌 문자로 이동할지 여부 (:set sol / nosol, :set startofline) */
+  startofline?: boolean;
+  /** 줄 앞 Tab/Backspace 시 shiftwidth 단위를 적용할지 여부 (:set sta / nosta, :set smarttab) */
+  smarttab?: boolean;
 }
 
 /** 맞춤법 검사기 오탈자 정보 */

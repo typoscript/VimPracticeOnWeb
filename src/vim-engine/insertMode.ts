@@ -532,12 +532,19 @@ function handleInsertEditingKey(
     const nextChangeKeys = appendCurrentChange(state, 'Backspace', isReplayingDot);
     if (col > 0) {
       const opts = getOptions(state);
-      const sts = resolveSofttabstop(opts);
+      const isLeadingIndent = /^[ \t]*$/.test(currentLine.slice(0, col));
+      const baseSts = resolveSofttabstop(opts);
+      const effectiveBsStop =
+        baseSts > 0
+          ? baseSts
+          : opts.smarttab && isLeadingIndent
+            ? Math.max(1, opts.shiftwidth || 2)
+            : 0;
       let deleteFrom = col - 1;
-      if (sts > 0 && !state.blockInsertSession && currentLine[col - 1] === ' ') {
+      if (effectiveBsStop > 0 && !state.blockInsertSession && currentLine[col - 1] === ' ') {
         const ts = Math.max(1, opts.tabstop || 2);
         const vcol = displayWidthOf(currentLine.slice(0, col), ts);
-        const targetVcol = Math.max(0, Math.floor((vcol - 1) / sts) * sts);
+        const targetVcol = Math.max(0, Math.floor((vcol - 1) / effectiveBsStop) * effectiveBsStop);
         deleteFrom = col;
         while (
           deleteFrom > 0 &&
@@ -598,12 +605,17 @@ function handleInsertEditingKey(
     };
   }
 
-  // Tab: 들여쓰기 삽입 (softtabstop / expandtab / tabstop 지원)
+  // Tab: 들여쓰기 삽입 (smarttab / softtabstop / expandtab / tabstop 지원)
   if (key === 'Tab') {
     const nextChangeKeys = appendCurrentChange(state, 'Tab', isReplayingDot);
     const opts = getOptions(state);
     const ts = Math.max(1, opts.tabstop || opts.shiftwidth || 2);
-    const sts = resolveSofttabstop(opts);
+    const isLeadingIndent = /^[ \t]*$/.test(currentLine.slice(0, col));
+    const baseSts = resolveSofttabstop(opts);
+    const sts =
+      opts.smarttab && isLeadingIndent
+        ? Math.max(1, opts.shiftwidth || 2)
+        : baseSts;
 
     if (sts > 0) {
       const vcol = displayWidthOf(currentLine.slice(0, col), ts);
@@ -741,11 +753,52 @@ function handleInsertEditingKey(
       }
       targetCol = prefixBefore.length;
     }
-    nextLines[line] = prefixBefore + key + currentLine.slice(col);
+    const newLine = prefixBefore + key + currentLine.slice(col);
+    const newCol = targetCol + 1;
+    const opts = getOptions(state);
+    const tw = opts.textwidth ?? 0;
+
+    // textwidth > 0 실시간 자동 줄바꿈 (:help 'textwidth')
+    if (tw > 0 && !state.blockInsertSession && newLine.length > tw && key !== ' ' && key !== '\t') {
+      const leadIndent = newLine.match(/^[ \t]*/)?.[0] ?? '';
+      let breakIdx = -1;
+      for (let i = Math.min(tw, newCol - 1); i >= leadIndent.length; i--) {
+        if (newLine[i] === ' ' || newLine[i] === '\t') {
+          breakIdx = i;
+          break;
+        }
+      }
+      if (breakIdx >= leadIndent.length) {
+        const head = newLine.slice(0, breakIdx).replace(/[ \t]+$/, '');
+        let tailStart = breakIdx + 1;
+        while (tailStart < newCol && (newLine[tailStart] === ' ' || newLine[tailStart] === '\t')) {
+          tailStart++;
+        }
+        const tailBeforeCursor = newLine.slice(tailStart, newCol);
+        const tailAfterCursor = newLine.slice(newCol);
+        const nextIndent = opts.autoindent || opts.smartindent ? leadIndent : '';
+        const wrappedLines = [
+          ...state.lines.slice(0, line),
+          head,
+          nextIndent + tailBeforeCursor + tailAfterCursor,
+          ...state.lines.slice(line + 1),
+        ];
+        return {
+          ...state,
+          lines: wrappedLines,
+          cursor: { line: line + 1, col: nextIndent.length + tailBeforeCursor.length },
+          pendingKeys: isKeymapPrefix(state, 'i', key) ? key : undefined,
+          currentChangeKeys: nextChangeKeys,
+          currentInsertText: (state.currentInsertText ?? '') + key,
+        };
+      }
+    }
+
+    nextLines[line] = newLine;
     return {
       ...state,
       lines: nextLines,
-      cursor: { line, col: targetCol + 1 },
+      cursor: { line, col: newCol },
       pendingKeys: isKeymapPrefix(state, 'i', key) ? key : undefined,
       currentChangeKeys: nextChangeKeys,
       currentInsertText: (state.currentInsertText ?? '') + key,

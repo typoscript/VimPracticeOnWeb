@@ -1,5 +1,5 @@
 import { VimEditorState } from './types';
-import { clampCursor, getMaxCol } from './cursor';
+import { clampCursor, getFirstNonBlankCol, getMaxCol } from './cursor';
 import { moveToLastLine } from './motions';
 import {
   deleteChar,
@@ -202,7 +202,12 @@ export function handleNormalViewportAndNavOps(
   // %: 카운트가 있으면 [count]% 파일 백분율 줄 점프, 없으면 괄호 짝 점프
   if (key === '%' && !parsed.operator) {
     if (parsed.count1 !== undefined) {
-      const pctTarget = computePercentJumpTarget(state.lines, parsed.count1, state.cursor.col);
+      const pctTarget = computePercentJumpTarget(
+        state.lines,
+        parsed.count1,
+        state.cursor.col,
+        Boolean(getOptions(state).startofline)
+      );
       if (pctTarget) {
         return { ...recordJump(state), cursor: pctTarget, pendingKeys: undefined };
       }
@@ -540,19 +545,26 @@ export function handleNormalEditingAndMotionFallback(
 
   if (key === 'G') {
     const stateWithJump = recordJump(state);
+    const useSol = Boolean(getOptions(state).startofline);
     if (parsed.count1 !== undefined) {
       const targetLine = Math.max(0, Math.min(parsed.count1 - 1, state.lines.length - 1));
       const maxCol = getMaxCol(state.lines[targetLine], 'NORMAL');
+      const targetCol = useSol
+        ? getFirstNonBlankCol(state.lines[targetLine])
+        : Math.min(state.cursor.col, maxCol);
       return {
         ...stateWithJump,
-        cursor: { line: targetLine, col: Math.min(state.cursor.col, maxCol) },
+        cursor: { line: targetLine, col: targetCol },
         pendingKeys: undefined,
       };
     }
     const nextCursor = moveToLastLine(state.lines, state.cursor);
+    const finalCursor = useSol
+      ? { line: nextCursor.line, col: getFirstNonBlankCol(state.lines[nextCursor.line]) }
+      : clampCursor(state.lines, nextCursor, 'NORMAL');
     return {
       ...stateWithJump,
-      cursor: clampCursor(state.lines, nextCursor, 'NORMAL'),
+      cursor: finalCursor,
       pendingKeys: undefined,
     };
   }

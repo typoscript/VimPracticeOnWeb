@@ -1,5 +1,6 @@
 import { VimEditorState } from './types';
-import { clampCursor, getMaxCol } from './cursor';
+import { clampCursor, getFirstNonBlankCol, getMaxCol } from './cursor';
+import { getOptions } from './setOptionsCore';
 import { moveToFirstLine } from './motions';
 import { pushUndoSnapshot } from './operators';
 import { syncRegisters } from './registers';
@@ -242,24 +243,31 @@ export function handleNormalGOperator(
   }
   if (key === 'g') {
     const stateWithJump = recordJump(state);
+    const useSol = Boolean(getOptions(state).startofline);
     if (parsedCount1 !== undefined) {
       const targetLine = Math.max(0, Math.min(parsedCount1 - 1, state.lines.length - 1));
       const maxCol = getMaxCol(state.lines[targetLine], 'NORMAL');
+      const targetCol = useSol
+        ? getFirstNonBlankCol(state.lines[targetLine])
+        : Math.min(state.cursor.col, maxCol);
       return {
         handled: true,
         state: {
           ...stateWithJump,
-          cursor: { line: targetLine, col: Math.min(state.cursor.col, maxCol) },
+          cursor: { line: targetLine, col: targetCol },
           pendingKeys: undefined,
         },
       };
     }
     const nextCursor = moveToFirstLine(state.lines, state.cursor);
+    const finalCursor = useSol
+      ? { line: nextCursor.line, col: getFirstNonBlankCol(state.lines[nextCursor.line]) }
+      : clampCursor(state.lines, nextCursor, 'NORMAL');
     return {
       handled: true,
       state: {
         ...stateWithJump,
-        cursor: clampCursor(state.lines, nextCursor, 'NORMAL'),
+        cursor: finalCursor,
         pendingKeys: undefined,
       },
     };

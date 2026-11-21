@@ -32,11 +32,15 @@ export const EXTRA_MOTION_KEYS = new Set([
 export function computePercentJumpTarget(
   lines: string[],
   percent: number,
-  currentCol = 0
+  currentCol = 0,
+  startOfLine = false
 ): CursorPosition | null {
   if (percent < 1 || percent > 100 || lines.length === 0) return null;
   const line1Based = Math.floor((percent * lines.length + 99) / 100);
   const line = Math.max(0, Math.min(lines.length - 1, line1Based - 1));
+  if (startOfLine) {
+    return { line, col: firstNonBlankCol(lines[line] ?? '') };
+  }
   const maxCol = Math.max(0, (lines[line] ?? '').length - 1);
   return { line, col: Math.max(0, Math.min(currentCol, maxCol)) };
 }

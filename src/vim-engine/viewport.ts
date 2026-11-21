@@ -261,7 +261,9 @@ export function scrollFullPageDown(state: VimEditorState, count = 1): VimEditorS
   const newTop = Math.min(total - 1, vp.topRow + count * page);
   const targetLine = Math.min(total - 1, newTop + effSo);
   const mode = state.mode.startsWith('VISUAL') ? 'VISUAL' : 'NORMAL';
-  const newCursor = clampCursor(state.lines, { line: targetLine, col: state.cursor.col }, mode);
+  const newCursor = getOptions(state).startofline
+    ? moveToFirstNonBlank(state.lines, { line: targetLine, col: 0 })
+    : clampCursor(state.lines, { line: targetLine, col: state.cursor.col }, mode);
 
   return {
     ...state,
@@ -296,7 +298,9 @@ export function scrollFullPageUp(state: VimEditorState, count = 1): VimEditorSta
   const targetLine =
     newTop === 0 && vp.topRow === 0 ? 0 : Math.max(0, Math.min(total - 1, bot - effSo));
   const mode = state.mode.startsWith('VISUAL') ? 'VISUAL' : 'NORMAL';
-  const newCursor = clampCursor(state.lines, { line: targetLine, col: state.cursor.col }, mode);
+  const newCursor = getOptions(state).startofline
+    ? moveToFirstNonBlank(state.lines, { line: targetLine, col: 0 })
+    : clampCursor(state.lines, { line: targetLine, col: state.cursor.col }, mode);
 
   return {
     ...state,
