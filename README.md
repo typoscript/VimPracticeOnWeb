@@ -1,8 +1,13 @@
 # ⌨️ VimPracticeOnWeb
 
-> **브라우저에서 직접 키보드로 Vim 키바인딩과 모션, 텍스트 편집을 체계적으로 마스터하는 웹 기반 인터랙티브 Vim 시뮬레이터 & 튜토리얼 코스**
+> **브라우저에서 직접 키보드로 순정 Vim과 현대 Neovim 워크플로를 체계적으로 마스터하는 웹 기반 인터랙티브 Vim 시뮬레이터 & 튜토리얼 플랫폼**
 
 CodeMirror나 Monaco 같은 무거운 외부 에디터 라이브러리 없이, **순수 함수형 상태 전이 아키텍처(`(state, key) => nextState`)**로 구현된 가볍고 반응성이 뛰어난 웹 Vim 학습 플랫폼입니다.
+독립 엔진 모듈 단독 사용법은 [`src/vim-engine/README.md`](./src/vim-engine/README.md)를 참고하세요.
+
+- **📚 112개 실전 커리큘럼**: 기초 이동(`hjkl`)부터 매크로·Vimscript·정규식·Netrw·세션, 현대 Neovim 플러그인(`Telescope`, `LSP`, `Treesitter`, `Gitsigns`, `Lua`, `Flash`, `Oil`, `Harpoon`, `mini.ai`, `Trouble`, `Multi-Cursor`)까지 단계별 완주
+- **🎮 다채로운 훈련 모드**: 튜토리얼 코스 · 타임어택 스피드런 · 아케이드 서바이벌(보스전/파워업) · 던전 RPG(6스테이지) · 하드코어 도장 · 멀티파일 자유 연습장(Sandbox) · BYOC 커스텀 미션
+- **🔬 높은 호환성 검증**: 실제 `nvim --headless` 대조 골든 회귀 **116종** 포함 **193개 테스트 파일 / 2,257개 테스트 100% 통과**
 
 ---
 
@@ -11,14 +16,14 @@ CodeMirror나 Monaco 같은 무거운 외부 에디터 라이브러리 없이, *
 ```mermaid
 flowchart TD
     subgraph UI_Layer["🖥️ 사용자 인터페이스 계층 (UI Components)"]
-        Editor["에디터 본문 (Editor)"]
+        Editor["에디터 본문 & 분할 창 (EditorViewport)"]
         DiffViewer["목표 Diff 비교 뷰 (DiffViewer)"]
-        VirtualKeyboard["반응형 가상 키보드 (VirtualKeyboard)"]
-        Keycaster["실시간 키 입력바 (Keycaster)"]
-        SpeedrunPanel["타임어택 패널 (SpeedrunPanel)"]
-        MissionPanel["레슨 & 미션 패널 (MissionPanel)"]
-        StatusBar["커맨드 & 상태바 (StatusBar)"]
-        CoachingToast["스마트 코칭 알림 (CoachingToast)"]
+        VirtualKeyboard["가상 키보드 & 키캐스터 (VirtualKeyboard / Keycaster)"]
+        MissionPanel["레슨 · 자유 연습장 · 스피드런 패널"]
+        GameModes["게임 훈련 모드 (Arcade · DungeonRPG · HardcoreDojo)"]
+        IdePanels["IDE/Neovim 패널 (FuzzyFinder · Trouble · Undotree · Harpoon · Yanky · WhichKey · Quickfix)"]
+        StatusBar["커맨드 & 상태바 · 매크로 디버거 (StatusBar / MacroDebugger)"]
+        CoachingToast["스마트 코칭 & 학습 통계/SRS (CoachingToast / Analytics)"]
     end
 
     subgraph Event_Layer["🛡️ 키 이벤트 & 제어 계층 (Event & Safety Layer)"]
@@ -27,25 +32,22 @@ flowchart TD
         FocusManager["포커스 이탈 감지 (Focus Manager)"]
     end
 
-    subgraph Core_Engine["⚙️ 순수 함수형 Vim 엔진 (Vim State Engine)"]
+    subgraph Core_Engine["⚙️ 순수 함수형 Vim 엔진 (src/vim-engine/)"]
         Reducer["handleKey(state, key) => newState"]
-        subgraph Sub_Engines["모듈별 세부 처리기"]
-            Motions["모션 & 카운트 (motions / wordMotion)"]
-            Operators["연산자 (operators / dd, dw, cw, r)"]
-            TextObjects["텍스트 객체 (textObjects / iw, aw, ciw, da')"]
-            FindChar["줄 내 문자 탐색 (findChar / f, F, t, T)"]
-            SearchEngine["키워드 검색 엔진 (search / /, n, N, *)"]
-            CommandLine["커맨드라인 엔진 (commandLine / :, :s, :%s)"]
-            DotRepeat["직전 변경 반복 (. Dot Repeat)"]
-            UndoRedo["실행 취소 및 Undo Tree (u, Ctrl+r, g-, g+)"]
-            DiffEngine["Diff 비교 및 병합 (:diffsplit, ]c, do, dp)"]
+        subgraph Sub_Engines["단방향 비순환 계층 모듈"]
+            Motions["모션 · 카운트 · 탐색 (motions / findChar / search / vimRegex)"]
+            Operators["연산자 · 텍스트 객체 · 서라운드 (operators / textObjects / surround)"]
+            CommandLine["Ex 커맨드 · Vimscript · 가상 셸 (commandLine / vimscript / shell)"]
+            Workspace["버퍼 · 탭 · 분할 창 · VFS · Netrw (buffer / tab / splitWindow / vfs)"]
+            UndoDiff["분기형 Undo Tree & Diff 병합 (undoTreeEngine / diffEngine)"]
+            ModernNvim["현대 Neovim 확장 (Lua · LSP · Gitsigns · Oil · Harpoon · Trouble · Flash · Multi-Cursor · Yanky)"]
         end
     end
 
     subgraph Storage_Layer["💾 영구 저장소 (LocalStorage Layer)"]
-        ProgressStore["레슨 진도 및 최고 별점 (1~3성)"]
-        SpeedrunStore["스피드런 최단 시간 & 최소 타수"]
-        SettingsStore["가상 키보드 / Diff 뷰 / 상대 라인 번호 설정"]
+        ProgressStore["레슨 진도 · 별점 · 스피드런 · 던전 기록"]
+        ConfigStore["나만의 init.lua / .vimrc · 커스텀 키맵 · 테마 · 언어 설정"]
+        AnalyticsStore["타수 히트맵 · 취약 패턴 · SRS 복습 스케줄 · JSON 백업"]
     end
 
     UI_Layer --> Event_Layer
@@ -101,6 +103,25 @@ flowchart TD
 | **히스토리** | `.` (Dot) | 마지막 버퍼 변경 명령 시퀀스를 현재 커서 위치에서 동일하게 재실행 |
 | | `u` | 실행 취소 (Undo) |
 | | `Ctrl + r` | 다시 실행 (Redo) |
+
+### 🚀 현대 Neovim 플러그인 치트시트 (순수 TypeScript 재구현)
+
+| 플러그인 | 키바인딩 / 명령어 | 기능 설명 |
+| :--- | :--- | :--- |
+| **Telescope** | `:LiveGrep`, `:Files`, `:Buffers`, `Ctrl-q` | 프로젝트 본문 검색·퍼지 파인더, 결과를 퀵픽스로 전송해 일괄 치환 |
+| **LSP (Neovim 0.11)** | `gra`, `grn`, `grr`, `gO`, `K` | 코드 액션, 다중 파일 이름 변경, 참조 검색, 문서 심볼, 호버 |
+| **Treesitter** | `daf`/`cif`/`daa`, `]f`/`[f`, `ii`/`ai` | 함수·인자·인덴트 구조적 텍스트 객체와 함수 점프 |
+| **mini.ai** | `cin"`, `din(`, `cil"`, `val(` | 커서 밖 다음(`n`)/이전(`l`) 따옴표·괄호 짝 원격 편집 |
+| **gitsigns.nvim** | `]h`/`[h`, `:Gitsigns preview_hunk\|reset_hunk\|stage_hunk` | 거터 Hunk 표시, 이동, 미리보기, 리셋·스테이징 |
+| **Lua 레이어** | `:lua`, `:luafile`, `:source init.lua`, `vim.opt`, `vim.keymap.set` | `eval` 없는 순수 TS Lua 인터프리터 (`vim.api`/`vim.fn` 일부 지원) |
+| **flash.nvim** | `gs`, `dgs`/`cgs`/`ygs`, `:Flash` | 화면 라벨 점프와 원격 범위 연산 |
+| **oil.nvim** | `:Oil`, `dd`/`cw`/`o` + `:w`, `Enter`, `-` | 디렉터리를 일반 버퍼처럼 편집해 파일 생성·이름 변경·삭제 |
+| **harpoon.nvim** | `:HarpoonAdd`, `:HarpoonMenu`, `:Harpoon [1-9]`, `:HarpoonNext/Prev` | 자주 쓰는 파일 핀 고정과 원키 전환 |
+| **trouble.nvim** | `:Trouble [all\|diagnostics\|todo\|quickfix]`, `:TroubleNext/Prev` | 진단·`TODO`/`FIXME`·퀵픽스를 파일별 트리로 통합 |
+| **vim-visual-multi** | `g Ctrl-n`, `Ctrl-n`/`Ctrl-x`/`Ctrl-p`, `:MultiCursor` | 같은 단어 다중 커서 선택·동시 편집 |
+| **undotree** | `:UndotreeToggle`, `:Undotree`, `g-`/`g+`, `:undo N` | 분기형 Undo 트리 그래프, Diff 미리보기, 클릭 시간 여행 |
+| **yanky.nvim** | `p` 직후 `Ctrl-p`/`Ctrl-n`, `:YankyRingHistory`, `:Yanks` | 복사 이력 링 순환 붙여넣기와 이력 팝업 |
+| **which-key.nvim** | (`g`, `z`, `[`, `]`, `<leader>` 등 입력 대기) | 후속 키 실시간 가이드 팝업 |
 
 ---
 
@@ -183,6 +204,8 @@ flowchart TD
 66. **레슨 66**: 고급 매크로 레지스터 조작과 `"ap` / `"ay` 실전 편집 마스터하기 (버퍼에서 매크로 수정 후 재실행)
 67. **레슨 67**: 순정 Vim 세션 관리(`:mksession`, `:source`)로 분할 창과 버퍼 환경 영구 보존하기
 68. **레슨 68**: 점프 리스트(`Ctrl-o` / `Ctrl-i`)와 마크 정리(`:delmarks!`)로 대규모 코드 정밀 탐색하기
+
+### 🏆 고급 실무 · LSP · 멀티 윈도우 · 대단원 챌린지 (레슨 69 ~ 100)
 69. **레슨 69**: 버퍼 로컬 옵션(`:setlocal`)과 파일타입 들여쓰기(`ftplugin`)로 다중 언어 모노레포 실무 마스터하기
 70. **레슨 70**: 입력 모드 고속 탈출(`:imap jk <Esc>`)과 리더키(`:nmap <leader>d "_d`)로 나만의 실무 단축키 마스터하기
 71. **레슨 71**: 순정 ctags 멀티 정의 심볼 탐색과 태그 선택기(`:tselect`, `:tjump`, `g]`, `:tn`, `:tp`) 마스터하기
@@ -243,6 +266,14 @@ flowchart TD
 - **⚡ 타임어택 스피드런 모드 (Speedrun Mode)**:
   - 5개의 무작위 코드 리팩토링 미션을 연속 격파하는 챌린지 모드입니다.
   - 실시간 스톱워치 타이머와 누적 타수를 기록하며, 개인 최고 기록(최단 시간 & 최소 타수)을 `localStorage`에 영구 보존합니다.
+- **🎮 게임형 실전 훈련 모드 (Arcade Survival · Dungeon RPG · Hardcore Dojo)**:
+  - **아케이드 서바이벌**: 웨이브별 버그 섬멸, Wave 5/10 보스전, 시간 정지(`Ctrl+z`)·버그 폭탄(`Ctrl+b`)·콤보 쉴드 파워업 지원.
+  - **던전 RPG**: 6개 스테이지(최종 보스 카오스 드래곤 포함)를 Vim 모션과 텍스트 객체 스킬로 공략하는 턴제 RPG.
+  - **하드코어 도장 & 약점 맞춤 드릴**: 방향키/비효율 습관을 차단하고 취약 키바인딩을 집중 반복 훈련.
+- **🎞️ 매크로 슬로우모션 디버거 & 대화형 튜터**:
+  - 녹화된 매크로를 1x / 0.5x / 0.2x 배속 및 키 단위 스텝으로 재생하며, 단계별 라인 Diff와 실패(bell) 원인 진단을 시각화합니다.
+- **✨ BYOC (Bring Your Own Code) & 학습 분석/SRS 복습**:
+  - 내 업무 코드를 붙여넣어 맞춤형 리팩토링 미션을 자동 생성하고, 키 입력 히트맵·Vim 문법 AST·간격 반복(SRS) 복습 큐·JSON 백업/복원을 제공합니다.
 - **🔍 순정 파일 & 버퍼 퍼지 파인더 (Pure Fuzzy Finder - `:find`, `:Files`, `:Buffers`)**:
   - 가상 파일 시스템(VFS) 및 버퍼 목록 대상 고속 퍼지 매칭 알고리즘(`fuzzyMatch`) 기반 대화형 팝업 UI를 제공합니다.
   - 키보드 네비게이션(`<C-j>/<C-k>`, `<Down>/<Up>`), Enter 즉시 열기, `Ctrl-v` 세로 분할(`:vsp`), `Ctrl-s` 가로 분할(`:sp`), `Ctrl-t` 새 탭 열기 완벽 연동.
@@ -255,13 +286,22 @@ flowchart TD
   - 창 바깥을 클릭하여 포커스를 잃으면 커서가 아웃라인으로 바뀌며, "클릭하여 에디터 포커스 활성화" 안내를 띄웁니다.
 - **🏆 Vim Golf 별점 시스템 & 스마트 코칭**:
   - 레슨별 Par(최적 타수) 기준에 따라 1~3성 별점을 부여하며, 비효율적인 연타 패턴(h/j/k/l 5회 이상) 시 대안 팁을 안내합니다.
+- **🧪 멀티파일 자유 연습장 (Sandbox) & 퀵런처**:
+  - 입장 즉시 `sandbox.ts`, `src/api.ts`(`TODO`), `src/worker.ts`(`FIXME`), `init.lua` 가상 파일과 Git diff 기준선, Harpoon 핀이 준비됩니다.
+  - 상단 칩 바에서 `:Oil`, `:Trouble`, `:HarpoonMenu`, `:Yanks`, `:LiveGrep`, `:UndotreeToggle`, `gs`, `]h`, `:MultiCursor`, `:source init.lua` 를 원클릭으로 체험합니다.
+- **🌿 시각적 Undo 트리 & 📋 복사 링 팝업**: `:UndotreeToggle` 분기 그래프와 `:Yanks` 이력 팝업을 지연 로딩 패널로 제공합니다.
+- **🗂️ 레슨 검색·필터**: 커리큘럼 모달에서 제목·단축키·`#번호` 검색과 `기초`/`모션`/`텍스트객체`/`Ex 커맨드`/`Vimscript`/`Netrw`/`Neovim` 태그 필터를 지원합니다.
+- **🧩 나만의 `init.lua` / `.vimrc` 플레이그라운드**: 설정 내보내기 모달에서 작성한 스크립트가 `localStorage` 에 저장되고 에디터·Which-Key·자유 연습장에 즉시 적용됩니다.
+- **🌐 한/영 화면 전환**: 헤더 버튼으로 화면과 엔진 메시지(`E492: Not an editor command` 등)를 한국어/영어로 전환합니다.
 
 ---
 
 ## 🛠️ 기술 스택 (Tech Stack)
 
 - **Core**: React 19, TypeScript, Vite
-- **Testing**: Vitest, React Testing Library (189개 파일, 2,225개 단위/통합 테스트 100% 통과)
+- **Testing**: Vitest, React Testing Library (193개 파일, 2,257개 단위/통합 테스트 100% 통과)
+- **실제 Neovim 골든 회귀 스위트**: `nvim --headless` 로 생성한 116개 케이스(`test/fixtures/neovim-golden-cases.json`)와 엔진 결과를 비교합니다. 재생성은 `npx tsx scripts/generateGoldenTests.ts`.
+- **번들 분할**: 엔진을 단방향 비순환 계층(`data` → `core` → `services` → `editing` → `neovim` → `ex` → 디스패처)의 청크로 나눠 모든 청크를 300 kB 이하(엔진 청크 각 160 kB 미만)로 유지하고, 보조 패널과 탭은 `React.lazy` 로 지연 로딩합니다.
 - **Styling**: Modern Pure CSS (Catppuccin Macchiato 테마)
 - **Zero Dependencies**: 외부 에디터(CodeMirror, Monaco 등) 및 무거운 UI 프레임워크 없는 순수 TypeScript 아키텍처
 
@@ -280,16 +320,23 @@ npm run dev
 ```
 브라우저에서 `http://localhost:5173`으로 접속합니다.
 
-### 3. 전체 테스트 실행 (Vitest)
+### 3. 테스트 및 타입 검사
 ```bash
-npm test
+# 전체 단위/통합 테스트 단발 실행 (193개 파일, 2,257개 테스트)
+npm test -- --run
+
+# DOM 타입 없이 순수 Vim 엔진(src/vim-engine/) 단독 타입 검사
+npm run check:vim-engine
+
+# 실제 로컬 Neovim(nvim --headless)으로 116개 골든 회귀 픽스처 재생성
+npx tsx scripts/generateGoldenTests.ts
 ```
 
 ### 4. 프로덕션 빌드
 ```bash
 npm run build
 ```
-빌드 결과물은 `dist/` 폴더에 생성됩니다.
+빌드 결과물은 `dist/` 폴더에 생성되며, 모든 JS 청크는 300 kB 이하(엔진 청크 각 160 kB 미만)로 분할됩니다.
 
 ---
 
@@ -313,7 +360,7 @@ npm run build
 - `main` 브랜치에 새로운 커밋이 `push`되거나, GitHub의 **`Actions`** 탭에서 **`Deploy VimPracticeOnWeb to GitHub Pages`** 워크플로의 `Run workflow` 버튼을 클릭하면 배포가 시작됩니다.
 - 배포 파이프라인은 아래 단계를 자동으로 수행합니다:
   1. `npm ci`: 의존성 패키지 클린 설치
-  2. `npm run test -- --run`: 281개 Vitest 단위/통합 테스트 전체 통과 검증
+  2. `npm run test -- --run`: 전체 Vitest 단위/통합 테스트 통과 검증
   3. `npm run build`: 리포지토리 베이스 경로(`/VimPracticeOnWeb/`)가 적용된 정적 사이트 번들링
   4. `actions/deploy-pages`: GitHub Pages CDN으로 즉시 무중단 배포
 
