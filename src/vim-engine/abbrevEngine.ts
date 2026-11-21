@@ -1,6 +1,10 @@
 import { AbbreviationEntry, VimEditorState } from './types';
 import { msg } from './messages';
-import { parseKeySequence } from './keymapEngine';
+import {
+  KeymapModifiers,
+  evaluateExprKeymap,
+  parseKeySequence,
+} from './keymapEngine';
 
 export type AbbrevMode = 'i' | 'c';
 
@@ -11,17 +15,87 @@ export interface AbbrevMatch {
 
 const ABBREV_DEFINE_RE =
   /^(?:(?:i|c)?(?:nore)?(?:ab|abb|abbr|abbre|abbrev|abbrevi|abbreviat|abbreviate)|(?:(?:i|c)(?:nore)?|nore)a)$/i;
-const ABBREV_UNDEF_RE = /^(i|c)?(?:una|unab|unabb|unabbr|unabbre|unabbrev)$/i;
+const ABBREV_UNDEF_RE = /^(i|c)?(?:una|unab|unabb|unabbr|unabbre|unabbrev|unabbreviate)$/i;
 const ABBREV_CLEAR_RE = /^(i|c)?(?:abc|abcl|abcle|abclea|abclear)$/i;
+const ABBREV_FLAG_RE = /^<(buffer|silent|expr|unique|nowait)>$/i;
 
 /** 단어를 구성하는 식별자 문자인지 판별합니다 (Vim iskeyword 기본 영숫자 + _). */
 export function isAbbrevWordChar(ch: string | undefined): boolean {
   return ch !== undefined && /\w/.test(ch);
 }
 
+/**
+ * Vim check_abbr 규약에 따라 약어 LHS 가 유효한지 검사합니다.
+ * - 공백 문자를 포함할 수 없음
+ * - 마지막 문자가 단어 문자(keyword)일 때:
+ *   - 직전 문자가 단어 문자이면 전체가 단어 문자여야 함 (full-id)
+ *   - 직전 문자가 비단어 문자이면 마지막 문자 앞의 모든 문자가 비단어 문자여야 함 (end-id)
+ */
+export function isValidAbbrevLhs(lhs: string): boolean {
+  if (!lhs || /\s/.test(lhs)) return false;
+  const len = lhs.length;
+  if (len === 1) return true;
+  if (isAbbrevWordChar(lhs[len - 1])) {
+    const prevIsWord = isAbbrevWordChar(lhs[len - 2]);
+    for (let i = 0; i < len - 2; i++) {
+      if (isAbbrevWordChar(lhs[i]) !== prevIsWord) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+/** 약어 LHS 가 전부 단어 문자로 이루어진 full-id 인지 판별합니다. */
+function isFullIdAbbrev(lhs: string): boolean {
+  for (let i = 0; i < lhs.length; i++) {
+    if (!isAbbrevWordChar(lhs[i])) return false;
+  }
+  return lhs.length > 0;
+}
+
+/** :ab / :iab / :cab 인자에서 수식어(<buffer>, <expr>, <silent>, <unique>)와 lhs / rhs 를 분리합니다. */
+export function parseAbbrevRest(rawRest: string): {
+  modifiers: KeymapModifiers;
+  lhs?: string;
+  rhs?: string;
+} {
+  const modifiers: KeymapModifiers = {};
+  let rest = rawRest.trim();
+  while (rest.length > 0) {
+    const firstMatch = rest.match(/^(\S+)(?:\s+([\s\S]*))?$/);
+    if (!firstMatch || !ABBREV_FLAG_RE.test(firstMatch[1])) break;
+    const flag = firstMatch[1].slice(1, -1).toLowerCase();
+    if (flag === 'buffer') modifiers.buffer = true;
+    else if (flag === 'silent') modifiers.silent = true;
+    else if (flag === 'expr') modifiers.expr = true;
+    else if (flag === 'unique') modifiers.unique = true;
+    else if (flag === 'nowait') modifiers.nowait = true;
+    rest = (firstMatch[2] ?? '').trimStart();
+  }
+  if (!rest) {
+    return { modifiers };
+  }
+  const body = rest.match(/^(\S+)(?:\s+([\s\S]+))?$/);
+  if (!body) return { modifiers };
+  return {
+    modifiers,
+    lhs: body[1],
+    rhs: body[2] !== undefined ? body[2].trim() : undefined,
+  };
+}
+
 /** 입력 키가 해당 약어를 확장하는 트리거인지 판별합니다. */
 export function isAbbrevTriggerKey(key: string, lhsEndsWithWordChar: boolean): boolean {
-  if (key === 'Enter' || key === 'Tab' || key === 'Escape' || key === 'Ctrl-]' || key === 'Ctrl+]' || key === 'ctrl-]') {
+  if (
+    key === 'Enter' ||
+    key === 'Tab' ||
+    key === 'Escape' ||
+    key === 'Ctrl-]' ||
+    key === 'Ctrl+]' ||
+    key === 'ctrl-]' ||
+    key === '<C-]>'
+  ) {
     return true;
   }
   if (key.length !== 1) return false;
@@ -30,8 +104,9 @@ export function isAbbrevTriggerKey(key: string, lhsEndsWithWordChar: boolean): b
 
 /**
  * 커서 앞 문자열의 끝부분과 일치하는 약어를 단어 경계 규칙에 따라 찾습니다.
- * - full-id (식별자 시작): 앞 글자가 비식별자(또는 줄 시작)여야 함
- * - non-keyword 시작(예: @e): 앞 글자가 공백(또는 줄 시작)이어야 함
+ * 버퍼 로컬 약어(<buffer>)가 전역 약어보다 우선합니다.
+ * - full-id (전체가 식별자 문자): 앞 글자가 비식별자(또는 줄 시작)여야 함
+ * - end-id / non-id (비식별자 포함): 앞 글자가 공백(또는 줄 시작)이어야 함
  */
 export function findMatchingAbbrev(
   state: VimEditorState,
@@ -40,19 +115,28 @@ export function findMatchingAbbrev(
   triggerKey: string,
   excludedLhs?: ReadonlySet<string>
 ): AbbrevMatch | null {
-  const abbrevs = state.abbreviations;
-  if (!abbrevs || textBeforeCursor.length === 0) return null;
+  if (textBeforeCursor.length === 0) return null;
+  const bufId = state.currentBufferId ?? 1;
+  const bufAbbrevs = state.bufferAbbreviations?.[bufId];
+  const globalAbbrevs = state.abbreviations;
+  if (!bufAbbrevs && !globalAbbrevs) return null;
 
   const prefix = `${mode}:`;
-  const candidates: AbbreviationEntry[] = [];
-  for (const [k, entry] of Object.entries(abbrevs)) {
-    if (k.startsWith(prefix)) {
-      candidates.push(entry);
+  const byLhs = new Map<string, AbbreviationEntry>();
+  if (globalAbbrevs) {
+    for (const [k, entry] of Object.entries(globalAbbrevs)) {
+      if (k.startsWith(prefix)) byLhs.set(entry.lhs, entry);
     }
   }
+  if (bufAbbrevs) {
+    for (const [k, entry] of Object.entries(bufAbbrevs)) {
+      if (k.startsWith(prefix)) byLhs.set(entry.lhs, { ...entry, buffer: true });
+    }
+  }
+  const candidates = Array.from(byLhs.values());
   if (candidates.length === 0) return null;
 
-  // 더 긴 lhs 를 우선 매칭
+  // 더 긴 lhs 를 우선 매칭 (동일 길이면 버퍼 로컬이 이미 덮어씀)
   candidates.sort((a, b) => b.lhs.length - a.lhs.length);
 
   for (const entry of candidates) {
@@ -62,10 +146,10 @@ export function findMatchingAbbrev(
 
     const prevIdx = textBeforeCursor.length - lhs.length - 1;
     const prevChar = prevIdx >= 0 ? textBeforeCursor[prevIdx] : undefined;
-    const startsWithWord = isAbbrevWordChar(lhs[0]);
+    const fullId = isFullIdAbbrev(lhs);
 
     if (prevChar !== undefined) {
-      if (startsWithWord) {
+      if (fullId) {
         if (isAbbrevWordChar(prevChar)) continue;
       } else {
         if (!/\s/.test(prevChar)) continue;
@@ -88,50 +172,67 @@ export function isAbbrevManagementCmd(cmdBuffer: string): boolean {
   return ABBREV_UNDEF_RE.test(verb) || ABBREV_CLEAR_RE.test(verb);
 }
 
-/** 약어 목록을 Vim 형식으로 포맷팅합니다 (:ab, :ia, :ca). */
+/** 약어 목록을 Vim 형식으로 포맷팅합니다 (:ab, :ia, :ca, :ab <buffer>). */
 export function formatAbbrevsList(
   state: VimEditorState,
   modeFilter: 'all' | 'i' | 'c' = 'all',
-  prefixFilter?: string
+  prefixFilter?: string,
+  bufferOnly = false
 ): string {
-  const abbrevs = state.abbreviations ?? {};
-  const byLhs = new Map<string, { i?: AbbreviationEntry; c?: AbbreviationEntry }>();
+  const bufId = state.currentBufferId ?? 1;
+  const bufAbbrevs = state.bufferAbbreviations?.[bufId] ?? {};
+  const globalAbbrevs = state.abbreviations ?? {};
 
-  for (const [k, entry] of Object.entries(abbrevs)) {
-    const isI = k.startsWith('i:');
-    const isC = k.startsWith('c:');
-    if (!isI && !isC) continue;
-    if (modeFilter === 'i' && !isI) continue;
-    if (modeFilter === 'c' && !isC) continue;
-    if (prefixFilter && !entry.lhs.startsWith(prefixFilter)) continue;
+  const collectFrom = (
+    source: Record<string, AbbreviationEntry>,
+    isBuf: boolean,
+    out: string[]
+  ) => {
+    const byLhs = new Map<string, { i?: AbbreviationEntry; c?: AbbreviationEntry }>();
+    for (const [k, entry] of Object.entries(source)) {
+      const isI = k.startsWith('i:');
+      const isC = k.startsWith('c:');
+      if (!isI && !isC) continue;
+      if (modeFilter === 'i' && !isI) continue;
+      if (modeFilter === 'c' && !isC) continue;
+      if (prefixFilter && !entry.lhs.startsWith(prefixFilter)) continue;
 
-    const slot = byLhs.get(entry.lhs) ?? {};
-    if (isI) slot.i = entry;
-    if (isC) slot.c = entry;
-    byLhs.set(entry.lhs, slot);
-  }
+      const slot = byLhs.get(entry.lhs) ?? {};
+      if (isI) slot.i = entry;
+      if (isC) slot.c = entry;
+      byLhs.set(entry.lhs, slot);
+    }
 
-  const linesOut: string[] = [];
-  for (const [lhs, slot] of byLhs.entries()) {
-    if (
-      modeFilter === 'all' &&
-      slot.i &&
-      slot.c &&
-      slot.i.rhs === slot.c.rhs &&
-      Boolean(slot.i.noremap) === Boolean(slot.c.noremap)
-    ) {
-      const flag = slot.i.noremap ? '*' : ' ';
-      linesOut.push(`!${flag} ${lhs.padEnd(12)} ${slot.i.rhs}`);
-    } else {
-      if (slot.i) {
+    const scopeMark = isBuf ? '@' : '';
+    const padWidth = isBuf ? 11 : 12;
+
+    for (const [lhs, slot] of byLhs.entries()) {
+      if (
+        modeFilter === 'all' &&
+        slot.i &&
+        slot.c &&
+        slot.i.rhs === slot.c.rhs &&
+        Boolean(slot.i.noremap) === Boolean(slot.c.noremap)
+      ) {
         const flag = slot.i.noremap ? '*' : ' ';
-        linesOut.push(`i${flag} ${lhs.padEnd(12)} ${slot.i.rhs}`);
-      }
-      if (slot.c) {
-        const flag = slot.c.noremap ? '*' : ' ';
-        linesOut.push(`c${flag} ${lhs.padEnd(12)} ${slot.c.rhs}`);
+        out.push(`!${flag} ${scopeMark}${lhs.padEnd(padWidth)} ${slot.i.rhs}`);
+      } else {
+        if (slot.i) {
+          const flag = slot.i.noremap ? '*' : ' ';
+          out.push(`i${flag} ${scopeMark}${lhs.padEnd(padWidth)} ${slot.i.rhs}`);
+        }
+        if (slot.c) {
+          const flag = slot.c.noremap ? '*' : ' ';
+          out.push(`c${flag} ${scopeMark}${lhs.padEnd(padWidth)} ${slot.c.rhs}`);
+        }
       }
     }
+  };
+
+  const linesOut: string[] = [];
+  collectFrom(bufAbbrevs, true, linesOut);
+  if (!bufferOnly) {
+    collectFrom(globalAbbrevs, false, linesOut);
   }
 
   if (linesOut.length === 0) {
@@ -153,8 +254,21 @@ export function registerAbbrev(
   state: VimEditorState,
   cmdVerb: string,
   lhs: string,
-  rhs: string
+  rhs: string,
+  modifiers: KeymapModifiers = {}
 ): VimEditorState {
+  if (!isValidAbbrevLhs(lhs)) {
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+      bell: true,
+      commandMessage: msg('E474: 잘못된 인수입니다: {token}', { token: lhs }),
+    };
+  }
+
   const lower = cmdVerb.toLowerCase();
   const mode: 'all' | 'i' | 'c' = lower.startsWith('i')
     ? 'i'
@@ -162,13 +276,38 @@ export function registerAbbrev(
     ? 'c'
     : 'all';
   const noremap = lower.includes('nore');
-  const nextAbbrevs: Record<string, AbbreviationEntry> = { ...(state.abbreviations ?? {}) };
+  const bufId = state.currentBufferId ?? 1;
+  const targetAbbrevs: Record<string, AbbreviationEntry> = modifiers.buffer
+    ? { ...(state.bufferAbbreviations?.[bufId] ?? {}) }
+    : { ...(state.abbreviations ?? {}) };
+
+  if (modifiers.unique) {
+    const existsI = (mode === 'all' || mode === 'i') && targetAbbrevs[`i:${lhs}`] !== undefined;
+    const existsC = (mode === 'all' || mode === 'c') && targetAbbrevs[`c:${lhs}`] !== undefined;
+    if (existsI || existsC) {
+      return {
+        ...state,
+        mode: 'NORMAL',
+        visualAnchor: undefined,
+        commandBuffer: undefined,
+        commandType: undefined,
+        bell: true,
+        commandMessage: msg('E227: {lhs} 에 대한 매핑이 이미 존재합니다', { lhs }),
+      };
+    }
+  }
+
+  const extraProps = {
+    ...(modifiers.expr ? { expr: true } : {}),
+    ...(modifiers.silent ? { silent: true } : {}),
+    ...(modifiers.buffer ? { buffer: true } : {}),
+  };
 
   if (mode === 'all' || mode === 'i') {
-    nextAbbrevs[`i:${lhs}`] = { mode: 'i', lhs, rhs, noremap };
+    targetAbbrevs[`i:${lhs}`] = { mode: 'i', lhs, rhs, noremap, ...extraProps };
   }
   if (mode === 'all' || mode === 'c') {
-    nextAbbrevs[`c:${lhs}`] = { mode: 'c', lhs, rhs, noremap };
+    targetAbbrevs[`c:${lhs}`] = { mode: 'c', lhs, rhs, noremap, ...extraProps };
   }
 
   return {
@@ -177,7 +316,14 @@ export function registerAbbrev(
     visualAnchor: undefined,
     commandBuffer: undefined,
     commandType: undefined,
-    abbreviations: nextAbbrevs,
+    ...(modifiers.buffer
+      ? {
+          bufferAbbreviations: {
+            ...(state.bufferAbbreviations ?? {}),
+            [bufId]: targetAbbrevs,
+          },
+        }
+      : { abbreviations: targetAbbrevs }),
     commandMessage: msg('[약어 등록] {cmd}: {lhs} -> {rhs}', { cmd: cmdVerb, lhs, rhs }),
   };
 }
@@ -186,7 +332,8 @@ export function registerAbbrev(
 export function unregisterAbbrev(
   state: VimEditorState,
   cmdVerb: string,
-  lhs: string
+  lhs: string,
+  options: { buffer?: boolean } = {}
 ): VimEditorState {
   const lower = cmdVerb.toLowerCase();
   const mode: 'all' | 'i' | 'c' = lower.startsWith('i')
@@ -194,15 +341,18 @@ export function unregisterAbbrev(
     : lower.startsWith('c')
     ? 'c'
     : 'all';
-  const nextAbbrevs: Record<string, AbbreviationEntry> = { ...(state.abbreviations ?? {}) };
+  const bufId = state.currentBufferId ?? 1;
+  const targetAbbrevs: Record<string, AbbreviationEntry> = options.buffer
+    ? { ...(state.bufferAbbreviations?.[bufId] ?? {}) }
+    : { ...(state.abbreviations ?? {}) };
   let removed = 0;
 
-  if ((mode === 'all' || mode === 'i') && nextAbbrevs[`i:${lhs}`]) {
-    delete nextAbbrevs[`i:${lhs}`];
+  if ((mode === 'all' || mode === 'i') && targetAbbrevs[`i:${lhs}`]) {
+    delete targetAbbrevs[`i:${lhs}`];
     removed++;
   }
-  if ((mode === 'all' || mode === 'c') && nextAbbrevs[`c:${lhs}`]) {
-    delete nextAbbrevs[`c:${lhs}`];
+  if ((mode === 'all' || mode === 'c') && targetAbbrevs[`c:${lhs}`]) {
+    delete targetAbbrevs[`c:${lhs}`];
     removed++;
   }
 
@@ -224,22 +374,37 @@ export function unregisterAbbrev(
     visualAnchor: undefined,
     commandBuffer: undefined,
     commandType: undefined,
-    abbreviations: nextAbbrevs,
+    ...(options.buffer
+      ? {
+          bufferAbbreviations: {
+            ...(state.bufferAbbreviations ?? {}),
+            [bufId]: targetAbbrevs,
+          },
+        }
+      : { abbreviations: targetAbbrevs }),
     commandMessage: msg('[약어 해제] {cmd}: {lhs}', { cmd: cmdVerb, lhs }),
   };
 }
 
 /** 약어를 일괄 초기화합니다 (:abclear, :iabclear, :cabclear). */
-export function clearAbbrevs(state: VimEditorState, cmdVerb: string): VimEditorState {
+export function clearAbbrevs(
+  state: VimEditorState,
+  cmdVerb: string,
+  options: { buffer?: boolean } = {}
+): VimEditorState {
   const lower = cmdVerb.toLowerCase();
   const mode: 'all' | 'i' | 'c' = lower.startsWith('i')
     ? 'i'
     : lower.startsWith('c')
     ? 'c'
     : 'all';
+  const bufId = state.currentBufferId ?? 1;
+  const sourceAbbrevs = options.buffer
+    ? state.bufferAbbreviations?.[bufId] ?? {}
+    : state.abbreviations ?? {};
   const nextAbbrevs: Record<string, AbbreviationEntry> = {};
 
-  for (const [k, entry] of Object.entries(state.abbreviations ?? {})) {
+  for (const [k, entry] of Object.entries(sourceAbbrevs)) {
     if (mode === 'all') continue;
     if (mode === 'i' && k.startsWith('i:')) continue;
     if (mode === 'c' && k.startsWith('c:')) continue;
@@ -255,7 +420,14 @@ export function clearAbbrevs(state: VimEditorState, cmdVerb: string): VimEditorS
     visualAnchor: undefined,
     commandBuffer: undefined,
     commandType: undefined,
-    abbreviations: nextAbbrevs,
+    ...(options.buffer
+      ? {
+          bufferAbbreviations: {
+            ...(state.bufferAbbreviations ?? {}),
+            [bufId]: nextAbbrevs,
+          },
+        }
+      : { abbreviations: nextAbbrevs }),
     commandMessage: msg('[약어 초기화] {modeName} 약어를 모두 삭제했습니다.', { modeName }),
   };
 }
@@ -283,34 +455,35 @@ export function executeAbbrevCommand(
       ? 'c'
       : 'all';
 
-    if (!rest) {
+    const parsed = parseAbbrevRest(rest);
+    if (!parsed.lhs) {
       return {
         ...state,
         mode: 'NORMAL',
         visualAnchor: undefined,
         commandBuffer: undefined,
         commandType: undefined,
-        commandMessage: formatAbbrevsList(state, modeFilter),
+        commandMessage: formatAbbrevsList(state, modeFilter, undefined, Boolean(parsed.modifiers.buffer)),
       };
     }
 
-    const defMatch = rest.match(/^(\S+)\s+([\s\S]+)$/);
-    if (!defMatch) {
+    if (parsed.rhs === undefined) {
       return {
         ...state,
         mode: 'NORMAL',
         visualAnchor: undefined,
         commandBuffer: undefined,
         commandType: undefined,
-        commandMessage: formatAbbrevsList(state, modeFilter, rest.trim()),
+        commandMessage: formatAbbrevsList(state, modeFilter, parsed.lhs, Boolean(parsed.modifiers.buffer)),
       };
     }
 
-    return registerAbbrev(state, verb, defMatch[1], defMatch[2]);
+    return registerAbbrev(state, verb, parsed.lhs, parsed.rhs, parsed.modifiers);
   }
 
   if (ABBREV_UNDEF_RE.test(verb)) {
-    const lhs = rest.trim().split(/\s+/)[0];
+    const parsed = parseAbbrevRest(rest);
+    const lhs = parsed.lhs ?? '';
     if (!lhs) {
       return {
         ...state,
@@ -322,31 +495,43 @@ export function executeAbbrevCommand(
         commandMessage: msg('E24: 그런 약어가 없습니다: {lhs}', { lhs: '' }),
       };
     }
-    return unregisterAbbrev(state, verb, lhs);
+    return unregisterAbbrev(state, verb, lhs, { buffer: Boolean(parsed.modifiers.buffer) });
   }
 
   if (ABBREV_CLEAR_RE.test(verb)) {
-    return clearAbbrevs(state, verb);
+    const parsed = parseAbbrevRest(rest);
+    return clearAbbrevs(state, verb, { buffer: Boolean(parsed.modifiers.buffer) });
   }
 
   return null;
 }
 
-/** Command 모드에서 직전 단어를 :cabbrev 약어로 확장합니다. */
+/** Command 모드에서 직전 단어를 :cabbrev 약어로 확장합니다. (<buffer>, <expr> 지원) */
 export function expandCmdlineAbbrev(
   state: VimEditorState,
   cmdBuffer: string,
   triggerKey: string,
   seenLhs?: Set<string>
 ): string {
-  if (!state.abbreviations || isAbbrevManagementCmd(cmdBuffer)) return cmdBuffer;
+  const bufId = state.currentBufferId ?? 1;
+  const hasAnyAbbrev =
+    Boolean(state.abbreviations && Object.keys(state.abbreviations).length > 0) ||
+    Boolean(state.bufferAbbreviations?.[bufId] && Object.keys(state.bufferAbbreviations[bufId]).length > 0);
+  if (!hasAnyAbbrev || isAbbrevManagementCmd(cmdBuffer)) return cmdBuffer;
 
   const seen = seenLhs ? new Set(seenLhs) : new Set<string>();
   const match = findMatchingAbbrev(state, 'c', cmdBuffer, triggerKey, seen);
   if (!match) return cmdBuffer;
 
   const prefix = cmdBuffer.slice(0, cmdBuffer.length - match.lhsLen);
-  const tokens = parseKeySequence(match.entry.rhs, state.leaderKey || ' ');
+  const evalState: VimEditorState = {
+    ...state,
+    mode: 'COMMAND',
+    commandType: state.commandType ?? ':',
+    commandBuffer: cmdBuffer,
+  };
+  const rhs = match.entry.expr ? evaluateExprKeymap(evalState, match.entry.rhs) : match.entry.rhs;
+  const tokens = parseKeySequence(rhs, state.leaderKey || ' ');
   let expanded = prefix;
 
   for (const tok of tokens) {

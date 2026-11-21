@@ -321,10 +321,14 @@ export function handleCommandLineModeKey(
   // Ctrl-] 수동 커맨드라인 약어 확장
   if (key === 'Ctrl-]' || key === 'Ctrl+]' || key === 'ctrl-]' || key === '<C-]>') {
     const s = state.wildmenu?.active ? acceptWildmenu(state) : state;
+    const rawBuf = s.commandBuffer ?? '';
+    const col = s.commandCursorCol !== undefined ? Math.min(rawBuf.length, s.commandCursorCol) : rawBuf.length;
+    const head = expandCmdlineAbbrev(s, rawBuf.slice(0, col), 'Ctrl-]');
+    const tail = rawBuf.slice(col);
     return {
       ...s,
-      commandBuffer: expandCmdlineAbbrev(s, s.commandBuffer ?? '', 'Ctrl-]'),
-      commandCursorCol: undefined,
+      commandBuffer: head + tail,
+      commandCursorCol: tail.length > 0 ? head.length : undefined,
     };
   }
 
@@ -380,12 +384,15 @@ export function handleCommandLineModeKey(
   if (key.length === 1) {
     const s = state.wildmenu?.active ? acceptWildmenu(state) : state;
     const rawBuf = s.commandBuffer ?? '';
-    const isAtEnd = s.commandCursorCol === undefined || s.commandCursorCol >= rawBuf.length;
-    if (isAtEnd) {
-      const buf = !/\w/.test(key) ? expandCmdlineAbbrev(s, rawBuf, key) : rawBuf;
-      return { ...s, commandBuffer: buf + key, commandCursorCol: undefined };
-    }
-    return insertTextIntoCmdline(s, key);
+    const col = s.commandCursorCol !== undefined ? Math.min(rawBuf.length, s.commandCursorCol) : rawBuf.length;
+    const headRaw = rawBuf.slice(0, col);
+    const tail = rawBuf.slice(col);
+    const head = !/\w/.test(key) ? expandCmdlineAbbrev(s, headRaw, key) : headRaw;
+    return {
+      ...s,
+      commandBuffer: head + key + tail,
+      commandCursorCol: tail.length > 0 ? head.length + key.length : undefined,
+    };
   }
 
   return state;

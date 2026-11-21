@@ -168,4 +168,77 @@ describe('Vim 약어 엔진 (:iabbrev, :cabbrev, :abbrev, :unabbrev, :abclear, C
     expect(s.lines[0]).toBe('first the');
     expect(s.lines[1]).toBe('second the');
   });
+
+  it('<expr>, <buffer>, <unique>, <silent> 수식어와 <Cmd>...<CR> 및 getcmdtype/getcmdline을 지원한다', () => {
+    let s = createVimState(['']);
+    s = typeCommand(s, 'let g:ver = "2.5"');
+    s = typeCommand(s, 'iabbrev <expr> VER "v" . g:ver');
+    s = runKeys(s, ['i', ...'VER '.split(''), 'Escape']);
+    expect(s.lines[0]).toBe('v2.5 ');
+
+    // <unique> 중복 등록 시 E227 에러
+    s = typeCommand(s, 'iabbrev <unique> VER duplicate');
+    expect(s.bell).toBe(true);
+    expect(s.commandMessage).toContain('E227');
+
+    // <buffer> 로컬 약어가 전역 약어보다 우선하며 다른 버퍼에는 영향을 주지 않음
+    s = createVimState([''], undefined, { primaryFilename: 'a.txt' });
+    s = typeCommand(s, 'iabbrev hw global_hello');
+    s = typeCommand(s, 'iabbrev <buffer> hw local_hello');
+    s = typeCommand(s, 'ia <buffer>');
+    expect(s.commandMessage).toContain('@hw');
+
+    // maparg(..., 'i', 1, 1) 조회
+    s = typeCommand(s, 'let g:info = maparg("hw", "i", 1, 1)');
+    expect(s.globalVars?.info).toMatchObject({
+      kind: 'dict',
+      items: expect.objectContaining({
+        lhs: 'hw',
+        rhs: 'local_hello',
+        buffer: 1,
+      }),
+    });
+
+    s = runKeys(s, ['i', ...'hw '.split(''), 'Escape']);
+    expect(s.lines[0]).toBe('local_hello ');
+
+    s = typeCommand(s, 'iunabbrev <buffer> hw');
+    s = runKeys(s, ['A', ...'hw'.split(''), 'Escape']);
+    expect(s.lines[0]).toBe('local_hello global_hello');
+
+    // :cnoreabbrev <expr> + getcmdtype() / getcmdline() / getcmdpos()
+    let s2 = createVimState(['beta', 'alpha']);
+    s2 = typeCommand(
+      s2,
+      "cnoreabbrev <expr> S (getcmdtype() == ':' && getcmdline() == 'S' && getcmdpos() == 2) ? 'sort' : 'S'"
+    );
+    s2 = typeCommand(s2, 'S');
+    expect(s2.lines).toEqual(['alpha', 'beta']);
+
+    // <Cmd>...<CR> 포함 약어 확장
+    let s3 = createVimState(['']);
+    s3 = typeCommand(s3, 'inoreabbrev <silent> stamp <Cmd>let g:stamped = 1<CR>OK');
+    s3 = runKeys(s3, ['i', ...'stamp '.split(''), 'Escape']);
+    expect(s3.lines[0]).toBe('OK ');
+    expect(s3.globalVars?.stamped).toBe(1);
+  });
+
+  it('유효하지 않은 약어 LHS(a#b, #ab)는 E474 에러를 발생시키고 end-id(..f, #i)와 non-id(def#)는 허용한다', () => {
+    let s = createVimState(['']);
+    s = typeCommand(s, 'iabbrev a#b invalid');
+    expect(s.bell).toBe(true);
+    expect(s.commandMessage).toContain('E474');
+
+    s = typeCommand(s, 'iabbrev #ab invalid');
+    expect(s.bell).toBe(true);
+    expect(s.commandMessage).toContain('E474');
+
+    s = typeCommand(s, 'iabbrev #i #include');
+    expect(s.bell).toBeFalsy();
+    s = typeCommand(s, 'iabbrev def# define');
+    expect(s.bell).toBeFalsy();
+
+    s = runKeys(s, ['i', ...'#i def# '.split(''), 'Escape']);
+    expect(s.lines[0]).toBe('#include define ');
+  });
 });

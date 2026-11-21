@@ -84,6 +84,9 @@ export interface AbbreviationEntry {
   lhs: string;
   rhs: string;
   noremap: boolean;
+  expr?: boolean;
+  silent?: boolean;
+  buffer?: boolean;
 }
 
 export interface ClipboardRegister {
@@ -554,6 +557,8 @@ export interface VimEditorState {
   pendingKeymapPrefix?: string;
   /** 사용자 정의 입력/명령행 약어 (:iabbrev, :cabbrev, :abbrev, 키: 'i:teh' | 'c:W') */
   abbreviations?: Record<string, AbbreviationEntry>;
+  /** 버퍼별 로컬 약어 (:iabbrev <buffer>, :cabbrev <buffer>, bufferId -> map) */
+  bufferAbbreviations?: Record<number, Record<string, AbbreviationEntry>>;
   /** Insert/Command 모드 Ctrl-v 리터럴 및 uXXXX/UXXXXXXXX 유니코드 입력 대기 상태 */
   literalNextPending?: boolean | { kind: 'hex4' | 'hex8'; digits: string };
   /** Insert 모드 Ctrl-k 다이그래프 대기 상태 (null/undefined: 비활성, '': 1번째 키 대기, 'x': 2번째 키 대기) */

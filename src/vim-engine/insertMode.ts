@@ -6,10 +6,12 @@ import {
   ResolvedKeymap,
   applySilentKeymapResult,
   evaluateExprKeymap,
+  executeCmdSegment,
   isKeymapPrefix,
   parseKeySequence,
   resolveKeymapWithMeta,
   runKeymapTokens,
+  splitCmdSegments,
 } from './keymapEngine';
 import { findMatchingAbbrev, isAbbrevTriggerKey } from './abbrevEngine';
 import {
@@ -127,6 +129,7 @@ export function applyInsertAbbrev(
   const match = findMatchingAbbrev(state, 'i', currentLine.slice(0, col), triggerKey, abbrevCtx.seen);
   if (!match) return null;
 
+  const prevMsg = state.commandMessage;
   const startCol = col - match.lhsLen;
   const nextLines = [...state.lines];
   nextLines[line] = currentLine.slice(0, startCol) + currentLine.slice(col);
@@ -146,6 +149,8 @@ export function applyInsertAbbrev(
       ? state.currentChangeKeys.slice(0, Math.max(0, state.currentChangeKeys.length - match.lhsLen))
       : state.currentChangeKeys;
 
+  const nextInsertText = trimInsertText(state.currentInsertText, match.lhsLen);
+
   let s: VimEditorState = {
     ...state,
     lines: nextLines,
@@ -153,15 +158,31 @@ export function applyInsertAbbrev(
     pendingKeys: undefined,
     blockInsertSession: nextBlock,
     currentChangeKeys: nextChangeKeys,
+    currentInsertText: nextInsertText,
   };
+
+  const runEx = (st: VimEditorState, cmd: string) =>
+    executeCommandLine(st, cmd, (s0, k0) => dispatchKey(s0, k0, isReplayingDot, 0));
+
+  const evaluatedRhs = match.entry.expr
+    ? evaluateExprKeymap(s, match.entry.rhs, runEx)
+    : match.entry.rhs;
 
   const nextCtx: AbbrevReplayCtx = match.entry.noremap
     ? { depth: 99, seen: abbrevCtx.seen }
     : { depth: abbrevCtx.depth + 1, seen: new Set([...abbrevCtx.seen, match.entry.lhs]) };
 
-  const tokens = parseKeySequence(match.entry.rhs, state.leaderKey || ' ');
-  for (const tok of tokens) {
-    s = dispatchKey(s, tok, isReplayingDot, macroDepth, nextCtx);
+  const leaderKey = state.leaderKey || ' ';
+  for (const seg of splitCmdSegments(evaluatedRhs)) {
+    if (seg.kind === 'cmd') {
+      s = executeCmdSegment(s, seg.command, runEx);
+    } else {
+      const tokens = parseKeySequence(seg.text, leaderKey);
+      for (const tok of tokens) {
+        s = dispatchKey(s, tok, isReplayingDot, macroDepth, nextCtx);
+        if (s.bell) break;
+      }
+    }
     if (s.bell) break;
   }
 
@@ -173,7 +194,7 @@ export function applyInsertAbbrev(
   ) {
     s = dispatchKey(s, triggerKey, isReplayingDot, macroDepth, nextCtx);
   }
-  return s;
+  return applySilentKeymapResult(prevMsg, s, match.entry.silent);
 }
 
 /** INSERT 모드 커스텀 키매핑 실행 (<Esc> 특수 복귀 및 일반 토큰 재생) */

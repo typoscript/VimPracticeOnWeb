@@ -188,25 +188,32 @@ function lookupKeymapForScript(
 } | null {
   const mode = (modeRaw || 'n').trim().toLowerCase() || 'n';
   if (isAbbr) {
-    const abbrevs = state.abbreviations ?? {};
+    const bufId = state.currentBufferId ?? 1;
+    const sources: Array<{ map: Record<string, import('./types').AbbreviationEntry> | undefined; isBuf: boolean }> = [
+      { map: state.bufferAbbreviations?.[bufId], isBuf: true },
+      { map: state.abbreviations, isBuf: false },
+    ];
     const checkModes = mode === 'i' || mode === 'c' ? [mode] : ['i', 'c'];
-    for (const m of checkModes) {
-      for (const [k, entry] of Object.entries(abbrevs)) {
-        if (entry.mode !== m && !k.startsWith(`${m}:`)) continue;
-        const match = prefixMatch
-          ? entry.lhs === name || entry.lhs.startsWith(name) || name.startsWith(entry.lhs)
-          : entry.lhs === name;
-        if (match) {
-          return {
-            lhs: entry.lhs,
-            rhs: entry.rhs,
-            mode: entry.mode,
-            silent: 0,
-            expr: 0,
-            noremap: entry.noremap ? 1 : 0,
-            nowait: 0,
-            buffer: 0,
-          };
+    for (const { map, isBuf } of sources) {
+      if (!map) continue;
+      for (const m of checkModes) {
+        for (const [k, entry] of Object.entries(map)) {
+          if (entry.mode !== m && !k.startsWith(`${m}:`)) continue;
+          const match = prefixMatch
+            ? entry.lhs === name || entry.lhs.startsWith(name) || name.startsWith(entry.lhs)
+            : entry.lhs === name;
+          if (match) {
+            return {
+              lhs: entry.lhs,
+              rhs: entry.rhs,
+              mode: entry.mode,
+              silent: entry.silent ? 1 : 0,
+              expr: entry.expr ? 1 : 0,
+              noremap: entry.noremap ? 1 : 0,
+              nowait: 0,
+              buffer: isBuf || entry.buffer ? 1 : 0,
+            };
+          }
         }
       }
     }
@@ -1233,6 +1240,54 @@ export const EXTRA_BUILTINS: Record<string, ExtraBuiltin> = {
       const isAbbr = abbrArg !== undefined && isTruthy(abbrArg);
       const hit = lookupKeymapForScript(ctx.state, name, mode, isAbbr, true);
       return hit ? hit.rhs : '';
+    },
+  },
+
+  // ---- 커맨드라인 컨텍스트 조회 (getcmdtype / getcmdline / getcmdpos / setcmdpos) ----
+  getcmdtype: {
+    min: 0,
+    max: 0,
+    fn: (ctx) => {
+      const s = ctx.state;
+      if (s.mode !== 'COMMAND' && s.mode !== 'SEARCH') return '';
+      return s.commandType ?? (s.mode === 'COMMAND' ? ':' : '/');
+    },
+  },
+  getcmdline: {
+    min: 0,
+    max: 0,
+    fn: (ctx) => {
+      const s = ctx.state;
+      if (s.mode !== 'COMMAND' && s.mode !== 'SEARCH') return '';
+      return s.commandBuffer ?? '';
+    },
+  },
+  getcmdpos: {
+    min: 0,
+    max: 0,
+    fn: (ctx) => {
+      const s = ctx.state;
+      if (s.mode !== 'COMMAND' && s.mode !== 'SEARCH') return 0;
+      const buf = s.commandBuffer ?? '';
+      const col = s.commandCursorCol !== undefined ? s.commandCursorCol : buf.length;
+      return col + 1;
+    },
+  },
+  setcmdpos: {
+    min: 1,
+    max: 1,
+    fn: (ctx, [posArg]) => {
+      const s = ctx.state;
+      if (s.mode !== 'COMMAND' && s.mode !== 'SEARCH') return 1;
+      const pos = Math.trunc(toNumber(posArg));
+      if (pos < 1) return 0;
+      const buf = s.commandBuffer ?? '';
+      const targetCol = Math.min(buf.length, pos - 1);
+      ctx.state = {
+        ...s,
+        commandCursorCol: targetCol >= buf.length ? undefined : targetCol,
+      };
+      return 0;
     },
   },
 
