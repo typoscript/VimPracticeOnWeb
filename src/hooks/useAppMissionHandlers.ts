@@ -29,6 +29,7 @@ interface UseAppMissionHandlersParams {
   activePresets: UserKeymapSettings['activePresets'];
   leaderKey: UserKeymapSettings['leaderKey'];
   customKeymaps: UserKeymapSettings['customKeymaps'];
+  userInitConfig?: UserKeymapSettings['userInitConfig'];
   antiPatternDetectorRef: MutableRefObject<AntiPatternDetector>;
   getMissionInitialState: (mission: Mission) => VimEditorState;
   resetActionTimeline: (initState: VimEditorState) => void;
@@ -61,6 +62,7 @@ export function useAppMissionHandlers({
   activePresets,
   leaderKey,
   customKeymaps,
+  userInitConfig,
   antiPatternDetectorRef,
   getMissionInitialState,
   resetActionTimeline,
@@ -122,9 +124,9 @@ export function useAppMissionHandlers({
   const handleResetSandbox = useCallback(() => {
     handleStopGhostReplay();
     resetSessionWithState(
-      buildSandboxInitialState({ activePresets, leaderKey, customKeymaps })
+      buildSandboxInitialState({ activePresets, leaderKey, customKeymaps, userInitConfig })
     );
-  }, [handleStopGhostReplay, resetSessionWithState, activePresets, leaderKey, customKeymaps]);
+  }, [handleStopGhostReplay, resetSessionWithState, activePresets, leaderKey, customKeymaps, userInitConfig]);
 
   const handleResetCustomMission = useCallback(() => {
     if (!customMission) return;

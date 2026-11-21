@@ -5,6 +5,7 @@ import { LessonProgress } from '../../utils/storage';
 import { VimTheme } from '../../utils/theme';
 import { CustomMissionData } from '../../utils/customMission';
 import { CustomKeymapItem } from '../../utils/keymapStorage';
+import type { UserInitConfig } from '../../utils/userInitConfig';
 
 const LessonSelectModal = lazy(() =>
   import('../LessonSelectModal/LessonSelectModal').then((m) => ({
@@ -88,6 +89,8 @@ export interface AppModalsProps {
     onAddCustomKeymap: (rule: Omit<CustomKeymapItem, 'id'>) => void;
     onDeleteCustomKeymap: (id: string) => void;
     onRestoreBackup: () => void;
+    userInitConfig?: UserInitConfig;
+    onApplyUserInitConfig?: (config: UserInitConfig) => { ok: boolean; message: string };
   };
   byoc: {
     isOpen: boolean;
@@ -190,6 +193,8 @@ export function AppModals({
             onDeleteCustomKeymap={config.onDeleteCustomKeymap}
             options={editorState.options}
             onRestoreBackup={config.onRestoreBackup}
+            userInitConfig={config.userInitConfig}
+            onApplyUserInitConfig={config.onApplyUserInitConfig}
           />
         )}
 

@@ -173,6 +173,7 @@ export function App() {
     activePresets: hardcore.activePresets,
     leaderKey: hardcore.leaderKey,
     customKeymaps: hardcore.customKeymaps,
+    userInitConfig: hardcore.userInitConfig,
     antiPatternDetectorRef,
     getMissionInitialState,
     resetActionTimeline: timeline.resetActionTimeline,
@@ -435,6 +436,8 @@ export function App() {
           onAddCustomKeymap: hardcore.handleAddCustomKeymap,
           onDeleteCustomKeymap: hardcore.handleDeleteCustomKeymap,
           onRestoreBackup: missionHandlers.handleRestoreBackup,
+          userInitConfig: hardcore.userInitConfig,
+          onApplyUserInitConfig: hardcore.handleApplyUserInitConfig,
         }}
         byoc={{
           isOpen: viewSettings.isBYOCModalOpen,

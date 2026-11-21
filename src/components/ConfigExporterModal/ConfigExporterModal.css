@@ -859,3 +859,68 @@
   border: 1px solid rgba(243, 139, 168, 0.35);
 }
 
+.playground-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1rem 1.25rem;
+  overflow-y: auto;
+}
+
+.playground-toggle-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: var(--text-secondary, #bac2de);
+  cursor: pointer;
+}
+
+.playground-controls-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.playground-format-group {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.playground-presets-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.playground-preset-caption {
+  font-size: 0.75rem;
+  color: var(--text-muted, #9399b2);
+}
+
+.playground-preset-chip {
+  background: rgba(137, 180, 250, 0.12);
+  color: #89b4fa;
+  border: 1px solid rgba(137, 180, 250, 0.32);
+  border-radius: 999px;
+  padding: 0.22rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.playground-preset-chip:hover {
+  background: rgba(137, 180, 250, 0.22);
+  border-color: #89b4fa;
+}
+
+.playground-textarea {
+  min-height: 205px;
+  line-height: 1.5;
+  tab-size: 2;
+}
+

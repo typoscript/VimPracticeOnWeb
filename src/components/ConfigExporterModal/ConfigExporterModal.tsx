@@ -13,6 +13,8 @@ import './ConfigExporterModal.css';
 import { t } from '../../i18n';
 import { ConfigExporterKeymapsTab } from './ConfigExporterKeymapsTab';
 import { ConfigExporterBackupTab } from './ConfigExporterBackupTab';
+import { ConfigExporterPlaygroundTab } from './ConfigExporterPlaygroundTab';
+import type { UserInitConfig } from '../../utils/userInitConfig';
 
 export interface ConfigExporterModalProps {
   isOpen: boolean;
@@ -28,6 +30,8 @@ export interface ConfigExporterModalProps {
   onDeleteCustomKeymap?: (id: string) => void;
   options?: Partial<import('../../vim-engine').VimOptions>;
   onRestoreBackup?: () => void;
+  userInitConfig?: UserInitConfig;
+  onApplyUserInitConfig?: (config: UserInitConfig) => { ok: boolean; message: string };
 }
 
 export const ConfigExporterModal: React.FC<ConfigExporterModalProps> = ({
@@ -44,8 +48,10 @@ export const ConfigExporterModal: React.FC<ConfigExporterModalProps> = ({
   onDeleteCustomKeymap,
   options,
   onRestoreBackup,
+  userInitConfig,
+  onApplyUserInitConfig,
 }) => {
-  const [activeMainTab, setActiveMainTab] = useState<'keymaps' | 'exporter' | 'backup'>('keymaps');
+  const [activeMainTab, setActiveMainTab] = useState<'keymaps' | 'playground' | 'exporter' | 'backup'>('keymaps');
   const [activeTab, setActiveTab] = useState<ConfigPlatform>('vimrc');
   const [copied, setCopied] = useState(false);
 
@@ -166,6 +172,15 @@ export const ConfigExporterModal: React.FC<ConfigExporterModalProps> = ({
           </button>
           <button
             role="tab"
+            aria-selected={activeMainTab === 'playground'}
+            className={`config-nav-tab ${activeMainTab === 'playground' ? 'active' : ''}`}
+            onClick={() => setActiveMainTab('playground')}
+            data-testid="nav-playground-btn"
+          >
+            🌙 {t('init.lua 플레이그라운드')}
+          </button>
+          <button
+            role="tab"
             aria-selected={activeMainTab === 'exporter'}
             className={`config-nav-tab ${activeMainTab === 'exporter' ? 'active' : ''}`}
             onClick={() => setActiveMainTab('exporter')}
@@ -194,6 +209,13 @@ export const ConfigExporterModal: React.FC<ConfigExporterModalProps> = ({
           customKeymaps={customKeymaps}
           onAddCustomKeymap={onAddCustomKeymap}
           onDeleteCustomKeymap={onDeleteCustomKeymap}
+        />
+
+        {/* 1-b. 나만의 init.lua / .vimrc 영구 설정 플레이그라운드 */}
+        <ConfigExporterPlaygroundTab
+          activeMainTab={activeMainTab}
+          userInitConfig={userInitConfig}
+          onApplyUserInitConfig={onApplyUserInitConfig}
         />
 
         {/* 3. 플랫폼별 설정 코드 뷰어 섹션 */}

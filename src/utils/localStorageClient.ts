@@ -24,6 +24,7 @@ export const STORAGE_KEYS = {
   KEYMAP_PRESETS: 'vim_keymap_presets_v1',
   LEADER_KEY: 'vim_leader_key_v1',
   CUSTOM_KEYMAPS: 'vim_custom_keymaps_v1',
+  USER_INIT_CONFIG: 'vim_user_init_config_v1',
   THEME: 'vim_selected_theme',
   SOUND_MUTED: 'vim_sound_muted',
   LOCALE: 'vim_locale_v1',

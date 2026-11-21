@@ -13,6 +13,12 @@ import {
   compileUserKeymaps,
   CustomKeymapItem,
 } from '../utils/keymapStorage';
+import {
+  UserInitConfig,
+  loadUserInitConfig,
+  saveUserInitConfig,
+  applyUserInitConfigToState,
+} from '../utils/userInitConfig';
 import { t } from '../i18n';
 
 /**
@@ -74,6 +80,7 @@ export function useHardcoreAndKeymaps(
   const [activePresets, setActivePresets] = useState<Record<string, boolean>>(() => loadActivePresets());
   const [leaderKey, setLeaderKey] = useState<string>(() => loadLeaderKey());
   const [customKeymaps, setCustomKeymaps] = useState<CustomKeymapItem[]>(() => loadCustomKeymaps());
+  const [userInitConfig, setUserInitConfig] = useState<UserInitConfig>(() => loadUserInitConfig());
 
   const updateKeymapsInEditor = useCallback(
     (
@@ -151,6 +158,39 @@ export function useHardcoreAndKeymaps(
     [activePresets, leaderKey, updateKeymapsInEditor]
   );
 
+  const handleApplyUserInitConfig = useCallback(
+    (nextCfg: UserInitConfig): { ok: boolean; message: string } => {
+      // 먼저 가상 검증을 수행해 구문 오류가 있으면 기존 에디터 상태를 건드리지 않고 에러 반환
+      const probeState: VimEditorState = {
+        lines: [''],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+        leaderKey,
+        userKeymaps: compileUserKeymaps(activePresets, leaderKey, customKeymaps),
+      };
+      const check = applyUserInitConfigToState(probeState, nextCfg);
+      if (!check.ok) {
+        return { ok: false, message: check.message };
+      }
+
+      setUserInitConfig(nextCfg);
+      saveUserInitConfig(nextCfg);
+      setEditorStateRef.current?.((st) => {
+        const base: VimEditorState = {
+          ...st,
+          leaderKey,
+          userKeymaps: compileUserKeymaps(activePresets, leaderKey, customKeymaps),
+        };
+        const applied = applyUserInitConfigToState(base, nextCfg);
+        return applied.ok
+          ? { ...applied.state, commandMessage: applied.message }
+          : st;
+      });
+      return { ok: true, message: check.message };
+    },
+    [activePresets, leaderKey, customKeymaps, setEditorStateRef]
+  );
+
   const [currentTheme, setCurrentTheme] = useState<VimTheme>(() => loadThemeSetting());
   useEffect(() => {
     applyTheme(currentTheme);
@@ -166,6 +206,7 @@ export function useHardcoreAndKeymaps(
     setActivePresets(loadActivePresets());
     setLeaderKey(loadLeaderKey());
     setCustomKeymaps(loadCustomKeymaps());
+    setUserInitConfig(loadUserInitConfig());
     setHardcoreMode(loadHardcoreMode());
     const restoredTheme = loadThemeSetting();
     setCurrentTheme(restoredTheme);
@@ -184,10 +225,12 @@ export function useHardcoreAndKeymaps(
     activePresets,
     leaderKey,
     customKeymaps,
+    userInitConfig,
     handleTogglePreset,
     handleChangeLeaderKey,
     handleAddCustomKeymap,
     handleDeleteCustomKeymap,
+    handleApplyUserInitConfig,
     currentTheme,
     handleThemeChange,
     reloadHardcoreAndKeymaps,

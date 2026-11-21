@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 187개 테스트 파일, 2,214개 테스트 100% 통과 필수)*
+  *(현재 188개 테스트 파일, 2,219개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -215,6 +215,7 @@
 - **`mini.ai` 스타일 Next/Last 텍스트 객체 (`in`/`an`/`il`/`al`) + 레슨 110 + `index.js` 초기 번들 경량화 (`src/vim-engine/miniAiTextObjects.ts`, `AppMainWorkspace.tsx`, `AppModals.tsx`)**:
   - **Next/Last 텍스트 객체**: 커서가 따옴표(`"`, `'`, `` ` ``)·괄호(`()`, `{}`, `[]`, `<>`, `b`, `B`) 밖에 있어도 버퍼 전체에서 다음(`n`: `cin"`, `din(`, `dan"`, `>in{`, `gUin"`) 또는 이전(`l`: `cil"`, `yil[`, `val(`) 짝을 찾아 원격으로 편집하며 `[count]`·도트 반복(`.`)·Visual 선택·Which-Key 실시간 안내를 지원합니다. **레슨 110**을 추가해 전체 커리큘럼 **110강**을 완성했습니다.
   - **초기 번들 경량화**: 첫 화면에서 닫혀 있는 7종 보조 패널·모달(`MarksJumpVisualizer`, `MacroDebugger`, `VimGrammarASTViewer`, `SpeedrunPanel`, `LessonSelectModal`, `FuzzyFinder`, `HelpViewer`)을 `React.lazy` + `Suspense`로 분리해 메인 `index.js` 청크를 `259.91 kB` → `< 200 kB` 로 대폭 경량화했습니다.
+- **나만의 `init.lua` / `.vimrc` 영구 설정 플레이그라운드 (`src/utils/userInitConfig.ts`, `ConfigExporterPlaygroundTab.tsx`, `useHardcoreAndKeymaps.ts`, `missionInitialState.ts`, `backupStorage.ts`)**: `ConfigExporterModal`에 실시간 `init.lua`(Neovim Lua) / `.vimrc`(Vimscript) 편집 탭과 원클릭 프리셋 3종(LazyVim 기본 · 미니멀 프로 · 클래식 `.vimrc`)을 추가했습니다. 작성한 스크립트는 `localStorage`(`vim_user_init_config_v1`, JSON 백업 `BACKUP_KEYS` 포함)에 영구 저장되며, 적용 즉시 현재 에디터와 **Which-Key 팝업**에 옵션·키맵·리더키가 반영되고 자유 연습장(Sandbox) 진입/초기화 시에도 자동 적용됩니다.
 
 ---
 

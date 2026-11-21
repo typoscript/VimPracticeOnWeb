@@ -7,11 +7,13 @@ import {
 import { Mission } from '../types/mission';
 import { sandboxInitialLines } from '../data/sandbox';
 import { compileUserKeymaps, CustomKeymapItem } from './keymapStorage';
+import { UserInitConfig, applyUserInitConfigToState } from './userInitConfig';
 
 export interface UserKeymapSettings {
   activePresets: Record<string, boolean>;
   leaderKey: string;
   customKeymaps: CustomKeymapItem[];
+  userInitConfig?: UserInitConfig;
 }
 
 /**
@@ -131,8 +133,9 @@ export function buildSandboxInitialState({
   activePresets,
   leaderKey,
   customKeymaps,
+  userInitConfig,
 }: UserKeymapSettings): VimEditorState {
-  return {
+  const base: VimEditorState = {
     lines: sandboxInitialLines(),
     cursor: { line: 0, col: 0 },
     mode: 'NORMAL',
@@ -141,6 +144,11 @@ export function buildSandboxInitialState({
     userKeymaps: compileUserKeymaps(activePresets, leaderKey, customKeymaps),
     leaderKey,
   };
+  if (userInitConfig && userInitConfig.enabled && userInitConfig.code.trim()) {
+    const applied = applyUserInitConfigToState(base, userInitConfig);
+    if (applied.ok) return applied.state;
+  }
+  return base;
 }
 
 /**
