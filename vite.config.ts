@@ -9,7 +9,7 @@ import react from '@vitejs/plugin-react';
 export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly string[] }> = [
   {
     name: 'vim-engine-data',
-    files: ['spellData.ts', 'helpData.ts', 'messagesEn.ts'],
+    files: ['spellData.ts', 'helpData.ts', 'messagesEn.ts', 'wildmenuCatalog.ts'],
   },
   {
     name: 'vim-engine-core',
@@ -20,6 +20,7 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'cursor.ts',
       'vimRegex.ts',
       'vimscriptValues.ts',
+      'vimscriptEditorBuiltins.ts',
       'vimscriptBuiltinsExtra.ts',
       'vimscriptBuiltins.ts',
       'vimscriptLexer.ts',
@@ -43,16 +44,15 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
     files: [
       'syntaxEngine.ts',
       'ftpluginEngine.ts',
+      'setOptionAssigners.ts',
       'setEngine.ts',
       'registers.ts',
       'bufferEngine.ts',
       'bufferLifecycle.ts',
       'tabEngine.ts',
+      'splitWindowCore.ts',
       'splitWindow.ts',
-      'diffEngine.ts',
       'sessionEngine.ts',
-      'netrwEngine.ts',
-      'fuzzyFinder.ts',
       'argEngine.ts',
       'errorformat.ts',
       'errorListCore.ts',
@@ -65,8 +65,6 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'autocmdEngine.ts',
       'completion.ts',
       'helpEngine.ts',
-      'spellEngine.ts',
-      'cmdlineWindow.ts',
     ],
   },
   {
@@ -101,6 +99,11 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
   {
     name: 'vim-engine-ex',
     files: [
+      'diffEngine.ts',
+      'netrwEngine.ts',
+      'fuzzyFinder.ts',
+      'spellEngine.ts',
+      'cmdlineWindow.ts',
       'exSubstitute.ts',
       'exRange.ts',
       'exRangeOps.ts',
