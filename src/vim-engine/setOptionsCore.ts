@@ -27,6 +27,7 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   foldexpr: '0',
   foldmarker: '{{{,}}}',
   foldlevel: 0,
+  foldenable: true,
   scrollbind: false,
   nrformats: 'bin,hex',
   modifiable: true,
@@ -96,6 +97,8 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   foldmarker: 'foldmarker',
   fdl: 'foldlevel',
   foldlevel: 'foldlevel',
+  fen: 'foldenable',
+  foldenable: 'foldenable',
   cms: 'commentstring',
   commentstring: 'commentstring',
   efm: 'errorformat',
@@ -152,6 +155,7 @@ export const WINDOW_LOCAL_OPTION_KEYS = new Set<keyof VimOptions>([
   'foldexpr',
   'foldmarker',
   'foldlevel',
+  'foldenable',
   'scrolloff',
   'sidescroll',
   'sidescrolloff',
@@ -372,6 +376,7 @@ export function formatOptionsList(
     'smartindent',
     'shiftround',
     'wrapscan',
+    'foldenable',
   ];
 
   const numericKeys: (keyof VimOptions)[] = ['tabstop', 'shiftwidth', 'softtabstop', 'textwidth', 'scrolloff', 'sidescroll', 'sidescrolloff'];
@@ -519,6 +524,7 @@ const BOOLEAN_OPTION_KEYS = new Set<keyof VimOptions>([
   'smartindent',
   'shiftround',
   'wrapscan',
+  'foldenable',
 ]);
 
 /**

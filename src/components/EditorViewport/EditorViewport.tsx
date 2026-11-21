@@ -155,7 +155,7 @@ export function EditorViewport({
             jumpIndex={editorState.jumpIndex}
             onJumpToMark={onJumpToMark}
             viewport={isActive ? editorState.viewport : pane.viewport}
-            folds={editorState.folds}
+            folds={editorState.options?.foldenable === false ? undefined : editorState.folds}
             completionSession={isActive ? editorState.completionSession : undefined}
             insertNormalSession={isActive ? editorState.insertNormalSession : undefined}
             insertRegisterPending={isActive ? editorState.insertRegisterPending : undefined}
@@ -313,7 +313,7 @@ export function EditorViewport({
             jumpIndex={displayEditorState.jumpIndex}
             onJumpToMark={onJumpToMark}
             viewport={displayEditorState.viewport}
-            folds={displayEditorState.folds}
+            folds={displayEditorState.options?.foldenable === false ? undefined : displayEditorState.folds}
             completionSession={displayEditorState.completionSession}
             insertNormalSession={displayEditorState.insertNormalSession}
             insertRegisterPending={displayEditorState.insertRegisterPending}

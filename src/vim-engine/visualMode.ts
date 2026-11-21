@@ -772,13 +772,14 @@ export function handleVisualModeKey(
   if (bracketRes) return bracketRes;
 
   // VISUAL 모드 내 커서 이동 (모션 평가 및 카운트 반영)
+  const opts = getOptions(state);
   const motionCursor = evaluateMotionWithCount(
     state.lines,
     state.cursor,
     key,
     parsed.totalCount,
-    state.folds,
-    getOptions(state).whichwrap
+    opts.foldenable === false ? undefined : state.folds,
+    opts.whichwrap
   );
 
   if (motionCursor) {

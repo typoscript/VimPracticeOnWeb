@@ -44,7 +44,8 @@ type BooleanOrSyntaxOptionKey =
   | 'autoindent'
   | 'smartindent'
   | 'shiftround'
-  | 'wrapscan';
+  | 'wrapscan'
+  | 'foldenable';
 
 const VALID_FOLDMETHODS: readonly FoldMethod[] = ['manual', 'indent', 'marker', 'syntax', 'expr'];
 const VALID_NRFORMATS = new Set(['bin', 'octal', 'hex', 'alpha', 'unsigned', 'blank']);
@@ -88,6 +89,7 @@ const BOOLEAN_OR_SYNTAX_KEYS = new Set<BooleanOrSyntaxOptionKey>([
   'smartindent',
   'shiftround',
   'wrapscan',
+  'foldenable',
 ]);
 
 const DEFAULT_ERRORFORMAT = '%f:%l:%c:%m,%f:%l:%m,%f(%l\\,%c):%m';

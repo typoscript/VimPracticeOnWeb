@@ -573,13 +573,14 @@ export function handleNormalEditingAndMotionFallback(
     return moveByExtraMotion(state, key, parsed.totalCount);
   }
 
+  const opts = getOptions(state);
   let motionCursor = evaluateMotionWithCount(
     state.lines,
     state.cursor,
     key,
     parsed.totalCount,
-    state.folds,
-    getOptions(state).whichwrap
+    opts.foldenable === false ? undefined : state.folds,
+    opts.whichwrap
   );
 
   if (motionCursor) {

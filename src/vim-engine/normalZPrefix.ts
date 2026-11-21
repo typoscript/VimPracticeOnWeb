@@ -12,6 +12,12 @@ import {
   foldToggle,
   foldCloseAll,
   foldOpenAll,
+  foldMore,
+  foldReduce,
+  foldOpenCursorLine,
+  foldUpdate,
+  foldRecursive,
+  toggleFoldEnable,
   createFold,
   deleteFoldAtCursor,
   deleteAllFoldsAtCursor,
@@ -120,10 +126,19 @@ export function handleNormalZPrefix(
     if (key === 't') return scrollToTop(state);
     if (key === 'b') return scrollToBottom(state);
     if (key === 'c') return foldClose(state);
+    if (key === 'C') return foldRecursive(state, 'close');
     if (key === 'o') return foldOpen(state);
+    if (key === 'O') return foldRecursive(state, 'open');
     if (key === 'a') return foldToggle(state);
+    if (key === 'A') return foldRecursive(state, 'toggle');
     if (key === 'M') return foldCloseAll(state);
     if (key === 'R') return foldOpenAll(state);
+    if (key === 'm') return foldMore(state, parsedCount1 ?? 1);
+    if (key === 'r') return foldReduce(state, parsedCount1 ?? 1);
+    if (key === 'v') return foldOpenCursorLine(state);
+    if (key === 'x') return foldUpdate(state, true);
+    if (key === 'X') return foldUpdate(state, false);
+    if (key === 'i') return toggleFoldEnable(state);
     if (key === 'd') return deleteFoldAtCursor(state);
     if (key === 'D') return deleteAllFoldsAtCursor(state);
     if (key === 'E') return eliminateAllFolds(state);
