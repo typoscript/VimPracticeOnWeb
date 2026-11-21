@@ -507,6 +507,19 @@ export {
 } from './harpoonEngine';
 export type { HarpoonMenuState } from './types';
 
+// ---- yanky.nvim 스타일 Yank Ring (p/P 직후 Ctrl-p/Ctrl-n, :YankyRingHistory, :Yanks) ----
+export {
+  YANK_HISTORY_LIMIT,
+  pushYankHistory,
+  openYankyMenu,
+  closeYankyMenu,
+  clearYankHistory,
+  cycleYankRing,
+  handleYankyMenuKey,
+  executeYankyCommand,
+} from './yankRingEngine';
+export type { YankyMenuState, YankRingSession } from './types';
+
 // ---- mini.ai 스타일 Next/Last 텍스트 객체 (in/an/il/al) ----
 export { getMiniAiNextLastRange } from './textObjects';
 export type { MiniAiScope } from './textObjects';

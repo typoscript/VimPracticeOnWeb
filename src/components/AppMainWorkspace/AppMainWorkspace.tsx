@@ -47,6 +47,9 @@ const WhichKeyPopup = lazy(() =>
 const HarpoonMenu = lazy(() =>
   import('../HarpoonMenu/HarpoonMenu').then((m) => ({ default: m.HarpoonMenu }))
 );
+const YankyMenu = lazy(() =>
+  import('../YankyMenu/YankyMenu').then((m) => ({ default: m.YankyMenu }))
+);
 
 const SANDBOX_QUICK_TRY_CHIPS: ReadonlyArray<{
   id: string;
@@ -71,6 +74,12 @@ const SANDBOX_QUICK_TRY_CHIPS: ReadonlyArray<{
     label: '⚓ :HarpoonMenu',
     titleKey: i18nKey('핀 파일 빠른 전환 (:HarpoonMenu)'),
     keys: ['Escape', ...':HarpoonMenu'.split(''), 'Enter'],
+  },
+  {
+    id: 'yanky',
+    label: '📋 :Yanks',
+    titleKey: i18nKey('복사 링 히스토리 (:YankyRingHistory)'),
+    keys: ['Escape', ...':Yanks'.split(''), 'Enter'],
   },
   {
     id: 'livegrep',
@@ -468,6 +477,13 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
 
             {displayEditorState.harpoonMenu?.isOpen && (
               <HarpoonMenu
+                editorState={displayEditorState}
+                onPressKey={editor.processKeyInput}
+              />
+            )}
+
+            {displayEditorState.yankyMenu?.isOpen && (
+              <YankyMenu
                 editorState={displayEditorState}
                 onPressKey={editor.processKeyInput}
               />

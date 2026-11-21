@@ -37,6 +37,7 @@ import {
 } from './netrwEngine';
 import { openOilBuffer, closeOilBuffer, applyOilBufferChanges } from './oilEngine';
 import { executeHarpoonCommand } from './harpoonEngine';
+import { executeYankyCommand } from './yankRingEngine';
 import { executeTroubleCommand } from './troubleEngine';
 import { executeFindFileCommand, openFuzzyFinder } from './fuzzyFinder';
 import { openHelp, closeHelp } from './helpEngine';
@@ -305,6 +306,12 @@ function tryExecuteNetrwAndBufferSwitchCommand(
   );
   if (harpoonMatch) {
     return finishEx(executeHarpoonCommand(state, harpoonMatch[1], harpoonMatch[2] ?? ''));
+  }
+
+  // yanky.nvim 스타일 복사 이력 링: :YankyRingHistory, :Yanks, :YankyClearHistory
+  const yankyMatch = cleanCmdRaw.match(/^(YankyRingHistory|Yanks|YankyClearHistory)$/i);
+  if (yankyMatch) {
+    return finishEx(executeYankyCommand(state, yankyMatch[1]));
   }
 
   // trouble.nvim 스타일 프로젝트 진단·TODO·퀵픽스 통합 허브: :Trouble [mode|next|prev|toggle|close]

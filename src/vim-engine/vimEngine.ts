@@ -12,6 +12,12 @@ import { handleCommandLineWindowKey } from './cmdlineWindow';
 import { handleNetrwKey } from './netrwEngine';
 import { handleOilNavigationKey } from './oilEngine';
 import { handleHarpoonMenuKey } from './harpoonEngine';
+import {
+  handleYankyMenuKey,
+  cycleYankRing,
+  isYankRingCycleKey,
+  updateYankRing,
+} from './yankRingEngine';
 import { handleFuzzyFinderKey } from './fuzzyFinder';
 import { handleHelpKey } from './helpEngine';
 import { syncLiveLspDiagnostics } from './lspEngine';
@@ -62,6 +68,7 @@ function finishInsertNormalSession(
     !nextState.helpSession?.isOpen &&
     !nextState.flashJump?.isOpen &&
     !nextState.harpoonMenu?.isOpen &&
+    !nextState.yankyMenu?.isOpen &&
     !nextState.multiCursor?.isOpen &&
     !nextState.functionDraft
   ) {
@@ -107,6 +114,11 @@ export function rawHandleKey(
   // harpoon.nvim 빠른 파일 전환 팝업 메뉴 처리 (:HarpoonMenu)
   if (state.harpoonMenu?.isOpen) {
     return handleHarpoonMenuKey(state, key);
+  }
+
+  // yanky.nvim 복사 이력 팝업 메뉴 처리 (:YankyRingHistory / :Yanks)
+  if (state.yankyMenu?.isOpen) {
+    return handleYankyMenuKey(state, key, rawHandleKey);
   }
 
   // vim-visual-multi 다중 커서 세션 처리 (g Ctrl-n / :MultiCursor)
@@ -203,6 +215,19 @@ export function rawHandleKey(
         },
       };
     }
+  }
+
+  // yanky.nvim: p/P 직후 Ctrl-p / Ctrl-n 으로 붙여넣은 텍스트를 이전/다음 복사본으로 제자리 교체
+  if (
+    state.yankRing &&
+    state.mode === 'NORMAL' &&
+    !state.pendingKeys &&
+    macroDepth === 0 &&
+    !isReplayingDot &&
+    isYankRingCycleKey(key)
+  ) {
+    const cycled = cycleYankRing(state, key, rawHandleKey);
+    if (cycled) return cycled;
   }
 
   const prevTopRow = getViewport(state).topRow;
@@ -409,6 +434,9 @@ export function rawHandleKey(
       nextState = { ...nextState, lineUndoSnapshot: null };
     }
   }
+
+  // yanky.nvim 복사 이력 기록 및 p/P 링 세션 갱신
+  nextState = updateYankRing(state, nextState, key, isReplayingDot || macroDepth > 0);
 
   // 특수 마크('., '[, ']) 자동 갱신 (버퍼 변경 시)
   const specialMarksPatch = computeSpecialMarksUpdate(state, nextState);

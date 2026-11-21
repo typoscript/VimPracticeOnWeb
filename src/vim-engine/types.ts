@@ -923,6 +923,12 @@ export interface VimEditorState {
   harpoonList?: string[];
   /** harpoon.nvim 빠른 파일 전환 팝업 메뉴 상태 */
   harpoonMenu?: HarpoonMenuState | null;
+  /** yanky.nvim 스타일 복사 이력 링 버퍼 (최신 항목이 index 0, 최대 30건) */
+  yankHistory?: ClipboardRegister[];
+  /** yanky.nvim p/P 직후 Ctrl-p/Ctrl-n 순환 붙여넣기 세션 */
+  yankRing?: YankRingSession | null;
+  /** yanky.nvim 복사 이력 팝업 메뉴 상태 (:YankyRingHistory / :Yanks) */
+  yankyMenu?: YankyMenuState | null;
   /** trouble.nvim 스타일 프로젝트 진단·TODO·퀵픽스 통합 패널 상태 (:Trouble) */
   troublePanel?: TroubleSessionState | null;
   /** mbbill/undotree 스타일 시각적 Undo Tree 분할 패널 상태 (:UndotreeToggle) */
@@ -1096,6 +1102,20 @@ export interface HelpSession {
 export interface HarpoonMenuState {
   isOpen: boolean;
   selectedIndex: number;
+}
+
+export interface YankyMenuState {
+  isOpen: boolean;
+  selectedIndex: number;
+}
+
+export interface YankRingSession {
+  /** 현재 붙여넣은 복사 이력 index (0 = 가장 최근) */
+  index: number;
+  /** 붙여넣기에 사용한 키 */
+  key: string;
+  /** 붙여넣기 직전 상태 (교체 시 이 상태에서 다시 붙여넣어 단일 Undo 유지) */
+  base: VimEditorState;
 }
 
 export type TroubleMode = 'all' | 'diagnostics' | 'todo' | 'quickfix';

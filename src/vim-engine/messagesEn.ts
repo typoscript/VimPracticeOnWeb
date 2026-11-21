@@ -521,4 +521,9 @@ export const EN_MESSAGES: Record<string, string> = {
   "[MultiCursor INSERT] {count}개 커서 동시 입력 중 (Esc 종료)": "[MultiCursor INSERT] Editing {count} cursors (Esc to finish)",
   "[Undotree] 시각적 Undo 트리 열림 ({count}개 노드 · 클릭 또는 :undo N 으로 이동)": "[Undotree] Visual undo tree opened ({count} nodes · click or :undo N to jump)",
   "[Undotree] 패널을 닫았습니다": "[Undotree] Panel closed",
+  "[Yanky] 복사 기록이 비어 있습니다": "[Yanky] Yank history is empty",
+  "[Yanky] 링 {index}/{total}: {preview}": "[Yanky] Ring {index}/{total}: {preview}",
+  "[Yanky] 순환할 다른 복사 기록이 없습니다": "[Yanky] No other yank history to cycle",
+  "[Yanky] 복사 기록 {count}건 (j/k 이동 · Enter 붙여넣기 · d 삭제 · Esc 닫기)": "[Yanky] {count} yanks (j/k move · Enter paste · d delete · Esc close)",
+  "[Yanky] 복사 기록을 모두 비웠습니다": "[Yanky] Cleared yank history",
 };

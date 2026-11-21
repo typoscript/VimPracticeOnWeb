@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 191개 테스트 파일, 2,250개 테스트 100% 통과 필수)*
+  *(현재 193개 테스트 파일, 2,257개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -227,6 +227,7 @@
 - **`mbbill/undotree` 시각적 Undo Tree 분할 패널 & Sandbox 퀵런처 & `Neovim` 커리큘럼 필터 (`src/vim-engine/undoTreeEngine.ts`, `src/components/UndotreePanel/`, `AppMainWorkspace.tsx`, `src/utils/missionFilters.ts`)**:
   - **Undotree 시각 패널 (`:UndotreeToggle`, `:Undotree`, `:UndotreeShow`, `:UndotreeHide`)**: 기존 분기형 `undoTreeNodes` 상태를 기반으로 최신 노드 상단·루트 `#0` 하단의 ASCII 브랜치 그래프(`buildUndotreeGraphRows`), 저장 스냅샷 배지(`S1`), 변경 줄 델타(`+N`/`-M`), 우측 실시간 Diff 미리보기, `g-`/`g+` 시간 여행 및 노드 클릭 즉시 복원을 `React.lazy` 분할 패널로 구현했습니다.
   - **Sandbox 퀵런처 칩 바 & `Neovim` 필터 태그**: 자유 연습장 상단에 9종 원클릭 체험 칩(`:Oil`, `:Trouble`, `:HarpoonMenu`, `:LiveGrep`, `:UndotreeToggle`, `gs`, `]h`, `:MultiCursor user`, `:source init.lua`)을 추가하고, `LessonSelectModal` 카테고리 필터에 **`Neovim`** 태그(레슨 101~112 모아보기)를 추가했습니다.
+- **`yanky.nvim` Yank Ring (`src/vim-engine/yankRingEngine.ts`, `src/components/YankyMenu/`, `vimEngine.ts`, `exWorkspaceCommands.ts`)**: 모든 `y`/`d`/`c` 복사 이력을 `yankHistory` 링 버퍼(최신순·최대 30건·중복은 맨 앞으로 이동, 블랙홀 레지스터 `"_` 제외)에 누적합니다. NORMAL 모드 순수 `p`/`P`(카운트 허용, 레지스터 지정·`gp`·`dp` 제외) 직후 `Ctrl-p`(이전 복사본)/`Ctrl-n`(다음 복사본)로 방금 붙여넣은 텍스트를 제자리 교체하며(`yankRing.base` 에서 재붙여넣기해 `u` 한 번에 원복, 무명 레지스터·클립보드는 유지, 한 바퀴 순환), 다른 키를 누르면 세션이 끝납니다. `:YankyRingHistory`/`:Yanks` 지연 로딩 팝업(`j`/`k` 이동, `Enter`/`p` 뒤에·`P` 앞에·`1-9` 즉시 붙여넣기, `d` 삭제, `Esc`/`q` 닫기, 행 클릭)과 `:YankyClearHistory`, Sandbox 퀵런처 칩(`:Yanks`)을 제공하며 엔진 파일은 `vim-engine-neovim` 청크에 속합니다.
 
 ---
 

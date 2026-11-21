@@ -1,0 +1,125 @@
+.yanky-menu-panel {
+  width: 100%;
+  max-width: 960px;
+  margin-top: 6px;
+  background-color: #181825;
+  border: 1px solid #f9e2af;
+  border-radius: 8px;
+  padding: 0.55rem 0.8rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  font-size: 12.5px;
+  box-sizing: border-box;
+}
+
+.yanky-menu-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.yanky-menu-title {
+  color: #f9e2af;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.yanky-menu-count {
+  background-color: rgba(249, 226, 175, 0.16);
+  color: #f9e2af;
+  border: 1px solid rgba(249, 226, 175, 0.4);
+  border-radius: 4px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.yanky-menu-close {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: #a6adc8;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0 4px;
+}
+
+.yanky-menu-close:hover {
+  color: #f38ba8;
+}
+
+.yanky-menu-empty {
+  color: #a6adc8;
+  padding: 0.45rem 0.25rem;
+}
+
+.yanky-menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-height: 190px;
+  overflow-y: auto;
+}
+
+.yanky-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  color: #cdd6f4;
+}
+
+.yanky-menu-item:hover,
+.yanky-menu-item.selected {
+  background-color: rgba(249, 226, 175, 0.14);
+  border-color: rgba(249, 226, 175, 0.45);
+}
+
+.yanky-slot-badge {
+  color: #f9e2af;
+  font-weight: 700;
+  min-width: 14px;
+  text-align: center;
+}
+
+.yanky-type-badge {
+  font-size: 9.5px;
+  font-weight: 800;
+  padding: 0 5px;
+  border-radius: 3px;
+  background-color: rgba(137, 180, 250, 0.18);
+  color: #89b4fa;
+}
+
+.yanky-type-badge.type-line {
+  background-color: rgba(166, 227, 161, 0.18);
+  color: #a6e3a1;
+}
+
+.yanky-type-badge.type-block {
+  background-color: rgba(245, 194, 231, 0.18);
+  color: #f5c2e7;
+}
+
+.yanky-entry-text {
+  flex: 1;
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.yanky-entry-more {
+  color: #6c7086;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.yanky-menu-footer {
+  margin-top: 0.45rem;
+  color: #6c7086;
+  font-size: 11px;
+}

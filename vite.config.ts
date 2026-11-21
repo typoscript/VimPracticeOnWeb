@@ -104,6 +104,7 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'gitSignsEngine.ts',
       'oilEngine.ts',
       'harpoonEngine.ts',
+      'yankRingEngine.ts',
       'troubleEngine.ts',
       'lspEngine.ts',
       'lspRefactorEngine.ts',
