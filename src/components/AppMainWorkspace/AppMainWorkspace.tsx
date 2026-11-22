@@ -1,4 +1,5 @@
-import React, { lazy, Suspense, useState } from 'react';
+import React, { lazy, Suspense, useRef, useState } from 'react';
+import { LOCAL_FILE_ACCEPT } from '../../utils/sandboxLocalFiles';
 import { MissionPanel } from '../MissionPanel/MissionPanel';
 import { Keycaster } from '../Keycaster/Keycaster';
 import { DiffViewer } from '../DiffViewer/DiffViewer';
@@ -197,6 +198,10 @@ export interface WorkspaceMissionProps {
   ghostReplayProgress: MissionPanelProps['ghostReplayProgress'];
   onOpenBYOCModal: () => void;
   onResetSandbox: () => void;
+  localSandboxFiles?: string[];
+  onImportLocalFiles?: (files: FileList | File[]) => void;
+  onExportCurrentFile?: () => void;
+  onOpenSandboxFile?: (filename: string) => void;
   dojoInitialDrill: { drill: 'weakness-custom'; nonce: number } | null;
 }
 
@@ -330,6 +335,9 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
   panels,
 }) => {
   const { editorState, displayEditorState } = editor;
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const dragDepthRef = useRef(0);
+  const [isDraggingLocalFile, setIsDraggingLocalFile] = useState(false);
   const marksLoaded = useOpenedOnce(panels.showMarksVisualizer);
   const macroDebuggerLoaded = useOpenedOnce(panels.showMacroDebugger);
   const whichKeyLoaded = useOpenedOnce(
@@ -347,8 +355,58 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
     </div>
   );
 
+  const handleSandboxDragEnter = (e: React.DragEvent<HTMLElement>) => {
+    if (currentTab !== 'sandbox' || !mission.onImportLocalFiles) return;
+    e.preventDefault();
+    dragDepthRef.current += 1;
+    setIsDraggingLocalFile(true);
+  };
+
+  const handleSandboxDragOver = (e: React.DragEvent<HTMLElement>) => {
+    if (currentTab !== 'sandbox' || !mission.onImportLocalFiles) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  };
+
+  const handleSandboxDragLeave = (e: React.DragEvent<HTMLElement>) => {
+    if (currentTab !== 'sandbox' || !mission.onImportLocalFiles) return;
+    e.preventDefault();
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+    if (dragDepthRef.current === 0) {
+      setIsDraggingLocalFile(false);
+    }
+  };
+
+  const handleSandboxDrop = (e: React.DragEvent<HTMLElement>) => {
+    if (currentTab !== 'sandbox' || !mission.onImportLocalFiles) return;
+    e.preventDefault();
+    dragDepthRef.current = 0;
+    setIsDraggingLocalFile(false);
+    const droppedFiles = e.dataTransfer?.files;
+    if (droppedFiles && droppedFiles.length > 0) {
+      mission.onImportLocalFiles(droppedFiles);
+      editor.onFocus();
+    }
+  };
+
   return (
-    <main className="editor-wrapper">
+    <main
+      className={`editor-wrapper ${currentTab === 'sandbox' && isDraggingLocalFile ? 'sandbox-drag-over' : ''}`}
+      onDragEnter={handleSandboxDragEnter}
+      onDragOver={handleSandboxDragOver}
+      onDragLeave={handleSandboxDragLeave}
+      onDrop={handleSandboxDrop}
+      data-testid="main-workspace"
+    >
+      {currentTab === 'sandbox' && isDraggingLocalFile && (
+        <div className="sandbox-drop-overlay" data-testid="sandbox-drop-overlay">
+          <div className="sandbox-drop-overlay-card">
+            <span className="sandbox-drop-overlay-icon">📂</span>
+            <strong>{t('여기에 로컬 코드 파일을 놓아 불러오기')}</strong>
+            <span>{t('단일/멀티 텍스트 파일을 VFS·버퍼·Git 기준선에 즉시 마운트합니다')}</span>
+          </div>
+        </div>
+      )}
       {panels.showGrammarAST &&
         currentTab !== 'arcade' &&
         currentTab !== 'dungeon' &&
@@ -447,6 +505,45 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
                   </span>
                 </div>
                 <div className="sandbox-actions">
+                  {mission.onImportLocalFiles && (
+                    <>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        multiple
+                        accept={LOCAL_FILE_ACCEPT}
+                        className="sandbox-file-input-hidden"
+                        data-testid="sandbox-local-file-input"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files.length > 0) {
+                            mission.onImportLocalFiles?.(e.target.files);
+                            editor.onFocus();
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="sandbox-file-btn"
+                        onClick={() => fileInputRef.current?.click()}
+                        data-testid="sandbox-import-file-btn"
+                        title={t('로컬 코드 파일 불러오기 (또는 화면에 드래그&드롭)')}
+                      >
+                        {t('📂 로컬 파일 열기')}
+                      </button>
+                    </>
+                  )}
+                  {mission.onExportCurrentFile && (
+                    <button
+                      type="button"
+                      className="sandbox-export-btn"
+                      onClick={mission.onExportCurrentFile}
+                      data-testid="sandbox-export-file-btn"
+                      title={t('현재 버퍼의 수정된 코드를 로컬 파일로 다운로드')}
+                    >
+                      {t('💾 파일 내보내기')}
+                    </button>
+                  )}
                   <button
                     className="sandbox-byoc-btn"
                     onClick={mission.onOpenBYOCModal}
@@ -464,6 +561,30 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
                   </button>
                 </div>
               </div>
+              {mission.localSandboxFiles && mission.localSandboxFiles.length > 0 && (
+                <div className="sandbox-local-files-bar" data-testid="sandbox-local-files-bar">
+                  <span className="sandbox-local-files-label">{t('📂 로컬 파일:')}</span>
+                  <div className="sandbox-local-files-chips">
+                    {mission.localSandboxFiles.map((file) => {
+                      const isActive = displayEditorState.primaryFilename === file;
+                      return (
+                        <button
+                          key={file}
+                          type="button"
+                          className={`sandbox-local-file-chip ${isActive ? 'active' : ''}`}
+                          data-testid={`sandbox-local-file-${file}`}
+                          onClick={() => {
+                            mission.onOpenSandboxFile?.(file);
+                            editor.onFocus();
+                          }}
+                        >
+                          📄 {file}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
               <div className="sandbox-quick-try" data-testid="sandbox-quick-try">
                 <span className="sandbox-quick-try-label">{t('바로 체험:')}</span>
                 <div className="sandbox-quick-try-chips">

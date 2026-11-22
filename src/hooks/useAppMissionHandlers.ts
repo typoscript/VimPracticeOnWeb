@@ -1,5 +1,10 @@
-import { useCallback, Dispatch, SetStateAction, MutableRefObject } from 'react';
-import { VimEditorState } from '../vim-engine';
+import { useCallback, useState, Dispatch, SetStateAction, MutableRefObject } from 'react';
+import { VimEditorState, editBuffer } from '../vim-engine';
+import {
+  downloadCurrentBuffer,
+  mountLocalFilesIntoState,
+  readLocalFiles,
+} from '../utils/sandboxLocalFiles';
 import { Mission } from '../types/mission';
 import { MISSIONS } from '../data/missions';
 import { AntiPatternDetector } from '../utils/antiPatternDetector';
@@ -32,6 +37,7 @@ interface UseAppMissionHandlersParams {
   customKeymaps: UserKeymapSettings['customKeymaps'];
   userInitConfig?: UserKeymapSettings['userInitConfig'];
   antiPatternDetectorRef: MutableRefObject<AntiPatternDetector>;
+  editorStateRef: MutableRefObject<VimEditorState>;
   getMissionInitialState: (mission: Mission) => VimEditorState;
   resetActionTimeline: (initState: VimEditorState) => void;
   resetSpeedrunReady: () => void;
@@ -65,6 +71,7 @@ export function useAppMissionHandlers({
   customKeymaps,
   userInitConfig,
   antiPatternDetectorRef,
+  editorStateRef,
   getMissionInitialState,
   resetActionTimeline,
   resetSpeedrunReady,
@@ -122,12 +129,72 @@ export function useAppMissionHandlers({
     resetSessionWithState(getMissionInitialState(currentMission));
   }, [currentMission, handleStopGhostReplay, getMissionInitialState, resetSessionWithState]);
 
+  const [localSandboxFiles, setLocalSandboxFiles] = useState<string[]>([]);
+
   const handleResetSandbox = useCallback(() => {
     handleStopGhostReplay();
+    setLocalSandboxFiles([]);
     resetSessionWithState(
       buildSandboxInitialState({ activePresets, leaderKey, customKeymaps, userInitConfig })
     );
   }, [handleStopGhostReplay, resetSessionWithState, activePresets, leaderKey, customKeymaps, userInitConfig]);
+
+  const handleImportLocalFiles = useCallback(
+    async (files: FileList | File[]) => {
+      const { loaded, skipped } = await readLocalFiles(files);
+      if (loaded.length === 0) {
+        if (skipped.length > 0) {
+          setCoachingMessage(
+            t('⚠️ 불러올 수 있는 텍스트 파일이 없습니다 (제외 {n}개: 바이너리 또는 512KB 초과).', {
+              n: skipped.length,
+            })
+          );
+        }
+        return;
+      }
+
+      handleStopGhostReplay();
+      const nextState = mountLocalFilesIntoState(editorStateRef.current, loaded);
+      const importedNames = loaded.map((f) => f.name);
+      setLocalSandboxFiles((prev) => [
+        ...importedNames,
+        ...prev.filter((name) => !importedNames.includes(name)),
+      ]);
+
+      const previewNames =
+        importedNames.length <= 2
+          ? importedNames.join(', ')
+          : `${importedNames[0]}, ${importedNames[1]} (+${importedNames.length - 2})`;
+      const baseMsg = t('📂 로컬 파일 {n}개 불러옴: {names} (:bnext · :Oil · :LiveGrep 연동)', {
+        n: loaded.length,
+        names: previewNames,
+      });
+      const skipSuffix =
+        skipped.length > 0
+          ? ` · ${t('제외 {m}개(바이너리/512KB 초과)', { m: skipped.length })}`
+          : '';
+
+      resetSessionWithState(nextState, baseMsg + skipSuffix);
+    },
+    [handleStopGhostReplay, editorStateRef, resetSessionWithState, setCoachingMessage]
+  );
+
+  const handleExportCurrentFile = useCallback(() => {
+    const payload = downloadCurrentBuffer(editorStateRef.current);
+    setCoachingMessage(
+      t('💾 "{filename}" ({lines}줄) 로컬 파일로 내보냈습니다.', {
+        filename: payload.filename,
+        lines: payload.lineCount,
+      })
+    );
+  }, [editorStateRef, setCoachingMessage]);
+
+  const handleOpenSandboxFile = useCallback(
+    (filename: string) => {
+      setEditorState((prev) => editBuffer(prev, filename));
+    },
+    [setEditorState]
+  );
 
   const handleResetCustomMission = useCallback(() => {
     if (!customMission) return;
@@ -294,5 +361,9 @@ export function useAppMissionHandlers({
     handleRunMacroFromDebugger,
     handleSelectLessonById,
     handleRestoreBackup,
+    localSandboxFiles,
+    handleImportLocalFiles,
+    handleExportCurrentFile,
+    handleOpenSandboxFile,
   };
 }

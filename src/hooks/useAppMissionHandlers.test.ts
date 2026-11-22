@@ -41,6 +41,8 @@ describe('useAppMissionHandlers', () => {
       const [coachingMessage, setCoachingMessage] = useState<string | null>(null);
       const [progress, setProgress] = useState<LessonProgress>({});
       const antiPatternDetectorRef = useRef(new AntiPatternDetector());
+      const editorStateRef = useRef(editorState);
+      editorStateRef.current = editorState;
 
       const handlers = useAppMissionHandlers({
         currentMission: MISSIONS[currentMissionIndex],
@@ -50,6 +52,7 @@ describe('useAppMissionHandlers', () => {
         leaderKey: ' ',
         customKeymaps: [],
         antiPatternDetectorRef,
+        editorStateRef,
         getMissionInitialState: (m) => buildMissionInitialState(m, EMPTY_KEYMAPS),
         resetActionTimeline,
         resetSpeedrunReady,

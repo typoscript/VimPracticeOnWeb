@@ -220,5 +220,5 @@ export function resolveStatusFilename(
   if (currentTab === 'speedrun') {
     return `speedrun_stage_${speedrunCurrentStage + 1}.txt`;
   }
-  return 'sandbox.ts';
+  return displayEditorState.primaryFilename || 'sandbox.ts';
 }

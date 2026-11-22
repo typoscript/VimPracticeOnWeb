@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 201개 테스트 파일, 2,296개 테스트 100% 통과 필수)*
+  *(현재 202개 테스트 파일, 2,301개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -250,6 +250,9 @@
   - **`LuaSnip` 스타일 스니펫 엔진 (`<Tab>` / `<S-Tab>`, `:Snippets`)**: Insert 모드에서 9종 내장 트리거(`fn`, `afn`, `if`, `ife`, `for`, `try`, `clg`, `imp`, `iface`) 입력 후 `<Tab>` 으로 멀티라인 템플릿을 확장하고 `$1` 플레이스홀더를 `SELECT` 모드로 선택하며, 입력 치환 후 `<Tab>`/`<S-Tab>` 으로 탭스톱을 순환해 `$0` 에서 종료합니다.
   - **`vim-fugitive` 미니 Git 워크플로 (`:Git`/`:G`, `:Gstatus`, `:Gblame`, `:Glog`)**: 가상 커밋 로그와 `gitsigns`(`gitBaseLines`)를 연동해 `:Git status`, `:Git add`, `:Git commit -m "..."`, `:Git log`, `:Git diff`, `:Git reset` 과 에디터 줄 끝 인라인 Blame 가상 텍스트(`.git-blame-virtual`) 토글(`:Gblame`)을 제공합니다(사용자 정의 `:command G` 및 소문자 `:g/pat/cmd` 우선·보존).
   - **하드코어 도장 `Modern Neovim 10연타` (`neovim-master`)**: `mini.ai`(`cin"`/`din(`), `Treesitter`(`daf`/`daa`), `mini.move`(`Alt-j`/`Alt-l`), `vim-abolish`(`crc`/`cru`), `dial.nvim`(`Ctrl-a`), `treesj`(`gS`) 10문제를 노미스 스피드런으로 훈련하는 신규 도장 코스를 추가했습니다.
+- **자유 연습장(Sandbox) 로컬 파일 드래그&드롭 불러오기 & 내보내기 (`src/utils/sandboxLocalFiles.ts`, `useAppMissionHandlers.ts`, `AppMainWorkspace.tsx`)**:
+  - **단일/멀티 로컬 파일 마운트**: 파일 선택 버튼(`📂 로컬 파일 열기`) 또는 Sandbox 화면 전체 드래그&드롭(`.sandbox-drop-overlay`)으로 로컬 텍스트 코드 파일(파일당 최대 512 KB, 바이너리 NUL 자동 제외)을 VFS(`virtualFiles`), 버퍼 목록(`:bnext`/`:e`), Harpoon 핀 목록, Git 기준선(`gitBaseLines` — 수정 시 즉시 `gitsigns`/`:Gblame` Diff 반영)에 한 번에 마운트합니다.
+  - **로컬 파일 전환 칩 & 파일 내보내기**: 불러온 파일 목록을 원클릭 전환 칩(`.sandbox-local-files-bar`)으로 표시하고, 상태바 파일명(`resolveStatusFilename`)을 활성 파일명으로 동기화하며, `💾 파일 내보내기` 버튼으로 수정된 현재 버퍼를 원본 파일명 그대로 로컬 다운로드합니다.
 
 ---
 

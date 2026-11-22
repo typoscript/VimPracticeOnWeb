@@ -175,6 +175,7 @@ export function App() {
     customKeymaps: hardcore.customKeymaps,
     userInitConfig: hardcore.userInitConfig,
     antiPatternDetectorRef,
+    editorStateRef,
     getMissionInitialState,
     resetActionTimeline: timeline.resetActionTimeline,
     resetSpeedrunReady: speedrun.resetSpeedrunReady,
@@ -338,6 +339,10 @@ export function App() {
           ghostReplayProgress: ghost.ghostReplayProgress,
           onOpenBYOCModal: () => viewSettings.setIsBYOCModalOpen(true),
           onResetSandbox: missionHandlers.handleResetSandbox,
+          localSandboxFiles: missionHandlers.localSandboxFiles,
+          onImportLocalFiles: missionHandlers.handleImportLocalFiles,
+          onExportCurrentFile: missionHandlers.handleExportCurrentFile,
+          onOpenSandboxFile: missionHandlers.handleOpenSandboxFile,
           dojoInitialDrill,
         }}
         speedrun={{
