@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 206개 테스트 파일, 2,319개 테스트 100% 통과 필수)*
+  *(현재 207개 테스트 파일, 2,324개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -260,6 +260,9 @@
   - **`nvim-cmp` 통합 자동완성 (`Ctrl-Space`)**: `LuaSnip` 스니펫(`[Snip]` + 코드 미리보기), 문서 LSP 심볼(`[Func]`/`[Class]`/`[Var]`), 버퍼 단어(`[Text]`)를 종류 배지·상세 설명과 함께 통합 제안하고, 스니펫 선택 후 `Enter`/`Tab`/클릭 시 즉시 템플릿을 확장해 `SELECT` 모드 `$1` 로 진입합니다.
   - **`noice.nvim` 플로팅 커맨드라인 (`:set cmdlinepopup` / `:set noice`, 기본 `off`)**: 활성화 시 `:`/`/`/`?`/`=` 입력을 에디터 상단 중앙 플로팅 팝업(`NoiceCmdline`, `React.lazy`)과 인라인 와일드메뉴로 렌더링합니다(Sandbox 퀵런처 `✨ :set noice` 칩 제공).
   - **로컬 폴더 열기 & 순수 TS `.zip` 내보내기**: 자유 연습장에 `📁 폴더 열기`(`webkitdirectory`)로 하위 디렉터리 트리 전체를 VFS 에 마운트하고, 외부 의존성 없는 표준 PKZIP Store/UTF-8/CRC-32 빌더(`zipBuilder.ts`)로 워크스페이스 전체 파일을 `📦 ZIP 내보내기` 한 번에 다운로드합니다.
+- **Neovim 시각적 코드 가독성 2종 — `indent-blankline` 세로 가이드선 & `todo-comments` 인라인 컬러 배지 (`src/components/Editor/editorDecorations.ts`, `Editor.tsx`, `EditorLineRenderer.tsx`)**:
+  - **`indent-blankline.nvim` (`:set indentline` / `:set ibl`, 기본 `on`)**: 들여쓰기 레벨마다 세로 가이드선(`.indent-guide`, 빈 줄 보간 지원)과 현재 커서 스코프 강조(`.indent-guide-active`)를 렌더링하며 `:set noindentline`/`:set noibl` 로 토글할 수 있습니다.
+  - **`todo-comments.nvim`**: 주석 내 `TODO:`/`FIXME:`/`BUG:`/`HACK:`/`WARN:`/`NOTE:`/`PERF:` 태그를 본문 텍스트 무결성을 해치지 않고 컬러 알약 배지(`.todo-comment-tag`)로 강조 렌더링합니다.
 
 ---
 

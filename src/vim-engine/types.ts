@@ -400,6 +400,8 @@ export interface VimOptions {
   autopairs?: boolean;
   /** noice.nvim 스타일 에디터 상단 중앙 플로팅 커맨드라인 (:set cmdlinepopup / :set noice) */
   cmdlinepopup?: boolean;
+  /** indent-blankline.nvim 스타일 세로 들여쓰기 가이드선 표시 여부 (:set indentline / :set ibl) */
+  indentline?: boolean;
 }
 
 /** 맞춤법 검사기 오탈자 정보 */

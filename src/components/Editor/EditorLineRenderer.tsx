@@ -18,6 +18,7 @@ import {
   tokenizeLine,
   getSyntaxTokensMap,
 } from '../../vim-engine';
+import type { TodoCommentBadge } from './editorDecorations';
 
 export interface RenderLineOptions {
   text: string;
@@ -47,25 +48,73 @@ export interface RenderLineOptions {
   listchars?: ParsedListchars;
   tabstop?: number;
   cursorColumnCol?: number | null;
+  todoBadge?: TodoCommentBadge | null;
 }
 
-function renderSyntaxSpans(text: string, tokens: SyntaxToken[]): React.ReactNode {
+function renderTextWithTodoBadge(
+  text: string,
+  baseStart: number,
+  todoBadge?: TodoCommentBadge | null,
+  extraClass = ''
+): React.ReactNode {
+  if (!todoBadge) {
+    return extraClass ? <span className={extraClass}>{text}</span> : text;
+  }
+  const baseEnd = baseStart + text.length;
+  const overlapStart = Math.max(baseStart, todoBadge.startCol);
+  const overlapEnd = Math.min(baseEnd, todoBadge.endCol);
+  if (overlapStart >= overlapEnd) {
+    return extraClass ? <span className={extraClass}>{text}</span> : text;
+  }
+
+  const localStart = overlapStart - baseStart;
+  const localEnd = overlapEnd - baseStart;
+  const before = text.slice(0, localStart);
+  const badge = text.slice(localStart, localEnd);
+  const after = text.slice(localEnd);
+  return (
+    <>
+      {before && (extraClass ? <span className={extraClass}>{before}</span> : before)}
+      <span
+        className={`todo-comment-tag todo-tag-${todoBadge.variant}`}
+        data-testid={`todo-badge-${todoBadge.variant}`}
+      >
+        {badge}
+      </span>
+      {after && (extraClass ? <span className={extraClass}>{after}</span> : after)}
+    </>
+  );
+}
+
+function renderSyntaxSpans(
+  text: string,
+  tokens: SyntaxToken[],
+  todoBadge?: TodoCommentBadge | null
+): React.ReactNode {
   const parts: React.ReactNode[] = [];
   let lastIdx = 0;
   for (let i = 0; i < tokens.length; i++) {
     const t = tokens[i];
     if (t.startCol > lastIdx) {
-      parts.push(text.slice(lastIdx, t.startCol));
+      parts.push(
+        <React.Fragment key={`gap-${i}`}>
+          {renderTextWithTodoBadge(text.slice(lastIdx, t.startCol), lastIdx, todoBadge)}
+        </React.Fragment>
+      );
     }
     parts.push(
-      <span key={i} className={`vim-char syn-${t.type}`}>
-        {t.text}
-      </span>
+      <React.Fragment key={i}>
+        {renderTextWithTodoBadge(t.text, t.startCol, todoBadge, `vim-char syn-${t.type}`)}
+      </React.Fragment>
     );
     lastIdx = t.endCol;
   }
   if (lastIdx < text.length) {
-    parts.push(text.slice(lastIdx));
+    parts.push(
+      <React.Fragment key="tail">
+        {renderTextWithTodoBadge(text.slice(lastIdx), lastIdx, todoBadge)}
+      </React.Fragment>
+    );
   }
   return <>{parts}</>;
 }
@@ -100,6 +149,7 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     listchars,
     tabstop = 2,
     cursorColumnCol = null,
+    todoBadge = null,
   } = opts;
   const isCursorLine = cursor.line === lineIdx;
   const cursorCol = isCursorLine ? cursor.col : null;
@@ -194,13 +244,13 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     cursorColumnCol === null
   ) {
     if (!isSyntaxEnabled || !syntaxLanguage || syntaxLanguage === 'text' || text.length === 0) {
-      return text;
+      return todoBadge ? renderTextWithTodoBadge(text, 0, todoBadge) : text;
     }
     const tokens = tokenizeLine(text, syntaxLanguage);
     if (tokens.length === 0) {
-      return text;
+      return todoBadge ? renderTextWithTodoBadge(text, 0, todoBadge) : text;
     }
-    return renderSyntaxSpans(text, tokens);
+    return renderSyntaxSpans(text, tokens, todoBadge);
   }
 
   const tokenMap =
@@ -371,6 +421,12 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
 
     if (tokenType) {
       classNames += ` syn-${tokenType}`;
+    }
+
+    if (todoBadge && i >= todoBadge.startCol && i < todoBadge.endCol && !isCursor) {
+      classNames += ` todo-comment-tag todo-tag-${todoBadge.variant}`;
+      if (i === todoBadge.startCol) classNames += ' todo-tag-start';
+      if (i === todoBadge.endCol - 1) classNames += ' todo-tag-end';
     }
 
     if (listCharClass) {

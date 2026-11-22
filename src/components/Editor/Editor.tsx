@@ -31,6 +31,11 @@ import {
 import './Editor.css';
 import { t } from '../../i18n';
 import { renderLineContent } from './EditorLineRenderer';
+import {
+  computeActiveScopeIndent,
+  computeIndentGuideCols,
+  findTodoCommentBadge,
+} from './editorDecorations';
 
 export interface EditorProps {
   lines: string[];
@@ -224,6 +229,11 @@ export const Editor: React.FC<EditorProps> = ({
   const colorColumnIndices = parseColorcolumn(options?.colorcolumn, options?.textwidth ?? 0);
   const listcharsConfig = isListMode ? parseListchars(options?.listchars) : undefined;
   const tabstop = Math.max(1, options?.tabstop ?? 2);
+  const indentUnit = Math.max(1, options?.shiftwidth || tabstop || 2);
+  const showIndentLines = options?.indentline !== false;
+  const activeScopeIndent = showIndentLines
+    ? computeActiveScopeIndent(lines, cursor.line, indentUnit, tabstop)
+    : null;
   const searchOpts = options ? { ignorecase: options.ignorecase, smartcase: options.smartcase } : undefined;
 
   // 전체 검색 일치 항목 수집
@@ -414,6 +424,24 @@ export const Editor: React.FC<EditorProps> = ({
                   )}
                 </div>
                 <div className="line-content">
+                  {!isFoldedHeader &&
+                    showIndentLines &&
+                    computeIndentGuideCols(lines, lineIdx, indentUnit, tabstop).map((guideCol) => {
+                      const isScopeActive =
+                        activeScopeIndent !== null &&
+                        guideCol === activeScopeIndent.col &&
+                        lineIdx >= activeScopeIndent.startLine &&
+                        lineIdx <= activeScopeIndent.endLine;
+                      return (
+                        <span
+                          key={`ibl-${guideCol}`}
+                          className={`indent-guide ${isScopeActive ? 'indent-guide-active' : ''}`}
+                          data-testid={`indent-guide-${lineIdx + 1}-${guideCol}`}
+                          style={{ left: `${guideCol}ch` }}
+                          aria-hidden="true"
+                        />
+                      );
+                    })}
                   {colorColumnIndices.map((ccIdx) => (
                     <span
                       key={`cc-${ccIdx}`}
@@ -462,6 +490,7 @@ export const Editor: React.FC<EditorProps> = ({
                         listchars: listcharsConfig,
                         tabstop,
                         cursorColumnCol: isCursorColumn ? cursor.col : null,
+                        todoBadge: isSyntaxEnabled ? findTodoCommentBadge(lineText) : null,
                       })}
                       {primaryLineDiagnostic && (
                         <span

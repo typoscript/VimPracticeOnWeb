@@ -1172,3 +1172,67 @@
 .cmp-preview-line {
   white-space: pre;
 }
+
+/* indent-blankline.nvim 세로 들여쓰기 가이드선 (:set indentline / :set ibl) */
+.indent-guide {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background-color: rgba(120, 124, 153, 0.22);
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+}
+
+.indent-guide.indent-guide-active {
+  background-color: rgba(122, 162, 247, 0.52);
+  box-shadow: 0 0 4px rgba(122, 162, 247, 0.25);
+}
+
+/* todo-comments.nvim 인라인 TODO / FIXME / HACK / WARN / NOTE / PERF 컬러 배지 */
+.todo-comment-tag {
+  font-weight: 800;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.vim-char.todo-comment-tag {
+  padding: 0;
+  border-radius: 0;
+}
+
+.vim-char.todo-comment-tag.todo-tag-start {
+  border-top-left-radius: 3px;
+  border-bottom-left-radius: 3px;
+}
+
+.vim-char.todo-comment-tag.todo-tag-end {
+  border-top-right-radius: 3px;
+  border-bottom-right-radius: 3px;
+}
+
+.todo-comment-tag.todo-tag-info {
+  background-color: rgba(122, 162, 247, 0.26);
+  color: #7dcfff !important;
+}
+
+.todo-comment-tag.todo-tag-error {
+  background-color: rgba(247, 118, 142, 0.28);
+  color: #f7768e !important;
+}
+
+.todo-comment-tag.todo-tag-warning {
+  background-color: rgba(224, 175, 104, 0.28);
+  color: #e0af68 !important;
+}
+
+.todo-comment-tag.todo-tag-hint {
+  background-color: rgba(115, 218, 202, 0.24);
+  color: #73daca !important;
+}
+
+.todo-comment-tag.todo-tag-perf {
+  background-color: rgba(187, 154, 247, 0.26);
+  color: #bb9af7 !important;
+}
