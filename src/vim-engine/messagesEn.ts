@@ -570,4 +570,8 @@ export const EN_MESSAGES: Record<string, string> = {
   "[Git diff] 변경사항이 없습니다": "[Git diff] No unstaged diff",
   "[Git diff] {file}: {hunks} Hunk (+{added} -{removed})": "[Git diff] {file}: {hunks} hunk(s) (+{added} -{removed})",
   "[Git] 알 수 없는 하위 명령입니다: {sub}": "[Git] Unknown subcommand: {sub}",
+  "[Git] 인터랙티브 Git 패널 열림 (j/k 이동 · s 스테이징 · u 취소 · = Diff · c 커밋)": "[Git] Interactive Git panel opened (j/k move · s stage · u unstage · = diff · c commit)",
+  "[Git] 인터랙티브 Git 패널을 닫았습니다": "[Git] Interactive Git panel closed",
+  "[Git] 스테이징을 해제했습니다": "[Git] Unstaged changes",
+  "[Git] 취소할 스테이징 변경사항이 없습니다": "[Git] No staged changes to unstage",
 };

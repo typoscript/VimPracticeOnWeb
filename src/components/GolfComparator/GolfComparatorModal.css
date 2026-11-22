@@ -1,0 +1,357 @@
+.golf-comparator-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(11, 13, 21, 0.78);
+  backdrop-filter: blur(5px);
+}
+
+.golf-comparator-dialog {
+  width: 100%;
+  max-width: 980px;
+  max-height: 90vh;
+  overflow-y: auto;
+  border-radius: 12px;
+  border: 1px solid #414868;
+  background: #1a1b26;
+  color: #c0caf5;
+  padding: 1.1rem 1.25rem;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.golf-comparator-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.golf-comparator-header h3 {
+  margin: 0;
+  font-size: 1.08rem;
+  color: #7dcfff;
+}
+
+.golf-comparator-subtitle {
+  margin: 0.2rem 0 0;
+  font-size: 0.84rem;
+  color: #a9b1d6;
+}
+
+.golf-close-btn {
+  background: transparent;
+  border: 1px solid #414868;
+  color: #a9b1d6;
+  border-radius: 6px;
+  padding: 0.25rem 0.55rem;
+  cursor: pointer;
+}
+
+.golf-close-btn:hover {
+  border-color: #f7768e;
+  color: #f7768e;
+}
+
+.golf-summary-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  background: #16161e;
+  border: 1px solid #292e42;
+}
+
+.golf-metric {
+  display: flex;
+  flex-direction: column;
+  padding: 0.2rem 0.65rem;
+  border-right: 1px solid #292e42;
+}
+
+.golf-metric:last-of-type {
+  border-right: none;
+}
+
+.golf-metric-label {
+  font-size: 0.72rem;
+  color: #787c99;
+}
+
+.golf-metric-val {
+  font-size: 1rem;
+  color: #c0caf5;
+}
+
+.golf-metric-val.optimal {
+  color: #9ece6a;
+}
+
+.golf-metric-val.perfect {
+  color: #e0af68;
+}
+
+.golf-metric-val.delta {
+  color: #ff9e64;
+}
+
+.golf-divergence-btn {
+  margin-left: auto;
+  background: rgba(224, 175, 104, 0.15);
+  border: 1px solid rgba(224, 175, 104, 0.5);
+  color: #e0af68;
+  border-radius: 6px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.golf-divergence-btn:hover {
+  background: rgba(224, 175, 104, 0.26);
+}
+
+.golf-tip-banner {
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border-left: 3px solid #7aa2f7;
+  background: rgba(122, 162, 247, 0.1);
+  color: #c0caf5;
+  font-size: 0.8rem;
+}
+
+.golf-controls-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  background: #1f2335;
+  border: 1px solid #292e42;
+}
+
+.golf-transport-btns {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.golf-transport-btns button {
+  background: #24283b;
+  border: 1px solid #414868;
+  color: #c0caf5;
+  border-radius: 5px;
+  padding: 0.3rem 0.55rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.golf-transport-btns button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.golf-transport-btns .golf-play-btn {
+  background: #7aa2f7;
+  border-color: #7aa2f7;
+  color: #16161e;
+  font-weight: 700;
+  padding: 0.3rem 0.75rem;
+}
+
+.golf-step-slider {
+  flex: 1;
+  min-width: 140px;
+  accent-color: #7aa2f7;
+}
+
+.golf-step-counter {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78rem;
+  color: #a9b1d6;
+  min-width: 78px;
+  text-align: center;
+}
+
+.golf-speed-group {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.golf-speed-btn {
+  background: #24283b;
+  border: 1px solid #414868;
+  color: #a9b1d6;
+  border-radius: 4px;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.golf-speed-btn.active {
+  background: rgba(125, 207, 255, 0.2);
+  border-color: #7dcfff;
+  color: #7dcfff;
+  font-weight: 700;
+}
+
+.golf-dual-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+@media (max-width: 760px) {
+  .golf-dual-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.golf-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid #292e42;
+  background: #16161e;
+  padding: 0.65rem;
+}
+
+.golf-pane.optimal-pane {
+  border-color: rgba(158, 206, 106, 0.35);
+}
+
+.golf-pane-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+}
+
+.golf-pane-title {
+  font-weight: 700;
+  color: #c0caf5;
+}
+
+.golf-pane-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.74rem;
+  color: #787c99;
+}
+
+.golf-done-badge {
+  background: rgba(122, 162, 247, 0.2);
+  color: #7aa2f7;
+  border-radius: 4px;
+  padding: 0.08rem 0.4rem;
+  font-weight: 700;
+}
+
+.golf-done-badge.optimal {
+  background: rgba(158, 206, 106, 0.22);
+  color: #9ece6a;
+}
+
+.golf-mini-editor {
+  background: #11121a;
+  border: 1px solid #24283b;
+  border-radius: 6px;
+  padding: 0.45rem 0;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  overflow-x: auto;
+  min-height: 110px;
+}
+
+.golf-code-line {
+  display: flex;
+  align-items: baseline;
+  padding: 0 0.6rem;
+  white-space: pre;
+}
+
+.golf-code-line.active-line {
+  background: rgba(122, 162, 247, 0.08);
+}
+
+.golf-code-line.changed-line {
+  background: rgba(158, 206, 106, 0.14);
+}
+
+.golf-line-num {
+  width: 24px;
+  min-width: 24px;
+  margin-right: 0.6rem;
+  text-align: right;
+  color: #565f89;
+  user-select: none;
+}
+
+.golf-line-text {
+  color: #c0caf5;
+}
+
+.golf-cursor.normal {
+  background: #7aa2f7;
+  color: #16161e;
+  font-weight: 700;
+  border-radius: 2px;
+}
+
+.golf-cursor.insert {
+  border-left: 2px solid #9ece6a;
+  background: rgba(158, 206, 106, 0.18);
+}
+
+.golf-key-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  max-height: 82px;
+  overflow-y: auto;
+}
+
+.golf-key-chip {
+  background: #24283b;
+  border: 1px solid #3b4261;
+  color: #a9b1d6;
+  border-radius: 4px;
+  padding: 0.12rem 0.42rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.golf-key-chip.passed {
+  opacity: 0.72;
+}
+
+.golf-key-chip.divergence {
+  border-color: #e0af68;
+  color: #e0af68;
+}
+
+.golf-key-chip.active {
+  background: #7aa2f7;
+  border-color: #7aa2f7;
+  color: #16161e;
+  font-weight: 700;
+}
+
+.golf-key-chip.optimal.active {
+  background: #9ece6a;
+  border-color: #9ece6a;
+}

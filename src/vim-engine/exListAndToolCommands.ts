@@ -37,7 +37,7 @@ import { executeUserCommandDefinition } from './userCommandEngine';
 import { executeDigraphCommand } from './digraphs';
 import { addSpellGoodWord, addSpellWrongWord, undoSpellWord } from './spellEngine';
 import { executeGitsignsCommand } from './gitSignsEngine';
-import { executeGitCommand } from './gitFugitiveEngine';
+import { executeGitCommand, closeGitPanel, openGitPanel, toggleGitPanel } from './gitFugitiveEngine';
 import { formatSnippetsList } from './snippetEngine';
 import { openFlashJump } from './flashJumpEngine';
 import { startMultiCursor } from './multiCursorEngine';
@@ -486,9 +486,18 @@ function tryExecuteMappingAndMiscToolCommand(
     return finishEx(executeGitsignsCommand(state, gitsignsMatch[1] ?? ''));
   }
 
-  // vim-fugitive 스타일 미니 Git 워크플로: :Git [...], :G [...], :Gstatus, :Gblame, :Glog
+  // vim-fugitive 스타일 미니 Git 워크플로: :Git [...], :G [...], :Gstatus, :Gblame, :Glog, :LazyGit, :GitClose
+  if (/^(?:LazyGit|GitToggle)$/i.test(cleanCmdRaw)) {
+    return finishEx(toggleGitPanel(state));
+  }
+  if (/^Fugitive$/i.test(cleanCmdRaw)) {
+    return finishEx(openGitPanel(state, 'changes'));
+  }
+  if (/^GitClose$/i.test(cleanCmdRaw)) {
+    return finishEx(closeGitPanel(state));
+  }
   if (/^Gstatus$/i.test(cleanCmdRaw)) {
-    return finishEx(executeGitCommand(state, 'status'));
+    return finishEx(executeGitCommand(state, ''));
   }
   if (/^Gblame(?:\s+(.*))?$/i.test(cleanCmdRaw)) {
     const arg = cleanCmdRaw.replace(/^Gblame/i, '').trim();
@@ -501,7 +510,7 @@ function tryExecuteMappingAndMiscToolCommand(
   if (gitMatch) {
     const isShadowedByUserCmd = gitMatch[1] === 'G' && Boolean(state.userCommands?.G);
     if (!isShadowedByUserCmd) {
-      return finishEx(executeGitCommand(state, gitMatch[2] ?? 'status'));
+      return finishEx(executeGitCommand(state, gitMatch[2] ?? ''));
     }
   }
 

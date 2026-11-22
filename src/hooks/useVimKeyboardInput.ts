@@ -118,6 +118,19 @@ export function useVimKeyboardInput({
         return;
       }
 
+      const target = e.target as HTMLElement | null;
+      if (
+        e.defaultPrevented ||
+        (target &&
+          (target.tagName === 'INPUT' ||
+            target.tagName === 'TEXTAREA' ||
+            target.tagName === 'SELECT' ||
+            target.isContentEditable ||
+            Boolean(target.closest?.('.git-split-panel, .golf-comparator-dialog'))))
+      ) {
+        return;
+      }
+
       if (!isEditorFocused) {
         setIsEditorFocused(true);
       }

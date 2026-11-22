@@ -51,6 +51,11 @@ const HarpoonMenu = lazy(() =>
 const YankyMenu = lazy(() =>
   import('../YankyMenu/YankyMenu').then((m) => ({ default: m.YankyMenu }))
 );
+const GolfComparatorModal = lazy(() =>
+  import('../GolfComparator/GolfComparatorModal').then((m) => ({
+    default: m.GolfComparatorModal,
+  }))
+);
 
 const SANDBOX_QUICK_TRY_CHIPS: ReadonlyArray<{
   id: string;
@@ -111,6 +116,12 @@ const SANDBOX_QUICK_TRY_CHIPS: ReadonlyArray<{
     label: '🔀 ]h',
     titleKey: i18nKey('Git Hunk 이동 (]h)'),
     keys: ['Escape', ']', 'h'],
+  },
+  {
+    id: 'gitpanel',
+    label: '🐙 :Git',
+    titleKey: i18nKey('인터랙티브 Git 스테이징 · 커밋 패널 (:Git)'),
+    keys: ['Escape', ...':Git'.split(''), 'Enter'],
   },
   {
     id: 'gblame',
@@ -263,6 +274,17 @@ export interface WorkspaceEditorProps {
     | 'onJumpSpectreItem'
     | 'onApplySpectreReplaceAll'
     | 'onCloseSpectrePanel'
+    | 'onSelectGitPanelIndex'
+    | 'onChangeGitPanelTab'
+    | 'onToggleGitPanelHunkDiff'
+    | 'onJumpGitPanelHunk'
+    | 'onStageGitPanelHunk'
+    | 'onStageAllGitPanel'
+    | 'onUnstageGitPanel'
+    | 'onResetGitPanelHunk'
+    | 'onCommitGitPanel'
+    | 'onToggleGitBlame'
+    | 'onCloseGitPanel'
     | 'onSwitchCommandLineWindowType'
     | 'onClearCommandLineHistory'
     | 'onCloseCommandLineWindow'
@@ -338,6 +360,12 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const dragDepthRef = useRef(0);
   const [isDraggingLocalFile, setIsDraggingLocalFile] = useState(false);
+  const [golfCompareMissionId, setGolfCompareMissionId] = useState<number | null>(null);
+  const showGolfComparator =
+    currentTab === 'course' &&
+    mission.isCompleted &&
+    golfCompareMissionId === mission.currentMission.id &&
+    Boolean(mission.currentMission.optimalKeys?.length);
   const marksLoaded = useOpenedOnce(panels.showMarksVisualizer);
   const macroDebuggerLoaded = useOpenedOnce(panels.showMacroDebugger);
   const whichKeyLoaded = useOpenedOnce(
@@ -466,6 +494,11 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
               onStopGhostReplay={mission.onStopGhostReplay}
               isGhostReplaying={mission.isGhostReplaying}
               ghostReplayProgress={mission.ghostReplayProgress}
+              onOpenGolfCompare={
+                mission.currentMission.optimalKeys && mission.currentMission.optimalKeys.length > 0
+                  ? () => setGolfCompareMissionId(mission.currentMission.id)
+                  : undefined
+              }
             />
           )}
 
@@ -669,6 +702,17 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
               <YankyMenu
                 editorState={displayEditorState}
                 onPressKey={editor.processKeyInput}
+              />
+            )}
+
+            {showGolfComparator && mission.currentMission.optimalKeys && (
+              <GolfComparatorModal
+                missionTitle={mission.currentMission.title}
+                par={mission.currentMission.par}
+                initialState={panels.timelineSteps[0]?.snapshot ?? editorState}
+                userKeys={panels.allKeysSoFar}
+                optimalKeys={mission.currentMission.optimalKeys}
+                onClose={() => setGolfCompareMissionId(null)}
               />
             )}
           </Suspense>

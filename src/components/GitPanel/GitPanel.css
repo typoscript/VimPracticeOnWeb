@@ -1,0 +1,369 @@
+.git-split-panel {
+  width: 100%;
+  max-width: 900px;
+  margin-top: 0.6rem;
+  border-radius: 8px;
+  border: 1px solid #414868;
+  background: #16161e;
+  color: #c0caf5;
+  overflow: hidden;
+  outline: none;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.git-split-panel:focus {
+  border-color: #7aa2f7;
+}
+
+.git-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  background: #1f2335;
+  border-bottom: 1px solid #292e42;
+  font-size: 0.8rem;
+}
+
+.git-panel-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.git-panel-badge {
+  font-weight: 800;
+  color: #bb9af7;
+}
+
+.git-panel-filename {
+  font-family: 'JetBrains Mono', monospace;
+  color: #c0caf5;
+  font-weight: 600;
+}
+
+.git-panel-stats {
+  display: inline-flex;
+  gap: 0.35rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75rem;
+}
+
+.git-stat-add {
+  color: #9ece6a;
+  font-weight: 700;
+}
+
+.git-stat-del {
+  color: #f7768e;
+  font-weight: 700;
+}
+
+.git-stat-clean {
+  color: #73daca;
+}
+
+.git-staged-pill {
+  background: rgba(158, 206, 106, 0.2);
+  border: 1px solid rgba(158, 206, 106, 0.5);
+  color: #9ece6a;
+  border-radius: 4px;
+  padding: 0.05rem 0.38rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.git-panel-tabs {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.git-panel-tab {
+  background: #24283b;
+  border: 1px solid #3b4261;
+  color: #a9b1d6;
+  border-radius: 5px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.git-panel-tab.active {
+  background: rgba(122, 162, 247, 0.2);
+  border-color: #7aa2f7;
+  color: #7aa2f7;
+  font-weight: 700;
+}
+
+.git-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.git-action-btn {
+  background: #24283b;
+  border: 1px solid #414868;
+  color: #c0caf5;
+  border-radius: 5px;
+  padding: 0.22rem 0.52rem;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.git-action-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.git-action-btn.stage {
+  border-color: rgba(158, 206, 106, 0.5);
+  color: #9ece6a;
+}
+
+.git-action-btn.active {
+  border-color: #7dcfff;
+  color: #7dcfff;
+  background: rgba(125, 207, 255, 0.14);
+}
+
+.git-action-close {
+  background: transparent;
+  border: none;
+  color: #787c99;
+  cursor: pointer;
+  padding: 0.15rem 0.35rem;
+  font-size: 0.85rem;
+}
+
+.git-action-close:hover {
+  color: #f7768e;
+}
+
+.git-commit-bar {
+  display: flex;
+  gap: 0.45rem;
+  padding: 0.45rem 0.75rem;
+  background: #1a1b26;
+  border-bottom: 1px solid #292e42;
+}
+
+.git-commit-input {
+  flex: 1;
+  background: #11121a;
+  border: 1px solid #3b4261;
+  border-radius: 5px;
+  color: #c0caf5;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.8rem;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.git-commit-input:focus {
+  outline: none;
+  border-color: #7aa2f7;
+}
+
+.git-commit-submit-btn {
+  background: #9ece6a;
+  border: 1px solid #9ece6a;
+  color: #16161e;
+  border-radius: 5px;
+  padding: 0.32rem 0.8rem;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.git-commit-submit-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.git-panel-body {
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 0.5rem 0.75rem;
+}
+
+.git-panel-empty {
+  padding: 0.9rem 0.5rem;
+  text-align: center;
+  font-size: 0.82rem;
+  color: #9aa5ce;
+}
+
+.git-hunk-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.git-hunk-card {
+  border: 1px solid #292e42;
+  border-radius: 6px;
+  background: #1a1b26;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.git-hunk-card.selected {
+  border-color: #7aa2f7;
+  box-shadow: 0 0 0 1px rgba(122, 162, 247, 0.28);
+}
+
+.git-hunk-card-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  padding: 0.35rem 0.55rem;
+  font-size: 0.78rem;
+}
+
+.git-hunk-cursor {
+  width: 12px;
+  color: #7aa2f7;
+  font-weight: 800;
+}
+
+.git-hunk-type-tag {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 0.08rem 0.38rem;
+  border-radius: 3px;
+}
+
+.git-hunk-type-tag.type-add {
+  background: rgba(158, 206, 106, 0.2);
+  color: #9ece6a;
+}
+
+.git-hunk-type-tag.type-change {
+  background: rgba(122, 162, 247, 0.2);
+  color: #7aa2f7;
+}
+
+.git-hunk-type-tag.type-delete {
+  background: rgba(247, 118, 142, 0.2);
+  color: #f7768e;
+}
+
+.git-hunk-range,
+.git-hunk-delta {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.74rem;
+  color: #a9b1d6;
+}
+
+.git-hunk-row-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 0.28rem;
+  flex-wrap: wrap;
+}
+
+.git-mini-btn {
+  background: #24283b;
+  border: 1px solid #3b4261;
+  color: #c0caf5;
+  border-radius: 4px;
+  padding: 0.12rem 0.42rem;
+  font-size: 0.71rem;
+  cursor: pointer;
+}
+
+.git-mini-btn.stage {
+  border-color: rgba(158, 206, 106, 0.45);
+  color: #9ece6a;
+}
+
+.git-mini-btn.reset {
+  border-color: rgba(247, 118, 142, 0.45);
+  color: #f7768e;
+}
+
+.git-hunk-inline-diff {
+  border-top: 1px solid #292e42;
+  background: #11121a;
+  padding: 0.35rem 0.6rem;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.76rem;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.git-diff-line {
+  padding: 0.06rem 0.3rem;
+  border-radius: 2px;
+}
+
+.git-diff-line.removed {
+  background: rgba(247, 118, 142, 0.14);
+  color: #f7768e;
+}
+
+.git-diff-line.added {
+  background: rgba(158, 206, 106, 0.14);
+  color: #9ece6a;
+}
+
+.git-commit-log-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.git-commit-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.35rem 0.55rem;
+  border-radius: 5px;
+  border: 1px solid transparent;
+  background: #1a1b26;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.git-commit-row.selected {
+  border-color: #7aa2f7;
+}
+
+.git-commit-hash {
+  font-family: 'JetBrains Mono', monospace;
+  color: #e0af68;
+  font-weight: 700;
+}
+
+.git-head-badge {
+  background: rgba(125, 207, 255, 0.2);
+  color: #7dcfff;
+  border-radius: 3px;
+  padding: 0.05rem 0.35rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.git-commit-msg {
+  color: #c0caf5;
+  font-weight: 600;
+}
+
+.git-commit-meta {
+  margin-left: auto;
+  font-size: 0.72rem;
+  color: #787c99;
+}
+
+.git-panel-footer {
+  padding: 0.3rem 0.75rem;
+  background: #1f2335;
+  border-top: 1px solid #292e42;
+  font-size: 0.7rem;
+  color: #787c99;
+}

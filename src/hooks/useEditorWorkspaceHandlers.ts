@@ -41,6 +41,16 @@ import {
   closeGitHunkPreview,
   resetGitHunk,
   stageGitHunk,
+  selectGitPanelHunk,
+  setGitPanelTab,
+  toggleGitPanelHunkDiff,
+  jumpToGitPanelHunk,
+  stageGitPanelHunkByIndex,
+  unstageGitPanelChanges,
+  resetGitPanelHunkByIndex,
+  commitFromGitPanel,
+  closeGitPanel,
+  executeGitCommand,
   selectCompletionCandidate,
   selectWildmenuCandidate,
   setMark,
@@ -218,6 +228,61 @@ export function useEditorWorkspaceHandlers({
 
   const handleCloseSpectrePanel = useCallback(
     () => applyAndFocus((prev) => closeSpectrePanel(prev)),
+    [applyAndFocus]
+  );
+
+  const handleSelectGitPanelIndex = useCallback(
+    (index: number) => setEditorState((prev) => selectGitPanelHunk(prev, index)),
+    [setEditorState]
+  );
+
+  const handleChangeGitPanelTab = useCallback(
+    (tab: 'changes' | 'log') => setEditorState((prev) => setGitPanelTab(prev, tab)),
+    [setEditorState]
+  );
+
+  const handleToggleGitPanelHunkDiff = useCallback(
+    (hunkId: number) => setEditorState((prev) => toggleGitPanelHunkDiff(prev, hunkId)),
+    [setEditorState]
+  );
+
+  const handleJumpGitPanelHunk = useCallback(
+    (index: number) => applyAndFocus((prev) => jumpToGitPanelHunk(prev, index)),
+    [applyAndFocus]
+  );
+
+  const handleStageGitPanelHunk = useCallback(
+    (index: number) => setEditorState((prev) => stageGitPanelHunkByIndex(prev, index)),
+    [setEditorState]
+  );
+
+  const handleStageAllGitPanel = useCallback(
+    () => setEditorState((prev) => executeGitCommand(prev, 'add')),
+    [setEditorState]
+  );
+
+  const handleUnstageGitPanel = useCallback(
+    () => setEditorState((prev) => unstageGitPanelChanges(prev)),
+    [setEditorState]
+  );
+
+  const handleResetGitPanelHunk = useCallback(
+    (index: number) => setEditorState((prev) => resetGitPanelHunkByIndex(prev, index)),
+    [setEditorState]
+  );
+
+  const handleCommitGitPanel = useCallback(
+    (message: string) => setEditorState((prev) => commitFromGitPanel(prev, message)),
+    [setEditorState]
+  );
+
+  const handleToggleGitBlame = useCallback(
+    () => setEditorState((prev) => executeGitCommand(prev, 'blame')),
+    [setEditorState]
+  );
+
+  const handleCloseGitPanel = useCallback(
+    () => applyAndFocus((prev) => closeGitPanel(prev)),
     [applyAndFocus]
   );
 
@@ -407,6 +472,17 @@ export function useEditorWorkspaceHandlers({
       onJumpSpectreItem: handleJumpSpectreItem,
       onApplySpectreReplaceAll: handleApplySpectreReplaceAll,
       onCloseSpectrePanel: handleCloseSpectrePanel,
+      onSelectGitPanelIndex: handleSelectGitPanelIndex,
+      onChangeGitPanelTab: handleChangeGitPanelTab,
+      onToggleGitPanelHunkDiff: handleToggleGitPanelHunkDiff,
+      onJumpGitPanelHunk: handleJumpGitPanelHunk,
+      onStageGitPanelHunk: handleStageGitPanelHunk,
+      onStageAllGitPanel: handleStageAllGitPanel,
+      onUnstageGitPanel: handleUnstageGitPanel,
+      onResetGitPanelHunk: handleResetGitPanelHunk,
+      onCommitGitPanel: handleCommitGitPanel,
+      onToggleGitBlame: handleToggleGitBlame,
+      onCloseGitPanel: handleCloseGitPanel,
       onSwitchCommandLineWindowType: handleSwitchCommandLineWindowType,
       onClearCommandLineHistory: handleClearCommandLineHistory,
       onCloseCommandLineWindow: handleCloseCommandLineWindow,
@@ -445,6 +521,17 @@ export function useEditorWorkspaceHandlers({
       handleJumpSpectreItem,
       handleApplySpectreReplaceAll,
       handleCloseSpectrePanel,
+      handleSelectGitPanelIndex,
+      handleChangeGitPanelTab,
+      handleToggleGitPanelHunkDiff,
+      handleJumpGitPanelHunk,
+      handleStageGitPanelHunk,
+      handleStageAllGitPanel,
+      handleUnstageGitPanel,
+      handleResetGitPanelHunk,
+      handleCommitGitPanel,
+      handleToggleGitBlame,
+      handleCloseGitPanel,
       handleSwitchCommandLineWindowType,
       handleClearCommandLineHistory,
       handleCloseCommandLineWindow,

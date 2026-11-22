@@ -1034,6 +1034,8 @@ export interface VimEditorState {
   undoJoinMerged?: boolean;
   /** 직전 작업이 undo 였는지 여부 (:undojoin E790 검증용) */
   lastActionWasUndo?: boolean;
+  /** vim-fugitive / LazyGit 스타일 인터랙티브 Git 분할 패널 (:Git / :LazyGit) */
+  gitPanel?: GitPanelState | null;
 }
 
 export type LspDiagnosticSeverity = 'error' | 'warning' | 'info' | 'hint';
@@ -1263,6 +1265,13 @@ export interface GitBlameInfo {
   author: string;
   message: string;
   uncommitted: boolean;
+}
+
+export interface GitPanelState {
+  isOpen: boolean;
+  selectedIndex: number;
+  expandedHunkIds: number[];
+  activeTab: 'changes' | 'log';
 }
 
 export type VimState = VimEditorState;

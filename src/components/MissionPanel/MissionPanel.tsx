@@ -16,6 +16,7 @@ export interface MissionPanelProps {
   onStopGhostReplay?: () => void;
   isGhostReplaying?: boolean;
   ghostReplayProgress?: { current: number; total: number };
+  onOpenGolfCompare?: () => void;
   lastTestRun?: VirtualTestRunResult | null;
   activeFilename?: string;
   onRunVirtualTests?: () => void;
@@ -50,6 +51,7 @@ export const MissionPanel: React.FC<MissionPanelProps> = ({
   onStopGhostReplay,
   isGhostReplaying,
   ghostReplayProgress,
+  onOpenGolfCompare,
   lastTestRun,
   activeFilename,
   onRunVirtualTests,
@@ -228,17 +230,30 @@ export const MissionPanel: React.FC<MissionPanelProps> = ({
                 {t('(기록: {n}타 / 기준 Par: {par}타)', { n: keystrokeCount, par: mission.par })}
               </span>
             </div>
-            {mission.optimalKeys && mission.optimalKeys.length > 0 && onStartGhostReplay && (
+            {mission.optimalKeys && mission.optimalKeys.length > 0 && (onStartGhostReplay || onOpenGolfCompare) && (
               <div className="optimal-replay-action">
-                <button
-                  type="button"
-                  className="optimal-replay-btn"
-                  onClick={onStartGhostReplay}
-                  data-testid="play-optimal-replay-btn"
-                  title={t('3성(Par) 기준 최적 모범 타수 자동 재생 보기')}
-                >
-                  {t('✨ 최적 타수(Par) 모범 답안 보기 ({n}타)', { n: mission.optimalKeys.length })}
-                </button>
+                {onStartGhostReplay && (
+                  <button
+                    type="button"
+                    className="optimal-replay-btn"
+                    onClick={onStartGhostReplay}
+                    data-testid="play-optimal-replay-btn"
+                    title={t('3성(Par) 기준 최적 모범 타수 자동 재생 보기')}
+                  >
+                    {t('✨ 최적 타수(Par) 모범 답안 보기 ({n}타)', { n: mission.optimalKeys.length })}
+                  </button>
+                )}
+                {onOpenGolfCompare && (
+                  <button
+                    type="button"
+                    className="golf-compare-btn"
+                    onClick={onOpenGolfCompare}
+                    data-testid="open-golf-compare-btn"
+                    title={t('내 풀이 키스트로크와 최적 해법을 프레임 단위로 1:1 비교')}
+                  >
+                    {t('⚔️ 내 풀이 vs 최적 해법 비교')}
+                  </button>
+                )}
               </div>
             )}
           </div>

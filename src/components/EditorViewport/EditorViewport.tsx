@@ -23,6 +23,9 @@ const UndotreePanel = lazy(() =>
 const SpectrePanel = lazy(() =>
   import('../SpectrePanel/SpectrePanel').then((m) => ({ default: m.SpectrePanel }))
 );
+const GitPanel = lazy(() =>
+  import('../GitPanel/GitPanel').then((m) => ({ default: m.GitPanel }))
+);
 
 interface EditorViewportProps {
   editorState: VimEditorState;
@@ -66,6 +69,17 @@ interface EditorViewportProps {
   onJumpSpectreItem?: (index: number) => void;
   onApplySpectreReplaceAll?: () => void;
   onCloseSpectrePanel?: () => void;
+  onSelectGitPanelIndex?: (index: number) => void;
+  onChangeGitPanelTab?: (tab: 'changes' | 'log') => void;
+  onToggleGitPanelHunkDiff?: (hunkId: number) => void;
+  onJumpGitPanelHunk?: (index: number) => void;
+  onStageGitPanelHunk?: (index: number) => void;
+  onStageAllGitPanel?: () => void;
+  onUnstageGitPanel?: () => void;
+  onResetGitPanelHunk?: (index: number) => void;
+  onCommitGitPanel?: (message: string) => void;
+  onToggleGitBlame?: () => void;
+  onCloseGitPanel?: () => void;
   onSwitchCommandLineWindowType: (type: ':' | '/') => void;
   onClearCommandLineHistory: (type: ':' | '/' | '?') => void;
   onCloseCommandLineWindow: () => void;
@@ -118,6 +132,17 @@ export function EditorViewport({
   onJumpSpectreItem,
   onApplySpectreReplaceAll,
   onCloseSpectrePanel,
+  onSelectGitPanelIndex,
+  onChangeGitPanelTab,
+  onToggleGitPanelHunkDiff,
+  onJumpGitPanelHunk,
+  onStageGitPanelHunk,
+  onStageAllGitPanel,
+  onUnstageGitPanel,
+  onResetGitPanelHunk,
+  onCommitGitPanel,
+  onToggleGitBlame,
+  onCloseGitPanel,
   onSwitchCommandLineWindowType,
   onClearCommandLineHistory,
   onCloseCommandLineWindow,
@@ -466,6 +491,26 @@ export function EditorViewport({
               onJumpItem={(idx) => onJumpSpectreItem?.(idx)}
               onReplaceAll={() => onApplySpectreReplaceAll?.()}
               onClose={() => onCloseSpectrePanel?.()}
+            />
+          </Suspense>
+        )}
+
+        {/* vim-fugitive / LazyGit 스타일 인터랙티브 Git 분할 패널 (:Git / :LazyGit) */}
+        {displayEditorState.gitPanel?.isOpen && (
+          <Suspense fallback={null}>
+            <GitPanel
+              editorState={displayEditorState}
+              onSelectIndex={(idx) => onSelectGitPanelIndex?.(idx)}
+              onChangeTab={(tab) => onChangeGitPanelTab?.(tab)}
+              onToggleHunkDiff={(id) => onToggleGitPanelHunkDiff?.(id)}
+              onJumpHunk={(idx) => onJumpGitPanelHunk?.(idx)}
+              onStageHunk={(idx) => onStageGitPanelHunk?.(idx)}
+              onStageAll={() => onStageAllGitPanel?.()}
+              onUnstage={() => onUnstageGitPanel?.()}
+              onResetHunk={(idx) => onResetGitPanelHunk?.(idx)}
+              onCommit={(message) => onCommitGitPanel?.(message)}
+              onToggleBlame={() => onToggleGitBlame?.()}
+              onClose={() => onCloseGitPanel?.()}
             />
           </Suspense>
         )}

@@ -639,9 +639,21 @@ export {
 export type { SnippetDefinition } from './snippetEngine';
 export type { SnippetTabstop, SnippetSession } from './types';
 
-// ---- vim-fugitive 스타일 미니 Git 워크플로 (:Git / :Gstatus / :Gblame / :Glog) ----
+// ---- vim-fugitive 스타일 미니 Git 워크플로 (:Git / :Gstatus / :Gblame / :Glog / :LazyGit) ----
 export {
+  getEffectiveCommitLog,
   computeGitBlameLines,
   executeGitCommand,
+  openGitPanel,
+  closeGitPanel,
+  toggleGitPanel,
+  setGitPanelTab,
+  selectGitPanelHunk,
+  toggleGitPanelHunkDiff,
+  jumpToGitPanelHunk,
+  stageGitPanelHunkByIndex,
+  unstageGitPanelChanges,
+  resetGitPanelHunkByIndex,
+  commitFromGitPanel,
 } from './gitFugitiveEngine';
-export type { GitCommitEntry, GitBlameInfo } from './types';
+export type { GitCommitEntry, GitBlameInfo, GitPanelState } from './types';

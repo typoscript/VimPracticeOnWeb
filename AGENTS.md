@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 202개 테스트 파일, 2,301개 테스트 100% 통과 필수)*
+  *(현재 204개 테스트 파일, 2,307개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -253,6 +253,9 @@
 - **자유 연습장(Sandbox) 로컬 파일 드래그&드롭 불러오기 & 내보내기 (`src/utils/sandboxLocalFiles.ts`, `useAppMissionHandlers.ts`, `AppMainWorkspace.tsx`)**:
   - **단일/멀티 로컬 파일 마운트**: 파일 선택 버튼(`📂 로컬 파일 열기`) 또는 Sandbox 화면 전체 드래그&드롭(`.sandbox-drop-overlay`)으로 로컬 텍스트 코드 파일(파일당 최대 512 KB, 바이너리 NUL 자동 제외)을 VFS(`virtualFiles`), 버퍼 목록(`:bnext`/`:e`), Harpoon 핀 목록, Git 기준선(`gitBaseLines` — 수정 시 즉시 `gitsigns`/`:Gblame` Diff 반영)에 한 번에 마운트합니다.
   - **로컬 파일 전환 칩 & 파일 내보내기**: 불러온 파일 목록을 원클릭 전환 칩(`.sandbox-local-files-bar`)으로 표시하고, 상태바 파일명(`resolveStatusFilename`)을 활성 파일명으로 동기화하며, `💾 파일 내보내기` 버튼으로 수정된 현재 버퍼를 원본 파일명 그대로 로컬 다운로드합니다.
+- **내 풀이 vs 최적 해법 1:1 스텝 비교 리플레이어 (Vim Golf Comparator) & 인터랙티브 `vim-fugitive` Git 분할 패널 (`golfComparator.ts`, `GolfComparatorModal.tsx`, `gitFugitiveEngine.ts`, `GitPanel.tsx`)**:
+  - **1:1 Vim Golf 비교기**: 레슨 완료 배너의 `⚔️ 내 풀이 vs 최적 해법 비교` 버튼으로 지연 로딩 모달을 열어 사용자 입력 키 시퀀스(`allKeysSoFar`)와 모범 해법(`optimalKeys`)을 좌우 듀얼 미니 에디터로 동기화 재생(1x/0.5x/0.25x, 슬라이더, 키 칩 클릭)하며 타수 차이·효율도·첫 분기점 점프·연타 습관 코칭 팁을 제공합니다.
+  - **인터랙티브 `:Git` / `:LazyGit` 분할 패널**: `:Git`(단독), `:Gstatus`, `:LazyGit`, `:Fugitive`, `:GitClose` 로 하단 지연 로딩 패널을 열어 키보드(`j`/`k` 이동, `=` 인라인 Diff 토글, `s` Hunk 스테이징, `u` 언스테이징, `X` Hunk 되돌리기, `c` 커밋 입력, `1`/`2` 변경·로그 탭 전환, `q`/`Esc` 닫기)와 버튼으로 실무 Git 스테이징·커밋·로그 워크플로를 완결합니다.
 
 ---
 
