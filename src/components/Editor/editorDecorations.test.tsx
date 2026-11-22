@@ -4,9 +4,13 @@ import { createVimState, sendKeys, DEFAULT_VIM_OPTIONS } from '../../vim-engine'
 import {
   computeIndentGuideCols,
   computeActiveScopeIndent,
+  computeIlluminatedWordMap,
   computeMatchParenPair,
   computeRainbowDelimitersMap,
   computeSatelliteMarkers,
+  computeTreesitterContextLines,
+  computeWinbarBreadcrumbs,
+  findColorizerSpans,
   findTodoCommentBadge,
   getBufferFiletypeBadge,
 } from './editorDecorations';
@@ -276,5 +280,115 @@ describe('satellite.nvim 우측 스크롤바 미니맵 마커 & bufferline 파�
       />
     );
     expect(screen.queryByTestId('editor-satellite-bar')).not.toBeInTheDocument();
+  });
+});
+
+describe('nvim-treesitter-context Sticky Scope & Winbar 브레드크럼 & colorizer & vim-illuminate', () => {
+  it('computeTreesitterContextLines 와 computeWinbarBreadcrumbs 가 중첩 클래스·함수·블록 계층을 계산한다', () => {
+    const lines = [
+      'export class OrderService {',
+      '  processOrder(id: string) {',
+      '    if (id.length > 0) {',
+      '      return id;',
+      '    }',
+      '  }',
+      '}',
+    ];
+    const ctx = computeTreesitterContextLines(lines, 3, 2);
+    expect(ctx.map((c) => c.line)).toEqual([0, 1, 2]);
+    expect(ctx[0].symbolName).toBe('OrderService');
+    expect(ctx[1].symbolName).toBe('processOrder');
+    expect(ctx[2].kind).toBe('block');
+
+    const crumbs = computeWinbarBreadcrumbs('src/services/order.ts', lines, 3, 2);
+    expect(crumbs.map((c) => `${c.kind}:${c.label}`)).toEqual([
+      'dir:src',
+      'dir:services',
+      'file:order.ts',
+      'class:OrderService',
+      'function:processOrder',
+    ]);
+  });
+
+  it('findColorizerSpans 와 computeIlluminatedWordMap 이 컬러 리터럴과 동일 심볼 스팬을 계산한다', () => {
+    const colorLine = 'const primary = "#ff6b6b"; const bg = rgb(12, 34, 56); const accent = hsl(210, 50%, 60%);';
+    const spans = findColorizerSpans(colorLine);
+    expect(spans.map((s) => s.color)).toEqual([
+      '#ff6b6b',
+      'rgb(12, 34, 56)',
+      'hsl(210, 50%, 60%)',
+    ]);
+
+    const lines = ['const totalCount = 1;', 'return totalCount + totalCount;'];
+    const illMap = computeIlluminatedWordMap(lines, { line: 0, col: 7 });
+    expect(illMap).not.toBeNull();
+    expect(illMap!.get(0)?.length).toBe(1);
+    expect(illMap!.get(1)?.length).toBe(2);
+  });
+
+  it(':TSContextToggle · :ColorizerToggle · :IlluminateToggle 및 :set 옵션 토글이 동작한다', () => {
+    let state = createVimState(['const x = 1;']);
+    state = sendKeys(state, ':TSContextToggle<CR>:ColorizerToggle<CR>:IlluminateToggle<CR>');
+    expect(state.options?.tscontext).toBe(false);
+    expect(state.options?.colorizer).toBe(false);
+    expect(state.options?.illuminate).toBe(false);
+
+    state = sendKeys(state, ':set tsc col ill nowb<CR>');
+    expect(state.options?.tscontext).toBe(true);
+    expect(state.options?.colorizer).toBe(true);
+    expect(state.options?.illuminate).toBe(true);
+    expect(state.options?.winbar).toBe(false);
+  });
+
+  it('Editor 가 Winbar·Sticky Scope·colorizer·illuminate 를 렌더링하고 옵션 비활성화 시 숨긴다', () => {
+    const lines = [
+      'function renderTheme() {',
+      '  const brandColor = "#7aa2f7";',
+      '  return brandColor;',
+      '}',
+    ];
+    const { container, rerender } = render(
+      <Editor
+        lines={lines}
+        cursor={{ line: 2, col: 10 }}
+        mode="NORMAL"
+        primaryFilename="src/theme.ts"
+        options={{
+          ...DEFAULT_VIM_OPTIONS,
+          tscontext: true,
+          winbar: true,
+          colorizer: true,
+          illuminate: true,
+        }}
+      />
+    );
+
+    expect(screen.getByTestId('editor-winbar')).toHaveTextContent('theme.ts');
+    expect(screen.getByTestId('editor-winbar')).toHaveTextContent('renderTheme');
+    expect(screen.getByTestId('editor-ts-context')).toBeInTheDocument();
+    expect(screen.getByTestId('ts-context-row-1')).toHaveTextContent('function renderTheme() {');
+    expect(container.querySelectorAll('.colorizer-cell').length).toBe(7); // #7aa2f7
+    expect(container.querySelectorAll('.illuminate-word-cell').length).toBeGreaterThan(0);
+
+    rerender(
+      <Editor
+        lines={lines}
+        cursor={{ line: 2, col: 10 }}
+        mode="NORMAL"
+        primaryFilename="src/theme.ts"
+        options={{
+          ...DEFAULT_VIM_OPTIONS,
+          tscontext: false,
+          winbar: false,
+          colorizer: false,
+          illuminate: false,
+        }}
+      />
+    );
+
+    expect(screen.queryByTestId('editor-winbar')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('editor-ts-context')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('.colorizer-cell').length).toBe(0);
+    expect(container.querySelectorAll('.illuminate-word-cell').length).toBe(0);
   });
 });

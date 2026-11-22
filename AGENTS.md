@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 207개 테스트 파일, 2,335개 테스트 100% 통과 필수)*
+  *(현재 207개 테스트 파일, 2,339개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -269,6 +269,9 @@
 - **상단 버퍼라인(`bufferline.nvim`) & 우측 스크롤바 미니맵 마커(`satellite.nvim`) (`src/components/EditorViewport/EditorViewport.tsx`, `src/components/Editor/Editor.tsx`, `editorDecorations.ts`)**:
   - **`bufferline.nvim` (`:set bufferline` / `:set bl`, 기본 `on`)**: 다중 버퍼 탭바에 파일타입 배지(`TS`/`JS`/`LUA`/`MD`/`JSON`/`CSS`), 수정 상태 도트(`●`), 활성 버퍼 LSP 진단 에러/경고 카운트 배지(`E:N`/`W:N`), 원클릭 전환 및 개별 버퍼 닫기 버튼(`✕` → `deleteBuffer`)을 표시하며 `:set nobufferline`/`:set nobl` 로 토글할 수 있습니다.
   - **`satellite.nvim` (`:set satellite` / `:set sat`, 기본 `on`)**: 에디터 우측 스크롤바 트랙(`.editor-satellite-bar`)에 현재 커서 위치, 검색 매치, LSP 진단(Error/Warning), Git Hunk(`+`/`~`/`_`), 사용자 마크(`a-zA-Z`)의 상대 줄 위치를 컬러 마커로 실시간 시각화하며 `:set nosatellite`/`:set nosat` 로 토글할 수 있습니다.
+- **Sticky Scope(`nvim-treesitter-context`) & 브레드크럼 Winbar · 인라인 컬러 프리뷰(`nvim-colorizer.lua`) & 심볼 자동 강조(`vim-illuminate`) (`src/components/Editor/editorDecorations.ts`, `Editor.tsx`, `EditorLineRenderer.tsx`, `exListAndToolCommands.ts`)**:
+  - **`nvim-treesitter-context` (`:set tscontext` / `:set tsc`, `:TSContextToggle`, 기본 `on`) & 브레드크럼 Winbar (`:set winbar` / `:set wb`, 기본 `on`)**: 현재 커서를 감싸는 상위 클래스·인터페이스·함수·제어문 선언 헤더(최대 3단계)를 에디터 상단에 고정 표시(`.editor-ts-context`)하고, 파일 경로 › 클래스 › 함수 심볼 계층을 상단 브레드크럼 바(`.editor-winbar`)로 시각화합니다.
+  - **`nvim-colorizer.lua` (`:set colorizer` / `:set col`, `:ColorizerToggle`, 기본 `on`) & `vim-illuminate` (`:set illuminate` / `:set ill`, `:IlluminateToggle`, 기본 `on`)**: 코드 내 `#hex`, `rgb()`, `rgba()`, `hsl()`, `hsla()` 컬러 리터럴에 본문 무결성을 해치지 않고 실시간 컬러 밑줄 프리뷰(`.colorizer-cell`)를 표시하며, 커서 아래 식별자와 동일한 심볼이 버퍼 내 2회 이상 등장할 때 모든 참조 위치를 자동 하이라이트(`.illuminate-word-cell`)합니다.
 
 ---
 

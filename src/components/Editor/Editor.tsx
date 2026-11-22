@@ -33,10 +33,14 @@ import { t } from '../../i18n';
 import { renderLineContent } from './EditorLineRenderer';
 import {
   computeActiveScopeIndent,
+  computeIlluminatedWordMap,
   computeIndentGuideCols,
   computeMatchParenPair,
   computeRainbowDelimitersMap,
   computeSatelliteMarkers,
+  computeTreesitterContextLines,
+  computeWinbarBreadcrumbs,
+  findColorizerSpans,
   findTodoCommentBadge,
 } from './editorDecorations';
 
@@ -236,6 +240,10 @@ export const Editor: React.FC<EditorProps> = ({
   const showIndentLines = options?.indentline !== false;
   const showMatchParen = options?.matchparen !== false;
   const showRainbow = options?.rainbow !== false && isSyntaxEnabled;
+  const showTSContext = options?.tscontext !== false;
+  const showWinbar = options?.winbar !== false;
+  const showColorizer = options?.colorizer !== false;
+  const showIlluminate = options?.illuminate !== false;
   const activeScopeIndent = showIndentLines
     ? computeActiveScopeIndent(lines, cursor.line, indentUnit, tabstop)
     : null;
@@ -249,6 +257,22 @@ export const Editor: React.FC<EditorProps> = ({
   const rainbowDelimitersMap = React.useMemo(
     () => (showRainbow ? computeRainbowDelimitersMap(lines) : null),
     [lines, showRainbow]
+  );
+  const tsContextLines = React.useMemo(
+    () =>
+      showTSContext ? computeTreesitterContextLines(lines, cursor.line, tabstop) : [],
+    [lines, cursor.line, tabstop, showTSContext]
+  );
+  const winbarBreadcrumbs = React.useMemo(
+    () =>
+      showWinbar && primaryFilename
+        ? computeWinbarBreadcrumbs(primaryFilename, lines, cursor.line, tabstop)
+        : [],
+    [showWinbar, primaryFilename, lines, cursor.line, tabstop]
+  );
+  const illuminatedWordMap = React.useMemo(
+    () => (showIlluminate ? computeIlluminatedWordMap(lines, cursor) : null),
+    [lines, cursor.line, cursor.col, showIlluminate]
   );
   const searchOpts = options ? { ignorecase: options.ignorecase, smartcase: options.smartcase } : undefined;
 
@@ -301,6 +325,56 @@ export const Editor: React.FC<EditorProps> = ({
             <span className="blur-icon">🖱️</span>
             <span className="blur-text">{t('클릭하여 에디터 포커스 활성화')}</span>
           </div>
+        </div>
+      )}
+
+      {winbarBreadcrumbs.length > 0 && (
+        <div
+          className="editor-winbar"
+          data-testid="editor-winbar"
+          aria-hidden="true"
+        >
+          {winbarBreadcrumbs.map((seg, idx) => (
+            <React.Fragment key={`${seg.kind}-${seg.label}-${idx}`}>
+              {idx > 0 && <span className="winbar-sep">›</span>}
+              <span
+                className={`winbar-segment kind-${seg.kind}`}
+                data-testid={`winbar-seg-${idx}`}
+              >
+                <span className="winbar-icon">
+                  {seg.kind === 'dir'
+                    ? '📁'
+                    : seg.kind === 'file'
+                      ? '📄'
+                      : seg.kind === 'class'
+                        ? '◈'
+                        : seg.kind === 'interface'
+                          ? '◆'
+                          : 'ƒ'}
+                </span>
+                <span className="winbar-label">{seg.label}</span>
+              </span>
+            </React.Fragment>
+          ))}
+        </div>
+      )}
+
+      {tsContextLines.length > 0 && (
+        <div
+          className="editor-ts-context"
+          data-testid="editor-ts-context"
+          aria-hidden="true"
+        >
+          {tsContextLines.map((item) => (
+            <div
+              key={`tsc-${item.line}`}
+              className={`ts-context-row kind-${item.kind}`}
+              data-testid={`ts-context-row-${item.line + 1}`}
+            >
+              <span className="ts-context-lnum">{item.line + 1}</span>
+              <span className="ts-context-text">{item.text}</span>
+            </div>
+          ))}
         </div>
       )}
 
@@ -530,6 +604,8 @@ export const Editor: React.FC<EditorProps> = ({
                           return cols.length > 0 ? cols : undefined;
                         })(),
                         rainbowCols: rainbowDelimitersMap?.get(lineIdx) ?? null,
+                        colorizerSpans: showColorizer ? findColorizerSpans(lineText) : undefined,
+                        illuminatedSpans: illuminatedWordMap?.get(lineIdx),
                       })}
                       {primaryLineDiagnostic && (
                         <span

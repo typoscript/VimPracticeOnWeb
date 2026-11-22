@@ -1347,3 +1347,94 @@
   background: rgba(187, 154, 247, 0.92);
   z-index: 3;
 }
+
+/* ============================================================================
+   Winbar 브레드크럼 (:set winbar / :set wb) & nvim-treesitter-context (:set tscontext / :set tsc)
+   ============================================================================ */
+.editor-winbar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 12px;
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 0.72rem;
+  color: #9aa5ce;
+  background: rgba(22, 22, 30, 0.85);
+  border-bottom: 1px solid rgba(122, 162, 247, 0.14);
+  user-select: none;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.winbar-sep {
+  color: #565f89;
+  font-size: 0.72rem;
+}
+
+.winbar-segment {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.winbar-segment.kind-file {
+  color: #c0caf5;
+  font-weight: 600;
+}
+
+.winbar-segment.kind-class,
+.winbar-segment.kind-interface {
+  color: #e0af68;
+  font-weight: 600;
+}
+
+.winbar-segment.kind-function {
+  color: #7aa2f7;
+  font-weight: 600;
+}
+
+.editor-ts-context {
+  background: rgba(26, 27, 38, 0.95);
+  border-bottom: 1px solid rgba(122, 162, 247, 0.28);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.28);
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 0.82rem;
+  user-select: none;
+  z-index: 5;
+}
+
+.ts-context-row {
+  display: flex;
+  align-items: center;
+  padding: 1px 10px;
+  line-height: 1.35;
+  color: #a9b1d6;
+}
+
+.ts-context-lnum {
+  display: inline-block;
+  min-width: 2.5rem;
+  padding-right: 10px;
+  text-align: right;
+  color: #565f89;
+  font-size: 0.74rem;
+}
+
+.ts-context-text {
+  white-space: pre;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ============================================================================
+   nvim-colorizer.lua 인라인 컬러 프리뷰 & vim-illuminate 동일 심볼 자동 강조
+   ============================================================================ */
+.colorizer-cell {
+  border-radius: 1px;
+  font-weight: 600;
+}
+
+.illuminate-word-cell {
+  background-color: rgba(122, 162, 247, 0.16);
+  border-bottom: 1px dashed rgba(122, 162, 247, 0.45);
+}

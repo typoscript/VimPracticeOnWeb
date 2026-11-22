@@ -55,6 +55,10 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   rainbow: true,
   bufferline: true,
   satellite: true,
+  tscontext: true,
+  winbar: true,
+  colorizer: true,
+  illuminate: true,
 };
 
 export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
@@ -169,6 +173,14 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   bufferline: 'bufferline',
   sat: 'satellite',
   satellite: 'satellite',
+  tsc: 'tscontext',
+  tscontext: 'tscontext',
+  wb: 'winbar',
+  winbar: 'winbar',
+  col: 'colorizer',
+  colorizer: 'colorizer',
+  ill: 'illuminate',
+  illuminate: 'illuminate',
 };
 
 export const WINDOW_LOCAL_OPTION_KEYS = new Set<keyof VimOptions>([
@@ -568,6 +580,10 @@ const BOOLEAN_OPTION_KEYS = new Set<keyof VimOptions>([
   'rainbow',
   'bufferline',
   'satellite',
+  'tscontext',
+  'winbar',
+  'colorizer',
+  'illuminate',
 ]);
 
 /**

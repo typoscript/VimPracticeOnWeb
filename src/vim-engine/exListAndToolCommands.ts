@@ -553,6 +553,17 @@ function tryExecuteMappingAndMiscToolCommand(
     return finishEx(executeTreesj(state, action, false));
   }
 
+  // :TSContextToggle / :ColorizerToggle / :IlluminateToggle — 모던 Neovim 시각 플러그인 토글
+  if (/^TSContextToggle$/i.test(cleanCmdRaw)) {
+    return finishEx(executeSetCommand(state, 'tscontext!', 'both'));
+  }
+  if (/^ColorizerToggle$/i.test(cleanCmdRaw)) {
+    return finishEx(executeSetCommand(state, 'colorizer!', 'both'));
+  }
+  if (/^IlluminateToggle$/i.test(cleanCmdRaw)) {
+    return finishEx(executeSetCommand(state, 'illuminate!', 'both'));
+  }
+
   // :TestRun / :RunTests / :TestSuite — 실무 캡스톤 가상 테스트 러너
   if (/^(?:TestRun|RunTests|TestSuite)$/i.test(cleanCmdRaw)) {
     return finishEx(runVirtualTests(state));

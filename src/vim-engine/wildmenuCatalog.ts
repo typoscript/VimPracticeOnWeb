@@ -483,6 +483,14 @@ export const AVAILABLE_OPTIONS: string[] = [
   'nobufferline',
   'satellite',
   'nosatellite',
+  'tscontext',
+  'notscontext',
+  'winbar',
+  'nowinbar',
+  'colorizer',
+  'nocolorizer',
+  'illuminate',
+  'noilluminate',
 ];
 
 export const OPTION_VALUE_COMPLETIONS: Record<string, readonly string[]> = {

@@ -410,6 +410,14 @@ export interface VimOptions {
   bufferline?: boolean;
   /** satellite.nvim 스타일 우측 스크롤바 미니맵 마커 표시 여부 (:set satellite / :set sat) */
   satellite?: boolean;
+  /** nvim-treesitter-context 스타일 상단 Sticky Scope 헤더 고정 표시 여부 (:set tscontext / :set tsc) */
+  tscontext?: boolean;
+  /** 상단 파일 경로 › 심볼 계층 브레드크럼 Winbar 표시 여부 (:set winbar / :set wb) */
+  winbar?: boolean;
+  /** nvim-colorizer.lua 스타일 인라인 #hex/rgb()/hsl() 컬러 프리뷰 표시 여부 (:set colorizer / :set col) */
+  colorizer?: boolean;
+  /** vim-illuminate 스타일 커서 아래 동일 심볼 자동 강조 표시 여부 (:set illuminate / :set ill) */
+  illuminate?: boolean;
 }
 
 /** 맞춤법 검사기 오탈자 정보 */

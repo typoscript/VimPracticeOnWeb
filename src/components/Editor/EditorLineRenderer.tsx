@@ -18,7 +18,11 @@ import {
   tokenizeLine,
   getSyntaxTokensMap,
 } from '../../vim-engine';
-import type { TodoCommentBadge } from './editorDecorations';
+import type {
+  ColorizerSpan,
+  IlluminatedSpan,
+  TodoCommentBadge,
+} from './editorDecorations';
 
 export interface RenderLineOptions {
   text: string;
@@ -51,6 +55,8 @@ export interface RenderLineOptions {
   todoBadge?: TodoCommentBadge | null;
   matchParenCols?: number[];
   rainbowCols?: Map<number, number> | null;
+  colorizerSpans?: ColorizerSpan[];
+  illuminatedSpans?: IlluminatedSpan[];
 }
 
 function renderTextWithTodoBadge(
@@ -154,6 +160,8 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     todoBadge = null,
     matchParenCols,
     rainbowCols = null,
+    colorizerSpans,
+    illuminatedSpans,
   } = opts;
   const isCursorLine = cursor.line === lineIdx;
   const cursorCol = isCursorLine ? cursor.col : null;
@@ -181,6 +189,8 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
   const hasDiagnostics = (lineDiagnostics?.length ?? 0) > 0;
   const hasMatchParen = (matchParenCols?.length ?? 0) > 0;
   const hasRainbow = (rainbowCols?.size ?? 0) > 0;
+  const hasColorizer = (colorizerSpans?.length ?? 0) > 0;
+  const hasIlluminated = (illuminatedSpans?.length ?? 0) > 0;
 
   // 비주얼 블록 I / A / c 다중 줄 실시간 멀티커서 & 고스트 프리뷰 계산 (첫 줄이 아닌 대상 줄)
   let blockSecondaryCol: number | null = null;
@@ -248,6 +258,8 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     !hasDiagnostics &&
     !hasMatchParen &&
     !hasRainbow &&
+    !hasColorizer &&
+    !hasIlluminated &&
     !listMode &&
     cursorColumnCol === null
   ) {
@@ -447,6 +459,17 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
       classNames += ' match-paren-highlight';
     }
 
+    const colorSpan = colorizerSpans?.find((s) => i >= s.startCol && i < s.endCol);
+    if (colorSpan && !isCursor) {
+      classNames += ' colorizer-cell';
+    }
+
+    const isIlluminated =
+      illuminatedSpans?.some((s) => i >= s.startCol && i < s.endCol) ?? false;
+    if (isIlluminated && !isCursor) {
+      classNames += ' illuminate-word-cell';
+    }
+
     if (listCharClass) {
       classNames += listCharClass;
     }
@@ -521,6 +544,15 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
       <span
         key={i}
         className={classNames}
+        style={
+          colorSpan && !isCursor
+            ? {
+                borderBottom: `2px solid ${colorSpan.color}`,
+                boxShadow: `inset 0 -2px 0 ${colorSpan.color}`,
+              }
+            : undefined
+        }
+        data-color={colorSpan ? colorSpan.color : undefined}
         data-testid={
           isCursor
             ? 'vim-cursor'

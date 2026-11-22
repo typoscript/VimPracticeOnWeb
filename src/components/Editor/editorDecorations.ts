@@ -458,3 +458,239 @@ export function getBufferFiletypeBadge(filename: string): { label: string; cls: 
   if (lower.endsWith('.py')) return { label: 'PY', cls: 'ft-py' };
   return { label: '≡', cls: 'ft-default' };
 }
+
+export interface TreesitterContextItem {
+  line: number;
+  text: string;
+  kind: 'class' | 'function' | 'interface' | 'block';
+  symbolName?: string;
+}
+
+export interface BreadcrumbSegment {
+  kind: 'dir' | 'file' | 'class' | 'function' | 'interface';
+  label: string;
+  line?: number;
+}
+
+function classifyScopeHeader(
+  trimmed: string
+): { kind: TreesitterContextItem['kind']; symbolName?: string } | null {
+  if (!trimmed || trimmed.startsWith('//') || trimmed.startsWith('*') || trimmed.startsWith('/*')) {
+    return null;
+  }
+  if (/^[}\])]/.test(trimmed)) return null;
+
+  const classMatch = trimmed.match(/^(?:export\s+)?(?:abstract\s+)?class\s+([A-Za-z_$][\w$]*)/);
+  if (classMatch) return { kind: 'class', symbolName: classMatch[1] };
+
+  const ifaceMatch = trimmed.match(/^(?:export\s+)?(?:interface|type|enum)\s+([A-Za-z_$][\w$]*)/);
+  if (ifaceMatch) return { kind: 'interface', symbolName: ifaceMatch[1] };
+
+  const fnMatch =
+    trimmed.match(/^(?:export\s+)?(?:async\s+)?function\*?\s+([A-Za-z_$][\w$]*)/) ??
+    trimmed.match(/^def\s+([A-Za-z_]\w*)/) ??
+    trimmed.match(/^(?:local\s+)?function\s+([A-Za-z_][\w.:]*)/) ??
+    trimmed.match(
+      /^(?:export\s+)?(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>/
+    );
+  if (fnMatch) return { kind: 'function', symbolName: fnMatch[1] };
+
+  const methodMatch = trimmed.match(
+    /^(?:public\s+|private\s+|protected\s+|static\s+|async\s+)*([A-Za-z_$][\w$]*)\s*\([^;]*\)\s*(?::\s*[^{]+)?\{$/
+  );
+  if (
+    methodMatch &&
+    !['if', 'for', 'while', 'switch', 'catch', 'function'].includes(methodMatch[1])
+  ) {
+    return { kind: 'function', symbolName: methodMatch[1] };
+  }
+
+  if (
+    /^(?:if|else\s+if|else|for|while|switch|try|catch|finally|describe|it|test)\b/.test(trimmed) &&
+    (trimmed.endsWith('{') || trimmed.endsWith(':'))
+  ) {
+    return { kind: 'block' };
+  }
+
+  return null;
+}
+
+/**
+ * nvim-treesitter-context: 현재 커서 줄을 감싸고 있는 상위 클래스·함수·블록 선언 헤더 줄(최대 3단계)을 계산합니다.
+ */
+export function computeTreesitterContextLines(
+  lines: string[],
+  cursorLine: number,
+  tabstop = 2
+): TreesitterContextItem[] {
+  if (lines.length === 0 || cursorLine <= 0 || cursorLine >= lines.length) return [];
+  const ts = Math.max(1, tabstop);
+  let requiredIndent = getEffectiveLineIndent(lines, cursorLine, ts);
+  const curTrimmed = (lines[cursorLine] ?? '').trim();
+  // 커서가 닫는 중괄호('}') 줄에 있을 때는 해당 블록 내부 들여쓰기 기준으로 상위 헤더 탐색
+  if (/^[}\])]/.test(curTrimmed)) {
+    requiredIndent += 1;
+  }
+  if (requiredIndent <= 0) return [];
+
+  const collected: TreesitterContextItem[] = [];
+  for (let row = cursorLine - 1; row >= 0; row--) {
+    const raw = lines[row] ?? '';
+    const trimmed = raw.trim();
+    if (!trimmed) continue;
+    const indent = measureLeadingIndentWidth(raw, ts);
+    if (indent < requiredIndent) {
+      const classified = classifyScopeHeader(trimmed);
+      if (classified) {
+        collected.push({
+          line: row,
+          text: raw,
+          kind: classified.kind,
+          symbolName: classified.symbolName,
+        });
+      }
+      requiredIndent = indent;
+      if (indent === 0) break;
+    }
+  }
+
+  return collected.reverse().slice(-3);
+}
+
+/**
+ * Winbar Breadcrumbs: 파일 경로(폴더 › 파일)와 현재 커서가 속한 심볼 계층(클래스 › 함수)을 계산합니다.
+ */
+export function computeWinbarBreadcrumbs(
+  primaryFilename: string | undefined,
+  lines: string[],
+  cursorLine: number,
+  tabstop = 2
+): BreadcrumbSegment[] {
+  const segments: BreadcrumbSegment[] = [];
+  const cleanPath = (primaryFilename || '').trim();
+  if (cleanPath) {
+    const parts = cleanPath.split('/').filter(Boolean);
+    for (let i = 0; i < parts.length; i++) {
+      segments.push({
+        kind: i === parts.length - 1 ? 'file' : 'dir',
+        label: parts[i],
+      });
+    }
+  }
+
+  // 현재 커서 줄 자체가 선언 헤더인지 확인
+  const contextItems = computeTreesitterContextLines(lines, cursorLine, tabstop);
+  for (const item of contextItems) {
+    if (item.symbolName && (item.kind === 'class' || item.kind === 'function' || item.kind === 'interface')) {
+      segments.push({
+        kind: item.kind,
+        label: item.symbolName,
+        line: item.line,
+      });
+    }
+  }
+
+  const curTrimmed = (lines[cursorLine] ?? '').trim();
+  const curClassified = classifyScopeHeader(curTrimmed);
+  if (
+    curClassified?.symbolName &&
+    (curClassified.kind === 'class' ||
+      curClassified.kind === 'function' ||
+      curClassified.kind === 'interface')
+  ) {
+    segments.push({
+      kind: curClassified.kind,
+      label: curClassified.symbolName,
+      line: cursorLine,
+    });
+  }
+
+  return segments;
+}
+
+export interface ColorizerSpan {
+  startCol: number;
+  endCol: number;
+  color: string;
+}
+
+const COLOR_LITERAL_RE =
+  /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b|\brgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)|\bhsla?\(\s*\d{1,3}\s*,\s*\d{1,3}%\s*,\s*\d{1,3}%(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)/g;
+
+/**
+ * nvim-colorizer.lua: 한 줄 내의 #hex, rgb(), rgba(), hsl(), hsla() 컬러 리터럴 위치와 CSS 색상값을 추출합니다.
+ */
+export function findColorizerSpans(lineText: string): ColorizerSpan[] {
+  if (!lineText || (!lineText.includes('#') && !lineText.includes('rgb') && !lineText.includes('hsl'))) {
+    return [];
+  }
+  const spans: ColorizerSpan[] = [];
+  COLOR_LITERAL_RE.lastIndex = 0;
+  let m: RegExpExecArray | null = null;
+  while ((m = COLOR_LITERAL_RE.exec(lineText)) !== null) {
+    spans.push({
+      startCol: m.index,
+      endCol: m.index + m[0].length,
+      color: m[0],
+    });
+  }
+  return spans;
+}
+
+export interface IlluminatedSpan {
+  startCol: number;
+  endCol: number;
+}
+
+const IDENT_CHAR_RE = /[A-Za-z0-9_$]/;
+const IDENT_START_RE = /[A-Za-z_$]/;
+
+/**
+ * 커서 아래 식별자 단어를 추출합니다 (길이 2 이상).
+ */
+export function getIdentifierAtCursor(lineText: string, col: number): string | null {
+  if (!lineText || col < 0 || col >= lineText.length) return null;
+  if (!IDENT_CHAR_RE.test(lineText[col])) return null;
+  let start = col;
+  while (start > 0 && IDENT_CHAR_RE.test(lineText[start - 1])) start--;
+  let end = col + 1;
+  while (end < lineText.length && IDENT_CHAR_RE.test(lineText[end])) end++;
+  const word = lineText.slice(start, end);
+  if (word.length < 2 || !IDENT_START_RE.test(word[0])) return null;
+  return word;
+}
+
+/**
+ * vim-illuminate: 커서 아래 식별자와 동일한 심볼이 버퍼 내 2회 이상 등장할 때 모든 줄별 스팬을 계산합니다.
+ */
+export function computeIlluminatedWordMap(
+  lines: string[],
+  cursor: CursorPosition
+): Map<number, IlluminatedSpan[]> | null {
+  const curLine = lines[cursor.line] ?? '';
+  const word = getIdentifierAtCursor(curLine, cursor.col);
+  if (!word) return null;
+
+  const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`(?<![A-Za-z0-9_$])${escaped}(?![A-Za-z0-9_$])`, 'g');
+  const map = new Map<number, IlluminatedSpan[]>();
+  let totalCount = 0;
+
+  for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+    const text = lines[lineIdx] ?? '';
+    if (!text.includes(word)) continue;
+    re.lastIndex = 0;
+    let m: RegExpExecArray | null = null;
+    let lineSpans: IlluminatedSpan[] | null = null;
+    while ((m = re.exec(text)) !== null) {
+      if (!lineSpans) lineSpans = [];
+      lineSpans.push({ startCol: m.index, endCol: m.index + word.length });
+      totalCount++;
+    }
+    if (lineSpans) {
+      map.set(lineIdx, lineSpans);
+    }
+  }
+
+  return totalCount >= 2 ? map : null;
+}
