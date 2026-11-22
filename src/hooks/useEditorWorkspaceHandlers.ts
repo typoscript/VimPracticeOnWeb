@@ -4,6 +4,7 @@ import {
   handleKey,
   switchPaneFocus,
   switchBuffer,
+  deleteBuffer,
   switchTab,
   openNewTab,
   closeTab,
@@ -107,6 +108,11 @@ export function useEditorWorkspaceHandlers({
 
   const handleSwitchBuffer = useCallback(
     (targetId: number) => applyAndFocus((prev) => switchBuffer(prev, targetId)),
+    [applyAndFocus]
+  );
+
+  const handleCloseBuffer = useCallback(
+    (targetId: number) => applyAndFocus((prev) => deleteBuffer(prev, String(targetId), true)),
     [applyAndFocus]
   );
 
@@ -450,6 +456,7 @@ export function useEditorWorkspaceHandlers({
       onSwitchPane: handleSwitchPane,
       onSelectCompletionCandidate: handleSelectCompletionCandidate,
       onSwitchBuffer: handleSwitchBuffer,
+      onCloseBuffer: handleCloseBuffer,
       onSwitchTabPage: handleSwitchTabPage,
       onCloseTabPage: handleCloseTabPage,
       onNewTabPage: handleNewTabPage,

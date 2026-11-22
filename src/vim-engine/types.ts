@@ -406,6 +406,10 @@ export interface VimOptions {
   matchparen?: boolean;
   /** rainbow-delimiters.nvim 스타일 중첩 괄호 깊이별 컬러 강조 (:set rainbow / :set rb) */
   rainbow?: boolean;
+  /** bufferline.nvim 스타일 상단 버퍼 탭바 표시 여부 (:set bufferline / :set bl) */
+  bufferline?: boolean;
+  /** satellite.nvim 스타일 우측 스크롤바 미니맵 마커 표시 여부 (:set satellite / :set sat) */
+  satellite?: boolean;
 }
 
 /** 맞춤법 검사기 오탈자 정보 */

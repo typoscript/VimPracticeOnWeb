@@ -308,3 +308,153 @@ export function computeRainbowDelimitersMap(
 
   return result;
 }
+
+export type SatelliteMarkerKind =
+  | 'cursor'
+  | 'search'
+  | 'diagnostic-error'
+  | 'diagnostic-warning'
+  | 'git-add'
+  | 'git-change'
+  | 'git-delete'
+  | 'mark';
+
+export interface SatelliteMarker {
+  id: string;
+  kind: SatelliteMarkerKind;
+  line: number;
+  topPercent: number;
+  label: string;
+}
+
+export interface ComputeSatelliteMarkersInput {
+  lineCount: number;
+  cursorLine: number;
+  searchMatchLines?: number[];
+  diagnostics?: ReadonlyArray<{ line: number; severity: string; message: string }>;
+  gitLineSigns?: Map<number, 'add' | 'change' | 'delete'>;
+  marks?: Record<string, { row: number; col: number }>;
+}
+
+function lineToPercent(line: number, lineCount: number): number {
+  if (lineCount <= 1) return 50;
+  const clamped = Math.max(0, Math.min(lineCount - 1, line));
+  return Number((((clamped + 0.5) / lineCount) * 100).toFixed(2));
+}
+
+/**
+ * satellite.nvim: 에디터 우측 스크롤바 트랙에 표시할 미니맵 마커(커서, 검색 매치, LSP 진단, Git Hunk, 마크)를 계산합니다.
+ */
+export function computeSatelliteMarkers({
+  lineCount,
+  cursorLine,
+  searchMatchLines,
+  diagnostics,
+  gitLineSigns,
+  marks,
+}: ComputeSatelliteMarkersInput): SatelliteMarker[] {
+  if (lineCount <= 0) return [];
+  const markers: SatelliteMarker[] = [];
+
+  // 1) Git Hunk 마커
+  if (gitLineSigns) {
+    for (const [line, sign] of gitLineSigns.entries()) {
+      if (line < 0 || line >= lineCount) continue;
+      const kind: SatelliteMarkerKind =
+        sign === 'add' ? 'git-add' : sign === 'delete' ? 'git-delete' : 'git-change';
+      markers.push({
+        id: `${kind}-${line}`,
+        kind,
+        line,
+        topPercent: lineToPercent(line, lineCount),
+        label: `L${line + 1} · Git ${sign}`,
+      });
+    }
+  }
+
+  // 2) 검색 매치 마커 (줄 단위 중복 제거)
+  if (searchMatchLines && searchMatchLines.length > 0) {
+    const uniqueSearchLines = Array.from(new Set(searchMatchLines));
+    for (const line of uniqueSearchLines) {
+      if (line < 0 || line >= lineCount) continue;
+      markers.push({
+        id: `search-${line}`,
+        kind: 'search',
+        line,
+        topPercent: lineToPercent(line, lineCount),
+        label: `L${line + 1} · Search match`,
+      });
+    }
+  }
+
+  // 3) 사용자 마크 마커 (a-zA-Z)
+  if (marks) {
+    const seenMarkLines = new Set<number>();
+    for (const [name, pos] of Object.entries(marks)) {
+      if (!/^[a-zA-Z]$/.test(name)) continue;
+      if (pos.row < 0 || pos.row >= lineCount || seenMarkLines.has(pos.row)) continue;
+      seenMarkLines.add(pos.row);
+      markers.push({
+        id: `mark-${pos.row}`,
+        kind: 'mark',
+        line: pos.row,
+        topPercent: lineToPercent(pos.row, lineCount),
+        label: `L${pos.row + 1} · Mark '${name}`,
+      });
+    }
+  }
+
+  // 4) LSP 진단 마커 (줄당 가장 높은 심각도 1개)
+  if (diagnostics && diagnostics.length > 0) {
+    const lineSeverity = new Map<number, { kind: 'diagnostic-error' | 'diagnostic-warning'; msg: string }>();
+    for (const d of diagnostics) {
+      if (d.line < 0 || d.line >= lineCount) continue;
+      const isErr = d.severity === 'error';
+      const existing = lineSeverity.get(d.line);
+      if (!existing || (isErr && existing.kind !== 'diagnostic-error')) {
+        lineSeverity.set(d.line, {
+          kind: isErr ? 'diagnostic-error' : 'diagnostic-warning',
+          msg: d.message,
+        });
+      }
+    }
+    for (const [line, info] of lineSeverity.entries()) {
+      markers.push({
+        id: `${info.kind}-${line}`,
+        kind: info.kind,
+        line,
+        topPercent: lineToPercent(line, lineCount),
+        label: `L${line + 1} · ${info.msg}`,
+      });
+    }
+  }
+
+  // 5) 현재 커서 위치 마커
+  const safeCursorLine = Math.max(0, Math.min(lineCount - 1, cursorLine));
+  markers.push({
+    id: `cursor-${safeCursorLine}`,
+    kind: 'cursor',
+    line: safeCursorLine,
+    topPercent: lineToPercent(safeCursorLine, lineCount),
+    label: `L${safeCursorLine + 1} · Cursor`,
+  });
+
+  return markers;
+}
+
+/**
+ * bufferline.nvim: 파일 확장자에 따른 아이콘/약어 배지를 반환합니다.
+ */
+export function getBufferFiletypeBadge(filename: string): { label: string; cls: string } {
+  const lower = (filename || '').toLowerCase();
+  if (lower.endsWith('.ts') || lower.endsWith('.tsx')) return { label: 'TS', cls: 'ft-ts' };
+  if (lower.endsWith('.js') || lower.endsWith('.jsx') || lower.endsWith('.mjs')) {
+    return { label: 'JS', cls: 'ft-js' };
+  }
+  if (lower.endsWith('.lua')) return { label: 'LUA', cls: 'ft-lua' };
+  if (lower.endsWith('.json')) return { label: '{}', cls: 'ft-json' };
+  if (lower.endsWith('.md')) return { label: 'MD', cls: 'ft-md' };
+  if (lower.endsWith('.css')) return { label: 'CSS', cls: 'ft-css' };
+  if (lower.endsWith('.py')) return { label: 'PY', cls: 'ft-py' };
+  return { label: '≡', cls: 'ft-default' };
+}

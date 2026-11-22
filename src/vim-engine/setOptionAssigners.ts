@@ -52,7 +52,9 @@ type BooleanOrSyntaxOptionKey =
   | 'cmdlinepopup'
   | 'indentline'
   | 'matchparen'
-  | 'rainbow';
+  | 'rainbow'
+  | 'bufferline'
+  | 'satellite';
 
 const VALID_FOLDMETHODS: readonly FoldMethod[] = ['manual', 'indent', 'marker', 'syntax', 'expr'];
 const VALID_NRFORMATS = new Set(['bin', 'octal', 'hex', 'alpha', 'unsigned', 'blank']);
@@ -107,6 +109,8 @@ const BOOLEAN_OR_SYNTAX_KEYS = new Set<BooleanOrSyntaxOptionKey>([
   'indentline',
   'matchparen',
   'rainbow',
+  'bufferline',
+  'satellite',
 ]);
 
 const DEFAULT_ERRORFORMAT = '%f:%l:%c:%m,%f:%l:%m,%f(%l\\,%c):%m';

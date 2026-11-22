@@ -258,6 +258,7 @@ export interface WorkspaceEditorProps {
     | 'onSwitchPane'
     | 'onSelectCompletionCandidate'
     | 'onSwitchBuffer'
+    | 'onCloseBuffer'
     | 'onSwitchTabPage'
     | 'onCloseTabPage'
     | 'onNewTabPage'

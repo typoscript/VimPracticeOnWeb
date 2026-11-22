@@ -1264,3 +1264,86 @@
 .rainbow-delim.rainbow-depth-5 {
   color: #f7768e !important;
 }
+
+/* ============================================================================
+   satellite.nvim 스타일 우측 스크롤바 미니맵 마커 (:set satellite / :set sat)
+   ============================================================================ */
+.editor-satellite-bar {
+  position: absolute;
+  top: 4px;
+  right: 2px;
+  bottom: 4px;
+  width: 8px;
+  pointer-events: none;
+  z-index: 6;
+  border-radius: 4px;
+  background: rgba(26, 27, 38, 0.35);
+}
+
+.satellite-marker {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  height: 3px;
+  border-radius: 2px;
+  transform: translateY(-50%);
+  pointer-events: auto;
+}
+
+.satellite-marker.kind-cursor {
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: rgba(122, 162, 247, 0.95);
+  box-shadow: 0 0 4px rgba(122, 162, 247, 0.65);
+  z-index: 4;
+}
+
+.satellite-marker.kind-search {
+  background: rgba(224, 175, 104, 0.92);
+  z-index: 3;
+}
+
+.satellite-marker.kind-diagnostic-error {
+  height: 4px;
+  background: rgba(247, 118, 142, 0.96);
+  box-shadow: 0 0 4px rgba(247, 118, 142, 0.55);
+  z-index: 5;
+}
+
+.satellite-marker.kind-diagnostic-warning {
+  background: rgba(255, 158, 100, 0.92);
+  z-index: 4;
+}
+
+.satellite-marker.kind-git-add {
+  left: 1px;
+  width: 3px;
+  right: auto;
+  background: rgba(158, 206, 106, 0.9);
+  z-index: 2;
+}
+
+.satellite-marker.kind-git-change {
+  left: 1px;
+  width: 3px;
+  right: auto;
+  background: rgba(125, 207, 255, 0.9);
+  z-index: 2;
+}
+
+.satellite-marker.kind-git-delete {
+  left: 1px;
+  width: 3px;
+  right: auto;
+  background: rgba(247, 118, 142, 0.9);
+  z-index: 2;
+}
+
+.satellite-marker.kind-mark {
+  left: auto;
+  right: 1px;
+  width: 3px;
+  background: rgba(187, 154, 247, 0.92);
+  z-index: 3;
+}

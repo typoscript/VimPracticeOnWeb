@@ -270,4 +270,48 @@ describe('EditorViewport', () => {
     expect(screen.getAllByTestId('colorcolumn-guide-10')).toHaveLength(2);
     expect(container.querySelectorAll('.cursor-column-cell')).toHaveLength(1);
   });
+
+  it('bufferline.nvim 상단 버퍼바가 파일타입 배지·수정 점(●)·LSP 진단 배지·닫기 버튼을 표시하고 :set nobufferline 시 숨긴다', () => {
+    const onCloseBuffer = vi.fn();
+    const state = makeBaseState({
+      buffers: [
+        { id: 1, name: 'api.ts', lines: ['const a = 1;'], cursor: { line: 0, col: 0 }, isModified: true },
+        { id: 2, name: 'init.lua', lines: ['-- lua'], cursor: { line: 0, col: 0 }, isModified: false },
+      ],
+      currentBufferId: 1,
+      alternateBufferId: 2,
+      lspDiagnostics: [
+        { id: 'e1', line: 0, col: 0, endCol: 5, severity: 'error', message: 'err' },
+        { id: 'w1', line: 0, col: 6, endCol: 7, severity: 'warning', message: 'warn' },
+      ],
+    });
+    const props = createProps({
+      editorState: state,
+      displayEditorState: state,
+      onCloseBuffer,
+    });
+    const { rerender } = render(<EditorViewport {...props} />);
+
+    expect(screen.getByTestId('buffer-ft-1')).toHaveTextContent('TS');
+    expect(screen.getByTestId('buffer-ft-2')).toHaveTextContent('LUA');
+    expect(screen.getByTestId('buffer-modified-1')).toHaveTextContent('●');
+    expect(screen.getByTestId('buffer-diag-error-1')).toHaveTextContent('E:1');
+    expect(screen.getByTestId('buffer-diag-warn-1')).toHaveTextContent('W:1');
+
+    fireEvent.click(screen.getByTestId('buffer-close-2'));
+    expect(onCloseBuffer).toHaveBeenCalledWith(2);
+
+    const hiddenState = {
+      ...state,
+      options: { ...(state.options as any), bufferline: false },
+    };
+    rerender(
+      <EditorViewport
+        {...props}
+        editorState={hiddenState}
+        displayEditorState={hiddenState}
+      />
+    );
+    expect(screen.queryByTestId('editor-buffer-bar')).not.toBeInTheDocument();
+  });
 });

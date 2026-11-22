@@ -36,6 +36,7 @@ import {
   computeIndentGuideCols,
   computeMatchParenPair,
   computeRainbowDelimitersMap,
+  computeSatelliteMarkers,
   findTodoCommentBadge,
 } from './editorDecorations';
 
@@ -259,6 +260,21 @@ export const Editor: React.FC<EditorProps> = ({
     customMatches && customMatches.length > 0
       ? computeCustomMatchSpans(lines, customMatches, searchOpts)
       : [];
+  const showSatellite = options?.satellite !== false && lines.length > 0;
+  const satelliteMarkers = React.useMemo(
+    () =>
+      showSatellite
+        ? computeSatelliteMarkers({
+            lineCount: lines.length,
+            cursorLine: cursor.line,
+            searchMatchLines: allMatches.map((m) => m.line),
+            diagnostics: lspDiagnostics,
+            gitLineSigns,
+            marks,
+          })
+        : [],
+    [showSatellite, lines.length, cursor.line, allMatches, lspDiagnostics, gitLineSigns, marks]
+  );
 
   return (
     <div
@@ -805,6 +821,27 @@ export const Editor: React.FC<EditorProps> = ({
           })}
         </div>
       </div>
+      {showSatellite && satelliteMarkers.length > 0 && (
+        <div
+          className="editor-satellite-bar"
+          data-testid="editor-satellite-bar"
+          aria-hidden="true"
+        >
+          {satelliteMarkers.map((marker) => (
+            <span
+              key={marker.id}
+              className={`satellite-marker kind-${marker.kind}`}
+              data-testid={
+                marker.kind === 'cursor'
+                  ? 'satellite-cursor-marker'
+                  : `satellite-marker-${marker.kind}-${marker.line + 1}`
+              }
+              style={{ top: `${marker.topPercent}%` }}
+              title={marker.label}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

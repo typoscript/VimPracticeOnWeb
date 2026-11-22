@@ -6,7 +6,9 @@ import {
   computeActiveScopeIndent,
   computeMatchParenPair,
   computeRainbowDelimitersMap,
+  computeSatelliteMarkers,
   findTodoCommentBadge,
+  getBufferFiletypeBadge,
 } from './editorDecorations';
 import { Editor } from './Editor';
 
@@ -199,5 +201,80 @@ describe('matchparen 짝 괄호 강조 & rainbow-delimiters 중첩 괄호 컬러
     );
     expect(screen.queryByTestId('match-paren-char')).not.toBeInTheDocument();
     expect(container.querySelectorAll('.rainbow-delim').length).toBe(0);
+  });
+});
+
+describe('satellite.nvim 우측 스크롤바 미니맵 마커 & bufferline 파일타입 배지', () => {
+  it('computeSatelliteMarkers 가 커서·검색·LSP 진단·Git Hunk·마크 마커를 정확히 계산한다', () => {
+    const gitSigns = new Map<number, 'add' | 'change' | 'delete'>([
+      [0, 'add'],
+      [3, 'change'],
+    ]);
+    const markers = computeSatelliteMarkers({
+      lineCount: 10,
+      cursorLine: 4,
+      searchMatchLines: [1, 1, 7],
+      diagnostics: [
+        { line: 2, severity: 'warning', message: 'unused var' },
+        { line: 2, severity: 'error', message: 'type mismatch' },
+        { line: 5, severity: 'warning', message: 'deprecated' },
+      ],
+      gitLineSigns: gitSigns,
+      marks: { a: { row: 8, col: 0 } },
+    });
+
+    expect(markers.some((m) => m.kind === 'cursor' && m.line === 4)).toBe(true);
+    expect(markers.filter((m) => m.kind === 'search').map((m) => m.line)).toEqual([1, 7]);
+    // 줄 2는 warning 과 error 가 모두 있으므로 error 가 우선됨
+    expect(markers.some((m) => m.kind === 'diagnostic-error' && m.line === 2)).toBe(true);
+    expect(markers.some((m) => m.kind === 'diagnostic-warning' && m.line === 5)).toBe(true);
+    expect(markers.some((m) => m.kind === 'git-add' && m.line === 0)).toBe(true);
+    expect(markers.some((m) => m.kind === 'git-change' && m.line === 3)).toBe(true);
+    expect(markers.some((m) => m.kind === 'mark' && m.line === 8)).toBe(true);
+    expect(getBufferFiletypeBadge('app.ts').label).toBe('TS');
+    expect(getBufferFiletypeBadge('init.lua').label).toBe('LUA');
+  });
+
+  it('Editor 가 satellite 마커 트랙을 렌더링하고 :set nosatellite (:set nosat) 로 토글한다', () => {
+    let state = createVimState(['line1', 'line2']);
+    state = sendKeys(state, ':set nosat bufferline<CR>');
+    expect(state.options?.satellite).toBe(false);
+    expect(state.options?.bufferline).toBe(true);
+    state = sendKeys(state, ':set satellite nobl<CR>');
+    expect(state.options?.satellite).toBe(true);
+    expect(state.options?.bufferline).toBe(false);
+
+    const lines = ['const a = 1;', 'const b = 2;', 'const c = 3;'];
+    const gitSigns = new Map<number, 'add' | 'change' | 'delete'>([[0, 'add']]);
+    const { rerender } = render(
+      <Editor
+        lines={lines}
+        cursor={{ line: 1, col: 0 }}
+        mode="NORMAL"
+        searchQuery="const"
+        gitLineSigns={gitSigns}
+        lspDiagnostics={[
+          { id: 'd1', line: 2, col: 0, endCol: 5, severity: 'error', message: 'err' },
+        ]}
+        marks={{ a: { row: 0, col: 0 } }}
+        options={{ ...DEFAULT_VIM_OPTIONS, satellite: true }}
+      />
+    );
+
+    expect(screen.getByTestId('editor-satellite-bar')).toBeInTheDocument();
+    expect(screen.getByTestId('satellite-cursor-marker')).toBeInTheDocument();
+    expect(screen.getByTestId('satellite-marker-diagnostic-error-3')).toBeInTheDocument();
+    expect(screen.getByTestId('satellite-marker-git-add-1')).toBeInTheDocument();
+    expect(screen.getByTestId('satellite-marker-mark-1')).toBeInTheDocument();
+
+    rerender(
+      <Editor
+        lines={lines}
+        cursor={{ line: 1, col: 0 }}
+        mode="NORMAL"
+        options={{ ...DEFAULT_VIM_OPTIONS, satellite: false }}
+      />
+    );
+    expect(screen.queryByTestId('editor-satellite-bar')).not.toBeInTheDocument();
   });
 });

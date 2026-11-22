@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { Editor } from '../Editor/Editor';
+import { getBufferFiletypeBadge } from '../Editor/editorDecorations';
 import { QuickfixPanel } from '../QuickfixPanel';
 import {
   VimEditorState,
@@ -7,6 +8,7 @@ import {
   TroubleMode,
   ensureBuffers,
   ensureTabPages,
+  isCurrentBufferModified,
   getEffectiveWindowTree,
   getGitLineSigns,
   computeGitBlameLines,
@@ -41,6 +43,7 @@ interface EditorViewportProps {
   onSwitchPane: (paneIndex: number) => void;
   onSelectCompletionCandidate: (index: number) => void;
   onSwitchBuffer: (bufferId: number) => void;
+  onCloseBuffer?: (bufferId: number) => void;
   onSwitchTabPage: (tabId: number) => void;
   onCloseTabPage: (tabId: number) => void;
   onNewTabPage: () => void;
@@ -104,6 +107,7 @@ export function EditorViewport({
   onSwitchPane,
   onSelectCompletionCandidate,
   onSwitchBuffer,
+  onCloseBuffer,
   onSwitchTabPage,
   onCloseTabPage,
   onNewTabPage,
@@ -349,12 +353,22 @@ export function EditorViewport({
           </div>
         )}
 
-        {/* 상단 버퍼 탭 바 (Bufferline) */}
-        {bufferList.length > 1 && (
+        {/* 상단 버퍼 탭 바 (bufferline.nvim: :set bufferline / :set bl) */}
+        {bufferList.length > 1 && displayEditorState.options?.bufferline !== false && (
           <div className="editor-buffer-bar" data-testid="editor-buffer-bar">
             {bufferList.map((buf) => {
               const isCurrent = buf.id === currentBufId;
               const isAlt = buf.id === altBufId;
+              const ftBadge = getBufferFiletypeBadge(buf.name);
+              const isModified = isCurrent
+                ? Boolean(buf.isModified) || isCurrentBufferModified(displayEditorState)
+                : Boolean(buf.isModified);
+              const activeDiags =
+                isCurrent && displayEditorState.lspDiagnostics
+                  ? displayEditorState.lspDiagnostics
+                  : [];
+              const errCount = activeDiags.filter((d) => d.severity === 'error').length;
+              const warnCount = activeDiags.filter((d) => d.severity === 'warning').length;
               return (
                 <div
                   key={buf.id}
@@ -366,10 +380,53 @@ export function EditorViewport({
                   data-testid={`buffer-tab-${buf.id}`}
                   title={t('버퍼 {id}: {name}', { id: buf.id, name: buf.name })}
                 >
+                  <span
+                    className={`buffer-ft-badge ${ftBadge.cls}`}
+                    data-testid={`buffer-ft-${buf.id}`}
+                  >
+                    {ftBadge.label}
+                  </span>
                   <span className="buffer-number">{buf.id}</span>
                   <span className="buffer-indicator">{isCurrent ? '%' : isAlt ? '#' : ''}</span>
                   <span className="buffer-name">{buf.name}</span>
-                  {buf.isModified && <span className="buffer-modified">*</span>}
+                  {errCount > 0 && (
+                    <span
+                      className="buffer-diag-badge error"
+                      data-testid={`buffer-diag-error-${buf.id}`}
+                    >
+                      E:{errCount}
+                    </span>
+                  )}
+                  {warnCount > 0 && (
+                    <span
+                      className="buffer-diag-badge warning"
+                      data-testid={`buffer-diag-warn-${buf.id}`}
+                    >
+                      W:{warnCount}
+                    </span>
+                  )}
+                  {isModified && (
+                    <span
+                      className="buffer-modified"
+                      data-testid={`buffer-modified-${buf.id}`}
+                    >
+                      ●
+                    </span>
+                  )}
+                  {bufferList.length > 1 && (
+                    <button
+                      type="button"
+                      className="buffer-close-btn"
+                      data-testid={`buffer-close-${buf.id}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCloseBuffer?.(buf.id);
+                      }}
+                      title={t('버퍼 닫기 (:bdelete)')}
+                    >
+                      ✕
+                    </button>
+                  )}
                 </div>
               );
             })}

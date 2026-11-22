@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 207개 테스트 파일, 2,332개 테스트 100% 통과 필수)*
+  *(현재 207개 테스트 파일, 2,335개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -266,6 +266,9 @@
   - **`matchparen` & `rainbow-delimiters.nvim` (`:set matchparen`/`:set mp`, `:set rainbow`/`:set rb`, 기본 `on`)**: 커서가 괄호(`()`, `[]`, `{}`, `:set matchpairs`) 위(INSERT 모드 직전 괄호 포함)일 때 멀티라인 대응 짝 괄호를 실시간 하이라이트(`.match-paren-highlight`)하고, 문자열·주석을 제외한 중첩 괄호를 6단계 깊이별 컬러(`.rainbow-depth-0..5`)로 구분합니다.
 - **현대 Neovim 실전 커리큘럼 121~125강 확장 (`part6ModernNeovim.ts`, `learningTracks.ts`, `missionFilters.ts`, `useSpeedrunSession.ts`, `enContent.ts`)**:
   - **신규 레슨 5종**: `nvim-autopairs` 자동 페어링·스킵·Enter 확장(레슨 121), `LuaSnip` `fn<Tab>` 스니펫 확장 및 `<Tab>`/`<S-Tab>` 탭스톱 순환(레슨 122), `vim-fugitive` `:Gblame`·`:Git add`·`:Git commit`(레슨 123), `nvim-cmp` `Ctrl-Space` LSP 심볼 완성 및 스니펫 즉시 확장(레슨 124), `noice.nvim` `:set noice` 플로팅 Cmdline(`:%s`) & Search(`/`) 125강 피날레(레슨 125)를 정규 커리큘럼(**125강**), *현대 Neovim IDE 25강* 학습 트랙, Neovim 카테고리 필터, 스피드런 후보 풀, 한/영 번역 사전에 통합했습니다.
+- **상단 버퍼라인(`bufferline.nvim`) & 우측 스크롤바 미니맵 마커(`satellite.nvim`) (`src/components/EditorViewport/EditorViewport.tsx`, `src/components/Editor/Editor.tsx`, `editorDecorations.ts`)**:
+  - **`bufferline.nvim` (`:set bufferline` / `:set bl`, 기본 `on`)**: 다중 버퍼 탭바에 파일타입 배지(`TS`/`JS`/`LUA`/`MD`/`JSON`/`CSS`), 수정 상태 도트(`●`), 활성 버퍼 LSP 진단 에러/경고 카운트 배지(`E:N`/`W:N`), 원클릭 전환 및 개별 버퍼 닫기 버튼(`✕` → `deleteBuffer`)을 표시하며 `:set nobufferline`/`:set nobl` 로 토글할 수 있습니다.
+  - **`satellite.nvim` (`:set satellite` / `:set sat`, 기본 `on`)**: 에디터 우측 스크롤바 트랙(`.editor-satellite-bar`)에 현재 커서 위치, 검색 매치, LSP 진단(Error/Warning), Git Hunk(`+`/`~`/`_`), 사용자 마크(`a-zA-Z`)의 상대 줄 위치를 컬러 마커로 실시간 시각화하며 `:set nosatellite`/`:set nosat` 로 토글할 수 있습니다.
 
 ---
 

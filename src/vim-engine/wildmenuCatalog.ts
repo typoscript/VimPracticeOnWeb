@@ -479,6 +479,10 @@ export const AVAILABLE_OPTIONS: string[] = [
   'wildmode',
   'wrap',
   'wrapscan',
+  'bufferline',
+  'nobufferline',
+  'satellite',
+  'nosatellite',
 ];
 
 export const OPTION_VALUE_COMPLETIONS: Record<string, readonly string[]> = {

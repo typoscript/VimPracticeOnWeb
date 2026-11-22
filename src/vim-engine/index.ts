@@ -52,7 +52,15 @@ export {
   isSamePaneBuffer,
 } from './windowTree';
 export type { PaneRect } from './windowTree';
-export { switchBuffer, ensureBuffers, syncCurrentBuffer, addBuffer, editBuffer, deleteBuffer } from './bufferEngine';
+export {
+  switchBuffer,
+  ensureBuffers,
+  syncCurrentBuffer,
+  isCurrentBufferModified,
+  addBuffer,
+  editBuffer,
+  deleteBuffer,
+} from './bufferEngine';
 export { switchTab, openNewTab, closeTab, ensureTabPages, tabdo } from './tabEngine';
 export { bufdo } from './bufferEngine';
 export {

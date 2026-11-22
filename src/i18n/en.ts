@@ -50,6 +50,7 @@ export const EN: Record<string, string> = {
   "🔄 코드 초기화": "🔄 Reset code",
   "탭 {v}: {filename}": "Tab {v}: {filename}",
   "탭 닫기 (:tabclose)": "Close tab (:tabclose)",
+  "버퍼 닫기 (:bdelete)": "Close buffer (:bdelete)",
   "새 탭 열기 (:tabnew)": "New tab (:tabnew)",
   "버퍼 {id}: {name}": "Buffer {id}: {name}",
   "명령어 히스토리 보기 (q:)": "View command history (q:)",

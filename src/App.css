@@ -943,6 +943,76 @@
 .buffer-modified {
   color: #f7768e;
   font-weight: bold;
+  font-size: 0.7rem;
+}
+
+.buffer-ft-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  background: rgba(122, 162, 247, 0.14);
+  color: #7aa2f7;
+}
+
+.buffer-ft-badge.ft-js,
+.buffer-ft-badge.ft-json {
+  background: rgba(224, 175, 104, 0.16);
+  color: #e0af68;
+}
+
+.buffer-ft-badge.ft-lua {
+  background: rgba(125, 207, 255, 0.16);
+  color: #7dcfff;
+}
+
+.buffer-ft-badge.ft-md {
+  background: rgba(187, 154, 247, 0.16);
+  color: #bb9af7;
+}
+
+.buffer-diag-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 5px;
+  border-radius: 8px;
+  font-size: 0.64rem;
+  font-weight: 700;
+}
+
+.buffer-diag-badge.error {
+  background: rgba(247, 118, 142, 0.18);
+  color: #f7768e;
+}
+
+.buffer-diag-badge.warning {
+  background: rgba(224, 175, 104, 0.18);
+  color: #e0af68;
+}
+
+.buffer-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 2px;
+  padding: 0 3px;
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: inherit;
+  opacity: 0.55;
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+
+.buffer-close-btn:hover {
+  opacity: 1;
+  color: #f7768e;
+  background: rgba(247, 118, 142, 0.15);
 }
 
 /* 커맨드라인 윈도우 (Command-line Window: q:, q/, q?, Ctrl-f) */

@@ -53,6 +53,8 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   indentline: true,
   matchparen: true,
   rainbow: true,
+  bufferline: true,
+  satellite: true,
 };
 
 export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
@@ -163,6 +165,10 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   matchparen: 'matchparen',
   rb: 'rainbow',
   rainbow: 'rainbow',
+  bl: 'bufferline',
+  bufferline: 'bufferline',
+  sat: 'satellite',
+  satellite: 'satellite',
 };
 
 export const WINDOW_LOCAL_OPTION_KEYS = new Set<keyof VimOptions>([
@@ -560,6 +566,8 @@ const BOOLEAN_OPTION_KEYS = new Set<keyof VimOptions>([
   'indentline',
   'matchparen',
   'rainbow',
+  'bufferline',
+  'satellite',
 ]);
 
 /**
