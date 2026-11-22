@@ -115,6 +115,7 @@ flowchart TD
 | **gitsigns.nvim** | `]h`/`[h`, `:Gitsigns preview_hunk\|reset_hunk\|stage_hunk` | 거터 Hunk 표시, 이동, 미리보기, 리셋·스테이징 |
 | **Lua 레이어** | `:lua`, `:luafile`, `:source init.lua`, `vim.opt`, `vim.keymap.set` | `eval` 없는 순수 TS Lua 인터프리터 (`vim.api`/`vim.fn` 일부 지원) |
 | **flash.nvim** | `gs`, `dgs`/`cgs`/`ygs`, `:Flash` | 화면 라벨 점프와 원격 범위 연산 |
+| **neo-tree.nvim** | `:Neotree [toggle\|focus\|reveal\|close]`, `:NvimTreeToggle`, `a`/`r`/`d`/`s` | 좌측 영구 도킹 파일 트리 사이드바, Git 상태·진단 배지, 파일 생성·이름변경·삭제·분할 열기 |
 | **oil.nvim** | `:Oil`, `dd`/`cw`/`o` + `:w`, `Enter`, `-` | 디렉터리를 일반 버퍼처럼 편집해 파일 생성·이름 변경·삭제 |
 | **harpoon.nvim** | `:HarpoonAdd`, `:HarpoonMenu`, `:Harpoon [1-9]`, `:HarpoonNext/Prev` | 자주 쓰는 파일 핀 고정과 원키 전환 |
 | **trouble.nvim** | `:Trouble [all\|diagnostics\|todo\|quickfix]`, `:TroubleNext/Prev` | 진단·`TODO`/`FIXME`·퀵픽스를 파일별 트리로 통합 |
@@ -132,7 +133,7 @@ flowchart TD
 
 ---
 
-## 🎯 튜토리얼 커리큘럼 (Lessons 1 ~ 128)
+## 🎯 튜토리얼 커리큘럼 (Lessons 1 ~ 130)
 
 ### 🟢 기초 이동 및 텍스트 편집 (레슨 1 ~ 10)
 1. **레슨 1**: 기본 방향 이동 (`h`, `j`, `k`, `l`)
@@ -246,7 +247,7 @@ flowchart TD
 99. **레슨 99**: 덮어쓰기 모드(`R`), `[count]r` & 비주얼 블록 치환(`Ctrl-v r`) 마스터하기
 100. **레슨 100**: [대단원] 정규식 캡처·매크로·`vim-surround`·다중 파일 배치(`:vimgrep` + `:cdo` + `Ctrl-^`) 종합 마스터 챌린지
 
-### 🚀 현대 Neovim 실전 트랙 (레슨 101 ~ 128)
+### 🚀 현대 Neovim 실전 트랙 (레슨 101 ~ 130)
 101. **레슨 101**: Telescope `:LiveGrep` 본문 검색 & `Ctrl-q` 퀵픽스 일괄 치환
 102. **레슨 102**: Neovim 0.11 LSP 리팩토링 — `gra` 코드 액션 & `grn` 다중 파일 이름 변경
 103. **레슨 103**: Neovim 0.11 LSP 탐색 — `gO` 문서 심볼 아웃라인 & `grr` 참조 검색
@@ -275,6 +276,8 @@ flowchart TD
 126. **레슨 126**: 순정 고급 카운트 편집(`[count]s` · `[count]A` · `[count]D` · `d_`)
 127. **레슨 127**: 대괄호 고급 탐색(`[/` · `]/` 블록 주석 & `]'` 마크 순회 & `[I` 키워드 조회)
 128. **레슨 128**: `[128강 피날레]` 모던 Neovim 시각 플러그인(`:TSContextToggle` · `:ColorizerToggle` · `:IlluminateToggle`)
+129. **레슨 129**: `neo-tree.nvim` 파일 트리 사이드바(`:Neotree` · `a` 생성 · `r` 이름변경 · `d` 삭제)
+130. **레슨 130**: `[130강 피날레]` `neo-tree` 분할 열기(`s`) & 멀티파일 라이브 리팩토링(`:wa`)
 
 ---
 

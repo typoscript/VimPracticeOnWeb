@@ -28,6 +28,9 @@ const SpectrePanel = lazy(() =>
 const GitPanel = lazy(() =>
   import('../GitPanel/GitPanel').then((m) => ({ default: m.GitPanel }))
 );
+const NeotreeSidebar = lazy(() =>
+  import('../NeotreeSidebar/NeotreeSidebar').then((m) => ({ default: m.NeotreeSidebar }))
+);
 
 interface EditorViewportProps {
   editorState: VimEditorState;
@@ -83,6 +86,17 @@ interface EditorViewportProps {
   onCommitGitPanel?: (message: string) => void;
   onToggleGitBlame?: () => void;
   onCloseGitPanel?: () => void;
+  onSelectNeotreeIndex?: (index: number) => void;
+  onOpenNeotreeNode?: (index: number, mode?: 'edit' | 'vsplit' | 'split' | 'tab') => void;
+  onToggleNeotreeDir?: (dirPath: string) => void;
+  onStartNeotreeAdd?: (index?: number) => void;
+  onStartNeotreeRename?: (index?: number) => void;
+  onUpdateNeotreePrompt?: (value: string) => void;
+  onConfirmNeotreePrompt?: (value?: string) => void;
+  onCancelNeotreePrompt?: () => void;
+  onDeleteNeotreeNode?: (index: number) => void;
+  onFocusNeotree?: (focused: boolean) => void;
+  onCloseNeotree?: () => void;
   onSwitchCommandLineWindowType: (type: ':' | '/') => void;
   onClearCommandLineHistory: (type: ':' | '/' | '?') => void;
   onCloseCommandLineWindow: () => void;
@@ -147,6 +161,17 @@ export function EditorViewport({
   onCommitGitPanel,
   onToggleGitBlame,
   onCloseGitPanel,
+  onSelectNeotreeIndex,
+  onOpenNeotreeNode,
+  onToggleNeotreeDir,
+  onStartNeotreeAdd,
+  onStartNeotreeRename,
+  onUpdateNeotreePrompt,
+  onConfirmNeotreePrompt,
+  onCancelNeotreePrompt,
+  onDeleteNeotreeNode,
+  onFocusNeotree,
+  onCloseNeotree,
   onSwitchCommandLineWindowType,
   onClearCommandLineHistory,
   onCloseCommandLineWindow,
@@ -433,64 +458,93 @@ export function EditorViewport({
           </div>
         )}
 
-        {/* 에디터 렌더링: 분할 창 트리 모드 vs 단일 창 모드 */}
-        {isSplitMode && splitTree ? (
-          renderSplitNode(splitTree, 100, true, 'root')
-        ) : (
-          <Editor
-            lines={displayEditorState.lines}
-            cursor={displayEditorState.cursor}
-            mode={displayEditorState.mode}
-            targetPosition={targetPosition}
-            visualAnchor={displayEditorState.visualAnchor}
-            visualBlockEndOfLine={displayEditorState.visualBlockEndOfLine}
-            relativeLineNumbers={relativeLineNumbers}
-            searchQuery={
-              displayEditorState.mode === 'SEARCH'
-                ? displayEditorState.commandBuffer
-                : displayEditorState.hlsearchSuppressed
-                ? undefined
-                : displayEditorState.lastSearchQuery
-            }
-            isFocused={isEditorFocused}
-            onFocus={onFocusEditor}
-            marks={displayEditorState.marks}
-            jumpList={displayEditorState.jumpList}
-            jumpIndex={displayEditorState.jumpIndex}
-            onJumpToMark={onJumpToMark}
-            viewport={displayEditorState.viewport}
-            folds={displayEditorState.options?.foldenable === false ? undefined : displayEditorState.folds}
-            completionSession={displayEditorState.completionSession}
-            insertNormalSession={displayEditorState.insertNormalSession}
-            insertRegisterPending={displayEditorState.insertRegisterPending}
-            confirmSubstitute={displayEditorState.confirmSubstitute}
-            incCommandPreview={displayEditorState.incCommandPreview}
-            blockInsertSession={displayEditorState.blockInsertSession}
-            options={displayEditorState.options}
-            spellGoodWords={displayEditorState.spellGoodWords}
-            spellWrongWords={displayEditorState.spellWrongWords}
-            bellSignal={bellCount}
-            onSelectCompletionItem={onSelectCompletionCandidate}
-            primaryFilename={displayEditorState.primaryFilename || fallbackPrimaryFilename}
-            lspDiagnostics={displayEditorState.lspDiagnostics}
-            lspHover={displayEditorState.lspHover}
-            onCloseLspHover={onCloseLspHover}
-            lspRename={displayEditorState.lspRename}
-            onCancelLspRename={onCancelLspRename}
-            lspCodeActionMenu={displayEditorState.lspCodeActionMenu}
-            onApplyLspCodeAction={onApplyLspCodeAction}
-            onCloseLspCodeAction={onCloseLspCodeAction}
-            customMatches={displayEditorState.customMatches}
-            gitLineSigns={gitLineSigns}
-            gitBlameLines={gitBlameLines}
-            gitHunkPreview={displayEditorState.gitHunkPreview}
-            onCloseGitHunkPreview={onCloseGitHunkPreview}
-            onResetGitHunk={onResetGitHunk}
-            onStageGitHunk={onStageGitHunk}
-            flashJump={displayEditorState.flashJump}
-            multiCursor={displayEditorState.multiCursor}
-          />
-        )}
+        {/* 에디터 렌더링: 좌측 Neo-tree 사이드바(:Neotree) + 분할/단일 에디터 */}
+        {(() => {
+          const editorContent =
+            isSplitMode && splitTree ? (
+              renderSplitNode(splitTree, 100, true, 'root')
+            ) : (
+              <Editor
+                lines={displayEditorState.lines}
+                cursor={displayEditorState.cursor}
+                mode={displayEditorState.mode}
+                targetPosition={targetPosition}
+                visualAnchor={displayEditorState.visualAnchor}
+                visualBlockEndOfLine={displayEditorState.visualBlockEndOfLine}
+                relativeLineNumbers={relativeLineNumbers}
+                searchQuery={
+                  displayEditorState.mode === 'SEARCH'
+                    ? displayEditorState.commandBuffer
+                    : displayEditorState.hlsearchSuppressed
+                    ? undefined
+                    : displayEditorState.lastSearchQuery
+                }
+                isFocused={isEditorFocused}
+                onFocus={onFocusEditor}
+                marks={displayEditorState.marks}
+                jumpList={displayEditorState.jumpList}
+                jumpIndex={displayEditorState.jumpIndex}
+                onJumpToMark={onJumpToMark}
+                viewport={displayEditorState.viewport}
+                folds={displayEditorState.options?.foldenable === false ? undefined : displayEditorState.folds}
+                completionSession={displayEditorState.completionSession}
+                insertNormalSession={displayEditorState.insertNormalSession}
+                insertRegisterPending={displayEditorState.insertRegisterPending}
+                confirmSubstitute={displayEditorState.confirmSubstitute}
+                incCommandPreview={displayEditorState.incCommandPreview}
+                blockInsertSession={displayEditorState.blockInsertSession}
+                options={displayEditorState.options}
+                spellGoodWords={displayEditorState.spellGoodWords}
+                spellWrongWords={displayEditorState.spellWrongWords}
+                bellSignal={bellCount}
+                onSelectCompletionItem={onSelectCompletionCandidate}
+                primaryFilename={displayEditorState.primaryFilename || fallbackPrimaryFilename}
+                lspDiagnostics={displayEditorState.lspDiagnostics}
+                lspHover={displayEditorState.lspHover}
+                onCloseLspHover={onCloseLspHover}
+                lspRename={displayEditorState.lspRename}
+                onCancelLspRename={onCancelLspRename}
+                lspCodeActionMenu={displayEditorState.lspCodeActionMenu}
+                onApplyLspCodeAction={onApplyLspCodeAction}
+                onCloseLspCodeAction={onCloseLspCodeAction}
+                customMatches={displayEditorState.customMatches}
+                gitLineSigns={gitLineSigns}
+                gitBlameLines={gitBlameLines}
+                gitHunkPreview={displayEditorState.gitHunkPreview}
+                onCloseGitHunkPreview={onCloseGitHunkPreview}
+                onResetGitHunk={onResetGitHunk}
+                onStageGitHunk={onStageGitHunk}
+                flashJump={displayEditorState.flashJump}
+                multiCursor={displayEditorState.multiCursor}
+              />
+            );
+
+          if (!displayEditorState.neotree?.isOpen) {
+            return editorContent;
+          }
+
+          return (
+            <div className="editor-neotree-layout" data-testid="editor-neotree-layout">
+              <Suspense fallback={null}>
+                <NeotreeSidebar
+                  editorState={displayEditorState}
+                  onSelectIndex={(idx) => onSelectNeotreeIndex?.(idx)}
+                  onOpenNode={(idx, mode) => onOpenNeotreeNode?.(idx, mode)}
+                  onToggleDir={(dirPath) => onToggleNeotreeDir?.(dirPath)}
+                  onStartAdd={(idx) => onStartNeotreeAdd?.(idx)}
+                  onStartRename={(idx) => onStartNeotreeRename?.(idx)}
+                  onUpdatePrompt={(val) => onUpdateNeotreePrompt?.(val)}
+                  onConfirmPrompt={(val) => onConfirmNeotreePrompt?.(val)}
+                  onCancelPrompt={() => onCancelNeotreePrompt?.()}
+                  onDeleteNode={(idx) => onDeleteNeotreeNode?.(idx)}
+                  onFocusNeotree={(focused) => onFocusNeotree?.(focused)}
+                  onClose={() => onCloseNeotree?.()}
+                />
+              </Suspense>
+              <div className="editor-neotree-main">{editorContent}</div>
+            </div>
+          );
+        })()}
 
         {/* 퀵픽스 분할 창 (Quickfix List: :copen, :cclose, :cn, :cp, :vimgrep) */}
         {displayEditorState.quickfix?.isOpen && (

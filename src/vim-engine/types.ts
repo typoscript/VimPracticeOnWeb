@@ -1083,6 +1083,8 @@ export interface VimEditorState {
   gitPanel?: GitPanelState | null;
   /** init.lua (vim.snippets.add) 로 등록된 사용자 커스텀 스니펫 목록 */
   customSnippets?: CustomSnippetDefinition[];
+  /** neo-tree.nvim / nvim-tree 스타일 좌측 영구 파일 트리 사이드바 (:Neotree / :NvimTreeToggle) */
+  neotree?: NeotreeSessionState | null;
 }
 
 export type LspDiagnosticSeverity = 'error' | 'warning' | 'info' | 'hint';
@@ -1327,6 +1329,38 @@ export interface GitPanelState {
   selectedIndex: number;
   expandedHunkIds: number[];
   activeTab: 'changes' | 'log';
+}
+
+export type NeotreeGitStatus = 'M' | 'S' | 'U';
+
+export interface NeotreeNode {
+  path: string;
+  name: string;
+  depth: number;
+  isDir: boolean;
+  isExpanded?: boolean;
+  isActiveBuffer?: boolean;
+  isModified?: boolean;
+  gitStatus?: NeotreeGitStatus;
+  errorCount?: number;
+  warningCount?: number;
+}
+
+export interface NeotreePromptState {
+  type: 'add' | 'rename';
+  targetDir: string;
+  targetPath?: string;
+  isDir?: boolean;
+  value: string;
+}
+
+export interface NeotreeSessionState {
+  isOpen: boolean;
+  isFocused: boolean;
+  selectedIndex: number;
+  collapsedDirs: string[];
+  prompt?: NeotreePromptState | null;
+  initialFilePaths?: string[];
 }
 
 export type VimState = VimEditorState;

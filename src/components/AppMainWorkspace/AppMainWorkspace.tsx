@@ -69,6 +69,12 @@ const SANDBOX_QUICK_TRY_CHIPS: ReadonlyArray<{
   keys: readonly string[];
 }> = [
   {
+    id: 'neotree',
+    label: '🌲 :Neotree',
+    titleKey: i18nKey('파일 트리 사이드바 토글 (:Neotree)'),
+    keys: ['Escape', ...':Neotree toggle'.split(''), 'Enter'],
+  },
+  {
     id: 'oil',
     label: '📁 :Oil',
     titleKey: i18nKey('파일시스템 버퍼 편집 (:Oil)'),

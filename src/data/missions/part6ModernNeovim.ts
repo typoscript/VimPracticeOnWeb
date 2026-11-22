@@ -1376,4 +1376,114 @@ export const MISSIONS_PART6: Mission[] = [
       );
     },
   },
+  {
+    id: 129,
+    title: '레슨 129: neo-tree.nvim 파일 트리 사이드바(:Neotree · a 생성 · r 이름변경 · d 삭제)',
+    description:
+      '에디터 좌측에 상시 도킹되어 폴더 구조·Git 상태 배지(M/U/S)·진단 카운트를 실시간으로 보여주는 neo-tree.nvim(:Neotree / :NvimTreeToggle) 사이드바에서 키보드만으로 파일을 생성(a), 삭제(d), 이름 변경(r), 열기(Enter)까지 완결해 보세요.\n\n1) :Neotree (:Neotree toggle / focus / reveal / close · :NvimTreeToggle):\n   - 실행 즉시 좌측에 파일 트리 사이드바가 열리고 현재 버퍼 파일 위치가 자동 선택(reveal)됩니다.\n   - j / k 로 노드를 이동하고 Enter 로 폴더를 접거나 파일을 에디터에서 엽니다.\n\n2) 트리 내 파일 조작 (a / r / d):\n   - a: 현재 폴더에 새 파일(또는 끝에 / 를 붙여 새 폴더)을 생성합니다.\n   - r: 선택된 파일이나 폴더의 이름을 변경합니다.\n   - d: 선택된 파일이나 폴더를 즉시 삭제합니다.\n\n미션:\n1. :Neotree<Enter> 로 파일 트리 사이드바를 여세요 (src/index.ts 선택됨).\n2. a config.ts<Enter> 로 src/config.ts 파일을 새로 생성하세요.\n3. G d 로 마지막 파일(src/trash.ts)로 이동해 삭제한 뒤, src/oldName.ts 위에서 r helper.ts<Enter> 로 이름을 변경하세요.\n4. Enter 를 눌러 src/helper.ts 를 에디터로 열고 f" ci" ready<Esc> 로 "ready" 로 수정하세요!',
+    hint: ':Neotree<Enter> → aconfig.ts<Enter> → Gd → rhelper.ts<Enter> → <Enter> → f"ci"ready<Esc>',
+    par: 52,
+    primaryFilename: 'src/index.ts',
+    initialLines: ['export const app = "v1";'],
+    targetLines: ['export const helper = "ready";'],
+    initialVirtualFiles: {
+      'src/index.ts': ['export const app = "v1";'],
+      'src/oldName.ts': ['export const helper = "draft";'],
+      'src/trash.ts': ['export const unused = true;'],
+    },
+    initialCursor: { line: 0, col: 0 },
+    optimalKeys: [
+      ...keysOf(':Neotree'),
+      'Enter',
+      'a',
+      ...keysOf('config.ts'),
+      'Enter',
+      'G',
+      'd',
+      'r',
+      ...keysOf('helper.ts'),
+      'Enter',
+      'Enter',
+      'f',
+      '"',
+      'c',
+      'i',
+      '"',
+      ...keysOf('ready'),
+      'Escape',
+    ],
+    checkComplete: (state) => {
+      const vfs = state.virtualFiles ?? {};
+      return (
+        state.mode === 'NORMAL' &&
+        state.neotree?.isOpen === true &&
+        'src/config.ts' in vfs &&
+        !('src/trash.ts' in vfs) &&
+        !('src/oldName.ts' in vfs) &&
+        state.primaryFilename === 'src/helper.ts' &&
+        state.lines.length === 1 &&
+        state.lines[0] === 'export const helper = "ready";'
+      );
+    },
+  },
+  {
+    id: 130,
+    title: '레슨 130: [130강 피날레] neo-tree 분할 열기(s) & 멀티파일 라이브 리팩토링(:wa)',
+    description:
+      '축하합니다! 전체 130강 커리큘럼의 대단원 피날레입니다. 좌측 neo-tree.nvim(:Neotree) 사이드바에서 다른 파일을 세로 분할 창(s)으로 나란히 열고, 두 창을 오가며(Ctrl-w w) API 버전과 활성화 플래그를 리팩토링한 뒤 :wa 로 전체 저장해 130강을 완주하세요!\n\n1) Neo-tree 분할 창 열기 (s / v: 세로 분할 · S: 가로 분할 · t: 새 탭):\n   - 파일 노드 위에서 s 를 누르면 Neo-tree 사이드바는 좌측에 그대로 유지한 채, 해당 파일을 우측 세로 분할 창으로 열고 포커스를 새 창으로 즉시 옮깁니다.\n\n2) 멀티 윈도우 전환 & 일괄 저장 (Ctrl-w w · :wa):\n   - Ctrl-w w 로 분할된 두 코드 창 사이를 오가며 편집하고 :wa 로 모든 버퍼를 VFS 에 한 번에 저장합니다.\n\n미션:\n1. :Neotree<Enter> 로 사이드바를 열고 j → s 를 눌러 src/types.ts 를 세로 분할 창으로 여세요.\n2. 새로 열린 src/types.ts 창에서 f1 r2 로 "v1" 을 "v2" 로 바꾸세요.\n3. Ctrl-w w 로 왼쪽 src/service.ts 창으로 돌아와 f1 r2 와 j 0 Ctrl-a 로 "/v2/items" 와 true 로 수정한 뒤 :wa<Enter> 로 모두 저장해 130강을 완주하세요!',
+    hint: ':Neotree<Enter> → j → s → f1r2 → Ctrl-w w → f1r2 → j 0 Ctrl-a → :wa<Enter>',
+    par: 35,
+    primaryFilename: 'src/service.ts',
+    initialLines: [
+      'export const endpoint = "/v1/items";',
+      'export const active = false;',
+    ],
+    targetLines: [
+      'export const endpoint = "/v2/items";',
+      'export const active = true;',
+    ],
+    initialVirtualFiles: {
+      'src/service.ts': [
+        'export const endpoint = "/v1/items";',
+        'export const active = false;',
+      ],
+      'src/types.ts': ['export const apiVersion = "v1";'],
+    },
+    initialCursor: { line: 0, col: 0 },
+    optimalKeys: [
+      ...keysOf(':Neotree'),
+      'Enter',
+      'j',
+      's',
+      'f',
+      '1',
+      'r',
+      '2',
+      'Ctrl-w',
+      'w',
+      'f',
+      '1',
+      'r',
+      '2',
+      'j',
+      '0',
+      'Ctrl-a',
+      ...keysOf(':wa'),
+      'Enter',
+    ],
+    checkComplete: (state) => {
+      const target = [
+        'export const endpoint = "/v2/items";',
+        'export const active = true;',
+      ];
+      const vfs = state.virtualFiles ?? {};
+      return (
+        state.mode === 'NORMAL' &&
+        state.neotree?.isOpen === true &&
+        vfs['src/types.ts']?.[0] === 'export const apiVersion = "v2";' &&
+        state.lines.length === target.length &&
+        state.lines.every((l, i) => l === target[i])
+      );
+    },
+  },
 ];

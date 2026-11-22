@@ -1,0 +1,306 @@
+.editor-neotree-layout {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  width: 100%;
+  min-height: 260px;
+}
+
+.editor-neotree-main {
+  flex: 1 1 0%;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.neotree-sidebar {
+  width: 230px;
+  min-width: 200px;
+  max-width: 270px;
+  background-color: #181825;
+  border-right: 1px solid #313244;
+  display: flex;
+  flex-direction: column;
+  font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, monospace;
+  user-select: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.neotree-sidebar.focused {
+  border-right-color: #89b4fa;
+  box-shadow: inset 2px 0 0 #89b4fa;
+}
+
+.neotree-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0.65rem;
+  background-color: #11111b;
+  border-bottom: 1px solid #313244;
+}
+
+.neotree-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.38rem;
+}
+
+.neotree-icon {
+  font-size: 0.85rem;
+}
+
+.neotree-title {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #cdd6f4;
+}
+
+.neotree-focus-badge {
+  background-color: rgba(137, 180, 250, 0.2);
+  border: 1px solid rgba(137, 180, 250, 0.55);
+  color: #89b4fa;
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 0.05rem 0.32rem;
+  border-radius: 4px;
+}
+
+.neotree-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.neotree-hdr-btn {
+  background: transparent;
+  border: 1px solid #313244;
+  color: #a6adc8;
+  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.12s ease;
+}
+
+.neotree-hdr-btn:hover {
+  background-color: #313244;
+  color: #ffffff;
+  border-color: #89b4fa;
+}
+
+.neotree-prompt-bar {
+  padding: 0.45rem 0.55rem;
+  background-color: rgba(30, 30, 46, 0.96);
+  border-bottom: 1px solid #45475a;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.neotree-prompt-label {
+  font-size: 0.68rem;
+  color: #89b4fa;
+  font-weight: 700;
+}
+
+.neotree-prompt-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.neotree-prompt-input {
+  flex: 1;
+  min-width: 0;
+  background-color: #11111b;
+  border: 1px solid #89b4fa;
+  border-radius: 4px;
+  color: #cdd6f4;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.74rem;
+  font-family: inherit;
+  outline: none;
+}
+
+.neotree-prompt-ok,
+.neotree-prompt-cancel {
+  background-color: #313244;
+  border: 1px solid #45475a;
+  color: #cdd6f4;
+  border-radius: 4px;
+  padding: 0.15rem 0.38rem;
+  font-size: 0.7rem;
+  cursor: pointer;
+}
+
+.neotree-prompt-ok {
+  color: #a6e3a1;
+  border-color: rgba(166, 227, 161, 0.45);
+}
+
+.neotree-tree-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.3rem 0;
+}
+
+.neotree-node-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding-top: 0.24rem;
+  padding-bottom: 0.24rem;
+  padding-right: 0.45rem;
+  font-size: 0.76rem;
+  color: #bac2de;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.1s ease;
+}
+
+.neotree-node-row:hover {
+  background-color: rgba(49, 50, 68, 0.55);
+}
+
+.neotree-node-row.active-buffer {
+  color: #89b4fa;
+  font-weight: 700;
+}
+
+.neotree-node-row.selected {
+  background-color: rgba(137, 180, 250, 0.18);
+  color: #ffffff;
+}
+
+.neotree-sidebar.focused .neotree-node-row.selected {
+  background-color: rgba(137, 180, 250, 0.28);
+  box-shadow: inset 2px 0 0 #89b4fa;
+}
+
+.neotree-node-chevron {
+  width: 10px;
+  font-size: 0.68rem;
+  color: #7f849c;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.neotree-folder-icon {
+  font-size: 0.78rem;
+  flex-shrink: 0;
+}
+
+.neotree-ft-badge {
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 0.04rem 0.26rem;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.neotree-node-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.neotree-node-name.dir {
+  color: #89b4fa;
+  font-weight: 600;
+}
+
+.neotree-node-badges {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.neotree-git-badge {
+  font-size: 0.64rem;
+  font-weight: 800;
+  padding: 0.02rem 0.28rem;
+  border-radius: 3px;
+}
+
+.neotree-git-badge.git-m {
+  color: #f9e2af;
+  background-color: rgba(249, 226, 175, 0.16);
+}
+
+.neotree-git-badge.git-u {
+  color: #a6e3a1;
+  background-color: rgba(166, 227, 161, 0.16);
+}
+
+.neotree-git-badge.git-s {
+  color: #94e2d5;
+  background-color: rgba(148, 226, 213, 0.18);
+}
+
+.neotree-diag-badge {
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 0.02rem 0.26rem;
+  border-radius: 3px;
+}
+
+.neotree-diag-badge.error {
+  color: #f38ba8;
+  background-color: rgba(243, 139, 168, 0.18);
+}
+
+.neotree-diag-badge.warning {
+  color: #fab387;
+  background-color: rgba(250, 179, 135, 0.18);
+}
+
+.neotree-row-actions {
+  display: none;
+  align-items: center;
+  gap: 2px;
+}
+
+.neotree-node-row:hover .neotree-row-actions {
+  display: inline-flex;
+}
+
+.neotree-row-btn {
+  background-color: #1e1e2e;
+  border: 1px solid #45475a;
+  color: #cdd6f4;
+  border-radius: 3px;
+  font-size: 0.65rem;
+  padding: 0.05rem 0.25rem;
+  cursor: pointer;
+}
+
+.neotree-row-btn:hover {
+  border-color: #89b4fa;
+  color: #89b4fa;
+}
+
+.neotree-row-btn.danger:hover {
+  border-color: #f38ba8;
+  color: #f38ba8;
+}
+
+.neotree-footer-hint {
+  padding: 0.35rem 0.6rem;
+  border-top: 1px solid #313244;
+  background-color: #11111b;
+  font-size: 0.64rem;
+  color: #7f849c;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

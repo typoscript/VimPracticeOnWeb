@@ -11,6 +11,7 @@ import { triggerAutocmd, triggerWindowAndTabAutocmds } from './autocmdEngine';
 import { handleCommandLineWindowKey } from './cmdlineWindow';
 import { handleNetrwKey } from './netrwEngine';
 import { handleOilNavigationKey } from './oilEngine';
+import { handleNeotreeKey } from './neotreeEngine';
 import { handleHarpoonMenuKey } from './harpoonEngine';
 import {
   handleYankyMenuKey,
@@ -162,11 +163,19 @@ export function rawHandleKey(
     }
   }
 
-  // oil.nvim 스타일 디렉터리 버퍼 탐색 키(Enter/-) 처리 (편집 키는 일반 Vim 엔진으로 통과)
+    // oil.nvim 스타일 디렉터리 버퍼 탐색 키(Enter/-) 처리 (편집 키는 일반 Vim 엔진으로 통과)
   if (state.oilSession?.isOpen) {
     const oilHandled = handleOilNavigationKey(state, key);
     if (oilHandled !== null) {
       return oilHandled;
+    }
+  }
+
+  // neo-tree.nvim 스타일 좌측 파일 트리 사이드바 포커스 시 키 처리
+  if (state.mode === 'NORMAL' && state.neotree?.isOpen && state.neotree?.isFocused) {
+    const neotreeHandled = handleNeotreeKey(state, key);
+    if (neotreeHandled !== null) {
+      return neotreeHandled;
     }
   }
 

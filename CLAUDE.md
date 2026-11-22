@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 208개 테스트 파일, 2,341개 테스트 100% 통과 필수)*
+  *(현재 209개 테스트 파일, 2,343개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 128)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 130)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -274,7 +274,10 @@
   - **`nvim-colorizer.lua` (`:set colorizer` / `:set col`, `:ColorizerToggle`, 기본 `on`) & `vim-illuminate` (`:set illuminate` / `:set ill`, `:IlluminateToggle`, 기본 `on`)**: 코드 내 `#hex`, `rgb()`, `rgba()`, `hsl()`, `hsla()` 컬러 리터럴에 본문 무결성을 해치지 않고 실시간 컬러 밑줄 프리뷰(`.colorizer-cell`)를 표시하며, 커서 아래 식별자와 동일한 심볼이 버퍼 내 2회 이상 등장할 때 모든 참조 위치를 자동 하이라이트(`.illuminate-word-cell`)합니다.
 - **인터랙티브 단축키 치트시트 모달(`:Cheatsheet` / `:Cheat`) & 커리큘럼 126~128강 확장 (`src/components/CheatsheetModal/`, `part6ModernNeovim.ts`, `learningTracks.ts`, `missionFilters.ts`)**:
   - **`:Cheatsheet` 모달**: 상단 헤더 `📖 치트시트` 버튼 또는 `:Cheatsheet`/`:Cheat`/`:Keybindings`/`:Shortcuts` 로 열리는 지연 로딩 모달에서 6개 카테고리(모션·편집·텍스트 객체·검색·창/터미널·모던 Neovim) 22종 핵심 단축키를 실시간 검색하고 `[▶ 실행]` 버튼으로 현재 에디터에 즉시 실행해 볼 수 있습니다.
-  - **신규 레슨 126~128강 (128강 완결)**: 순정 고급 카운트 편집(`[count]s`·`[count]A`·`[count]D`·`d_`, 레슨 126), 대괄호 고급 탐색(`[/`·`]/` 블록 주석·`]'` 마크 순회·`[I` 키워드 조회, 레슨 127), 모던 Neovim 시각 플러그인 피날레(`:TSContextToggle`·`:ColorizerToggle`·`:IlluminateToggle`, 레슨 128)를 정규 커리큘럼(**128강**), *현대 Neovim IDE 28강* 트랙, 한/영 번역 사전에 통합했습니다.
+  - **신규 레슨 126~128강**: 순정 고급 카운트 편집(`[count]s`·`[count]A`·`[count]D`·`d_`, 레슨 126), 대괄호 고급 탐색(`[/`·`]/` 블록 주석·`]'` 마크 순회·`[I` 키워드 조회, 레슨 127), 모던 Neovim 시각 플러그인 피날레(`:TSContextToggle`·`:ColorizerToggle`·`:IlluminateToggle`, 레슨 128)를 정규 커리큘럼에 통합했습니다.
+- **`neo-tree.nvim` / `nvim-tree` 영구 파일 트리 사이드바(`:Neotree` / `:NvimTreeToggle`) & 커리큘럼 129~130강 완성 (`src/vim-engine/neotreeEngine.ts`, `src/components/NeotreeSidebar/`, `part6ModernNeovim.ts`)**:
+  - **`neo-tree.nvim` 사이드바 (`:Neotree [toggle|focus|show|reveal|close]`, `:NvimTreeToggle` / `:NvimTreeFocus` / `:NvimTreeClose`)**: 에디터 좌측에 상시 도킹되는 지연 로딩(`React.lazy`) 파일 트리 사이드바로 폴더 계층(`▾`/`▸`), 파일타입 배지, 실시간 Git 상태 배지(`M` 수정 · `U` 신규 · `S` 스테이징), LSP 진단 카운트(`E:N`/`W:N`), 현재 버퍼 자동 위치 추적(reveal)을 렌더링하며, 포커스 상태에서 키보드(`j`/`k`/`gg`/`G` 이동, `Enter`/`l`/`o` 열기·폴더 토글, `h` 상위 폴더/접기, `s`/`v` 세로 분할 열기, `S` 가로 분할 열기, `t` 새 탭 열기, `a` 파일/폴더 생성, `r` 이름 변경, `d` 삭제, `Ctrl-w w`/`Tab` 에디터 포커스 전환, `q` 닫기)와 마우스 클릭으로 VFS·열린 버퍼를 실시간 제어합니다.
+  - **신규 레슨 129~130강 (130강 완결)**: `:Neotree` 사이드바 파일 생성(`a`)·삭제(`d`)·이름 변경(`r`)·열기(`Enter`) 워크플로(레슨 129)와 Neo-tree 세로 분할 열기(`s`) 및 멀티파일 라이브 리팩토링(`:wa`, 레슨 130)을 정규 커리큘럼(**130강**), *현대 Neovim IDE 30강* 트랙, 한/영 번역 사전에 통합했습니다.
 
 ---
 

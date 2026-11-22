@@ -52,6 +52,17 @@ import {
   commitFromGitPanel,
   closeGitPanel,
   executeGitCommand,
+  selectNeotreeIndex,
+  openNeotreeNode,
+  toggleNeotreeDir,
+  startNeotreeAddPrompt,
+  startNeotreeRenamePrompt,
+  updateNeotreePromptValue,
+  confirmNeotreePrompt,
+  cancelNeotreePrompt,
+  deleteNeotreeNode,
+  setNeotreeFocus,
+  closeNeotree,
   selectCompletionCandidate,
   selectCmpCompletionCandidate,
   selectWildmenuCandidate,
@@ -298,6 +309,62 @@ export function useEditorWorkspaceHandlers({
     [applyAndFocus]
   );
 
+  const handleSelectNeotreeIndex = useCallback(
+    (index: number) => setEditorState((prev) => selectNeotreeIndex(prev, index)),
+    [setEditorState]
+  );
+
+  const handleOpenNeotreeNode = useCallback(
+    (index: number, mode: 'edit' | 'vsplit' | 'split' | 'tab' = 'edit') =>
+      applyAndFocus((prev) => openNeotreeNode(prev, index, mode)),
+    [applyAndFocus]
+  );
+
+  const handleToggleNeotreeDir = useCallback(
+    (dirPath: string) => setEditorState((prev) => toggleNeotreeDir(prev, dirPath)),
+    [setEditorState]
+  );
+
+  const handleStartNeotreeAdd = useCallback(
+    (index?: number) => setEditorState((prev) => startNeotreeAddPrompt(prev, index)),
+    [setEditorState]
+  );
+
+  const handleStartNeotreeRename = useCallback(
+    (index?: number) => setEditorState((prev) => startNeotreeRenamePrompt(prev, index)),
+    [setEditorState]
+  );
+
+  const handleUpdateNeotreePrompt = useCallback(
+    (value: string) => setEditorState((prev) => updateNeotreePromptValue(prev, value)),
+    [setEditorState]
+  );
+
+  const handleConfirmNeotreePrompt = useCallback(
+    (value?: string) => applyAndFocus((prev) => confirmNeotreePrompt(prev, value)),
+    [applyAndFocus]
+  );
+
+  const handleCancelNeotreePrompt = useCallback(
+    () => applyAndFocus((prev) => cancelNeotreePrompt(prev)),
+    [applyAndFocus]
+  );
+
+  const handleDeleteNeotreeNode = useCallback(
+    (index: number) => applyAndFocus((prev) => deleteNeotreeNode(prev, index)),
+    [applyAndFocus]
+  );
+
+  const handleFocusNeotree = useCallback(
+    (focused: boolean) => setEditorState((prev) => setNeotreeFocus(prev, focused)),
+    [setEditorState]
+  );
+
+  const handleCloseNeotree = useCallback(
+    () => applyAndFocus((prev) => closeNeotree(prev)),
+    [applyAndFocus]
+  );
+
   const handleCloseLspHover = useCallback(
     () => applyAndFocus((prev) => closeLspHover(prev)),
     [applyAndFocus]
@@ -496,6 +563,17 @@ export function useEditorWorkspaceHandlers({
       onCommitGitPanel: handleCommitGitPanel,
       onToggleGitBlame: handleToggleGitBlame,
       onCloseGitPanel: handleCloseGitPanel,
+      onSelectNeotreeIndex: handleSelectNeotreeIndex,
+      onOpenNeotreeNode: handleOpenNeotreeNode,
+      onToggleNeotreeDir: handleToggleNeotreeDir,
+      onStartNeotreeAdd: handleStartNeotreeAdd,
+      onStartNeotreeRename: handleStartNeotreeRename,
+      onUpdateNeotreePrompt: handleUpdateNeotreePrompt,
+      onConfirmNeotreePrompt: handleConfirmNeotreePrompt,
+      onCancelNeotreePrompt: handleCancelNeotreePrompt,
+      onDeleteNeotreeNode: handleDeleteNeotreeNode,
+      onFocusNeotree: handleFocusNeotree,
+      onCloseNeotree: handleCloseNeotree,
       onSwitchCommandLineWindowType: handleSwitchCommandLineWindowType,
       onClearCommandLineHistory: handleClearCommandLineHistory,
       onCloseCommandLineWindow: handleCloseCommandLineWindow,
@@ -545,6 +623,17 @@ export function useEditorWorkspaceHandlers({
       handleCommitGitPanel,
       handleToggleGitBlame,
       handleCloseGitPanel,
+      handleSelectNeotreeIndex,
+      handleOpenNeotreeNode,
+      handleToggleNeotreeDir,
+      handleStartNeotreeAdd,
+      handleStartNeotreeRename,
+      handleUpdateNeotreePrompt,
+      handleConfirmNeotreePrompt,
+      handleCancelNeotreePrompt,
+      handleDeleteNeotreeNode,
+      handleFocusNeotree,
+      handleCloseNeotree,
       handleSwitchCommandLineWindowType,
       handleClearCommandLineHistory,
       handleCloseCommandLineWindow,

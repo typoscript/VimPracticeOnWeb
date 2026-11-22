@@ -36,6 +36,7 @@ import {
   formatNetrwBookmarks,
 } from './netrwEngine';
 import { openOilBuffer, closeOilBuffer, applyOilBufferChanges } from './oilEngine';
+import { executeNeotreeCommand } from './neotreeEngine';
 import { executeHarpoonCommand } from './harpoonEngine';
 import { executeYankyCommand } from './yankRingEngine';
 import { executeSpectreCommand } from './spectreEngine';
@@ -329,6 +330,14 @@ function tryExecuteNetrwAndBufferSwitchCommand(
   const oilMatch = cleanCmdRaw.match(/^Oil(?:\s+(.*))?$/i);
   if (oilMatch) {
     return finishEx(openOilBuffer(state, oilMatch[1]?.trim()));
+  }
+
+  // neo-tree.nvim / nvim-tree 스타일 파일 트리 사이드바: :Neotree [toggle|focus|show|close|reveal], :NvimTreeToggle, :NvimTreeFocus, :NvimTreeOpen, :NvimTreeClose, :NvimTreeFindFile
+  const neotreeMatch = cleanCmdRaw.match(
+    /^(Neotree|NeoTree|NvimTreeToggle|NvimTreeFocus|NvimTreeOpen|NvimTreeClose|NvimTreeFindFile)(?:\s+(.*))?$/i
+  );
+  if (neotreeMatch) {
+    return finishEx(executeNeotreeCommand(state, neotreeMatch[1], neotreeMatch[2] ?? ''));
   }
 
   // harpoon.nvim 스타일 파일 핀 & 빠른 전환: :Harpoon, :HarpoonAdd, :HarpoonMenu, :HarpoonNext, :HarpoonPrev, :HarpoonRemove, :HarpoonClear

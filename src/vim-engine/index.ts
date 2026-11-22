@@ -674,3 +674,29 @@ export {
   selectCmpCompletionCandidate,
 } from './cmpEngine';
 export type { CompletionItemKind, CompletionItemMeta } from './types';
+
+// ---- neo-tree.nvim / nvim-tree 스타일 영구 파일 트리 사이드바 (:Neotree / :NvimTreeToggle) ----
+export {
+  buildNeotreeNodes,
+  openNeotree,
+  closeNeotree,
+  toggleNeotree,
+  setNeotreeFocus,
+  selectNeotreeIndex,
+  toggleNeotreeDir,
+  openNeotreeNode,
+  startNeotreeAddPrompt,
+  startNeotreeRenamePrompt,
+  updateNeotreePromptValue,
+  cancelNeotreePrompt,
+  confirmNeotreePrompt,
+  deleteNeotreeNode,
+  executeNeotreeCommand,
+  handleNeotreeKey,
+} from './neotreeEngine';
+export type {
+  NeotreeGitStatus,
+  NeotreeNode,
+  NeotreePromptState,
+  NeotreeSessionState,
+} from './types';

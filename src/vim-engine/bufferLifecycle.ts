@@ -175,6 +175,16 @@ export function writeAllNamedBuffers(state: VimEditorState): { ok: boolean; stat
     return b;
   });
 
+  if (synced.splitPanes && synced.splitPanes.length > 0) {
+    const activeIdx = synced.activePaneIndex ?? 0;
+    synced.splitPanes.forEach((p, idx) => {
+      if (p.filename && p.filename !== '[No Name]') {
+        const linesToSave = idx === activeIdx ? [...synced.lines] : [...p.lines];
+        nextVfs[p.filename] = linesToSave;
+      }
+    });
+  }
+
   if (savedCount === 0 && nextBuffers.some((b) => b.name && b.name !== '[No Name]')) {
     savedCount = nextBuffers.filter((b) => b.name && b.name !== '[No Name]').length;
   }
