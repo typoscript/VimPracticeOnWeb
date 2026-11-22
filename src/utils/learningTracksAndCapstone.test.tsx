@@ -185,9 +185,9 @@ describe('실무 멀티파일 캡스톤 챌린지 (capstoneProjects)', () => {
     expect(screen.getByTestId('learning-tracks-section')).toBeInTheDocument();
     expect(screen.getByTestId('capstone-projects-section')).toBeInTheDocument();
 
-    // 트랙 필터 클릭 → 현대 Neovim 25강만 표시
+    // 트랙 필터 클릭 → 현대 Neovim 28강만 표시
     fireEvent.click(screen.getByTestId('track-filter-neovim'));
-    expect(screen.getByText(/25개 레슨 검색됨/)).toBeInTheDocument();
+    expect(screen.getByText(/28개 레슨 검색됨/)).toBeInTheDocument();
 
     // 트랙 해제 후 캡스톤 도전하기 클릭
     fireEvent.click(screen.getByTestId('track-filter-neovim'));

@@ -40,6 +40,9 @@ const ConfigExporterModal = lazy(() =>
 const BYOCModal = lazy(() =>
   import('../BYOCModal/BYOCModal').then((m) => ({ default: m.BYOCModal }))
 );
+const CheatsheetModal = lazy(() =>
+  import('../CheatsheetModal/CheatsheetModal').then((m) => ({ default: m.CheatsheetModal }))
+);
 
 /**
  * 한 번이라도 열린 적이 있으면 true 를 유지합니다.
@@ -116,6 +119,11 @@ export interface AppModalsProps {
     onPopTag: () => void;
     onClose: () => void;
   };
+  cheatsheet?: {
+    isOpen: boolean;
+    onClose: () => void;
+    onExecuteKeys?: (keys: readonly string[]) => void;
+  };
 }
 
 /**
@@ -131,6 +139,7 @@ export function AppModals({
   byoc,
   fuzzyFinderHandlers,
   helpHandlers,
+  cheatsheet,
 }: AppModalsProps) {
   const lessonModalLoaded = useOpenedOnce(lesson.isOpen);
   const customModalLoaded = useOpenedOnce(customMission.isOpen);
@@ -138,6 +147,7 @@ export function AppModals({
   const dailyModalLoaded = useOpenedOnce(daily.isOpen);
   const configModalLoaded = useOpenedOnce(config.isOpen);
   const byocModalLoaded = useOpenedOnce(byoc.isOpen);
+  const cheatsheetModalLoaded = useOpenedOnce(Boolean(cheatsheet?.isOpen));
 
   return (
     <Suspense fallback={null}>
@@ -207,6 +217,14 @@ export function AppModals({
             onClose={byoc.onClose}
             initialCode={editorState.lines.join('\n')}
             onStartMission={byoc.onPlay}
+          />
+        )}
+
+        {cheatsheetModalLoaded && cheatsheet && (
+          <CheatsheetModal
+            isOpen={cheatsheet.isOpen}
+            onClose={cheatsheet.onClose}
+            onExecuteKeys={cheatsheet.onExecuteKeys}
           />
         )}
       {editorState.fuzzyFinder?.isOpen && (

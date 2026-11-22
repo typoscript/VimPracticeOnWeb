@@ -2042,8 +2042,8 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     }
   });
 
-  it('레슨 121~125 (nvim-autopairs · LuaSnip · vim-fugitive · nvim-cmp · noice.nvim 125강 피날레) 이 optimalKeys 로 정상 완료된다', () => {
-    for (const id of [121, 122, 123, 124, 125]) {
+  it('레슨 121~128 (nvim-autopairs · LuaSnip · vim-fugitive · nvim-cmp · noice.nvim · 카운트 편집 · 대괄호 탐색 · 시각 플러그인 128강 피날레) 이 optimalKeys 로 정상 완료된다', () => {
+    for (const id of [121, 122, 123, 124, 125, 126, 127, 128]) {
       const m = MISSIONS.find((x) => x.id === id);
       expect(m, `레슨 ${id} 존재해야 함`).toBeDefined();
       let state: VimEditorState = {
@@ -2062,8 +2062,8 @@ describe('MISSIONS 10 ~ 12 validation', () => {
     }
   });
 
-  it('모든 125개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
-    expect(MISSIONS.length).toBe(125);
+  it('모든 128개 레슨이 3성(Par) 기준 optimalKeys를 포함하며 이를 실행하면 미션이 완료된다', () => {
+    expect(MISSIONS.length).toBe(128);
 
     MISSIONS.forEach((m) => {
       expect(m.optimalKeys, `레슨 ${m.id}에 optimalKeys가 정의되어 있어야 합니다.`).toBeDefined();

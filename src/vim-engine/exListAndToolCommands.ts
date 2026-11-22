@@ -173,6 +173,14 @@ function tryExecuteOptionAndScriptCommand(
     });
   }
 
+  // 인터랙티브 단축키 치트시트 모달 열기 (:Cheatsheet, :Cheat, :Keybindings, :Shortcuts)
+  if (/^(?:cheatsheet|cheat|keybindings|shortcuts)$/i.test(cleanCmdRaw)) {
+    return finishEx(state, {
+      showCheatsheetModal: true,
+      commandMessage: msg('단축키 치트시트 창 열림 (:Cheatsheet)'),
+    });
+  }
+
   // Neovim Lua 실행: :lua {code}, :luafile {file}, :={expr}
   const luaPrintMatch = cleanCmdRaw.match(/^=\s*([\s\S]+)$/);
   if (luaPrintMatch) {

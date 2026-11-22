@@ -24,6 +24,7 @@ interface AppHeaderProps {
   onOpenCustomModal: () => void;
   onOpenConfigModal: () => void;
   onOpenLessonModal: () => void;
+  onOpenCheatsheetModal?: () => void;
   showDiffView: boolean;
   onToggleDiffView: () => void;
   showRegisterInspector: boolean;
@@ -63,6 +64,7 @@ export function AppHeader({
   onOpenCustomModal,
   onOpenConfigModal,
   onOpenLessonModal,
+  onOpenCheatsheetModal,
   showDiffView,
   onToggleDiffView,
   showRegisterInspector,
@@ -227,6 +229,18 @@ export function AppHeader({
                 data-testid="open-lesson-modal-btn"
               >
                 {t('📚 레슨 목록')}
+              </button>
+            )}
+
+            {onOpenCheatsheetModal && (
+              <button
+                type="button"
+                className="toolbar-btn cheatsheet-open-btn"
+                onClick={onOpenCheatsheetModal}
+                data-testid="open-cheatsheet-modal-btn"
+                title={t('전체 Vim · Neovim 단축키 검색 및 즉시 실행 치트시트 (:Cheatsheet)')}
+              >
+                {t('📖 치트시트')}
               </button>
             )}
           </div>

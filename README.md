@@ -132,7 +132,7 @@ flowchart TD
 
 ---
 
-## 🎯 튜토리얼 커리큘럼 (Lessons 1 ~ 125)
+## 🎯 튜토리얼 커리큘럼 (Lessons 1 ~ 128)
 
 ### 🟢 기초 이동 및 텍스트 편집 (레슨 1 ~ 10)
 1. **레슨 1**: 기본 방향 이동 (`h`, `j`, `k`, `l`)
@@ -246,7 +246,7 @@ flowchart TD
 99. **레슨 99**: 덮어쓰기 모드(`R`), `[count]r` & 비주얼 블록 치환(`Ctrl-v r`) 마스터하기
 100. **레슨 100**: [대단원] 정규식 캡처·매크로·`vim-surround`·다중 파일 배치(`:vimgrep` + `:cdo` + `Ctrl-^`) 종합 마스터 챌린지
 
-### 🚀 현대 Neovim 실전 트랙 (레슨 101 ~ 125)
+### 🚀 현대 Neovim 실전 트랙 (레슨 101 ~ 128)
 101. **레슨 101**: Telescope `:LiveGrep` 본문 검색 & `Ctrl-q` 퀵픽스 일괄 치환
 102. **레슨 102**: Neovim 0.11 LSP 리팩토링 — `gra` 코드 액션 & `grn` 다중 파일 이름 변경
 103. **레슨 103**: Neovim 0.11 LSP 탐색 — `gO` 문서 심볼 아웃라인 & `grr` 참조 검색
@@ -272,6 +272,9 @@ flowchart TD
 123. **레슨 123**: `vim-fugitive` 미니 Git 워크플로(`:Gblame` · `:Git add` · `:Git commit`)
 124. **레슨 124**: `nvim-cmp` 통합 자동완성(`Ctrl-Space` · LSP 심볼 & 스니펫 즉시 확장)
 125. **레슨 125**: `[125강 피날레]` `noice.nvim` 플로팅 커맨드라인(`:set noice` · `:%s` · `/` 검색)
+126. **레슨 126**: 순정 고급 카운트 편집(`[count]s` · `[count]A` · `[count]D` · `d_`)
+127. **레슨 127**: 대괄호 고급 탐색(`[/` · `]/` 블록 주석 & `]'` 마크 순회 & `[I` 키워드 조회)
+128. **레슨 128**: `[128강 피날레]` 모던 Neovim 시각 플러그인(`:TSContextToggle` · `:ColorizerToggle` · `:IlluminateToggle`)
 
 ---
 

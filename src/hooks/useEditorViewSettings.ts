@@ -36,6 +36,7 @@ export function useEditorViewSettings({
   const [isDailyModalOpen, setIsDailyModalOpen] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [isBYOCModalOpen, setIsBYOCModalOpen] = useState(false);
+  const [isCheatsheetModalOpen, setIsCheatsheetModalOpen] = useState(false);
 
   const [relativeLineNumbers, setRelativeLineNumbers] = useState<boolean>(() =>
     loadRelativeLineSetting()
@@ -79,6 +80,12 @@ export function useEditorViewSettings({
       setIsConfigModalOpen(editorState.showConfigModal);
     }
   }, [editorState.showConfigModal]);
+
+  useEffect(() => {
+    if (editorState.showCheatsheetModal !== undefined) {
+      setIsCheatsheetModalOpen(editorState.showCheatsheetModal);
+    }
+  }, [editorState.showCheatsheetModal]);
 
   const handleToggleRegisterInspector = useCallback(() => {
     setShowRegisterInspector((prev) => {
@@ -183,7 +190,8 @@ export function useEditorViewSettings({
     isAnalyticsModalOpen ||
     isDailyModalOpen ||
     isConfigModalOpen ||
-    isBYOCModalOpen;
+    isBYOCModalOpen ||
+    isCheatsheetModalOpen;
 
   return {
     isModalOpen,
@@ -198,6 +206,8 @@ export function useEditorViewSettings({
     setIsConfigModalOpen,
     isBYOCModalOpen,
     setIsBYOCModalOpen,
+    isCheatsheetModalOpen,
+    setIsCheatsheetModalOpen,
     isAnyModalOpen,
     relativeLineNumbers,
     showVirtualKeyboard,

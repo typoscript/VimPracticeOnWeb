@@ -3,7 +3,7 @@ import { CoachingToast } from './components/CoachingToast/CoachingToast';
 import { AppHeader, AppTab } from './components/AppHeader/AppHeader';
 import { AppModals } from './components/AppModals/AppModals';
 import { AppMainWorkspace } from './components/AppMainWorkspace/AppMainWorkspace';
-import { VimEditorState } from './vim-engine';
+import { VimEditorState, handleKey } from './vim-engine';
 import { Mission } from './types/mission';
 import { MISSIONS } from './data/missions';
 import { sandboxInitialLines } from './data/sandbox';
@@ -289,6 +289,7 @@ export function App() {
         onOpenCustomModal={() => viewSettings.setIsCustomModalOpen(true)}
         onOpenConfigModal={() => viewSettings.setIsConfigModalOpen(true)}
         onOpenLessonModal={() => viewSettings.setIsModalOpen(true)}
+        onOpenCheatsheetModal={() => viewSettings.setIsCheatsheetModalOpen(true)}
         showDiffView={viewSettings.showDiffView}
         onToggleDiffView={viewSettings.handleToggleDiffView}
         showRegisterInspector={viewSettings.showRegisterInspector}
@@ -463,6 +464,22 @@ export function App() {
           isOpen: viewSettings.isBYOCModalOpen,
           onClose: () => viewSettings.setIsBYOCModalOpen(false),
           onPlay: missionHandlers.handlePlayBYOCMission,
+        }}
+        cheatsheet={{
+          isOpen: viewSettings.isCheatsheetModalOpen,
+          onClose: () => {
+            viewSettings.setIsCheatsheetModalOpen(false);
+            setEditorState((prev) => ({ ...prev, showCheatsheetModal: false }));
+          },
+          onExecuteKeys: (keys) => {
+            setEditorState((prev) => {
+              let next: VimEditorState = { ...prev, showCheatsheetModal: false };
+              for (const k of keys) {
+                next = handleKey(next, k);
+              }
+              return next;
+            });
+          },
         }}
         fuzzyFinderHandlers={workspaceHandlers.fuzzyFinderHandlers}
         helpHandlers={workspaceHandlers.helpHandlers}

@@ -578,4 +578,5 @@ export const EN_MESSAGES: Record<string, string> = {
   "Lua 오류: 유효한 스니펫 트리거 이름이 필요합니다: {trigger}": "Lua error: valid snippet trigger name required: {trigger}",
   "Lua 오류: 스니펫 본문(문자열 또는 문자열 테이블)이 필요합니다": "Lua error: snippet body (string or string table) is required",
   "E387: 현재 줄에 일치 항목이 있습니다": "E387: Match is on current line",
+  "단축키 치트시트 창 열림 (:Cheatsheet)": "Opened keyboard shortcuts cheatsheet (:Cheatsheet)",
 };

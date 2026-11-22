@@ -919,6 +919,8 @@ export interface VimEditorState {
   showMarksVisualizer?: boolean;
   /** 커스텀 설정 및 .vimrc 내보내기/다운로드 모달 표시 여부 (:vimrc, :export, :config) */
   showConfigModal?: boolean;
+  /** 인터랙티브 단축키 치트시트 모달 표시 여부 (:Cheatsheet, :Cheat) */
+  showCheatsheetModal?: boolean;
   /** 퍼지 파일 & 버퍼 검색 팝업 상태 (:find, :Files, :Buffers) */
   fuzzyFinder?: FuzzyFinderState | null;
   /** 순정 Vim 환경 옵션 설정 (:set nu, :set rnu, :set ic 등) */

@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 207개 테스트 파일, 2,339개 테스트 100% 통과 필수)*
+  *(현재 208개 테스트 파일, 2,341개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 125)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 128)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -272,6 +272,9 @@
 - **Sticky Scope(`nvim-treesitter-context`) & 브레드크럼 Winbar · 인라인 컬러 프리뷰(`nvim-colorizer.lua`) & 심볼 자동 강조(`vim-illuminate`) (`src/components/Editor/editorDecorations.ts`, `Editor.tsx`, `EditorLineRenderer.tsx`, `exListAndToolCommands.ts`)**:
   - **`nvim-treesitter-context` (`:set tscontext` / `:set tsc`, `:TSContextToggle`, 기본 `on`) & 브레드크럼 Winbar (`:set winbar` / `:set wb`, 기본 `on`)**: 현재 커서를 감싸는 상위 클래스·인터페이스·함수·제어문 선언 헤더(최대 3단계)를 에디터 상단에 고정 표시(`.editor-ts-context`)하고, 파일 경로 › 클래스 › 함수 심볼 계층을 상단 브레드크럼 바(`.editor-winbar`)로 시각화합니다.
   - **`nvim-colorizer.lua` (`:set colorizer` / `:set col`, `:ColorizerToggle`, 기본 `on`) & `vim-illuminate` (`:set illuminate` / `:set ill`, `:IlluminateToggle`, 기본 `on`)**: 코드 내 `#hex`, `rgb()`, `rgba()`, `hsl()`, `hsla()` 컬러 리터럴에 본문 무결성을 해치지 않고 실시간 컬러 밑줄 프리뷰(`.colorizer-cell`)를 표시하며, 커서 아래 식별자와 동일한 심볼이 버퍼 내 2회 이상 등장할 때 모든 참조 위치를 자동 하이라이트(`.illuminate-word-cell`)합니다.
+- **인터랙티브 단축키 치트시트 모달(`:Cheatsheet` / `:Cheat`) & 커리큘럼 126~128강 확장 (`src/components/CheatsheetModal/`, `part6ModernNeovim.ts`, `learningTracks.ts`, `missionFilters.ts`)**:
+  - **`:Cheatsheet` 모달**: 상단 헤더 `📖 치트시트` 버튼 또는 `:Cheatsheet`/`:Cheat`/`:Keybindings`/`:Shortcuts` 로 열리는 지연 로딩 모달에서 6개 카테고리(모션·편집·텍스트 객체·검색·창/터미널·모던 Neovim) 22종 핵심 단축키를 실시간 검색하고 `[▶ 실행]` 버튼으로 현재 에디터에 즉시 실행해 볼 수 있습니다.
+  - **신규 레슨 126~128강 (128강 완결)**: 순정 고급 카운트 편집(`[count]s`·`[count]A`·`[count]D`·`d_`, 레슨 126), 대괄호 고급 탐색(`[/`·`]/` 블록 주석·`]'` 마크 순회·`[I` 키워드 조회, 레슨 127), 모던 Neovim 시각 플러그인 피날레(`:TSContextToggle`·`:ColorizerToggle`·`:IlluminateToggle`, 레슨 128)를 정규 커리큘럼(**128강**), *현대 Neovim IDE 28강* 트랙, 한/영 번역 사전에 통합했습니다.
 
 ---
 

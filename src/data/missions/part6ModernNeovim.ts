@@ -1213,4 +1213,167 @@ export const MISSIONS_PART6: Mission[] = [
       );
     },
   },
+  {
+    id: 126,
+    title: '레슨 126: 순정 고급 카운트 편집([count]s · [count]A · [count]D · d_)',
+    description:
+      '카운트(숫자)를 단순 이동에만 쓰지 않고 치환([count]s), 반복 삽입([count]A / [count]i), 다중 줄 끝 삭제([count]D / [count]C), 줄 단위 모션 결합(d_)에 활용하면 불필요한 연타를 획기적으로 줄일 수 있습니다.\n\n1) [count]s & [count]A / [count]i:\n   - 4s PASS<Esc> 는 커서부터 4글자를 지우고 PASS 를 입력합니다.\n   - 3A !<Esc> 는 줄 끝에 ! 를 입력한 뒤 Esc 를 누르는 순간 3번 자동 반복되어 !!! 가 됩니다.\n\n2) [count]D & d_ (줄 단위 언더스코어 모션):\n   - 2D 는 현재 줄의 커서 위치부터 다음 줄 끝까지 2줄에 걸친 꼬리 텍스트를 한 번에 삭제합니다.\n   - _ 는 첫 비공백 문자로 이동하는 줄 단위(linewise) 모션이므로 d_ 는 dd 와 동일하게 현재 줄 전체를 삭제합니다.\n\n미션:\n1. 1번째 줄에서 fX 4s PASS<Esc> 로 XXXX 를 PASS 로 교체하세요.\n2. 2번째 줄(j)에서 3A !<Esc> 로 줄 끝에 !!! 3개를 한 번에 붙이세요.\n3. 3번째 줄(j 0 f; l)에서 2D 로 3~4번째 줄의 주석을 한 번에 지우고, 마지막 줄(j)을 d_ 로 삭제하세요!',
+    hint: 'fX 4sPASS<Esc> → j 3A!<Esc> → j 0 f; l 2D → j d_',
+    par: 30,
+    primaryFilename: 'src/countEdits.ts',
+    initialLines: [
+      'const code = "XXXX_ok";',
+      'const tag = "v1"',
+      'const keep = 1; // old1',
+      '// old2',
+      '  const obsolete = true;',
+    ],
+    targetLines: [
+      'const code = "PASS_ok";',
+      'const tag = "v1"!!!',
+      'const keep = 1;',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    optimalKeys: [
+      'f',
+      'X',
+      '4',
+      's',
+      ...keysOf('PASS'),
+      'Escape',
+      'j',
+      '3',
+      'A',
+      '!',
+      'Escape',
+      'j',
+      '0',
+      'f',
+      ';',
+      'l',
+      '2',
+      'D',
+      'j',
+      'd',
+      '_',
+    ],
+    checkComplete: (state) => {
+      const target = [
+        'const code = "PASS_ok";',
+        'const tag = "v1"!!!',
+        'const keep = 1;',
+      ];
+      return (
+        state.mode === 'NORMAL' &&
+        state.lines.length === target.length &&
+        state.lines.every((l, i) => l === target[i])
+      );
+    },
+  },
+  {
+    id: 127,
+    title: "레슨 127: 대괄호 고급 탐색([/ · ]/ 블록 주석 & ]' 마크 순회 & [I 키워드 조회)",
+    description:
+      "Vim 의 대괄호([ / ]) 탐색 명령을 익히면 블록 주석의 시작·끝으로 즉시 점프([/ · ]/)해 주석 전체를 삭제(d]/)하거나, 설정된 소문자 마크들을 순서대로 순회(]' · [')하고, 커서 아래 키워드가 등장하는 모든 줄을 한눈에 조회([I)할 수 있습니다.\n\n1) [/ & ]/ (/* ... */ 블록 주석 경계 점프):\n   - [/ 는 현재 또는 이전 /* 블록 주석 시작으로, ]/ 는 */ 주석 끝으로 점프합니다.\n\n2) ]' / [' & [I:\n   - ]' 는 현재 줄 아래의 다음 소문자 마크(a~z)가 있는 줄의 첫 비공백 문자로 점프합니다.\n   - [I 는 커서 아래 단어가 포함된 버퍼 내 모든 줄 번호와 내용을 상태바에 요약 출력합니다.\n\n미션:\n1. 주석 내부(2번째 줄)에서 [/ 로 /* 시작 줄로 점프한 뒤, d]/ 와 dd 로 3줄 블록 주석을 깔끔히 지우세요.\n2. 2j ma 로 gamma 줄에 마크 a 를 찍고 gg 로 맨 위로 올라간 뒤, ]' 로 마크 a 줄로 즉시 점프하세요.\n3. Ctrl-a 로 gamma 값을 2 로 올린 뒤 [I 를 눌러 gamma 줄을 조회해 완료하세요!",
+    hint: "[/ → d]/ → dd → 2j ma → gg → ]' → Ctrl-a → [I",
+    par: 24,
+    primaryFilename: 'src/bracketNav.ts',
+    initialLines: [
+      '/* legacy header',
+      ' * outdated notes',
+      ' */',
+      'const alpha = 1;',
+      'const beta = 2;',
+      'const gamma = 1;',
+    ],
+    targetLines: [
+      'const alpha = 1;',
+      'const beta = 2;',
+      'const gamma = 2;',
+    ],
+    initialCursor: { line: 1, col: 3 },
+    optimalKeys: [
+      '[',
+      '/',
+      'd',
+      ']',
+      '/',
+      'd',
+      'd',
+      '2',
+      'j',
+      'm',
+      'a',
+      'g',
+      'g',
+      ']',
+      "'",
+      'Ctrl-a',
+      '[',
+      'I',
+    ],
+    checkComplete: (state) => {
+      const target = [
+        'const alpha = 1;',
+        'const beta = 2;',
+        'const gamma = 2;',
+      ];
+      return (
+        state.mode === 'NORMAL' &&
+        Boolean(state.marks?.a) &&
+        Boolean(state.commandMessage?.includes('const gamma = 2;')) &&
+        state.lines.length === target.length &&
+        state.lines.every((l, i) => l === target[i])
+      );
+    },
+  },
+  {
+    id: 128,
+    title: '레슨 128: [128강 피날레] 모던 Neovim 시각 플러그인(:TSContextToggle · :ColorizerToggle · :IlluminateToggle)',
+    description:
+      '축하합니다! 전체 128강 커리큘럼의 최종 피날레입니다. 현대 Neovim IDE 의 3대 시각 가독성 플러그인 — 상단 Sticky Scope(nvim-treesitter-context), 인라인 컬러 프리뷰(nvim-colorizer.lua), 커서 심볼 자동 강조(vim-illuminate)를 확인하며 테마 컬러와 식별자를 리팩토링해 128강 대장정을 완주하세요!\n\n1) Sticky Scope(:TSContextToggle) & Winbar(:set winbar):\n   - 커서가 함수·클래스 본문 안에 있을 때 상단 고정 헤더와 브레드크럼 경로로 현재 문맥을 실시간 표시합니다.\n\n2) Colorizer(:ColorizerToggle) & Illuminate(:IlluminateToggle):\n   - #7aa2f7 같은 HEX/RGB 컬러 리터럴에 실제 색상 밑줄 프리뷰를 입히고, 커서 아래 변수(accentColor)와 같은 모든 참조 위치를 자동 하이라이트합니다.\n\n미션:\n1. 2번째 줄에서 f" ci" #7aa2f7<Esc> 로 테마 색상을 "#7aa2f7" 로 변경해 실시간 컬러 프리뷰를 확인하세요.\n2. :%s/accentColor/primaryColor/g<Enter> 로 두 곳의 심볼 이름을 primaryColor 로 일괄 변경해 128강을 완주하세요!',
+    hint: 'f" ci"#7aa2f7<Esc> → :%s/accentColor/primaryColor/g<Enter>',
+    par: 50,
+    primaryFilename: 'src/visualFinale.ts',
+    initialLines: [
+      'export function applyTheme() {',
+      '  const accentColor = "#000000";',
+      '  return accentColor;',
+      '}',
+    ],
+    targetLines: [
+      'export function applyTheme() {',
+      '  const primaryColor = "#7aa2f7";',
+      '  return primaryColor;',
+      '}',
+    ],
+    initialCursor: { line: 1, col: 8 },
+    optimalKeys: [
+      'f',
+      '"',
+      'c',
+      'i',
+      '"',
+      ...keysOf('#7aa2f7'),
+      'Escape',
+      ...keysOf(':%s/accentColor/primaryColor/g'),
+      'Enter',
+    ],
+    checkComplete: (state) => {
+      const target = [
+        'export function applyTheme() {',
+        '  const primaryColor = "#7aa2f7";',
+        '  return primaryColor;',
+        '}',
+      ];
+      return (
+        state.mode === 'NORMAL' &&
+        state.options?.tscontext !== false &&
+        state.options?.colorizer !== false &&
+        state.options?.illuminate !== false &&
+        state.lines.length === target.length &&
+        state.lines.every((l, i) => l === target[i])
+      );
+    },
+  },
 ];
