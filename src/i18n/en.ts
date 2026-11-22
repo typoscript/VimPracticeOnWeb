@@ -1335,7 +1335,7 @@ export const EN: Record<string, string> = {
   "init.lua 플레이그라운드": "init.lua Playground",
   "나만의 init.lua / .vimrc 영구 설정 플레이그라운드": "Personal init.lua / .vimrc Live Config Playground",
   "자유 연습장 시작 시 자동 적용": "Auto-apply when opening Sandbox",
-  "Neovim Lua(vim.opt, vim.keymap.set, vim.g.mapleader) 또는 .vimrc 스크립트를 작성하고 저장하면 현재 에디터와 Which-Key 팝업, 자유 연습장에 즉시 반영됩니다.": "Write Neovim Lua (vim.opt, vim.keymap.set, vim.g.mapleader) or .vimrc config and apply it live to the editor, Which-Key popup, and Sandbox.",
+  "Neovim Lua(vim.opt.autopairs/cmdlinepopup, vim.keymap.set, vim.snippets.add, vim.g.mapleader) 또는 .vimrc 스크립트를 작성하고 저장하면 현재 에디터와 Which-Key·nvim-cmp 팝업, 자유 연습장에 즉시 반영됩니다.": "Write Neovim Lua (vim.opt.autopairs/cmdlinepopup, vim.keymap.set, vim.snippets.add, vim.g.mapleader) or .vimrc config and apply it live to the editor, Which-Key, nvim-cmp, and Sandbox.",
   "⚡ 원클릭 프리셋 불러오기": "⚡ Load One-Click Preset",
   "LazyVim 기본 (Lua)": "LazyVim Defaults (Lua)",
   "미니멀 프로 (Lua)": "Minimal Pro (Lua)",
@@ -1483,4 +1483,6 @@ export const EN: Record<string, string> = {
   "📁 폴더 열기": "📁 Open Folder",
   "작업공간의 모든 파일을 .zip 아카이브로 한 번에 다운로드": "Download all workspace files as a single .zip archive",
   "📦 ZIP 내보내기": "📦 Export ZIP",
+  "커스텀 스니펫 · 모던 IDE (Lua)": "Custom Snippets · Modern IDE (Lua)",
+  "설정이 저장되고 에디터에 즉시 적용되었습니다 (키맵 {maps}개 · 커스텀 스니펫 {snippets}개 · 리더키 {leader})": "Config saved and applied live ({maps} keymaps · {snippets} custom snippets · leader {leader})",
 };

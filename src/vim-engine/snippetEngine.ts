@@ -63,6 +63,31 @@ const SNIPPET_MAP = new Map<string, SnippetDefinition>(
   BUILTIN_SNIPPETS.map((s) => [s.trigger, s])
 );
 
+/**
+ * 사용자 커스텀 스니펫(customSnippets, 우선 적용)과 내장 스니펫(BUILTIN_SNIPPETS)을 합쳐 반환합니다.
+ */
+export function getAllSnippets(
+  state?: Pick<VimEditorState, 'customSnippets'>
+): readonly SnippetDefinition[] {
+  const custom = state?.customSnippets;
+  if (!custom || custom.length === 0) return BUILTIN_SNIPPETS;
+  const seen = new Set<string>();
+  const merged: SnippetDefinition[] = [];
+  for (const s of custom) {
+    if (!seen.has(s.trigger)) {
+      seen.add(s.trigger);
+      merged.push(s);
+    }
+  }
+  for (const s of BUILTIN_SNIPPETS) {
+    if (!seen.has(s.trigger)) {
+      seen.add(s.trigger);
+      merged.push(s);
+    }
+  }
+  return merged;
+}
+
 const TABSTOP_TOKEN_RE = /\$\{(\d+):([^}]*)\}|\$(\d+)/g;
 
 interface ParsedTemplate {
@@ -209,11 +234,14 @@ export function tryExpandSnippetOnTab(state: VimEditorState): VimEditorState | n
   const after = currentLine.slice(col);
 
   // 줄 시작(들여쓰기 포함) 또는 공백 뒤의 단독 트리거 단어만 매칭
-  const match = before.match(/^([ \t]*)([a-zA-Z]+)$/) ?? before.match(/(\s)([a-zA-Z]+)$/);
+  const match =
+    before.match(/^([ \t]*)([a-zA-Z_][a-zA-Z0-9_]*)$/) ??
+    before.match(/(\s)([a-zA-Z_][a-zA-Z0-9_]*)$/);
   if (!match) return null;
 
   const trigger = match[2];
-  const def = SNIPPET_MAP.get(trigger);
+  const def =
+    state.customSnippets?.find((s) => s.trigger === trigger) ?? SNIPPET_MAP.get(trigger);
   if (!def) return null;
 
   const startCol = col - trigger.length;
@@ -286,9 +314,13 @@ export function jumpSnippetTabstop(
 }
 
 /**
- * `:Snippets` — 사용 가능한 내장 스니펫 트리거 목록을 반환합니다.
+ * `:Snippets` — 사용 가능한 내장 및 사용자 커스텀 스니펫 트리거 목록을 반환합니다.
  */
-export function formatSnippetsList(): string {
-  const summary = BUILTIN_SNIPPETS.map((s) => `${s.trigger}<Tab>(${s.description})`).join(' · ');
+export function formatSnippetsList(state?: Pick<VimEditorState, 'customSnippets'>): string {
+  const customTriggers = new Set((state?.customSnippets ?? []).map((s) => s.trigger));
+  const all = getAllSnippets(state);
+  const summary = all
+    .map((s) => `${customTriggers.has(s.trigger) ? '*' : ''}${s.trigger}<Tab>(${s.description})`)
+    .join(' · ');
   return msg('[Snippets] {list}', { list: summary });
 }

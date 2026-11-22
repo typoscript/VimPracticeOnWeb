@@ -545,6 +545,54 @@ function invokeLuaRef(rt: LuaRuntime, path: string, args: LuaValue[]): LuaValue 
     return null;
   }
 
+  // vim.snippets.add(trigger, body, description?) / remove(trigger) / clear() / list()
+  if (path === 'vim.snippets.add') {
+    const trigger = formatLuaValue(args[0] ?? '').trim();
+    if (!trigger || !/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(trigger)) {
+      throw new Error(msg('Lua 오류: 유효한 스니펫 트리거 이름이 필요합니다: {trigger}', { trigger }));
+    }
+    const bodyArg = args[1];
+    let body: string[] = [];
+    if (bodyArg && isLuaTable(bodyArg)) {
+      body = bodyArg.array.map((line) => formatLuaValue(line));
+    } else if (typeof bodyArg === 'string') {
+      body = bodyArg.replace(/\r\n/g, '\n').split('\n');
+    }
+    if (body.length === 0) {
+      throw new Error(msg('Lua 오류: 스니펫 본문(문자열 또는 문자열 테이블)이 필요합니다'));
+    }
+    const description = args[2] ? formatLuaValue(args[2]) : 'custom snippet';
+    const prev = rt.state.customSnippets ?? [];
+    const next = [
+      { trigger, description, body },
+      ...prev.filter((s) => s.trigger !== trigger),
+    ];
+    rt.state = {
+      ...rt.state,
+      customSnippets: next,
+    };
+    return null;
+  }
+  if (path === 'vim.snippets.remove') {
+    const trigger = formatLuaValue(args[0] ?? '').trim();
+    const prev = rt.state.customSnippets ?? [];
+    rt.state = {
+      ...rt.state,
+      customSnippets: prev.filter((s) => s.trigger !== trigger),
+    };
+    return null;
+  }
+  if (path === 'vim.snippets.clear') {
+    rt.state = {
+      ...rt.state,
+      customSnippets: [],
+    };
+    return null;
+  }
+  if (path === 'vim.snippets.list') {
+    return makeTable((rt.state.customSnippets ?? []).map((s) => s.trigger));
+  }
+
   // vim.cmd(...) / vim.cmd.<excmd>(arg)
   if (path === 'vim.cmd') {
     const script = formatLuaValue(args[0] ?? '');

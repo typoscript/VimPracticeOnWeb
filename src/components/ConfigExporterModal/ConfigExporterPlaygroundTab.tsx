@@ -79,7 +79,7 @@ export const ConfigExporterPlaygroundTab: React.FC<ConfigExporterPlaygroundTabPr
 
         <p className="backup-desc">
           {t(
-            'Neovim Lua(vim.opt, vim.keymap.set, vim.g.mapleader) 또는 .vimrc 스크립트를 작성하고 저장하면 현재 에디터와 Which-Key 팝업, 자유 연습장에 즉시 반영됩니다.'
+            'Neovim Lua(vim.opt.autopairs/cmdlinepopup, vim.keymap.set, vim.snippets.add, vim.g.mapleader) 또는 .vimrc 스크립트를 작성하고 저장하면 현재 에디터와 Which-Key·nvim-cmp 팝업, 자유 연습장에 즉시 반영됩니다.'
           )}
         </p>
 

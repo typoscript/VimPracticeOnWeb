@@ -6,7 +6,7 @@ import {
   selectCompletionCandidate,
   startOrCycleCompletion,
 } from './completion';
-import { BUILTIN_SNIPPETS, tryExpandSnippetOnTab } from './snippetEngine';
+import { getAllSnippets, tryExpandSnippetOnTab } from './snippetEngine';
 import { extractDocumentSymbols } from './lspRefactorEngine';
 
 function mapSymbolKindToCmpKind(rawKind: string): CompletionItemKind {
@@ -29,8 +29,8 @@ function collectCmpItems(
   const seen = new Set<string>();
   const items: CompletionItemMeta[] = [];
 
-  // 1) LuaSnip 스타일 내장 스니펫 (최우선)
-  for (const snip of BUILTIN_SNIPPETS) {
+  // 1) LuaSnip 스타일 사용자 커스텀 + 내장 스니펫 (최우선)
+  for (const snip of getAllSnippets(state)) {
     if (!lowerPrefix || snip.trigger.toLowerCase().startsWith(lowerPrefix)) {
       if (seen.has(`snip:${snip.trigger}`)) continue;
       seen.add(`snip:${snip.trigger}`);

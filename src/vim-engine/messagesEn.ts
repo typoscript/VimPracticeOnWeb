@@ -575,4 +575,6 @@ export const EN_MESSAGES: Record<string, string> = {
   "[Git] 인터랙티브 Git 패널을 닫았습니다": "[Git] Interactive Git panel closed",
   "[Git] 스테이징을 해제했습니다": "[Git] Unstaged changes",
   "[Git] 취소할 스테이징 변경사항이 없습니다": "[Git] No staged changes to unstage",
+  "Lua 오류: 유효한 스니펫 트리거 이름이 필요합니다: {trigger}": "Lua error: valid snippet trigger name required: {trigger}",
+  "Lua 오류: 스니펫 본문(문자열 또는 문자열 테이블)이 필요합니다": "Lua error: snippet body (string or string table) is required",
 };

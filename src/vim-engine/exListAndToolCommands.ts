@@ -514,9 +514,9 @@ function tryExecuteMappingAndMiscToolCommand(
     }
   }
 
-  // :Snippets — 내장 LuaSnip 스타일 스니펫 목록 조회
+  // :Snippets — 내장 + 커스텀 LuaSnip 스타일 스니펫 목록 조회
   if (/^Snippets?$/i.test(cleanCmdRaw)) {
-    return finishEx(state, { commandMessage: formatSnippetsList() });
+    return finishEx(state, { commandMessage: formatSnippetsList(state) });
   }
 
   // :Flash [query] — flash.nvim 스타일 화면 라벨 점프 세션 열기

@@ -1057,6 +1057,8 @@ export interface VimEditorState {
   lastActionWasUndo?: boolean;
   /** vim-fugitive / LazyGit 스타일 인터랙티브 Git 분할 패널 (:Git / :LazyGit) */
   gitPanel?: GitPanelState | null;
+  /** init.lua (vim.snippets.add) 로 등록된 사용자 커스텀 스니펫 목록 */
+  customSnippets?: CustomSnippetDefinition[];
 }
 
 export type LspDiagnosticSeverity = 'error' | 'warning' | 'info' | 'hint';
@@ -1272,6 +1274,12 @@ export interface SnippetSession {
   trigger: string;
   tabstops: SnippetTabstop[];
   currentIndex: number;
+}
+
+export interface CustomSnippetDefinition {
+  trigger: string;
+  description: string;
+  body: string[];
 }
 
 export interface GitCommitEntry {

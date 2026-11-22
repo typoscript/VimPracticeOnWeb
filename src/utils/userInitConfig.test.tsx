@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { createVimState, handleKey } from '../vim-engine';
+import { createVimState, handleKey, sendKeys, runExCommand } from '../vim-engine';
 import {
   USER_INIT_PRESETS,
   loadUserInitConfig,
@@ -125,5 +125,56 @@ describe('나만의 init.lua / .vimrc 영구 설정 플레이그라운드', () =
       })
     );
     expect(screen.getByTestId('playground-status-msg')).toHaveTextContent('적용 완료');
+  });
+
+  it('vim.opt.autopairs / cmdlinepopup 및 vim.snippets.add 로 등록한 커스텀 스니펫이 Tab · Ctrl-Space · :Snippets 에서 동작한다', () => {
+    const preset = USER_INIT_PRESETS.find((p) => p.id === 'snippetsPro')!;
+    const initial = createVimState(['']);
+
+    const applied = applyUserInitConfigToState(initial, {
+      format: 'lua',
+      code: preset.code,
+      enabled: true,
+    });
+    expect(applied.ok).toBe(true);
+    expect(applied.state.options?.autopairs).toBe(true);
+    expect(applied.state.options?.cmdlinepopup).toBe(true);
+    expect(applied.state.customSnippets?.length).toBe(3);
+
+    // 1) :Snippets 목록에 커스텀 스니펫(*rfc)이 표시됨
+    const listState = runExCommand(applied.state, 'Snippets');
+    expect(listState.commandMessage).toContain('*rfc<Tab>');
+
+    // 2) Insert 모드 <Tab> 으로 커스텀 스니펫 rfc 확장 → SELECT 모드 진입
+    let s = sendKeys(applied.state, 'irfc<Tab>Card<Tab>body<Esc>');
+    expect(s.lines).toEqual([
+      'export function Card() {',
+      '  return <div>body</div>;',
+      '}',
+    ]);
+
+    // 3) Ctrl-Space (nvim-cmp) 팝업에서도 커스텀 스니펫 todo 가 최상위 제안되고 Enter 로 확장됨
+    let cmpState = sendKeys(applied.state, 'ito');
+    cmpState = handleKey(cmpState, 'Ctrl-Space');
+    expect(cmpState.completionSession?.type).toBe('cmp');
+    expect(cmpState.completionSession?.candidates[0]).toBe('todo');
+    cmpState = handleKey(cmpState, 'Enter');
+    expect(cmpState.mode).toBe('SELECT');
+    expect(cmpState.lines[0]).toBe('// TODO(dev): follow up');
+  });
+
+  it('vim.snippets.remove / vim.snippets.clear 로 커스텀 스니펫을 개별 삭제하거나 전체 초기화한다', () => {
+    let s = createVimState(['']);
+    s = runExCommand(s, 'lua vim.snippets.add("hi", "hello ${1:world}$0", "greet")');
+    expect(s.customSnippets?.map((x) => x.trigger)).toEqual(['hi']);
+
+    s = runExCommand(s, 'lua vim.snippets.add("bye", { "goodbye $0" })');
+    expect(s.customSnippets?.length).toBe(2);
+
+    s = runExCommand(s, 'lua vim.snippets.remove("hi")');
+    expect(s.customSnippets?.map((x) => x.trigger)).toEqual(['bye']);
+
+    s = runExCommand(s, 'lua vim.snippets.clear()');
+    expect(s.customSnippets).toEqual([]);
   });
 });

@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 206개 테스트 파일, 2,317개 테스트 100% 통과 필수)*
+  *(현재 206개 테스트 파일, 2,319개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -215,7 +215,7 @@
 - **`mini.ai` 스타일 Next/Last 텍스트 객체 (`in`/`an`/`il`/`al`) + 레슨 110 + `index.js` 초기 번들 경량화 (`src/vim-engine/miniAiTextObjects.ts`, `AppMainWorkspace.tsx`, `AppModals.tsx`)**:
   - **Next/Last 텍스트 객체**: 커서가 따옴표(`"`, `'`, `` ` ``)·괄호(`()`, `{}`, `[]`, `<>`, `b`, `B`) 밖에 있어도 버퍼 전체에서 다음(`n`: `cin"`, `din(`, `dan"`, `>in{`, `gUin"`) 또는 이전(`l`: `cil"`, `yil[`, `val(`) 짝을 찾아 원격으로 편집하며 `[count]`·도트 반복(`.`)·Visual 선택·Which-Key 실시간 안내를 지원합니다. **레슨 110**을 추가해 전체 커리큘럼 **110강**을 완성했습니다.
   - **초기 번들 경량화**: 첫 화면에서 닫혀 있는 7종 보조 패널·모달(`MarksJumpVisualizer`, `MacroDebugger`, `VimGrammarASTViewer`, `SpeedrunPanel`, `LessonSelectModal`, `FuzzyFinder`, `HelpViewer`)을 `React.lazy` + `Suspense`로 분리해 메인 `index.js` 청크를 `259.91 kB` → `< 200 kB` 로 대폭 경량화했습니다.
-- **나만의 `init.lua` / `.vimrc` 영구 설정 플레이그라운드 (`src/utils/userInitConfig.ts`, `ConfigExporterPlaygroundTab.tsx`, `useHardcoreAndKeymaps.ts`, `missionInitialState.ts`, `backupStorage.ts`)**: `ConfigExporterModal`에 실시간 `init.lua`(Neovim Lua) / `.vimrc`(Vimscript) 편집 탭과 원클릭 프리셋 3종(LazyVim 기본 · 미니멀 프로 · 클래식 `.vimrc`)을 추가했습니다. 작성한 스크립트는 `localStorage`(`vim_user_init_config_v1`, JSON 백업 `BACKUP_KEYS` 포함)에 영구 저장되며, 적용 즉시 현재 에디터와 **Which-Key 팝업**에 옵션·키맵·리더키가 반영되고 자유 연습장(Sandbox) 진입/초기화 시에도 자동 적용됩니다.
+- **나만의 `init.lua` / `.vimrc` 영구 설정 플레이그라운드 (`src/utils/userInitConfig.ts`, `ConfigExporterPlaygroundTab.tsx`, `useHardcoreAndKeymaps.ts`, `missionInitialState.ts`, `backupStorage.ts`)**: `ConfigExporterModal`에 실시간 `init.lua`(Neovim Lua) / `.vimrc`(Vimscript) 편집 탭과 원클릭 프리셋 4종(LazyVim 기본 · 커스텀 스니펫/모던 IDE · 미니멀 프로 · 클래식 `.vimrc`)을 추가했습니다. `vim.opt.autopairs`/`cmdlinepopup` 및 `vim.snippets.add`/`remove`/`clear`/`list` 커스텀 스니펫 Lua API를 지원하며, 작성한 스크립트는 `localStorage`(`vim_user_init_config_v1`, JSON 백업 `BACKUP_KEYS` 포함)에 영구 저장되어 적용 즉시 현재 에디터·**Which-Key**·**`nvim-cmp`(`Ctrl-Space`)**·`LuaSnip`(`<Tab>`) 및 자유 연습장(Sandbox)에 반영됩니다.
 - **`trouble.nvim` 프로젝트 진단·TODO 통합 허브 & `vim-visual-multi` 다중 커서 (`src/vim-engine/troubleEngine.ts`, `src/vim-engine/multiCursorEngine.ts`, `src/components/TroublePanel/`, `EditorLineRenderer.tsx`)**:
   - **Trouble 통합 허브 (`:Trouble [all|diagnostics|todo|quickfix|next|prev|toggle|close]`, `:TroubleToggle`, `:TroubleClose`, `:TroubleNext`, `:TroublePrev`)**: LSP 진단, 프로젝트 전체 VFS의 `TODO`/`FIXME`/`HACK`/`BUG`/`WARN`/`NOTE` 주석, 퀵픽스 항목을 파일별 트리로 묶어 지연 로딩(`React.lazy`)된 하단 패널에 표시하고 원클릭 파일 전환·점프 및 모드 필터링을 제공합니다.
   - **다중 커서 (`g Ctrl-n`, `:MultiCursor[!] [query]`, `:MultiCursorAll [query]`)**: 커서 아래 단어와 동일한 토큰을 `Ctrl-n`(추가)·`Ctrl-x`(건너뛰기)·`Ctrl-p`(취소)로 점진 선택해 `c`/`i`/`a`/`d`/`Backspace`/`Delete`로 여러 위치(같은 줄 다중 매치 포함)를 동시에 편집하고 단일 Undo(`u`)로 복원합니다. `EditorLineRenderer` 멀티 선택·커서 렌더링, `StatusBar` `-- MULTI (N) --` / `-- MULTI INSERT (N) --` 배지, Which-Key `g Ctrl-n` 안내를 연동했습니다.

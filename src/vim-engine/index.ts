@@ -632,12 +632,13 @@ export {
 } from './autopairsEngine';
 export {
   BUILTIN_SNIPPETS,
+  getAllSnippets,
   tryExpandSnippetOnTab,
   jumpSnippetTabstop,
   formatSnippetsList,
 } from './snippetEngine';
 export type { SnippetDefinition } from './snippetEngine';
-export type { SnippetTabstop, SnippetSession } from './types';
+export type { SnippetTabstop, SnippetSession, CustomSnippetDefinition } from './types';
 
 // ---- vim-fugitive 스타일 미니 Git 워크플로 (:Git / :Gstatus / :Gblame / :Glog / :LazyGit) ----
 export {

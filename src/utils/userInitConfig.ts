@@ -44,11 +44,34 @@ export const USER_INIT_PRESETS: ReadonlyArray<UserInitPreset> = [
       'vim.opt.shiftwidth = 2',
       'vim.opt.ignorecase = true',
       'vim.opt.smartcase = true',
+      'vim.opt.autopairs = true',
+      'vim.opt.cmdlinepopup = true',
       'vim.keymap.set("i", "jk", "<Esc>")',
       'vim.keymap.set("n", "<leader>w", ":w<CR>")',
       'vim.keymap.set("n", "<leader>f", ":Files<CR>")',
       'vim.keymap.set("n", "<leader>g", ":LiveGrep<CR>")',
       'vim.keymap.set("n", "<leader>o", ":Oil<CR>")',
+      'vim.keymap.set("n", "<leader>G", ":Git<CR>")',
+      'vim.snippets.add("todo", { "// TODO(${1:owner}): ${2:task}$0" }, "TODO comment")',
+    ].join('\n'),
+  },
+  {
+    id: 'snippetsPro',
+    label: i18nKey('커스텀 스니펫 · 모던 IDE (Lua)'),
+    format: 'lua',
+    code: [
+      '-- Modern IDE + Custom LuaSnip Snippets (Ctrl-Space / <Tab>)',
+      'vim.g.mapleader = " "',
+      'vim.opt.autopairs = true',
+      'vim.opt.cmdlinepopup = true',
+      'vim.opt.relativenumber = true',
+      'vim.snippets.add("rfc", {',
+      '  "export function ${1:Component}() {",',
+      '  "  return <div>${2:hello}</div>;",',
+      '  "}$0",',
+      '}, "React functional component")',
+      'vim.snippets.add("todo", { "// TODO(${1:dev}): ${2:follow up}$0" }, "TODO tag")',
+      'vim.snippets.add("err", { "throw new Error(\\"${1:message}\\");$0" }, "throw Error")',
     ].join('\n'),
   },
   {
@@ -170,13 +193,20 @@ export function applyUserInitConfigToState(
   const leaderDisplay =
     (appliedState.leaderKey ?? ' ') === ' ' ? '<Space>' : (appliedState.leaderKey ?? '\\');
   const mapCount = Object.keys(appliedState.userKeymaps ?? {}).length;
+  const snippetCount = appliedState.customSnippets?.length ?? 0;
 
   return {
     state: appliedState,
     ok: true,
-    message: t('설정이 저장되고 에디터에 즉시 적용되었습니다 (키맵 {maps}개 · 리더키 {leader})', {
-      maps: mapCount,
-      leader: leaderDisplay,
-    }),
+    message:
+      snippetCount > 0
+        ? t(
+            '설정이 저장되고 에디터에 즉시 적용되었습니다 (키맵 {maps}개 · 커스텀 스니펫 {snippets}개 · 리더키 {leader})',
+            { maps: mapCount, snippets: snippetCount, leader: leaderDisplay }
+          )
+        : t('설정이 저장되고 에디터에 즉시 적용되었습니다 (키맵 {maps}개 · 리더키 {leader})', {
+            maps: mapCount,
+            leader: leaderDisplay,
+          }),
   };
 }
