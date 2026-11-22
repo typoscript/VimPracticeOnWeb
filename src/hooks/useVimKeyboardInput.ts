@@ -50,15 +50,18 @@ const MODIFIER_SHORTCUTS: Record<string, ModifierShortcutRule> = {
   w: {
     allowAlt: true,
     vimKey: 'Ctrl-w',
-    appliesTo: (mode) => isNormalOrVisual(mode) || mode === 'INSERT',
+    appliesTo: (mode) => isNormalOrVisual(mode) || mode === 'INSERT' || mode === 'TERMINAL',
   },
-  h: { allowAlt: true, vimKey: 'Ctrl-h', appliesTo: (mode) => mode === 'INSERT' },
-  n: { allowAlt: true, vimKey: 'Ctrl-n', appliesTo: (mode) => mode === 'INSERT' },
-  p: { allowAlt: true, vimKey: 'Ctrl-p', appliesTo: (mode) => mode === 'INSERT' },
-  f: { allowAlt: false, vimKey: '/', appliesTo: () => true },
-  v: { allowAlt: false, vimKey: 'Ctrl-v', appliesTo: (mode) => isNonTextInputMode(mode) },
-  '^': { allowAlt: false, vimKey: 'Ctrl-^', appliesTo: () => true },
-  '6': { allowAlt: false, vimKey: 'Ctrl-^', appliesTo: () => true },
+  h: { allowAlt: true, vimKey: 'Ctrl-h', appliesTo: (mode) => mode === 'INSERT' || mode === 'TERMINAL' },
+  n: { allowAlt: true, vimKey: 'Ctrl-n', appliesTo: (mode) => mode === 'INSERT' || mode === 'TERMINAL' },
+  p: { allowAlt: true, vimKey: 'Ctrl-p', appliesTo: (mode) => mode === 'INSERT' || mode === 'TERMINAL' },
+  l: { allowAlt: false, vimKey: 'Ctrl-l', appliesTo: (mode) => mode === 'TERMINAL' },
+  c: { allowAlt: false, vimKey: 'Ctrl-c', appliesTo: (mode) => mode === 'TERMINAL' },
+  '\\': { allowAlt: false, vimKey: 'Ctrl-\\', appliesTo: (mode) => mode === 'TERMINAL' },
+  f: { allowAlt: false, vimKey: '/', appliesTo: (mode) => mode !== 'TERMINAL' },
+  v: { allowAlt: false, vimKey: 'Ctrl-v', appliesTo: (mode) => isNonTextInputMode(mode) && mode !== 'TERMINAL' },
+  '^': { allowAlt: false, vimKey: 'Ctrl-^', appliesTo: (mode) => mode !== 'TERMINAL' },
+  '6': { allowAlt: false, vimKey: 'Ctrl-^', appliesTo: (mode) => mode !== 'TERMINAL' },
   o: {
     allowAlt: true,
     vimKey: 'Ctrl-o',
@@ -72,7 +75,7 @@ const MODIFIER_SHORTCUTS: Record<string, ModifierShortcutRule> = {
   u: {
     allowAlt: true,
     vimKey: 'Ctrl-u',
-    appliesTo: (mode) => isNormalOrVisual(mode) || mode === 'INSERT',
+    appliesTo: (mode) => isNormalOrVisual(mode) || mode === 'INSERT' || mode === 'TERMINAL',
   },
 };
 
@@ -134,6 +137,13 @@ export function useVimKeyboardInput({
       ) {
         e.preventDefault();
         processKeyInput(`Ctrl-${lowerKey}`);
+        return;
+      }
+
+      // TERMINAL 모드에서 물리 Backslash 키(Ctrl+\) 지원
+      if ((e.ctrlKey || e.metaKey) && e.code === 'Backslash' && editorMode === 'TERMINAL') {
+        e.preventDefault();
+        processKeyInput('Ctrl-\\');
         return;
       }
 

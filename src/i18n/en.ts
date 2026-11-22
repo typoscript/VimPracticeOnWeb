@@ -1377,6 +1377,8 @@ export const EN: Record<string, string> = {
   "검색어를 입력하면 프로젝트 전체 매치와 치환 미리보기가 표시됩니다.": "Type a search pattern to preview matches and replacements across the project.",
   "🧘 Zen 모드 종료 (:ZenMode)": "🧘 Exit Zen Mode (:ZenMode)",
   "줄 · 블록 즉시 이동 (Alt-j/k/h/l)": "Move line or selection block (Alt-j/k/h/l)",
+  "내장 분할 터미널 토글 (:ToggleTerm)": "Toggle built-in split terminal (:ToggleTerm)",
+  "구조적 Split/Join 토글 (gS / :TSJToggle)": "Toggle structural Split/Join (gS / :TSJToggle)",
   "몰입형 집중 모드 토글 (:ZenMode)": "Toggle distraction-free Zen Mode (:ZenMode)",
   "Neovim": "Neovim",
   "파일시스템 버퍼 편집 (:Oil)": "Edit filesystem as a buffer (:Oil)",

@@ -46,7 +46,12 @@ export function getMaxCol(
   if (len === 0) {
     return 0;
   }
-  if (mode === 'INSERT' || mode === 'REPLACE' || hasVirtualEdit(virtualedit, 'onemore')) {
+  if (
+    mode === 'INSERT' ||
+    mode === 'REPLACE' ||
+    mode === 'TERMINAL' ||
+    hasVirtualEdit(virtualedit, 'onemore')
+  ) {
     return len;
   }
   return Math.max(0, len - 1);

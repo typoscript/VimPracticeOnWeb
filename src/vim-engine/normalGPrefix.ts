@@ -25,6 +25,7 @@ import { executeCommandLine } from './commandLine';
 import { openLspDocumentSymbols } from './lspRefactorEngine';
 import { openFlashJump } from './flashJumpEngine';
 import { startMultiCursor } from './multiCursorEngine';
+import { executeTreesj } from './treesjEngine';
 import { joinLines, executeCaseMotion } from './lineOperators';
 import { msg } from './messages';
 import { executeGn, executeWordSearch } from './searchMode';
@@ -488,6 +489,9 @@ export function handleNormalGOperator(
   }
   if (key === 's') {
     return { handled: true, state: openFlashJump(state) };
+  }
+  if (key === 'S') {
+    return { handled: true, state: executeTreesj(state, 'toggle', isReplayingDot) };
   }
   if (key === 'Ctrl-n' || key === 'Ctrl+n' || key === 'ctrl-n' || key === '<C-n>') {
     return { handled: true, state: startMultiCursor(state) };

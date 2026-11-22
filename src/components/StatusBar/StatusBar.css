@@ -93,6 +93,18 @@
   font-weight: 700;
 }
 
+.mode-terminal {
+  background-color: #2dd4bf;
+  color: #042f2e;
+  font-weight: 800;
+}
+
+.status-terminal-badge {
+  color: #2dd4bf;
+  font-weight: 700;
+  font-size: 11px;
+}
+
 .mode-flash {
   background-color: #ff007c;
   color: #ffffff;

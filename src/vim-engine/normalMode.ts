@@ -160,8 +160,8 @@ export function handleNormalModeKey(
     return { ...state, pendingKeys: `${state.pendingKeys ?? ''}Ctrl-w` };
   }
 
-  // 1-0-s. 순정 vim-surround 대기 (ds, cs, ys, yss)
-  const surroundRes = handleNormalSurroundPending(state, key);
+  // 1-0-s. 순정 vim-surround 대기 (ds, cs, ys, yss) 및 vim-abolish (cr{variant})
+  const surroundRes = handleNormalSurroundPending(state, key, isReplayingDot);
   if (surroundRes) return surroundRes;
 
   // 1-0-c~e. Ctrl-^ (대안 버퍼), Ctrl-] / Ctrl-t (ctags), Ctrl-v (VISUAL_BLOCK)

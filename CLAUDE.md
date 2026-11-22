@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 196개 테스트 파일, 2,265개 테스트 100% 통과 필수)*
+  *(현재 197개 테스트 파일, 2,274개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 116)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 120)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -235,6 +235,12 @@
   - **`mini.move` (`Alt-j`/`Alt-k` · `Alt-h`/`Alt-l`, `<A-j>`/`<M-j>` 표기 및 macOS Option 물리 키 코드 지원)**: NORMAL 모드에서 현재 줄 상하 스왑(경계 bell·카운트·`.` 반복·Undo 연동) 및 커서 상대 위치를 유지하는 좌우 들여쓰기 이동, VISUAL / VISUAL_LINE 모드에서 선택 영역을 유지한 채 다중 줄 블록 전체를 상하·좌우로 연속 이동합니다.
   - **`:ZenMode` (`:Zen [on|off|toggle]`) & 독립 엔진 문서 최신화**: 헤더·네비게이션·보조 패널을 숨기고 에디터에 몰입하는 집중 뷰(우측 상단 플로팅 종료 버튼 포함)를 추가하고, `src/vim-engine/README.md` 공개 API 표와 한/영 `locale` 가이드를 최신화했습니다.
   - **실전 레슨 115~116**: `:Spectre` + `:SpectreApply` 멀티파일 일괄 치환(레슨 115)과 `mini.move` `Alt-j` / `Alt-l` 줄·들여쓰기 이동(레슨 116)을 추가해 전체 커리큘럼을 **116강**으로 확장했습니다.
+- **Neovim 내장 터미널(`:terminal`/`:ToggleTerm`), 스마트 편집 3종(`dial.nvim` · `vim-abolish` · `treesj`) & 120강 커리큘럼 완성 (레슨 117 ~ 120, `terminalEngine.ts`, `dialEngine.ts`, `abolishEngine.ts`, `treesjEngine.ts`, `part6ModernNeovim.ts`)**:
+  - **내장 가상 터미널 버퍼 (`:terminal`/`:term`, `:ToggleTerm`, `:TermClose`, `TERMINAL` 모드)**: 기존 `shellEngine.ts` 파이프라인과 연결해 하단 분할(`:ToggleTerm`) 또는 현재 창(`:terminal`)에서 `ls`/`cat`/`grep`/`echo`/`cd`/`pwd`/`clear`/`help`/`exit` 명령을 실행하고, `Ctrl-\ Ctrl-n` 으로 `NORMAL` 모드로 전환해 터미널 출력을 탐색·검색·복사(`yiW`)한 뒤 `Ctrl-w k` 로 코드 창에 붙여넣거나 `i`/`a`/`A` 로 입력을 재개합니다. (`StatusBar` `-- TERMINAL --` 및 `[TERM]` 배지, `.cursor-terminal` 커서, `useVimKeyboardInput` `Ctrl-\` 물리 키 가로채기 연동)
+  - **`dial.nvim` 스마트 토글 & 증감 (`Ctrl-a`/`Ctrl-x`, Visual `Ctrl-a`/`Ctrl-x`, `:DialInc`/`:DialDec`)**: 기존 숫자(`nrformats`) 호환성을 100% 보존하면서 ISO 날짜(`YYYY-MM-DD` 월말/연말 경계 일 단위 증감), 불리언(`true`↔`false`), 비교·논리 연산자(`===`↔`!==`, `==`↔`!=`, `&&`↔`||`, `>=`↔`<=`), 상태·요일·로그레벨(`enabled`↔`disabled`, `debug`→`info`→`warn`→`error`, `Monday`..`Sunday`), 선언 키워드(`const`↔`let`)를 단일 Undo·카운트·`.` 반복과 함께 증감합니다.
+  - **`vim-abolish` 식별자 케이스 변환 (`crs`/`crc`/`crm`/`cru`/`cr-`/`cr.`/`crt`, `:Coerce`/`:AbolishCase`)**: 커서 아래 식별자(연속 대문자 약어·`kebab-case` 포함)를 `snake_case`, `camelCase`, `PascalCase`, `SCREAMING_SNAKE_CASE`, `kebab-case`, `dot.case`, `Title Case` 로 3타 만에 변환하며 단일 Undo, `.` 도트 반복, Which-Key `cr` 팝업을 지원합니다.
+  - **`treesj` 구조적 Split/Join (`gS`, `:TSJToggle`/`:TSJSplit`/`:TSJJoin`)**: 문자열 리터럴과 중첩 괄호 안의 쉼표를 보존하며 가장 안쪽 `{...}`/`[...]`/`(...)` 블록을 한 줄 ↔ 멀티라인으로 왕복 분할·병합합니다(단일 Undo·`.` 반복·Which-Key `gS` 안내·Sandbox 퀵런처 칩 연동).
+  - **실전 레슨 117~120 (120강 완결)**: `:ToggleTerm` 출력 복사 워크플로(레슨 117), `dial.nvim` 스마트 토글/날짜 증감(레슨 118), `vim-abolish` 케이스 변환(레슨 119), `treesj` 120강 피날레(레슨 120)를 추가해 전체 커리큘럼 **120강**을 완성했습니다.
 
 ---
 

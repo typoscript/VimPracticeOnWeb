@@ -9,7 +9,8 @@ export type VimMode =
   | 'SELECT_BLOCK'
   | 'COMMAND'
   | 'SEARCH'
-  | 'REPLACE';
+  | 'REPLACE'
+  | 'TERMINAL';
 
 export interface CursorPosition {
   line: number; // 0-indexed 줄 번호
@@ -937,6 +938,8 @@ export interface VimEditorState {
   spectrePanel?: SpectreSessionState | null;
   /** zen-mode.nvim 스타일 몰입형 집중 모드 활성화 여부 (:ZenMode / :Zen) */
   zenMode?: boolean;
+  /** Neovim 내장 가상 터미널 버퍼 세션 (:terminal / :term / :ToggleTerm) */
+  terminalSession?: TerminalSessionState | null;
   /** vim-visual-multi 스타일 다중 커서 선택·동시 편집 세션 (g Ctrl-n / :MultiCursor) */
   multiCursor?: MultiCursorSession | null;
   /** 순정 Vim Undo Tree 노드 맵 (seq -> UndoTreeNode) */
@@ -1173,6 +1176,22 @@ export interface MultiCursorSession {
   query: string;
   selections: MultiCursorSelection[];
   cursors: CursorPosition[];
+}
+
+export interface TerminalSessionState {
+  isOpen: boolean;
+  cwd: string;
+  prompt: string;
+  inputBuffer: string;
+  history: string[];
+  historyIndex: number;
+  promptLine: number;
+  isSplit: boolean;
+  returnFilename?: string;
+  returnLines?: string[];
+  returnCursor?: CursorPosition;
+  returnBufferId?: number;
+  ctrlBackslashPending?: boolean;
 }
 
 export type VimState = VimEditorState;

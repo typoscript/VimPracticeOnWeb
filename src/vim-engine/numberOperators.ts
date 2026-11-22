@@ -2,6 +2,7 @@ import { VimEditorState } from './types';
 import { pushUndoSnapshot } from './operators';
 import { getOptions } from './setEngine';
 import { isPositionSelected } from './visual';
+import { findIsoDateTokenAtOrAfter, findDialToken, applyDialMatch } from './dialEngine';
 
 interface ParsedNumberToken {
   start: number;
@@ -83,7 +84,7 @@ function formatNumberTokenDelta(raw: string, delta: number, nrformats?: string):
 
 /**
  * Ctrl+a / Ctrl+x: 커서 위치 또는 커서 오른쪽에서 가장 가까운 숫자(또는 nrformats 기준 토큰)를 찾아 증감
- * (음수·hex·bin·octal·alpha·unsigned 및 [count] 결합 지원)
+ * (음수·hex·bin·octal·alpha·unsigned, dial.nvim 날짜/불리언/연산자/키워드 토글 및 [count] 결합 지원)
  */
 export function modifyNumberAtCursor(
   state: VimEditorState,
@@ -92,6 +93,15 @@ export function modifyNumberAtCursor(
   const currentLine = state.lines[state.cursor.line] ?? '';
   const col = state.cursor.col;
   const nrformats = getOptions(state).nrformats;
+
+  // 1) 커서가 직접 Tier 1 dial 토큰(날짜/불리언/연산자/요일 등) 위에 있으면 즉시 dial 적용
+  const directDial = findDialToken(currentLine, col, delta, {
+    onlyUnderCursor: true,
+    allowKeywords: false,
+  });
+  if (directDial) {
+    return applyDialMatch(state, directDial);
+  }
 
   const regex = buildNrFormatRegex(nrformats);
   let match: RegExpExecArray | null = null;
@@ -112,7 +122,18 @@ export function modifyNumberAtCursor(
     }
   }
 
+  // 2) ISO 날짜(YYYY-MM-DD)가 일반 숫자보다 먼저(또는 같은 위치에서) 나오면 날짜 증감 우선
+  const isoDateMatch = findIsoDateTokenAtOrAfter(currentLine, col, delta);
+  if (isoDateMatch && (!targetMatch || isoDateMatch.start <= targetMatch.start)) {
+    return applyDialMatch(state, isoDateMatch);
+  }
+
+  // 3) 줄에 숫자가 없으면 dial.nvim 스마트 토글(불리언/연산자/요일/로그레벨/const↔let 등) 폴백
   if (!targetMatch) {
+    const dialFallback = findDialToken(currentLine, col, delta, { allowKeywords: true });
+    if (dialFallback) {
+      return applyDialMatch(state, dialFallback);
+    }
     return { ...state, pendingKeys: undefined };
   }
 
@@ -214,6 +235,29 @@ export function modifyNumberVisual(
       const before = lineStr.slice(0, targetMatch.start);
       const after = lineStr.slice(targetMatch.end);
       newLines[l] = before + newNumStr + after;
+    } else if (!isSequential) {
+      const scanCol = mode === 'VISUAL_BLOCK' ? minCol : 0;
+      const dialDelta = isIncrement ? count : -count;
+      const dialMatch = findDialToken(lineStr, scanCol, dialDelta, { allowKeywords: true });
+      if (dialMatch) {
+        let isDialSelected = false;
+        if (mode === 'VISUAL_BLOCK') {
+          isDialSelected = dialMatch.start <= maxCol && dialMatch.end - 1 >= minCol;
+        } else if (mode === 'VISUAL_LINE') {
+          isDialSelected = true;
+        } else {
+          for (let c = dialMatch.start; c < dialMatch.end; c++) {
+            if (isPositionSelected(l, c, anchor, cursor, mode)) {
+              isDialSelected = true;
+              break;
+            }
+          }
+        }
+        if (isDialSelected) {
+          newLines[l] =
+            lineStr.slice(0, dialMatch.start) + dialMatch.replacement + lineStr.slice(dialMatch.end);
+        }
+      }
     }
   }
 

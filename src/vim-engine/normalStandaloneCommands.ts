@@ -29,6 +29,7 @@ import {
 import { findMatchingBracket } from './bracketMatch';
 import { computePercentJumpTarget } from './extraMotions';
 import { handleMiniMoveNormal } from './miniMoveEngine';
+import { enterTerminalInsertMode } from './terminalEngine';
 import { moveToNextParagraph, moveToPrevParagraph } from './advancedMotions';
 import { moveFind } from './findChar';
 import { getWordAtCursor } from './search';
@@ -545,6 +546,8 @@ export function handleNormalEditingAndMotionFallback(
     };
   }
   if (key === 'A') {
+    const termRes = enterTerminalInsertMode(state);
+    if (termRes) return termRes;
     return {
       ...appendAtLineEnd(state),
       currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['A'],
@@ -563,6 +566,8 @@ export function handleNormalEditingAndMotionFallback(
     };
   }
   if (key === 'i') {
+    const termRes = enterTerminalInsertMode(state);
+    if (termRes) return termRes;
     return {
       ...pushUndoSnapshot(state),
       mode: 'INSERT',
@@ -571,6 +576,8 @@ export function handleNormalEditingAndMotionFallback(
     };
   }
   if (key === 'a') {
+    const termRes = enterTerminalInsertMode(state);
+    if (termRes) return termRes;
     const newCol =
       currentLine.length === 0 ? 0 : Math.min(state.cursor.col + 1, currentLine.length);
     return {

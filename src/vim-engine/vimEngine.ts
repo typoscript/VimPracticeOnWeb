@@ -24,6 +24,7 @@ import { syncLiveLspDiagnostics } from './lspEngine';
 import { handleLspRenameKey, handleLspCodeActionKey } from './lspRefactorEngine';
 import { handleFlashJumpKey } from './flashJumpEngine';
 import { handleMultiCursorKey } from './multiCursorEngine';
+import { handleTerminalModeKey } from './terminalEngine';
 import { handleSpellSuggestKey } from './spellEngine';
 import { recordUndoTreeChange } from './undoTreeEngine';
 import { computeSpecialMarksUpdate } from './marks';
@@ -235,7 +236,9 @@ export function rawHandleKey(
   const prevSplitPanes = state.splitPanes;
 
   let nextState: VimEditorState;
-  if (state.mode === 'SEARCH') {
+  if (state.mode === 'TERMINAL') {
+    nextState = handleTerminalModeKey(state, key);
+  } else if (state.mode === 'SEARCH') {
     nextState = handleSearchModeKey(state, key, isReplayingDot);
     if (state.insertNormalSession && nextState.mode === 'NORMAL') {
       nextState = finishInsertNormalSession(nextState);

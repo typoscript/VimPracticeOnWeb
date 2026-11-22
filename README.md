@@ -5,9 +5,9 @@
 CodeMirror나 Monaco 같은 무거운 외부 에디터 라이브러리 없이, **순수 함수형 상태 전이 아키텍처(`(state, key) => nextState`)**로 구현된 가볍고 반응성이 뛰어난 웹 Vim 학습 플랫폼입니다.
 독립 엔진 모듈 단독 사용법은 [`src/vim-engine/README.md`](./src/vim-engine/README.md)를 참고하세요.
 
-- **📚 116개 실전 커리큘럼**: 기초 이동(`hjkl`)부터 매크로·Vimscript·정규식·Netrw·세션, 현대 Neovim 플러그인(`Telescope`, `LSP`, `Treesitter`, `Gitsigns`, `Lua`, `Flash`, `Oil`, `Harpoon`, `mini.ai`, `mini.move`, `Trouble`, `Multi-Cursor`, `Undotree`, `Yanky`, `Spectre`)까지 단계별 완주
+- **📚 120개 실전 커리큘럼**: 기초 이동(`hjkl`)부터 매크로·Vimscript·정규식·Netrw·세션, 현대 Neovim 플러그인(`Telescope`, `LSP`, `Treesitter`, `Gitsigns`, `Lua`, `Flash`, `Oil`, `Harpoon`, `mini.ai`, `mini.move`, `Trouble`, `Multi-Cursor`, `Undotree`, `Yanky`, `Spectre`, `:terminal`, `dial.nvim`, `vim-abolish`, `treesj`)까지 단계별 완주
 - **🎮 다채로운 훈련 모드**: 튜토리얼 코스 · 타임어택 스피드런 · 아케이드 서바이벌(보스전/파워업) · 던전 RPG(6스테이지) · 하드코어 도장 · 멀티파일 자유 연습장(Sandbox) · BYOC 커스텀 미션
-- **🔬 높은 호환성 검증**: 실제 `nvim --headless` 대조 골든 회귀 **116종** 포함 **196개 테스트 파일 / 2,265개 테스트 100% 통과**
+- **🔬 높은 호환성 검증**: 실제 `nvim --headless` 대조 골든 회귀 **116종** 포함 **197개 테스트 파일 / 2,274개 테스트 100% 통과**
 
 ---
 
@@ -123,12 +123,16 @@ flowchart TD
 | **yanky.nvim** | `p` 직후 `Ctrl-p`/`Ctrl-n`, `:YankyRingHistory`, `:Yanks` | 복사 이력 링 순환 붙여넣기와 이력 팝업 |
 | **nvim-spectre** | `:Spectre [검색어] [치환어]`, `:SpectreToggle`, `:SpectreApply` | 프로젝트 전체 정규식 검색·치환 인라인 Diff 미리보기 및 선별 일괄 치환 |
 | **mini.move** | `Alt-j`/`Alt-k`, `Alt-h`/`Alt-l` (NORMAL · VISUAL) | 현재 줄 또는 선택된 다중 줄 블록 전체를 상하·좌우로 즉시 이동 |
+| **내장 터미널** | `:terminal`, `:term`, `:ToggleTerm`, `Ctrl-\ Ctrl-n` | 가상 POSIX 셸 분할 터미널 실행, NORMAL 전환으로 출력 복사·검색 |
+| **dial.nvim** | `Ctrl-a`/`Ctrl-x`, `:DialInc`, `:DialDec` | 불리언·ISO 날짜(`YYYY-MM-DD`)·연산자(`===`/`&&`)·요일·`const`/`let` 스마트 증감 |
+| **vim-abolish** | `crs`/`crc`/`crm`/`cru`/`cr-`/`cr.`, `:Coerce` | 커서 아래 식별자 케이스 즉시 변환(`snake`/`camel`/`Pascal`/`UPPER`/`kebab`) |
+| **treesj** | `gS`, `:TSJToggle`, `:TSJSplit`, `:TSJJoin` | 한 줄·멀티라인 객체/배열/인자 컨테이너 구조적 Split/Join |
 | **zen-mode.nvim** | `:ZenMode`, `:Zen [on\|off\|toggle]` | 상단 헤더·보조 패널을 숨기고 에디터에 몰입하는 집중 뷰 |
-| **which-key.nvim** | (`g`, `z`, `[`, `]`, `<leader>` 등 입력 대기) | 후속 키 실시간 가이드 팝업 |
+| **which-key.nvim** | (`g`, `z`, `[`, `]`, `cr`, `<leader>` 등 입력 대기) | 후속 키 실시간 가이드 팝업 |
 
 ---
 
-## 🎯 튜토리얼 커리큘럼 (Lessons 1 ~ 116)
+## 🎯 튜토리얼 커리큘럼 (Lessons 1 ~ 120)
 
 ### 🟢 기초 이동 및 텍스트 편집 (레슨 1 ~ 10)
 1. **레슨 1**: 기본 방향 이동 (`h`, `j`, `k`, `l`)
@@ -259,6 +263,10 @@ flowchart TD
 114. **레슨 114**: `yanky.nvim` 복사 링 순환 붙여넣기(`p` + `Ctrl-p`/`Ctrl-n` · `:Yanks`)
 115. **레슨 115**: `nvim-spectre` 프로젝트 대화형 검색·치환(`:Spectre` · `:SpectreApply`)
 116. **레슨 116**: `mini.move` 줄·선택 블록 즉시 이동(`Alt-j/k` · `Alt-h/l`)
+117. **레슨 117**: Neovim 내장 터미널 버퍼(`:ToggleTerm` · `Ctrl-\ Ctrl-n` 출력 복사)
+118. **레슨 118**: `dial.nvim` 스마트 토글 & 날짜·연산자 증감(`Ctrl-a` · `Ctrl-x`)
+119. **레슨 119**: `vim-abolish` 식별자 케이스 즉시 변환(`crs` · `crc` · `crm` · `cru`)
+120. **레슨 120**: `[120강 피날레]` `treesj` 구조적 Split/Join(`gS` · `:TSJToggle`) 마스터
 
 ---
 
@@ -306,7 +314,7 @@ flowchart TD
 ## 🛠️ 기술 스택 (Tech Stack)
 
 - **Core**: React 19, TypeScript, Vite
-- **Testing**: Vitest, React Testing Library (196개 파일, 2,265개 단위/통합 테스트 100% 통과)
+- **Testing**: Vitest, React Testing Library (197개 파일, 2,274개 단위/통합 테스트 100% 통과)
 - **실제 Neovim 골든 회귀 스위트**: `nvim --headless` 로 생성한 116개 케이스(`test/fixtures/neovim-golden-cases.json`)와 엔진 결과를 비교합니다. 재생성은 `npx tsx scripts/generateGoldenTests.ts`.
 - **번들 분할**: 엔진을 단방향 비순환 계층(`data` → `core` → `services` → `editing` → `neovim` → `ex` → 디스패처)의 청크로 나눠 모든 청크를 300 kB 이하(엔진 청크 각 160 kB 미만)로 유지하고, 보조 패널과 탭은 `React.lazy` 로 지연 로딩합니다.
 - **Styling**: Modern Pure CSS (Catppuccin Macchiato 테마)
@@ -329,7 +337,7 @@ npm run dev
 
 ### 3. 테스트 및 타입 검사
 ```bash
-# 전체 단위/통합 테스트 단발 실행 (196개 파일, 2,265개 테스트)
+# 전체 단위/통합 테스트 단발 실행 (197개 파일, 2,274개 테스트)
 npm test -- --run
 
 # DOM 타입 없이 순수 Vim 엔진(src/vim-engine/) 단독 타입 검사

@@ -18,6 +18,7 @@ export interface WhichKeyPanelData {
 const G_PREFIX_ITEMS: WhichKeyItem[] = [
   { key: 'g', labelKo: '파일 맨 위', labelEn: 'Top of file' },
   { key: 's', labelKo: 'Flash 화면 라벨 점프', labelEn: 'Flash label jump' },
+  { key: 'S', labelKo: 'treesj 구조 분할/병합 (Split/Join)', labelEn: 'treesj Split/Join block' },
   { key: 'Ctrl-n', labelKo: '다중 커서 선택 (Multi-Cursor)', labelEn: 'Multi-cursor select' },
   { key: 'd', labelKo: '정의로 이동 (LSP)', labelEn: 'Go to definition' },
   { key: 'r', labelKo: '+LSP / 가상 치환', labelEn: '+LSP / Virtual replace', group: true },
@@ -368,6 +369,22 @@ export function resolveWhichKeyData(state: VimEditorState): WhichKeyPanelData | 
               { key: '>', labelKo: '직전 선택 끝', labelEn: 'Last visual end' },
             ]
           : []),
+      ],
+    };
+  }
+  if (stripped === 'cr') {
+    return {
+      prefix: 'cr',
+      titleKo: 'vim-abolish 케이스 변환 (Coerce)',
+      titleEn: 'vim-abolish Case Coercion',
+      items: [
+        { key: 's', labelKo: 'snake_case 변환', labelEn: 'snake_case' },
+        { key: 'c', labelKo: 'camelCase 변환', labelEn: 'camelCase' },
+        { key: 'm', labelKo: 'PascalCase 변환', labelEn: 'PascalCase (MixedCase)' },
+        { key: 'u', labelKo: 'SCREAMING_SNAKE 변환', labelEn: 'SCREAMING_SNAKE_CASE' },
+        { key: '-', labelKo: 'kebab-case 변환', labelEn: 'kebab-case' },
+        { key: '.', labelKo: 'dot.case 변환', labelEn: 'dot.case' },
+        { key: 't', labelKo: 'Title Case 변환', labelEn: 'Title Case' },
       ],
     };
   }

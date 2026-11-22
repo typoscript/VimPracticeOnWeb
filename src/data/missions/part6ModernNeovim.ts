@@ -784,4 +784,192 @@ export const MISSIONS_PART6: Mission[] = [
       );
     },
   },
+  {
+    id: 117,
+    title: '레슨 117: Neovim 내장 터미널 버퍼(:ToggleTerm · Ctrl-\\ Ctrl-n 출력 복사)',
+    description:
+      '에디터를 떠나지 않고 하단 분할 창에 가상 POSIX 터미널을 열어 셸 명령을 실행하고, Ctrl-\\ Ctrl-n 으로 NORMAL 모드로 전환해 터미널 출력을 일반 버퍼처럼 복사(yiW)해 코드에 붙여넣는 Neovim 터미널 워크플로우를 익혀 보세요.\n\n1) :ToggleTerm [명령] / :terminal [명령]:\n   - 하단 분할 창(:ToggleTerm) 또는 현재 창(:terminal)에 가상 터미널(term://shell)을 열고 TERMINAL 모드로 진입합니다.\n\n2) Ctrl-\\ Ctrl-n (터미널 → NORMAL 모드 전환):\n   - 터미널 버퍼를 일반 Vim 버퍼처럼 탐색·검색·복사할 수 있으며, Ctrl-w k 로 위쪽 코드 창으로 이동하거나 i 로 터미널 입력을 재개합니다.\n\n미션:\n1. :ToggleTerm echo v2.4.0<Enter> 로 분할 터미널을 열고 v2.4.0 을 출력하세요.\n2. Ctrl-\\ Ctrl-n 으로 NORMAL 모드로 전환한 뒤 k yiW 로 v2.4.0 출력을 복사하세요.\n3. Ctrl-w k 로 코드 창에 올라와 f" ci" Ctrl-r 0<Esc> 로 "PENDING" 을 "v2.4.0" 으로 교체한 뒤 :ToggleTerm<Enter> 로 터미널을 닫으세요!',
+    hint: ':ToggleTerm echo v2.4.0<Enter> → Ctrl-\\ Ctrl-n → k yiW → Ctrl-w k → f" ci" Ctrl-r 0<Esc> → :ToggleTerm<Enter>',
+    par: 56,
+    primaryFilename: 'src/release.ts',
+    initialLines: ['export const buildTag = "PENDING";'],
+    targetLines: ['export const buildTag = "v2.4.0";'],
+    initialCursor: { line: 0, col: 0 },
+    optimalKeys: [
+      ...keysOf(':ToggleTerm echo v2.4.0'),
+      'Enter',
+      'Ctrl-\\',
+      'Ctrl-n',
+      'k',
+      'y',
+      'i',
+      'W',
+      'Ctrl-w',
+      'k',
+      'f',
+      '"',
+      'c',
+      'i',
+      '"',
+      'Ctrl-r',
+      '0',
+      'Escape',
+      ...keysOf(':ToggleTerm'),
+      'Enter',
+    ],
+    checkComplete: (state) =>
+      !state.terminalSession?.isOpen &&
+      state.lines.length === 1 &&
+      state.lines[0] === 'export const buildTag = "v2.4.0";',
+  },
+  {
+    id: 118,
+    title: '레슨 118: dial.nvim 스마트 토글 & 날짜·연산자 증감(Ctrl-a · Ctrl-x)',
+    description:
+      '순정 Vim 의 Ctrl-a / Ctrl-x 는 숫자만 증감하지만, dial.nvim 확장을 결합하면 불리언(false↔true), ISO 날짜(YYYY-MM-DD), 비교·논리 연산자(===↔!==, &&↔||), 키워드(enabled↔disabled, const↔let)까지 단 한 타로 똑똑하게 토글·증감할 수 있습니다.\n\n1) 스마트 값·날짜·연산자 증감 (Ctrl-a / Ctrl-x):\n   - 줄에 ISO 날짜가 있으면 일 단위로 증감하고, 불리언·연산자·상태 단어는 반대값/다음 단계로 순환합니다.\n\n2) 선언 키워드 토글 (const ↔ let):\n   - 숫자나 값 토큰이 없는 줄에서는 const ↔ let 키워드도 Ctrl-a 로 즉시 전환합니다.\n\n미션:\n1. 1번째 줄에서 Ctrl-a 로 false → true 로, 2번째 줄(j 0)에서 Ctrl-a 로 "2026-11-22" → "2026-11-23" 으로 올리세요.\n2. 3번째 줄(j 0)에서 Ctrl-a (=== → !==), f& Ctrl-a (&& → ||), w Ctrl-a (enabled → disabled)를 차례로 적용하세요.\n3. 4번째 줄(j 0)에서 Ctrl-a 로 const 를 let 으로 전환해 완료하세요!',
+    hint: 'Ctrl-a → j 0 Ctrl-a → j 0 Ctrl-a f& Ctrl-a w Ctrl-a → j 0 Ctrl-a',
+    par: 18,
+    primaryFilename: 'src/flags.ts',
+    initialLines: [
+      'const debugMode = false;',
+      'const releaseDate = "2026-11-22";',
+      'const isValid = a === b && enabled;',
+      'const retries = "none";',
+    ],
+    targetLines: [
+      'const debugMode = true;',
+      'const releaseDate = "2026-11-23";',
+      'const isValid = a !== b || disabled;',
+      'let retries = "none";',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    optimalKeys: [
+      'Ctrl-a',
+      'j',
+      '0',
+      'Ctrl-a',
+      'j',
+      '0',
+      'Ctrl-a',
+      'f',
+      '&',
+      'Ctrl-a',
+      'w',
+      'Ctrl-a',
+      'j',
+      '0',
+      'Ctrl-a',
+    ],
+    checkComplete: (state) => {
+      const target = [
+        'const debugMode = true;',
+        'const releaseDate = "2026-11-23";',
+        'const isValid = a !== b || disabled;',
+        'let retries = "none";',
+      ];
+      return (
+        state.lines.length === target.length &&
+        state.lines.every((l, i) => l === target[i])
+      );
+    },
+  },
+  {
+    id: 119,
+    title: '레슨 119: vim-abolish 식별자 케이스 즉시 변환(crs · crc · crm · cru)',
+    description:
+      'API 응답의 snake_case 와 프론트엔드의 camelCase, 클래스명 PascalCase, 상수 SCREAMING_SNAKE_CASE 사이를 다시 타이핑하지 않고 3타만으로 즉시 변환하는 vim-abolish Coercion(cr)을 마스터해 보세요.\n\n1) vim-abolish 케이스 변환 단축키 (cr{key}):\n   - crc: camelCase (user_profile_id → userProfileId)\n   - crs: snake_case (fetchUserProfile → fetch_user_profile)\n   - crm: PascalCase (api_client → ApiClient)\n   - cru: SCREAMING_SNAKE_CASE (maxRetryCount → MAX_RETRY_COUNT)\n   - cr- / cr.: kebab-case / dot.case 변환 및 . 반복 지원\n\n미션:\n1. 1번째 줄의 user_profile_id 로 이동(w)해 crc 로 camelCase(userProfileId)로 바꾸세요.\n2. 2번째 줄(j 0 w)의 fetchUserProfile 을 crs 로 snake_case(fetch_user_profile)로 바꾸세요.\n3. 3번째 줄(j 0 w)의 api_client 를 crm 으로 ApiClient 로, 4번째 줄(j 0 w)의 maxRetryCount 를 cru 로 MAX_RETRY_COUNT 로 변환하세요!',
+    hint: 'w crc → j 0 w crs → j 0 w crm → j 0 w cru',
+    par: 26,
+    primaryFilename: 'src/naming.ts',
+    initialLines: [
+      'const user_profile_id = 1;',
+      'const fetchUserProfile = () => {};',
+      'const api_client = new HttpClient();',
+      'const maxRetryCount = 3;',
+    ],
+    targetLines: [
+      'const userProfileId = 1;',
+      'const fetch_user_profile = () => {};',
+      'const ApiClient = new HttpClient();',
+      'const MAX_RETRY_COUNT = 3;',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    optimalKeys: [
+      'w',
+      'c',
+      'r',
+      'c',
+      'j',
+      '0',
+      'w',
+      'c',
+      'r',
+      's',
+      'j',
+      '0',
+      'w',
+      'c',
+      'r',
+      'm',
+      'j',
+      '0',
+      'w',
+      'c',
+      'r',
+      'u',
+    ],
+    checkComplete: (state) => {
+      const target = [
+        'const userProfileId = 1;',
+        'const fetch_user_profile = () => {};',
+        'const ApiClient = new HttpClient();',
+        'const MAX_RETRY_COUNT = 3;',
+      ];
+      return (
+        state.lines.length === target.length &&
+        state.lines.every((l, i) => l === target[i])
+      );
+    },
+  },
+  {
+    id: 120,
+    title: '레슨 120: [120강 피날레] treesj 구조적 Split/Join(gS · :TSJToggle) 마스터',
+    description:
+      '축하합니다! 전체 120강 커리큘럼의 마지막 피날레입니다. 길어진 한 줄 객체·배열·인자 목록을 멀티라인으로 깔끔하게 펼치고(Split), 불필요하게 펼쳐진 짧은 블록을 다시 한 줄로 병합(Join)하는 treesj(gS / :TSJToggle)를 익혀 현대 Neovim 마스터 여정을 완주하세요!\n\n1) gS (:TSJToggle / :TSJSplit / :TSJJoin):\n   - 커서가 위치한(또는 현재 줄의) {...}, [...], (...) 컨테이너가 한 줄이면 멀티라인으로 분할하고, 멀티라인이면 한 줄로 병합합니다.\n   - 중첩 괄호와 문자열 리터럴 내부의 쉼표는 안전하게 보존되며 u 로 단일 실행 취소가 가능합니다.\n\n미션:\n1. 1번째 줄(config 객체)에서 gS 를 눌러 3개 속성을 멀티라인 블록으로 깔끔하게 펼치세요.\n2. 5j 로 tags 배열 시작 줄로 내려간 뒤 gS 를 눌러 멀티라인 배열을 한 줄 ["vim", "neovim", "lua"] 로 병합해 120강을 완주하세요!',
+    hint: 'gS → 5j → gS',
+    par: 8,
+    primaryFilename: 'src/treesj.ts',
+    initialLines: [
+      'const config = { host: "api.local", port: 8080, tls: true };',
+      'const tags = [',
+      '  "vim",',
+      '  "neovim",',
+      '  "lua"',
+      '];',
+    ],
+    targetLines: [
+      'const config = {',
+      '  host: "api.local",',
+      '  port: 8080,',
+      '  tls: true',
+      '};',
+      'const tags = ["vim", "neovim", "lua"];',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    optimalKeys: ['g', 'S', '5', 'j', 'g', 'S'],
+    checkComplete: (state) => {
+      const target = [
+        'const config = {',
+        '  host: "api.local",',
+        '  port: 8080,',
+        '  tls: true',
+        '};',
+        'const tags = ["vim", "neovim", "lua"];',
+      ];
+      return (
+        state.lines.length === target.length &&
+        state.lines.every((l, i) => l === target[i])
+      );
+    },
+  },
 ];

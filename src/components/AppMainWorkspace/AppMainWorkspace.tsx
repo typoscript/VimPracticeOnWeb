@@ -124,6 +124,18 @@ const SANDBOX_QUICK_TRY_CHIPS: ReadonlyArray<{
     keys: ['Escape', 'Alt-j'],
   },
   {
+    id: 'terminal',
+    label: '💻 :ToggleTerm',
+    titleKey: i18nKey('내장 분할 터미널 토글 (:ToggleTerm)'),
+    keys: ['Escape', ...':ToggleTerm'.split(''), 'Enter'],
+  },
+  {
+    id: 'treesj',
+    label: '🌳 gS',
+    titleKey: i18nKey('구조적 Split/Join 토글 (gS / :TSJToggle)'),
+    keys: ['Escape', 'g', 'S'],
+  },
+  {
     id: 'zenmode',
     label: '🧘 :ZenMode',
     titleKey: i18nKey('몰입형 집중 모드 토글 (:ZenMode)'),
@@ -537,6 +549,7 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
             spellActive={displayEditorState.options?.spell}
             flashActive={Boolean(displayEditorState.flashJump?.isOpen)}
             oilActive={Boolean(displayEditorState.oilSession?.isOpen)}
+            terminalActive={Boolean(displayEditorState.terminalSession?.isOpen)}
             harpoonSlot={(() => {
               const cur = displayEditorState.primaryFilename;
               if (!cur || !displayEditorState.harpoonList?.length) return null;

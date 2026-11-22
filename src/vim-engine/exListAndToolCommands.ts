@@ -39,6 +39,9 @@ import { addSpellGoodWord, addSpellWrongWord, undoSpellWord } from './spellEngin
 import { executeGitsignsCommand } from './gitSignsEngine';
 import { openFlashJump } from './flashJumpEngine';
 import { startMultiCursor } from './multiCursorEngine';
+import { executeDialCommand } from './dialEngine';
+import { executeAbolishCommand } from './abolishEngine';
+import { executeTreesj } from './treesjEngine';
 import { executeLuaChunk, executeLuaFile, executeLuaPrintExpr } from './luaEngine';
 import { compileVimRegex } from './vimRegex';
 import { describeCharAt } from './engineHelpers';
@@ -491,6 +494,27 @@ function tryExecuteMappingAndMiscToolCommand(
   if (multiMatch) {
     const selectAll = multiMatch[1].toLowerCase() === 'multicursorall' || multiMatch[2] === '!';
     return finishEx(startMultiCursor(state, { query: multiMatch[3]?.trim(), selectAll }));
+  }
+
+  // :DialInc [count] / :DialDec [count] — dial.nvim 스마트 토글·증감
+  const dialMatch = cleanCmdRaw.match(/^(DialInc|DialDec)(?:\s+(\d+))?$/i);
+  if (dialMatch) {
+    const step = dialMatch[2] ? parseInt(dialMatch[2], 10) : 1;
+    const delta = dialMatch[1].toLowerCase() === 'dialdec' ? -step : step;
+    return finishEx(executeDialCommand(state, delta));
+  }
+
+  // :Coerce {variant} / :AbolishCase {variant} — vim-abolish 케이스 변환
+  const coerceMatch = cleanCmdRaw.match(/^(?:Coerce|AbolishCase)(?:\s+(.*))?$/i);
+  if (coerceMatch) {
+    return finishEx(executeAbolishCommand(state, coerceMatch[1] ?? ''));
+  }
+
+  // :TSJToggle / :TSJSplit / :TSJJoin — treesj 구조적 Split/Join
+  const tsjMatch = cleanCmdRaw.match(/^TSJ(Toggle|Split|Join)$/i);
+  if (tsjMatch) {
+    const action = tsjMatch[1].toLowerCase() as 'toggle' | 'split' | 'join';
+    return finishEx(executeTreesj(state, action, false));
   }
 
   return null;

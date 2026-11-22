@@ -15,6 +15,7 @@ import {
   executeYouSurround,
   executeLineSurround,
 } from './surroundEngine';
+import { applyAbolishCoerce } from './abolishEngine';
 import { setMark, jumpToMark, executeMarkOperator, isValidMarkJumpChar } from './marks';
 import { indentLines, formatIndentLines, formatIndentRange } from './lineOperators';
 import {
@@ -26,12 +27,22 @@ import {
 import { PrefixStepResult } from './normalGPrefix';
 
 /**
- * 순정 vim-surround 대기 상태(ds{char}, cs{old}{new}, ys{motion}{char}, yss{char})를 처리합니다.
+ * 순정 vim-surround 대기 상태(ds{char}, cs{old}{new}, ys{motion}{char}, yss{char}) 및
+ * vim-abolish 케이스 변환 대기 상태(cr{s|c|m|u|-|.})를 처리합니다.
  */
 export function handleNormalSurroundPending(
   state: VimEditorState,
-  key: string
+  key: string,
+  isReplayingDot = false
 ): VimEditorState | null {
+  // 0) vim-abolish Coercion (crs, crc, crm, cru, cr-, cr., crt)
+  if (state.pendingKeys === 'c' && key === 'r') {
+    return { ...state, pendingKeys: 'cr' };
+  }
+  if (state.pendingKeys === 'cr') {
+    return applyAbolishCoerce(state, key, isReplayingDot);
+  }
+
   // 1) Delete Surround (ds{char})
   if (state.pendingKeys === 'd' && key === 's') {
     return { ...state, pendingKeys: 'ds' };

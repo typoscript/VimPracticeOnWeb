@@ -60,6 +60,7 @@ export function getMaxAllowedCol(
     mode === 'COMMAND' ||
     mode === 'SEARCH' ||
     mode === 'REPLACE' ||
+    mode === 'TERMINAL' ||
     hasVirtualEdit(virtualedit, 'onemore')
   ) {
     return len;

@@ -44,6 +44,8 @@ export interface StatusBarProps {
   flashActive?: boolean;
   /** oil.nvim 디렉터리 버퍼 활성화 여부 (:Oil) */
   oilActive?: boolean;
+  /** Neovim 내장 터미널 버퍼 활성화 여부 (:terminal / :ToggleTerm) */
+  terminalActive?: boolean;
   /** harpoon.nvim 현재 파일 핀 슬롯 번호 (1-based) */
   harpoonSlot?: number | null;
   /** vim-visual-multi 다중 커서 활성 정보 */
@@ -75,6 +77,7 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   spellActive,
   flashActive,
   oilActive,
+  terminalActive,
   harpoonSlot,
   multiCursorInfo,
   searchCount,
@@ -92,6 +95,8 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       ? 'INSERT (normal)'
       : insertRegisterPending
       ? 'INSERT (register)'
+      : mode === 'TERMINAL'
+      ? '-- TERMINAL --'
       : mode === 'REPLACE'
       ? virtualReplace
         ? '-- VREPLACE --'
@@ -270,6 +275,11 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         {oilActive && (
           <span className="status-oil-badge" data-testid="status-oil-badge">
             [OIL]
+          </span>
+        )}
+        {terminalActive && (
+          <span className="status-terminal-badge" data-testid="status-terminal-badge">
+            [TERM]
           </span>
         )}
         {spellActive && (

@@ -305,6 +305,14 @@
   box-shadow: -2px 0 0 var(--cursor-insert, #89b4fa);
 }
 
+/* TERMINAL 모드: 에메랄드/틸 세로 블록 커서 */
+.cursor-terminal {
+  background-color: #2dd4bf;
+  color: #042f2e;
+  font-weight: bold;
+  box-shadow: -2px 0 0 #2dd4bf;
+}
+
 /* VISUAL_BLOCK 다중 줄 삽입(I/A/c) 보조 멀티커서 & 실시간 고스트 프리뷰 */
 .vim-block-secondary-cursor {
   box-shadow: -2px 0 0 rgba(137, 180, 250, 0.85);

@@ -40,6 +40,11 @@ import { executeHarpoonCommand } from './harpoonEngine';
 import { executeYankyCommand } from './yankRingEngine';
 import { executeSpectreCommand } from './spectreEngine';
 import { executeTroubleCommand } from './troubleEngine';
+import {
+  openTerminalBuffer,
+  toggleTerminalBuffer,
+  closeTerminalBuffer,
+} from './terminalEngine';
 import { executeFindFileCommand, openFuzzyFinder } from './fuzzyFinder';
 import { openHelp, closeHelp } from './helpEngine';
 import { triggerAutocmd } from './autocmdEngine';
@@ -295,6 +300,31 @@ function tryExecuteNetrwAndBufferSwitchCommand(
   cleanCmdRaw: string,
   runEx: ExCommandRunner
 ): VimEditorState | null {
+  // Neovim 내장 가상 터미널 버퍼: :terminal [cmd], :term [cmd], :ToggleTerm [cmd], :TermClose
+  const toggleTermMatch = cleanCmdRaw.match(/^ToggleTerm(?:\s+(.*))?$/i);
+  if (toggleTermMatch) {
+    const res = toggleTerminalBuffer(state, toggleTermMatch[1]?.trim());
+    return {
+      ...res,
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+  if (/^TermClose$/i.test(cleanCmdRaw)) {
+    return finishEx(closeTerminalBuffer(state));
+  }
+  const termMatch = cleanCmdRaw.match(/^(?:terminal|term)(?:\s+(.*))?$/i);
+  if (termMatch) {
+    const res = openTerminalBuffer(state, { command: termMatch[1]?.trim(), split: false });
+    return {
+      ...res,
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    };
+  }
+
   // oil.nvim 스타일 버퍼 기반 디렉터리 편집기: :Oil [dir]
   const oilMatch = cleanCmdRaw.match(/^Oil(?:\s+(.*))?$/i);
   if (oilMatch) {
@@ -520,6 +550,9 @@ function tryExecuteSaveQuitAndHelpCommand(
   };
 
   const quitCurrentWindow = (curState: VimEditorState, force = false): VimEditorState => {
+    if (curState.terminalSession?.isOpen && curState.primaryFilename === 'term://shell') {
+      return finishEx(closeTerminalBuffer(curState));
+    }
     if (curState.oilSession?.isOpen) return finishEx(closeOilBuffer(curState));
     if (curState.helpSession?.isOpen) return finishEx(closeHelp(curState));
     if (curState.splitDirection && curState.splitDirection !== 'none') {

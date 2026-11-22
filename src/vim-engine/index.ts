@@ -571,3 +571,43 @@ export {
   handleMultiCursorKey,
 } from './multiCursorEngine';
 export type { MultiCursorSelection, MultiCursorSession } from './types';
+
+// ---- dial.nvim 스타일 스마트 토글·증감 (Ctrl-a / Ctrl-x / :DialInc / :DialDec) ----
+export {
+  findIsoDateTokenAtOrAfter,
+  findDialToken,
+  applyDialMatch,
+  executeDialCommand,
+  DIAL_VALUE_CYCLES,
+  DIAL_OPERATOR_CYCLES,
+  DIAL_KEYWORD_CYCLES,
+} from './dialEngine';
+export type { DialTokenMatch } from './dialEngine';
+
+// ---- vim-abolish 스타일 식별자 케이스 변환 (crs / crc / crm / cru / cr- / cr. / :Coerce) ----
+export {
+  ABOLISH_KEY_TO_VARIANT,
+  splitIdentifierWords,
+  coerceIdentifierCase,
+  findIdentifierRangeAtCursor,
+  applyAbolishCoerce,
+  executeAbolishCommand,
+} from './abolishEngine';
+export type { AbolishCaseVariant } from './abolishEngine';
+
+// ---- treesj 스타일 구조적 Split/Join (gS / :TSJToggle / :TSJSplit / :TSJJoin) ----
+export {
+  splitTopLevelItems,
+  executeTreesj,
+} from './treesjEngine';
+export type { TreesjAction } from './treesjEngine';
+
+// ---- Neovim 내장 가상 터미널 버퍼 (:terminal / :term / :ToggleTerm / Ctrl-\ Ctrl-n) ----
+export {
+  openTerminalBuffer,
+  toggleTerminalBuffer,
+  closeTerminalBuffer,
+  enterTerminalInsertMode,
+  handleTerminalModeKey,
+} from './terminalEngine';
+export type { TerminalSessionState } from './types';
