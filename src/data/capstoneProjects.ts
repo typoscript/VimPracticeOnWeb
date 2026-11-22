@@ -15,6 +15,7 @@ export interface CapstoneProject {
   recommendedTools: string[];
   primaryFilename: string;
   initialLines: string[];
+  initialGitBaseLines?: string[];
   initialVirtualFiles: Record<string, string[]>;
   initialHarpoonList: string[];
   tests: VirtualTestSpec[];
@@ -220,6 +221,128 @@ export const CAPSTONE_PROJECTS: readonly CapstoneProject[] = [
       },
     ],
   },
+  {
+    id: 'capstone-git-release',
+    icon: '🐙',
+    difficultyKey: i18nKey('실무 · Git 릴리스'),
+    titleKey: i18nKey('캡스톤 4: 릴리스 직전 Git Hunk 선별 정리 & 핫픽스 커밋'),
+    summaryKey: i18nKey('실수 디버그 Hunk 제거 · canary 차단 · 릴리스 날짜 갱신 · :Git 커밋 완결'),
+    descriptionKey: i18nKey(
+      '릴리스 브랜치에 디버그 로그와 카나리 플래그가 섞여 들어왔습니다! Git Hunk 탐색(]h), 인터랙티브 :Git 패널, :Gblame, dial(Ctrl-a)을 활용해 불필요한 변경을 정리하고 깔끔하게 커밋한 뒤 :TestRun 으로 검증하세요.\n\n요구사항:\n1. src/release.ts: RELEASE_VERSION = "2.4.0" 은 유지하되, 실수로 들어간 DEBUG_SECRET_LEAK 로그 줄을 삭제하고 canaryMode 를 false 로 복구하세요.\n2. src/changelog.ts: releasedAt 날짜를 "2026-11-23" 으로 하루 올리세요(Ctrl-a).\n3. src/release.ts 로 돌아와 :Git commit -m "chore: release 2.4.0" (또는 :Git 패널)으로 변경을 커밋해 작업 트리를 깨끗하게 만드세요.'
+    ),
+    hintKey: i18nKey('src/release.ts 에서 j dd 로 디버그 삭제 후 Ctrl-a(canaryMode false) → :Harpoon 2 에서 Ctrl-a → :Harpoon 1 복귀 후 :Git commit -m "release 2.4.0" → :TestRun'),
+    par: 55,
+    recommendedTools: [':Git', ']h', ':Gblame', 'Ctrl-a', ':Harpoon [1-2]', ':TestRun'],
+    primaryFilename: 'src/release.ts',
+    initialLines: [
+      'export const RELEASE_VERSION = "2.4.0";',
+      'console.log("DEBUG_SECRET_LEAK");',
+      'export const canaryMode = true;',
+    ],
+    initialGitBaseLines: [
+      'export const RELEASE_VERSION = "2.3.9";',
+      'export const canaryMode = false;',
+    ],
+    initialVirtualFiles: {
+      'src/release.ts': [
+        'export const RELEASE_VERSION = "2.4.0";',
+        'console.log("DEBUG_SECRET_LEAK");',
+        'export const canaryMode = true;',
+      ],
+      'src/changelog.ts': [
+        'export const releasedAt = "2026-11-22";',
+      ],
+    },
+    initialHarpoonList: ['src/release.ts', 'src/changelog.ts'],
+    tests: [
+      {
+        id: 'git-release-clean-secret',
+        name: 'release: keeps 2.4.0 and removes DEBUG_SECRET_LEAK',
+        file: 'src/release.ts',
+        mustContain: ['RELEASE_VERSION = "2.4.0"'],
+        mustNotContain: ['DEBUG_SECRET_LEAK'],
+      },
+      {
+        id: 'git-release-canary',
+        name: 'release: canaryMode disabled (false)',
+        file: 'src/release.ts',
+        mustContain: ['canaryMode = false'],
+      },
+      {
+        id: 'git-changelog-date',
+        name: 'changelog: releasedAt bumped to 2026-11-23',
+        file: 'src/changelog.ts',
+        mustContain: ['"2026-11-23"'],
+      },
+      {
+        id: 'git-release-committed',
+        name: 'git: changes cleanly committed (:Git commit)',
+        file: 'src/release.ts',
+        requireGitCommit: true,
+      },
+    ],
+  },
+  {
+    id: 'capstone-ts-modernize',
+    icon: '⚡',
+    difficultyKey: i18nKey('실무 · 마스터'),
+    titleKey: i18nKey('캡스톤 5: 레거시 JS → TypeScript 현대화 풀스택 리팩토링'),
+    summaryKey: i18nKey('vim-abolish(crc/cru) · LuaSnip/nvim-cmp 인터페이스 생성 · treesj(gS) · :Spectre 일괄 현대화'),
+    descriptionKey: i18nKey(
+      '현대 Neovim 핵심 플러그인(vim-abolish, LuaSnip/Ctrl-Space, treesj, dial, Spectre)을 총동원해 3개 결제 모듈 파일(src/orderModel.ts, src/pricing.ts, src/legacyGateway.ts)을 TypeScript 표준으로 현대화하고 :TestRun 으로 검증하세요!\n\n요구사항:\n1. src/orderModel.ts: order_total_amount → orderTotalAmount(crc), shipping_fee_rate → SHIPPING_FEE_RATE(cru) 로 변환하고, 마지막 줄에 interface OrderSummary 블록을 추가하세요(iface<Tab> 또는 Ctrl-Space 추천).\n2. src/pricing.ts: 한 줄 pricingRules 객체를 멀티라인 블록으로 펼치고(gS), discount 를 true 로 활성화하세요(Ctrl-a).\n3. src/legacyGateway.ts: /legacy/ 경로를 /modern/ 으로 치환하고(:Spectre), HACK 주석 줄을 삭제하세요.'
+    ),
+    hintKey: i18nKey('orderModel.ts 에서 crc/cru + o iface<Tab> OrderSummary → :Harpoon 2 에서 gS & Ctrl-a → :Spectre /legacy/ /modern/ → :SpectreApply → legacyGateway.ts dd → :TestRun'),
+    par: 75,
+    recommendedTools: ['crc / cru', 'iface<Tab> / Ctrl-Space', 'gS', 'Ctrl-a', ':Spectre', ':TestRun'],
+    primaryFilename: 'src/orderModel.ts',
+    initialLines: [
+      'export const order_total_amount = 15000;',
+      'export const shipping_fee_rate = 0.05;',
+    ],
+    initialVirtualFiles: {
+      'src/orderModel.ts': [
+        'export const order_total_amount = 15000;',
+        'export const shipping_fee_rate = 0.05;',
+      ],
+      'src/pricing.ts': [
+        'export const pricingRules = { currency: "KRW", taxRate: 0.1, discount: false };',
+      ],
+      'src/legacyGateway.ts': [
+        '// HACK: temporary legacy shim',
+        'export const PAY_API = "https://pay.service.local/legacy/charge";',
+      ],
+    },
+    initialHarpoonList: ['src/orderModel.ts', 'src/pricing.ts', 'src/legacyGateway.ts'],
+    tests: [
+      {
+        id: 'ts-model-casing',
+        name: 'orderModel: camelCase & SCREAMING_SNAKE_CASE normalized',
+        file: 'src/orderModel.ts',
+        mustContain: ['orderTotalAmount', 'SHIPPING_FEE_RATE'],
+        mustNotContain: ['order_total_amount', 'shipping_fee_rate'],
+      },
+      {
+        id: 'ts-model-interface',
+        name: 'orderModel: OrderSummary TypeScript interface added',
+        file: 'src/orderModel.ts',
+        mustContain: ['interface OrderSummary'],
+      },
+      {
+        id: 'ts-pricing-split-discount',
+        name: 'pricing: multiline block + discount enabled',
+        file: 'src/pricing.ts',
+        mustContain: ['currency: "KRW"', 'discount: true'],
+        minLines: 4,
+      },
+      {
+        id: 'ts-gateway-modernized',
+        name: 'legacyGateway: /modern/ migrated & HACK removed',
+        file: 'src/legacyGateway.ts',
+        mustContain: ['/modern/charge'],
+        mustNotContain: ['/legacy/', 'HACK'],
+      },
+    ],
+  },
 ];
 
 export function loadCapstoneProgress(): CapstoneProgressMap {
@@ -261,6 +384,7 @@ export function createCapstoneMission(project: CapstoneProject): Mission {
     par: project.par,
     primaryFilename: project.primaryFilename,
     initialLines: [...project.initialLines],
+    initialGitBaseLines: project.initialGitBaseLines ? [...project.initialGitBaseLines] : undefined,
     initialCursor: { line: 0, col: 0 },
     initialVirtualFiles: Object.fromEntries(
       Object.entries(project.initialVirtualFiles).map(([k, v]) => [k, [...v]])

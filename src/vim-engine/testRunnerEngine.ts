@@ -6,6 +6,7 @@ import {
   VirtualTestSpec,
 } from './types';
 import { buildVfsMap } from './vfs';
+import { getGitHunks } from './gitSignsEngine';
 import { msg } from './messages';
 
 function getFileLinesFromState(state: VimEditorState, filename: string): string[] | null {
@@ -109,6 +110,23 @@ function evaluateSingleTest(
       },
       failLine: 0,
     };
+  }
+
+  if (spec.requireGitCommit) {
+    const hasCommit = (state.gitCommitLog?.length ?? 0) > 0;
+    const unstagedHunks = getGitHunks(state).length;
+    if (!hasCommit || unstagedHunks > 0) {
+      return {
+        result: {
+          id: spec.id,
+          name: spec.name,
+          file: spec.file,
+          passed: false,
+          reason: msg('아직 커밋되지 않은 변경사항이 남아 있거나 커밋 기록이 없습니다 (:Git commit)'),
+        },
+        failLine: 0,
+      };
+    }
   }
 
   return {

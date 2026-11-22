@@ -117,7 +117,55 @@ describe('실무 멀티파일 캡스톤 챌린지 (capstoneProjects)', () => {
     expect(loadCapstoneProgress()[project.id]?.bestKeystrokes).toBe(42);
   });
 
-  it('LessonSelectModal 에 4개 학습 트랙 카드와 3개 캡스톤 카드가 렌더링되고 필터/시작이 동작한다', () => {
+  it('캡스톤 4 (Git Hunk 선별 정리 & 핫픽스 커밋) 를 :Git commit + dial + :TestRun 으로 완주할 수 있다', () => {
+    expect(CAPSTONE_PROJECTS.length).toBe(5);
+    const project = CAPSTONE_PROJECTS[3];
+    const mission = createCapstoneMission(project);
+    let s = buildCustomInitialState(mission);
+
+    // 커밋 전에는 테스트 실패
+    s = runExCommand(s, 'TestRun');
+    expect(s.lastTestRun?.allPassed).toBe(false);
+
+    // src/release.ts: DEBUG_SECRET_LEAK 줄 삭제 + canaryMode false
+    s = sendKeys(s, 'jdd<C-a>');
+    // src/changelog.ts: 날짜 하루 올리기
+    s = runExCommand(s, 'Harpoon 2');
+    s = sendKeys(s, '<C-a>');
+    // src/release.ts 복귀 후 :Git commit 실행
+    s = runExCommand(s, 'Harpoon 1');
+    s = runExCommand(s, 'Git commit -m "chore: release 2.4.0"');
+    // :TestRun 통과
+    s = runExCommand(s, 'TestRun');
+
+    expect(s.lastTestRun?.allPassed).toBe(true);
+    expect(mission.checkComplete(s)).toBe(true);
+  });
+
+  it('캡스톤 5 (TS 현대화 리팩토링) 를 abolish(crc/cru) + LuaSnip(iface<Tab>) + treesj(gS) + dial + Spectre + :TestRun 으로 완주할 수 있다', () => {
+    const project = CAPSTONE_PROJECTS[4];
+    const mission = createCapstoneMission(project);
+    let s = buildCustomInitialState(mission);
+
+    // 1. src/orderModel.ts: crc + cru + LuaSnip iface<Tab> 로 interface OrderSummary 생성
+    s = sendKeys(s, '2wcrcj02wcruoiface<Tab>OrderSummary<Esc>');
+    // 2. src/pricing.ts: gS 멀티라인 분할 + discount false -> true
+    s = runExCommand(s, 'Harpoon 2');
+    s = sendKeys(s, 'gS3j0<C-a>');
+    // 3. :Spectre /legacy/ /modern/ 일괄 치환 후 HACK 삭제
+    s = runExCommand(s, 'Spectre /legacy/ /modern/');
+    s = runExCommand(s, 'SpectreApply');
+    s = runExCommand(s, 'SpectreClose');
+    s = runExCommand(s, 'Harpoon 3');
+    s = sendKeys(s, 'dd');
+    // 4. :TestRun 검증
+    s = runExCommand(s, 'TestRun');
+
+    expect(s.lastTestRun?.allPassed).toBe(true);
+    expect(mission.checkComplete(s)).toBe(true);
+  });
+
+  it('LessonSelectModal 에 4개 학습 트랙 카드와 5개 캡스톤 카드가 렌더링되고 필터/시작이 동작한다', () => {
     const onSelectLesson = vi.fn();
     const onStartCapstone = vi.fn();
     const onClose = vi.fn();

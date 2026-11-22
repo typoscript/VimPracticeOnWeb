@@ -551,6 +551,7 @@ export const EN_MESSAGES: Record<string, string> = {
   "필수 코드 누락: \"{expected}\"": "Missing expected code: \"{expected}\"",
   "제거 대상 패턴 잔존: \"{forbidden}\"": "Forbidden pattern still present: \"{forbidden}\"",
   "최소 {min}줄 이상으로 분할되어야 합니다 (현재 {cur}줄)": "Expected at least {min} lines (currently {cur})",
+  "아직 커밋되지 않은 변경사항이 남아 있거나 커밋 기록이 없습니다 (:Git commit)": "Uncommitted changes remain or no commit recorded yet (:Git commit)",
   "[TestRun] 이 작업공간에 등록된 가상 테스트가 없습니다": "[TestRun] No virtual tests registered in this workspace",
   "[TestRun] PASS — 모든 테스트 통과 ({passed}/{total})": "[TestRun] PASS — All tests passed ({passed}/{total})",
   "[TestRun] FAIL — {passed}/{total} 통과 ({failed}건 실패 · :copen 으로 확인)": "[TestRun] FAIL — {passed}/{total} passed ({failed} failed · run :copen to inspect)",

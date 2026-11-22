@@ -1239,6 +1239,8 @@ export interface VirtualTestSpec {
   mustNotContain?: string[];
   exactLines?: string[];
   minLines?: number;
+  /** 최소 1회 :Git commit 기록이 있고 미커밋 Hunk 가 없어야 통과 */
+  requireGitCommit?: boolean;
 }
 
 export interface VirtualTestCaseResult {
