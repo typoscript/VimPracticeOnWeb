@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 204개 테스트 파일, 2,307개 테스트 100% 통과 필수)*
+  *(현재 206개 테스트 파일, 2,315개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -256,6 +256,10 @@
 - **내 풀이 vs 최적 해법 1:1 스텝 비교 리플레이어 (Vim Golf Comparator) & 인터랙티브 `vim-fugitive` Git 분할 패널 (`golfComparator.ts`, `GolfComparatorModal.tsx`, `gitFugitiveEngine.ts`, `GitPanel.tsx`)**:
   - **1:1 Vim Golf 비교기**: 레슨 완료 배너의 `⚔️ 내 풀이 vs 최적 해법 비교` 버튼으로 지연 로딩 모달을 열어 사용자 입력 키 시퀀스(`allKeysSoFar`)와 모범 해법(`optimalKeys`)을 좌우 듀얼 미니 에디터로 동기화 재생(1x/0.5x/0.25x, 슬라이더, 키 칩 클릭)하며 타수 차이·효율도·첫 분기점 점프·연타 습관 코칭 팁을 제공합니다.
   - **인터랙티브 `:Git` / `:LazyGit` 분할 패널**: `:Git`(단독), `:Gstatus`, `:LazyGit`, `:Fugitive`, `:GitClose` 로 하단 지연 로딩 패널을 열어 키보드(`j`/`k` 이동, `=` 인라인 Diff 토글, `s` Hunk 스테이징, `u` 언스테이징, `X` Hunk 되돌리기, `c` 커밋 입력, `1`/`2` 변경·로그 탭 전환, `q`/`Esc` 닫기)와 버튼으로 실무 Git 스테이징·커밋·로그 워크플로를 완결합니다.
+- **`nvim-cmp` 통합 자동완성(`Ctrl-Space`), `noice.nvim` 플로팅 커맨드라인(`:set cmdlinepopup` / `:set noice`) & 로컬 폴더 열기·`.zip` 내보내기 (`cmpEngine.ts`, `NoiceCmdline.tsx`, `zipBuilder.ts`, `sandboxLocalFiles.ts`)**:
+  - **`nvim-cmp` 통합 자동완성 (`Ctrl-Space`)**: `LuaSnip` 스니펫(`[Snip]` + 코드 미리보기), 문서 LSP 심볼(`[Func]`/`[Class]`/`[Var]`), 버퍼 단어(`[Text]`)를 종류 배지·상세 설명과 함께 통합 제안하고, 스니펫 선택 후 `Enter`/`Tab`/클릭 시 즉시 템플릿을 확장해 `SELECT` 모드 `$1` 로 진입합니다.
+  - **`noice.nvim` 플로팅 커맨드라인 (`:set cmdlinepopup` / `:set noice`, 기본 `off`)**: 활성화 시 `:`/`/`/`?`/`=` 입력을 에디터 상단 중앙 플로팅 팝업(`NoiceCmdline`, `React.lazy`)과 인라인 와일드메뉴로 렌더링합니다(Sandbox 퀵런처 `✨ :set noice` 칩 제공).
+  - **로컬 폴더 열기 & 순수 TS `.zip` 내보내기**: 자유 연습장에 `📁 폴더 열기`(`webkitdirectory`)로 하위 디렉터리 트리 전체를 VFS 에 마운트하고, 외부 의존성 없는 표준 PKZIP Store/UTF-8/CRC-32 빌더(`zipBuilder.ts`)로 워크스페이스 전체 파일을 `📦 ZIP 내보내기` 한 번에 다운로드합니다.
 
 ---
 

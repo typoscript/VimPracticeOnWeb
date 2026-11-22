@@ -582,6 +582,7 @@ export function startOrCycleCompletion(
         selectedIndex: nextIndex,
         originalWord,
         type: sessionType,
+        items: state.completionSession.items,
       },
     };
   }

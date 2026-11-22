@@ -392,6 +392,18 @@
   color: #ffffff;
 }
 
+.sandbox-export-btn.zip {
+  background-color: rgba(249, 226, 175, 0.13);
+  border-color: rgba(249, 226, 175, 0.45);
+  color: #f9e2af;
+}
+
+.sandbox-export-btn.zip:hover {
+  background-color: rgba(249, 226, 175, 0.24);
+  border-color: #f9e2af;
+  color: #ffffff;
+}
+
 .sandbox-local-files-bar {
   display: flex;
   align-items: center;

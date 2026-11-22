@@ -342,6 +342,7 @@ export function App() {
           localSandboxFiles: missionHandlers.localSandboxFiles,
           onImportLocalFiles: missionHandlers.handleImportLocalFiles,
           onExportCurrentFile: missionHandlers.handleExportCurrentFile,
+          onExportWorkspaceZip: missionHandlers.handleExportWorkspaceZip,
           onOpenSandboxFile: missionHandlers.handleOpenSandboxFile,
           dojoInitialDrill,
         }}

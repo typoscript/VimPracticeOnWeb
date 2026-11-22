@@ -38,6 +38,7 @@ import {
   handleAutopairsEnter,
 } from './autopairsEngine';
 import { tryExpandSnippetOnTab, jumpSnippetTabstop } from './snippetEngine';
+import { startCmpCompletion, acceptCmpCompletion } from './cmpEngine';
 import { recordChangePosition } from './advancedMotions';
 import {
   AbbrevReplayCtx,
@@ -406,6 +407,9 @@ function handleInsertCompletionStep(
     state = { ...state, insertCtrlXMode: false };
   }
 
+  if (key === 'Ctrl-Space' || key === 'Ctrl+Space' || key === 'Ctrl- ' || key === '<C-Space>') {
+    return { handled: true, state: startCmpCompletion(state, 'next') };
+  }
   if (key === 'Ctrl-n' || key === 'Ctrl+n' || key === 'Alt-n' || key === 'Alt+n') {
     return { handled: true, state: startOrCycleCompletion(state, 'next') };
   }
@@ -420,8 +424,21 @@ function handleInsertCompletionStep(
       state: belowLine !== undefined && col < belowLine.length ? insertTextAtCursor(state, belowLine[col]) : state,
     };
   }
-  if (key === 'Ctrl-y' || key === 'Ctrl+y' || (key === 'Enter' && state.completionSession)) {
-    if (state.completionSession) return { handled: true, state: acceptCompletion(state) };
+  if (
+    key === 'Ctrl-y' ||
+    key === 'Ctrl+y' ||
+    ((key === 'Enter' || (key === 'Tab' && state.completionSession?.type === 'cmp')) &&
+      state.completionSession)
+  ) {
+    if (state.completionSession) {
+      return {
+        handled: true,
+        state:
+          state.completionSession.type === 'cmp'
+            ? acceptCmpCompletion(state)
+            : acceptCompletion(state),
+      };
+    }
     const aboveLine = state.lines[line - 1];
     return {
       handled: true,

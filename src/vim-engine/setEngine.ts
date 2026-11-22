@@ -114,7 +114,7 @@ export function executeSetCommand(
       errState = handleOptionAssignment(ctx, token);
     } else if (token.endsWith('!')) {
       errState = handleBooleanOption(ctx, token, 'toggle');
-    } else if (token.startsWith('no')) {
+    } else if (token.startsWith('no') && !OPTION_ALIASES[token]) {
       errState = handleBooleanOption(ctx, token, 'off');
     } else {
       errState = handleBooleanOption(ctx, token, 'on');

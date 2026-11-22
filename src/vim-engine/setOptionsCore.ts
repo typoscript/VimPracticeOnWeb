@@ -49,6 +49,7 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   startofline: false,
   smarttab: false,
   autopairs: false,
+  cmdlinepopup: false,
 };
 
 export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
@@ -151,6 +152,8 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   smarttab: 'smarttab',
   ap: 'autopairs',
   autopairs: 'autopairs',
+  cmdlinepopup: 'cmdlinepopup',
+  noice: 'cmdlinepopup',
 };
 
 export const WINDOW_LOCAL_OPTION_KEYS = new Set<keyof VimOptions>([
@@ -544,6 +547,7 @@ const BOOLEAN_OPTION_KEYS = new Set<keyof VimOptions>([
   'startofline',
   'smarttab',
   'autopairs',
+  'cmdlinepopup',
 ]);
 
 /**

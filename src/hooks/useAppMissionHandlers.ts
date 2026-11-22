@@ -2,6 +2,7 @@ import { useCallback, useState, Dispatch, SetStateAction, MutableRefObject } fro
 import { VimEditorState, editBuffer } from '../vim-engine';
 import {
   downloadCurrentBuffer,
+  downloadWorkspaceAsZip,
   mountLocalFilesIntoState,
   readLocalFiles,
 } from '../utils/sandboxLocalFiles';
@@ -189,6 +190,16 @@ export function useAppMissionHandlers({
     );
   }, [editorStateRef, setCoachingMessage]);
 
+  const handleExportWorkspaceZip = useCallback(() => {
+    const result = downloadWorkspaceAsZip(editorStateRef.current);
+    setCoachingMessage(
+      t('📦 워크스페이스 {count}개 파일을 "{filename}" 으로 내보냈습니다.', {
+        count: result.fileCount,
+        filename: result.filename,
+      })
+    );
+  }, [editorStateRef, setCoachingMessage]);
+
   const handleOpenSandboxFile = useCallback(
     (filename: string) => {
       setEditorState((prev) => editBuffer(prev, filename));
@@ -364,6 +375,7 @@ export function useAppMissionHandlers({
     localSandboxFiles,
     handleImportLocalFiles,
     handleExportCurrentFile,
+    handleExportWorkspaceZip,
     handleOpenSandboxFile,
   };
 }

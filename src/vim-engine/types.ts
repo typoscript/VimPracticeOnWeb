@@ -398,6 +398,8 @@ export interface VimOptions {
   smarttab?: boolean;
   /** nvim-autopairs 스타일 Insert 모드 괄호·따옴표 자동 닫기 (:set autopairs / noautopairs, :set ap) */
   autopairs?: boolean;
+  /** noice.nvim 스타일 에디터 상단 중앙 플로팅 커맨드라인 (:set cmdlinepopup / :set noice) */
+  cmdlinepopup?: boolean;
 }
 
 /** 맞춤법 검사기 오탈자 정보 */
@@ -480,14 +482,33 @@ export interface BlockInsertSession {
   skippedLines?: number[]; // 블록 범위(minCol)에 도달하지 않아 제외된 짧은 줄 목록
 }
 
+export type CompletionItemKind =
+  | 'Snippet'
+  | 'Function'
+  | 'Variable'
+  | 'Class'
+  | 'Property'
+  | 'Text'
+  | 'Keyword';
+
+export interface CompletionItemMeta {
+  label: string;
+  kind: CompletionItemKind;
+  detail?: string;
+  preview?: string[];
+  snippetTrigger?: string;
+}
+
 export interface CompletionSession {
   prefix: string;
   prefixStartCol: number;
   candidates: string[];
   selectedIndex: number; // 0-indexed into candidates
   originalWord: string;
-  /** 자동완성 종류: 단어(keyword), 파일 경로(file), 전체 라인(line), 사전(dictionary), 태그(tag), 옴니(omni), Vim 명령/함수(vim), 맞춤법(spell) */
-  type?: 'keyword' | 'file' | 'line' | 'dictionary' | 'tag' | 'omni' | 'vim' | 'spell';
+  /** 자동완성 종류: 단어(keyword), 파일 경로(file), 전체 라인(line), 사전(dictionary), 태그(tag), 옴니(omni), Vim 명령/함수(vim), 맞춤법(spell), nvim-cmp 통합(cmp) */
+  type?: 'keyword' | 'file' | 'line' | 'dictionary' | 'tag' | 'omni' | 'vim' | 'spell' | 'cmp';
+  /** nvim-cmp 통합 자동완성 항목별 종류·상세·스니펫 미리보기 메타데이터 */
+  items?: CompletionItemMeta[];
 }
 
 export interface LastVisualSelection {

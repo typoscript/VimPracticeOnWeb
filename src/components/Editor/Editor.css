@@ -1104,3 +1104,71 @@
 .git-blame-virtual.uncommitted {
   color: rgba(249, 226, 175, 0.72);
 }
+
+/* nvim-cmp 통합 자동완성 종류 배지 및 코드 미리보기 */
+.cmp-kind-badge {
+  display: inline-flex;
+  align-items: center;
+  margin-right: 7px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 10.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cmp-kind-badge.kind-snippet {
+  background: rgba(187, 154, 247, 0.22);
+  color: #bb9af7;
+}
+
+.cmp-kind-badge.kind-function {
+  background: rgba(122, 162, 247, 0.22);
+  color: #7aa2f7;
+}
+
+.cmp-kind-badge.kind-class {
+  background: rgba(224, 175, 104, 0.22);
+  color: #e0af68;
+}
+
+.cmp-kind-badge.kind-variable,
+.cmp-kind-badge.kind-property {
+  background: rgba(125, 207, 255, 0.2);
+  color: #7dcfff;
+}
+
+.cmp-kind-badge.kind-text,
+.cmp-kind-badge.kind-keyword {
+  background: rgba(158, 206, 106, 0.16);
+  color: #9ece6a;
+}
+
+.cmp-item-detail {
+  margin-left: 10px;
+  font-size: 11px;
+  color: #787c99;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+.completion-item.selected .cmp-item-detail {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.cmp-preview-box {
+  padding: 6px 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(17, 18, 26, 0.92);
+  font-family: 'JetBrains Mono', Consolas, monospace;
+  font-size: 11px;
+  color: #a9b1d6;
+  line-height: 1.45;
+  white-space: pre;
+  overflow-x: auto;
+}
+
+.cmp-preview-line {
+  white-space: pre;
+}

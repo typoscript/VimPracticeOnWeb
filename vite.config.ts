@@ -115,6 +115,7 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'troubleEngine.ts',
       'lspEngine.ts',
       'lspRefactorEngine.ts',
+      'cmpEngine.ts',
       'flashJumpEngine.ts',
       'multiCursorEngine.ts',
       'treesjEngine.ts',

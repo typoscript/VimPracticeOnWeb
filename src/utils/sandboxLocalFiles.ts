@@ -1,4 +1,5 @@
 import { VimBuffer, VimEditorState, syncCurrentBuffer } from '../vim-engine';
+import { ZipEntryInput, buildZipArchive } from './zipBuilder';
 
 /** 로컬 파일 불러오기 1개당 최대 크기 (512 KB) */
 export const MAX_LOCAL_FILE_BYTES = 512 * 1024;
@@ -282,4 +283,79 @@ export function downloadCurrentBuffer(state: VimEditorState): ExportBufferPayloa
     URL.revokeObjectURL(url);
   }
   return payload;
+}
+
+/**
+ * 현재 작업공간(VFS + 열린 버퍼 + 활성 편집 내용)의 모든 파일을 ZIP 내보내기 항목으로 수집합니다.
+ */
+export function collectWorkspaceFilesForExport(state: VimEditorState): ZipEntryInput[] {
+  const fileMap = new Map<string, string[]>();
+
+  if (state.virtualFiles) {
+    for (const [path, lines] of Object.entries(state.virtualFiles)) {
+      fileMap.set(path, lines);
+    }
+  }
+
+  if (state.buffers) {
+    for (const buf of state.buffers) {
+      if (buf.name && !buf.name.startsWith('oil://') && !buf.name.startsWith('term://')) {
+        fileMap.set(buf.name, buf.lines);
+      }
+    }
+  }
+
+  const activeName = state.primaryFilename || 'sandbox.ts';
+  if (!activeName.startsWith('oil://') && !activeName.startsWith('term://')) {
+    fileMap.set(activeName, state.lines);
+  }
+
+  return Array.from(fileMap.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([path, lines]) => ({
+      path,
+      content: (lines.length > 0 ? lines : ['']).join('\n') + '\n',
+    }));
+}
+
+export interface ExportZipResult {
+  filename: string;
+  fileCount: number;
+  byteLength: number;
+}
+
+/**
+ * 현재 작업공간의 모든 파일을 순수 TypeScript ZIP 아카이브(.zip)로 묶어 로컬 다운로드합니다.
+ */
+export function downloadWorkspaceAsZip(
+  state: VimEditorState,
+  zipFilename = 'vim-workspace.zip'
+): ExportZipResult {
+  const entries = collectWorkspaceFilesForExport(state);
+  const bytes = buildZipArchive(entries);
+
+  if (typeof URL.createObjectURL === 'function') {
+    const buffer = bytes.buffer.slice(
+      bytes.byteOffset,
+      bytes.byteOffset + bytes.byteLength
+    ) as ArrayBuffer;
+    const blob = new Blob([buffer], { type: 'application/zip' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = zipFilename;
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    if (typeof URL.revokeObjectURL === 'function') {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  return {
+    filename: zipFilename,
+    fileCount: entries.length,
+    byteLength: bytes.byteLength,
+  };
 }

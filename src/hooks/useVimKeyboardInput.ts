@@ -160,6 +160,18 @@ export function useVimKeyboardInput({
         return;
       }
 
+      // INSERT 모드 Ctrl-Space: nvim-cmp 통합 자동완성 팝업 (스니펫 + LSP + 버퍼)
+      if (
+        (e.ctrlKey || e.metaKey) &&
+        !e.altKey &&
+        (e.key === ' ' || e.code === 'Space') &&
+        editorMode === 'INSERT'
+      ) {
+        e.preventDefault();
+        processKeyInput('Ctrl-Space');
+        return;
+      }
+
       const rule = MODIFIER_SHORTCUTS[lowerKey] ?? MODIFIER_SHORTCUTS[e.key];
       if (
         rule &&

@@ -657,3 +657,11 @@ export {
   commitFromGitPanel,
 } from './gitFugitiveEngine';
 export type { GitCommitEntry, GitBlameInfo, GitPanelState } from './types';
+
+// ---- nvim-cmp 통합 자동완성 팝업 (Ctrl-Space: 스니펫 + LSP 심볼 + 버퍼 단어) ----
+export {
+  startCmpCompletion,
+  acceptCmpCompletion,
+  selectCmpCompletionCandidate,
+} from './cmpEngine';
+export type { CompletionItemKind, CompletionItemMeta } from './types';

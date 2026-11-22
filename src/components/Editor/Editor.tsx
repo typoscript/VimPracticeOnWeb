@@ -649,7 +649,9 @@ export const Editor: React.FC<EditorProps> = ({
                           >
                             <div className="completion-header">
                               <span className="completion-prefix-tag">
-                                {completionSession.type === 'file'
+                                {completionSession.type === 'cmp'
+                                  ? `⚡ [nvim-cmp] ${completionSession.prefix || '*'}`
+                                  : completionSession.type === 'file'
                                   ? `📁 [FILE] ${completionSession.prefix || '/'}`
                                   : completionSession.type === 'line'
                                   ? `📄 [LINE] ${completionSession.prefix.trim().slice(0, 16)}`
@@ -663,6 +665,10 @@ export const Editor: React.FC<EditorProps> = ({
                             <div className="completion-list">
                               {completionSession.candidates.map((cand, idx) => {
                                 const isLineType = completionSession.type === 'line';
+                                const cmpMeta =
+                                  completionSession.type === 'cmp'
+                                    ? completionSession.items?.[idx]
+                                    : undefined;
                                 return (
                                   <div
                                     key={`${cand}-${idx}`}
@@ -676,6 +682,24 @@ export const Editor: React.FC<EditorProps> = ({
                                       onSelectCompletionItem?.(idx);
                                     }}
                                   >
+                                    {cmpMeta && (
+                                      <span
+                                        className={`cmp-kind-badge kind-${cmpMeta.kind.toLowerCase()}`}
+                                        data-testid={`cmp-kind-${idx}`}
+                                      >
+                                        {cmpMeta.kind === 'Snippet'
+                                          ? '✂ Snip'
+                                          : cmpMeta.kind === 'Function'
+                                            ? 'ƒ Func'
+                                            : cmpMeta.kind === 'Class'
+                                              ? '◈ Class'
+                                              : cmpMeta.kind === 'Property'
+                                                ? '◆ Prop'
+                                                : cmpMeta.kind === 'Variable'
+                                                  ? '𝑥 Var'
+                                                  : '𝐓 Text'}
+                                      </span>
+                                    )}
                                     {isLineType ? (
                                       <span className="cand-remainder">
                                         {cand.length > 50 ? `${cand.slice(0, 50)}...` : cand}
@@ -690,6 +714,9 @@ export const Editor: React.FC<EditorProps> = ({
                                         </span>
                                       </>
                                     )}
+                                    {cmpMeta?.detail && (
+                                      <span className="cmp-item-detail">{cmpMeta.detail}</span>
+                                    )}
                                     {idx === completionSession.selectedIndex && (
                                       <span className="cand-selected-indicator">⏎</span>
                                     )}
@@ -697,8 +724,24 @@ export const Editor: React.FC<EditorProps> = ({
                                 );
                               })}
                             </div>
+                            {completionSession.type === 'cmp' &&
+                              completionSession.items?.[completionSession.selectedIndex]?.preview && (
+                                <div className="cmp-preview-box" data-testid="cmp-preview-box">
+                                  {completionSession.items[
+                                    completionSession.selectedIndex
+                                  ].preview!.slice(0, 5).map((pLine, pIdx) => (
+                                    <div key={pIdx} className="cmp-preview-line">
+                                      {pLine}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
                             <div className="completion-footer">
-                              <span>{t('Ctrl+n: 다음 | Ctrl+p: 이전 | Enter/Ctrl+y: 선택')}</span>
+                              <span>
+                                {completionSession.type === 'cmp'
+                                  ? t('Ctrl-n/p: 이동 | Enter/Tab: 확정·스니펫 확장 | Ctrl-e: 취소')
+                                  : t('Ctrl+n: 다음 | Ctrl+p: 이전 | Enter/Ctrl+y: 선택')}
+                              </span>
                             </div>
                           </div>
                         )}

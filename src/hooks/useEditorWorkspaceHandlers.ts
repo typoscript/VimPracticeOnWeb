@@ -52,6 +52,7 @@ import {
   closeGitPanel,
   executeGitCommand,
   selectCompletionCandidate,
+  selectCmpCompletionCandidate,
   selectWildmenuCandidate,
   setMark,
   jumpToMark,
@@ -90,7 +91,12 @@ export function useEditorWorkspaceHandlers({
   );
 
   const handleSelectCompletionCandidate = useCallback(
-    (index: number) => applyAndFocus((prev) => selectCompletionCandidate(prev, index)),
+    (index: number) =>
+      applyAndFocus((prev) =>
+        prev.completionSession?.type === 'cmp'
+          ? selectCmpCompletionCandidate(prev, index)
+          : selectCompletionCandidate(prev, index)
+      ),
     [applyAndFocus]
   );
 

@@ -56,6 +56,11 @@ const GolfComparatorModal = lazy(() =>
     default: m.GolfComparatorModal,
   }))
 );
+const NoiceCmdline = lazy(() =>
+  import('../NoiceCmdline/NoiceCmdline').then((m) => ({
+    default: m.NoiceCmdline,
+  }))
+);
 
 const SANDBOX_QUICK_TRY_CHIPS: ReadonlyArray<{
   id: string;
@@ -166,6 +171,12 @@ const SANDBOX_QUICK_TRY_CHIPS: ReadonlyArray<{
     keys: ['Escape', ...':ZenMode'.split(''), 'Enter'],
   },
   {
+    id: 'noice',
+    label: '✨ :set noice',
+    titleKey: i18nKey('noice.nvim 플로팅 커맨드라인 토글 (:set cmdlinepopup)'),
+    keys: ['Escape', ...':set cmdlinepopup!'.split(''), 'Enter', ':'],
+  },
+  {
     id: 'lua',
     label: '🌙 :source init.lua',
     titleKey: i18nKey('Lua 설정 즉시 적용 (:source init.lua)'),
@@ -212,6 +223,7 @@ export interface WorkspaceMissionProps {
   localSandboxFiles?: string[];
   onImportLocalFiles?: (files: FileList | File[]) => void;
   onExportCurrentFile?: () => void;
+  onExportWorkspaceZip?: () => void;
   onOpenSandboxFile?: (filename: string) => void;
   dojoInitialDrill: { drill: 'weakness-custom'; nonce: number } | null;
 }
@@ -358,6 +370,7 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
 }) => {
   const { editorState, displayEditorState } = editor;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const folderInputRef = useRef<HTMLInputElement | null>(null);
   const dragDepthRef = useRef(0);
   const [isDraggingLocalFile, setIsDraggingLocalFile] = useState(false);
   const [golfCompareMissionId, setGolfCompareMissionId] = useState<number | null>(null);
@@ -564,6 +577,35 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
                       >
                         {t('📂 로컬 파일 열기')}
                       </button>
+                      <input
+                        ref={(el) => {
+                          folderInputRef.current = el;
+                          if (el) {
+                            el.setAttribute('webkitdirectory', '');
+                            el.setAttribute('directory', '');
+                          }
+                        }}
+                        type="file"
+                        multiple
+                        className="sandbox-file-input-hidden"
+                        data-testid="sandbox-local-folder-input"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files.length > 0) {
+                            mission.onImportLocalFiles?.(e.target.files);
+                            editor.onFocus();
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="sandbox-file-btn"
+                        onClick={() => folderInputRef.current?.click()}
+                        data-testid="sandbox-import-folder-btn"
+                        title={t('프로젝트 폴더 전체를 VFS 트리로 불러오기')}
+                      >
+                        {t('📁 폴더 열기')}
+                      </button>
                     </>
                   )}
                   {mission.onExportCurrentFile && (
@@ -575,6 +617,17 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
                       title={t('현재 버퍼의 수정된 코드를 로컬 파일로 다운로드')}
                     >
                       {t('💾 파일 내보내기')}
+                    </button>
+                  )}
+                  {mission.onExportWorkspaceZip && (
+                    <button
+                      type="button"
+                      className="sandbox-export-btn zip"
+                      onClick={mission.onExportWorkspaceZip}
+                      data-testid="sandbox-export-zip-btn"
+                      title={t('작업공간의 모든 파일을 .zip 아카이브로 한 번에 다운로드')}
+                    >
+                      {t('📦 ZIP 내보내기')}
                     </button>
                   )}
                   <button
@@ -704,6 +757,19 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
                 onPressKey={editor.processKeyInput}
               />
             )}
+
+            {displayEditorState.options?.cmdlinepopup &&
+              (displayEditorState.mode === 'COMMAND' ||
+                displayEditorState.mode === 'SEARCH') && (
+                <NoiceCmdline
+                  mode={displayEditorState.mode}
+                  commandType={displayEditorState.commandType}
+                  commandBuffer={displayEditorState.commandBuffer}
+                  commandCursorCol={displayEditorState.commandCursorCol}
+                  wildmenu={displayEditorState.wildmenu}
+                  onSelectWildmenuCandidate={editor.onSelectWildmenuCandidate}
+                />
+              )}
 
             {showGolfComparator && mission.currentMission.optimalKeys && (
               <GolfComparatorModal
