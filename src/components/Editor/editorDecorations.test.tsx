@@ -4,6 +4,8 @@ import { createVimState, sendKeys, DEFAULT_VIM_OPTIONS } from '../../vim-engine'
 import {
   computeIndentGuideCols,
   computeActiveScopeIndent,
+  computeMatchParenPair,
+  computeRainbowDelimitersMap,
   findTodoCommentBadge,
 } from './editorDecorations';
 import { Editor } from './Editor';
@@ -117,5 +119,85 @@ describe(':set indentline / ibl 옵션 및 Editor 렌더링', () => {
       />
     );
     expect(screen.queryByTestId('indent-guide-4-0')).not.toBeInTheDocument();
+  });
+});
+
+describe('matchparen 짝 괄호 강조 & rainbow-delimiters 중첩 괄호 컬러', () => {
+  it('computeMatchParenPair 가 단일/멀티라인 짝 괄호 및 INSERT 직전 괄호를 정확히 찾는다', () => {
+    const lines = ['function f(a) {', '  return (a + 1);', '}'];
+    // line 0 col 14 ('{') <-> line 2 col 0 ('}')
+    expect(computeMatchParenPair(lines, { line: 0, col: 14 }, 'NORMAL')).toEqual({
+      open: { line: 0, col: 14 },
+      close: { line: 2, col: 0 },
+    });
+    // 역방향: line 2 col 0 ('}') <-> line 0 col 14 ('{')
+    expect(computeMatchParenPair(lines, { line: 2, col: 0 }, 'NORMAL')).toEqual({
+      open: { line: 0, col: 14 },
+      close: { line: 2, col: 0 },
+    });
+    // INSERT 모드에서 ')' 바로 다음 칸에서도 짝 '(' 매칭
+    expect(computeMatchParenPair(lines, { line: 1, col: 16 }, 'INSERT')).toEqual({
+      open: { line: 1, col: 9 },
+      close: { line: 1, col: 15 },
+    });
+    // 괄호가 아닌 일반 문자 위에서는 null
+    expect(computeMatchParenPair(lines, { line: 0, col: 0 }, 'NORMAL')).toBeNull();
+  });
+
+  it('computeRainbowDelimitersMap 이 중첩 괄호 깊이를 0..5 순환 배정하고 문자열·주석 내 괄호는 무시한다', () => {
+    const lines = ['const x = ({ a: [1, "(ignored)"] }); // {ignored}'];
+    const map = computeRainbowDelimitersMap(lines);
+    const line0 = map.get(0)!;
+    // '(' = 0, '{' = 1, '[' = 2, ']' = 2, '}' = 1, ')' = 0
+    expect(line0.get(10)).toBe(0); // '('
+    expect(line0.get(11)).toBe(1); // '{'
+    expect(line0.get(16)).toBe(2); // '['
+    // 문자열 내부 '(' (index 21) 와 주석 내부 '{' 는 매핑되지 않아야 함
+    expect(line0.has(21)).toBe(false);
+    expect(line0.get(31)).toBe(2); // ']'
+    expect(line0.get(33)).toBe(1); // '}'
+    expect(line0.get(34)).toBe(0); // ')'
+  });
+
+  it(':set nomatchparen / :set mp 및 :set norainbow / :set rb 옵션 토글이 동작한다', () => {
+    let state = createVimState(['(a)']);
+    state = sendKeys(state, ':set nomp norb<CR>');
+    expect(state.options?.matchparen).toBe(false);
+    expect(state.options?.rainbow).toBe(false);
+    state = sendKeys(state, ':set matchparen rainbow<CR>');
+    expect(state.options?.matchparen).toBe(true);
+    expect(state.options?.rainbow).toBe(true);
+  });
+
+  it('Editor 가 커서 짝 괄호(.match-paren-highlight)와 레인보우 깊이 클래스를 렌더링하고 옵션 해제 시 숨긴다', () => {
+    const lines = ['fn((1))'];
+    const { container, rerender } = render(
+      <Editor
+        lines={lines}
+        cursor={{ line: 0, col: 2 }}
+        mode="NORMAL"
+        primaryFilename="app.ts"
+        options={{ ...DEFAULT_VIM_OPTIONS, matchparen: true, rainbow: true }}
+      />
+    );
+
+    // col 2 '(' 의 짝인 col 6 ')' 가 match-paren-char 로 강조됨
+    const partner = screen.getByTestId('match-paren-char');
+    expect(partner).toHaveTextContent(')');
+    expect(partner).toHaveClass('match-paren-highlight');
+    expect(container.querySelectorAll('.rainbow-depth-1').length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByTestId('editor-container')).toHaveTextContent('fn((1))');
+
+    rerender(
+      <Editor
+        lines={lines}
+        cursor={{ line: 0, col: 2 }}
+        mode="NORMAL"
+        primaryFilename="app.ts"
+        options={{ ...DEFAULT_VIM_OPTIONS, matchparen: false, rainbow: false }}
+      />
+    );
+    expect(screen.queryByTestId('match-paren-char')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('.rainbow-delim').length).toBe(0);
   });
 });

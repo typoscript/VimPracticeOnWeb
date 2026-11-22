@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 207개 테스트 파일, 2,324개 테스트 100% 통과 필수)*
+  *(현재 207개 테스트 파일, 2,328개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -263,6 +263,7 @@
 - **Neovim 시각적 코드 가독성 2종 — `indent-blankline` 세로 가이드선 & `todo-comments` 인라인 컬러 배지 (`src/components/Editor/editorDecorations.ts`, `Editor.tsx`, `EditorLineRenderer.tsx`)**:
   - **`indent-blankline.nvim` (`:set indentline` / `:set ibl`, 기본 `on`)**: 들여쓰기 레벨마다 세로 가이드선(`.indent-guide`, 빈 줄 보간 지원)과 현재 커서 스코프 강조(`.indent-guide-active`)를 렌더링하며 `:set noindentline`/`:set noibl` 로 토글할 수 있습니다.
   - **`todo-comments.nvim`**: 주석 내 `TODO:`/`FIXME:`/`BUG:`/`HACK:`/`WARN:`/`NOTE:`/`PERF:` 태그를 본문 텍스트 무결성을 해치지 않고 컬러 알약 배지(`.todo-comment-tag`)로 강조 렌더링합니다.
+  - **`matchparen` & `rainbow-delimiters.nvim` (`:set matchparen`/`:set mp`, `:set rainbow`/`:set rb`, 기본 `on`)**: 커서가 괄호(`()`, `[]`, `{}`, `:set matchpairs`) 위(INSERT 모드 직전 괄호 포함)일 때 멀티라인 대응 짝 괄호를 실시간 하이라이트(`.match-paren-highlight`)하고, 문자열·주석을 제외한 중첩 괄호를 6단계 깊이별 컬러(`.rainbow-depth-0..5`)로 구분합니다.
 
 ---
 

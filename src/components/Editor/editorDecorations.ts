@@ -1,3 +1,5 @@
+import type { CursorPosition, VimMode } from '../../vim-engine';
+
 export type TodoBadgeVariant = 'info' | 'error' | 'warning' | 'hint' | 'perf';
 
 export interface TodoCommentBadge {
@@ -138,4 +140,171 @@ export function findTodoCommentBadge(lineText: string): TodoCommentBadge | null 
     endCol,
     variant,
   };
+}
+
+export interface MatchParenPair {
+  open: CursorPosition;
+  close: CursorPosition;
+}
+
+function parseMatchPairsSpec(raw?: string): {
+  openSet: Set<string>;
+  allSet: Set<string>;
+  partnerMap: Record<string, string>;
+} {
+  const effective = raw && raw.trim() ? raw : '(:),{:},[:]';
+  const openSet = new Set<string>();
+  const allSet = new Set<string>();
+  const partnerMap: Record<string, string> = {};
+  for (const token of effective.split(',')) {
+    const t = token.trim();
+    if (t.length === 3 && t[1] === ':' && t[0] !== t[2]) {
+      openSet.add(t[0]);
+      allSet.add(t[0]);
+      allSet.add(t[2]);
+      partnerMap[t[0]] = t[2];
+      partnerMap[t[2]] = t[0];
+    }
+  }
+  return { openSet, allSet, partnerMap };
+}
+
+/**
+ * 순정 Vim matchparen: 현재 커서(INSERT 모드에서는 직전 문자 포함)가 괄호 위일 때
+ * 멀티라인을 포함한 대응 짝 괄호 위치를 계산합니다.
+ */
+export function computeMatchParenPair(
+  lines: string[],
+  cursor: CursorPosition,
+  mode: VimMode,
+  matchpairs?: string
+): MatchParenPair | null {
+  if (lines.length === 0 || cursor.line < 0 || cursor.line >= lines.length) return null;
+
+  const { openSet, allSet, partnerMap } = parseMatchPairsSpec(matchpairs);
+  const currentLine = lines[cursor.line] ?? '';
+  let col = cursor.col;
+  let ch = currentLine[col];
+
+  if ((!ch || !allSet.has(ch)) && mode === 'INSERT' && col > 0) {
+    const prevCh = currentLine[col - 1];
+    if (prevCh && allSet.has(prevCh)) {
+      col = col - 1;
+      ch = prevCh;
+    }
+  }
+
+  if (!ch || !allSet.has(ch)) return null;
+
+  const isOpening = openSet.has(ch);
+  const partner = partnerMap[ch];
+  const origin: CursorPosition = { line: cursor.line, col };
+
+  if (isOpening) {
+    let depth = 1;
+    for (let l = cursor.line; l < lines.length; l++) {
+      const text = lines[l] ?? '';
+      const startC = l === cursor.line ? col + 1 : 0;
+      for (let c = startC; c < text.length; c++) {
+        if (text[c] === ch) depth++;
+        else if (text[c] === partner) {
+          depth--;
+          if (depth === 0) {
+            return { open: origin, close: { line: l, col: c } };
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  // 닫는 괄호 → 역방향 탐색
+  let depth = 1;
+  for (let l = cursor.line; l >= 0; l--) {
+    const text = lines[l] ?? '';
+    const startC = l === cursor.line ? col - 1 : text.length - 1;
+    for (let c = startC; c >= 0; c--) {
+      if (text[c] === ch) depth++;
+      else if (text[c] === partner) {
+        depth--;
+        if (depth === 0) {
+          return { open: { line: l, col: c }, close: origin };
+        }
+      }
+    }
+  }
+  return null;
+}
+
+const RAINBOW_OPEN_TO_CLOSE: Record<string, string> = {
+  '(': ')',
+  '[': ']',
+  '{': '}',
+};
+const RAINBOW_CLOSERS = new Set([')', ']', '}']);
+
+/**
+ * rainbow-delimiters.nvim: 버퍼 전체의 중첩 괄호((), [], {}) 깊이를 0..5 순환 색상 인덱스로 계산합니다.
+ * 문자열 리터럴("", '', ``) 및 줄 주석(//) 내부 괄호는 무시합니다.
+ */
+export function computeRainbowDelimitersMap(
+  lines: string[]
+): Map<number, Map<number, number>> {
+  const result = new Map<number, Map<number, number>>();
+  const stack: Array<{ expectedClose: string; depth: number }> = [];
+
+  for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+    const text = lines[lineIdx] ?? '';
+    let quote: '"' | "'" | '`' | null = null;
+    let lineMap: Map<number, number> | null = null;
+
+    for (let col = 0; col < text.length; col++) {
+      const ch = text[col];
+
+      if (quote) {
+        if (ch === '\\' && col + 1 < text.length) {
+          col++;
+          continue;
+        }
+        if (ch === quote) quote = null;
+        continue;
+      }
+
+      if (ch === '/' && text[col + 1] === '/') {
+        break;
+      }
+      if (ch === '"' || ch === "'" || ch === '`') {
+        quote = ch;
+        continue;
+      }
+
+      const expectedClose = RAINBOW_OPEN_TO_CLOSE[ch];
+      if (expectedClose) {
+        const depth = stack.length % 6;
+        stack.push({ expectedClose, depth });
+        if (!lineMap) {
+          lineMap = new Map<number, number>();
+          result.set(lineIdx, lineMap);
+        }
+        lineMap.set(col, depth);
+      } else if (RAINBOW_CLOSERS.has(ch)) {
+        // 가장 가까운 일치 여는 괄호까지 스택에서 pop
+        let matchedDepth = Math.max(0, (stack.length - 1) % 6);
+        for (let k = stack.length - 1; k >= 0; k--) {
+          if (stack[k].expectedClose === ch) {
+            matchedDepth = stack[k].depth;
+            stack.splice(k, stack.length - k);
+            break;
+          }
+        }
+        if (!lineMap) {
+          lineMap = new Map<number, number>();
+          result.set(lineIdx, lineMap);
+        }
+        lineMap.set(col, matchedDepth);
+      }
+    }
+  }
+
+  return result;
 }

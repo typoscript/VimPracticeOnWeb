@@ -1236,3 +1236,31 @@
   background-color: rgba(187, 154, 247, 0.26);
   color: #bb9af7 !important;
 }
+
+/* 순정 Vim matchparen 실시간 짝 괄호 강조 (:set matchparen / :set mp) */
+.match-paren-highlight {
+  background-color: rgba(125, 207, 255, 0.24);
+  box-shadow: inset 0 0 0 1px rgba(125, 207, 255, 0.85);
+  border-radius: 2px;
+  font-weight: 800;
+}
+
+/* rainbow-delimiters.nvim 중첩 괄호 깊이별 6단계 컬러 (:set rainbow / :set rb) */
+.rainbow-delim.rainbow-depth-0 {
+  color: #e0af68 !important;
+}
+.rainbow-delim.rainbow-depth-1 {
+  color: #bb9af7 !important;
+}
+.rainbow-delim.rainbow-depth-2 {
+  color: #7dcfff !important;
+}
+.rainbow-delim.rainbow-depth-3 {
+  color: #9ece6a !important;
+}
+.rainbow-delim.rainbow-depth-4 {
+  color: #ff9e64 !important;
+}
+.rainbow-delim.rainbow-depth-5 {
+  color: #f7768e !important;
+}

@@ -34,6 +34,8 @@ import { renderLineContent } from './EditorLineRenderer';
 import {
   computeActiveScopeIndent,
   computeIndentGuideCols,
+  computeMatchParenPair,
+  computeRainbowDelimitersMap,
   findTodoCommentBadge,
 } from './editorDecorations';
 
@@ -231,9 +233,22 @@ export const Editor: React.FC<EditorProps> = ({
   const tabstop = Math.max(1, options?.tabstop ?? 2);
   const indentUnit = Math.max(1, options?.shiftwidth || tabstop || 2);
   const showIndentLines = options?.indentline !== false;
+  const showMatchParen = options?.matchparen !== false;
+  const showRainbow = options?.rainbow !== false && isSyntaxEnabled;
   const activeScopeIndent = showIndentLines
     ? computeActiveScopeIndent(lines, cursor.line, indentUnit, tabstop)
     : null;
+  const matchParenPair = React.useMemo(
+    () =>
+      showMatchParen
+        ? computeMatchParenPair(lines, cursor, mode, options?.matchpairs)
+        : null,
+    [lines, cursor.line, cursor.col, mode, showMatchParen, options?.matchpairs]
+  );
+  const rainbowDelimitersMap = React.useMemo(
+    () => (showRainbow ? computeRainbowDelimitersMap(lines) : null),
+    [lines, showRainbow]
+  );
   const searchOpts = options ? { ignorecase: options.ignorecase, smartcase: options.smartcase } : undefined;
 
   // 전체 검색 일치 항목 수집
@@ -491,6 +506,14 @@ export const Editor: React.FC<EditorProps> = ({
                         tabstop,
                         cursorColumnCol: isCursorColumn ? cursor.col : null,
                         todoBadge: isSyntaxEnabled ? findTodoCommentBadge(lineText) : null,
+                        matchParenCols: (() => {
+                          if (!matchParenPair) return undefined;
+                          const cols: number[] = [];
+                          if (matchParenPair.open.line === lineIdx) cols.push(matchParenPair.open.col);
+                          if (matchParenPair.close.line === lineIdx) cols.push(matchParenPair.close.col);
+                          return cols.length > 0 ? cols : undefined;
+                        })(),
+                        rainbowCols: rainbowDelimitersMap?.get(lineIdx) ?? null,
                       })}
                       {primaryLineDiagnostic && (
                         <span

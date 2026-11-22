@@ -49,6 +49,8 @@ export interface RenderLineOptions {
   tabstop?: number;
   cursorColumnCol?: number | null;
   todoBadge?: TodoCommentBadge | null;
+  matchParenCols?: number[];
+  rainbowCols?: Map<number, number> | null;
 }
 
 function renderTextWithTodoBadge(
@@ -150,6 +152,8 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     tabstop = 2,
     cursorColumnCol = null,
     todoBadge = null,
+    matchParenCols,
+    rainbowCols = null,
   } = opts;
   const isCursorLine = cursor.line === lineIdx;
   const cursorCol = isCursorLine ? cursor.col : null;
@@ -175,6 +179,8 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
   const hasMultiCursor = (multiSelections?.length ?? 0) > 0 || (multiCursorCols?.length ?? 0) > 0;
   const hasSpellErrors = (spellErrors?.length ?? 0) > 0;
   const hasDiagnostics = (lineDiagnostics?.length ?? 0) > 0;
+  const hasMatchParen = (matchParenCols?.length ?? 0) > 0;
+  const hasRainbow = (rainbowCols?.size ?? 0) > 0;
 
   // 비주얼 블록 I / A / c 다중 줄 실시간 멀티커서 & 고스트 프리뷰 계산 (첫 줄이 아닌 대상 줄)
   let blockSecondaryCol: number | null = null;
@@ -240,6 +246,8 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     !hasMultiCursor &&
     !hasSpellErrors &&
     !hasDiagnostics &&
+    !hasMatchParen &&
+    !hasRainbow &&
     !listMode &&
     cursorColumnCol === null
   ) {
@@ -429,6 +437,16 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
       if (i === todoBadge.endCol - 1) classNames += ' todo-tag-end';
     }
 
+    const rainbowDepth = rainbowCols?.get(i);
+    if (rainbowDepth !== undefined && !isCursor) {
+      classNames += ` rainbow-delim rainbow-depth-${rainbowDepth}`;
+    }
+
+    const isMatchParen = matchParenCols?.includes(i) ?? false;
+    if (isMatchParen && !isCursor) {
+      classNames += ' match-paren-highlight';
+    }
+
     if (listCharClass) {
       classNames += listCharClass;
     }
@@ -518,6 +536,8 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
             ? 'inccommand-match'
             : isSearchMatch
             ? 'search-match'
+            : isMatchParen
+            ? 'match-paren-char'
             : isTarget
             ? 'target-marker'
             : undefined

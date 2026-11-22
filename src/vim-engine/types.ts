@@ -402,6 +402,10 @@ export interface VimOptions {
   cmdlinepopup?: boolean;
   /** indent-blankline.nvim 스타일 세로 들여쓰기 가이드선 표시 여부 (:set indentline / :set ibl) */
   indentline?: boolean;
+  /** 순정 matchparen 실시간 짝 괄호 강조 표시 여부 (:set matchparen / :set mp) */
+  matchparen?: boolean;
+  /** rainbow-delimiters.nvim 스타일 중첩 괄호 깊이별 컬러 강조 (:set rainbow / :set rb) */
+  rainbow?: boolean;
 }
 
 /** 맞춤법 검사기 오탈자 정보 */

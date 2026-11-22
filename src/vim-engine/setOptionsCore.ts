@@ -51,6 +51,8 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   autopairs: false,
   cmdlinepopup: false,
   indentline: true,
+  matchparen: true,
+  rainbow: true,
 };
 
 export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
@@ -157,6 +159,10 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   noice: 'cmdlinepopup',
   ibl: 'indentline',
   indentline: 'indentline',
+  mp: 'matchparen',
+  matchparen: 'matchparen',
+  rb: 'rainbow',
+  rainbow: 'rainbow',
 };
 
 export const WINDOW_LOCAL_OPTION_KEYS = new Set<keyof VimOptions>([
@@ -552,6 +558,8 @@ const BOOLEAN_OPTION_KEYS = new Set<keyof VimOptions>([
   'autopairs',
   'cmdlinepopup',
   'indentline',
+  'matchparen',
+  'rainbow',
 ]);
 
 /**
