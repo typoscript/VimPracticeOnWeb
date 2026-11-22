@@ -445,18 +445,25 @@ export function changeLine(state: VimEditorState, count = 1): VimEditorState {
 }
 
 /**
- * 'C': 현재 커서부터 줄 끝까지 삭제하고 INSERT 모드로 진입합니다.
+ * 'C' / '[count]C': 현재 커서부터 줄 끝(count > 1 이면 count개 줄 끝)까지 삭제하고 INSERT 모드로 진입합니다.
  */
-export function changeToEndOfLine(state: VimEditorState): VimEditorState {
+export function changeToEndOfLine(state: VimEditorState, count = 1): VimEditorState {
   const { line, col } = state.cursor;
   const currentLine = state.lines[line] ?? '';
 
   const stateWithSnapshot = pushUndoSnapshot(state);
-  const deletedText = currentLine.slice(col);
+  const endLine = Math.min(state.lines.length - 1, line + Math.max(1, count) - 1);
+  const deletedText =
+    endLine === line
+      ? currentLine.slice(col)
+      : [currentLine.slice(col), ...state.lines.slice(line + 1, endLine + 1)].join('\n');
   const newLine = currentLine.slice(0, col);
 
-  const nextLines = [...state.lines];
-  nextLines[line] = newLine;
+  const nextLines = [
+    ...state.lines.slice(0, line),
+    newLine,
+    ...state.lines.slice(endLine + 1),
+  ];
 
   return {
     ...stateWithSnapshot,

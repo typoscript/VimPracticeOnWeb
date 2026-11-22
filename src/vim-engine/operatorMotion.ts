@@ -19,8 +19,10 @@ import { EXTRA_MOTION_KEYS, evaluateExtraMotion } from './extraMotions';
 export const OPERATOR_MOTION_KEYS = new Set([
   'j', 'k', 'gj', 'gk', 'G', 'ArrowDown', 'ArrowUp',
   'h', 'l', 'b', 'B', '^', 'ArrowLeft', 'ArrowRight',
-  '(', ')', '+', '-', 'Enter', '|',
-  '[[', ']]', '[]', '][', '[m', ']m', '[M', ']M', '[f', ']f', '[F', ']F', 'g0', 'g$', 'gm', 'gM',
+  '(', ')', '+', '-', '_', 'Enter', '|',
+  '[[', ']]', '[]', '][', '[m', ']m', '[M', ']M', '[f', ']f', '[F', ']F',
+  '[/', ']/', '[*', ']*',
+  'g0', 'g^', 'g$', 'gm', 'gM',
 ]);
 
 type Operator = 'd' | 'c' | 'y';

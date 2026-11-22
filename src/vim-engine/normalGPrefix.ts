@@ -69,6 +69,7 @@ export function handleNormalOpGPrefix(
       key === 'j' ||
       key === 'k' ||
       key === '0' ||
+      key === '^' ||
       key === '$' ||
       key === 'm' ||
       key === 'M' ||
@@ -318,6 +319,7 @@ export function handleNormalGOperator(
   }
   if (key === 'I') {
     const stateWithSnapshot = pushUndoSnapshot(state);
+    const cKeys = parsedTotalCount > 1 ? [String(parsedTotalCount), 'g', 'I'] : ['g', 'I'];
     return {
       handled: true,
       state: {
@@ -325,7 +327,9 @@ export function handleNormalGOperator(
         mode: 'INSERT',
         cursor: { line: state.cursor.line, col: 0 },
         pendingKeys: undefined,
-        currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['g', 'I'],
+        insertRepeatCount: parsedTotalCount > 1 ? parsedTotalCount : undefined,
+        insertRepeatNewline: undefined,
+        currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
       },
     };
   }
@@ -342,7 +346,7 @@ export function handleNormalGOperator(
       },
     };
   }
-  if (key === '0' || key === '$' || key === 'm' || key === 'M') {
+  if (key === '0' || key === '^' || key === '$' || key === 'm' || key === 'M') {
     const moved = moveByExtraMotion(state, `g${key}`, parsedTotalCount);
     return { handled: true, state: key === '$' ? { ...moved, stickyDollar: true } : moved };
   }

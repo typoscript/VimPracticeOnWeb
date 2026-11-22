@@ -22,8 +22,9 @@ export interface MotionResult {
 }
 
 export const EXTRA_MOTION_KEYS = new Set([
-  '(', ')', '+', '-', 'Enter', '|', 'ge', 'gE', 'g_', '[(', '[{', '])', ']}',
+  '(', ')', '+', '-', '_', 'Enter', '|', 'ge', 'gE', 'g_', 'g^', '[(', '[{', '])', ']}',
   '[[', ']]', '[]', '][', '[m', ']m', '[M', ']M', '[f', ']f', '[F', ']F',
+  '[/', ']/', '[*', ']*',
   'g0', 'g$', 'gm', 'gM', 'go',
 ]);
 
@@ -203,6 +204,11 @@ export function evaluateExtraMotion(
       const line = Math.max(0, cursor.line - n);
       return { target: { line, col: firstNonBlankCol(lines[line] ?? '') }, kind: 'linewise' };
     }
+    case '_': {
+      const line = cursor.line + n - 1;
+      if (line > last) return null;
+      return { target: { line, col: firstNonBlankCol(lines[line] ?? '') }, kind: 'linewise' };
+    }
     case '|': {
       const len = (lines[cursor.line] ?? '').length;
       return { target: { line: cursor.line, col: Math.max(0, Math.min(n - 1, len - 1)) }, kind: 'exclusive' };
@@ -323,8 +329,44 @@ export function evaluateExtraMotion(
       const target = findFunctionJumpTarget(lines, cursor, key, n);
       return target ? { target, kind: 'exclusive' } : null;
     }
+    // [/ / [* : 이전 C 블록 주석 시작(/*) 점프, ]/ / ]* : 다음 C 블록 주석 끝(*/) 점프
+    case '[/':
+    case '[*':
+    case ']/':
+    case ']*': {
+      const forward = key[0] === ']';
+      const token = forward ? '*/' : '/*';
+      let found = 0;
+      if (forward) {
+        for (let line = cursor.line; line <= last; line++) {
+          const text = lines[line] ?? '';
+          let searchFrom = line === cursor.line ? cursor.col + 1 : 0;
+          while (searchFrom <= text.length - 2) {
+            const idx = text.indexOf(token, searchFrom);
+            if (idx === -1) break;
+            if (++found === n) {
+              return { target: { line, col: idx }, kind: 'exclusive' };
+            }
+            searchFrom = idx + 1;
+          }
+        }
+        return null;
+      }
+      for (let line = cursor.line; line >= 0; line--) {
+        const text = lines[line] ?? '';
+        const maxStart = line === cursor.line ? cursor.col - 1 : text.length - 2;
+        for (let col = Math.min(maxStart, text.length - 2); col >= 0; col--) {
+          if (text.slice(col, col + 2) === token && ++found === n) {
+            return { target: { line, col }, kind: 'exclusive' };
+          }
+        }
+      }
+      return null;
+    }
     case 'g0':
       return { target: { line: cursor.line, col: 0 }, kind: 'exclusive' };
+    case 'g^':
+      return { target: { line: cursor.line, col: firstNonBlankCol(lines[cursor.line] ?? '') }, kind: 'exclusive' };
     case 'g$': {
       const len = (lines[cursor.line] ?? '').length;
       return { target: { line: cursor.line, col: Math.max(0, len - 1) }, kind: 'inclusive' };

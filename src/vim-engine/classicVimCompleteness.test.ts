@@ -140,6 +140,110 @@ describe('순정 Vim 100% 완성 패치 — 노멀·Ex 기본 문법', () => {
     expect(s.lines[4]).toBe('EEE');
     expect(s.marks).toEqual(beforeLockMarks);
   });
+
+  it('_ 모션([count]_, d_, c_, y_, Visual _) 및 g^ 모션(g^, dg^, cg^, yg^, Visual g^)이 동작한다', () => {
+    let s = createVimState(['  first', '    second', '  third'], { line: 0, col: 5 });
+    // 단독 _ : 현재 줄 첫 비공백(col 2)
+    s = handleKey(s, '_');
+    expect(s.cursor).toEqual({ line: 0, col: 2 });
+
+    // 2_ : 1줄 아래(line 1) 첫 비공백(col 4)
+    s = runKeys(s, ['2', '_']);
+    expect(s.cursor).toEqual({ line: 1, col: 4 });
+
+    // d_ : 현재 줄 삭제 (dd 와 동일)
+    s = runKeys(s, ['d', '_']);
+    expect(s.lines).toEqual(['  first', '  third']);
+
+    // 2d_ : 2줄 삭제
+    let s2 = createVimState(['  a', '  b', '  c'], { line: 0, col: 0 });
+    s2 = runKeys(s2, ['2', 'd', '_']);
+    expect(s2.lines).toEqual(['  c']);
+
+    // g^ 및 dg^
+    let s3 = createVimState(['   hello world'], { line: 0, col: 9 });
+    s3 = runKeys(s3, ['g', '^']);
+    expect(s3.cursor).toEqual({ line: 0, col: 3 });
+    let s4 = createVimState(['   hello world'], { line: 0, col: 9 });
+    s4 = runKeys(s4, ['d', 'g', '^']);
+    expect(s4.lines).toEqual(['   world']);
+  });
+
+  it('[count]s / [count]S / [count]Y / [count]D / [count]C 및 [count]i/a/I/A/o/O 반복 삽입이 동작한다', () => {
+    // 3s: 3글자 지우고 입력
+    let s = createVimState(['abcdef'], { line: 0, col: 1 });
+    s = runKeys(s, ['3', 's', 'X', 'Escape']);
+    expect(s.lines).toEqual(['aXef']);
+
+    // 2S: 2줄을 비우고 입력
+    let s2 = createVimState(['line1', 'line2', 'line3'], { line: 0, col: 0 });
+    s2 = runKeys(s2, ['2', 'S', ...'merged'.split(''), 'Escape']);
+    expect(s2.lines).toEqual(['merged', 'line3']);
+
+    // 2Y: 2줄 복사 후 p
+    let s3 = createVimState(['one', 'two', 'three'], { line: 0, col: 0 });
+    s3 = runKeys(s3, ['2', 'Y', 'G', 'p']);
+    expect(s3.lines).toEqual(['one', 'two', 'three', 'one', 'two']);
+
+    // 2D: 현재 커서부터 2번째 줄 끝까지 삭제
+    let s4 = createVimState(['hello world', 'second line', 'third'], { line: 0, col: 5 });
+    s4 = runKeys(s4, ['2', 'D']);
+    expect(s4.lines).toEqual(['hello', 'third']);
+
+    // 2C: 현재 커서부터 2번째 줄 끝까지 변경
+    let s5 = createVimState(['hello world', 'second line', 'third'], { line: 0, col: 5 });
+    s5 = runKeys(s5, ['2', 'C', '!', 'Escape']);
+    expect(s5.lines).toEqual(['hello!', 'third']);
+
+    // 3iab<Esc> -> ababab, 4A!<Esc> -> !!!!, 3oitem<Esc> -> 3줄 추가
+    let s6 = createVimState(['start'], { line: 0, col: 0 });
+    s6 = runKeys(s6, ['3', 'i', 'a', 'b', 'Escape']);
+    expect(s6.lines).toEqual(['abababstart']);
+    s6 = runKeys(s6, ['4', 'A', '!', 'Escape']);
+    expect(s6.lines).toEqual(['abababstart!!!!']);
+    s6 = runKeys(s6, ['3', 'o', 'r', 'o', 'w', 'Escape']);
+    expect(s6.lines).toEqual(['abababstart!!!!', 'row', 'row', 'row']);
+  });
+
+  it("대괄호 탐색 모션(]' / [' / ]` / [`, [/ / ]/ / [* / ]*, [i / ]i / [I / ]I)이 동작한다", () => {
+    // 1) 소문자 마크 순회 (]' / [' / ]` / [`)
+    let s = createVimState(['  line0', '  line1', '  line2', '  line3'], { line: 1, col: 4 });
+    s = runKeys(s, ['m', 'a', '2', 'j', 'l', 'm', 'b', 'g', 'g']);
+    // ]' -> 마크 a 줄의 첫 비공백(line 1, col 2)
+    s = runKeys(s, [']', "'"]);
+    expect(s.cursor).toEqual({ line: 1, col: 2 });
+    // ]` -> 현재 위치(1,2) 뒤의 첫 문자 마크 a(1,4), 한 번 더 누르면 마크 b(3,5)
+    s = runKeys(s, [']', '`']);
+    expect(s.cursor).toEqual({ line: 1, col: 4 });
+    s = runKeys(s, [']', '`']);
+    expect(s.cursor).toEqual({ line: 3, col: 5 });
+    // [` -> 이전 마크 a 의 정확한 열(line 1, col 4)
+    s = runKeys(s, ['[', '`']);
+    expect(s.cursor).toEqual({ line: 1, col: 4 });
+    // ]' 후 [' -> 이전 마크 a 줄의 첫 비공백(line 1, col 2)
+    s = runKeys(s, [']', "'", '[', "'"]);
+    expect(s.cursor).toEqual({ line: 1, col: 2 });
+
+    // 2) 블록 주석 경계 ([/ / ]/ / [* / ]*)
+    let sc = createVimState(['/* header', ' * body', ' */', 'const x = 1;'], { line: 1, col: 3 });
+    sc = runKeys(sc, ['[', '/']);
+    expect(sc.cursor).toEqual({ line: 0, col: 0 });
+    sc = runKeys(sc, [']', '/']);
+    expect(sc.cursor).toEqual({ line: 2, col: 1 });
+
+    // 3) 키워드 줄 조회 ([i / ]i / [I)
+    let si = createVimState(
+      ['const token = 1;', 'const other = 2;', 'return token + 1;'],
+      { line: 0, col: 6 }
+    );
+    si = runKeys(si, ['[', 'i']);
+    expect(si.commandMessage).toBe('const token = 1;');
+    si = runKeys(si, [']', 'i']);
+    expect(si.commandMessage).toBe('return token + 1;');
+    si = runKeys(si, ['[', 'I']);
+    expect(si.commandMessage).toContain('1: const token = 1;');
+    expect(si.commandMessage).toContain('3: return token + 1;');
+  });
 });
 
 describe('순정 Vim 100% 완성 패치 — Vimscript 확장 문법', () => {

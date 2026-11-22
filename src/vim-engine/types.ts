@@ -1055,6 +1055,10 @@ export interface VimEditorState {
   insertCtrlGPending?: boolean;
   /** 현재 Insert 세션 진입 시 시작 열 (Ctrl-g j / k 열 정렬용) */
   insertStartCol?: number;
+  /** [count]i / [count]a / [count]I / [count]A / [count]o / [count]O 반복 삽입 카운트 */
+  insertRepeatCount?: number;
+  /** [count]o / [count]O 처럼 줄 단위로 반복 삽입할지 여부 */
+  insertRepeatNewline?: boolean;
   /** :undojoin 실행 후 다음 변경을 직전 Undo 블록에 병합할지 여부 */
   pendingUndoJoin?: boolean;
   /** :undojoin 병합이 방금 적용되어 Undo Tree 현재 노드를 제자리 갱신해야 하는지 여부 */

@@ -122,8 +122,8 @@ export const FAILABLE_MOTION_KEYS = new Set([
   'Backspace', ' ', 'Space',
 ]);
 
-export const NORMAL_EXTRA_KEYS = new Set(['(', ')', '+', '-', 'Enter', '|']);
-export const VISUAL_EXTRA_KEYS = new Set(['(', ')', '+', '-', 'Enter', '|']);
+export const NORMAL_EXTRA_KEYS = new Set(['(', ')', '+', '-', '_', 'Enter', '|']);
+export const VISUAL_EXTRA_KEYS = new Set(['(', ')', '+', '-', '_', 'Enter', '|']);
 
 /** 줄 단위 모션 (끝 줄을 항상 포함) */
 export const LINEWISE_SHIFT_MOTIONS = new Set(['j', 'k', 'G', 'gg', '+', '-', 'Enter', 'ArrowUp', 'ArrowDown', '_']);

@@ -467,62 +467,75 @@ export function handleNormalEditingAndMotionFallback(
     return executePutVariant(state, key === 'P', parsed.totalCount, undefined, [key], isReplayingDot);
   }
 
-  if (key === 'Y' && !state.pendingKeys) {
-    return syncRegisters(state, yankFoldOrLine(state, 1), true);
+  if (key === 'Y' && !parsed.operator) {
+    return syncRegisters(state, yankFoldOrLine(state, parsed.totalCount), true);
   }
-  if (key === 'D' && !state.pendingKeys) {
+  if (key === 'D' && !parsed.operator) {
     const { line, col } = state.cursor;
     const cur = state.lines[line] ?? '';
-    const nextLines = [...state.lines];
-    nextLines[line] = cur.slice(0, col);
+    const endLine = Math.min(state.lines.length - 1, line + parsed.totalCount - 1);
+    const deletedContent =
+      endLine === line
+        ? cur.slice(col)
+        : [cur.slice(col), ...state.lines.slice(line + 1, endLine + 1)].join('\n');
+    const nextLines = [
+      ...state.lines.slice(0, line),
+      cur.slice(0, col),
+      ...state.lines.slice(endLine + 1),
+    ];
     const stateWithDel: VimEditorState = {
       ...pushUndoSnapshot(state),
       lines: nextLines,
       cursor: clampCursor(nextLines, { line, col }, 'NORMAL'),
-      clipboard: { type: 'text', content: cur.slice(col) },
+      clipboard: { type: 'text', content: deletedContent },
       pendingKeys: undefined,
     };
+    const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'D'] : ['D'];
     return {
       ...syncRegisters(state, stateWithDel, false),
-      lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['D'],
+      lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
     };
   }
-  if (key === 's' && !state.pendingKeys) {
+  if (key === 's' && !parsed.operator) {
     const { line, col } = state.cursor;
     const curLine = state.lines[line] ?? '';
+    const cKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 's'] : ['s'];
     if (curLine.length === 0) {
       return {
         ...state,
         mode: 'INSERT',
         pendingKeys: undefined,
-        currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['s'],
+        currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
       };
     }
+    const delCount = Math.min(parsed.totalCount, curLine.length - col);
     const nextLines = [...state.lines];
-    nextLines[line] = curLine.slice(0, col) + curLine.slice(col + 1);
+    nextLines[line] = curLine.slice(0, col) + curLine.slice(col + delCount);
     const stateWithDel: VimEditorState = {
       ...pushUndoSnapshot(state),
       lines: nextLines,
       cursor: { line, col },
       mode: 'INSERT',
-      clipboard: { type: 'text', content: curLine[col] ?? '' },
+      clipboard: { type: 'text', content: curLine.slice(col, col + delCount) },
       pendingKeys: undefined,
     };
     return {
       ...syncRegisters(state, stateWithDel, false),
-      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['s'],
+      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
     };
   }
-  if (key === 'S' && !state.pendingKeys) {
+  if (key === 'S' && !parsed.operator) {
+    const cKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'S'] : ['S'];
     return {
-      ...syncRegisters(state, changeLine(state), false),
-      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['S'],
+      ...syncRegisters(state, changeLine(state, parsed.totalCount), false),
+      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
     };
   }
-  if (key === 'C') {
+  if (key === 'C' && !parsed.operator) {
+    const cKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'C'] : ['C'];
     return {
-      ...syncRegisters(state, changeToEndOfLine(state), false),
-      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['C'],
+      ...syncRegisters(state, changeToEndOfLine(state, parsed.totalCount), false),
+      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
     };
   }
   if (key === 'x') {
@@ -540,39 +553,54 @@ export function handleNormalEditingAndMotionFallback(
     };
   }
   if (key === 'I') {
+    const cKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'I'] : ['I'];
     return {
       ...insertAtFirstNonBlank(state),
-      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['I'],
+      insertRepeatCount: parsed.totalCount > 1 ? parsed.totalCount : undefined,
+      insertRepeatNewline: undefined,
+      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
     };
   }
   if (key === 'A') {
     const termRes = enterTerminalInsertMode(state);
     if (termRes) return termRes;
+    const cKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'A'] : ['A'];
     return {
       ...appendAtLineEnd(state),
-      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['A'],
+      insertRepeatCount: parsed.totalCount > 1 ? parsed.totalCount : undefined,
+      insertRepeatNewline: undefined,
+      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
     };
   }
   if (key === 'o') {
+    const cKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'o'] : ['o'];
     return {
       ...openLineBelow(state),
-      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['o'],
+      insertRepeatCount: parsed.totalCount > 1 ? parsed.totalCount : undefined,
+      insertRepeatNewline: parsed.totalCount > 1 ? true : undefined,
+      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
     };
   }
   if (key === 'O') {
+    const cKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'O'] : ['O'];
     return {
       ...openLineAbove(state),
-      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['O'],
+      insertRepeatCount: parsed.totalCount > 1 ? parsed.totalCount : undefined,
+      insertRepeatNewline: parsed.totalCount > 1 ? true : undefined,
+      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
     };
   }
   if (key === 'i') {
     const termRes = enterTerminalInsertMode(state);
     if (termRes) return termRes;
+    const cKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'i'] : ['i'];
     return {
       ...pushUndoSnapshot(state),
       mode: 'INSERT',
       pendingKeys: undefined,
-      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['i'],
+      insertRepeatCount: parsed.totalCount > 1 ? parsed.totalCount : undefined,
+      insertRepeatNewline: undefined,
+      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
     };
   }
   if (key === 'a') {
@@ -580,12 +608,15 @@ export function handleNormalEditingAndMotionFallback(
     if (termRes) return termRes;
     const newCol =
       currentLine.length === 0 ? 0 : Math.min(state.cursor.col + 1, currentLine.length);
+    const cKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'a'] : ['a'];
     return {
       ...pushUndoSnapshot(state),
       mode: 'INSERT',
       cursor: { line: state.cursor.line, col: newCol },
       pendingKeys: undefined,
-      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['a'],
+      insertRepeatCount: parsed.totalCount > 1 ? parsed.totalCount : undefined,
+      insertRepeatNewline: undefined,
+      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
     };
   }
   if (key === 'R' && !parsed.operator && !state.pendingKeys) {

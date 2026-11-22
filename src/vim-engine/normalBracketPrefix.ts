@@ -19,7 +19,13 @@ import { jumpDiffHunk } from './diffEngine';
 import { jumpGitHunk } from './gitSignsEngine';
 import { jumpToNextSpellError, jumpToPrevSpellError } from './spellEngine';
 import { jumpToFoldEdge } from './folding';
+import { findAdjacentLowercaseMark, recordJump, executeMarkOperator } from './marks';
+import { getWordAtCursor } from './search';
+import { clampCursor } from './cursor';
+import { syncRegisters } from './registers';
+import { msg } from './messages';
 import {
+  ringBell,
   moveByExtraMotion,
   executePutVariant,
   applyOperatorMotion,
@@ -62,8 +68,90 @@ export function handleNormalBracketPrefix(
     if ((bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'))) {
       return { handled: true, state: moveByExtraMotion(state, `${bracket}${key}`, bCount) };
     }
-    if (key === '[' || key === ']' || key === 'm' || key === 'M' || key === 'f' || key === 'F') {
+    if (
+      key === '[' ||
+      key === ']' ||
+      key === 'm' ||
+      key === 'M' ||
+      key === 'f' ||
+      key === 'F' ||
+      key === '/' ||
+      key === '*'
+    ) {
       return { handled: true, state: moveByExtraMotion(state, `${bracket}${key}`, bCount) };
+    }
+    if (key === "'" || key === '`') {
+      const found = findAdjacentLowercaseMark(
+        state,
+        bracket === ']' ? 'next' : 'prev',
+        key === "'",
+        bCount
+      );
+      if (!found) {
+        return { handled: true, state: ringBell(state) };
+      }
+      const withJump = recordJump(state);
+      return {
+        handled: true,
+        state: {
+          ...withJump,
+          cursor: clampCursor(withJump.lines, found.target, 'NORMAL'),
+          pendingKeys: undefined,
+        },
+      };
+    }
+    if (key === 'i' || key === 'I') {
+      const curLine = state.lines[state.cursor.line] ?? '';
+      const word = getWordAtCursor(curLine, state.cursor.col);
+      if (!word) {
+        return {
+          handled: true,
+          state: {
+            ...ringBell(state),
+            commandMessage: msg('E349: 커서 위치에 식별자가 없습니다 (no identifier under cursor)'),
+          },
+        };
+      }
+      const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const wordRe = new RegExp(`\\b${escaped}\\b`);
+      const startRow = bracket === ']' ? state.cursor.line + 1 : 0;
+      const matches: Array<{ line: number; text: string }> = [];
+      for (let r = startRow; r < state.lines.length; r++) {
+        if (wordRe.test(state.lines[r] ?? '')) {
+          matches.push({ line: r, text: state.lines[r] ?? '' });
+        }
+      }
+      if (matches.length === 0) {
+        return {
+          handled: true,
+          state: {
+            ...ringBell(state),
+            commandMessage: msg('E387: 현재 줄에 일치 항목이 있습니다'),
+          },
+        };
+      }
+      if (key === 'I') {
+        const formatted = matches
+          .map((m) => `${String(m.line + 1).padStart(3, ' ')}: ${m.text}`)
+          .join('\n');
+        return {
+          handled: true,
+          state: {
+            ...state,
+            pendingKeys: undefined,
+            commandMessage: formatted,
+          },
+        };
+      }
+      const targetMatch = matches[Math.min(bCount - 1, matches.length - 1)];
+      return {
+        handled: true,
+        state: {
+          ...state,
+          pendingKeys: undefined,
+          commandMessage: targetMatch.text,
+        },
+      };
     }
     if (key === 'd' || key === 'D') {
       const dir = key === 'D'
@@ -166,16 +254,44 @@ export function handleNormalBracketPrefix(
     return { handled: false, state: { ...state, pendingKeys: undefined } };
   }
 
-  // 연산자 + 괄호/섹션/메서드 모션 (d[(, c]}, y[{, d]], c[[, d]m, y[M ...)
+  // 연산자 + 괄호/섹션/메서드/주석/마크 모션 (d[(, c]}, y[{, d]], c[[, d]m, y[M, d]/, d]' ...)
   const opBracketMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([cdy])([1-9][0-9]*)?([\]\[])$/);
   if (opBracketMatch) {
     const bracket = opBracketMatch[4];
+    const op = opBracketMatch[2] as 'd' | 'c' | 'y';
+    const total = (opBracketMatch[1] ? parseInt(opBracketMatch[1], 10) : 1) * (opBracketMatch[3] ? parseInt(opBracketMatch[3], 10) : 1);
+    if (key === "'" || key === '`') {
+      const found = findAdjacentLowercaseMark(
+        state,
+        bracket === ']' ? 'next' : 'prev',
+        key === "'",
+        total
+      );
+      if (!found) {
+        return { handled: true, state: ringBell(state) };
+      }
+      const res = executeMarkOperator(state, op, found.markChar, key === "'");
+      const synced = syncRegisters(state, res, op === 'y');
+      const opKeys = total > 1 ? [String(total), op, bracket, key] : [op, bracket, key];
+      if (op === 'c') {
+        return {
+          handled: true,
+          state: { ...synced, currentChangeKeys: isReplayingDot ? state.currentChangeKeys : opKeys },
+        };
+      }
+      if (op === 'd') {
+        return {
+          handled: true,
+          state: { ...synced, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys },
+        };
+      }
+      return { handled: true, state: synced };
+    }
     const isPaired = (bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'));
     const isSection = key === '[' || key === ']';
     const isMethod = key === 'm' || key === 'M' || key === 'f' || key === 'F';
-    if (isPaired || isSection || isMethod) {
-      const op = opBracketMatch[2] as 'd' | 'c' | 'y';
-      const total = (opBracketMatch[1] ? parseInt(opBracketMatch[1], 10) : 1) * (opBracketMatch[3] ? parseInt(opBracketMatch[3], 10) : 1);
+    const isComment = key === '/' || key === '*';
+    if (isPaired || isSection || isMethod || isComment) {
       return {
         handled: true,
         state: applyOperatorMotion(state, op, `${bracket}${key}`, { operator: op, count1: total > 1 ? total : undefined, totalCount: total }, isReplayingDot),

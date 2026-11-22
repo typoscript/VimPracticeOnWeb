@@ -337,23 +337,52 @@ export function handleInsertRegister(
 }
 
 function exitInsertToNormal(state: VimEditorState, isReplayingDot: boolean): VimEditorState {
-  const { line, col } = state.cursor;
+  let targetState = state;
+  const repeatCount = state.insertRepeatCount ?? 1;
+  const repeatNewline = Boolean(state.insertRepeatNewline);
+  const rawInserted = state.currentInsertText ?? '';
+
+  if (repeatCount > 1) {
+    const extraCount = repeatCount - 1;
+    if (repeatNewline) {
+      const curRow = targetState.cursor.line;
+      const lineToDuplicate = targetState.lines[curRow] ?? '';
+      const duplicated = Array.from({ length: extraCount }, () => lineToDuplicate);
+      const nextLines = [
+        ...targetState.lines.slice(0, curRow + 1),
+        ...duplicated,
+        ...targetState.lines.slice(curRow + 1),
+      ];
+      targetState = {
+        ...targetState,
+        lines: nextLines,
+        cursor: { line: curRow + extraCount, col: targetState.cursor.col },
+      };
+    } else if (rawInserted.length > 0) {
+      const extraText = rawInserted.repeat(extraCount);
+      targetState = insertTextAtCursor(targetState, extraText);
+    }
+  }
+
+  const { line, col } = targetState.cursor;
   const nextCol = Math.max(0, col - 1);
-  let nextLastChange = state.lastChangeKeys;
-  if (!isReplayingDot && state.currentChangeKeys) {
-    nextLastChange = [...state.currentChangeKeys, 'Escape'];
+  let nextLastChange = targetState.lastChangeKeys;
+  if (!isReplayingDot && targetState.currentChangeKeys) {
+    nextLastChange = [...targetState.currentChangeKeys, 'Escape'];
   }
   const lastPos = { line, col, row: line };
-  const changeRecord = recordChangePosition(state.changeList, { line, col });
+  const changeRecord = recordChangePosition(targetState.changeList, { line, col });
 
   return {
-    ...state,
+    ...targetState,
     mode: 'NORMAL',
-    cursor: clampCursor(state.lines, { line, col: nextCol }, 'NORMAL'),
+    cursor: clampCursor(targetState.lines, { line, col: nextCol }, 'NORMAL'),
     pendingKeys: undefined,
     digraphPending: undefined,
     insertCtrlGPending: undefined,
     insertStartCol: undefined,
+    insertRepeatCount: undefined,
+    insertRepeatNewline: undefined,
     lastChangeKeys: nextLastChange,
     currentChangeKeys: undefined,
     lastInsertedText: resolveLastInsertedText(state),
@@ -361,7 +390,7 @@ function exitInsertToNormal(state: VimEditorState, isReplayingDot: boolean): Vim
     lastInsertPos: lastPos,
     changeList: changeRecord.changeList,
     changeIndex: changeRecord.changeIndex,
-    marks: { ...(state.marks ?? {}), '^': { row: line, col } },
+    marks: { ...(targetState.marks ?? {}), '^': { row: line, col } },
   };
 }
 

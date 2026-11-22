@@ -739,3 +739,62 @@ export function executeMarkOperator(
 
   return { ...state, pendingKeys: undefined };
 }
+
+/**
+ * 현재 버퍼의 소문자 마크(a-z) 중 커서 기준 다음(next) 또는 이전(prev) 마크를 찾습니다 (]' / [' / ]` / [`).
+ */
+export function findAdjacentLowercaseMark(
+  state: VimEditorState,
+  direction: 'next' | 'prev',
+  isLineWise: boolean,
+  count = 1
+): { markChar: string; target: CursorPosition } | null {
+  const marks = state.marks ?? {};
+  const candidates: Array<{ markChar: string; row: number; col: number }> = [];
+
+  for (const [k, pos] of Object.entries(marks)) {
+    if (!/^[a-z]$/.test(k)) continue;
+    if (pos.row < 0 || pos.row >= state.lines.length) continue;
+    candidates.push({ markChar: k, row: pos.row, col: pos.col });
+  }
+  if (candidates.length === 0) return null;
+
+  const { line: curLine, col: curCol } = state.cursor;
+  const filtered = candidates.filter((m) => {
+    if (isLineWise) {
+      return direction === 'next' ? m.row > curLine : m.row < curLine;
+    }
+    if (direction === 'next') {
+      return m.row > curLine || (m.row === curLine && m.col > curCol);
+    }
+    return m.row < curLine || (m.row === curLine && m.col < curCol);
+  });
+
+  if (filtered.length === 0) return null;
+
+  filtered.sort((a, b) =>
+    direction === 'next'
+      ? a.row - b.row || a.col - b.col
+      : b.row - a.row || b.col - a.col
+  );
+
+  // linewise(]' / [')는 같은 줄의 여러 마크를 하나의 줄로 묶어 카운트
+  const steps: Array<{ markChar: string; row: number; col: number }> = [];
+  for (const item of filtered) {
+    if (isLineWise && steps.length > 0 && steps[steps.length - 1].row === item.row) {
+      continue;
+    }
+    steps.push(item);
+  }
+
+  const chosen = steps[Math.min(Math.max(1, count) - 1, steps.length - 1)];
+  if (!chosen) return null;
+
+  const lineLen = (state.lines[chosen.row] ?? '').length;
+  const target: CursorPosition = isLineWise
+    ? moveToFirstNonBlank(state.lines, { line: chosen.row, col: 0 })
+    : { line: chosen.row, col: Math.max(0, Math.min(chosen.col, Math.max(0, lineLen - 1))) };
+
+  return { markChar: chosen.markChar, target };
+}
+

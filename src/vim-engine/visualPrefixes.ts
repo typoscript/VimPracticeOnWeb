@@ -28,6 +28,7 @@ import {
 } from './engineHelpers';
 import { jumpGitHunk } from './gitSignsEngine';
 import { openFlashJump } from './flashJumpEngine';
+import { findAdjacentLowercaseMark } from './marks';
 
 /**
  * Visual 모드 'z' 접두 명령 처리 (수평 스크롤 zh/zl/zH/zL/ze/zs, 수동 폴드 zf)
@@ -88,7 +89,7 @@ export function handleVisualGImmediate(
       pendingKeys: undefined,
     };
   }
-  if (key === '0' || key === '$' || key === 'm' || key === 'M') {
+  if (key === '0' || key === '^' || key === '$' || key === 'm' || key === 'M') {
     return moveByExtraMotion(state, `g${key}`, parsed.totalCount);
   }
   return null;
@@ -103,6 +104,9 @@ export function handleVisualGSubcommand(
   parsed: ReturnType<typeof parsePending>
 ): VimEditorState | null {
   if (state.pendingKeys?.endsWith('g') || parsed.operator === 'g') {
+    if (key === '0' || key === '^' || key === '$' || key === 'm' || key === 'M') {
+      return moveByExtraMotion(state, `g${key}`, parsed.totalCount);
+    }
     if (key === 'g') {
       const targetLine = parsed.count1 !== undefined
         ? Math.max(0, Math.min(parsed.count1 - 1, state.lines.length - 1))
@@ -314,8 +318,23 @@ export function handleVisualBracketPrefix(state: VimEditorState, key: string): V
     const isPaired = (bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'));
     const isSection = key === '[' || key === ']';
     const isMethod = key === 'm' || key === 'M' || key === 'f' || key === 'F';
-    if (isPaired || isSection || isMethod) {
+    const isComment = key === '/' || key === '*';
+    if (isPaired || isSection || isMethod || isComment) {
       return moveByExtraMotion(state, `${bracket}${key}`, count);
+    }
+    if (key === "'" || key === '`') {
+      const found = findAdjacentLowercaseMark(
+        state,
+        bracket === ']' ? 'next' : 'prev',
+        key === "'",
+        count
+      );
+      if (!found) return ringBell(state);
+      return {
+        ...state,
+        cursor: found.target,
+        pendingKeys: undefined,
+      };
     }
     if (key === 'h') {
       return jumpGitHunk(state, bracket === ']' ? 'next' : 'prev', count);
