@@ -289,6 +289,133 @@
   line-height: 1.45;
 }
 
+/* 실무 캡스톤 가상 테스트 러너 패널 */
+.capstone-test-suite {
+  margin: 0.75rem 0;
+  padding: 0.7rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid rgba(203, 166, 247, 0.35);
+  background-color: rgba(24, 24, 37, 0.75);
+}
+
+.capstone-test-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.capstone-test-title {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #cba6f7;
+}
+
+.capstone-test-run-btn {
+  background-color: #a6e3a1;
+  color: #11111b;
+  border: none;
+  border-radius: 5px;
+  padding: 0.25rem 0.7rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.capstone-test-run-btn:hover {
+  opacity: 0.9;
+}
+
+.capstone-files-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.45rem;
+}
+
+.capstone-meta-label {
+  font-size: 0.73rem;
+  color: #939ab7;
+}
+
+.capstone-file-chip {
+  font-family: monospace;
+  font-size: 0.73rem;
+  padding: 2px 7px;
+  border-radius: 4px;
+  border: 1px solid #45475a;
+  background-color: #1e1e2e;
+  color: #cdd6f4;
+  cursor: pointer;
+}
+
+.capstone-file-chip.active {
+  border-color: #89b4fa;
+  background-color: rgba(137, 180, 250, 0.18);
+  color: #89b4fa;
+  font-weight: 700;
+}
+
+.capstone-rec-chip {
+  font-family: monospace;
+  font-size: 0.71rem;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background-color: rgba(137, 220, 235, 0.1);
+  color: #89dceb;
+}
+
+.capstone-test-list {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.capstone-test-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background-color: rgba(30, 30, 46, 0.8);
+}
+
+.capstone-test-item.passed {
+  color: #a6e3a1;
+}
+
+.capstone-test-item.failed {
+  color: #f38ba8;
+}
+
+.capstone-test-item.pending {
+  color: #a6adc8;
+}
+
+.capstone-test-item .test-file {
+  font-family: monospace;
+  font-size: 0.72rem;
+  color: #7f849c;
+}
+
+.capstone-test-item .test-reason {
+  font-size: 0.72rem;
+  color: #fab387;
+}
+
+.capstone-test-item .test-pending-tag {
+  font-size: 0.68rem;
+  color: #6c7086;
+  margin-left: auto;
+}
+
 @media (max-width: 640px) {
   .mission-panel {
     padding: 1rem;

@@ -546,4 +546,12 @@ export const EN_MESSAGES: Record<string, string> = {
   "[Terminal] 내장 터미널이 열렸습니다 (Ctrl-\\ Ctrl-n 으로 NORMAL 복귀)": "[Terminal] Built-in terminal opened (press Ctrl-\\ Ctrl-n for NORMAL)",
   "[Terminal] 터미널을 닫았습니다": "[Terminal] Terminal closed",
   "[Terminal] NORMAL 모드 전환 (출력 복사·검색 가능 · i 로 입력 재개)": "[Terminal] Switched to NORMAL mode (yank/search output · press i to resume)",
+  "파일을 찾을 수 없습니다: {file}": "File not found: {file}",
+  "기대한 코드 형식과 일치하지 않습니다 ({file})": "Code does not match expected format ({file})",
+  "필수 코드 누락: \"{expected}\"": "Missing expected code: \"{expected}\"",
+  "제거 대상 패턴 잔존: \"{forbidden}\"": "Forbidden pattern still present: \"{forbidden}\"",
+  "최소 {min}줄 이상으로 분할되어야 합니다 (현재 {cur}줄)": "Expected at least {min} lines (currently {cur})",
+  "[TestRun] 이 작업공간에 등록된 가상 테스트가 없습니다": "[TestRun] No virtual tests registered in this workspace",
+  "[TestRun] PASS — 모든 테스트 통과 ({passed}/{total})": "[TestRun] PASS — All tests passed ({passed}/{total})",
+  "[TestRun] FAIL — {passed}/{total} 통과 ({failed}건 실패 · :copen 으로 확인)": "[TestRun] FAIL — {passed}/{total} passed ({failed} failed · run :copen to inspect)",
 };

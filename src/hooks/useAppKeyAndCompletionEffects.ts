@@ -4,6 +4,7 @@ import { AppTab } from '../components/AppHeader/AppHeader';
 import { VimEditorState, VimMode, handleKey } from '../vim-engine';
 import { Mission } from '../types/mission';
 import { saveLessonRecord, LessonProgress } from '../utils/storage';
+import { saveCapstoneCompletion } from '../data/capstoneProjects';
 import { recordLessonSrsReview } from '../utils/srsScheduler';
 import { AntiPatternDetector } from '../utils/antiPatternDetector';
 import { HardcoreGuard } from '../utils/hardcoreGuard';
@@ -105,6 +106,8 @@ export function useAppKeyAndCompletionEffects({
       if (currentTab === 'course') {
         const rating = calculateStars(keystrokeCount, currentMission.par);
         recordLessonSrsReview(currentMission.id, rating.starCount);
+      } else if (currentTab === 'custom' && customMission?.capstoneId) {
+        saveCapstoneCompletion(customMission.capstoneId, keystrokeCount);
       }
     }
     wasCompletedRef.current = isCompleted;
@@ -114,6 +117,7 @@ export function useAppKeyAndCompletionEffects({
     currentTab,
     currentMission.id,
     currentMission.par,
+    customMission,
     keystrokeCount,
   ]);
 

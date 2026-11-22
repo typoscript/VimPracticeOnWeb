@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 197개 테스트 파일, 2,274개 테스트 100% 통과 필수)*
+  *(현재 199개 테스트 파일, 2,282개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -241,6 +241,10 @@
   - **`vim-abolish` 식별자 케이스 변환 (`crs`/`crc`/`crm`/`cru`/`cr-`/`cr.`/`crt`, `:Coerce`/`:AbolishCase`)**: 커서 아래 식별자(연속 대문자 약어·`kebab-case` 포함)를 `snake_case`, `camelCase`, `PascalCase`, `SCREAMING_SNAKE_CASE`, `kebab-case`, `dot.case`, `Title Case` 로 3타 만에 변환하며 단일 Undo, `.` 도트 반복, Which-Key `cr` 팝업을 지원합니다.
   - **`treesj` 구조적 Split/Join (`gS`, `:TSJToggle`/`:TSJSplit`/`:TSJJoin`)**: 문자열 리터럴과 중첩 괄호 안의 쉼표를 보존하며 가장 안쪽 `{...}`/`[...]`/`(...)` 블록을 한 줄 ↔ 멀티라인으로 왕복 분할·병합합니다(단일 Undo·`.` 반복·Which-Key `gS` 안내·Sandbox 퀵런처 칩 연동).
   - **실전 레슨 117~120 (120강 완결)**: `:ToggleTerm` 출력 복사 워크플로(레슨 117), `dial.nvim` 스마트 토글/날짜 증감(레슨 118), `vim-abolish` 케이스 변환(레슨 119), `treesj` 120강 피날레(레슨 120)를 추가해 전체 커리큘럼 **120강**을 완성했습니다.
+- **목적별 학습 트랙 로드맵 UI & 실무 멀티파일 캡스톤 챌린지 · 가상 테스트 러너 (`:TestRun` / 터미널 `npm test`) (`src/vim-engine/testRunnerEngine.ts`, `src/utils/learningTracks.ts`, `src/data/capstoneProjects.ts`, `LessonSelectModal.tsx`, `MissionPanel.tsx`)**:
+  - **목적별 학습 트랙 UI**: 커리큘럼 모달 상단에 4개 추천 트랙(*입문 필수 20강 · 실무 리팩토링 25강 · Ex/Vimscript 마스터 · 현대 Neovim IDE 20강*) 진행률 바, 트랙별 필터 보기, 원클릭 이어하기(`#N`) 버튼을 제공합니다.
+  - **엔진 가상 테스트 러너 (`:TestRun`, `:RunTests`, `:TestSuite`, 터미널 `npm test`/`vitest`)**: `state.virtualTests` 를 VFS·열린 버퍼 기준으로 검증하고, 실패 항목은 퀵픽스(`:copen`/`:cn`)에 자동 등록하며 터미널 실행 시 테스트 리포트를 버퍼에 출력합니다.
+  - **실무 멀티파일 캡스톤 3종**: *레거시 API v1→v2 마이그레이션*, *프로덕션 장애 5분 핫픽스*, *PR 코드 리뷰 4건 일괄 반영* 멀티파일 프로젝트를 자유로운 Vim/Neovim 도구 조합으로 풀고 `:TestRun` 통과로 클리어하며, `MissionPanel` 실시간 테스트 체크리스트·파일 퀵 전환 칩·완료 기록 영구 저장(`vim_capstone_progress_v1`, `BACKUP_KEYS` 포함)을 제공합니다.
 
 ---
 

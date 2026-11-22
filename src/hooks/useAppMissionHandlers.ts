@@ -7,6 +7,7 @@ import {
   createCustomMissionObject,
   CustomMissionData,
 } from '../utils/customMission';
+import { CapstoneProject, createCapstoneMission } from '../data/capstoneProjects';
 import {
   loadProgress,
   loadActionTimelineSetting,
@@ -131,8 +132,40 @@ export function useAppMissionHandlers({
   const handleResetCustomMission = useCallback(() => {
     if (!customMission) return;
     handleStopGhostReplay();
-    resetSessionWithState(buildCustomInitialState(customMission));
-  }, [customMission, handleStopGhostReplay, resetSessionWithState]);
+    resetSessionWithState(
+      buildCustomInitialState(customMission, { activePresets, leaderKey, customKeymaps, userInitConfig })
+    );
+  }, [customMission, handleStopGhostReplay, resetSessionWithState, activePresets, leaderKey, customKeymaps, userInitConfig]);
+
+  const handlePlayCapstoneProject = useCallback(
+    (project: CapstoneProject) => {
+      handleStopGhostReplay();
+      const capstoneMission = createCapstoneMission(project);
+      setCustomMission(capstoneMission);
+      setCurrentTab('custom');
+      resetSessionWithState(
+        buildCustomInitialState(capstoneMission, {
+          activePresets,
+          leaderKey,
+          customKeymaps,
+          userInitConfig,
+        }),
+        t('🏢 실무 캡스톤 [{title}] 시작! 자유롭게 편집한 뒤 :TestRun 으로 검증하세요.', {
+          title: t(project.titleKey),
+        })
+      );
+    },
+    [
+      handleStopGhostReplay,
+      setCustomMission,
+      setCurrentTab,
+      resetSessionWithState,
+      activePresets,
+      leaderKey,
+      customKeymaps,
+      userInitConfig,
+    ]
+  );
 
   const handlePlayCustomMission = useCallback(
     (data: CustomMissionData) => {
@@ -254,6 +287,7 @@ export function useAppMissionHandlers({
     handleResetMission,
     handleResetSandbox,
     handleResetCustomMission,
+    handlePlayCapstoneProject,
     handlePlayCustomMission,
     handlePlayBYOCMission,
     handleSwitchTab,

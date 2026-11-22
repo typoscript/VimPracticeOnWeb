@@ -4,6 +4,7 @@ import { splitWindow, closeSplitWindow, switchPaneFocus } from './splitWindow';
 import { ensureBuffers } from './bufferEngine';
 import { getEffectiveCwd } from './vfs';
 import { runShellPipeline } from './shellEngine';
+import { runVirtualTests, formatVirtualTestOutput } from './testRunnerEngine';
 import { msg } from './messages';
 
 const TERM_FILENAME = 'term://shell';
@@ -86,7 +87,7 @@ function executeTerminalLine(
 
   if (cmd === 'help') {
     const helpLines = [
-      'Built-in shell: ls, cat, grep, echo, printf, wc, sort, uniq, head, tail, cut, tr, sed, awk, jq, pwd, cd, clear, exit',
+      'Built-in shell: ls, cat, grep, echo, printf, wc, sort, uniq, head, tail, cut, tr, sed, awk, jq, pwd, cd, npm test, clear, exit',
       'Neovim tip: Press Ctrl-\\ Ctrl-n to enter NORMAL mode (yank/search output), press i to resume TERMINAL.',
     ];
     const nextLines = [...baseLines, ...helpLines, session.prompt];
@@ -96,6 +97,31 @@ function executeTerminalLine(
       lines: nextLines,
       cursor: { line: promptLine, col: session.prompt.length },
       mode: 'TERMINAL',
+      terminalSession: {
+        ...session,
+        inputBuffer: '',
+        history: nextHistory,
+        historyIndex: nextHistory.length,
+        promptLine,
+        ctrlBackslashPending: false,
+      },
+    };
+  }
+
+  // 가상 테스트 러너 실행: npm test / npm run test / vitest / testrun
+  if (/^(?:npm\s+(?:run\s+)?test|vitest(?:\s+run)?|testrun)$/i.test(cmd)) {
+    const tested = runVirtualTests(state);
+    const reportLines = tested.lastTestRun
+      ? formatVirtualTestOutput(tested.lastTestRun)
+      : [tested.commandMessage || '[TestRun] No virtual tests configured.'];
+    const nextLines = [...baseLines, ...reportLines, session.prompt];
+    const promptLine = nextLines.length - 1;
+    return {
+      ...tested,
+      lines: nextLines,
+      cursor: { line: promptLine, col: session.prompt.length },
+      mode: 'TERMINAL',
+      lastShellCommand: cmd,
       terminalSession: {
         ...session,
         inputBuffer: '',

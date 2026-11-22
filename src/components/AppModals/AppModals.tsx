@@ -4,6 +4,7 @@ import { VimEditorState, VimMode } from '../../vim-engine';
 import { LessonProgress } from '../../utils/storage';
 import { VimTheme } from '../../utils/theme';
 import { CustomMissionData } from '../../utils/customMission';
+import type { CapstoneProject } from '../../data/capstoneProjects';
 import { CustomKeymapItem } from '../../utils/keymapStorage';
 import type { UserInitConfig } from '../../utils/userInitConfig';
 
@@ -58,6 +59,7 @@ export interface AppModalsProps {
     currentMissionId: number;
     progress: LessonProgress;
     onSelectById: (missionId: number) => void;
+    onStartCapstone?: (project: CapstoneProject) => void;
   };
   customMission: {
     isOpen: boolean;
@@ -147,6 +149,7 @@ export function AppModals({
           currentMissionId={lesson.currentMissionId}
           progress={lesson.progress}
           onSelectLesson={lesson.onSelectById}
+          onStartCapstone={lesson.onStartCapstone}
         />
       )}
 

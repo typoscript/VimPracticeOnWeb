@@ -21,6 +21,7 @@ export const STORAGE_KEYS = {
   ANALYTICS: 'vim_user_analytics_v1',
   SRS_SCHEDULE: 'vim_srs_schedule_v1',
   CUSTOM_MISSIONS: 'vim_custom_missions_v1',
+  CAPSTONE_PROGRESS: 'vim_capstone_progress_v1',
   KEYMAP_PRESETS: 'vim_keymap_presets_v1',
   LEADER_KEY: 'vim_leader_key_v1',
   CUSTOM_KEYMAPS: 'vim_custom_keymaps_v1',

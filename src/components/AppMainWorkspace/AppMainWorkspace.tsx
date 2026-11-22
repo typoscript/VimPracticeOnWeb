@@ -408,6 +408,20 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
               keystrokeCount={mission.keystrokeCount}
               onSelectMission={() => {}}
               onResetMission={mission.onResetCustomMission}
+              lastTestRun={displayEditorState.lastTestRun}
+              activeFilename={displayEditorState.primaryFilename}
+              onRunVirtualTests={() => {
+                editor.onFocus();
+                for (const k of ['Escape', ...':TestRun'.split(''), 'Enter']) {
+                  editor.processKeyInput(k);
+                }
+              }}
+              onOpenCapstoneFile={(filename) => {
+                editor.onFocus();
+                for (const k of ['Escape', ...`:e ${filename}`.split(''), 'Enter']) {
+                  editor.processKeyInput(k);
+                }
+              }}
             />
           )}
 

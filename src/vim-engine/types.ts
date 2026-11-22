@@ -940,6 +940,10 @@ export interface VimEditorState {
   zenMode?: boolean;
   /** Neovim 내장 가상 터미널 버퍼 세션 (:terminal / :term / :ToggleTerm) */
   terminalSession?: TerminalSessionState | null;
+  /** 실무 캡스톤 시나리오용 가상 테스트 스위트 (:TestRun / npm test) */
+  virtualTests?: VirtualTestSpec[];
+  /** 마지막 가상 테스트 실행 결과 */
+  lastTestRun?: VirtualTestRunResult | null;
   /** vim-visual-multi 스타일 다중 커서 선택·동시 편집 세션 (g Ctrl-n / :MultiCursor) */
   multiCursor?: MultiCursorSession | null;
   /** 순정 Vim Undo Tree 노드 맵 (seq -> UndoTreeNode) */
@@ -1192,6 +1196,33 @@ export interface TerminalSessionState {
   returnCursor?: CursorPosition;
   returnBufferId?: number;
   ctrlBackslashPending?: boolean;
+}
+
+export interface VirtualTestSpec {
+  id: string;
+  name: string;
+  file: string;
+  mustContain?: string[];
+  mustNotContain?: string[];
+  exactLines?: string[];
+  minLines?: number;
+}
+
+export interface VirtualTestCaseResult {
+  id: string;
+  name: string;
+  file: string;
+  passed: boolean;
+  reason?: string;
+}
+
+export interface VirtualTestRunResult {
+  suiteName?: string;
+  passedCount: number;
+  totalCount: number;
+  allPassed: boolean;
+  results: VirtualTestCaseResult[];
+  runCount: number;
 }
 
 export type VimState = VimEditorState;

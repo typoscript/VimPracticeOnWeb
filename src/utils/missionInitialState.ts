@@ -113,12 +113,39 @@ export function buildCustomInitialState(
   mission: Mission,
   settings?: UserKeymapSettings
 ): VimEditorState {
+  const virtualFiles = mission.initialVirtualFiles
+    ? Object.fromEntries(
+        Object.entries(mission.initialVirtualFiles).map(([k, v]) => [k, [...v]])
+      )
+    : undefined;
   return {
     lines: [...mission.initialLines],
     cursor: { ...mission.initialCursor },
     mode: 'NORMAL',
     undoStack: [],
     redoStack: [],
+    primaryFilename: mission.primaryFilename,
+    virtualFiles,
+    gitBaseLines: mission.initialGitBaseLines ? [...mission.initialGitBaseLines] : undefined,
+    harpoonList: mission.initialHarpoonList ? [...mission.initialHarpoonList] : undefined,
+    virtualTests: mission.initialVirtualTests
+      ? mission.initialVirtualTests.map((spec) => ({ ...spec }))
+      : undefined,
+    lastTestRun: mission.initialVirtualTests
+      ? {
+          suiteName: mission.title,
+          passedCount: 0,
+          totalCount: mission.initialVirtualTests.length,
+          allPassed: false,
+          results: mission.initialVirtualTests.map((spec) => ({
+            id: spec.id,
+            name: spec.name,
+            file: spec.file,
+            passed: false,
+          })),
+          runCount: 0,
+        }
+      : undefined,
     ...(settings
       ? {
           userKeymaps: compileUserKeymaps(
@@ -186,7 +213,9 @@ export function resolveStatusFilename(
     return currentMission.primaryFilename || `lesson_${currentMission.id}.txt`;
   }
   if (currentTab === 'custom') {
-    return 'custom_golf.txt';
+    return displayEditorState.virtualTests?.length && displayEditorState.primaryFilename
+      ? displayEditorState.primaryFilename
+      : 'custom_golf.txt';
   }
   if (currentTab === 'speedrun') {
     return `speedrun_stage_${speedrunCurrentStage + 1}.txt`;

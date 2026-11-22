@@ -81,7 +81,7 @@ configureVimEngine({
 | Undo Tree & Undotree | `ensureUndoTreeInitialized`, `jumpUndoSeq`, `travelUndoTime`, `buildUndotreeGraphRows`, `openUndotreePanel`, `toggleUndotreePanel` |
 | LSP & Treesitter | `openLspHover`, `openLspRename`, `applyLspRename`, `findLspReferences`, `openLspCodeActionMenu`, `openLspDocumentSymbols` |
 | Git (`gitsigns.nvim`) | `getGitLineSigns`, `computeGitHunks`, `jumpToGitHunk`, `previewGitHunk`, `resetGitHunk`, `stageGitHunk` |
-| 현대 Neovim 확장 | `startFlashJump`, `openOilBuffer`, `saveOilBuffer`, `addHarpoonFile`, `openHarpoonMenu`, `selectHarpoonSlot`, `openTroublePanel`, `startMultiCursor`, `cycleYankRing`, `openYankyMenu`, `openSpectrePanel`, `applySpectreReplaceAll`, `handleMiniMoveNormal`, `handleMiniMoveVisual`, `openTerminalBuffer`, `toggleTerminalBuffer`, `findDialToken`, `applyAbolishCoerce`, `executeTreesj` |
+| 현대 Neovim 확장 | `startFlashJump`, `openOilBuffer`, `saveOilBuffer`, `addHarpoonFile`, `openHarpoonMenu`, `selectHarpoonSlot`, `openTroublePanel`, `startMultiCursor`, `cycleYankRing`, `openYankyMenu`, `openSpectrePanel`, `applySpectreReplaceAll`, `handleMiniMoveNormal`, `handleMiniMoveVisual`, `openTerminalBuffer`, `toggleTerminalBuffer`, `findDialToken`, `applyAbolishCoerce`, `executeTreesj`, `runVirtualTests` |
 | 매크로 디버거 | `buildMacroTrace`(매크로를 키 단위 상태 프레임으로 분해), `getMacroKeys`, `listMacroRegisters`, `explainMacroKeyAction` |
 | 개발용 | `withInvariantCheck`, `assertValidVimState`, `deepFreeze` |
 

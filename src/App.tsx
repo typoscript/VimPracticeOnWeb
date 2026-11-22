@@ -412,6 +412,7 @@ export function App() {
           currentMissionId: currentMission.id,
           progress,
           onSelectById: missionHandlers.handleSelectLessonById,
+          onStartCapstone: missionHandlers.handlePlayCapstoneProject,
         }}
         customMission={{
           isOpen: viewSettings.isCustomModalOpen,

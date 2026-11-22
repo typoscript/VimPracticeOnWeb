@@ -10,6 +10,16 @@ import {
   MISSION_CATEGORY_TAGS,
   MissionCategoryTag,
 } from '../../utils/missionFilters';
+import {
+  LEARNING_TRACKS,
+  LearningTrackId,
+  computeAllTracksProgress,
+} from '../../utils/learningTracks';
+import {
+  CAPSTONE_PROJECTS,
+  CapstoneProject,
+  loadCapstoneProgress,
+} from '../../data/capstoneProjects';
 import './LessonSelectModal.css';
 import { t } from '../../i18n';
 
@@ -20,6 +30,7 @@ export interface LessonSelectModalProps {
   currentMissionId: number;
   progress: LessonProgress;
   onSelectLesson: (missionId: number) => void;
+  onStartCapstone?: (project: CapstoneProject) => void;
 }
 
 export const LessonSelectModal: React.FC<LessonSelectModalProps> = ({
@@ -29,9 +40,11 @@ export const LessonSelectModal: React.FC<LessonSelectModalProps> = ({
   currentMissionId,
   progress,
   onSelectLesson,
+  onStartCapstone,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<MissionCategoryTag>('all');
+  const [selectedTrackId, setSelectedTrackId] = useState<LearningTrackId | null>(null);
   const [showUncompletedOnly, setShowUncompletedOnly] = useState(false);
 
   // 모달이 열릴 때마다 검색 필터 초기화
@@ -39,6 +52,7 @@ export const LessonSelectModal: React.FC<LessonSelectModalProps> = ({
     if (isOpen) {
       setSearchQuery('');
       setSelectedCategory('all');
+      setSelectedTrackId(null);
       setShowUncompletedOnly(false);
     }
   }, [isOpen]);
@@ -58,7 +72,7 @@ export const LessonSelectModal: React.FC<LessonSelectModalProps> = ({
 
   // 필터링된 미션 목록
   const filteredMissions = useMemo(() => {
-    return filterMissions(
+    const base = filterMissions(
       missions,
       {
         searchQuery,
@@ -67,7 +81,15 @@ export const LessonSelectModal: React.FC<LessonSelectModalProps> = ({
       },
       progress
     );
-  }, [missions, searchQuery, selectedCategory, showUncompletedOnly, progress]);
+    if (!selectedTrackId) return base;
+    const track = LEARNING_TRACKS.find((tr) => tr.id === selectedTrackId);
+    if (!track) return base;
+    const idSet = new Set(track.lessonIds);
+    return base.filter((m) => idSet.has(m.id));
+  }, [missions, searchQuery, selectedCategory, selectedTrackId, showUncompletedOnly, progress]);
+
+  const tracksProgress = useMemo(() => computeAllTracksProgress(progress), [progress]);
+  const capstoneProgress = useMemo(() => (isOpen ? loadCapstoneProgress() : {}), [isOpen]);
 
   const srsPlan = useMemo(() => {
     if (!isOpen) return null;
@@ -97,6 +119,7 @@ export const LessonSelectModal: React.FC<LessonSelectModalProps> = ({
   const handleResetFilters = () => {
     setSearchQuery('');
     setSelectedCategory('all');
+    setSelectedTrackId(null);
     setShowUncompletedOnly(false);
   };
 
@@ -193,7 +216,7 @@ export const LessonSelectModal: React.FC<LessonSelectModalProps> = ({
             </button>
           </div>
 
-          {(searchQuery || selectedCategory !== 'all' || showUncompletedOnly) && (
+          {(searchQuery || selectedCategory !== 'all' || selectedTrackId !== null || showUncompletedOnly) && (
             <div className="filter-status-info">
               <span className="results-count">
                 {t('{count}개 레슨 검색됨', { count: filteredMissions.length })}
@@ -211,7 +234,123 @@ export const LessonSelectModal: React.FC<LessonSelectModalProps> = ({
         </div>
 
         <div className="lesson-list" data-testid="lesson-list">
-          {srsPlan && srsPlan.items.length > 0 && !searchQuery && selectedCategory === 'all' && !showUncompletedOnly && (
+          {!searchQuery && selectedCategory === 'all' && !showUncompletedOnly && (
+            <section className="learning-tracks-section" data-testid="learning-tracks-section">
+              <div className="tracks-section-header">
+                <span className="tracks-section-title">{t('🗺️ 목적별 학습 트랙 (추천 로드맵)')}</span>
+              </div>
+              <div className="tracks-grid">
+                {tracksProgress.map(({ track, completedCount: tDone, totalCount: tTotal, percent, nextLessonId, isFinished }) => {
+                  const isTrackActive = selectedTrackId === track.id;
+                  return (
+                    <div
+                      key={track.id}
+                      className={`track-card ${isTrackActive ? 'active' : ''}`}
+                      data-testid={`track-card-${track.id}`}
+                    >
+                      <div className="track-card-top">
+                        <span className="track-card-icon">{track.icon}</span>
+                        <span className="track-card-title">{t(track.titleKey)}</span>
+                        <span className="track-card-badge" style={{ color: track.accentColor }}>
+                          {t(track.badgeKey)}
+                        </span>
+                      </div>
+                      <p className="track-card-desc">{t(track.descKey)}</p>
+                      <div className="track-progress-row">
+                        <div className="track-progress-bar">
+                          <div
+                            className="track-progress-fill"
+                            style={{ width: `${percent}%`, backgroundColor: track.accentColor }}
+                          />
+                        </div>
+                        <span className="track-progress-text">
+                          {tDone}/{tTotal} ({percent}%)
+                        </span>
+                      </div>
+                      <div className="track-card-actions">
+                        <button
+                          type="button"
+                          className={`track-filter-btn ${isTrackActive ? 'active' : ''}`}
+                          data-testid={`track-filter-${track.id}`}
+                          onClick={() => setSelectedTrackId(isTrackActive ? null : track.id)}
+                        >
+                          {isTrackActive ? t('트랙 해제') : t('트랙 보기')}
+                        </button>
+                        <button
+                          type="button"
+                          className="track-continue-btn"
+                          data-testid={`track-continue-${track.id}`}
+                          onClick={() => {
+                            onSelectLesson(nextLessonId);
+                            onClose();
+                          }}
+                        >
+                          {isFinished
+                            ? t('복습 #{id} →', { id: nextLessonId })
+                            : t('이어하기 #{id} →', { id: nextLessonId })}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {onStartCapstone && !searchQuery && selectedCategory === 'all' && !selectedTrackId && !showUncompletedOnly && (
+            <section className="capstone-projects-section" data-testid="capstone-projects-section">
+              <div className="tracks-section-header">
+                <span className="tracks-section-title">{t('🏢 실무 멀티파일 캡스톤 챌린지 (:TestRun)')}</span>
+              </div>
+              <div className="capstone-grid">
+                {CAPSTONE_PROJECTS.map((project) => {
+                  const rec = capstoneProgress[project.id];
+                  return (
+                    <div
+                      key={project.id}
+                      className={`capstone-card ${rec?.completed ? 'completed' : ''}`}
+                      data-testid={`capstone-card-${project.id}`}
+                    >
+                      <div className="capstone-card-top">
+                        <span className="capstone-icon">{project.icon}</span>
+                        <span className="capstone-title">{t(project.titleKey)}</span>
+                        {rec?.completed ? (
+                          <span className="capstone-done-badge">
+                            ✓ {t('완료 ({n}타)', { n: rec.bestKeystrokes })}
+                          </span>
+                        ) : (
+                          <span className="capstone-diff-badge">{t(project.difficultyKey)}</span>
+                        )}
+                      </div>
+                      <p className="capstone-summary">{t(project.summaryKey)}</p>
+                      <div className="capstone-footer">
+                        <div className="capstone-tools">
+                          {project.recommendedTools.slice(0, 3).map((tool) => (
+                            <span key={tool} className="capstone-tool-chip">
+                              {tool}
+                            </span>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          className="capstone-start-btn"
+                          data-testid={`capstone-start-${project.id}`}
+                          onClick={() => {
+                            onStartCapstone(project);
+                            onClose();
+                          }}
+                        >
+                          {rec?.completed ? t('다시 도전 →') : t('도전하기 →')}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
+          {srsPlan && srsPlan.items.length > 0 && !searchQuery && selectedCategory === 'all' && !selectedTrackId && !showUncompletedOnly && (
             <div className="lesson-srs-banner" data-testid="lesson-srs-banner">
               <div className="lesson-srs-header">
                 <span className="lesson-srs-title">🔁 {t('약점·간격 반복(SRS) 복습 추천')}</span>

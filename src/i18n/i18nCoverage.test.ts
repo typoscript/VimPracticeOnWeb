@@ -6,6 +6,7 @@ import { EN_CONTENT } from './enContent';
 import { MISSIONS } from '../data/missions';
 import { DUNGEON_STAGES, DUNGEON_SKILLS } from '../data/dungeonStages';
 import { SANDBOX_INITIAL_LINES } from '../data/sandbox';
+import { CAPSTONE_PROJECTS } from '../data/capstoneProjects';
 import { t, localized, setLocale, getLocale, ensureLocaleDictionaries } from './index';
 
 /**
@@ -90,6 +91,9 @@ function contentKeys(): Set<string> {
   for (const s of DUNGEON_STAGES) [s.title, s.description, s.hint, s.objective].forEach(add);
   for (const k of Object.values(DUNGEON_SKILLS)) [k.name, k.description].forEach(add);
   SANDBOX_INITIAL_LINES.forEach(add);
+  for (const c of CAPSTONE_PROJECTS) {
+    [c.difficultyKey, c.titleKey, c.summaryKey, c.descriptionKey, c.hintKey].forEach(add);
+  }
   return keys;
 }
 

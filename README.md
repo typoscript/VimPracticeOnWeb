@@ -7,7 +7,7 @@ CodeMirror나 Monaco 같은 무거운 외부 에디터 라이브러리 없이, *
 
 - **📚 120개 실전 커리큘럼**: 기초 이동(`hjkl`)부터 매크로·Vimscript·정규식·Netrw·세션, 현대 Neovim 플러그인(`Telescope`, `LSP`, `Treesitter`, `Gitsigns`, `Lua`, `Flash`, `Oil`, `Harpoon`, `mini.ai`, `mini.move`, `Trouble`, `Multi-Cursor`, `Undotree`, `Yanky`, `Spectre`, `:terminal`, `dial.nvim`, `vim-abolish`, `treesj`)까지 단계별 완주
 - **🎮 다채로운 훈련 모드**: 튜토리얼 코스 · 타임어택 스피드런 · 아케이드 서바이벌(보스전/파워업) · 던전 RPG(6스테이지) · 하드코어 도장 · 멀티파일 자유 연습장(Sandbox) · BYOC 커스텀 미션
-- **🔬 높은 호환성 검증**: 실제 `nvim --headless` 대조 골든 회귀 **116종** 포함 **197개 테스트 파일 / 2,274개 테스트 100% 통과**
+- **🔬 높은 호환성 검증**: 실제 `nvim --headless` 대조 골든 회귀 **116종** 포함 **199개 테스트 파일 / 2,282개 테스트 100% 통과**
 
 ---
 
@@ -305,7 +305,7 @@ flowchart TD
   - 입장 즉시 `sandbox.ts`, `src/api.ts`(`TODO`), `src/worker.ts`(`FIXME`), `init.lua` 가상 파일과 Git diff 기준선, Harpoon 핀이 준비됩니다.
   - 상단 칩 바에서 `:Oil`, `:Trouble`, `:HarpoonMenu`, `:Yanks`, `:LiveGrep`, `:UndotreeToggle`, `gs`, `]h`, `:MultiCursor`, `:source init.lua` 를 원클릭으로 체험합니다.
 - **🌿 시각적 Undo 트리 & 📋 복사 링 팝업**: `:UndotreeToggle` 분기 그래프와 `:Yanks` 이력 팝업을 지연 로딩 패널로 제공합니다.
-- **🗂️ 레슨 검색·필터**: 커리큘럼 모달에서 제목·단축키·`#번호` 검색과 `기초`/`모션`/`텍스트객체`/`Ex 커맨드`/`Vimscript`/`Netrw`/`Neovim` 태그 필터를 지원합니다.
+- **🗂️ 레슨 검색·필터 & 목적별 학습 트랙**: 커리큘럼 모달에서 4개 목적별 학습 트랙(*입문 필수 20강 · 실무 리팩토링 25강 · Ex/Vimscript 마스터 · 현대 Neovim IDE 20강*) 진행률·원클릭 이어하기와 3개 실무 멀티파일 캡스톤 챌린지(`:TestRun` / `npm test` 가상 테스트 러너)를 제공합니다.
 - **🧩 나만의 `init.lua` / `.vimrc` 플레이그라운드**: 설정 내보내기 모달에서 작성한 스크립트가 `localStorage` 에 저장되고 에디터·Which-Key·자유 연습장에 즉시 적용됩니다.
 - **🌐 한/영 화면 전환**: 헤더 버튼으로 화면과 엔진 메시지(`E492: Not an editor command` 등)를 한국어/영어로 전환합니다.
 
@@ -314,7 +314,7 @@ flowchart TD
 ## 🛠️ 기술 스택 (Tech Stack)
 
 - **Core**: React 19, TypeScript, Vite
-- **Testing**: Vitest, React Testing Library (197개 파일, 2,274개 단위/통합 테스트 100% 통과)
+- **Testing**: Vitest, React Testing Library (199개 파일, 2,282개 단위/통합 테스트 100% 통과)
 - **실제 Neovim 골든 회귀 스위트**: `nvim --headless` 로 생성한 116개 케이스(`test/fixtures/neovim-golden-cases.json`)와 엔진 결과를 비교합니다. 재생성은 `npx tsx scripts/generateGoldenTests.ts`.
 - **번들 분할**: 엔진을 단방향 비순환 계층(`data` → `core` → `services` → `editing` → `neovim` → `ex` → 디스패처)의 청크로 나눠 모든 청크를 300 kB 이하(엔진 청크 각 160 kB 미만)로 유지하고, 보조 패널과 탭은 `React.lazy` 로 지연 로딩합니다.
 - **Styling**: Modern Pure CSS (Catppuccin Macchiato 테마)
@@ -337,7 +337,7 @@ npm run dev
 
 ### 3. 테스트 및 타입 검사
 ```bash
-# 전체 단위/통합 테스트 단발 실행 (197개 파일, 2,274개 테스트)
+# 전체 단위/통합 테스트 단발 실행 (199개 파일, 2,282개 테스트)
 npm test -- --run
 
 # DOM 타입 없이 순수 Vim 엔진(src/vim-engine/) 단독 타입 검사

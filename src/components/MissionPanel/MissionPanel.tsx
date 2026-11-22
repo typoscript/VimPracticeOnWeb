@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Mission } from '../../types/mission';
+import type { VirtualTestRunResult } from '../../vim-engine';
 import './MissionPanel.css';
 import { t } from '../../i18n';
 
@@ -15,6 +16,10 @@ export interface MissionPanelProps {
   onStopGhostReplay?: () => void;
   isGhostReplaying?: boolean;
   ghostReplayProgress?: { current: number; total: number };
+  lastTestRun?: VirtualTestRunResult | null;
+  activeFilename?: string;
+  onRunVirtualTests?: () => void;
+  onOpenCapstoneFile?: (filename: string) => void;
 }
 
 /**
@@ -45,6 +50,10 @@ export const MissionPanel: React.FC<MissionPanelProps> = ({
   onStopGhostReplay,
   isGhostReplaying,
   ghostReplayProgress,
+  lastTestRun,
+  activeFilename,
+  onRunVirtualTests,
+  onOpenCapstoneFile,
 }) => {
   const [showHint, setShowHint] = useState(false);
 
@@ -108,6 +117,89 @@ export const MissionPanel: React.FC<MissionPanelProps> = ({
       <p className="mission-desc" data-testid="mission-desc">
         {t(mission.description)}
       </p>
+
+      {mission.initialVirtualTests && mission.initialVirtualTests.length > 0 && (
+        <div className="capstone-test-suite" data-testid="capstone-test-suite">
+          <div className="capstone-test-header">
+            <span className="capstone-test-title">
+              {t('🧪 실무 캡스톤 가상 테스트 ({passed}/{total})', {
+                passed: lastTestRun?.passedCount ?? 0,
+                total: lastTestRun?.totalCount ?? mission.initialVirtualTests.length,
+              })}
+            </span>
+            {onRunVirtualTests && (
+              <button
+                type="button"
+                className="capstone-test-run-btn"
+                data-testid="capstone-test-run-btn"
+                onClick={onRunVirtualTests}
+              >
+                {t('▶ :TestRun 테스트 실행')}
+              </button>
+            )}
+          </div>
+
+          {mission.initialVirtualFiles && onOpenCapstoneFile && (
+            <div className="capstone-files-bar">
+              <span className="capstone-meta-label">{t('프로젝트 파일:')}</span>
+              {Object.keys(mission.initialVirtualFiles).map((fname) => (
+                <button
+                  key={fname}
+                  type="button"
+                  className={`capstone-file-chip ${activeFilename === fname ? 'active' : ''}`}
+                  data-testid={`capstone-file-${fname}`}
+                  onClick={() => onOpenCapstoneFile(fname)}
+                >
+                  {fname}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {mission.recommendedTools && mission.recommendedTools.length > 0 && (
+            <div className="capstone-files-bar">
+              <span className="capstone-meta-label">{t('추천 도구:')}</span>
+              {mission.recommendedTools.map((tool) => (
+                <span key={tool} className="capstone-rec-chip">
+                  {tool}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <ul className="capstone-test-list">
+            {(lastTestRun?.results ??
+              mission.initialVirtualTests.map((s) => ({
+                id: s.id,
+                name: s.name,
+                file: s.file,
+                passed: false,
+                reason: undefined as string | undefined,
+              }))).map((item) => {
+              const notRunYet = !lastTestRun || lastTestRun.runCount === 0;
+              return (
+                <li
+                  key={item.id}
+                  className={`capstone-test-item ${
+                    notRunYet ? 'pending' : item.passed ? 'passed' : 'failed'
+                  }`}
+                  data-testid={`capstone-test-${item.id}`}
+                >
+                  <span className="test-status-icon">
+                    {notRunYet ? '○' : item.passed ? '✓' : '✗'}
+                  </span>
+                  <span className="test-name">{item.name}</span>
+                  <span className="test-file">({item.file})</span>
+                  {!notRunYet && !item.passed && item.reason && (
+                    <span className="test-reason">— {item.reason}</span>
+                  )}
+                  {notRunYet && <span className="test-pending-tag">{t('미실행')}</span>}
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      )}
 
       {isGhostReplaying && ghostReplayProgress && onStopGhostReplay && (
         <div className="ghost-replay-banner" data-testid="ghost-replay-banner">

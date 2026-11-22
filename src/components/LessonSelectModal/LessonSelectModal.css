@@ -550,6 +550,249 @@
   color: #a6adc8;
 }
 
+/* 목적별 학습 트랙 & 실무 캡스톤 섹션 */
+.learning-tracks-section,
+.capstone-projects-section {
+  margin-bottom: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  border-radius: 8px;
+  border: 1px solid #313244;
+  background-color: rgba(24, 24, 37, 0.85);
+}
+
+.tracks-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.55rem;
+}
+
+.tracks-section-title {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: #cdd6f4;
+}
+
+.tracks-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.track-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.6rem 0.7rem;
+  border-radius: 7px;
+  border: 1px solid #363a4f;
+  background-color: #1e1e2e;
+  transition: border-color 0.15s ease;
+}
+
+.track-card.active {
+  border-color: #89b4fa;
+  background-color: rgba(137, 180, 250, 0.08);
+}
+
+.track-card-top {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.track-card-icon {
+  font-size: 0.95rem;
+}
+
+.track-card-title {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #cdd6f4;
+  flex: 1;
+}
+
+.track-card-badge {
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.track-card-desc {
+  margin: 0;
+  font-size: 0.74rem;
+  color: #a6adc8;
+  line-height: 1.35;
+}
+
+.track-progress-row {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.track-progress-bar {
+  flex: 1;
+  height: 5px;
+  border-radius: 999px;
+  background-color: #313244;
+  overflow: hidden;
+}
+
+.track-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.25s ease;
+}
+
+.track-progress-text {
+  font-size: 0.7rem;
+  color: #a6adc8;
+  font-family: monospace;
+  white-space: nowrap;
+}
+
+.track-card-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-top: 0.15rem;
+}
+
+.track-filter-btn,
+.track-continue-btn {
+  border-radius: 5px;
+  font-size: 0.73rem;
+  font-weight: 600;
+  padding: 0.22rem 0.55rem;
+  cursor: pointer;
+  border: 1px solid #45475a;
+  background: transparent;
+  color: #bac2de;
+  transition: all 0.15s ease;
+}
+
+.track-filter-btn.active {
+  background-color: #89b4fa;
+  border-color: #89b4fa;
+  color: #11111b;
+}
+
+.track-continue-btn {
+  background-color: rgba(166, 227, 161, 0.14);
+  border-color: rgba(166, 227, 161, 0.45);
+  color: #a6e3a1;
+}
+
+.track-continue-btn:hover {
+  background-color: rgba(166, 227, 161, 0.25);
+}
+
+.capstone-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.capstone-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 7px;
+  border: 1px solid rgba(203, 166, 247, 0.3);
+  background-color: rgba(203, 166, 247, 0.06);
+}
+
+.capstone-card.completed {
+  border-color: rgba(166, 227, 161, 0.45);
+  background-color: rgba(166, 227, 161, 0.06);
+}
+
+.capstone-card-top {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.capstone-title {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #cdd6f4;
+  flex: 1;
+}
+
+.capstone-diff-badge {
+  font-size: 0.7rem;
+  color: #cba6f7;
+  background-color: rgba(203, 166, 247, 0.14);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.capstone-done-badge {
+  font-size: 0.72rem;
+  color: #a6e3a1;
+  background-color: rgba(166, 227, 161, 0.16);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+
+.capstone-summary {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #a6adc8;
+}
+
+.capstone-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.capstone-tools {
+  display: flex;
+  gap: 0.3rem;
+  flex-wrap: wrap;
+}
+
+.capstone-tool-chip {
+  font-family: monospace;
+  font-size: 0.7rem;
+  color: #89dceb;
+  background-color: rgba(137, 220, 235, 0.1);
+  border: 1px solid rgba(137, 220, 235, 0.25);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.capstone-start-btn {
+  background-color: #cba6f7;
+  color: #11111b;
+  border: none;
+  border-radius: 5px;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.capstone-start-btn:hover {
+  opacity: 0.9;
+}
+
+@media (max-width: 600px) {
+  .tracks-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }

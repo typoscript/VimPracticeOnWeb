@@ -42,6 +42,7 @@ import { startMultiCursor } from './multiCursorEngine';
 import { executeDialCommand } from './dialEngine';
 import { executeAbolishCommand } from './abolishEngine';
 import { executeTreesj } from './treesjEngine';
+import { runVirtualTests } from './testRunnerEngine';
 import { executeLuaChunk, executeLuaFile, executeLuaPrintExpr } from './luaEngine';
 import { compileVimRegex } from './vimRegex';
 import { describeCharAt } from './engineHelpers';
@@ -515,6 +516,11 @@ function tryExecuteMappingAndMiscToolCommand(
   if (tsjMatch) {
     const action = tsjMatch[1].toLowerCase() as 'toggle' | 'split' | 'join';
     return finishEx(executeTreesj(state, action, false));
+  }
+
+  // :TestRun / :RunTests / :TestSuite — 실무 캡스톤 가상 테스트 러너
+  if (/^(?:TestRun|RunTests|TestSuite)$/i.test(cleanCmdRaw)) {
+    return finishEx(runVirtualTests(state));
   }
 
   return null;

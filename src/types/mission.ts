@@ -1,4 +1,4 @@
-import { ClipboardRegister, StateSnapshot, VimEditorState, QuickfixItem, ChangeListItem, UndoTreeNode, FoldRange, RegisterEntry, LspDiagnostic, LspHoverSymbol } from '../vim-engine';
+import { ClipboardRegister, StateSnapshot, VimEditorState, QuickfixItem, ChangeListItem, UndoTreeNode, FoldRange, RegisterEntry, LspDiagnostic, LspHoverSymbol, VirtualTestSpec } from '../vim-engine';
 
 export interface Mission {
   id: number;
@@ -54,5 +54,13 @@ export interface Mission {
   initialLspSymbols?: Record<string, LspHoverSymbol>;
   /** gitsigns.nvim 기준선(HEAD) 스냅샷 (]h/[h, :Gitsigns 미션용) */
   initialGitBaseLines?: string[];
+  /** harpoon.nvim 초기 핀 목록 */
+  initialHarpoonList?: string[];
+  /** 실무 캡스톤 가상 테스트 스위트 (:TestRun / npm test) */
+  initialVirtualTests?: VirtualTestSpec[];
+  /** 캡스톤 프로젝트 ID */
+  capstoneId?: string;
+  /** 캡스톤 추천 도구 배지 목록 */
+  recommendedTools?: string[];
   checkComplete: (state: VimEditorState) => boolean;
 }

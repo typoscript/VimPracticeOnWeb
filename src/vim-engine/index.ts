@@ -611,3 +611,15 @@ export {
   handleTerminalModeKey,
 } from './terminalEngine';
 export type { TerminalSessionState } from './types';
+
+// ---- 실무 캡스톤 가상 테스트 러너 (:TestRun / 터미널 npm test) ----
+export {
+  evaluateVirtualTests,
+  formatVirtualTestOutput,
+  runVirtualTests,
+} from './testRunnerEngine';
+export type {
+  VirtualTestSpec,
+  VirtualTestCaseResult,
+  VirtualTestRunResult,
+} from './types';
