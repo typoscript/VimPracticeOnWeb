@@ -41,6 +41,7 @@ import { executeHarpoonCommand } from './harpoonEngine';
 import { executeYankyCommand } from './yankRingEngine';
 import { executeSpectreCommand } from './spectreEngine';
 import { executeTroubleCommand } from './troubleEngine';
+import { chooseGitConflict } from './gitConflictEngine';
 import {
   openTerminalBuffer,
   toggleTerminalBuffer,
@@ -188,6 +189,16 @@ function tryExecuteSplitAndDiffCommand(
   }
   if (cleanCmd === 'diffupdate' || cleanCmd === 'diffu') {
     return finishEx(diffUpdate(state));
+  }
+  const diffgetStageMatch = cleanCmdRaw.match(/^diffg(?:et)?\s+\/\/([123])$/i);
+  if (diffgetStageMatch) {
+    const choice =
+      diffgetStageMatch[1] === '2'
+        ? 'ours'
+        : diffgetStageMatch[1] === '3'
+          ? 'theirs'
+          : 'base';
+    return finishEx(chooseGitConflict(state, choice));
   }
   if (cleanCmd === 'diffget' || cleanCmd === 'diffg') {
     return finishEx(diffObtain(state));

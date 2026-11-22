@@ -101,6 +101,10 @@ export function buildMissionInitialState(
     folds: m.initialFolds ? [...m.initialFolds] : undefined,
     virtualFiles: m.initialVirtualFiles ? { ...m.initialVirtualFiles } : undefined,
     gitBaseLines: m.initialGitBaseLines ? [...m.initialGitBaseLines] : undefined,
+    dapScenarioTrace: m.initialDapTrace ? m.initialDapTrace.map((s) => ({ ...s })) : undefined,
+    dapBreakpoints: m.initialDapBreakpoints
+      ? Object.fromEntries(Object.entries(m.initialDapBreakpoints).map(([k, v]) => [k, [...v]]))
+      : undefined,
     userKeymaps: compileUserKeymaps(activePresets, leaderKey, customKeymaps),
     leaderKey,
   };

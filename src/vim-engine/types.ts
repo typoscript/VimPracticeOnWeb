@@ -1085,6 +1085,14 @@ export interface VimEditorState {
   customSnippets?: CustomSnippetDefinition[];
   /** neo-tree.nvim / nvim-tree 스타일 좌측 영구 파일 트리 사이드바 (:Neotree / :NvimTreeToggle) */
   neotree?: NeotreeSessionState | null;
+  /** git-conflict.nvim 스타일 충돌 해결 카운터 */
+  gitConflictResolvedCount?: number;
+  /** nvim-dap 파일별 중단점 줄 목록 (filename -> sorted 0-based line numbers) */
+  dapBreakpoints?: Record<string, number[]>;
+  /** nvim-dap 커스텀 디버그 실행 트레이스 (미션/캡스톤 시나리오용) */
+  dapScenarioTrace?: DapTraceStep[];
+  /** nvim-dap 활성 디버깅 세션 및 nvim-dap-ui 패널 상태 */
+  dapSession?: DapSessionState | null;
 }
 
 export type LspDiagnosticSeverity = 'error' | 'warning' | 'info' | 'hint';
@@ -1361,6 +1369,80 @@ export interface NeotreeSessionState {
   collapsedDirs: string[];
   prompt?: NeotreePromptState | null;
   initialFilePaths?: string[];
+}
+
+export type GitConflictChoice = 'ours' | 'theirs' | 'both' | 'none' | 'base';
+
+export type GitConflictLineKind =
+  | 'marker-ours'
+  | 'ours'
+  | 'marker-base'
+  | 'base'
+  | 'separator'
+  | 'theirs'
+  | 'marker-theirs';
+
+export interface GitConflictBlock {
+  id: number;
+  /** 0-based `<<<<<<< ...` 줄 인덱스 */
+  startLine: number;
+  /** 0-based optional `||||||| ...` (diff3 base) 줄 인덱스 */
+  baseMarkerLine?: number;
+  /** 0-based `=======` 줄 인덱스 */
+  separatorLine: number;
+  /** 0-based `>>>>>>> ...` 줄 인덱스 */
+  endLine: number;
+  oursLabel: string;
+  baseLabel?: string;
+  theirsLabel: string;
+  oursLines: string[];
+  baseLines?: string[];
+  theirsLines: string[];
+}
+
+export interface DapVariable {
+  name: string;
+  value: string;
+  type: string;
+  changed?: boolean;
+}
+
+export interface DapStackFrame {
+  id: number;
+  name: string;
+  filename: string;
+  line: number;
+  variables: DapVariable[];
+}
+
+export interface DapTraceStep {
+  filename: string;
+  line: number;
+  functionName: string;
+  variables: DapVariable[];
+  callStack?: Array<{ name: string; filename: string; line: number }>;
+  output?: string;
+}
+
+export interface DapWatchResult {
+  expression: string;
+  value: string;
+  error?: boolean;
+}
+
+export interface DapSessionState {
+  isActive: boolean;
+  isPaused: boolean;
+  uiOpen: boolean;
+  filename: string;
+  currentLine: number;
+  stepIndex: number;
+  selectedFrameIndex: number;
+  steps: DapTraceStep[];
+  frames: DapStackFrame[];
+  watches: string[];
+  consoleOutput: string[];
+  terminatedReason?: string;
 }
 
 export type VimState = VimEditorState;

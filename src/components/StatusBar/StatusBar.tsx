@@ -52,6 +52,10 @@ export interface StatusBarProps {
   multiCursorInfo?: { count: number; submode: 'select' | 'insert' } | null;
   /** 현재 검색 매치 카운트 ([current/total]) */
   searchCount?: { current: number; total: number } | null;
+  /** git-conflict.nvim 현재 버퍼 머지 충돌 개수 */
+  gitConflictCount?: number;
+  /** nvim-dap 활성 디버그 상태 배지 */
+  dapBadge?: { line: number; paused: boolean } | null;
 }
 
 export const StatusBar: React.FC<StatusBarProps> = ({
@@ -81,6 +85,8 @@ export const StatusBar: React.FC<StatusBarProps> = ({
   harpoonSlot,
   multiCursorInfo,
   searchCount,
+  gitConflictCount,
+  dapBadge,
 }) => {
   const displayMode =
     multiCursorInfo
@@ -265,6 +271,16 @@ export const StatusBar: React.FC<StatusBarProps> = ({
         {searchCount && searchCount.total > 0 && (
           <span className="status-search-count" data-testid="status-search-count">
             [{searchCount.current}/{searchCount.total}]
+          </span>
+        )}
+        {gitConflictCount !== undefined && gitConflictCount > 0 && (
+          <span className="status-conflict-badge" data-testid="status-conflict-badge">
+            [⚔️ {gitConflictCount}]
+          </span>
+        )}
+        {dapBadge && (
+          <span className="status-dap-badge" data-testid="status-dap-badge">
+            [🐞 DAP L{dapBadge.line + 1}]
           </span>
         )}
         {harpoonSlot && (

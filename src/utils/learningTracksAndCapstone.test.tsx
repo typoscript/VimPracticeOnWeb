@@ -118,7 +118,7 @@ describe('실무 멀티파일 캡스톤 챌린지 (capstoneProjects)', () => {
   });
 
   it('캡스톤 4 (Git Hunk 선별 정리 & 핫픽스 커밋) 를 :Git commit + dial + :TestRun 으로 완주할 수 있다', () => {
-    expect(CAPSTONE_PROJECTS.length).toBe(5);
+    expect(CAPSTONE_PROJECTS.length).toBe(6);
     const project = CAPSTONE_PROJECTS[3];
     const mission = createCapstoneMission(project);
     let s = buildCustomInitialState(mission);
@@ -165,7 +165,29 @@ describe('실무 멀티파일 캡스톤 챌린지 (capstoneProjects)', () => {
     expect(mission.checkComplete(s)).toBe(true);
   });
 
-  it('LessonSelectModal 에 4개 학습 트랙 카드와 5개 캡스톤 카드가 렌더링되고 필터/시작이 동작한다', () => {
+  it('캡스톤 6 (Git 머지 충돌 해결 & nvim-dap 런타임 버그 핫픽스) 를 ]x/ct/cb + :DapBp/:DapContinue/:DapStepOver + :TestRun 으로 완주할 수 있다', () => {
+    const project = CAPSTONE_PROJECTS[5];
+    const mission = createCapstoneMission(project);
+    let s = buildCustomInitialState(mission);
+
+    // 1. src/checkout.ts 머지 충돌 2건 해결 (ct, cb)
+    s = sendKeys(s, ']xct]xcb');
+    // 2. src/invoice.ts 로 이동해 DAP 디버깅 후 + -> - 버그 수정
+    s = runExCommand(s, 'Harpoon 2');
+    s = sendKeys(s, '2j');
+    s = runExCommand(s, 'DapBp');
+    s = runExCommand(s, 'DapContinue');
+    s = runExCommand(s, 'DapStepOver');
+    s = runExCommand(s, 'DapTerminate');
+    s = sendKeys(s, 'kf+r-');
+    // 3. :TestRun 검증
+    s = runExCommand(s, 'TestRun');
+
+    expect(s.lastTestRun?.allPassed).toBe(true);
+    expect(mission.checkComplete(s)).toBe(true);
+  });
+
+  it('LessonSelectModal 에 4개 학습 트랙 카드와 6개 캡스톤 카드가 렌더링되고 필터/시작이 동작한다', () => {
     const onSelectLesson = vi.fn();
     const onStartCapstone = vi.fn();
     const onClose = vi.fn();
@@ -185,9 +207,9 @@ describe('실무 멀티파일 캡스톤 챌린지 (capstoneProjects)', () => {
     expect(screen.getByTestId('learning-tracks-section')).toBeInTheDocument();
     expect(screen.getByTestId('capstone-projects-section')).toBeInTheDocument();
 
-    // 트랙 필터 클릭 → 현대 Neovim 30강만 표시
+    // 트랙 필터 클릭 → 현대 Neovim 32강만 표시
     fireEvent.click(screen.getByTestId('track-filter-neovim'));
-    expect(screen.getByText(/30개 레슨 검색됨/)).toBeInTheDocument();
+    expect(screen.getByText(/32개 레슨 검색됨/)).toBeInTheDocument();
 
     // 트랙 해제 후 캡스톤 도전하기 클릭
     fireEvent.click(screen.getByTestId('track-filter-neovim'));

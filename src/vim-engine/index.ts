@@ -700,3 +700,47 @@ export type {
   NeotreePromptState,
   NeotreeSessionState,
 } from './types';
+
+// ---- git-conflict.nvim 스타일 3-Way 머지 충돌 해결 (]x/[x, co/ct/cb/c0, :GitConflict*, :diffget //2|//3) ----
+export {
+  parseGitConflicts,
+  findGitConflictAtLine,
+  getGitConflictLineKinds,
+  jumpGitConflict,
+  chooseGitConflict,
+  listGitConflictsToQuickfix,
+  executeGitConflictCommand,
+} from './gitConflictEngine';
+export type {
+  GitConflictChoice,
+  GitConflictLineKind,
+  GitConflictBlock,
+} from './types';
+
+// ---- nvim-dap / nvim-dap-ui 스타일 인터랙티브 디버거 (:DapBp, :DapContinue, :DapStepOver, :DapUiToggle) ----
+export {
+  buildAutoDapTrace,
+  getBreakpointsForFile,
+  toggleDapBreakpoint,
+  clearDapBreakpoints,
+  dapContinue,
+  dapStepOver,
+  dapStepInto,
+  dapStepOut,
+  dapTerminate,
+  toggleDapUi,
+  selectDapFrame,
+  evaluateDapWatch,
+  addDapWatch,
+  removeDapWatch,
+  evalDapExpression,
+  getDapLineVirtualText,
+  executeDapCommand,
+} from './dapEngine';
+export type {
+  DapVariable,
+  DapStackFrame,
+  DapTraceStep,
+  DapWatchResult,
+  DapSessionState,
+} from './types';

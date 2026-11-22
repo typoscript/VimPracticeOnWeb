@@ -5,9 +5,9 @@
 CodeMirror나 Monaco 같은 무거운 외부 에디터 라이브러리 없이, **순수 함수형 상태 전이 아키텍처(`(state, key) => nextState`)**로 구현된 가볍고 반응성이 뛰어난 웹 Vim 학습 플랫폼입니다.
 독립 엔진 모듈 단독 사용법은 [`src/vim-engine/README.md`](./src/vim-engine/README.md)를 참고하세요.
 
-- **📚 125개 실전 커리큘럼**: 기초 이동(`hjkl`)부터 매크로·Vimscript·정규식·Netrw·세션, 현대 Neovim 플러그인(`Telescope`, `LSP`, `Treesitter`, `Gitsigns`, `vim-fugitive`, `Lua`, `Flash`, `Oil`, `Harpoon`, `mini.ai`, `mini.move`, `Trouble`, `Multi-Cursor`, `Undotree`, `Yanky`, `Spectre`, `:terminal`, `dial.nvim`, `vim-abolish`, `treesj`, `nvim-autopairs`, `LuaSnip`, `nvim-cmp`, `noice.nvim`, `indent-blankline`, `todo-comments`, `matchparen`/`rainbow-delimiters`, `bufferline.nvim`, `satellite.nvim`, `nvim-treesitter-context`, `nvim-colorizer`, `vim-illuminate`)까지 단계별 완주
-- **🎮 다채로운 훈련 모드**: 튜토리얼 코스(4개 학습 트랙 · 1:1 Vim Golf 비교기) · 실무 멀티파일 캡스톤 5종(`:TestRun`) · 타임어택 스피드런 · 아케이드 서바이벌(보스전/파워업) · 던전 RPG(6스테이지) · 하드코어 도장(Modern Neovim 10연타 포함) · 멀티파일 자유 연습장(로컬 파일/폴더 드래그&드롭 · `.zip` 내보내기) · BYOC 커스텀 미션
-- **🔬 높은 호환성 검증**: 실제 `nvim --headless` 대조 골든 회귀 **116종** 포함 **207개 테스트 파일 / 2,328개 테스트 100% 통과**
+- **📚 132개 실전 커리큘럼**: 기초 이동(`hjkl`)부터 매크로·Vimscript·정규식·Netrw·세션, 현대 Neovim 플러그인(`Telescope`, `LSP`, `Treesitter`, `Gitsigns`, `vim-fugitive`, `git-conflict.nvim`, `nvim-dap`/`nvim-dap-ui`, `neo-tree.nvim`, `Lua`, `Flash`, `Oil`, `Harpoon`, `mini.ai`, `mini.move`, `Trouble`, `Multi-Cursor`, `Undotree`, `Yanky`, `Spectre`, `:terminal`, `dial.nvim`, `vim-abolish`, `treesj`, `nvim-autopairs`, `LuaSnip`, `nvim-cmp`, `noice.nvim`, `indent-blankline`, `todo-comments`, `matchparen`/`rainbow-delimiters`, `bufferline.nvim`, `satellite.nvim`, `nvim-treesitter-context`, `nvim-colorizer`, `vim-illuminate`)까지 단계별 완주
+- **🎮 다채로운 훈련 모드**: 튜토리얼 코스(4개 학습 트랙 · 1:1 Vim Golf 비교기) · 실무 멀티파일 캡스톤 6종(`:TestRun`) · 타임어택 스피드런 · 아케이드 서바이벌(보스전/파워업) · 던전 RPG(6스테이지) · 하드코어 도장(Modern Neovim 10연타 포함) · 멀티파일 자유 연습장(로컬 파일/폴더 드래그&드롭 · `.zip` 내보내기) · BYOC 커스텀 미션
+- **🔬 높은 호환성 검증**: 실제 `nvim --headless` 대조 골든 회귀 **116종** 포함 **211개 테스트 파일 / 2,352개 테스트 100% 통과**
 
 ---
 
@@ -113,6 +113,8 @@ flowchart TD
 | **Treesitter** | `daf`/`cif`/`daa`, `]f`/`[f`, `ii`/`ai` | 함수·인자·인덴트 구조적 텍스트 객체와 함수 점프 |
 | **mini.ai** | `cin"`, `din(`, `cil"`, `val(` | 커서 밖 다음(`n`)/이전(`l`) 따옴표·괄호 짝 원격 편집 |
 | **gitsigns.nvim** | `]h`/`[h`, `:Gitsigns preview_hunk\|reset_hunk\|stage_hunk` | 거터 Hunk 표시, 이동, 미리보기, 리셋·스테이징 |
+| **git-conflict.nvim** | `]x`/`[x`, `co`/`ct`/`cb`/`c0`, `:GitConflictListQf`, `:diffget //2\|//3` | 2-Way·diff3 3-Way 머지 충돌 하이라이트, 인라인 액션 및 키보드 즉시 해결 |
+| **nvim-dap / dap-ui** | `:DapBp`, `:DapContinue`, `:DapStepOver`/`Into`/`Out`, `:DapWatch`, `:DapUiToggle` | 거터 중단점·실행 화살표, 인라인 가상 변수 텍스트, Scopes·Watch·Call Stack·Console 패널 |
 | **Lua 레이어** | `:lua`, `:luafile`, `:source init.lua`, `vim.opt`, `vim.keymap.set` | `eval` 없는 순수 TS Lua 인터프리터 (`vim.api`/`vim.fn` 일부 지원) |
 | **flash.nvim** | `gs`, `dgs`/`cgs`/`ygs`, `:Flash` | 화면 라벨 점프와 원격 범위 연산 |
 | **neo-tree.nvim** | `:Neotree [toggle\|focus\|reveal\|close]`, `:NvimTreeToggle`, `a`/`r`/`d`/`s` | 좌측 영구 도킹 파일 트리 사이드바, Git 상태·진단 배지, 파일 생성·이름변경·삭제·분할 열기 |
@@ -133,7 +135,7 @@ flowchart TD
 
 ---
 
-## 🎯 튜토리얼 커리큘럼 (Lessons 1 ~ 130)
+## 🎯 튜토리얼 커리큘럼 (Lessons 1 ~ 132)
 
 ### 🟢 기초 이동 및 텍스트 편집 (레슨 1 ~ 10)
 1. **레슨 1**: 기본 방향 이동 (`h`, `j`, `k`, `l`)
@@ -247,7 +249,7 @@ flowchart TD
 99. **레슨 99**: 덮어쓰기 모드(`R`), `[count]r` & 비주얼 블록 치환(`Ctrl-v r`) 마스터하기
 100. **레슨 100**: [대단원] 정규식 캡처·매크로·`vim-surround`·다중 파일 배치(`:vimgrep` + `:cdo` + `Ctrl-^`) 종합 마스터 챌린지
 
-### 🚀 현대 Neovim 실전 트랙 (레슨 101 ~ 130)
+### 🚀 현대 Neovim 실전 트랙 (레슨 101 ~ 132)
 101. **레슨 101**: Telescope `:LiveGrep` 본문 검색 & `Ctrl-q` 퀵픽스 일괄 치환
 102. **레슨 102**: Neovim 0.11 LSP 리팩토링 — `gra` 코드 액션 & `grn` 다중 파일 이름 변경
 103. **레슨 103**: Neovim 0.11 LSP 탐색 — `gO` 문서 심볼 아웃라인 & `grr` 참조 검색
@@ -278,6 +280,8 @@ flowchart TD
 128. **레슨 128**: `[128강 피날레]` 모던 Neovim 시각 플러그인(`:TSContextToggle` · `:ColorizerToggle` · `:IlluminateToggle`)
 129. **레슨 129**: `neo-tree.nvim` 파일 트리 사이드바(`:Neotree` · `a` 생성 · `r` 이름변경 · `d` 삭제)
 130. **레슨 130**: `[130강 피날레]` `neo-tree` 분할 열기(`s`) & 멀티파일 라이브 리팩토링(`:wa`)
+131. **레슨 131**: `git-conflict.nvim` 3-Way 머지 충돌 해결(`]x` · `co` · `ct` · `cb` · `:diffget //2`)
+132. **레슨 132**: `[132강 피날레]` `nvim-dap` 인터랙티브 디버거(`:DapBp` · `:DapContinue` · `:DapStepOver`)
 
 ---
 

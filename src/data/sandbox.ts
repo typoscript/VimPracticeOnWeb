@@ -67,6 +67,16 @@ export function createSandboxVirtualFiles(currentLines: string[]): Record<string
       '  return `[worker] executed ${taskName} (retries=${MAX_RETRY})`;',
       '}',
     ],
+    'src/mergeDemo.ts': [
+      'export const featureFlags = {',
+      '<<<<<<< HEAD',
+      '  cacheTtlSec: 60,',
+      '=======',
+      '  cacheTtlSec: 300,',
+      '>>>>>>> feature/perf-cache',
+      '  enableMetrics: true,',
+      '};',
+    ],
     'init.lua': [
       '-- Sample Neovim init.lua for Sandbox (:source init.lua)',
       'vim.opt.number = true',

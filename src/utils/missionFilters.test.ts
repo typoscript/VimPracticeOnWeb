@@ -50,8 +50,8 @@ describe('missionFilters module', () => {
       searchQuery: '',
       category: 'neovim',
     });
-    expect(neovimMissions.length).toBe(30);
-    expect(neovimMissions.every((m) => m.id >= 101 && m.id <= 130)).toBe(true);
+    expect(neovimMissions.length).toBe(32);
+    expect(neovimMissions.every((m) => m.id >= 101 && m.id <= 132)).toBe(true);
 
     const textObjectMissions = filterMissions(MISSIONS, {
       searchQuery: '',

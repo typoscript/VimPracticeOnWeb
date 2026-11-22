@@ -6,12 +6,14 @@ import {
   VimEditorState,
   WindowLayoutNode,
   TroubleMode,
+  GitConflictChoice,
   ensureBuffers,
   ensureTabPages,
   isCurrentBufferModified,
   getEffectiveWindowTree,
   getGitLineSigns,
   computeGitBlameLines,
+  getBreakpointsForFile,
   CursorPosition,
 } from '../../vim-engine';
 import { t } from '../../i18n';
@@ -30,6 +32,9 @@ const GitPanel = lazy(() =>
 );
 const NeotreeSidebar = lazy(() =>
   import('../NeotreeSidebar/NeotreeSidebar').then((m) => ({ default: m.NeotreeSidebar }))
+);
+const DapPanel = lazy(() =>
+  import('../DapPanel/DapPanel').then((m) => ({ default: m.DapPanel }))
 );
 
 interface EditorViewportProps {
@@ -97,6 +102,18 @@ interface EditorViewportProps {
   onDeleteNeotreeNode?: (index: number) => void;
   onFocusNeotree?: (focused: boolean) => void;
   onCloseNeotree?: () => void;
+  onChooseGitConflict?: (lineIdx: number, choice: GitConflictChoice) => void;
+  onToggleDapBreakpointLine?: (lineIdx?: number) => void;
+  onDapContinue?: () => void;
+  onDapStepOver?: () => void;
+  onDapStepInto?: () => void;
+  onDapStepOut?: () => void;
+  onDapTerminate?: () => void;
+  onSelectDapFrame?: (index: number) => void;
+  onAddDapWatch?: (expr: string) => void;
+  onRemoveDapWatch?: (expr: string) => void;
+  onJumpDapBreakpoint?: (filename: string, line: number) => void;
+  onCloseDapUi?: () => void;
   onSwitchCommandLineWindowType: (type: ':' | '/') => void;
   onClearCommandLineHistory: (type: ':' | '/' | '?') => void;
   onCloseCommandLineWindow: () => void;
@@ -172,6 +189,18 @@ export function EditorViewport({
   onDeleteNeotreeNode,
   onFocusNeotree,
   onCloseNeotree,
+  onChooseGitConflict,
+  onToggleDapBreakpointLine,
+  onDapContinue,
+  onDapStepOver,
+  onDapStepInto,
+  onDapStepOut,
+  onDapTerminate,
+  onSelectDapFrame,
+  onAddDapWatch,
+  onRemoveDapWatch,
+  onJumpDapBreakpoint,
+  onCloseDapUi,
   onSwitchCommandLineWindowType,
   onClearCommandLineHistory,
   onCloseCommandLineWindow,
@@ -293,6 +322,10 @@ export function EditorViewport({
             onStageGitHunk={onStageGitHunk}
             flashJump={isActive ? editorState.flashJump : undefined}
             multiCursor={isActive ? editorState.multiCursor : undefined}
+            onChooseGitConflict={isActive ? onChooseGitConflict : undefined}
+            dapBreakpointLines={getBreakpointsForFile(displayEditorState, paneFilename)}
+            dapSession={displayEditorState.dapSession}
+            onToggleDapBreakpointLine={isActive ? (lineIdx) => onToggleDapBreakpointLine?.(lineIdx) : undefined}
           />
         </div>
       );
@@ -516,6 +549,13 @@ export function EditorViewport({
                 onStageGitHunk={onStageGitHunk}
                 flashJump={displayEditorState.flashJump}
                 multiCursor={displayEditorState.multiCursor}
+                onChooseGitConflict={onChooseGitConflict}
+                dapBreakpointLines={getBreakpointsForFile(
+                  displayEditorState,
+                  displayEditorState.primaryFilename || fallbackPrimaryFilename
+                )}
+                dapSession={displayEditorState.dapSession}
+                onToggleDapBreakpointLine={(lineIdx) => onToggleDapBreakpointLine?.(lineIdx)}
               />
             );
 
@@ -622,6 +662,27 @@ export function EditorViewport({
               onCommit={(message) => onCommitGitPanel?.(message)}
               onToggleBlame={() => onToggleGitBlame?.()}
               onClose={() => onCloseGitPanel?.()}
+            />
+          </Suspense>
+        )}
+
+        {/* nvim-dap / nvim-dap-ui 인터랙티브 디버거 분할 패널 (:DapUiToggle / :DapContinue) */}
+        {displayEditorState.dapSession?.uiOpen && (
+          <Suspense fallback={null}>
+            <DapPanel
+              session={displayEditorState.dapSession}
+              breakpoints={displayEditorState.dapBreakpoints ?? {}}
+              onContinue={() => onDapContinue?.()}
+              onStepOver={() => onDapStepOver?.()}
+              onStepInto={() => onDapStepInto?.()}
+              onStepOut={() => onDapStepOut?.()}
+              onToggleBreakpoint={() => onToggleDapBreakpointLine?.()}
+              onTerminate={() => onDapTerminate?.()}
+              onSelectFrame={(idx) => onSelectDapFrame?.(idx)}
+              onAddWatch={(expr) => onAddDapWatch?.(expr)}
+              onRemoveWatch={(expr) => onRemoveDapWatch?.(expr)}
+              onJumpBreakpoint={(file, line) => onJumpDapBreakpoint?.(file, line)}
+              onClose={() => onCloseDapUi?.()}
             />
           </Suspense>
         )}

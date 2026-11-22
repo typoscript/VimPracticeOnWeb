@@ -1,4 +1,4 @@
-import { ClipboardRegister, StateSnapshot, VimEditorState, QuickfixItem, ChangeListItem, UndoTreeNode, FoldRange, RegisterEntry, LspDiagnostic, LspHoverSymbol, VirtualTestSpec } from '../vim-engine';
+import { ClipboardRegister, StateSnapshot, VimEditorState, QuickfixItem, ChangeListItem, UndoTreeNode, FoldRange, RegisterEntry, LspDiagnostic, LspHoverSymbol, VirtualTestSpec, DapTraceStep } from '../vim-engine';
 
 export interface Mission {
   id: number;
@@ -58,6 +58,10 @@ export interface Mission {
   initialHarpoonList?: string[];
   /** 실무 캡스톤 가상 테스트 스위트 (:TestRun / npm test) */
   initialVirtualTests?: VirtualTestSpec[];
+  /** nvim-dap 초기 커스텀 디버그 트레이스 */
+  initialDapTrace?: DapTraceStep[];
+  /** nvim-dap 초기 중단점 맵 */
+  initialDapBreakpoints?: Record<string, number[]>;
   /** 캡스톤 프로젝트 ID */
   capstoneId?: string;
   /** 캡스톤 추천 도구 배지 목록 */

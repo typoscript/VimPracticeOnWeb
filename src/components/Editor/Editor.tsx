@@ -17,8 +17,12 @@ import {
   CustomMatchEntry,
   GitHunkPreviewState,
   GitBlameInfo,
+  GitConflictChoice,
+  DapSessionState,
   FlashJumpSession,
   MultiCursorSession,
+  getGitConflictLineKinds,
+  getDapLineVirtualText,
 } from '../../vim-engine';
 import {
   findMatches,
@@ -135,6 +139,14 @@ export interface EditorProps {
   flashJump?: FlashJumpSession | null;
   /** vim-visual-multi 스타일 다중 커서 세션 (g Ctrl-n, :MultiCursor) */
   multiCursor?: MultiCursorSession | null;
+  /** git-conflict.nvim 인라인 충돌 해결 클릭 콜백 */
+  onChooseGitConflict?: (lineIdx: number, choice: GitConflictChoice) => void;
+  /** nvim-dap 현재 버퍼의 중단점 줄 목록 (0-based) */
+  dapBreakpointLines?: number[];
+  /** nvim-dap 활성 디버그 세션 (거터 실행 화살표 및 가상 변수 텍스트 표시용) */
+  dapSession?: DapSessionState | null;
+  /** 거터 클릭 시 중단점 토글 콜백 */
+  onToggleDapBreakpointLine?: (lineIdx: number) => void;
 }
 
 export const Editor: React.FC<EditorProps> = ({
@@ -186,6 +198,10 @@ export const Editor: React.FC<EditorProps> = ({
   onStageGitHunk,
   flashJump,
   multiCursor,
+  onChooseGitConflict,
+  dapBreakpointLines,
+  dapSession,
+  onToggleDapBreakpointLine,
 }) => {
   const explicitFt =
     options?.filetype ||
@@ -273,6 +289,11 @@ export const Editor: React.FC<EditorProps> = ({
   const illuminatedWordMap = React.useMemo(
     () => (showIlluminate ? computeIlluminatedWordMap(lines, cursor) : null),
     [lines, cursor.line, cursor.col, showIlluminate]
+  );
+  const gitConflictKinds = React.useMemo(() => getGitConflictLineKinds(lines), [lines]);
+  const dapBreakpointSet = React.useMemo(
+    () => (dapBreakpointLines && dapBreakpointLines.length > 0 ? new Set(dapBreakpointLines) : null),
+    [dapBreakpointLines]
   );
   const searchOpts = options ? { ignorecase: options.ignorecase, smartcase: options.smartcase } : undefined;
 
@@ -458,10 +479,23 @@ export const Editor: React.FC<EditorProps> = ({
               }
             }
 
+            const conflictKind = gitConflictKinds.get(lineIdx);
+            const hasDapBp = Boolean(dapBreakpointSet?.has(lineIdx));
+            const effectiveDapFile = primaryFilename || 'main.ts';
+            const isDapActiveLine = Boolean(
+              dapSession?.isActive &&
+                dapSession.isPaused &&
+                dapSession.filename === effectiveDapFile &&
+                dapSession.currentLine === lineIdx
+            );
+            const dapVirtualText = isDapActiveLine
+              ? getDapLineVirtualText(dapSession, effectiveDapFile, lineIdx)
+              : null;
+
             return (
               <div
                 key={lineIdx}
-                className={`editor-row ${isCursorLineActive ? 'active-row' : ''} ${isFoldedHeader ? 'folded-row' : ''} ${diffLineType ? `diff-row diff-row-${diffLineType}` : ''}`}
+                className={`editor-row ${isCursorLineActive ? 'active-row' : ''} ${isFoldedHeader ? 'folded-row' : ''} ${diffLineType ? `diff-row diff-row-${diffLineType}` : ''} ${conflictKind ? `git-conflict-row git-conflict-${conflictKind}` : ''} ${isDapActiveLine ? 'dap-active-row' : ''}`}
                 data-testid={`editor-row-${lineIdx + 1}`}
               >
                 <div
@@ -469,6 +503,30 @@ export const Editor: React.FC<EditorProps> = ({
                   data-testid={`line-number-${lineIdx + 1}`}
                   aria-hidden="true"
                 >
+                  {isDapActiveLine && (
+                    <span
+                      className="gutter-dap-active"
+                      data-testid={`dap-active-sign-${lineIdx + 1}`}
+                      title={t('현재 디버그 실행 위치')}
+                    >
+                      ▶
+                    </span>
+                  )}
+                  {hasDapBp && (
+                    <span
+                      className="gutter-dap-bp"
+                      data-testid={`dap-bp-sign-${lineIdx + 1}`}
+                      title={t('중단점 (클릭하여 해제)')}
+                      onClick={(e) => {
+                        if (onToggleDapBreakpointLine) {
+                          e.stopPropagation();
+                          onToggleDapBreakpointLine(lineIdx);
+                        }
+                      }}
+                    >
+                      ●
+                    </span>
+                  )}
                   {marksOnLine.length > 0 && (
                     <span className="gutter-marks">
                       {marksOnLine.map(({ name, isGlobal }) => (
@@ -623,6 +681,54 @@ export const Editor: React.FC<EditorProps> = ({
                           data-testid={`git-blame-${lineIdx + 1}`}
                         >
                           {`  ${gitBlameLines[lineIdx].hash} · ${gitBlameLines[lineIdx].author} — ${gitBlameLines[lineIdx].message}`}
+                        </span>
+                      )}
+                      {dapVirtualText && (
+                        <span
+                          className="dap-virtual-text"
+                          data-testid={`dap-virtual-${lineIdx + 1}`}
+                        >
+                          {dapVirtualText}
+                        </span>
+                      )}
+                      {conflictKind === 'marker-ours' && onChooseGitConflict && (
+                        <span
+                          className="git-conflict-lens"
+                          data-testid={`git-conflict-lens-${lineIdx + 1}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            className="git-conflict-lens-btn ours"
+                            data-testid={`git-conflict-choose-ours-${lineIdx + 1}`}
+                            onClick={() => onChooseGitConflict(lineIdx, 'ours')}
+                          >
+                            Ours (co)
+                          </button>
+                          <button
+                            type="button"
+                            className="git-conflict-lens-btn theirs"
+                            data-testid={`git-conflict-choose-theirs-${lineIdx + 1}`}
+                            onClick={() => onChooseGitConflict(lineIdx, 'theirs')}
+                          >
+                            Theirs (ct)
+                          </button>
+                          <button
+                            type="button"
+                            className="git-conflict-lens-btn both"
+                            data-testid={`git-conflict-choose-both-${lineIdx + 1}`}
+                            onClick={() => onChooseGitConflict(lineIdx, 'both')}
+                          >
+                            Both (cb)
+                          </button>
+                          <button
+                            type="button"
+                            className="git-conflict-lens-btn none"
+                            data-testid={`git-conflict-choose-none-${lineIdx + 1}`}
+                            onClick={() => onChooseGitConflict(lineIdx, 'none')}
+                          >
+                            None (c0)
+                          </button>
                         </span>
                       )}
                       {lspHover?.isOpen && lspHover.line === lineIdx && (

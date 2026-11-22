@@ -17,6 +17,7 @@ import { nextArg, prevArg, firstArg, lastArg } from './argEngine';
 import { jumpToDiagnostic } from './lspEngine';
 import { jumpDiffHunk } from './diffEngine';
 import { jumpGitHunk } from './gitSignsEngine';
+import { jumpGitConflict } from './gitConflictEngine';
 import { jumpToNextSpellError, jumpToPrevSpellError } from './spellEngine';
 import { jumpToFoldEdge } from './folding';
 import { findAdjacentLowercaseMark, recordJump, executeMarkOperator } from './marks';
@@ -63,6 +64,13 @@ export function handleNormalBracketPrefix(
       return {
         handled: true,
         state: jumpGitHunk(state, dir, bCount),
+      };
+    }
+    if (key === 'x') {
+      const dir = bracket === ']' ? 'next' : 'prev';
+      return {
+        handled: true,
+        state: jumpGitConflict(state, dir, bCount),
       };
     }
     if ((bracket === '[' && (key === '(' || key === '{')) || (bracket === ']' && (key === ')' || key === '}'))) {

@@ -16,6 +16,7 @@ import {
   executeLineSurround,
 } from './surroundEngine';
 import { applyAbolishCoerce } from './abolishEngine';
+import { findGitConflictAtLine, chooseGitConflict } from './gitConflictEngine';
 import { setMark, jumpToMark, executeMarkOperator, isValidMarkJumpChar } from './marks';
 import { indentLines, formatIndentLines, formatIndentRange } from './lineOperators';
 import {
@@ -41,6 +42,18 @@ export function handleNormalSurroundPending(
   }
   if (state.pendingKeys === 'cr') {
     return applyAbolishCoerce(state, key, isReplayingDot);
+  }
+
+  // 0-b) git-conflict.nvim 머지 충돌 선택 (co: ours, ct: theirs, cb: both, c0: none)
+  // 커서가 유효한 머지 충돌 블록(<<<<<<< ... ======= ... >>>>>>>) 안에 있을 때만 동작해 순정 Vim ct/cb/c0 과 완전 공존
+  if (
+    state.pendingKeys === 'c' &&
+    (key === 'o' || key === 't' || key === 'b' || key === '0') &&
+    findGitConflictAtLine(state.lines, state.cursor.line)
+  ) {
+    const choice =
+      key === 'o' ? 'ours' : key === 't' ? 'theirs' : key === 'b' ? 'both' : 'none';
+    return chooseGitConflict(state, choice, isReplayingDot);
   }
 
   // 1) Delete Surround (ds{char})

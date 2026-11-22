@@ -343,6 +343,78 @@ export const CAPSTONE_PROJECTS: readonly CapstoneProject[] = [
       },
     ],
   },
+  {
+    id: 'capstone-merge-debug',
+    icon: '🐞',
+    difficultyKey: i18nKey('실무 · 머지 & 디버그'),
+    titleKey: i18nKey('캡스톤 6: Git 머지 충돌 해결 & nvim-dap 런타임 버그 핫픽스'),
+    summaryKey: i18nKey('3-Way 충돌 해결(]x/ct/cb) · :DapBp/:DapContinue 디버깅 · 결제 계산 핫픽스 · :TestRun'),
+    descriptionKey: i18nKey(
+      '배포 직전 브랜치 병합에서 머지 충돌이 발생했고, 결제 할인 계산에도 런타임 버그가 보고되었습니다! git-conflict.nvim(]x, ct, cb)과 nvim-dap(:DapBp, :DapContinue, :DapStepOver)으로 충돌을 정리하고 버그를 추적·수정한 뒤 :TestRun 으로 검증하세요.\n\n요구사항:\n1. src/checkout.ts: 첫 번째 충돌(currency)은 유입 브랜치("KRW", ct)를 선택하고, 두 번째 충돌(미들웨어)은 양쪽 모두 유지(cb)하세요.\n2. src/invoice.ts: :DapBp → :DapContinue → :DapStepOver 로 netTotal 계산을 추적해 + discount 버그를 - discount 로 수정하세요.\n3. 모든 수정이 끝나면 :TestRun 을 실행해 전체 테스트를 통과시키세요.'
+    ),
+    hintKey: i18nKey('src/checkout.ts 에서 ]x ct → ]x cb → :Harpoon 2(src/invoice.ts) → 2j :DapBp → :DapContinue → :DapStepOver → :DapTerminate → f+ r- → :TestRun'),
+    par: 65,
+    recommendedTools: [']x / ct / cb', ':GitConflictListQf', ':DapBp', ':DapContinue', ':DapStepOver', ':TestRun'],
+    primaryFilename: 'src/checkout.ts',
+    initialLines: [
+      'export const checkoutConfig = {',
+      '<<<<<<< HEAD',
+      '  currency: "USD",',
+      '=======',
+      '  currency: "KRW",',
+      '>>>>>>> feature/krw-checkout',
+      '<<<<<<< HEAD',
+      '  auditLog: true,',
+      '=======',
+      '  fraudCheck: true,',
+      '>>>>>>> feature/fraud-guard',
+      '};',
+    ],
+    initialVirtualFiles: {
+      'src/checkout.ts': [
+        'export const checkoutConfig = {',
+        '<<<<<<< HEAD',
+        '  currency: "USD",',
+        '=======',
+        '  currency: "KRW",',
+        '>>>>>>> feature/krw-checkout',
+        '<<<<<<< HEAD',
+        '  auditLog: true,',
+        '=======',
+        '  fraudCheck: true,',
+        '>>>>>>> feature/fraud-guard',
+        '};',
+      ],
+      'src/invoice.ts': [
+        'const subtotal = 50000;',
+        'const discount = 5000;',
+        'export const netTotal = subtotal + discount;',
+        'console.log(netTotal);',
+      ],
+    },
+    initialHarpoonList: ['src/checkout.ts', 'src/invoice.ts'],
+    tests: [
+      {
+        id: 'merge-no-markers',
+        name: 'checkout: all Git conflict markers resolved',
+        file: 'src/checkout.ts',
+        mustNotContain: ['<<<<<<<', '=======', '>>>>>>>'],
+      },
+      {
+        id: 'merge-currency-and-both',
+        name: 'checkout: KRW selected and both auditLog & fraudCheck kept',
+        file: 'src/checkout.ts',
+        mustContain: ['currency: "KRW"', 'auditLog: true', 'fraudCheck: true'],
+      },
+      {
+        id: 'dap-invoice-bugfix',
+        name: 'invoice: netTotal subtracts discount (subtotal - discount)',
+        file: 'src/invoice.ts',
+        mustContain: ['subtotal - discount'],
+        mustNotContain: ['subtotal + discount'],
+      },
+    ],
+  },
 ];
 
 export function loadCapstoneProgress(): CapstoneProgressMap {

@@ -38,6 +38,8 @@ import { executeDigraphCommand } from './digraphs';
 import { addSpellGoodWord, addSpellWrongWord, undoSpellWord } from './spellEngine';
 import { executeGitsignsCommand } from './gitSignsEngine';
 import { executeGitCommand, closeGitPanel, openGitPanel, toggleGitPanel } from './gitFugitiveEngine';
+import { executeGitConflictCommand } from './gitConflictEngine';
+import { executeDapCommand } from './dapEngine';
 import { formatSnippetsList } from './snippetEngine';
 import { openFlashJump } from './flashJumpEngine';
 import { startMultiCursor } from './multiCursorEngine';
@@ -570,6 +572,22 @@ function tryExecuteMappingAndMiscToolCommand(
   }
   if (/^IlluminateToggle$/i.test(cleanCmdRaw)) {
     return finishEx(executeSetCommand(state, 'illuminate!', 'both'));
+  }
+
+  // :GitConflict* — git-conflict.nvim 3-Way 머지 충돌 해결 명령
+  const gitConflictMatch = cleanCmdRaw.match(
+    /^(GitConflict(?:ChooseOurs|ChooseTheirs|ChooseBoth|ChooseNone|ChooseBase|NextConflict|PrevConflict|ListQf|Refresh))$/i
+  );
+  if (gitConflictMatch) {
+    return finishEx(executeGitConflictCommand(state, gitConflictMatch[1]));
+  }
+
+  // :Dap* — nvim-dap / nvim-dap-ui 인터랙티브 디버거 명령
+  const dapMatch = cleanCmdRaw.match(
+    /^(Dap(?:ToggleBreakpoint|Bp|ClearBreakpoints|Continue|Start|StepOver|Next|StepInto|StepIn|StepOut|Terminate|Stop|UiToggle|Ui|UiOpen|UiClose|Watch|Eval))(?:\s+(.*))?$/i
+  );
+  if (dapMatch) {
+    return finishEx(executeDapCommand(state, dapMatch[1], dapMatch[2] ?? ''));
   }
 
   // :TestRun / :RunTests / :TestSuite — 실무 캡스톤 가상 테스트 러너

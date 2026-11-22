@@ -250,6 +250,26 @@
   letter-spacing: 0.04em;
 }
 
+.status-conflict-badge {
+  background-color: rgba(250, 179, 135, 0.18);
+  color: #fab387;
+  border: 1px solid rgba(250, 179, 135, 0.45);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.status-dap-badge {
+  background-color: rgba(243, 139, 168, 0.2);
+  color: #f38ba8;
+  border: 1px solid rgba(243, 139, 168, 0.48);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .status-pending-keys {
   background-color: #313244;
   color: #f9e2af;

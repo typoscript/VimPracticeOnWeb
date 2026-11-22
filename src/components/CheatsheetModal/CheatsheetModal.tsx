@@ -219,6 +219,22 @@ export const CHEATSHEET_ITEMS: ReadonlyArray<CheatsheetItem> = [
     tryKeys: ['Escape', ...':Git'.split(''), 'Enter'],
   },
   {
+    id: 'git-conflict',
+    category: 'neovim',
+    keys: ']x / [x / co / ct / cb / c0 / :GitConflictListQf',
+    titleKey: i18nKey('git-conflict.nvim 3-Way 머지 충돌 해결'),
+    descKey: i18nKey('충돌 블록 간 점프(]x/[x) 후 현재(co)·유입(ct)·둘 다(cb)·제거(c0) 또는 :diffget //2·//3 으로 즉시 해결합니다.'),
+    tryKeys: ['Escape', ...':GitConflictListQf'.split(''), 'Enter'],
+  },
+  {
+    id: 'nvim-dap',
+    category: 'neovim',
+    keys: ':DapBp / :DapContinue / :DapStepOver / :DapUiToggle',
+    titleKey: i18nKey('nvim-dap 인터랙티브 디버거 & 변수 감시'),
+    descKey: i18nKey('중단점 설정(:DapBp)·실행(:DapContinue)·스텝(:DapStepOver/Into/Out)·Watch/Eval 로 런타임 버그를 추적합니다.'),
+    tryKeys: ['Escape', ...':DapUiToggle'.split(''), 'Enter'],
+  },
+  {
     id: 'visual-plugins',
     category: 'neovim',
     keys: ':set noice / :TSContextToggle / :ColorizerToggle',

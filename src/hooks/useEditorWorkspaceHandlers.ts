@@ -63,6 +63,20 @@ import {
   deleteNeotreeNode,
   setNeotreeFocus,
   closeNeotree,
+  chooseGitConflict,
+  GitConflictChoice,
+  toggleDapBreakpoint,
+  dapContinue,
+  dapStepOver,
+  dapStepInto,
+  dapStepOut,
+  dapTerminate,
+  toggleDapUi,
+  selectDapFrame,
+  addDapWatch,
+  removeDapWatch,
+  editBuffer,
+  syncCurrentBuffer,
   selectCompletionCandidate,
   selectCmpCompletionCandidate,
   selectWildmenuCandidate,
@@ -365,6 +379,75 @@ export function useEditorWorkspaceHandlers({
     [applyAndFocus]
   );
 
+  const handleChooseGitConflict = useCallback(
+    (lineIdx: number, choice: GitConflictChoice) =>
+      applyAndFocus((prev) => chooseGitConflict(prev, choice, false, lineIdx)),
+    [applyAndFocus]
+  );
+
+  const handleToggleDapBreakpointLine = useCallback(
+    (lineIdx?: number) => applyAndFocus((prev) => toggleDapBreakpoint(prev, lineIdx)),
+    [applyAndFocus]
+  );
+
+  const handleDapContinue = useCallback(
+    () => applyAndFocus((prev) => dapContinue(prev)),
+    [applyAndFocus]
+  );
+
+  const handleDapStepOver = useCallback(
+    () => applyAndFocus((prev) => dapStepOver(prev)),
+    [applyAndFocus]
+  );
+
+  const handleDapStepInto = useCallback(
+    () => applyAndFocus((prev) => dapStepInto(prev)),
+    [applyAndFocus]
+  );
+
+  const handleDapStepOut = useCallback(
+    () => applyAndFocus((prev) => dapStepOut(prev)),
+    [applyAndFocus]
+  );
+
+  const handleDapTerminate = useCallback(
+    () => applyAndFocus((prev) => dapTerminate(prev)),
+    [applyAndFocus]
+  );
+
+  const handleSelectDapFrame = useCallback(
+    (index: number) => applyAndFocus((prev) => selectDapFrame(prev, index)),
+    [applyAndFocus]
+  );
+
+  const handleAddDapWatch = useCallback(
+    (expr: string) => setEditorState((prev) => addDapWatch(prev, expr)),
+    [setEditorState]
+  );
+
+  const handleRemoveDapWatch = useCallback(
+    (expr: string) => setEditorState((prev) => removeDapWatch(prev, expr)),
+    [setEditorState]
+  );
+
+  const handleJumpDapBreakpoint = useCallback(
+    (filename: string, line: number) =>
+      applyAndFocus((prev) => {
+        const next =
+          filename && filename !== prev.primaryFilename
+            ? editBuffer(syncCurrentBuffer(prev), filename)
+            : prev;
+        const clampedLine = Math.max(0, Math.min(next.lines.length - 1, line));
+        return { ...next, cursor: { line: clampedLine, col: 0 } };
+      }),
+    [applyAndFocus]
+  );
+
+  const handleCloseDapUi = useCallback(
+    () => applyAndFocus((prev) => toggleDapUi(prev, false)),
+    [applyAndFocus]
+  );
+
   const handleCloseLspHover = useCallback(
     () => applyAndFocus((prev) => closeLspHover(prev)),
     [applyAndFocus]
@@ -574,6 +657,18 @@ export function useEditorWorkspaceHandlers({
       onDeleteNeotreeNode: handleDeleteNeotreeNode,
       onFocusNeotree: handleFocusNeotree,
       onCloseNeotree: handleCloseNeotree,
+      onChooseGitConflict: handleChooseGitConflict,
+      onToggleDapBreakpointLine: handleToggleDapBreakpointLine,
+      onDapContinue: handleDapContinue,
+      onDapStepOver: handleDapStepOver,
+      onDapStepInto: handleDapStepInto,
+      onDapStepOut: handleDapStepOut,
+      onDapTerminate: handleDapTerminate,
+      onSelectDapFrame: handleSelectDapFrame,
+      onAddDapWatch: handleAddDapWatch,
+      onRemoveDapWatch: handleRemoveDapWatch,
+      onJumpDapBreakpoint: handleJumpDapBreakpoint,
+      onCloseDapUi: handleCloseDapUi,
       onSwitchCommandLineWindowType: handleSwitchCommandLineWindowType,
       onClearCommandLineHistory: handleClearCommandLineHistory,
       onCloseCommandLineWindow: handleCloseCommandLineWindow,
@@ -634,6 +729,18 @@ export function useEditorWorkspaceHandlers({
       handleDeleteNeotreeNode,
       handleFocusNeotree,
       handleCloseNeotree,
+      handleChooseGitConflict,
+      handleToggleDapBreakpointLine,
+      handleDapContinue,
+      handleDapStepOver,
+      handleDapStepInto,
+      handleDapStepOut,
+      handleDapTerminate,
+      handleSelectDapFrame,
+      handleAddDapWatch,
+      handleRemoveDapWatch,
+      handleJumpDapBreakpoint,
+      handleCloseDapUi,
       handleSwitchCommandLineWindowType,
       handleClearCommandLineHistory,
       handleCloseCommandLineWindow,

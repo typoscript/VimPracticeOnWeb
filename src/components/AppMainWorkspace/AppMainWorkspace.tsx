@@ -11,7 +11,7 @@ import type { MarksJumpVisualizer as MarksJumpVisualizerType } from '../MarksJum
 import { ActionTimelinePanel } from '../ActionTimelinePanel/ActionTimelinePanel';
 import { AppTab } from '../AppHeader/AppHeader';
 import { EditorViewport } from '../EditorViewport/EditorViewport';
-import { VimEditorState, VimMode, computeSearchCount } from '../../vim-engine';
+import { VimEditorState, VimMode, computeSearchCount, parseGitConflicts } from '../../vim-engine';
 import { Mission } from '../../types/mission';
 import { LessonProgress } from '../../utils/storage';
 import { t, i18nKey } from '../../i18n';
@@ -181,6 +181,18 @@ const SANDBOX_QUICK_TRY_CHIPS: ReadonlyArray<{
     label: '✨ :set noice',
     titleKey: i18nKey('noice.nvim 플로팅 커맨드라인 토글 (:set cmdlinepopup)'),
     keys: ['Escape', ...':set cmdlinepopup!'.split(''), 'Enter', ':'],
+  },
+  {
+    id: 'gitconflict',
+    label: '⚔️ :GitConflictListQf',
+    titleKey: i18nKey('프로젝트 머지 충돌 퀵픽스 탐색 (:GitConflictListQf)'),
+    keys: ['Escape', ...':GitConflictListQf'.split(''), 'Enter'],
+  },
+  {
+    id: 'dap',
+    label: '🐞 :DapUiToggle',
+    titleKey: i18nKey('nvim-dap 인터랙티브 디버거 패널 (:DapUiToggle)'),
+    keys: ['Escape', ...':DapUiToggle'.split(''), 'Enter'],
   },
   {
     id: 'lua',
@@ -854,6 +866,15 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
               );
               return sc.total > 0 ? { current: sc.current, total: sc.total } : null;
             })()}
+            gitConflictCount={parseGitConflicts(displayEditorState.lines).length}
+            dapBadge={
+              displayEditorState.dapSession?.isActive
+                ? {
+                    line: displayEditorState.dapSession.currentLine,
+                    paused: displayEditorState.dapSession.isPaused,
+                  }
+                : null
+            }
             functionDraft={
               displayEditorState.functionDraft
                 ? {

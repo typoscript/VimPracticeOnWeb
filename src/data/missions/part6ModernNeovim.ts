@@ -1486,4 +1486,106 @@ export const MISSIONS_PART6: Mission[] = [
       );
     },
   },
+  {
+    id: 131,
+    title: '레슨 131: git-conflict.nvim 3-Way 머지 충돌 해결(]x · co · ct · cb · :diffget //2)',
+    description:
+      '실무에서 브랜치를 병합할 때 마주하는 Git 머지 충돌(<<<<<<< / ======= / >>>>>>>)을 마우스 없이 키보드만으로 초고속 해결하는 git-conflict.nvim 워크플로우를 마스터해 보세요.\n\n1) ]x / [x (다음·이전 충돌 점프) & :GitConflictListQf (퀵픽스 수집):\n   - ]x 로 다음 충돌 블록으로 즉시 이동하고, 충돌 안에서는 컬러 하이라이트와 인라인 액션이 표시됩니다.\n\n2) 충돌 영역 안에서의 즉시 해결 단축키 (co / ct / cb / c0 · :diffget //2|//3):\n   - co: 현재 브랜치(Ours / HEAD) 선택\n   - ct: 유입 브랜치(Theirs / incoming) 선택\n   - cb: 양쪽 변경 모두 유지(Both)\n   - c0: 양쪽 모두 제거(None)\n\n미션:\n1. ]x 로 첫 번째 충돌 블록(timeoutMs)으로 이동해 유입 브랜치 값(5000)을 선택하세요 (ct).\n2. ]x 로 두 번째 충돌 블록(headers)으로 이동해 양쪽 헤더를 모두 유지하세요 (cb)!',
+    hint: ']x → ct → ]x → cb',
+    par: 10,
+    primaryFilename: 'src/httpConfig.ts',
+    initialLines: [
+      'export const httpConfig = {',
+      '<<<<<<< HEAD',
+      '  timeoutMs: 3000,',
+      '=======',
+      '  timeoutMs: 5000,',
+      '>>>>>>> feature/retry-tuning',
+      '<<<<<<< HEAD',
+      '  authHeader: "Bearer",',
+      '=======',
+      '  traceHeader: "X-Trace-Id",',
+      '>>>>>>> feature/observability',
+      '};',
+    ],
+    targetLines: [
+      'export const httpConfig = {',
+      '  timeoutMs: 5000,',
+      '  authHeader: "Bearer",',
+      '  traceHeader: "X-Trace-Id",',
+      '};',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    optimalKeys: [']', 'x', 'c', 't', ']', 'x', 'c', 'b'],
+    checkComplete: (state) => {
+      const target = [
+        'export const httpConfig = {',
+        '  timeoutMs: 5000,',
+        '  authHeader: "Bearer",',
+        '  traceHeader: "X-Trace-Id",',
+        '};',
+      ];
+      return (
+        state.mode === 'NORMAL' &&
+        (state.gitConflictResolvedCount ?? 0) >= 2 &&
+        state.lines.length === target.length &&
+        state.lines.every((l, i) => l === target[i])
+      );
+    },
+  },
+  {
+    id: 132,
+    title: '레슨 132: [132강 피날레] nvim-dap 인터랙티브 디버거(:DapBp · :DapContinue · :DapStepOver)',
+    description:
+      '축하합니다! 모던 Neovim IDE 4대 축의 마지막 퍼즐 — nvim-dap / nvim-dap-ui 인터랙티브 디버거로 132강 피날레를 장식해 보세요! 중단점을 걸고 한 줄씩 스텝 실행하며 지역 변수 변화를 추적해 계산 버그를 찾아 수정합니다.\n\n1) 중단점 설정 & 실행 (:DapBp / :DapToggleBreakpoint · :DapContinue):\n   - 원하는 줄에서 :DapBp 로 거터 중단점(●)을 걸고 :DapContinue 로 디버깅을 시작하면 중단점에서 일시정지하며 nvim-dap-ui 패널과 인라인 변수 값이 나타납니다.\n\n2) 스텝 실행 & 평가 (:DapStepOver · :DapEval · :DapTerminate):\n   - :DapStepOver 로 다음 줄을 실행하며 변수 변화를 확인하고, :DapTerminate 로 세션을 종료한 뒤 버그 코드를 바로 수정합니다.\n\n미션:\n1. 3번째 줄(finalPrice)로 이동(2j)해 :DapBp<Enter> 로 중단점을 설정하세요.\n2. :DapContinue<Enter> 로 디버거를 시작하고 :DapStepOver<Enter> 로 실행 결과를 확인하세요 (할인액이 빠지지 않고 더해져 120 이 됨!).\n3. :DapTerminate<Enter> 로 디버거를 종료하고 3번째 줄로 올라가(k) + 를 - 로 고쳐(f+ r-) 132강을 완주하세요!',
+    hint: '2j → :DapBp<Enter> → :DapContinue<Enter> → :DapStepOver<Enter> → :DapTerminate<Enter> → k f+ r-',
+    par: 65,
+    primaryFilename: 'src/discount.ts',
+    initialLines: [
+      'const subtotal = 100;',
+      'const discount = 20;',
+      'const finalPrice = subtotal + discount;',
+      'console.log(finalPrice);',
+    ],
+    targetLines: [
+      'const subtotal = 100;',
+      'const discount = 20;',
+      'const finalPrice = subtotal - discount;',
+      'console.log(finalPrice);',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    optimalKeys: [
+      '2',
+      'j',
+      ...keysOf(':DapBp'),
+      'Enter',
+      ...keysOf(':DapContinue'),
+      'Enter',
+      ...keysOf(':DapStepOver'),
+      'Enter',
+      ...keysOf(':DapTerminate'),
+      'Enter',
+      'k',
+      'f',
+      '+',
+      'r',
+      '-',
+    ],
+    checkComplete: (state) => {
+      const target = [
+        'const subtotal = 100;',
+        'const discount = 20;',
+        'const finalPrice = subtotal - discount;',
+        'console.log(finalPrice);',
+      ];
+      return (
+        state.mode === 'NORMAL' &&
+        Boolean(state.dapSession) &&
+        !state.dapSession?.isActive &&
+        (state.dapSession?.stepIndex ?? 0) >= 3 &&
+        state.lines.length === target.length &&
+        state.lines.every((l, i) => l === target[i])
+      );
+    },
+  },
 ];

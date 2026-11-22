@@ -1438,3 +1438,108 @@
   background-color: rgba(122, 162, 247, 0.16);
   border-bottom: 1px dashed rgba(122, 162, 247, 0.45);
 }
+
+/* ============================================================================
+   git-conflict.nvim 3-Way 머지 충돌 하이라이트 & 인라인 CodeLens
+   ============================================================================ */
+.editor-row.git-conflict-marker-ours {
+  background-color: rgba(64, 160, 43, 0.28) !important;
+  border-left: 3px solid #a6e3a1;
+}
+
+.editor-row.git-conflict-ours {
+  background-color: rgba(166, 227, 161, 0.12) !important;
+  border-left: 3px solid rgba(166, 227, 161, 0.55);
+}
+
+.editor-row.git-conflict-marker-base,
+.editor-row.git-conflict-base {
+  background-color: rgba(249, 226, 175, 0.14) !important;
+  border-left: 3px solid #f9e2af;
+}
+
+.editor-row.git-conflict-separator {
+  background-color: rgba(108, 112, 134, 0.24) !important;
+  border-left: 3px solid #9399b2;
+}
+
+.editor-row.git-conflict-theirs {
+  background-color: rgba(137, 180, 250, 0.14) !important;
+  border-left: 3px solid rgba(137, 180, 250, 0.55);
+}
+
+.editor-row.git-conflict-marker-theirs {
+  background-color: rgba(137, 180, 250, 0.28) !important;
+  border-left: 3px solid #89b4fa;
+}
+
+.git-conflict-lens {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 12px;
+  vertical-align: middle;
+}
+
+.git-conflict-lens-btn {
+  background: rgba(24, 24, 37, 0.9);
+  border: 1px solid #45475a;
+  color: #cdd6f4;
+  font-family: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 0 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  line-height: 1.5;
+}
+
+.git-conflict-lens-btn.ours:hover {
+  border-color: #a6e3a1;
+  color: #a6e3a1;
+}
+
+.git-conflict-lens-btn.theirs:hover {
+  border-color: #89b4fa;
+  color: #89b4fa;
+}
+
+.git-conflict-lens-btn.both:hover {
+  border-color: #cba6f7;
+  color: #cba6f7;
+}
+
+.git-conflict-lens-btn.none:hover {
+  border-color: #f38ba8;
+  color: #f38ba8;
+}
+
+/* ============================================================================
+   nvim-dap 거터 중단점 · 활성 실행 줄 · 가상 변수 텍스트
+   ============================================================================ */
+.editor-row.dap-active-row {
+  background-color: rgba(249, 226, 175, 0.17) !important;
+  border-left: 3px solid #f9e2af;
+}
+
+.gutter-dap-bp {
+  color: #f38ba8;
+  font-size: 11px;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.gutter-dap-active {
+  color: #f9e2af;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.dap-virtual-text {
+  color: #f9e2af;
+  opacity: 0.88;
+  font-style: italic;
+  font-size: 0.88em;
+  user-select: none;
+}
