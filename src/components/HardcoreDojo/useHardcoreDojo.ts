@@ -12,6 +12,7 @@ import {
   generateWordJumpProblem,
   generateSuddenDeathProblem,
   generateProMasterProblem,
+  generateNeovimMasterProblem,
 } from './drillGenerators';
 import { HardcoreGuard } from '../../utils/hardcoreGuard';
 import { handleKey, VimEditorState, VimMode } from '../../vim-engine';
@@ -101,7 +102,16 @@ type DojoAction =
   | { type: 'SET_LEADERBOARD_OPEN'; open: boolean };
 
 function isTenStageDrill(drill: DojoDrillType): boolean {
-  return drill === 'sudden-death' || drill === 'pro-master' || drill === 'weakness-custom';
+  return (
+    drill === 'sudden-death' ||
+    drill === 'pro-master' ||
+    drill === 'neovim-master' ||
+    drill === 'weakness-custom'
+  );
+}
+
+function isSpeedrunDrill(drill: DojoDrillType): boolean {
+  return drill === 'sudden-death' || drill === 'pro-master' || drill === 'neovim-master';
 }
 
 function createProblemForDrillWithPlan(
@@ -120,6 +130,8 @@ function createProblemForDrillWithPlan(
       return generateSuddenDeathProblem(targetCombo);
     case 'pro-master':
       return generateProMasterProblem(targetCombo);
+    case 'neovim-master':
+      return generateNeovimMasterProblem(targetCombo);
     case 'weakness-custom': {
       const idx = Math.max(0, targetCombo % plan.queue.length);
       return plan.queue[idx].problem;
@@ -143,6 +155,12 @@ function buildEditorStateForProblem(problem: DojoProblem): VimEditorState {
 }
 
 function resolveSpeedrunTier(drill: DojoDrillType, finalSec: number): string {
+  if (drill === 'neovim-master') {
+    if (finalSec > 35.0) return '📦 PLUGIN USER';
+    if (finalSec > 22.0) return '🚀 NVIM PRO';
+    if (finalSec > 14.0) return '🌙 LUA ARCHITECT';
+    return '⚡ NEOVIM DEITY';
+  }
   if (drill === 'pro-master') {
     if (finalSec > 35.0) return '📜 PRO-DEV';
     if (finalSec > 22.0) return '💼 TECH-LEAD';
@@ -616,7 +634,7 @@ export function useHardcoreDojo({
     if (state.gameState !== 'running') return;
     const check = hardcoreGuardRef.current.checkMouseClick();
     if (!check.blocked) return;
-    if (state.selectedDrill === 'sudden-death' || state.selectedDrill === 'pro-master') {
+    if (isSpeedrunDrill(state.selectedDrill)) {
       failSuddenDeath(check.message || t('마우스 클릭 사용으로 탈락!'));
       return;
     }
@@ -628,17 +646,31 @@ export function useHardcoreDojo({
       if (state.gameState !== 'running' || !state.currentProblem) return;
       if (['Shift', 'Control', 'Alt', 'Meta', 'CapsLock'].includes(e.key)) return;
 
+      let vimKey = e.key;
+      const lower = e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && ['a', 'x', 'r', 'v', 'n', 'p'].includes(lower)) {
+        e.preventDefault();
+        vimKey = `Ctrl-${lower}`;
+      } else if (e.altKey && !e.ctrlKey && !e.metaKey) {
+        const codeMap: Record<string, string> = { KeyH: 'h', KeyJ: 'j', KeyK: 'k', KeyL: 'l' };
+        const dir = ['h', 'j', 'k', 'l'].includes(lower) ? lower : codeMap[e.code];
+        if (dir) {
+          e.preventDefault();
+          vimKey = `Alt-${dir}`;
+        }
+      }
+
       if (
         ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', ' ', 'Backspace', 'Tab'].includes(
-          e.key
+          vimKey
         )
       ) {
         e.preventDefault();
       }
 
-      const check = hardcoreGuardRef.current.checkKey(e.key, Date.now());
+      const check = hardcoreGuardRef.current.checkKey(vimKey, Date.now());
       if (check.blocked) {
-        if (state.selectedDrill === 'sudden-death' || state.selectedDrill === 'pro-master') {
+        if (isSpeedrunDrill(state.selectedDrill)) {
           failSuddenDeath(check.message || t('방향키 또는 비정상 입력으로 탈락!'));
           return;
         }
@@ -647,16 +679,16 @@ export function useHardcoreDojo({
       }
 
       const nextProbKeys = state.problemKeystrokes + 1;
-      const isSpeedrun =
-        state.selectedDrill === 'sudden-death' || state.selectedDrill === 'pro-master';
-      const maxAllowed = state.selectedDrill === 'pro-master' ? 25 : 12;
+      const isSpeedrun = isSpeedrunDrill(state.selectedDrill);
+      const maxAllowed =
+        state.selectedDrill === 'pro-master' || state.selectedDrill === 'neovim-master' ? 25 : 12;
       if (isSpeedrun && nextProbKeys > maxAllowed) {
         failSuddenDeath(t('타수 초과: 한 번의 모션으로 정확히 격파하지 못했습니다.'));
         return;
       }
 
-      playKeySound?.(e.key, state.editorState.mode);
-      const nextEditorState = handleKey(state.editorState, e.key);
+      playKeySound?.(vimKey, state.editorState.mode);
+      const nextEditorState = handleKey(state.editorState, vimKey);
       dispatch({ type: 'APPLY_KEY', nextEditorState, nextProblemKeystrokes: nextProbKeys });
 
       const { hit, standardBonus } = evaluateProblemSuccess(
@@ -668,7 +700,7 @@ export function useHardcoreDojo({
 
       if (state.selectedDrill === 'weakness-custom') {
         handleWeaknessHit(state.keystrokes + 1);
-      } else if (state.selectedDrill === 'sudden-death' || state.selectedDrill === 'pro-master') {
+      } else if (isSpeedrunDrill(state.selectedDrill)) {
         handleSuddenDeathHit();
       } else {
         playSuccessSound?.();

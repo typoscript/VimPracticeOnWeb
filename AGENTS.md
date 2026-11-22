@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 199개 테스트 파일, 2,282개 테스트 100% 통과 필수)*
+  *(현재 201개 테스트 파일, 2,296개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -245,6 +245,11 @@
   - **목적별 학습 트랙 UI**: 커리큘럼 모달 상단에 4개 추천 트랙(*입문 필수 20강 · 실무 리팩토링 25강 · Ex/Vimscript 마스터 · 현대 Neovim IDE 20강*) 진행률 바, 트랙별 필터 보기, 원클릭 이어하기(`#N`) 버튼을 제공합니다.
   - **엔진 가상 테스트 러너 (`:TestRun`, `:RunTests`, `:TestSuite`, 터미널 `npm test`/`vitest`)**: `state.virtualTests` 를 VFS·열린 버퍼 기준으로 검증하고, 실패 항목은 퀵픽스(`:copen`/`:cn`)에 자동 등록하며 터미널 실행 시 테스트 리포트를 버퍼에 출력합니다.
   - **실무 멀티파일 캡스톤 3종**: *레거시 API v1→v2 마이그레이션*, *프로덕션 장애 5분 핫픽스*, *PR 코드 리뷰 4건 일괄 반영* 멀티파일 프로젝트를 자유로운 Vim/Neovim 도구 조합으로 풀고 `:TestRun` 통과로 클리어하며, `MissionPanel` 실시간 테스트 체크리스트·파일 퀵 전환 칩·완료 기록 영구 저장(`vim_capstone_progress_v1`, `BACKUP_KEYS` 포함)을 제공합니다.
+- **`nvim-autopairs` · `LuaSnip` 스니펫 · `vim-fugitive` 미니 Git · 도장 Modern Neovim 10연타 (`autopairsEngine.ts`, `snippetEngine.ts`, `gitFugitiveEngine.ts`, `Editor.tsx`, `HardcoreDojo/`)**:
+  - **`nvim-autopairs` (`:set autopairs` / `:set ap`, 기본 `off`)**: 기존 순정 Vim 호환성을 100% 유지하면서 옵션을 켰을 때 Insert 모드 괄호·따옴표 자동 닫기(`()[]{}""''` `` `` ``), 닫는 기호 스킵, 빈 쌍 `Backspace` 동시 삭제, `{|}`/`(|)`/`[|]` 사이 `Enter` 자동 들여쓰기 확장을 지원합니다.
+  - **`LuaSnip` 스타일 스니펫 엔진 (`<Tab>` / `<S-Tab>`, `:Snippets`)**: Insert 모드에서 9종 내장 트리거(`fn`, `afn`, `if`, `ife`, `for`, `try`, `clg`, `imp`, `iface`) 입력 후 `<Tab>` 으로 멀티라인 템플릿을 확장하고 `$1` 플레이스홀더를 `SELECT` 모드로 선택하며, 입력 치환 후 `<Tab>`/`<S-Tab>` 으로 탭스톱을 순환해 `$0` 에서 종료합니다.
+  - **`vim-fugitive` 미니 Git 워크플로 (`:Git`/`:G`, `:Gstatus`, `:Gblame`, `:Glog`)**: 가상 커밋 로그와 `gitsigns`(`gitBaseLines`)를 연동해 `:Git status`, `:Git add`, `:Git commit -m "..."`, `:Git log`, `:Git diff`, `:Git reset` 과 에디터 줄 끝 인라인 Blame 가상 텍스트(`.git-blame-virtual`) 토글(`:Gblame`)을 제공합니다(사용자 정의 `:command G` 및 소문자 `:g/pat/cmd` 우선·보존).
+  - **하드코어 도장 `Modern Neovim 10연타` (`neovim-master`)**: `mini.ai`(`cin"`/`din(`), `Treesitter`(`daf`/`daa`), `mini.move`(`Alt-j`/`Alt-l`), `vim-abolish`(`crc`/`cru`), `dial.nvim`(`Ctrl-a`), `treesj`(`gS`) 10문제를 노미스 스피드런으로 훈련하는 신규 도장 코스를 추가했습니다.
 
 ---
 

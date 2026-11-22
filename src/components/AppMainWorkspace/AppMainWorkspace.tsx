@@ -112,6 +112,18 @@ const SANDBOX_QUICK_TRY_CHIPS: ReadonlyArray<{
     keys: ['Escape', ']', 'h'],
   },
   {
+    id: 'gblame',
+    label: '🕵️ :Gblame',
+    titleKey: i18nKey('인라인 Git Blame 토글 (:Gblame)'),
+    keys: ['Escape', ...':Gblame'.split(''), 'Enter'],
+  },
+  {
+    id: 'snippets',
+    label: '✂️ :Snippets',
+    titleKey: i18nKey('내장 스니펫 트리거 목록 (:Snippets)'),
+    keys: ['Escape', ...':Snippets'.split(''), 'Enter'],
+  },
+  {
     id: 'multicursor',
     label: '✨ :MultiCursor user',
     titleKey: i18nKey('다중 커서 편집 (g Ctrl-n)'),

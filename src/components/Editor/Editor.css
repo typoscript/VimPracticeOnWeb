@@ -1089,3 +1089,18 @@
   box-shadow: inset 2px 0 0 #f5c2e7;
   background-color: rgba(245, 194, 231, 0.25);
 }
+
+/* vim-fugitive 인라인 Git Blame 가상 텍스트 (:Gblame / :Git blame) */
+.git-blame-virtual {
+  margin-left: 2ch;
+  font-size: 0.76em;
+  font-style: italic;
+  color: rgba(166, 173, 200, 0.58);
+  user-select: none;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.git-blame-virtual.uncommitted {
+  color: rgba(249, 226, 175, 0.72);
+}

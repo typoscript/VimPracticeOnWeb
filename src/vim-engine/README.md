@@ -8,7 +8,7 @@
 handleKey(state, key) => newState
 ```
 
-순정 Vim 100%(모션·연산자·텍스트 객체·레지스터·매크로·`.` 반복·분기형 실행 취소 트리·Vim 정규식·`:s`·`:g`·Vim script·버퍼·창 분할·탭·퀵픽스·폴딩·키매핑·맞춤법·`vim-surround`)과 현대 Neovim 핵심 플러그인 생태계(`Telescope`, `LSP 0.11`, `Treesitter`, `mini.ai`, `mini.move`, `gitsigns.nvim`, `Lua`, `flash.nvim`, `oil.nvim`, `harpoon.nvim`, `trouble.nvim`, `vim-visual-multi`, `undotree`, `yanky.nvim`, `nvim-spectre`, `zen-mode.nvim`, `:terminal`/`ToggleTerm`, `dial.nvim`, `vim-abolish`, `treesj`)를 순수 함수형 상태 전이로 지원합니다. 동작은 실제 `nvim --headless` 골든 회귀 스위트(116종)와 대조해 검증하고 있습니다.
+순정 Vim 100%(모션·연산자·텍스트 객체·레지스터·매크로·`.` 반복·분기형 실행 취소 트리·Vim 정규식·`:s`·`:g`·Vim script·버퍼·창 분할·탭·퀵픽스·폴딩·키매핑·맞춤법·`vim-surround`)과 현대 Neovim 핵심 플러그인 생태계(`Telescope`, `LSP 0.11`, `Treesitter`, `mini.ai`, `mini.move`, `gitsigns.nvim`, `vim-fugitive`, `Lua`, `flash.nvim`, `oil.nvim`, `harpoon.nvim`, `trouble.nvim`, `vim-visual-multi`, `undotree`, `yanky.nvim`, `nvim-spectre`, `zen-mode.nvim`, `:terminal`/`ToggleTerm`, `dial.nvim`, `vim-abolish`, `treesj`, `nvim-autopairs`, `LuaSnip`)를 순수 함수형 상태 전이로 지원합니다. 동작은 실제 `nvim --headless` 골든 회귀 스위트(116종)와 대조해 검증하고 있습니다.
 
 ## 다른 프로젝트에서 쓰기
 
@@ -80,8 +80,8 @@ configureVimEngine({
 | Vim script & Lua | `evalVimExpression`, `evaluateVimScript`, `VimScriptError`, `executeLua`, `evalLuaExpr`, `sourceLuaFile` |
 | Undo Tree & Undotree | `ensureUndoTreeInitialized`, `jumpUndoSeq`, `travelUndoTime`, `buildUndotreeGraphRows`, `openUndotreePanel`, `toggleUndotreePanel` |
 | LSP & Treesitter | `openLspHover`, `openLspRename`, `applyLspRename`, `findLspReferences`, `openLspCodeActionMenu`, `openLspDocumentSymbols` |
-| Git (`gitsigns.nvim`) | `getGitLineSigns`, `computeGitHunks`, `jumpToGitHunk`, `previewGitHunk`, `resetGitHunk`, `stageGitHunk` |
-| 현대 Neovim 확장 | `startFlashJump`, `openOilBuffer`, `saveOilBuffer`, `addHarpoonFile`, `openHarpoonMenu`, `selectHarpoonSlot`, `openTroublePanel`, `startMultiCursor`, `cycleYankRing`, `openYankyMenu`, `openSpectrePanel`, `applySpectreReplaceAll`, `handleMiniMoveNormal`, `handleMiniMoveVisual`, `openTerminalBuffer`, `toggleTerminalBuffer`, `findDialToken`, `applyAbolishCoerce`, `executeTreesj`, `runVirtualTests` |
+| Git (`gitsigns` · `fugitive`) | `getGitLineSigns`, `computeGitHunks`, `jumpToGitHunk`, `previewGitHunk`, `resetGitHunk`, `stageGitHunk`, `executeGitCommand`, `computeGitBlameLines` |
+| 현대 Neovim 확장 | `startFlashJump`, `openOilBuffer`, `saveOilBuffer`, `addHarpoonFile`, `openHarpoonMenu`, `selectHarpoonSlot`, `openTroublePanel`, `startMultiCursor`, `cycleYankRing`, `openYankyMenu`, `openSpectrePanel`, `applySpectreReplaceAll`, `handleMiniMoveNormal`, `handleMiniMoveVisual`, `openTerminalBuffer`, `toggleTerminalBuffer`, `findDialToken`, `applyAbolishCoerce`, `executeTreesj`, `runVirtualTests`, `tryExpandSnippetOnTab`, `jumpSnippetTabstop` |
 | 매크로 디버거 | `buildMacroTrace`(매크로를 키 단위 상태 프레임으로 분해), `getMacroKeys`, `listMacroRegisters`, `explainMacroKeyAction` |
 | 개발용 | `withInvariantCheck`, `assertValidVimState`, `deepFreeze` |
 

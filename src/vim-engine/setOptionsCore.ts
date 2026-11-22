@@ -48,6 +48,7 @@ export const DEFAULT_VIM_OPTIONS: VimOptions = {
   softtabstop: 0,
   startofline: false,
   smarttab: false,
+  autopairs: false,
 };
 
 export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
@@ -148,6 +149,8 @@ export const OPTION_ALIASES: Record<string, keyof VimOptions> = {
   startofline: 'startofline',
   sta: 'smarttab',
   smarttab: 'smarttab',
+  ap: 'autopairs',
+  autopairs: 'autopairs',
 };
 
 export const WINDOW_LOCAL_OPTION_KEYS = new Set<keyof VimOptions>([
@@ -388,6 +391,7 @@ export function formatOptionsList(
     'foldenable',
     'startofline',
     'smarttab',
+    'autopairs',
   ];
 
   const numericKeys: (keyof VimOptions)[] = ['tabstop', 'shiftwidth', 'softtabstop', 'textwidth', 'scrolloff', 'sidescroll', 'sidescrolloff'];
@@ -539,6 +543,7 @@ const BOOLEAN_OPTION_KEYS = new Set<keyof VimOptions>([
   'foldenable',
   'startofline',
   'smarttab',
+  'autopairs',
 ]);
 
 /**

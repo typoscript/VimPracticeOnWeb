@@ -16,6 +16,7 @@ import {
   LspCodeActionMenuState,
   CustomMatchEntry,
   GitHunkPreviewState,
+  GitBlameInfo,
   FlashJumpSession,
   MultiCursorSession,
 } from '../../vim-engine';
@@ -108,6 +109,8 @@ export interface EditorProps {
   customMatches?: CustomMatchEntry[];
   /** Gitsigns 줄별 거터 사인 맵 (lineIdx -> 'add' | 'change' | 'delete') */
   gitLineSigns?: Map<number, 'add' | 'change' | 'delete'>;
+  /** vim-fugitive 인라인 Git Blame 가상 텍스트 (:Gblame / :Git blame) */
+  gitBlameLines?: GitBlameInfo[];
   /** Gitsigns Hunk 미리보기 팝업 세션 (:Gitsigns preview_hunk) */
   gitHunkPreview?: GitHunkPreviewState | null;
   /** Git Hunk 미리보기 닫기 콜백 */
@@ -164,6 +167,7 @@ export const Editor: React.FC<EditorProps> = ({
   onCloseLspCodeAction,
   customMatches,
   gitLineSigns,
+  gitBlameLines,
   gitHunkPreview,
   onCloseGitHunkPreview,
   onResetGitHunk,
@@ -467,6 +471,14 @@ export const Editor: React.FC<EditorProps> = ({
                           {'  ■ '}
                           {primaryLineDiagnostic.code ? `[${primaryLineDiagnostic.code}] ` : ''}
                           {primaryLineDiagnostic.message}
+                        </span>
+                      )}
+                      {gitBlameLines?.[lineIdx] && (
+                        <span
+                          className={`git-blame-virtual ${gitBlameLines[lineIdx].uncommitted ? 'uncommitted' : ''}`}
+                          data-testid={`git-blame-${lineIdx + 1}`}
+                        >
+                          {`  ${gitBlameLines[lineIdx].hash} · ${gitBlameLines[lineIdx].author} — ${gitBlameLines[lineIdx].message}`}
                         </span>
                       )}
                       {lspHover?.isOpen && lspHover.line === lineIdx && (

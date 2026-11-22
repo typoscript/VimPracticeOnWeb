@@ -9,6 +9,7 @@ import {
   ensureTabPages,
   getEffectiveWindowTree,
   getGitLineSigns,
+  computeGitBlameLines,
   CursorPosition,
 } from '../../vim-engine';
 import { t } from '../../i18n';
@@ -136,6 +137,9 @@ export function EditorViewport({
   const isSplitMode = Boolean(splitTree && editorState.splitPanes && editorState.splitPanes.length >= 2);
   const paneCount = editorState.splitPanes?.length ?? 0;
   const gitLineSigns = getGitLineSigns(displayEditorState);
+  const gitBlameLines = displayEditorState.gitBlameVisible
+    ? computeGitBlameLines(displayEditorState)
+    : undefined;
 
   const renderSplitNode = (
     node: WindowLayoutNode,
@@ -228,6 +232,7 @@ export function EditorViewport({
             primaryFilename={paneFilename}
             customMatches={displayEditorState.customMatches}
             gitLineSigns={isActive ? gitLineSigns : undefined}
+            gitBlameLines={isActive ? gitBlameLines : undefined}
             gitHunkPreview={isActive ? displayEditorState.gitHunkPreview : undefined}
             onCloseGitHunkPreview={onCloseGitHunkPreview}
             onResetGitHunk={onResetGitHunk}
@@ -395,6 +400,7 @@ export function EditorViewport({
             onCloseLspCodeAction={onCloseLspCodeAction}
             customMatches={displayEditorState.customMatches}
             gitLineSigns={gitLineSigns}
+            gitBlameLines={gitBlameLines}
             gitHunkPreview={displayEditorState.gitHunkPreview}
             onCloseGitHunkPreview={onCloseGitHunkPreview}
             onResetGitHunk={onResetGitHunk}

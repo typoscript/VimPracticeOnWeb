@@ -32,6 +32,12 @@ import { AVAILABLE_COMMANDS, BUILTIN_VIM_FUNCTIONS } from './wildmenuCatalog';
 import { getSpellSuggestions } from './spellEngine';
 import { getOptions } from './setEngine';
 import { parseWhichwrapFlags, hasFormatOption, extractCommentPrefix } from './setOptionsCore';
+import {
+  handleAutopairsChar,
+  handleAutopairsBackspace,
+  handleAutopairsEnter,
+} from './autopairsEngine';
+import { tryExpandSnippetOnTab, jumpSnippetTabstop } from './snippetEngine';
 import { recordChangePosition } from './advancedMotions';
 import {
   AbbrevReplayCtx,
@@ -575,6 +581,8 @@ function handleInsertEditingKey(
       };
     }
     const nextChangeKeys = appendCurrentChange(state, 'Backspace', isReplayingDot);
+    const autopairBs = handleAutopairsBackspace(state, nextChangeKeys);
+    if (autopairBs) return autopairBs;
     if (col > 0) {
       const opts = getOptions(state);
       const isLeadingIndent = /^[ \t]*$/.test(currentLine.slice(0, col));
@@ -615,9 +623,11 @@ function handleInsertEditingKey(
     return { ...state, currentChangeKeys: nextChangeKeys };
   }
 
-  // Enter: 줄 분할 및 다음 줄 이동 (autoindent / smartindent / formatoptions 'r' 주석 연속 지원)
+  // Enter: 줄 분할 및 다음 줄 이동 (autopairs / autoindent / smartindent / formatoptions 'r' 주석 연속 지원)
   if (key === 'Enter') {
     const nextChangeKeys = appendCurrentChange(state, 'Enter', isReplayingDot);
+    const autopairEnter = handleAutopairsEnter(state, nextChangeKeys);
+    if (autopairEnter) return autopairEnter;
     const opts = getOptions(state);
     const beforeCursor = currentLine.slice(0, col);
     const afterCursor = currentLine.slice(col);
@@ -654,8 +664,21 @@ function handleInsertEditingKey(
     };
   }
 
-  // Tab: 들여쓰기 삽입 (smarttab / softtabstop / expandtab / tabstop 지원)
+  // Shift-Tab: 활성 스니펫 이전 탭스톱으로 점프
+  if (key === 'Shift-Tab' || key === '<S-Tab>') {
+    const prevStop = jumpSnippetTabstop(state, 'prev');
+    if (prevStop) return prevStop;
+    return state;
+  }
+
+  // Tab: 스니펫 점프·확장 또는 들여쓰기 삽입 (smarttab / softtabstop / expandtab / tabstop 지원)
   if (key === 'Tab') {
+    if (state.snippetSession) {
+      const nextStop = jumpSnippetTabstop(state, 'next');
+      if (nextStop) return nextStop;
+    }
+    const expandedSnippet = tryExpandSnippetOnTab(state);
+    if (expandedSnippet) return expandedSnippet;
     const nextChangeKeys = appendCurrentChange(state, 'Tab', isReplayingDot);
     const opts = getOptions(state);
     const ts = Math.max(1, opts.tabstop || opts.shiftwidth || 2);
@@ -775,6 +798,8 @@ function handleInsertEditingKey(
       };
     }
     const nextChangeKeys = appendCurrentChange(state, key, isReplayingDot);
+    const autopairChar = handleAutopairsChar(state, key, nextChangeKeys);
+    if (autopairChar) return autopairChar;
     const nextLines = [...state.lines];
     let targetCol = col;
     let prefixBefore = currentLine.slice(0, col);
@@ -978,7 +1003,8 @@ export function handleInsertModeKey(
   }
 
   if (key === 'Escape') {
-    return handleInsertEscape(state, isReplayingDot);
+    const escaped = handleInsertEscape(state, isReplayingDot);
+    return escaped.snippetSession ? { ...escaped, snippetSession: null } : escaped;
   }
 
   const lastInsertedRes = handleInsertLastInserted(state, key, isReplayingDot);

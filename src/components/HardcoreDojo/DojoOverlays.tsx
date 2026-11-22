@@ -100,6 +100,20 @@ export function DojoOverlays({
               </button>
             </div>
           </>
+        ) : selectedDrill === 'neovim-master' ? (
+          <>
+            <div style={{ color: '#7dcfff', fontSize: '0.9rem', marginBottom: '1.25rem', fontWeight: 700 }}>
+              {t('🚀 mini.ai · Treesitter · mini.move · abolish · dial · treesj 10문제를 노미스로 격파하세요!')}
+            </div>
+            <button
+              type="button"
+              className="dojo-start-btn"
+              style={{ background: '#7dcfff', color: '#1a1b26' }}
+              onClick={onStartGame}
+            >
+              {t('🚀 Modern Neovim 도전 시작 (10연타)')}
+            </button>
+          </>
         ) : selectedDrill === 'pro-master' ? (
           <>
             <div style={{ color: '#bb9af7', fontSize: '0.9rem', marginBottom: '1.25rem', fontWeight: 700 }}>

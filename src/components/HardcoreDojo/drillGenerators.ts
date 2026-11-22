@@ -44,6 +44,13 @@ export const DOJO_DRILL_METAS: Record<string, DojoDrillMeta> = localized({
     description: '텍스트 객체(ci", di(), cit), 단어 대소문자(gU), 인덴트(>>), 라인 합치기(J) 등 실무 핵심 10문제를 최단 키로 격파하세요!',
     keyInstructions: '실무 프로 10연타! 최적의 Vim 텍스트 객체와 연산자로 목표 코드를 완성하세요.',
   },
+  'neovim-master': {
+    id: 'neovim-master',
+    title: 'Modern Neovim 10연타 챌린지',
+    badge: '🚀 Neovim Pro',
+    description: 'mini.ai(cin"/din(), Treesitter(daf/daa), mini.move(Alt-j/l), vim-abolish(crc/cru), dial(Ctrl-a), treesj(gS) 현대 Neovim 10문제를 노미스로 격파하세요!',
+    keyInstructions: 'Modern Neovim 10연타! 최신 플러그인 모션·연산자로 목표 코드를 완성하세요.',
+  },
   'weakness-custom': {
     id: 'weakness-custom',
     title: '약점 집중 맞춤 드릴',
@@ -332,6 +339,107 @@ export const PRO_MASTER_PROBLEMS: Array<Omit<ProMasterProblem, 'type' | 'index'>
 export function generateProMasterProblem(combo = 0): ProMasterProblem {
   const index = Math.max(0, Math.min(PRO_MASTER_PROBLEMS.length - 1, combo % PRO_MASTER_PROBLEMS.length));
   const sample = PRO_MASTER_PROBLEMS[index];
+  return {
+    type: 'pro-master',
+    index,
+    prompt: sample.prompt,
+    lines: [...sample.lines],
+    initialCursor: { ...sample.initialCursor },
+    targetLines: [...sample.targetLines],
+    hint: sample.hint,
+    optimalKeys: sample.optimalKeys,
+  };
+}
+
+export const NEOVIM_MASTER_PROBLEMS: Array<Omit<ProMasterProblem, 'type' | 'index'>> = [
+  {
+    prompt: '[mini.ai] 커서 밖에서 다음 따옴표 안을 바로 비우세요!',
+    lines: ['const msg = "REMOVE_ME";'],
+    initialCursor: { line: 0, col: 0 },
+    targetLines: ['const msg = "";'],
+    hint: 'cin" 후 Esc',
+    optimalKeys: 'cin"<Esc>',
+  },
+  {
+    prompt: '[mini.ai] 커서 밖에서 다음 함수 괄호 인자를 비우세요!',
+    lines: ['const res = runTask(oldA, oldB);'],
+    initialCursor: { line: 0, col: 0 },
+    targetLines: ['const res = runTask();'],
+    hint: 'din(',
+    optimalKeys: 'din(',
+  },
+  {
+    prompt: '[Treesitter] legacy() 함수 전체를 한 번에 삭제하세요!',
+    lines: ['function legacy() {', '  return 0;', '}', 'const ok = true;'],
+    initialCursor: { line: 0, col: 0 },
+    targetLines: ['const ok = true;'],
+    hint: 'daf',
+    optimalKeys: 'daf',
+  },
+  {
+    prompt: '[Treesitter] 불필요한 unused 인자를 쉼표까지 깔끔히 삭제하세요!',
+    lines: ['function greet(name, unused) { return name; }'],
+    initialCursor: { line: 0, col: 21 },
+    targetLines: ['function greet(name) { return name; }'],
+    hint: 'daa',
+    optimalKeys: 'daa',
+  },
+  {
+    prompt: '[mini.move] 첫 줄(step2)을 아래 줄과 즉시 맞바꾸세요!',
+    lines: ['const step2 = 2;', 'const step1 = 1;'],
+    initialCursor: { line: 0, col: 0 },
+    targetLines: ['const step1 = 1;', 'const step2 = 2;'],
+    hint: 'Alt-j',
+    optimalKeys: '<A-j>',
+  },
+  {
+    prompt: '[mini.move] 현재 줄을 오른쪽으로 1단계 들여쓰기하세요!',
+    lines: ['if (ok) {', 'run();', '}'],
+    initialCursor: { line: 1, col: 0 },
+    targetLines: ['if (ok) {', '  run();', '}'],
+    hint: 'Alt-l',
+    optimalKeys: '<A-l>',
+  },
+  {
+    prompt: '[vim-abolish] user_profile_id 를 camelCase 로 변환하세요!',
+    lines: ['const user_profile_id = 42;'],
+    initialCursor: { line: 0, col: 6 },
+    targetLines: ['const userProfileId = 42;'],
+    hint: 'crc',
+    optimalKeys: 'crc',
+  },
+  {
+    prompt: '[vim-abolish] maxRetryCount 를 SCREAMING_SNAKE_CASE 로 변환하세요!',
+    lines: ['const maxRetryCount = 3;'],
+    initialCursor: { line: 0, col: 6 },
+    targetLines: ['const MAX_RETRY_COUNT = 3;'],
+    hint: 'cru',
+    optimalKeys: 'cru',
+  },
+  {
+    prompt: '[dial.nvim] false 불리언을 true 로 즉시 토글하세요!',
+    lines: ['const debugMode = false;'],
+    initialCursor: { line: 0, col: 0 },
+    targetLines: ['const debugMode = true;'],
+    hint: 'Ctrl-a (<C-a>)',
+    optimalKeys: '<C-a>',
+  },
+  {
+    prompt: '[treesj] 한 줄 config 객체를 멀티라인 블록으로 펼치세요!',
+    lines: ['const cfg = { host: "api", port: 8080 };'],
+    initialCursor: { line: 0, col: 0 },
+    targetLines: ['const cfg = {', '  host: "api",', '  port: 8080', '};'],
+    hint: 'gS',
+    optimalKeys: 'gS',
+  },
+];
+
+export function generateNeovimMasterProblem(combo = 0): ProMasterProblem {
+  const index = Math.max(
+    0,
+    Math.min(NEOVIM_MASTER_PROBLEMS.length - 1, combo % NEOVIM_MASTER_PROBLEMS.length)
+  );
+  const sample = NEOVIM_MASTER_PROBLEMS[index];
   return {
     type: 'pro-master',
     index,

@@ -396,6 +396,8 @@ export interface VimOptions {
   startofline?: boolean;
   /** 줄 앞 Tab/Backspace 시 shiftwidth 단위를 적용할지 여부 (:set sta / nosta, :set smarttab) */
   smarttab?: boolean;
+  /** nvim-autopairs 스타일 Insert 모드 괄호·따옴표 자동 닫기 (:set autopairs / noautopairs, :set ap) */
+  autopairs?: boolean;
 }
 
 /** 맞춤법 검사기 오탈자 정보 */
@@ -916,6 +918,14 @@ export interface VimEditorState {
   gitBaseHistory?: string[][];
   /** :Gitsigns preview_hunk 플로팅 미리보기 세션 */
   gitHunkPreview?: GitHunkPreviewState | null;
+  /** vim-fugitive 스타일 가상 Git 커밋 로그 (:Git commit / :Git log) */
+  gitCommitLog?: GitCommitEntry[];
+  /** 현재 버퍼 변경사항의 스테이징 여부 (:Git add / :Git status) */
+  gitStaged?: boolean;
+  /** 인라인 Git Blame 표시 활성화 여부 (:Git blame / :Gblame) */
+  gitBlameVisible?: boolean;
+  /** LuaSnip 스타일 활성 스니펫 탭스톱 세션 */
+  snippetSession?: SnippetSession | null;
   /** flash.nvim 스타일 화면 전체 라벨 점프 세션 (gs / :Flash) */
   flashJump?: FlashJumpSession | null;
   /** oil.nvim 스타일 버퍼 기반 파일시스템 편집 세션 (:Oil) */
@@ -1223,6 +1233,36 @@ export interface VirtualTestRunResult {
   allPassed: boolean;
   results: VirtualTestCaseResult[];
   runCount: number;
+}
+
+export interface SnippetTabstop {
+  index: number;
+  line: number;
+  col: number;
+  length: number;
+  placeholder: string;
+}
+
+export interface SnippetSession {
+  trigger: string;
+  tabstops: SnippetTabstop[];
+  currentIndex: number;
+}
+
+export interface GitCommitEntry {
+  hash: string;
+  author: string;
+  message: string;
+  filename: string;
+  added: number;
+  removed: number;
+}
+
+export interface GitBlameInfo {
+  hash: string;
+  author: string;
+  message: string;
+  uncommitted: boolean;
 }
 
 export type VimState = VimEditorState;

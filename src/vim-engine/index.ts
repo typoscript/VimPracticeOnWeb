@@ -623,3 +623,25 @@ export type {
   VirtualTestCaseResult,
   VirtualTestRunResult,
 } from './types';
+
+// ---- nvim-autopairs & LuaSnip 스타일 스니펫 엔진 (:set autopairs, :Snippets) ----
+export {
+  handleAutopairsChar,
+  handleAutopairsBackspace,
+  handleAutopairsEnter,
+} from './autopairsEngine';
+export {
+  BUILTIN_SNIPPETS,
+  tryExpandSnippetOnTab,
+  jumpSnippetTabstop,
+  formatSnippetsList,
+} from './snippetEngine';
+export type { SnippetDefinition } from './snippetEngine';
+export type { SnippetTabstop, SnippetSession } from './types';
+
+// ---- vim-fugitive 스타일 미니 Git 워크플로 (:Git / :Gstatus / :Gblame / :Glog) ----
+export {
+  computeGitBlameLines,
+  executeGitCommand,
+} from './gitFugitiveEngine';
+export type { GitCommitEntry, GitBlameInfo } from './types';

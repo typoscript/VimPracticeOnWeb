@@ -42,6 +42,7 @@ import { joinLines, changeCaseVisual, indentVisual, modifyNumberVisual, formatIn
 import { findMatchingBracket } from './bracketMatch';
 import { computePercentJumpTarget } from './extraMotions';
 import { handleMiniMoveVisual } from './miniMoveEngine';
+import { jumpSnippetTabstop } from './snippetEngine';
 import {
   parsePending,
   ringBell,
@@ -864,8 +865,15 @@ export function handleSelectModeKey(
       pendingKeys: undefined,
       pendingKeymapPrefix: undefined,
       activeRegister: undefined,
+      snippetSession: state.snippetSession ? null : state.snippetSession,
       lastVisualSelection: snap,
     };
+  }
+
+  // LuaSnip 스타일 활성 스니펫 세션 중 Tab / Shift-Tab 으로 다음·이전 플레이스홀더 점프
+  if (state.snippetSession && (key === 'Tab' || key === 'Shift-Tab' || key === '<S-Tab>')) {
+    const jumped = jumpSnippetTabstop(state, key === 'Tab' ? 'next' : 'prev');
+    if (jumped) return jumped;
   }
 
   // Ctrl-g: 대응하는 VISUAL 모드로 전환

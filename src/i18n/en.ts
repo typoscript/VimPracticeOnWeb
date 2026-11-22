@@ -1416,4 +1416,12 @@ export const EN: Record<string, string> = {
   "프로젝트 파일:": "Project files:",
   "추천 도구:": "Recommended tools:",
   "미실행": "Not run",
+  "Modern Neovim 10연타 챌린지": "Modern Neovim 10-Stage Challenge",
+  "mini.ai(cin\"/din(), Treesitter(daf/daa), mini.move(Alt-j/l), vim-abolish(crc/cru), dial(Ctrl-a), treesj(gS) 현대 Neovim 10문제를 노미스로 격파하세요!": "Clear 10 modern Neovim challenges cleanly using mini.ai (cin\"/din(), Treesitter (daf/daa), mini.move (Alt-j/l), vim-abolish (crc/cru), dial (Ctrl-a), and treesj (gS)!",
+  "Modern Neovim 10연타! 최신 플러그인 모션·연산자로 목표 코드를 완성하세요.": "Modern Neovim 10-stage sprint! Match the target code with modern plugin motions and operators.",
+  "🚀 현대 Neovim 10연타": "🚀 Modern Neovim 10-Stage",
+  "🚀 mini.ai · Treesitter · mini.move · abolish · dial · treesj 10문제를 노미스로 격파하세요!": "🚀 Clear 10 mini.ai · Treesitter · mini.move · abolish · dial · treesj drills with zero mistakes!",
+  "🚀 Modern Neovim 도전 시작 (10연타)": "🚀 Start Modern Neovim Challenge (10-Stage)",
+  "인라인 Git Blame 토글 (:Gblame)": "Toggle inline Git Blame (:Gblame)",
+  "내장 스니펫 트리거 목록 (:Snippets)": "List built-in snippet triggers (:Snippets)",
 };

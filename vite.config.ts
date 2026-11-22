@@ -82,6 +82,8 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'viewport.ts',
       'dialEngine.ts',
       'abolishEngine.ts',
+      'autopairsEngine.ts',
+      'snippetEngine.ts',
       'numberOperators.ts',
       'lineOperators.ts',
       'textObjectsExtended.ts',
@@ -105,6 +107,7 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
     files: [
       'diffEngine.ts',
       'gitSignsEngine.ts',
+      'gitFugitiveEngine.ts',
       'oilEngine.ts',
       'harpoonEngine.ts',
       'yankRingEngine.ts',

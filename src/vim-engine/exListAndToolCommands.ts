@@ -37,6 +37,8 @@ import { executeUserCommandDefinition } from './userCommandEngine';
 import { executeDigraphCommand } from './digraphs';
 import { addSpellGoodWord, addSpellWrongWord, undoSpellWord } from './spellEngine';
 import { executeGitsignsCommand } from './gitSignsEngine';
+import { executeGitCommand } from './gitFugitiveEngine';
+import { formatSnippetsList } from './snippetEngine';
 import { openFlashJump } from './flashJumpEngine';
 import { startMultiCursor } from './multiCursorEngine';
 import { executeDialCommand } from './dialEngine';
@@ -482,6 +484,30 @@ function tryExecuteMappingAndMiscToolCommand(
   const gitsignsMatch = cleanCmdRaw.match(/^(?:Gitsigns|Gitsign|GitHunk)(?:\s+(.*))?$/i);
   if (gitsignsMatch) {
     return finishEx(executeGitsignsCommand(state, gitsignsMatch[1] ?? ''));
+  }
+
+  // vim-fugitive 스타일 미니 Git 워크플로: :Git [...], :G [...], :Gstatus, :Gblame, :Glog
+  if (/^Gstatus$/i.test(cleanCmdRaw)) {
+    return finishEx(executeGitCommand(state, 'status'));
+  }
+  if (/^Gblame(?:\s+(.*))?$/i.test(cleanCmdRaw)) {
+    const arg = cleanCmdRaw.replace(/^Gblame/i, '').trim();
+    return finishEx(executeGitCommand(state, `blame ${arg}`.trim()));
+  }
+  if (/^Glog$/i.test(cleanCmdRaw)) {
+    return finishEx(executeGitCommand(state, 'log'));
+  }
+  const gitMatch = cleanCmdRaw.match(/^(Git|G)(?:\s+(.*))?$/);
+  if (gitMatch) {
+    const isShadowedByUserCmd = gitMatch[1] === 'G' && Boolean(state.userCommands?.G);
+    if (!isShadowedByUserCmd) {
+      return finishEx(executeGitCommand(state, gitMatch[2] ?? 'status'));
+    }
+  }
+
+  // :Snippets — 내장 LuaSnip 스타일 스니펫 목록 조회
+  if (/^Snippets?$/i.test(cleanCmdRaw)) {
+    return finishEx(state, { commandMessage: formatSnippetsList() });
   }
 
   // :Flash [query] — flash.nvim 스타일 화면 라벨 점프 세션 열기

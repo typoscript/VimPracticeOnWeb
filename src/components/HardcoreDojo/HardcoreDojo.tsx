@@ -106,7 +106,8 @@ export function HardcoreDojo({
         {(Object.keys(DOJO_DRILL_METAS) as DojoDrillType[]).map((drillId) => {
           const meta = DOJO_DRILL_METAS[drillId];
           const best = highScores[drillId];
-          const isSpeedrun = drillId === 'sudden-death' || drillId === 'pro-master';
+          const isSpeedrun =
+            drillId === 'sudden-death' || drillId === 'pro-master' || drillId === 'neovim-master';
           return (
             <button
               key={drillId}
@@ -130,8 +131,12 @@ export function HardcoreDojo({
                 </div>
               )}
               {isSpeedrun && (
-                <div style={{ fontSize: '0.72rem', color: drillId === 'pro-master' ? '#bb9af7' : '#f7768e', marginTop: '0.35rem', fontWeight: 700 }}>
-                  {drillId === 'pro-master' ? t('👑 실무 프로 10연타') : t('⚡ 10연타 노미스 서든데스')}
+                <div style={{ fontSize: '0.72rem', color: drillId === 'neovim-master' ? '#7dcfff' : drillId === 'pro-master' ? '#bb9af7' : '#f7768e', marginTop: '0.35rem', fontWeight: 700 }}>
+                  {drillId === 'neovim-master'
+                    ? t('🚀 현대 Neovim 10연타')
+                    : drillId === 'pro-master'
+                      ? t('👑 실무 프로 10연타')
+                      : t('⚡ 10연타 노미스 서든데스')}
                 </div>
               )}
             </button>

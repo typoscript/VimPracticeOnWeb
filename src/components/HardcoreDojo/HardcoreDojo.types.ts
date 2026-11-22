@@ -4,6 +4,7 @@ export type DojoDrillType =
   | 'word-jump'
   | 'sudden-death'
   | 'pro-master'
+  | 'neovim-master'
   | 'weakness-custom';
 
 export interface DojoLeaderboardEntry {

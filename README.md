@@ -5,9 +5,9 @@
 CodeMirror나 Monaco 같은 무거운 외부 에디터 라이브러리 없이, **순수 함수형 상태 전이 아키텍처(`(state, key) => nextState`)**로 구현된 가볍고 반응성이 뛰어난 웹 Vim 학습 플랫폼입니다.
 독립 엔진 모듈 단독 사용법은 [`src/vim-engine/README.md`](./src/vim-engine/README.md)를 참고하세요.
 
-- **📚 120개 실전 커리큘럼**: 기초 이동(`hjkl`)부터 매크로·Vimscript·정규식·Netrw·세션, 현대 Neovim 플러그인(`Telescope`, `LSP`, `Treesitter`, `Gitsigns`, `Lua`, `Flash`, `Oil`, `Harpoon`, `mini.ai`, `mini.move`, `Trouble`, `Multi-Cursor`, `Undotree`, `Yanky`, `Spectre`, `:terminal`, `dial.nvim`, `vim-abolish`, `treesj`)까지 단계별 완주
-- **🎮 다채로운 훈련 모드**: 튜토리얼 코스 · 타임어택 스피드런 · 아케이드 서바이벌(보스전/파워업) · 던전 RPG(6스테이지) · 하드코어 도장 · 멀티파일 자유 연습장(Sandbox) · BYOC 커스텀 미션
-- **🔬 높은 호환성 검증**: 실제 `nvim --headless` 대조 골든 회귀 **116종** 포함 **199개 테스트 파일 / 2,282개 테스트 100% 통과**
+- **📚 120개 실전 커리큘럼**: 기초 이동(`hjkl`)부터 매크로·Vimscript·정규식·Netrw·세션, 현대 Neovim 플러그인(`Telescope`, `LSP`, `Treesitter`, `Gitsigns`, `vim-fugitive`, `Lua`, `Flash`, `Oil`, `Harpoon`, `mini.ai`, `mini.move`, `Trouble`, `Multi-Cursor`, `Undotree`, `Yanky`, `Spectre`, `:terminal`, `dial.nvim`, `vim-abolish`, `treesj`, `nvim-autopairs`, `LuaSnip`)까지 단계별 완주
+- **🎮 다채로운 훈련 모드**: 튜토리얼 코스(4개 학습 트랙) · 실무 멀티파일 캡스톤(`:TestRun`) · 타임어택 스피드런 · 아케이드 서바이벌(보스전/파워업) · 던전 RPG(6스테이지) · 하드코어 도장(Modern Neovim 10연타 포함) · 멀티파일 자유 연습장(Sandbox) · BYOC 커스텀 미션
+- **🔬 높은 호환성 검증**: 실제 `nvim --headless` 대조 골든 회귀 **116종** 포함 **201개 테스트 파일 / 2,296개 테스트 100% 통과**
 
 ---
 
@@ -337,7 +337,7 @@ npm run dev
 
 ### 3. 테스트 및 타입 검사
 ```bash
-# 전체 단위/통합 테스트 단발 실행 (199개 파일, 2,282개 테스트)
+# 전체 단위/통합 테스트 단발 실행 (201개 파일, 2,296개 테스트)
 npm test -- --run
 
 # DOM 타입 없이 순수 Vim 엔진(src/vim-engine/) 단독 타입 검사
