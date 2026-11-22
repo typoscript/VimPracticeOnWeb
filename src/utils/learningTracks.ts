@@ -61,13 +61,14 @@ export const LEARNING_TRACKS: readonly LearningTrack[] = [
   {
     id: 'neovim',
     icon: '🚀',
-    titleKey: i18nKey('현대 Neovim IDE 20강'),
+    titleKey: i18nKey('현대 Neovim IDE 25강'),
     descKey: i18nKey('Telescope · LSP · Treesitter · Flash · Oil · 터미널 · treesj'),
     badgeKey: i18nKey('Neovim'),
     accentColor: '#cba6f7',
     lessonIds: [
       101, 102, 103, 104, 105, 106, 107, 108, 109, 110,
       111, 112, 113, 114, 115, 116, 117, 118, 119, 120,
+      121, 122, 123, 124, 125,
     ],
   },
 ];

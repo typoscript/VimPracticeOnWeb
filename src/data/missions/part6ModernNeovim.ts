@@ -972,4 +972,245 @@ export const MISSIONS_PART6: Mission[] = [
       );
     },
   },
+  {
+    id: 121,
+    title: '레슨 121: nvim-autopairs 자동 괄호·따옴표 페어링(:set autopairs · 스킵 · Enter 확장)',
+    description:
+      'Insert 모드에서 괄호와 따옴표를 입력할 때 닫는 기호를 자동으로 짝지어 주고, 이미 닫혀 있는 기호를 넘어가며(스킵), {|} 사이에서 Enter 를 누르면 블록 본문을 자동 들여쓰기해 주는 nvim-autopairs 워크플로우를 익혀 보세요.\n\n1) :set autopairs (:set ap):\n   - 활성화 시 (, [, {, ", \', ` 입력에 대응하는 닫는 기호를 자동 삽입하고 커서를 중앙에 배치합니다.\n   - 커서 바로 오른쪽에 같은 닫는 기호가 있으면 중복 입력 대신 커서만 오른쪽으로 통과(스킵)합니다.\n\n2) 블록 Enter 확장 ({|} + Enter):\n   - 중괄호 쌍 사이에서 Enter 를 누르면 들여쓰기된 본문 줄이 생성되고 닫는 } 가 다음 줄로 내려갑니다.\n\n미션:\n1. :set ap<Enter> 로 nvim-autopairs 를 활성화하세요.\n2. A 로 줄 끝 입력 모드에 들어가 (name) { 를 입력한 뒤 Enter 를 눌러 함수 블록을 자동 확장하세요.\n3. 본문에 return "hi"; 를 입력하고 Escape 로 NORMAL 모드로 복귀해 완료하세요!',
+    hint: ':set ap<Enter> → A(name) {<Enter>return "hi";<Esc>',
+    par: 38,
+    primaryFilename: 'src/autopairs.ts',
+    initialLines: ['function greet'],
+    targetLines: [
+      'function greet(name) {',
+      '  return "hi";',
+      '}',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    optimalKeys: [
+      ...keysOf(':set ap'),
+      'Enter',
+      'A',
+      ...keysOf('(name) {'),
+      'Enter',
+      ...keysOf('return "hi";'),
+      'Escape',
+    ],
+    checkComplete: (state) => {
+      const target = [
+        'function greet(name) {',
+        '  return "hi";',
+        '}',
+      ];
+      return (
+        state.options?.autopairs === true &&
+        state.mode === 'NORMAL' &&
+        state.lines.length === target.length &&
+        state.lines.every((l, i) => l === target[i])
+      );
+    },
+  },
+  {
+    id: 122,
+    title: '레슨 122: LuaSnip 스니펫 확장 & 탭스톱 점프(fn<Tab> · <Tab>/<S-Tab> · :Snippets)',
+    description:
+      '반복되는 함수·조건문·인터페이스 보일러플레이트를 매번 타이핑하지 않고, 짧은 트리거 + Tab 으로 확장한 뒤 플레이스홀더($1 → $2 → $3 → $0)를 번개처럼 채워 나가는 LuaSnip 워크플로우를 마스터해 보세요.\n\n1) 트리거 + Tab 확장 (fn, afn, if, for, try, clg, iface 등 · :Snippets 목록 확인):\n   - Insert 모드에서 트리거 단어를 입력하고 Tab 을 누르면 멀티라인 템플릿이 펼쳐지고 $1 플레이스홀더가 SELECT 모드로 선택됩니다.\n\n2) Tab / Shift-Tab 탭스톱 순환:\n   - 선택된 플레이스홀더를 바로 타이핑해 치환한 뒤 Tab 으로 다음 탭스톱, Shift-Tab 으로 이전 탭스톱으로 이동하며 마지막 $0 에서 세션이 종료됩니다.\n\n미션:\n1. 2번째 빈 줄에서 i fn<Tab> 으로 function 스니펫을 확장하세요.\n2. $1(name)을 sum 으로 치환한 뒤 Tab → $2(params)를 a, b 로 치환 → Tab → $3(// body)을 return a + b; 로 치환하세요.\n3. Tab 으로 $0 종료 위치로 빠져나온 뒤 Escape 를 눌러 미션을 완료하세요!',
+    hint: 'ifn<Tab>sum<Tab>a, b<Tab>return a + b;<Tab><Esc>',
+    par: 34,
+    primaryFilename: 'src/snippets.ts',
+    initialLines: [
+      '// LuaSnip: expand fn<Tab> below',
+      '',
+    ],
+    targetLines: [
+      '// LuaSnip: expand fn<Tab> below',
+      'function sum(a, b) {',
+      '  return a + b;',
+      '}',
+    ],
+    initialCursor: { line: 1, col: 0 },
+    optimalKeys: [
+      'i',
+      'f',
+      'n',
+      'Tab',
+      ...keysOf('sum'),
+      'Tab',
+      ...keysOf('a, b'),
+      'Tab',
+      ...keysOf('return a + b;'),
+      'Tab',
+      'Escape',
+    ],
+    checkComplete: (state) => {
+      const target = [
+        '// LuaSnip: expand fn<Tab> below',
+        'function sum(a, b) {',
+        '  return a + b;',
+        '}',
+      ];
+      return (
+        state.mode === 'NORMAL' &&
+        !state.snippetSession &&
+        state.lines.length === target.length &&
+        state.lines.every((l, i) => l === target[i])
+      );
+    },
+  },
+  {
+    id: 123,
+    title: '레슨 123: vim-fugitive 미니 Git 워크플로(:Gblame · :Git add · :Git commit)',
+    description:
+      '터미널로 전환하지 않고 에디터 안에서 인라인 Git Blame(:Gblame)으로 수정 이력을 확인하고, 변경사항을 스테이징(:Git add)해 커밋(:Git commit -m)까지 완결하는 vim-fugitive 실무 워크플로우를 익혀 보세요.\n\n1) :Gblame (:Git blame):\n   - 각 줄 끝에 커밋 해시·작성자·미커밋 상태를 인라인 가상 텍스트로 토글 표시합니다.\n\n2) :Git add & :Git commit -m "..." (또는 :Git 인터랙티브 분할 패널):\n   - 수정된 Hunk 를 스테이징하고 커밋해 HEAD 기준선을 갱신합니다. 커밋 완료 시 미커밋 Hunk 가 0개가 됩니다.\n\n미션:\n1. 1번째 줄의 "v1" 을 "v2" 로(f1 r2), 2번째 줄의 false 를 true 로(j 0 Ctrl-a) 수정하세요.\n2. :Gblame<Enter> 를 실행해 인라인 Git Blame 표시를 켜세요.\n3. :Git add<Enter> 와 :Git commit -m "feat: auth v2"<Enter> 로 변경사항을 커밋해 작업 트리를 깨끗하게 만드세요!',
+    hint: 'f1 r2 → j 0 Ctrl-a → :Gblame<Enter> → :Git add<Enter> → :Git commit -m "feat: auth v2"<Enter>',
+    par: 60,
+    primaryFilename: 'src/auth.ts',
+    initialGitBaseLines: [
+      'export const AUTH_VERSION = "v1";',
+      'export const STRICT_MODE = false;',
+    ],
+    initialLines: [
+      'export const AUTH_VERSION = "v1";',
+      'export const STRICT_MODE = false;',
+    ],
+    targetLines: [
+      'export const AUTH_VERSION = "v2";',
+      'export const STRICT_MODE = true;',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    optimalKeys: [
+      'f',
+      '1',
+      'r',
+      '2',
+      'j',
+      '0',
+      'Ctrl-a',
+      ...keysOf(':Gblame'),
+      'Enter',
+      ...keysOf(':Git add'),
+      'Enter',
+      ...keysOf(':Git commit -m "feat: auth v2"'),
+      'Enter',
+    ],
+    checkComplete: (state) => {
+      const target = [
+        'export const AUTH_VERSION = "v2";',
+        'export const STRICT_MODE = true;',
+      ];
+      const linesMatch =
+        state.lines.length === target.length &&
+        state.lines.every((l, i) => l === target[i]);
+      const baseClean =
+        Array.isArray(state.gitBaseLines) &&
+        state.gitBaseLines.length === target.length &&
+        state.gitBaseLines.every((l, i) => l === target[i]);
+      const hasUserCommit = Boolean(
+        state.gitCommitLog && state.gitCommitLog.some((c) => c.author === 'you')
+      );
+      return linesMatch && baseClean && hasUserCommit && state.gitBlameVisible === true;
+    },
+  },
+  {
+    id: 124,
+    title: '레슨 124: nvim-cmp 통합 자동완성(Ctrl-Space · LSP 심볼 & 스니펫 즉시 확장)',
+    description:
+      'LuaSnip 스니펫([Snip]), LSP 문서 심볼([Func]/[Class]/[Var]), 버퍼 단어([Text])를 종류 배지와 코드 미리보기까지 한 팝업에서 제안하는 nvim-cmp(Ctrl-Space) 통합 자동완성을 마스터해 보세요.\n\n1) Insert 모드 Ctrl-Space:\n   - 커서 앞 접두사에 맞는 스니펫·LSP 심볼·버퍼 단어를 통합 팝업으로 띄웁니다.\n   - Ctrl-n / Ctrl-p 로 후보를 순환하고 Enter (또는 Tab)로 확정합니다.\n\n2) 스니펫 항목 즉시 확장:\n   - 팝업에서 [Snip] 항목을 Enter 로 확정하면 단어 삽입에 그치지 않고 LuaSnip 템플릿이 즉시 펼쳐져 $1 플레이스홀더 선택 상태로 진입합니다.\n\n미션:\n1. 4번째 줄(3j A)에서 form 을 입력한 뒤 Ctrl-Space → Enter 로 formatGreeting 함수를 자동완성하고 ("Vim");<Esc> 를 마무리하세요.\n2. 5번째 줄(j i)에서 cl 을 입력한 뒤 Ctrl-Space → Enter 로 clg 스니펫을 확장하고 output<Esc> 를 입력해 console.log(output); 을 완성하세요!',
+    hint: '3j A form Ctrl-Space<Enter>("Vim");<Esc> → j i cl Ctrl-Space<Enter>output<Esc>',
+    par: 38,
+    primaryFilename: 'src/cmpDemo.ts',
+    initialLines: [
+      'function formatGreeting(name: string) {',
+      '  return "Hello, " + name;',
+      '}',
+      'const output = ',
+      '',
+    ],
+    targetLines: [
+      'function formatGreeting(name: string) {',
+      '  return "Hello, " + name;',
+      '}',
+      'const output = formatGreeting("Vim");',
+      'console.log(output);',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    optimalKeys: [
+      '3',
+      'j',
+      'A',
+      ...keysOf('form'),
+      'Ctrl-Space',
+      'Enter',
+      ...keysOf('("Vim");'),
+      'Escape',
+      'j',
+      'i',
+      'c',
+      'l',
+      'Ctrl-Space',
+      'Enter',
+      ...keysOf('output'),
+      'Escape',
+    ],
+    checkComplete: (state) => {
+      const target = [
+        'function formatGreeting(name: string) {',
+        '  return "Hello, " + name;',
+        '}',
+        'const output = formatGreeting("Vim");',
+        'console.log(output);',
+      ];
+      return (
+        state.mode === 'NORMAL' &&
+        !state.completionSession &&
+        state.lines.length === target.length &&
+        state.lines.every((l, i) => l === target[i])
+      );
+    },
+  },
+  {
+    id: 125,
+    title: '레슨 125: [125강 피날레] noice.nvim 플로팅 커맨드라인(:set noice · :%s · / 검색)',
+    description:
+      '축하합니다! 전체 125강 커리큘럼의 대미를 장식하는 현대 Neovim UI 피날레입니다. 클래식 하단 명령줄을 에디터 상단 중앙의 세련된 플로팅 팝업과 인라인 와일드메뉴로 전환하는 noice.nvim(:set noice)을 활성화하고, 플로팅 Cmdline(:)과 플로팅 Search(/)를 직접 체험하며 125강을 완주하세요!\n\n1) :set noice (:set cmdlinepopup / :set nonoice):\n   - 켜두면 :, /, ?, = 입력이 에디터 중앙 상단 플로팅 UI(⚡ Cmdline / 🔍 Search Down)로 표시됩니다.\n   - Tab 자동완성 와일드메뉴도 팝업 하단에 인라인 칩으로 깔끔하게 나타납니다.\n\n미션:\n1. :set noice<Enter> 로 noice.nvim 플로팅 커맨드라인을 켜세요.\n2. 플로팅 커맨드라인에서 :%s/legacy/neovim/g<Enter> 로 모든 legacy 를 neovim 으로 일괄 치환하세요.\n3. 플로팅 검색 /ready<Enter> 로 3번째 줄의 ready 로 점프한 뒤 cw master<Esc> 로 "master" 로 바꿔 125강을 완주하세요!',
+    hint: ':set noice<Enter> → :%s/legacy/neovim/g<Enter> → /ready<Enter> → cwmaster<Esc>',
+    par: 54,
+    primaryFilename: 'src/noiceFinale.ts',
+    initialLines: [
+      'const theme = "legacy";',
+      'const cmdline = "legacy";',
+      'const status = "ready";',
+    ],
+    targetLines: [
+      'const theme = "neovim";',
+      'const cmdline = "neovim";',
+      'const status = "master";',
+    ],
+    initialCursor: { line: 0, col: 0 },
+    optimalKeys: [
+      ...keysOf(':set noice'),
+      'Enter',
+      ...keysOf(':%s/legacy/neovim/g'),
+      'Enter',
+      ...keysOf('/ready'),
+      'Enter',
+      'c',
+      'w',
+      ...keysOf('master'),
+      'Escape',
+    ],
+    checkComplete: (state) => {
+      const target = [
+        'const theme = "neovim";',
+        'const cmdline = "neovim";',
+        'const status = "master";',
+      ];
+      return (
+        state.options?.cmdlinepopup === true &&
+        state.mode === 'NORMAL' &&
+        state.lines.length === target.length &&
+        state.lines.every((l, i) => l === target[i])
+      );
+    },
+  },
 ];

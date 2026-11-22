@@ -5,7 +5,7 @@
 CodeMirror나 Monaco 같은 무거운 외부 에디터 라이브러리 없이, **순수 함수형 상태 전이 아키텍처(`(state, key) => nextState`)**로 구현된 가볍고 반응성이 뛰어난 웹 Vim 학습 플랫폼입니다.
 독립 엔진 모듈 단독 사용법은 [`src/vim-engine/README.md`](./src/vim-engine/README.md)를 참고하세요.
 
-- **📚 120개 실전 커리큘럼**: 기초 이동(`hjkl`)부터 매크로·Vimscript·정규식·Netrw·세션, 현대 Neovim 플러그인(`Telescope`, `LSP`, `Treesitter`, `Gitsigns`, `vim-fugitive`, `Lua`, `Flash`, `Oil`, `Harpoon`, `mini.ai`, `mini.move`, `Trouble`, `Multi-Cursor`, `Undotree`, `Yanky`, `Spectre`, `:terminal`, `dial.nvim`, `vim-abolish`, `treesj`, `nvim-autopairs`, `LuaSnip`, `nvim-cmp`, `noice.nvim`, `indent-blankline`, `todo-comments`, `matchparen`/`rainbow-delimiters`)까지 단계별 완주
+- **📚 125개 실전 커리큘럼**: 기초 이동(`hjkl`)부터 매크로·Vimscript·정규식·Netrw·세션, 현대 Neovim 플러그인(`Telescope`, `LSP`, `Treesitter`, `Gitsigns`, `vim-fugitive`, `Lua`, `Flash`, `Oil`, `Harpoon`, `mini.ai`, `mini.move`, `Trouble`, `Multi-Cursor`, `Undotree`, `Yanky`, `Spectre`, `:terminal`, `dial.nvim`, `vim-abolish`, `treesj`, `nvim-autopairs`, `LuaSnip`, `nvim-cmp`, `noice.nvim`, `indent-blankline`, `todo-comments`, `matchparen`/`rainbow-delimiters`)까지 단계별 완주
 - **🎮 다채로운 훈련 모드**: 튜토리얼 코스(4개 학습 트랙 · 1:1 Vim Golf 비교기) · 실무 멀티파일 캡스톤 5종(`:TestRun`) · 타임어택 스피드런 · 아케이드 서바이벌(보스전/파워업) · 던전 RPG(6스테이지) · 하드코어 도장(Modern Neovim 10연타 포함) · 멀티파일 자유 연습장(로컬 파일/폴더 드래그&드롭 · `.zip` 내보내기) · BYOC 커스텀 미션
 - **🔬 높은 호환성 검증**: 실제 `nvim --headless` 대조 골든 회귀 **116종** 포함 **207개 테스트 파일 / 2,328개 테스트 100% 통과**
 
@@ -132,7 +132,7 @@ flowchart TD
 
 ---
 
-## 🎯 튜토리얼 커리큘럼 (Lessons 1 ~ 120)
+## 🎯 튜토리얼 커리큘럼 (Lessons 1 ~ 125)
 
 ### 🟢 기초 이동 및 텍스트 편집 (레슨 1 ~ 10)
 1. **레슨 1**: 기본 방향 이동 (`h`, `j`, `k`, `l`)
@@ -246,7 +246,7 @@ flowchart TD
 99. **레슨 99**: 덮어쓰기 모드(`R`), `[count]r` & 비주얼 블록 치환(`Ctrl-v r`) 마스터하기
 100. **레슨 100**: [대단원] 정규식 캡처·매크로·`vim-surround`·다중 파일 배치(`:vimgrep` + `:cdo` + `Ctrl-^`) 종합 마스터 챌린지
 
-### 🚀 현대 Neovim 실전 트랙 (레슨 101 ~ 116)
+### 🚀 현대 Neovim 실전 트랙 (레슨 101 ~ 125)
 101. **레슨 101**: Telescope `:LiveGrep` 본문 검색 & `Ctrl-q` 퀵픽스 일괄 치환
 102. **레슨 102**: Neovim 0.11 LSP 리팩토링 — `gra` 코드 액션 & `grn` 다중 파일 이름 변경
 103. **레슨 103**: Neovim 0.11 LSP 탐색 — `gO` 문서 심볼 아웃라인 & `grr` 참조 검색
@@ -267,6 +267,11 @@ flowchart TD
 118. **레슨 118**: `dial.nvim` 스마트 토글 & 날짜·연산자 증감(`Ctrl-a` · `Ctrl-x`)
 119. **레슨 119**: `vim-abolish` 식별자 케이스 즉시 변환(`crs` · `crc` · `crm` · `cru`)
 120. **레슨 120**: `[120강 피날레]` `treesj` 구조적 Split/Join(`gS` · `:TSJToggle`) 마스터
+121. **레슨 121**: `nvim-autopairs` 자동 괄호·따옴표 페어링(`:set autopairs` · 스킵 · Enter 확장)
+122. **레슨 122**: `LuaSnip` 스니펫 확장 & 탭스톱 점프(`fn<Tab>` · `<Tab>`/`<S-Tab>` · `:Snippets`)
+123. **레슨 123**: `vim-fugitive` 미니 Git 워크플로(`:Gblame` · `:Git add` · `:Git commit`)
+124. **레슨 124**: `nvim-cmp` 통합 자동완성(`Ctrl-Space` · LSP 심볼 & 스니펫 즉시 확장)
+125. **레슨 125**: `[125강 피날레]` `noice.nvim` 플로팅 커맨드라인(`:set noice` · `:%s` · `/` 검색)
 
 ---
 

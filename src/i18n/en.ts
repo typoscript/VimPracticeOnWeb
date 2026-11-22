@@ -1399,7 +1399,7 @@ export const EN: Record<string, string> = {
   "Ex · Vimscript 마스터": "Ex & Vimscript Mastery",
   "퀵픽스 · Netrw · 세션 · 자동명령 · 함수/람다 · 셸 파이프": "Quickfix, Netrw, sessions, autocmds, functions/lambdas & shell pipes",
   "심화": "Advanced",
-  "현대 Neovim IDE 20강": "Modern Neovim IDE (20 Lessons)",
+  "현대 Neovim IDE 25강": "Modern Neovim IDE (25 Lessons)",
   "Telescope · LSP · Treesitter · Flash · Oil · 터미널 · treesj": "Telescope, LSP, Treesitter, Flash, Oil, Terminal & treesj",
   "🗺️ 목적별 학습 트랙 (추천 로드맵)": "🗺️ Learning Tracks (Guided Roadmaps)",
   "트랙 보기": "Filter Track",

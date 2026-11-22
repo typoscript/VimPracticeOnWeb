@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 207개 테스트 파일, 2,328개 테스트 100% 통과 필수)*
+  *(현재 207개 테스트 파일, 2,329개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -53,7 +53,7 @@
 
 ---
 
-## 4. 현재 구현 완료 현황 (레슨 1 ~ 120)
+## 4. 현재 구현 완료 현황 (레슨 1 ~ 125)
 - **기초 이동 & 편집 (레슨 1 ~ 10)**: `h, j, k, l`, `w, b, e`, `$`, `x`, `i/Esc`, `dd`, `dw`, `u`, `v`, 숫자 카운트
 - **효율적 가속 (레슨 11 ~ 19)**: `o, A, I`, `cw, r`, `f, t, df`, `ciw, di"`, `.`, `/ n N *`, `:%s/old/new/g`, 매크로 `qa @a %`, `Ctrl+v` 비주얼 블록
 - **실무 프로 생산성 (레슨 20 ~ 32)**: `m, ', Ctrl-o`, `J, ~, >>, <<, Ctrl-a/x`, `:g/pat/d, :norm`, `"_ "a`, `:vsp Ctrl-w`, `cit, gg=G`, `Ctrl+w, Ctrl+n`, `{} gi gv g;`, `\1 \2 \u`, `Ctrl+r 0, Ctrl+r =`, `cgn .`, `"A qA`, `g Ctrl+a, :sort u`
@@ -264,6 +264,8 @@
   - **`indent-blankline.nvim` (`:set indentline` / `:set ibl`, 기본 `on`)**: 들여쓰기 레벨마다 세로 가이드선(`.indent-guide`, 빈 줄 보간 지원)과 현재 커서 스코프 강조(`.indent-guide-active`)를 렌더링하며 `:set noindentline`/`:set noibl` 로 토글할 수 있습니다.
   - **`todo-comments.nvim`**: 주석 내 `TODO:`/`FIXME:`/`BUG:`/`HACK:`/`WARN:`/`NOTE:`/`PERF:` 태그를 본문 텍스트 무결성을 해치지 않고 컬러 알약 배지(`.todo-comment-tag`)로 강조 렌더링합니다.
   - **`matchparen` & `rainbow-delimiters.nvim` (`:set matchparen`/`:set mp`, `:set rainbow`/`:set rb`, 기본 `on`)**: 커서가 괄호(`()`, `[]`, `{}`, `:set matchpairs`) 위(INSERT 모드 직전 괄호 포함)일 때 멀티라인 대응 짝 괄호를 실시간 하이라이트(`.match-paren-highlight`)하고, 문자열·주석을 제외한 중첩 괄호를 6단계 깊이별 컬러(`.rainbow-depth-0..5`)로 구분합니다.
+- **현대 Neovim 실전 커리큘럼 121~125강 확장 (`part6ModernNeovim.ts`, `learningTracks.ts`, `missionFilters.ts`, `useSpeedrunSession.ts`, `enContent.ts`)**:
+  - **신규 레슨 5종**: `nvim-autopairs` 자동 페어링·스킵·Enter 확장(레슨 121), `LuaSnip` `fn<Tab>` 스니펫 확장 및 `<Tab>`/`<S-Tab>` 탭스톱 순환(레슨 122), `vim-fugitive` `:Gblame`·`:Git add`·`:Git commit`(레슨 123), `nvim-cmp` `Ctrl-Space` LSP 심볼 완성 및 스니펫 즉시 확장(레슨 124), `noice.nvim` `:set noice` 플로팅 Cmdline(`:%s`) & Search(`/`) 125강 피날레(레슨 125)를 정규 커리큘럼(**125강**), *현대 Neovim IDE 25강* 학습 트랙, Neovim 카테고리 필터, 스피드런 후보 풀, 한/영 번역 사전에 통합했습니다.
 
 ---
 
