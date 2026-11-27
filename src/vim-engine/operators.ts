@@ -2,6 +2,7 @@ import { StateSnapshot, VimEditorState } from './types';
 import { clampCursor, getFirstNonBlankCol, getMaxCol } from './cursor';
 import { getOptions, hasFormatOption, extractCommentPrefix } from './setOptionsCore';
 import { areLinesEqual, ensureUndoTreeInitialized, recordUndoTreeChange, jumpUndoSeq } from './undoTreeEngine';
+import { msg } from './messages';
 
 const MAX_HISTORY = 50;
 
@@ -664,6 +665,48 @@ export function putClipboard(state: VimEditorState): VimEditorState {
   };
 }
 
+/** Vim u_add_time: 100초 미만은 "N seconds ago", 그 이상은 변경 시각(HH:MM:SS). */
+function formatUndoAge(timestamp: number | undefined): string {
+  if (timestamp === undefined) return msg('{n}초 전', { n: 0 });
+  const seconds = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+  if (seconds >= 100) {
+    const d = new Date(timestamp);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  }
+  return seconds === 1 ? msg('1초 전') : msg('{n}초 전', { n: seconds });
+}
+
+/**
+ * Vim u_undo_end 처럼 실행 취소/다시 실행 결과를 알립니다.
+ * 줄 수가 바뀌면 "N more lines" / "1 line less" 등, 같으면 바뀐 줄 수를 "N changes" 로 보여 주고
+ * 뒤에 "; before #seq" (u) 또는 "; after #seq" (Ctrl-r) 와 그 변경의 시각을 붙입니다.
+ */
+function describeUndoRedo(
+  before: string[],
+  after: string[],
+  direction: 'before' | 'after',
+  seq: number,
+  timestamp: number | undefined
+): string {
+  const delta = after.length - before.length;
+  let summary: string;
+  if (delta === 1) summary = msg('1줄이 늘었습니다');
+  else if (delta > 1) summary = msg('{n}줄이 늘었습니다', { n: delta });
+  else if (delta === -1) summary = msg('1줄이 줄었습니다');
+  else if (delta < -1) summary = msg('{n}줄이 줄었습니다', { n: -delta });
+  else {
+    let changed = 0;
+    for (let i = 0; i < after.length; i++) if (after[i] !== before[i]) changed++;
+    const count = Math.max(1, changed);
+    summary = count === 1 ? msg('1곳이 바뀌었습니다') : msg('{n}곳이 바뀌었습니다', { n: count });
+  }
+  const age = formatUndoAge(timestamp);
+  return direction === 'before'
+    ? msg('{summary}; #{seq} 이전  {age}', { summary, seq, age })
+    : msg('{summary}; #{seq} 이후  {age}', { summary, seq, age });
+}
+
 /**
  * 'u': 직전 상태로 실행 취소(Undo)합니다.
  */
@@ -673,7 +716,7 @@ export function undo(state: VimEditorState): VimEditorState {
       const parent = state.undoTreeNodes[state.currentUndoSeq]?.parentSeq ?? 0;
       return jumpUndoSeq(state, parent);
     }
-    return { ...state, pendingKeys: undefined };
+    return { ...state, pendingKeys: undefined, commandMessage: msg('이미 가장 오래된 변경사항입니다.') };
   }
 
   const lastSnapshot = state.undoStack[state.undoStack.length - 1];
@@ -699,6 +742,7 @@ export function undo(state: VimEditorState): VimEditorState {
     }
   }
 
+  const undoneSeq = state.currentUndoSeq ?? state.undoStack.length;
   return {
     ...state,
     lines: lastSnapshot.lines,
@@ -710,6 +754,13 @@ export function undo(state: VimEditorState): VimEditorState {
     pendingKeys: undefined,
     pendingUndoJoin: undefined,
     lastActionWasUndo: true,
+    commandMessage: describeUndoRedo(
+      state.lines,
+      lastSnapshot.lines,
+      'before',
+      undoneSeq,
+      state.undoTreeNodes?.[undoneSeq]?.timestamp
+    ),
   };
 }
 
@@ -718,7 +769,7 @@ export function undo(state: VimEditorState): VimEditorState {
  */
 export function redo(state: VimEditorState): VimEditorState {
   if (!state.redoStack || state.redoStack.length === 0) {
-    return { ...state, pendingKeys: undefined };
+    return { ...state, pendingKeys: undefined, commandMessage: msg('이미 가장 최신 변경사항입니다.') };
   }
 
   const nextSnapshot = state.redoStack[state.redoStack.length - 1];
@@ -746,6 +797,7 @@ export function redo(state: VimEditorState): VimEditorState {
     }
   }
 
+  const redoneSeq = currentSeq ?? nextUndo.length;
   return {
     ...state,
     lines: nextSnapshot.lines,
@@ -755,5 +807,12 @@ export function redo(state: VimEditorState): VimEditorState {
     currentUndoSeq: currentSeq,
     undoTimeIndex: timeIdx,
     pendingKeys: undefined,
+    commandMessage: describeUndoRedo(
+      state.lines,
+      nextSnapshot.lines,
+      'after',
+      redoneSeq,
+      state.undoTreeNodes?.[redoneSeq]?.timestamp
+    ),
   };
 }

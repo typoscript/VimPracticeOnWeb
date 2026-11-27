@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 223개 테스트 파일, 2,579개 테스트 100% 통과 필수)*
+  *(현재 225개 테스트 파일, 2,600개 테스트 100% 통과 필수)*
 - **실제 브라우저(E2E) 테스트 (Playwright)**:
   `npm run test:e2e`
   *(`e2e/*.e2e.ts`, `playwright.config.ts`. 프로덕션 빌드를 `vite preview` 로 띄워 Chromium 에서 레슨 완료·Ex 명령·Ctrl+v 차단·한글 IME 키 매핑·언어 전환·지연 로딩 탭을 검사합니다. 처음 한 번 `npx playwright install chromium` 이 필요하며, Linux 에서 공유 라이브러리가 없다고 나오면 `sudo npx playwright install-deps chromium` 을 실행하세요. 파일 이름을 `.e2e.ts` 로 두어 vitest 가 줍지 않게 합니다.)*
