@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { KeyReferenceModal } from './KeyReferenceModal';
-import { KEY_REFERENCE_ENTRIES, keyNameFromEvent } from './keyReferenceCatalog';
+import { KEY_REFERENCE_MODES, keyNameFromEvent, keyReferenceModeFor } from './keyReferenceCatalog';
+import { lessonsForKey } from './keyReferenceLessons';
+import { MISSIONS } from '../../data/missions';
 import { isKeyReferenceShortcut } from '../../utils/keyReferenceShortcut';
 
 const ev = (key: string, extra: Partial<KeyboardEvent> = {}) => ({
@@ -14,9 +16,27 @@ const ev = (key: string, extra: Partial<KeyboardEvent> = {}) => ({
 });
 
 describe('keyReferenceCatalog', () => {
-  it('has one entry per key', () => {
-    const keys = KEY_REFERENCE_ENTRIES.map((entry) => entry.key);
-    expect(new Set(keys).size).toBe(keys.length);
+  it('has one entry per key in each mode', () => {
+    for (const mode of KEY_REFERENCE_MODES) {
+      const keys = mode.entries.map((entry) => entry.key);
+      expect(new Set(keys).size, mode.id).toBe(keys.length);
+    }
+  });
+
+  it('picks the tab for the editor mode', () => {
+    expect(keyReferenceModeFor('NORMAL')).toBe('normal');
+    expect(keyReferenceModeFor('VISUAL_BLOCK')).toBe('visual');
+    expect(keyReferenceModeFor('INSERT')).toBe('insert');
+    expect(keyReferenceModeFor('COMMAND')).toBe('normal');
+  });
+
+  it('finds lessons that practice a key, title matches first', () => {
+    const forJ = lessonsForKey('j', MISSIONS);
+    expect(forJ[0].id).toBe(1);
+    expect(forJ.length).toBeLessThanOrEqual(4);
+    const forCtrlW = lessonsForKey('Ctrl-w', MISSIONS).map((m) => m.id);
+    expect(forCtrlW).toContain(24);
+    expect(lessonsForKey('Esc', MISSIONS).length).toBeGreaterThan(0);
   });
 
   it('turns key events into reference key names', () => {
@@ -77,5 +97,26 @@ describe('KeyReferenceModal', () => {
     fireEvent.keyDown(window, { key: 'Escape' });
     fireEvent.keyDown(window, { key: '/', code: 'Slash', ctrlKey: true });
     expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it('opens on the tab for the editor mode and looks keys up in that mode', () => {
+    render(<KeyReferenceModal isOpen onClose={() => {}} editorMode="INSERT" />);
+    expect(screen.getByTestId('key-reference-mode-insert')).toHaveAttribute('aria-selected', 'true');
+    fireEvent.keyDown(window, { key: 'u', code: 'KeyU', ctrlKey: true });
+    expect(screen.getByTestId('key-reference-detail').textContent).toContain('입력 시작점까지 지우기');
+
+    fireEvent.click(screen.getByTestId('key-reference-mode-visual'));
+    fireEvent.keyDown(window, { key: 'o', code: 'KeyO' });
+    expect(screen.getByTestId('key-reference-detail').textContent).toContain('반대쪽 끝');
+  });
+
+  it('links to lessons that practice the key', () => {
+    const onSelectLesson = vi.fn();
+    const onClose = vi.fn();
+    render(<KeyReferenceModal isOpen onClose={onClose} missions={MISSIONS} onSelectLesson={onSelectLesson} />);
+    fireEvent.keyDown(window, { key: 'j', code: 'KeyJ' });
+    fireEvent.click(screen.getByTestId('key-reference-lesson-1'));
+    expect(onSelectLesson).toHaveBeenCalledWith(1);
+    expect(onClose).toHaveBeenCalled();
   });
 });

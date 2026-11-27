@@ -238,7 +238,13 @@ export function AppModals({
         )}
 
         {keyReferenceLoaded && keyReference && (
-          <KeyReferenceModal isOpen={keyReference.isOpen} onClose={keyReference.onClose} />
+          <KeyReferenceModal
+            isOpen={keyReference.isOpen}
+            onClose={keyReference.onClose}
+            editorMode={editorState.mode}
+            missions={MISSIONS}
+            onSelectLesson={lesson.onSelectById}
+          />
         )}
       {editorState.fuzzyFinder?.isOpen && (
         <FuzzyFinder

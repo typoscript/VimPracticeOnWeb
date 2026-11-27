@@ -1,6 +1,8 @@
 import {
   CTRL_W_ITEMS,
   G_PREFIX_ITEMS,
+  INSERT_CTRL_R_ITEMS,
+  INSERT_CTRL_X_ITEMS,
   LEFT_BRACKET_ITEMS,
   REGISTER_ITEMS,
   RIGHT_BRACKET_ITEMS,
@@ -16,9 +18,17 @@ export type KeyReferenceCategory =
   | 'operator'
   | 'search'
   | 'visual'
-  | 'other';
+  | 'other'
+  | 'visual-select'
+  | 'visual-edit'
+  | 'insert-delete'
+  | 'insert-put'
+  | 'insert-move';
 
-/** 노멀 모드에서 키 하나(또는 Ctrl 조합)를 눌렀을 때의 동작 */
+/** 키 사전의 모드 탭 */
+export type KeyReferenceMode = 'normal' | 'visual' | 'insert';
+
+/** 한 모드에서 키 하나(또는 Ctrl 조합)를 눌렀을 때의 동작 */
 export interface KeyReferenceEntry {
   /** 표시·매칭용 키 이름 (`h`, `H`, `$`, `Ctrl-a`, `Esc`, `Enter`) */
   key: string;
@@ -41,6 +51,11 @@ export const KEY_REFERENCE_CATEGORIES: ReadonlyArray<{
   { id: 'search', ko: '검색', en: 'Search' },
   { id: 'visual', ko: '비주얼 · 선택', en: 'Visual' },
   { id: 'other', ko: '창 · 마크 · 레지스터 · 기타', en: 'Windows · marks · registers · misc' },
+  { id: 'visual-select', ko: '선택 범위 조절', en: 'Adjust the selection' },
+  { id: 'visual-edit', ko: '선택한 텍스트 편집', en: 'Edit the selection' },
+  { id: 'insert-delete', ko: '지우기', en: 'Delete' },
+  { id: 'insert-put', ko: '넣기 · 자동완성', en: 'Insert & complete' },
+  { id: 'insert-move', ko: '이동 · 모드 전환', en: 'Move & switch modes' },
 ];
 
 /** 연산자 뒤에 오는 텍스트 객체 목록 (`i`/`a` + 객체) */
@@ -53,6 +68,7 @@ const OPERATOR_FOLLOW_UPS: readonly WhichKeyItem[] = [
   })),
 ];
 
+/** 노멀 모드 키 */
 export const KEY_REFERENCE_ENTRIES: readonly KeyReferenceEntry[] = [
   // ---- 이동 ----
   { key: 'h', category: 'motion', ko: '왼쪽으로 한 칸', en: 'Left one character' },
@@ -175,10 +191,92 @@ export const KEY_REFERENCE_ENTRIES: readonly KeyReferenceEntry[] = [
   { key: 'Backspace', category: 'other', ko: '왼쪽으로 한 칸', en: 'Left one character' },
 ];
 
-const ENTRY_BY_KEY = new Map(KEY_REFERENCE_ENTRIES.map((entry) => [entry.key, entry]));
+/** 비주얼 모드(v / V / Ctrl-v) 키 */
+export const VISUAL_KEY_ENTRIES: readonly KeyReferenceEntry[] = [
+  { key: 'o', category: 'visual-select', ko: '선택의 반대쪽 끝으로 커서 옮기기', en: 'Move to the other end of the selection' },
+  { key: 'O', category: 'visual-select', ko: '블록 선택에서 같은 줄의 반대쪽 모서리로', en: 'Blockwise: other corner on the same line' },
+  { key: 'i', category: 'visual-select', ko: 'i{객체}: 텍스트 객체 안쪽을 선택 (viw, vi")', en: 'i{object}: select inside a text object (viw, vi")', followUps: TEXT_OBJECT_ITEMS },
+  { key: 'a', category: 'visual-select', ko: 'a{객체}: 텍스트 객체를 감싼 것까지 선택 (vaw, va()', en: 'a{object}: select around a text object (vaw, va()', followUps: TEXT_OBJECT_ITEMS },
+  { key: '$', category: 'visual-select', ko: '줄 끝까지 선택 (블록이면 줄마다 끝까지)', en: 'Extend to end of line (each line in block mode)' },
+  { key: 'v', category: 'visual-select', ko: '글자 단위로 바꾸기 (이미 글자 단위면 끝내기)', en: 'Switch to characterwise (or leave it)' },
+  { key: 'V', category: 'visual-select', ko: '줄 단위로 바꾸기 (이미 줄 단위면 끝내기)', en: 'Switch to linewise (or leave it)' },
+  { key: 'Ctrl-v', category: 'visual-select', ko: '블록 단위로 바꾸기 (이미 블록이면 끝내기)', en: 'Switch to blockwise (or leave it)' },
+  { key: 'Ctrl-g', category: 'visual-select', ko: '선택(Select) 모드로 바꾸기', en: 'Switch to Select mode' },
+  { key: 'Esc', category: 'visual-select', ko: '선택 취소하고 노멀 모드로', en: 'Cancel the selection' },
+  { key: 'd', category: 'visual-edit', ko: '선택 영역 삭제 (x 도 같음)', en: 'Delete the selection (same as x)' },
+  { key: 'x', category: 'visual-edit', ko: '선택 영역 삭제', en: 'Delete the selection' },
+  { key: 'c', category: 'visual-edit', ko: '선택 영역을 지우고 입력 (블록이면 줄마다)', en: 'Change the selection (on every line in block mode)' },
+  { key: 's', category: 'visual-edit', ko: '선택 영역을 지우고 입력 (c 와 같음)', en: 'Change the selection (same as c)' },
+  { key: 'y', category: 'visual-edit', ko: '선택 영역 복사', en: 'Yank the selection' },
+  { key: 'p', category: 'visual-edit', ko: '선택 영역을 레지스터 내용으로 바꾸기', en: 'Replace the selection with a register' },
+  { key: 'r', category: 'visual-edit', ko: 'r{문자}: 선택한 글자를 모두 그 문자로', en: 'r{char}: replace every selected character' },
+  { key: '~', category: 'visual-edit', ko: '대소문자 바꾸기', en: 'Toggle case' },
+  { key: 'u', category: 'visual-edit', ko: '소문자로', en: 'Lowercase' },
+  { key: 'U', category: 'visual-edit', ko: '대문자로', en: 'Uppercase' },
+  { key: '>', category: 'visual-edit', ko: '선택한 줄 들여쓰기', en: 'Indent the selected lines' },
+  { key: '<', category: 'visual-edit', ko: '선택한 줄 내어쓰기', en: 'Outdent the selected lines' },
+  { key: '=', category: 'visual-edit', ko: '선택한 줄 자동 들여쓰기', en: 'Re-indent the selected lines' },
+  { key: 'J', category: 'visual-edit', ko: '선택한 줄을 공백으로 합치기 (gJ 는 공백 없이)', en: 'Join the selected lines (gJ without spaces)' },
+  { key: 'I', category: 'visual-edit', ko: '블록 선택: 줄마다 블록 앞에 입력', en: 'Block: insert before the block on every line' },
+  { key: 'A', category: 'visual-edit', ko: '블록 선택: 줄마다 블록 뒤에 입력', en: 'Block: append after the block on every line' },
+  { key: ':', category: 'visual-edit', ko: "선택한 줄에 Ex 명령 (:'<,'>s/…)", en: "Ex command on the selected lines (:'<,'>s/…)" },
+  { key: 'Ctrl-a', category: 'visual-edit', ko: '선택 안의 숫자 +1 (g Ctrl-a 는 1, 2, 3… 차례로)', en: 'Increment numbers (g Ctrl-a makes a sequence)' },
+  { key: 'Ctrl-x', category: 'visual-edit', ko: '선택 안의 숫자 -1', en: 'Decrement numbers in the selection' },
+  { key: 'g', category: 'visual-edit', ko: '+g 접두 명령 (gJ, gq, gc, gu, gU, g Ctrl-a …)', en: '+g prefix (gJ, gq, gc, gu, gU, g Ctrl-a …)', followUps: G_PREFIX_ITEMS },
+];
 
-export function findKeyReferenceEntry(key: string): KeyReferenceEntry | undefined {
-  return ENTRY_BY_KEY.get(key);
+/** 입력 모드(INSERT) 키 */
+export const INSERT_KEY_ENTRIES: readonly KeyReferenceEntry[] = [
+  { key: 'Backspace', category: 'insert-delete', ko: '앞 글자 지우기 (Ctrl-h 도 같음)', en: 'Delete the previous character (same as Ctrl-h)' },
+  { key: 'Ctrl-h', category: 'insert-delete', ko: '앞 글자 지우기', en: 'Delete the previous character' },
+  { key: 'Ctrl-w', category: 'insert-delete', ko: '앞 단어 지우기 (브라우저에서는 Alt+W)', en: 'Delete the previous word (Alt+W in the browser)' },
+  { key: 'Ctrl-u', category: 'insert-delete', ko: '입력 시작점까지 지우기 (다시 누르면 줄 시작까지)', en: 'Delete back to where insert started (again: to line start)' },
+  { key: 'Ctrl-r', category: 'insert-put', ko: 'Ctrl-r {레지스터}: 레지스터 내용 넣기 (Ctrl-r = 계산식)', en: 'Ctrl-r {register}: insert a register (Ctrl-r = for an expression)', followUps: INSERT_CTRL_R_ITEMS },
+  { key: 'Ctrl-n', category: 'insert-put', ko: '자동완성: 다음 후보', en: 'Completion: next match' },
+  { key: 'Ctrl-p', category: 'insert-put', ko: '자동완성: 이전 후보', en: 'Completion: previous match' },
+  { key: 'Ctrl-x', category: 'insert-put', ko: '+자동완성 종류 고르기 (파일, 줄, 사전 …)', en: '+Choose a completion kind (file, line, dictionary …)', followUps: INSERT_CTRL_X_ITEMS },
+  { key: 'Ctrl-Space', category: 'insert-put', ko: 'nvim-cmp 통합 자동완성 (스니펫·LSP·버퍼)', en: 'nvim-cmp completion (snippets, LSP, buffer)' },
+  { key: 'Ctrl-a', category: 'insert-put', ko: '직전에 입력한 텍스트 다시 넣기 (Ctrl-@ 는 넣고 노멀로)', en: 'Insert the last inserted text again (Ctrl-@ then stops)' },
+  { key: 'Ctrl-v', category: 'insert-put', ko: '다음 키를 글자 그대로 넣기 (Ctrl-v u0041 → 유니코드)', en: 'Insert the next key literally (Ctrl-v u0041 for Unicode)' },
+  { key: 'Ctrl-k', category: 'insert-put', ko: 'Ctrl-k {두 글자}: 다이그래프 특수 문자 넣기', en: 'Ctrl-k {two chars}: insert a digraph' },
+  { key: 'Ctrl-e', category: 'insert-put', ko: '아래 줄의 같은 열 글자 복사해 넣기', en: 'Copy the character below the cursor' },
+  { key: 'Ctrl-y', category: 'insert-put', ko: '위 줄의 같은 열 글자 복사해 넣기', en: 'Copy the character above the cursor' },
+  { key: 'Ctrl-t', category: 'insert-put', ko: '현재 줄 들여쓰기 한 단계', en: 'Indent the current line' },
+  { key: 'Ctrl-d', category: 'insert-put', ko: '현재 줄 내어쓰기 한 단계 (0 Ctrl-d 는 모두)', en: 'Outdent the current line (0 Ctrl-d removes all)' },
+  { key: 'Tab', category: 'insert-put', ko: '탭 / 공백 넣기 (스니펫 확장·다음 자리)', en: 'Insert a tab or spaces (expand snippet / next stop)' },
+  { key: 'Enter', category: 'insert-put', ko: '줄 나누기', en: 'Break the line' },
+  { key: 'Ctrl-]', category: 'insert-put', ko: '약어(:iabbrev) 바로 펼치기', en: 'Expand an abbreviation now' },
+  { key: 'Esc', category: 'insert-move', ko: '노멀 모드로 (커서는 한 칸 왼쪽)', en: 'Back to Normal mode (cursor moves left one)' },
+  { key: 'Ctrl-o', category: 'insert-move', ko: '노멀 명령 하나만 실행하고 입력 모드로 돌아오기', en: 'Run one Normal command, then return to Insert' },
+  { key: 'Ctrl-g', category: 'insert-move', ko: 'Ctrl-g u: 실행 취소 단위 나누기 / j, k: 입력 시작 열로 위아래', en: 'Ctrl-g u: break undo / j, k: up or down to the insert column' },
+  { key: 'ArrowLeft', category: 'insert-move', ko: '왼쪽으로 (실행 취소 단위가 나뉨)', en: 'Left (starts a new undo step)' },
+  { key: 'ArrowRight', category: 'insert-move', ko: '오른쪽으로 (실행 취소 단위가 나뉨)', en: 'Right (starts a new undo step)' },
+];
+
+export const KEY_REFERENCE_MODES: ReadonlyArray<{
+  id: KeyReferenceMode;
+  ko: string;
+  en: string;
+  entries: readonly KeyReferenceEntry[];
+}> = [
+  { id: 'normal', ko: '노멀', en: 'Normal', entries: KEY_REFERENCE_ENTRIES },
+  { id: 'visual', ko: '비주얼', en: 'Visual', entries: VISUAL_KEY_ENTRIES },
+  { id: 'insert', ko: '입력', en: 'Insert', entries: INSERT_KEY_ENTRIES },
+];
+
+/** 에디터 모드에 맞는 키 사전 탭 */
+export function keyReferenceModeFor(editorMode: string | undefined): KeyReferenceMode {
+  if (editorMode?.startsWith('VISUAL') || editorMode?.startsWith('SELECT')) return 'visual';
+  if (editorMode === 'INSERT' || editorMode === 'REPLACE') return 'insert';
+  return 'normal';
+}
+
+const ENTRY_MAPS = new Map(
+  KEY_REFERENCE_MODES.map((mode) => [mode.id, new Map(mode.entries.map((entry) => [entry.key, entry]))])
+);
+
+export function findKeyReferenceEntry(key: string, mode: KeyReferenceMode = 'normal'): KeyReferenceEntry | undefined {
+  return ENTRY_MAPS.get(mode)?.get(key);
 }
 
 const NAMED_KEYS: Record<string, string> = {
@@ -187,7 +285,9 @@ const NAMED_KEYS: Record<string, string> = {
   Enter: 'Enter',
   Backspace: 'Backspace',
   F1: 'F1',
-  Tab: 'Ctrl-i',
+  Tab: 'Tab',
+  ArrowLeft: 'ArrowLeft',
+  ArrowRight: 'ArrowRight',
 };
 
 /**
@@ -200,6 +300,8 @@ export function keyNameFromEvent(e: Pick<KeyboardEvent, 'key' | 'code' | 'ctrlKe
     if (e.altKey) return null;
     if (e.key === '^' || e.key === '6' || e.code === 'Digit6') return 'Ctrl-^';
     if (e.key === ']' || e.code === 'BracketRight') return 'Ctrl-]';
+    if (e.key === '@' || e.code === 'Digit2') return 'Ctrl-@';
+    if (e.key === ' ' || e.code === 'Space') return 'Ctrl-Space';
     const letter = /^Key([A-Z])$/.exec(e.code)?.[1]?.toLowerCase() ?? e.key.toLowerCase();
     return /^[a-z]$/.test(letter) ? `Ctrl-${letter}` : null;
   }

@@ -137,7 +137,7 @@ export const TEXT_OBJECT_ITEMS: WhichKeyItem[] = [
   { key: 'l', labelKo: '+이전 객체 (mini.ai last)', labelEn: '+Last object (mini.ai)', group: true },
 ];
 
-const INSERT_CTRL_X_ITEMS: WhichKeyItem[] = [
+export const INSERT_CTRL_X_ITEMS: WhichKeyItem[] = [
   { key: 'Ctrl-n', labelKo: '키워드 완성 (다음)', labelEn: 'Keyword completion' },
   { key: 'Ctrl-f', labelKo: '파일 경로 완성', labelEn: 'Filename completion' },
   { key: 'Ctrl-l', labelKo: '전체 줄 완성', labelEn: 'Whole line completion' },
@@ -148,7 +148,7 @@ const INSERT_CTRL_X_ITEMS: WhichKeyItem[] = [
   { key: 's', labelKo: '맞춤법 추천 완성', labelEn: 'Spell suggestions' },
 ];
 
-const INSERT_CTRL_R_ITEMS: WhichKeyItem[] = [
+export const INSERT_CTRL_R_ITEMS: WhichKeyItem[] = [
   { key: '"', labelKo: '무명 레지스터', labelEn: 'Unnamed register' },
   { key: '0', labelKo: '최근 복사 (yank)', labelEn: 'Last yank register' },
   { key: '=', labelKo: 'Vimscript 계산식', labelEn: 'Expression register' },

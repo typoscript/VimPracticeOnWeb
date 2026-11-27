@@ -60,6 +60,63 @@
   border-color: #7aa2f7;
 }
 
+.keyref-mode-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 10px 18px 0;
+  background: #16161e;
+  flex-shrink: 0;
+}
+
+.keyref-mode-tab {
+  background: transparent;
+  border: 1px solid #292e42;
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  color: #9aa5ce;
+  padding: 5px 14px;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.keyref-mode-tab.is-active {
+  background: #1f2335;
+  color: #c0caf5;
+  border-color: #7aa2f7;
+}
+
+.keyref-lessons {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.keyref-lessons-title {
+  font-size: 0.75rem;
+  color: #7982a9;
+  margin-right: 4px;
+}
+
+.keyref-lesson-btn {
+  background: #1f2335;
+  border: 1px solid #3b4261;
+  border-radius: 999px;
+  color: #9ece6a;
+  font-size: 0.76rem;
+  padding: 3px 10px;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.keyref-lesson-btn:hover {
+  border-color: #9ece6a;
+}
+
 .keyref-detail {
   padding: 14px 18px;
   border-bottom: 1px solid #292e42;
