@@ -397,4 +397,91 @@ describe('surroundEngine: vim-surround (cs, ds, ys, yss, Visual S)', () => {
       expect(state.lines[0]).toBe('const foo = "bar";');
     });
   });
+
+  describe('태그 입력 프롬프트 (< / t 대상: cst<p>, ysiw<em>, yss<p>, Visual S<div>)', () => {
+    const keys = (state: VimEditorState, seq: string[]) =>
+      seq.reduce((s, k) => handleKey(s, k), state);
+    const at = (lines: string[], col: number, line = 0): VimEditorState => ({
+      lines,
+      cursor: { line, col },
+      mode: 'NORMAL',
+    });
+
+    it('ysiw<em> 로 단어를 <em>…</em> 태그로 감싸고 입력 중 프롬프트를 보여 준다', () => {
+      let state = keys(at(['hello user here'], 7), ['y', 's', 'i', 'w', '<']);
+      expect(state.surroundTagPrompt).toBeTruthy();
+      expect(state.commandMessage).toBe('<');
+      state = keys(state, ['e', 'm']);
+      expect(state.commandMessage).toBe('<em');
+      expect(state.lines[0]).toBe('hello user here');
+      state = handleKey(state, '>');
+      expect(state.lines[0]).toBe('hello <em>user</em> here');
+      expect(state.surroundTagPrompt).toBeFalsy();
+      expect(state.commandMessage).toBeUndefined();
+      state = handleKey(state, 'u');
+      expect(state.lines[0]).toBe('hello user here');
+    });
+
+    it('ys 대상 t 도 태그 입력을 받는다 (ysiwtb>)', () => {
+      const state = keys(at(['bold'], 0), ['y', 's', 'i', 'w', 't', 'b', '>']);
+      expect(state.lines[0]).toBe('<b>bold</b>');
+    });
+
+    it('cst<p> 로 둘러싼 태그 쌍을 바꾸고 cs"<em> 으로 따옴표를 태그로 바꾼다', () => {
+      let state = keys(at(['<div>hello</div>'], 6), ['c', 's', 't', '<', 'p', '>']);
+      expect(state.lines[0]).toBe('<p>hello</p>');
+      expect(state.mode).toBe('NORMAL');
+      state = keys(at(['say "hi" now'], 5), ['c', 's', '"', '<', 'e', 'm', '>']);
+      expect(state.lines[0]).toBe('say <em>hi</em> now');
+      state = keys(at(['<b>x</b>'], 3), ['c', 's', 't', 't', 'i', '>']);
+      expect(state.lines[0]).toBe('<i>x</i>');
+    });
+
+    it('속성은 여는 태그에만 붙고, cst 를 Enter 로 끝내면 기존 속성을 유지한다', () => {
+      let state = keys(at(['go here'], 3), [
+        'y', 's', 'i', 'w', '<', 'a', 'Space', 'h', 'r', 'e', 'f', '=', '"', 'x', '"', '>',
+      ]);
+      expect(state.lines[0]).toBe('go <a href="x">here</a>');
+
+      state = keys(at(['<div class="x">hi</div>'], 16), ['c', 's', 't', '<', 'p', '>']);
+      expect(state.lines[0]).toBe('<p>hi</p>');
+      state = keys(at(['<div class="x">hi</div>'], 16), ['c', 's', 't', '<', 'p', 'Enter']);
+      expect(state.lines[0]).toBe('<p class="x">hi</p>');
+    });
+
+    it('yss<p> 는 들여쓰기를 유지하며 줄 전체를 태그로 감싼다', () => {
+      const state = keys(at(['  some text'], 4), ['y', 's', 's', '<', 'p', '>']);
+      expect(state.lines[0]).toBe('  <p>some text</p>');
+    });
+
+    it('Visual S<div> 로 선택 영역을 태그로 감싼다', () => {
+      let state = at(['abc def'], 4);
+      state = keys(state, ['v', 'e', 'S', '<', 'd', 'i', 'v', '>']);
+      expect(state.lines[0]).toBe('abc <div>def</div>');
+      expect(state.mode).toBe('NORMAL');
+    });
+
+    it('Esc 로 태그 입력을 취소하면 버퍼가 바뀌지 않고, Backspace 로 글자를 지운다', () => {
+      let state = keys(at(['word'], 0), ['y', 's', 'i', 'w', '<', 'x', 'Backspace', 'b']);
+      expect(state.commandMessage).toBe('<b');
+      state = handleKey(state, 'Escape');
+      expect(state.surroundTagPrompt).toBeFalsy();
+      expect(state.lines[0]).toBe('word');
+      expect(state.pendingKeys).toBeUndefined();
+      state = keys(state, ['x']);
+      expect(state.lines[0]).toBe('ord');
+    });
+
+    it('. 으로 태그 감싸기·바꾸기를 반복한다', () => {
+      let state = keys(at(['one two'], 0), ['y', 's', 'i', 'w', '<', 'e', 'm', '>']);
+      expect(state.lines[0]).toBe('<em>one</em> two');
+      state = keys(state, ['$', '.']);
+      expect(state.lines[0]).toBe('<em>one</em> <em>two</em>');
+
+      state = keys(at(['<a>x</a> <b>y</b>'], 3), ['c', 's', 't', '<', 'p', '>']);
+      expect(state.lines[0]).toBe('<p>x</p> <b>y</b>');
+      state = keys(state, ['f', 'y', '.']);
+      expect(state.lines[0]).toBe('<p>x</p> <p>y</p>');
+    });
+  });
 });

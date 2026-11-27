@@ -1,4 +1,4 @@
-import { VimEditorState } from './types';
+import { VimEditorState, SurroundTagPrompt } from './types';
 import { clampCursor } from './cursor';
 import { pushUndoSnapshot } from './operators';
 import { getTextObjectRange, getTagTextObjectRange } from './textObjects';
@@ -44,12 +44,24 @@ export function getSurroundPair(char: string): SurroundPair {
     case '`':
       return { open: '`', close: '`', padSpace: false };
     default:
-      if (char.startsWith('<') && char.endsWith('>')) {
-        const tagName = char.slice(1, -1).trim();
-        return { open: `<${tagName}>`, close: `</${tagName}>`, padSpace: false };
+      if (char.length > 2 && char.startsWith('<') && char.endsWith('>')) {
+        return getTagSurroundPair(char.slice(1, -1));
       }
       return { open: char, close: char, padSpace: false };
   }
+}
+
+/**
+ * vim-surround 태그 쌍: 속성은 여는 태그에만 붙고(`<a href="x">` … `</a>`),
+ * `/` 로 끝나면 닫는 태그 없는 자기 닫힘 태그(`<br />`)가 됩니다.
+ */
+function getTagSurroundPair(tag: string): SurroundPair {
+  const trimmed = tag.replace(/>+$/, '');
+  if (trimmed.endsWith('/')) {
+    return { open: `<${trimmed.slice(0, -1)} />`, close: '', padSpace: false };
+  }
+  const name = trimmed.replace(/\s.*$/s, '');
+  return { open: `<${trimmed}>`, close: `</${name}>`, padSpace: false };
 }
 
 /**
@@ -415,4 +427,92 @@ export function executeVisualSurround(state: VimEditorState, targetChar: string)
     pendingKeys: undefined,
     lastChangeKeys: ['v', 'S', targetChar],
   };
+}
+
+const isPromptEnter = (key: string) => key === 'Enter' || key === '<CR>' || key === '<Enter>';
+const isPromptEscape = (key: string) =>
+  key === 'Escape' || key === '<Esc>' || key === 'Ctrl-c' || key === 'Ctrl+c';
+
+/**
+ * vim-surround 의 새 대상 `<` / `t` 는 태그 이름을 입력받습니다 (`cst<p>`, `ysiw<em>`).
+ * 입력 중에는 명령줄에 `<em` 처럼 프롬프트를 보여 줍니다.
+ */
+export function startSurroundTagPrompt(
+  state: VimEditorState,
+  action: SurroundTagPrompt['action'],
+  arg: string,
+  openKey: string
+): VimEditorState {
+  return {
+    ...state,
+    pendingKeys: undefined,
+    surroundTagPrompt: { action, arg, text: '', openKey },
+    commandMessage: '<',
+  };
+}
+
+/** cst 에서 바꿀 기존 여는 태그의 속성(` class="x"`)을 돌려줍니다. */
+function getOldTagAttributes(state: VimEditorState): string {
+  const tagRange = getTagTextObjectRange(state.lines, state.cursor, 'a');
+  if (!tagRange) return '';
+  const line = state.lines[tagRange.startLine ?? state.cursor.line] ?? '';
+  const m = line.slice(tagRange.startCol).match(/^<[^\s>]+([^>]*)>/);
+  return m ? m[1] : '';
+}
+
+/**
+ * 태그 입력 프롬프트 중 키 입력을 처리합니다. `>` 로 끝내면 입력한 태그만,
+ * Enter 로 끝내면 (cst 일 때) 기존 태그의 속성을 유지합니다 (vim-surround keepAttributes).
+ */
+export function handleSurroundTagPromptKey(state: VimEditorState, key: string): VimEditorState {
+  const prompt = state.surroundTagPrompt;
+  if (!prompt) return state;
+
+  if (isPromptEscape(key)) {
+    const cancelled: VimEditorState = { ...state, surroundTagPrompt: null, commandMessage: undefined };
+    return prompt.action === 'S' ? cancelled : { ...cancelled, pendingKeys: undefined };
+  }
+  if (key === 'Backspace' || key === '<BS>' || key === 'Ctrl-h') {
+    if (prompt.text.length === 0) {
+      return { ...state, surroundTagPrompt: null, commandMessage: undefined };
+    }
+    const text = prompt.text.slice(0, -1);
+    return { ...state, surroundTagPrompt: { ...prompt, text }, commandMessage: `<${text}` };
+  }
+
+  const finishByEnter = isPromptEnter(key);
+  if (!finishByEnter && key !== '>') {
+    const ch = key === 'Space' || key === '<Space>' ? ' ' : key;
+    if (ch.length !== 1) return state;
+    const text = prompt.text + ch;
+    return { ...state, surroundTagPrompt: { ...prompt, text }, commandMessage: `<${text}` };
+  }
+
+  const base: VimEditorState = { ...state, surroundTagPrompt: null, commandMessage: undefined };
+  const tag = prompt.text.replace(/>+$/, '');
+  if (tag.length === 0) {
+    return prompt.action === 'S' ? base : { ...base, pendingKeys: undefined };
+  }
+
+  let target = `<${tag}>`;
+  if (finishByEnter && prompt.action === 'cs' && toTextObjectTarget(prompt.arg) === 't' && !tag.endsWith('/')) {
+    target = `<${tag}${getOldTagAttributes(state)}>`;
+  }
+
+  let result: VimEditorState;
+  if (prompt.action === 'cs') result = executeChangeSurround(base, prompt.arg, target);
+  else if (prompt.action === 'ys') result = executeYouSurround(base, prompt.arg, target);
+  else if (prompt.action === 'yss') result = executeLineSurround(base, target);
+  else result = executeVisualSurround(base, target);
+
+  // . 반복은 프롬프트 입력 키를 그대로 다시 넣습니다.
+  if (result.lastChangeKeys && result.lastChangeKeys !== state.lastChangeKeys) {
+    const promptKeys = [
+      prompt.openKey,
+      ...Array.from(prompt.text).map((c) => (c === ' ' ? 'Space' : c)),
+      finishByEnter ? 'Enter' : '>',
+    ];
+    result = { ...result, lastChangeKeys: [...result.lastChangeKeys.slice(0, -1), ...promptKeys] };
+  }
+  return result;
 }

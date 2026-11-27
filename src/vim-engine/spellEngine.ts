@@ -192,7 +192,8 @@ export function getSpellSuggestions(
     if (lenDiff > 2) continue;
 
     const dist = damerauLevenshtein(lower, candidate);
-    if (dist <= 2) {
+    // 단어 자신은 추천하지 않습니다 (철자가 맞는 단어의 z=).
+    if (dist > 0 && dist <= 2) {
       candidates.push({ word: candidate, dist });
     }
   }
@@ -310,15 +311,8 @@ export function startSpellSuggest(state: VimEditorState): VimEditorState {
     return { ...state, bell: true };
   }
 
+  // Vim 처럼 철자가 맞는 단어에서도 비슷한 단어를 추천합니다.
   const { word, startCol } = target;
-  if (!isWordMisspelled(word, state)) {
-    return {
-      ...state,
-      bell: true,
-      commandMessage: msg('철자 오류가 아닙니다'),
-    };
-  }
-
   const suggestions = getSpellSuggestions(word, state, 9);
   if (suggestions.length === 0) {
     return {

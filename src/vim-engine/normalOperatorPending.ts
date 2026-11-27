@@ -14,6 +14,7 @@ import {
   executeChangeSurround,
   executeYouSurround,
   executeLineSurround,
+  startSurroundTagPrompt,
 } from './surroundEngine';
 import { applyAbolishCoerce } from './abolishEngine';
 import { findGitConflictAtLine, chooseGitConflict } from './gitConflictEngine';
@@ -72,6 +73,10 @@ export function handleNormalSurroundPending(
     return { ...state, pendingKeys: 'cs' + key };
   }
   if (state.pendingKeys?.startsWith('cs') && state.pendingKeys.length === 3) {
+    // 새 대상 < / t 는 태그 이름 입력 프롬프트 (cst<p>, cs"<em>)
+    if (key === '<' || key === 't') {
+      return startSurroundTagPrompt(state, 'cs', state.pendingKeys[2], key);
+    }
     return executeChangeSurround(state, state.pendingKeys[2], key);
   }
 
@@ -89,6 +94,7 @@ export function handleNormalSurroundPending(
     return { ...state, pendingKeys: undefined };
   }
   if (state.pendingKeys === 'yss') {
+    if (key === '<' || key === 't') return startSurroundTagPrompt(state, 'yss', '', key);
     return executeLineSurround(state, key);
   }
   if (state.pendingKeys === 'ysi' || state.pendingKeys === 'ysa') {
@@ -99,6 +105,9 @@ export function handleNormalSurroundPending(
     state.pendingKeys.length >= 3 &&
     state.pendingKeys !== 'yss'
   ) {
+    if (key === '<' || key === 't') {
+      return startSurroundTagPrompt(state, 'ys', state.pendingKeys.slice(2), key);
+    }
     return executeYouSurround(state, state.pendingKeys.slice(2), key);
   }
 

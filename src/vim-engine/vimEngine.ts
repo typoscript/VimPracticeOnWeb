@@ -31,6 +31,7 @@ import { handleFlashJumpKey } from './flashJumpEngine';
 import { handleMultiCursorKey } from './multiCursorEngine';
 import { handleTerminalModeKey } from './terminalEngine';
 import { handleSpellSuggestKey } from './spellEngine';
+import { handleSurroundTagPromptKey } from './surroundEngine';
 import { recordUndoTreeChange } from './undoTreeEngine';
 import { computeSpecialMarksUpdate } from './marks';
 import { applyScrollbindDelta } from './splitWindow';
@@ -110,6 +111,11 @@ export function rawHandleKey(
   // z= 맞춤법 교체 추천 세션 처리
   if (state.spellSuggest) {
     return handleSpellSuggestKey(state, key);
+  }
+
+  // vim-surround 태그 입력 프롬프트 (cst<p>, ysiw<em>, Visual S<div>)
+  if (state.surroundTagPrompt) {
+    return handleSurroundTagPromptKey(state, key);
   }
 
   // flash.nvim 스타일 화면 라벨 점프 세션 처리 (gs, dgs/cgs/ygs, :Flash)

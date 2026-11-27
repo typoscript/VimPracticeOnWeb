@@ -123,12 +123,31 @@ describe('순정 Vim 맞춤법 검사기 엔진 (:set spell, ]s, [s, z=, zg, zw)
   });
 
   describe('z= 맞춤법 교체 대화형 세션', () => {
-    it('오탈자가 아닌 정상 단어 위에서 z=를 누르면 bell이 울린다', () => {
-      let state = createVimState(['correct word']);
+    it('철자가 맞는 단어에서도 z=가 비슷한 단어를 추천한다 (nvim: "hello" → Change "hello" to:)', () => {
+      let state = createVimState(['hello world']);
       state = runExCommand(state, 'set spell');
       state = sendKeys(state, 'z=');
-      expect(state.bell).toBe(true);
-      expect(state.commandMessage).toContain('철자 오류가 아닙니다');
+      expect(state.bell).toBeFalsy();
+      expect(state.spellSuggest?.word).toBe('hello');
+      expect(state.spellSuggest?.suggestions).not.toContain('hello');
+      expect(state.spellSuggest?.suggestions.length).toBeGreaterThan(0);
+      expect(state.commandMessage).toContain('Change "hello" to:');
+
+      const chosen = state.spellSuggest!.suggestions[0];
+      state = handleKey(state, '1');
+      expect(state.spellSuggest).toBeNull();
+      expect(state.lines[0]).toBe(`${chosen} world`);
+      state = sendKeys(state, 'u');
+      expect(state.lines[0]).toBe('hello world');
+    });
+
+    it('철자가 맞는 단어에서 빈 Enter 를 누르면 변경 없이 취소된다', () => {
+      let state = createVimState(['hello world']);
+      state = sendKeys(state, 'z=');
+      expect(state.spellSuggest).toBeDefined();
+      state = handleKey(state, 'Enter');
+      expect(state.spellSuggest).toBeNull();
+      expect(state.lines[0]).toBe('hello world');
     });
 
     it('오탈자 위에서 z=를 누르면 추천 목록 프롬프트가 열린다', () => {
@@ -213,9 +232,10 @@ describe('순정 Vim 맞춤법 검사기 엔진 (:set spell, ]s, [s, z=, zg, zw)
       state = sendKeys(state, ']s');
       expect(state.commandMessage).toBe('E752: No more spell errors');
 
-      // 정상 단어에서 z=
+      // 정상 단어에서 z= 도 Vim 처럼 추천 목록을 연다 (Esc 로 닫기)
       state = sendKeys(state, 'z=');
-      expect(state.commandMessage).toBe('Spell is OK');
+      expect(state.commandMessage).toContain('Change "hello" to:');
+      state = handleKey(state, 'Escape');
 
       // zg 추가 메시지
       state = sendKeys(state, 'zg');

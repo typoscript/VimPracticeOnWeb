@@ -429,6 +429,21 @@ export interface SpellError {
 }
 
 /** z= 맞춤법 교체 추천 세션 */
+/**
+ * vim-surround 태그 입력 프롬프트 (cst<, ysiw<, yss<, Visual S<, 대상 `t` 도 동일).
+ * `>` 또는 Enter 로 끝나고 Esc 로 취소됩니다.
+ */
+export interface SurroundTagPrompt {
+  /** 프롬프트가 끝나면 실행할 서라운드 동작 */
+  action: 'cs' | 'ys' | 'yss' | 'S';
+  /** cs: 바꿀 대상 문자, ys: 모션 문자열 */
+  arg: string;
+  /** 지금까지 입력한 태그 텍스트 (`<` 제외) */
+  text: string;
+  /** 프롬프트를 연 키 (`<` 또는 `t`, `.` 반복 기록용) */
+  openKey: string;
+}
+
 export interface SpellSuggestSession {
   word: string;
   line: number;
@@ -1030,6 +1045,8 @@ export interface VimEditorState {
   saveCounter?: number;
   /** 맞춤법 검사기 세션 (z= 추천/교체 대화형 세션) */
   spellSuggest?: SpellSuggestSession | null;
+  /** vim-surround 태그 입력 프롬프트 (cst<p>, ysiw<em> 등) */
+  surroundTagPrompt?: SurroundTagPrompt | null;
   /** 사용자 추가 양호 단어 (zg) */
   spellGoodWords?: string[];
   /** 사용자 추가 오탈자 단어 (zw) */

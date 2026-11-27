@@ -21,7 +21,7 @@ import { jumpGitConflict } from './gitConflictEngine';
 import { jumpToNextSpellError, jumpToPrevSpellError } from './spellEngine';
 import { jumpToFoldEdge } from './folding';
 import { findAdjacentLowercaseMark, recordJump, executeMarkOperator } from './marks';
-import { getWordAtCursor } from './search';
+import { isKeywordChar } from './wordMotion';
 import { clampCursor } from './cursor';
 import { syncRegisters } from './registers';
 import { msg } from './messages';
@@ -110,7 +110,7 @@ export function handleNormalBracketPrefix(
     }
     if (key === 'i' || key === 'I') {
       const curLine = state.lines[state.cursor.line] ?? '';
-      const word = getWordAtCursor(curLine, state.cursor.col);
+      const word = findIdentUnderOrAfterCursor(curLine, state.cursor.col);
       if (!word) {
         return {
           handled: true,
@@ -120,21 +120,23 @@ export function handleNormalBracketPrefix(
           },
         };
       }
-      const escaped = word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const wordRe = new RegExp(`\\b${escaped}\\b`);
       const startRow = bracket === ']' ? state.cursor.line + 1 : 0;
       const matches: Array<{ line: number; text: string }> = [];
       for (let r = startRow; r < state.lines.length; r++) {
-        if (wordRe.test(state.lines[r] ?? '')) {
+        if (lineHasWholeKeyword(state.lines[r] ?? '', word)) {
           matches.push({ line: r, text: state.lines[r] ?? '' });
         }
       }
-      if (matches.length === 0) {
+      // [i / ]i 는 커서 줄의 일치를 건너뜁니다 (그것뿐이면 E387).
+      const shown = key === 'i' ? matches.filter((m) => m.line !== state.cursor.line) : matches;
+      if (shown.length === 0) {
         return {
           handled: true,
           state: {
             ...ringBell(state),
-            commandMessage: msg('E387: 현재 줄에 일치 항목이 있습니다'),
+            commandMessage: matches.length > 0
+              ? msg('E387: 현재 줄에 일치 항목이 있습니다')
+              : msg('E389: 패턴을 찾을 수 없습니다'),
           },
         };
       }
@@ -151,7 +153,7 @@ export function handleNormalBracketPrefix(
           },
         };
       }
-      const targetMatch = matches[Math.min(bCount - 1, matches.length - 1)];
+      const targetMatch = shown[Math.min(bCount - 1, shown.length - 1)];
       return {
         handled: true,
         state: {
@@ -309,4 +311,30 @@ export function handleNormalBracketPrefix(
   }
 
   return null;
+}
+
+/**
+ * Vim find_ident_under_cursor(FIND_IDENT) 규칙: 커서가 키워드 위면 그 단어,
+ * 아니면 같은 줄에서 커서 뒤에 오는 첫 키워드를 돌려줍니다.
+ */
+function findIdentUnderOrAfterCursor(lineText: string, col: number): string | null {
+  let start = Math.max(0, col);
+  while (start < lineText.length && !isKeywordChar(lineText[start])) start++;
+  if (start >= lineText.length) return null;
+  while (start > 0 && isKeywordChar(lineText[start - 1])) start--;
+  let end = start;
+  while (end < lineText.length && isKeywordChar(lineText[end])) end++;
+  return lineText.slice(start, end);
+}
+
+/** 줄에 `\<word\>` 처럼 키워드 경계로 둘러싸인 word 가 있는지 확인합니다. */
+function lineHasWholeKeyword(lineText: string, word: string): boolean {
+  let idx = lineText.indexOf(word);
+  while (idx !== -1) {
+    const before = idx > 0 ? lineText[idx - 1] : undefined;
+    const after = lineText[idx + word.length];
+    if (!isKeywordChar(before) && !isKeywordChar(after)) return true;
+    idx = lineText.indexOf(word, idx + 1);
+  }
+  return false;
 }

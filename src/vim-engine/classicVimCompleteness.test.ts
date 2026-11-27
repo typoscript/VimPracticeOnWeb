@@ -236,13 +236,46 @@ describe('순정 Vim 100% 완성 패치 — 노멀·Ex 기본 문법', () => {
       ['const token = 1;', 'const other = 2;', 'return token + 1;'],
       { line: 0, col: 6 }
     );
+    // Vim: [i 는 커서 줄의 일치를 건너뛴다 (nvim 확인)
     si = runKeys(si, ['[', 'i']);
-    expect(si.commandMessage).toBe('const token = 1;');
+    expect(si.commandMessage).toBe('return token + 1;');
     si = runKeys(si, [']', 'i']);
     expect(si.commandMessage).toBe('return token + 1;');
     si = runKeys(si, ['[', 'I']);
     expect(si.commandMessage).toContain('1: const token = 1;');
     expect(si.commandMessage).toContain('3: return token + 1;');
+  });
+
+  it('[I / ]I / [i 는 커서가 키워드 밖이면 줄에서 커서 뒤 첫 키워드를 쓴다 (nvim 확인)', () => {
+    const lines = ['// token here', 'const token = 1;', 'return token + 1;', '// nothing'];
+    // 커서가 "//" 위: nvim 은 token 으로 1·2·3 줄을 보여 준다
+    let s = runKeys(createVimState(lines, { line: 0, col: 0 }), ['[', 'I']);
+    expect(s.bell).toBeFalsy();
+    expect(s.commandMessage).toContain('1: // token here');
+    expect(s.commandMessage).toContain('2: const token = 1;');
+    expect(s.commandMessage).toContain('3: return token + 1;');
+    s = runKeys(createVimState(lines, { line: 0, col: 1 }), [']', 'I']);
+    expect(s.commandMessage).not.toContain('// token here');
+    expect(s.commandMessage).toContain('2: const token = 1;');
+    // [i 는 커서 줄의 일치를 건너뛴다
+    s = runKeys(createVimState(lines, { line: 0, col: 0 }), ['[', 'i']);
+    expect(s.commandMessage).toBe('const token = 1;');
+
+    // "foo // x" 의 "/" 위: 앞의 foo 가 아니라 뒤의 x 를 찾는다
+    s = runKeys(createVimState(['foo // x', 'x foo', 'foo'], { line: 0, col: 4 }), ['[', 'I']);
+    expect(s.commandMessage).toContain('1: foo // x');
+    expect(s.commandMessage).toContain('2: x foo');
+    expect(s.commandMessage).not.toContain('3: foo');
+
+    // 커서 뒤에 키워드가 없으면 E349
+    s = runKeys(createVimState(['x = 1 //', 'x'], { line: 0, col: 6 }), ['[', 'I']);
+    expect(s.bell).toBe(true);
+    expect(s.commandMessage).toContain('E349');
+    // 일치가 커서 줄뿐이면 [i 는 E387, 아래쪽에 없으면 ]I 는 E389
+    s = runKeys(createVimState(['abc', 'x'], { line: 0, col: 0 }), ['[', 'i']);
+    expect(s.commandMessage).toContain('E387');
+    s = runKeys(createVimState(['abc', 'x'], { line: 0, col: 0 }), [']', 'I']);
+    expect(s.commandMessage).toContain('E389');
   });
 });
 

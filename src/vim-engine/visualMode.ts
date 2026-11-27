@@ -11,7 +11,7 @@ import { starSearchPattern } from './vimRegex';
 import { getOptions } from './setOptionsCore';
 import { msg } from './messages';
 import { MAX_REMAP_DEPTH, isKeymapPrefix, parseKeySequence, resolveKeymapWithMeta, runKeymapTokens } from './keymapEngine';
-import { executeVisualSurround } from './surroundEngine';
+import { executeVisualSurround, startSurroundTagPrompt } from './surroundEngine';
 import { cursorToHigh, cursorToMiddle, cursorToLow, scrollHalfPageDown, scrollHalfPageUp, scrollFullPageDown, scrollFullPageUp, scrollLineDown, scrollLineUp } from './viewport';
 import { setMark, isValidMarkJumpChar, resolveMarkPosition } from './marks';
 import { joinLines, changeCaseVisual, indentVisual, modifyNumberVisual, formatIndentVisual } from './lineOperators';
@@ -74,6 +74,7 @@ export function handleVisualModeKey(
 
   // Visual 모드 vim-surround (S{char}) 및 선택 영역 일괄 문자 치환 (r{char})
   if (state.pendingKeys === 'S') {
+    if (key === '<' || key === 't') return startSurroundTagPrompt(state, 'S', '', key);
     return executeVisualSurround(state, key);
   }
   if (state.pendingKeys === 'r') {
