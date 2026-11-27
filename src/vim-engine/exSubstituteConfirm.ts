@@ -95,7 +95,7 @@ export function handleConfirmSubstituteKey(
   const session = state.confirmSubstitute;
   if (!session) return state;
 
-  const { currentMatch, isGlobal, commandStr, substitutedCount } = session;
+  const { currentMatch, isGlobal, substitutedCount } = session;
 
   // 1. 'y': 현재 매치 치환 후 다음 매치로 이동
   if (key === 'y' || key === 'Y') {
@@ -134,7 +134,6 @@ export function handleConfirmSubstituteKey(
         cursor: clampCursor(finalLines, { line: currentMatch.line, col: currentMatch.col }, 'NORMAL'),
         confirmSubstitute: null,
         commandMessage: msg('{newCount}개 항목을 치환했습니다.', { newCount }),
-        lastChangeKeys: [':', commandStr, 'Enter'],
       };
     }
   }
@@ -192,7 +191,6 @@ export function handleConfirmSubstituteKey(
       cursor: clampCursor(finalLines, { line: currentMatch.line, col: currentMatch.col }, 'NORMAL'),
       confirmSubstitute: null,
       commandMessage: msg('{newCount}개 항목을 치환했습니다.', { newCount }),
-      lastChangeKeys: [':', commandStr, 'Enter'],
     };
   }
 
@@ -247,6 +245,5 @@ export function substituteAllRemaining(
     cursor: clampCursor(finalLines, lastPos, 'NORMAL'),
     confirmSubstitute: null,
     commandMessage: msg('{totalCount}개 항목을 치환했습니다.', { totalCount }),
-    lastChangeKeys: [':', session.commandStr, 'Enter'],
   };
 }

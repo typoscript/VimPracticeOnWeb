@@ -199,6 +199,18 @@ const CASES: Case[] = [
   { id: 'ex-range-past-end-2', text: 'a\nb\nc', cursor: { row: 0, col: 0 }, keys: ':5d<CR>' },
   { id: 'ex-range-past-end-3', text: 'a\nb\nc', cursor: { row: 0, col: 0 }, keys: ':2,9<CR>' },
   { id: 'append-to-macro-register', text: 'aa bb\ncc dd\nee ff', cursor: { row: 0, col: 0 }, keys: 'qkdwjq\"Kyiw' },
+  { id: 'dot-after-ex-or-failure-1', text: 'aaa\naaa', cursor: { row: 0, col: 0 }, keys: 'i<Esc>:s/a/X/<CR>j.' },
+  { id: 'dot-after-ex-or-failure-2', text: '1\n2\n3', cursor: { row: 0, col: 0 }, keys: 'i<Esc>:d<CR>.' },
+  { id: 'dot-after-ex-or-failure-3', text: 'abc\nz\ndef', cursor: { row: 0, col: 0 }, keys: 'xj:g/z/d<CR>.' },
+  { id: 'dot-after-ex-or-failure-4', text: '1\n2', cursor: { row: 0, col: 0 }, keys: 'i<Esc>:norm Ia<CR>j.' },
+  { id: 'dot-after-ex-or-failure-5', text: 'abc\ndef', cursor: { row: 0, col: 0 }, keys: 'i<Esc>:%norm I# <CR>.' },
+  { id: 'dot-after-ex-or-failure-6', text: 'abc\nx 1', cursor: { row: 0, col: 0 }, keys: '4<C-a>j.' },
+  { id: 'dot-after-ex-or-failure-7', text: 'abc\ndef', cursor: { row: 0, col: 0 }, keys: 'xgUi[j.' },
+  { id: 'dot-after-ex-or-failure-8', text: 'abc\ndef', cursor: { row: 0, col: 0 }, keys: 'xca{j.' },
+  { id: 'dot-after-ex-or-failure-9', text: '1\n2', cursor: { row: 0, col: 0 }, keys: 'i<Esc>:t.<CR>.' },
+  { id: 'dot-after-ex-or-failure-10', text: 'one\ntwo\nthree\nxe', cursor: { row: 0, col: 0 }, keys: 'Vj>:v/e/d<CR>.' },
+  { id: 'norm-undo-one-step', text: 'a\nb\nc', cursor: { row: 0, col: 0 }, keys: ':%norm Ix<CR>u' },
+  { id: 'norm-while-recording', text: 'a\nb\nc', cursor: { row: 0, col: 0 }, keys: 'qm:norm Ix<CR>jq@m' },
 ];
 
 const LUA = `

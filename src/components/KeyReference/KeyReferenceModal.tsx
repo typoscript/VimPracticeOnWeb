@@ -88,8 +88,8 @@ export function KeyReferenceModal({ isOpen, onClose, editorMode, missions, onSel
 
   const selected = selectedKey ? findKeyReferenceEntry(selectedKey, mode) : undefined;
   const lessons = useMemo(
-    () => (selected && missions ? lessonsForKey(selected.key, missions) : []),
-    [selected, missions]
+    () => (selected && missions ? lessonsForKey(selected.key, missions, mode) : []),
+    [selected, missions, mode]
   );
 
   if (!isOpen) return null;

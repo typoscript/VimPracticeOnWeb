@@ -271,6 +271,5 @@ export function executeSubstitution(
     commandBuffer: undefined,
     commandType: undefined,
     commandMessage: resultMessage,
-    lastChangeKeys: [':', commandStr, 'Enter'],
   };
 }

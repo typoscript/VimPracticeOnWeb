@@ -36,7 +36,18 @@ describe('keyReferenceCatalog', () => {
     expect(forJ.length).toBeLessThanOrEqual(4);
     const forCtrlW = lessonsForKey('Ctrl-w', MISSIONS).map((m) => m.id);
     expect(forCtrlW).toContain(24);
-    expect(lessonsForKey('Esc', MISSIONS).length).toBeGreaterThan(0);
+    expect(lessonsForKey('Esc', MISSIONS, 'insert').length).toBeGreaterThan(0);
+  });
+
+  it('only links lessons that press the key in the chosen mode', () => {
+    // 레슨 84 는 제목에 f 가 있지만 :sort f 처럼 명령줄에서만 칩니다.
+    expect(lessonsForKey('f', MISSIONS, 'normal').map((m) => m.id)).not.toContain(84);
+    // 레슨 26 은 입력 모드에서 Ctrl-w 로 단어를 지우고, 레슨 24 는 노멀 모드 창 명령입니다.
+    expect(lessonsForKey('Ctrl-w', MISSIONS, 'insert').map((m) => m.id)).toContain(26);
+    expect(lessonsForKey('Ctrl-w', MISSIONS, 'insert').map((m) => m.id)).not.toContain(24);
+    expect(lessonsForKey('Ctrl-w', MISSIONS, 'normal').map((m) => m.id)).toContain(24);
+    expect(lessonsForKey('Ctrl-u', MISSIONS, 'insert').map((m) => m.id)).not.toContain(102);
+    expect(lessonsForKey('o', MISSIONS, 'visual').length).toBeGreaterThan(0);
   });
 
   it('turns key events into reference key names', () => {

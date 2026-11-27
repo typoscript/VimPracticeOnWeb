@@ -533,10 +533,10 @@ export function handleKey(
   let nextState: VimEditorState;
   if (getVimEngineConfig().devChecks) {
     deepFreeze(input);
-    nextState = recordInsertStartCursor(input, recordRepeatRegister(input, recordVisualRepeat(input, applyCurswant(input, syncPerFileState(input, rawHandleKey(input, key, isReplayingDot, macroDepth)), key), key, isReplayingDot), isReplayingDot));
+    nextState = keepRepeatOnFailure(input, recordInsertStartCursor(input, recordRepeatRegister(input, recordVisualRepeat(input, applyCurswant(input, syncPerFileState(input, rawHandleKey(input, key, isReplayingDot, macroDepth)), key), key, isReplayingDot), isReplayingDot)), key, isReplayingDot);
     assertValidVimState(input, nextState, key);
   } else {
-    nextState = recordInsertStartCursor(input, recordRepeatRegister(input, recordVisualRepeat(input, applyCurswant(input, syncPerFileState(input, rawHandleKey(input, key, isReplayingDot, macroDepth)), key), key, isReplayingDot), isReplayingDot));
+    nextState = keepRepeatOnFailure(input, recordInsertStartCursor(input, recordRepeatRegister(input, recordVisualRepeat(input, applyCurswant(input, syncPerFileState(input, rawHandleKey(input, key, isReplayingDot, macroDepth)), key), key, isReplayingDot), isReplayingDot)), key, isReplayingDot);
   }
   const withHl = releaseHlsearchSuppression(input, nextState, key);
   return processKeyAutocmds(input, withHl);
@@ -613,6 +613,20 @@ function recordInsertStartCursor(prev: VimEditorState, next: VimEditorState): Vi
   if (next.lines.length !== prev.lines.length) return next;
   const top = stack[stack.length - 1];
   return { ...next, undoStack: [...stack.slice(0, -1), { ...top, cursor: { ...next.cursor } }] };
+}
+
+/**
+ * Vim 은 실패한 변경(`gUi[` 처럼 대상이 없는 텍스트 객체, `ca{` 등)을 `.` 반복 대상으로 남기지 않습니다.
+ * 단 `[count]Ctrl-a` / `Ctrl-x` 는 숫자가 없어 실패해도 반복 대상으로 기록합니다 (nv_addsub 의 prep_redo).
+ */
+function keepRepeatOnFailure(prev: VimEditorState, next: VimEditorState, key: string, isReplayingDot: boolean): VimEditorState {
+  if (isReplayingDot || !next.bell || prev.mode !== 'NORMAL') return next;
+  const pending = prev.pendingKeys ?? '';
+  if ((key === 'Ctrl-a' || key === 'Ctrl-x') && /^([1-9][0-9]*)?$/.test(pending)) {
+    return { ...next, lastChangeKeys: [...pending.split('').filter(Boolean), key] };
+  }
+  if (next.lastChangeKeys !== prev.lastChangeKeys) return { ...next, lastChangeKeys: prev.lastChangeKeys };
+  return next;
 }
 
 /** `$` 뒤의 curswant: 세로 이동이 항상 줄 끝으로 갑니다 (Vim MAXCOL). */

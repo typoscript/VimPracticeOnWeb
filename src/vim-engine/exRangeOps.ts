@@ -15,7 +15,7 @@ import type { KeyRunner } from './exSubstitute';
 export function executeGlobalCommand(
   state: VimEditorState,
   gMatch: RegExpMatchArray,
-  commandStr: string,
+  _commandStr: string,
   keyRunner?: KeyRunner
 ): VimEditorState {
   const gType = gMatch[1];
@@ -91,7 +91,6 @@ export function executeGlobalCommand(
       commandBuffer: undefined,
       commandType: undefined,
       commandMessage: msg('{matchedIndicesCount}개 줄이 일괄 삭제되었습니다.', { matchedIndicesCount: matchedIndices.length }),
-      lastChangeKeys: [':', commandStr, 'Enter'],
     };
     return syncRegisters(state, deletedState, false);
   }
@@ -118,7 +117,6 @@ export function executeGlobalCommand(
       commandBuffer: undefined,
       commandType: undefined,
       commandMessage: msg('{matchedIndicesCount}개 줄에 normal 명령을 실행했습니다.', { matchedIndicesCount: matchedIndices.length }),
-      lastChangeKeys: [':', commandStr, 'Enter'],
     };
   }
 
@@ -156,7 +154,7 @@ export function applyRangeCount(
 export function executeRangeDelete(
   state: VimEditorState,
   range: { startLine: number; endLine: number },
-  commandStr: string,
+  _commandStr: string,
   register?: string
 ): VimEditorState {
   const stateWithUndo = pushUndoSnapshot(state);
@@ -185,7 +183,6 @@ export function executeRangeDelete(
     commandBuffer: undefined,
     commandType: undefined,
     commandMessage: msg('{v}개 줄이 삭제되었습니다.', { v: range.endLine - range.startLine + 1 }),
-    lastChangeKeys: [':', commandStr, 'Enter'],
   };
   return syncRegisters({ ...state, activeRegister: register ?? undefined }, res, false);
 }
@@ -264,7 +261,7 @@ export function executeRangeNorm(
   state: VimEditorState,
   range: { startLine: number; endLine: number },
   normKeys: string,
-  commandStr: string,
+  _commandStr: string,
   keyRunner?: KeyRunner,
   bang = false
 ): VimEditorState {
@@ -282,7 +279,6 @@ export function executeRangeNorm(
     commandBuffer: undefined,
     commandType: undefined,
     commandMessage: msg('{count}개 줄에 normal 명령을 실행했습니다.', { count }),
-    lastChangeKeys: [':', commandStr, 'Enter'],
   };
 }
 
@@ -301,31 +297,48 @@ export function executeNormalKeysOnLine(
   }
 
   const prevDisabled = state.keymapsDisabled;
+  // 매크로 녹화 중이어도 :norm 안의 키는 녹화에 넣지 않습니다 (녹화에는 :norm 명령 자체가 들어감).
+  const prevRecording = state.recordingMacro;
   let curState: VimEditorState = {
     ...state,
     cursor: { line: lineIdx, col: 0 },
     mode: 'NORMAL',
     pendingKeys: undefined,
+    recordingMacro: null,
     ...(bang ? { keymapsDisabled: true } : {}),
   };
 
   const tokens = parseKeyTokens(keysStr);
   if (!keyRunner) {
-    return { ...curState, keymapsDisabled: prevDisabled };
+    return { ...curState, keymapsDisabled: prevDisabled, recordingMacro: prevRecording };
   }
 
+  // Vim 처럼 :norm 안에서 한 변경은 `.` 로 반복할 수 있게 기록합니다 (반복 재생이 아닌 일반 입력으로 실행).
   for (const token of tokens) {
-    curState = keyRunner(curState, token, true);
+    curState = keyRunner(curState, token, false);
     // 실제 Vim과 동일하게 키가 실패하면 해당 줄의 남은 키를 버립니다.
     if (curState.bell) break;
   }
 
   // 명령어 수행 후 여전히 INSERT 모드인 경우 자동으로 Escape 호출하여 완료
   if (curState.mode !== 'NORMAL') {
-    curState = keyRunner(curState, 'Escape', true);
+    curState = keyRunner(curState, 'Escape', false);
   }
 
-  return { ...curState, keymapsDisabled: prevDisabled };
+  // :norm 전체가 한 번의 실행 취소 단위가 되도록, 안쪽 키가 만든 실행 취소 기록은 버리고 시작 시점의 기록을 둡니다.
+  return {
+    ...curState,
+    keymapsDisabled: prevDisabled,
+    recordingMacro: prevRecording,
+    undoStack: state.undoStack,
+    redoStack: state.redoStack,
+    undoTreeNodes: state.undoTreeNodes,
+    currentUndoSeq: state.currentUndoSeq,
+    maxUndoSeq: state.maxUndoSeq,
+    undoTimeHistory: state.undoTimeHistory,
+    undoTimeIndex: state.undoTimeIndex,
+    undoJoinMerged: state.undoJoinMerged,
+  };
 }
 
 /**
