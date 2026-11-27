@@ -533,13 +533,52 @@ export function handleKey(
   let nextState: VimEditorState;
   if (getVimEngineConfig().devChecks) {
     deepFreeze(input);
-    nextState = applyCurswant(input, syncPerFileState(input, rawHandleKey(input, key, isReplayingDot, macroDepth)), key);
+    nextState = recordVisualRepeat(input, applyCurswant(input, syncPerFileState(input, rawHandleKey(input, key, isReplayingDot, macroDepth)), key), key, isReplayingDot);
     assertValidVimState(input, nextState, key);
   } else {
-    nextState = applyCurswant(input, syncPerFileState(input, rawHandleKey(input, key, isReplayingDot, macroDepth)), key);
+    nextState = recordVisualRepeat(input, applyCurswant(input, syncPerFileState(input, rawHandleKey(input, key, isReplayingDot, macroDepth)), key), key, isReplayingDot);
   }
   const withHl = releaseHlsearchSuppression(input, nextState, key);
   return processKeyAutocmds(input, withHl);
+}
+
+const VISUAL_REPEAT_MODES = new Set(['VISUAL', 'VISUAL_LINE', 'VISUAL_BLOCK']);
+
+function countKeys(n: number, motion: string): string[] {
+  return n > 0 ? [...String(n).split(''), motion] : [];
+}
+
+/**
+ * Vim :help visual-repeat — 비주얼 연산을 `.` 로 반복하면 커서에서 같은 양의 텍스트를 다시 고릅니다.
+ * 줄 단위: 같은 줄 수 / 블록: 같은 줄 수·열 수 / 한 줄 안 문자 단위: 같은 글자 수 /
+ * 여러 줄 문자 단위: 같은 줄 수, 마지막 줄은 지난번과 같은 열까지.
+ */
+function visualReselectKeys(prev: VimEditorState): string[] | null {
+  const anchor = prev.visualAnchor;
+  if (!anchor) return null;
+  const cur = prev.cursor;
+  const lines = Math.abs(cur.line - anchor.line);
+  if (prev.mode === 'VISUAL_LINE') return ['V', ...countKeys(lines, 'j')];
+  if (prev.mode === 'VISUAL_BLOCK') {
+    const width = Math.abs(cur.col - anchor.col);
+    return ['Ctrl-v', ...countKeys(lines, 'j'), ...(prev.visualBlockEndOfLine ? ['$'] : countKeys(width, 'l'))];
+  }
+  if (lines === 0) return ['v', ...countKeys(Math.abs(cur.col - anchor.col), 'l')];
+  const end = cur.line > anchor.line ? cur : anchor;
+  return ['v', ...countKeys(lines, 'j'), '0', ...countKeys(end.col, 'l')];
+}
+
+/** 비주얼 모드 연산이 끝나면 '.' 가 같은 양의 텍스트에 다시 적용되도록 반복 키를 기록합니다. */
+function recordVisualRepeat(prev: VimEditorState, next: VimEditorState, key: string, isReplayingDot: boolean): VimEditorState {
+  if (isReplayingDot || !VISUAL_REPEAT_MODES.has(prev.mode)) return next;
+  if (VISUAL_REPEAT_MODES.has(next.mode) || next.pendingKeys) return next;
+  const entersInsert = next.mode === 'INSERT';
+  if (!entersInsert && next.lines === prev.lines) return next; // 복사·취소 등 변경이 아닌 연산
+  const reselect = visualReselectKeys(prev);
+  if (!reselect) return next;
+  const opKeys = [...(prev.pendingKeys ?? '').split('').filter(Boolean), key];
+  const repeatKeys = [...reselect, ...opKeys];
+  return entersInsert ? { ...next, currentChangeKeys: repeatKeys } : { ...next, lastChangeKeys: repeatKeys };
 }
 
 /** `$` 뒤의 curswant: 세로 이동이 항상 줄 끝으로 갑니다 (Vim MAXCOL). */

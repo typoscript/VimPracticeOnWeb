@@ -142,6 +142,23 @@ const CASES: Case[] = [
   // u: 바뀐 첫 줄로 (변경 전 커서가 그 줄이면 그 열)
   { id: 'undo-g-delete-top-line', text: 'keep\n  zap a\nkeep2\nzap b', cursor: { row: 3, col: 2 }, keys: ':g/zap/d<CR>u' },
   { id: 'undo-same-line-col', text: 'a1 b1\n  a2 b2\na3 b3', cursor: { row: 1, col: 4 }, keys: 'jdd2ku' },
+  // :help visual-repeat — 비주얼 연산 뒤 . 는 커서에서 같은 양의 텍스트에 다시 적용
+  { id: 'visual-repeat-1', text: 'alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok', cursor: { row: 0, col: 0 }, keys: 'vll~w.' },
+  { id: 'visual-repeat-2', text: 'alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok', cursor: { row: 0, col: 0 }, keys: 'vllUw.' },
+  { id: 'visual-repeat-3', text: 'alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok', cursor: { row: 0, col: 0 }, keys: 'vlldw.' },
+  { id: 'visual-repeat-4', text: 'alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok', cursor: { row: 0, col: 0 }, keys: 'Vj>j.' },
+  { id: 'visual-repeat-5', text: 'alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok', cursor: { row: 0, col: 0 }, keys: 'Vjdj.' },
+  { id: 'visual-repeat-6', text: 'alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok', cursor: { row: 0, col: 0 }, keys: 'VjUjj.' },
+  { id: 'visual-repeat-7', text: 'alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok', cursor: { row: 0, col: 0 }, keys: 'vjl~jj.' },
+  { id: 'visual-repeat-8', text: 'alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok', cursor: { row: 0, col: 0 }, keys: 'vjldj.' },
+  { id: 'visual-repeat-9', text: 'alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok', cursor: { row: 0, col: 0 }, keys: '<C-v>jlUw.' },
+  { id: 'visual-repeat-10', text: 'alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok', cursor: { row: 0, col: 0 }, keys: '<C-v>jldw.' },
+  { id: 'visual-repeat-11', text: 'alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok', cursor: { row: 0, col: 0 }, keys: 'vllr#w.' },
+  { id: 'visual-repeat-12', text: 'alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok', cursor: { row: 0, col: 0 }, keys: 'Vj~j.' },
+  { id: 'visual-repeat-13', text: 'alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok', cursor: { row: 0, col: 0 }, keys: 'vee~W.' },
+  { id: 'visual-repeat-14', text: 'alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok', cursor: { row: 0, col: 0 }, keys: 'VjJj.' },
+  { id: 'visual-repeat-15', text: 'alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok', cursor: { row: 0, col: 0 }, keys: 'vlllcX<Esc>w.' },
+  { id: 'visual-repeat-16', text: 'alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok', cursor: { row: 0, col: 0 }, keys: 'Vj>.' },
 ];
 
 const LUA = `
