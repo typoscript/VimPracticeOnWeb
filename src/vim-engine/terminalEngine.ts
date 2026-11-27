@@ -221,8 +221,13 @@ export function openTerminalBuffer(
       isSplit: true,
       ctrlBackslashPending: false,
     };
+    // 터미널 창은 코드 창과 다른 버퍼입니다. 버퍼 id 가 같게 남으면 syncSharedBufferPanes 가
+    // 터미널 내용을 코드 창(예: src/health.ts)에 덮어써 :TestRun/npm test 가 엉뚱한 내용을 읽습니다.
+    const termBufferId =
+      termPaneIdx >= 0 ? focusedTerm.splitPanes?.[termPaneIdx]?.bufferId : undefined;
     nextState = {
       ...focusedTerm,
+      ...(termBufferId !== undefined ? { currentBufferId: termBufferId } : {}),
       lines: [...initialTermLines],
       primaryFilename: TERM_FILENAME,
       mode: 'TERMINAL',
@@ -295,8 +300,19 @@ export function closeTerminalBuffer(state: VimEditorState): VimEditorState {
         ? switchPaneFocus({ ...state, mode: 'NORMAL' }, termIdx)
         : { ...state, mode: 'NORMAL' as const };
     const closed = closeSplitWindow({ ...readyToClose, mode: 'NORMAL', terminalSession: null });
+    // 창이 하나만 남으면 그 창(코드 버퍼)의 파일명·버퍼 id 를 되살립니다 (term://shell 로 남지 않게).
+    const remaining =
+      closed.splitPanes && closed.splitPanes.length > 1
+        ? undefined
+        : state.splitPanes.find((_, i) => i !== termIdx);
     return {
       ...closed,
+      ...(remaining
+        ? {
+            primaryFilename: remaining.filename,
+            ...(remaining.bufferId !== undefined ? { currentBufferId: remaining.bufferId } : {}),
+          }
+        : {}),
       mode: 'NORMAL',
       terminalSession: null,
       pendingKeys: undefined,

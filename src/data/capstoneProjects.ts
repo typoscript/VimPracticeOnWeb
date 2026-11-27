@@ -167,7 +167,7 @@ export const CAPSTONE_PROJECTS: readonly CapstoneProject[] = [
     descriptionKey: i18nKey(
       '팀원의 PR 리뷰 코멘트 4건을 현대 Neovim 도구(gra, gS, cru, Ctrl-a, :Harpoon)로 깔끔하게 반영하고 :TestRun 으로 CI 테스트를 통과시키세요!\n\n요구사항:\n1. src/userService.ts: var 선언을 const 로 바꾸고(gra → 1), TODO 주석을 삭제하세요.\n2. src/formatters.ts: 한 줄 defaultOpts 객체를 멀티라인 블록으로 펼치세요(gS).\n3. src/constants.ts: default_timeout 을 DEFAULT_TIMEOUT 으로 변환(cru)하고, releaseDate 를 "2026-11-23" 으로 하루 올리세요(Ctrl-a).'
     ),
-    hintKey: i18nKey('src/userService.ts 에서 dd & gra → 1 → :Harpoon 2 에서 gS → :Harpoon 3 에서 w cru 및 j Ctrl-a → :TestRun'),
+    hintKey: i18nKey('src/userService.ts 에서 dd & gra → 1 → :Harpoon 2 에서 gS → :Harpoon 3 에서 2w cru 및 j Ctrl-a → :TestRun'),
     par: 50,
     recommendedTools: ['gra', 'gS (:TSJToggle)', 'cru', 'Ctrl-a', ':HarpoonMenu', ':TestRun'],
     primaryFilename: 'src/userService.ts',
@@ -204,6 +204,8 @@ export const CAPSTONE_PROJECTS: readonly CapstoneProject[] = [
         name: 'formatters: defaultOpts split into multiline block',
         file: 'src/formatters.ts',
         mustContain: ['trim: true', 'upper: false', 'locale: "ko"'],
+        // 빈 줄만 늘려 minLines 를 채우는 편법을 막습니다 (한 줄 객체가 남아 있으면 실패).
+        mustNotContain: ['{ trim'],
         minLines: 4,
       },
       {
@@ -230,7 +232,7 @@ export const CAPSTONE_PROJECTS: readonly CapstoneProject[] = [
     descriptionKey: i18nKey(
       '릴리스 브랜치에 디버그 로그와 카나리 플래그가 섞여 들어왔습니다! Git Hunk 탐색(]h), 인터랙티브 :Git 패널, :Gblame, dial(Ctrl-a)을 활용해 불필요한 변경을 정리하고 깔끔하게 커밋한 뒤 :TestRun 으로 검증하세요.\n\n요구사항:\n1. src/release.ts: RELEASE_VERSION = "2.4.0" 은 유지하되, 실수로 들어간 DEBUG_SECRET_LEAK 로그 줄을 삭제하고 canaryMode 를 false 로 복구하세요.\n2. src/changelog.ts: releasedAt 날짜를 "2026-11-23" 으로 하루 올리세요(Ctrl-a).\n3. src/release.ts 로 돌아와 :Git commit -m "chore: release 2.4.0" (또는 :Git 패널)으로 변경을 커밋해 작업 트리를 깨끗하게 만드세요.'
     ),
-    hintKey: i18nKey('src/release.ts 에서 j dd 로 디버그 삭제 후 Ctrl-a(canaryMode false) → :Harpoon 2 에서 Ctrl-a → :Harpoon 1 복귀 후 :Git commit -m "release 2.4.0" → :TestRun'),
+    hintKey: i18nKey('src/release.ts 에서 j dd 로 디버그 삭제 후 Ctrl-a(canaryMode false) → :Harpoon 2 에서 Ctrl-a → :Harpoon 1 복귀 후 :Git commit -m "chore: release 2.4.0" → :TestRun'),
     par: 55,
     recommendedTools: [':Git', ']h', ':Gblame', 'Ctrl-a', ':Harpoon [1-2]', ':TestRun'],
     primaryFilename: 'src/release.ts',
@@ -332,6 +334,7 @@ export const CAPSTONE_PROJECTS: readonly CapstoneProject[] = [
         name: 'pricing: multiline block + discount enabled',
         file: 'src/pricing.ts',
         mustContain: ['currency: "KRW"', 'discount: true'],
+        mustNotContain: ['{ currency'],
         minLines: 4,
       },
       {
@@ -352,7 +355,7 @@ export const CAPSTONE_PROJECTS: readonly CapstoneProject[] = [
     descriptionKey: i18nKey(
       '배포 직전 브랜치 병합에서 머지 충돌이 발생했고, 결제 할인 계산에도 런타임 버그가 보고되었습니다! git-conflict.nvim(]x, ct, cb)과 nvim-dap(:DapBp, :DapContinue, :DapStepOver)으로 충돌을 정리하고 버그를 추적·수정한 뒤 :TestRun 으로 검증하세요.\n\n요구사항:\n1. src/checkout.ts: 첫 번째 충돌(currency)은 유입 브랜치("KRW", ct)를 선택하고, 두 번째 충돌(미들웨어)은 양쪽 모두 유지(cb)하세요.\n2. src/invoice.ts: :DapBp → :DapContinue → :DapStepOver 로 netTotal 계산을 추적해 + discount 버그를 - discount 로 수정하세요.\n3. 모든 수정이 끝나면 :TestRun 을 실행해 전체 테스트를 통과시키세요.'
     ),
-    hintKey: i18nKey('src/checkout.ts 에서 ]x ct → ]x cb → :Harpoon 2(src/invoice.ts) → 2j :DapBp → :DapContinue → :DapStepOver → :DapTerminate → f+ r- → :TestRun'),
+    hintKey: i18nKey('src/checkout.ts 에서 ]x ct → ]x cb → :Harpoon 2(src/invoice.ts) → 2j :DapBp → :DapContinue → :DapStepOver → :DapTerminate → k f+ r- → :TestRun'),
     par: 65,
     recommendedTools: [']x / ct / cb', ':GitConflictListQf', ':DapBp', ':DapContinue', ':DapStepOver', ':TestRun'],
     primaryFilename: 'src/checkout.ts',
@@ -405,6 +408,8 @@ export const CAPSTONE_PROJECTS: readonly CapstoneProject[] = [
         name: 'checkout: KRW selected and both auditLog & fraudCheck kept',
         file: 'src/checkout.ts',
         mustContain: ['currency: "KRW"', 'auditLog: true', 'fraudCheck: true'],
+        // 충돌 마커만 지우고 양쪽(USD·KRW)을 모두 남기는 편법을 막습니다.
+        mustNotContain: ['currency: "USD"'],
       },
       {
         id: 'dap-invoice-bugfix',
