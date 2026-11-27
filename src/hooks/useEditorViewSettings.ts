@@ -37,6 +37,7 @@ export function useEditorViewSettings({
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
   const [isBYOCModalOpen, setIsBYOCModalOpen] = useState(false);
   const [isCheatsheetModalOpen, setIsCheatsheetModalOpen] = useState(false);
+  const [isKeyReferenceOpen, setIsKeyReferenceOpen] = useState(false);
 
   const [relativeLineNumbers, setRelativeLineNumbers] = useState<boolean>(() =>
     loadRelativeLineSetting()
@@ -191,7 +192,8 @@ export function useEditorViewSettings({
     isDailyModalOpen ||
     isConfigModalOpen ||
     isBYOCModalOpen ||
-    isCheatsheetModalOpen;
+    isCheatsheetModalOpen ||
+    isKeyReferenceOpen;
 
   return {
     isModalOpen,
@@ -208,6 +210,8 @@ export function useEditorViewSettings({
     setIsBYOCModalOpen,
     isCheatsheetModalOpen,
     setIsCheatsheetModalOpen,
+    isKeyReferenceOpen,
+    setIsKeyReferenceOpen,
     isAnyModalOpen,
     relativeLineNumbers,
     showVirtualKeyboard,

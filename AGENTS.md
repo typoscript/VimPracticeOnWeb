@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 226개 테스트 파일, 2,722개 테스트 100% 통과 필수)*
+  *(현재 227개 테스트 파일, 2,731개 테스트 100% 통과 필수)*
 - **실제 브라우저(E2E) 테스트 (Playwright)**:
   `npm run test:e2e`
   *(`e2e/*.e2e.ts`, `playwright.config.ts`. 프로덕션 빌드를 `vite preview` 로 띄워 Chromium 에서 레슨 완료·Ex 명령·Ctrl+v 차단·한글 IME 키 매핑·언어 전환·지연 로딩 탭을 검사합니다. 처음 한 번 `npx playwright install chromium` 이 필요하며, Linux 에서 공유 라이브러리가 없다고 나오면 `sudo npx playwright install-deps chromium` 을 실행하세요. 파일 이름을 `.e2e.ts` 로 두어 vitest 가 줍지 않게 합니다.)*
@@ -296,6 +296,7 @@
   - **`git-conflict.nvim` 머지 충돌 엔진 (`]x`/`[x`, `co`/`ct`/`cb`/`c0`, `:GitConflict*`, `:diffget //1|//2|//3`)**: 2-Way(`<<<<<<<`/`=======`/`>>>>>>>`) 및 diff3 3-Way(`|||||||`) 충돌 블록 파싱, `Editor` 컬러 하이라이트(Ours/Base/Theirs) 및 `<<<<<<<` 줄 인라인 CodeLens 클릭 액션, 충돌 내부 한정 `co`/`ct`/`cb`/`c0`(충돌 바깥 순정 Vim `ct`/`cb`/`c0` 100% 보존), `:GitConflictListQf` 퀵픽스 연동, Undo/`.` 반복 및 `StatusBar` `[⚔️ N]` 배지를 구현했습니다.
   - **`nvim-dap` / `nvim-dap-ui` 인터랙티브 디버거 (`:DapBp`, `:DapContinue`, `:DapStepOver`/`Into`/`Out`, `:DapWatch`, `:DapEval`, `:DapTerminate`, `:DapUiToggle`)**: `eval` 없는 안전한 자동 트레이스 빌더(변수 대입·산술/비교 표현식·`console.log`/`print` 콘솔 출력 추적) 및 커스텀 `dapScenarioTrace` 지원, 거터 중단점(`●` 클릭 토글)·활성 실행 화살표(`▶`)·`nvim-dap-virtual-text` 인라인 변수 요약, 지연 로딩(`React.lazy`) `DapPanel`(Scopes/Variables · Watch · Call Stack · Breakpoints · Console)과 `StatusBar` `[🐞 DAP LN]` 배지를 구현했습니다.
   - **신규 레슨 131~132강 & 실무 캡스톤 6번**: `git-conflict.nvim` 충돌 해결(레슨 131), `nvim-dap` 디버깅 피날레(레슨 132), 다중 파일 *머지 충돌 해결 & nvim-dap 런타임 버그 핫픽스* 캡스톤 6번, Sandbox `src/mergeDemo.ts` 및 퀵런처 칩(`:GitConflictListQf` · `:DapUiToggle`), 치트시트·Which-Key·한/영 번역 사전을 통합했습니다.
+- **Vim 키 사전 (`Ctrl+/`, `src/components/KeyReference/`)**: 헤더 아래에 늘 보이던 단축키 띠(`h j k l 이동` 등)를 없애고, `Ctrl+/`(macOS `Cmd+/`) 또는 헤더 아래 `⌨️ 키마다 하는 일 보기` 버튼으로 여는 지연 로딩 창으로 바꿨습니다. 창이 열린 동안 키를 누르면(한글 IME 키도 영문으로 변환) 그 키가 노멀 모드에서 하는 일을 보여 주고, `g`/`z`/`[`/`]`/`Ctrl-w`/`"`/연산자처럼 뒤에 키가 이어지는 키는 Which-Key 목록(`whichKeyCatalog.ts`)을 재사용해 후속 키도 함께 보여 줍니다. 키 설명은 `keyReferenceCatalog.ts` 에 한/영(`ko`/`en`)으로 직접 적습니다. `Esc` 또는 `Ctrl+/` 로 닫습니다.
 
 ---
 

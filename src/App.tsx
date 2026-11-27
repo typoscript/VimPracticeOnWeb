@@ -205,6 +205,9 @@ export function App() {
     currentTab === 'dungeon' ||
     currentTab === 'dojo';
 
+  const { setIsKeyReferenceOpen } = viewSettings;
+  const openKeyReference = useCallback(() => setIsKeyReferenceOpen(true), [setIsKeyReferenceOpen]);
+
   useVimKeyboardInput({
     isModalOrGameBlocked,
     isGhostReplaying: ghost.isGhostReplaying,
@@ -218,6 +221,7 @@ export function App() {
     triggerHardcoreViolation: hardcore.triggerHardcoreViolation,
     setCoachingMessage,
     processKeyInput,
+    onOpenKeyReference: openKeyReference,
   });
 
   const activeMissionForDiff =
@@ -292,6 +296,7 @@ export function App() {
         onOpenConfigModal={() => viewSettings.setIsConfigModalOpen(true)}
         onOpenLessonModal={() => viewSettings.setIsModalOpen(true)}
         onOpenCheatsheetModal={() => viewSettings.setIsCheatsheetModalOpen(true)}
+        onOpenKeyReference={() => viewSettings.setIsKeyReferenceOpen(true)}
         showDiffView={viewSettings.showDiffView}
         onToggleDiffView={viewSettings.handleToggleDiffView}
         showRegisterInspector={viewSettings.showRegisterInspector}
@@ -482,6 +487,10 @@ export function App() {
               return next;
             });
           },
+        }}
+        keyReference={{
+          isOpen: viewSettings.isKeyReferenceOpen,
+          onClose: () => viewSettings.setIsKeyReferenceOpen(false),
         }}
         fuzzyFinderHandlers={workspaceHandlers.fuzzyFinderHandlers}
         helpHandlers={workspaceHandlers.helpHandlers}

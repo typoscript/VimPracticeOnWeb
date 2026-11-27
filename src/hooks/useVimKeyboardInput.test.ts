@@ -107,4 +107,12 @@ describe('useVimKeyboardInput', () => {
     expect(triggerHardcoreViolation).toHaveBeenCalled();
     expect(processKeyInput).not.toHaveBeenCalled();
   });
+  it('Ctrl+/ 는 Vim 에 넘기지 않고 키 사전 창을 연다', () => {
+    const onOpenKeyReference = vi.fn();
+    mountHook({ onOpenKeyReference });
+    const event = fireKey('/', { code: 'Slash', ctrlKey: true });
+    expect(onOpenKeyReference).toHaveBeenCalledTimes(1);
+    expect(event.defaultPrevented).toBe(true);
+    expect(processKeyInput).not.toHaveBeenCalled();
+  });
 });

@@ -493,33 +493,37 @@
   color: #a6adc8;
 }
 
-.key-cheatsheet {
+.key-reference-hint {
   display: flex;
-  flex-wrap: wrap;
   justify-content: center;
-  gap: 0.5rem;
-  margin-bottom: 1.25rem;
-}
-
-.cheat-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 4px 10px;
-  background-color: #181825;
-  border: 1px solid #313244;
-  border-radius: 6px;
+  margin-bottom: 1rem;
   font-size: 12px;
-  color: #bac2de;
+  color: #7f849c;
 }
 
-.cheat-item code {
+.key-reference-hint button {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.key-reference-hint button:hover {
+  color: #cdd6f4;
+  background: #181825;
+}
+
+.key-reference-hint kbd {
   font-family: 'JetBrains Mono', 'Fira Code', monospace;
-  font-weight: 700;
   color: #89b4fa;
-  background-color: #1e1e2e;
-  padding: 2px 5px;
+  background: #1e1e2e;
+  border: 1px solid #313244;
   border-radius: 4px;
+  padding: 1px 6px;
+  margin: 0 4px;
 }
 
 .editor-wrapper {
@@ -599,14 +603,6 @@
     align-items: flex-start;
   }
 
-  .key-cheatsheet {
-    gap: 0.35rem;
-  }
-
-  .cheat-item {
-    font-size: 11px;
-    padding: 3px 8px;
-  }
 }
 
 /* 멀티 윈도우 분할 레이아웃 (:sp, :vsp, Ctrl+w) */

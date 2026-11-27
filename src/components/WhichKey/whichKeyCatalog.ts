@@ -15,7 +15,7 @@ export interface WhichKeyPanelData {
   items: WhichKeyItem[];
 }
 
-const G_PREFIX_ITEMS: WhichKeyItem[] = [
+export const G_PREFIX_ITEMS: WhichKeyItem[] = [
   { key: 'g', labelKo: '파일 맨 위', labelEn: 'Top of file' },
   { key: 's', labelKo: 'Flash 화면 라벨 점프', labelEn: 'Flash label jump' },
   { key: 'S', labelKo: 'treesj 구조 분할/병합 (Split/Join)', labelEn: 'treesj Split/Join block' },
@@ -48,7 +48,7 @@ const GR_PREFIX_ITEMS: WhichKeyItem[] = [
   { key: '{c}', labelKo: '가상 1글자 치환', labelEn: 'Virtual replace char' },
 ];
 
-const Z_PREFIX_ITEMS: WhichKeyItem[] = [
+export const Z_PREFIX_ITEMS: WhichKeyItem[] = [
   { key: 'a', labelKo: '폴드 토글', labelEn: 'Toggle fold' },
   { key: 'o', labelKo: '폴드 열기', labelEn: 'Open fold' },
   { key: 'c', labelKo: '폴드 닫기', labelEn: 'Close fold' },
@@ -67,7 +67,7 @@ const Z_PREFIX_ITEMS: WhichKeyItem[] = [
   { key: 'w', labelKo: '오탈자 등록', labelEn: 'Mark wrong word' },
 ];
 
-const RIGHT_BRACKET_ITEMS: WhichKeyItem[] = [
+export const RIGHT_BRACKET_ITEMS: WhichKeyItem[] = [
   { key: 'f', labelKo: '다음 함수 시작', labelEn: 'Next function start' },
   { key: 'F', labelKo: '다음 함수 끝', labelEn: 'Next function end' },
   { key: 'h', labelKo: '다음 Git Hunk', labelEn: 'Next Git hunk' },
@@ -84,7 +84,7 @@ const RIGHT_BRACKET_ITEMS: WhichKeyItem[] = [
   { key: 'Space', labelKo: '아래 빈 줄 삽입', labelEn: 'Blank line below' },
 ];
 
-const LEFT_BRACKET_ITEMS: WhichKeyItem[] = [
+export const LEFT_BRACKET_ITEMS: WhichKeyItem[] = [
   { key: 'f', labelKo: '이전 함수 시작', labelEn: 'Prev function start' },
   { key: 'F', labelKo: '이전 함수 끝', labelEn: 'Prev function end' },
   { key: 'h', labelKo: '이전 Git Hunk', labelEn: 'Prev Git hunk' },
@@ -101,7 +101,7 @@ const LEFT_BRACKET_ITEMS: WhichKeyItem[] = [
   { key: 'Space', labelKo: '위 빈 줄 삽입', labelEn: 'Blank line above' },
 ];
 
-const CTRL_W_ITEMS: WhichKeyItem[] = [
+export const CTRL_W_ITEMS: WhichKeyItem[] = [
   { key: 'h', labelKo: '왼쪽 창', labelEn: 'Focus left pane' },
   { key: 'j', labelKo: '아래 창', labelEn: 'Focus lower pane' },
   { key: 'k', labelKo: '위 창', labelEn: 'Focus upper pane' },
@@ -116,7 +116,7 @@ const CTRL_W_ITEMS: WhichKeyItem[] = [
   { key: 'g', labelKo: '+분할/새탭 이동 (gf/])', labelEn: '+Split/tab goto', group: true },
 ];
 
-const TEXT_OBJECT_ITEMS: WhichKeyItem[] = [
+export const TEXT_OBJECT_ITEMS: WhichKeyItem[] = [
   { key: 'w', labelKo: '단어 (word)', labelEn: 'word' },
   { key: 'W', labelKo: '큰 단어 (WORD)', labelEn: 'WORD' },
   { key: '"', labelKo: '큰따옴표 "..."', labelEn: 'Double quotes' },
@@ -159,7 +159,7 @@ const INSERT_CTRL_R_ITEMS: WhichKeyItem[] = [
   { key: 'a-z', labelKo: '명명된 레지스터', labelEn: 'Named register' },
 ];
 
-const REGISTER_ITEMS: WhichKeyItem[] = [
+export const REGISTER_ITEMS: WhichKeyItem[] = [
   { key: '"', labelKo: '무명 레지스터', labelEn: 'Unnamed register' },
   { key: '0', labelKo: '최근 복사 (0)', labelEn: 'Yank register' },
   { key: '_', labelKo: '블랙홀 (삭제 버림)', labelEn: 'Black hole register' },

@@ -25,6 +25,7 @@ interface AppHeaderProps {
   onOpenConfigModal: () => void;
   onOpenLessonModal: () => void;
   onOpenCheatsheetModal?: () => void;
+  onOpenKeyReference?: () => void;
   showDiffView: boolean;
   onToggleDiffView: () => void;
   showRegisterInspector: boolean;
@@ -65,6 +66,7 @@ export function AppHeader({
   onOpenConfigModal,
   onOpenLessonModal,
   onOpenCheatsheetModal,
+  onOpenKeyReference,
   showDiffView,
   onToggleDiffView,
   showRegisterInspector,
@@ -302,30 +304,14 @@ export function AppHeader({
         </div>
       </div>
 
-      <section className="key-cheatsheet" aria-label="Keyboard Shortcuts">
-        <span className="cheat-item"><code>h j k l</code> {t('이동')}</span>
-        <span className="cheat-item"><code>w b e</code> {t('단어 점프')}</span>
-        <span className="cheat-item"><code>f F t T</code> {t('문자 탐색')}</span>
-        <span className="cheat-item"><code>/ n N *</code> {t('키워드 검색')}</span>
-        <span className="cheat-item"><code>{t(': [숫자] / :s')}</code> {t('커맨드라인')}</span>
-        <span className="cheat-item"><code>0 $ ^</code> {t('줄 이동')}</span>
-        <span className="cheat-item"><code>i a I A o O</code> {t('입력 진입')}</span>
-        <span className="cheat-item"><code>Esc</code> {t('일반 모드')}</span>
-        <span className="cheat-item"><code>x</code> {t('글자 삭제')}</span>
-        <span className="cheat-item"><code>cw cc C r</code> {t('수정/교체')}</span>
-        <span className="cheat-item"><code>iw i" i(</code> {t('텍스트 객체')}</span>
-        <span className="cheat-item"><code>v / V</code> {t('영역 선택')}</span>
-        <span className="cheat-item"><code>dd dw</code> {t('줄/단어 삭제')}</span>
-        <span className="cheat-item"><code>.</code> {t('직전 변경 반복')}</span>
-        <span className="cheat-item"><code>m ' Ctrl-o</code> {t('마크/점프')}</span>
-        <span className="cheat-item"><code>J ~ &gt;&gt; Ctrl-a</code> {t('라인/편집')}</span>
-        <span className="cheat-item"><code>:g :norm</code> {t('일괄/글로벌')}</span>
-        <span className="cheat-item"><code>zz H M L</code> {t('뷰포트/스크롤')}</span>
-        <span className="cheat-item"><code>"a "0 "_</code> {t('레지스터')}</span>
-        <span className="cheat-item"><code>:sp :vsp Ctrl-w</code> {t('창 분할')}</span>
-        <span className="cheat-item"><code>p</code> {t('붙여넣기')}</span>
-        <span className="cheat-item"><code>u / Ctrl-r</code> {t('실행취소/다시실행')}</span>
-      </section>
+      {onOpenKeyReference && (
+        <div className="key-reference-hint">
+          <button type="button" onClick={onOpenKeyReference} data-testid="open-key-reference-btn">
+            {t('⌨️ 키마다 하는 일 보기')}
+            <kbd>Ctrl</kbd>+<kbd>/</kbd>
+          </button>
+        </div>
+      )}
     </>
   );
 }

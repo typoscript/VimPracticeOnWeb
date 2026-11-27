@@ -40,6 +40,9 @@ const ConfigExporterModal = lazy(() =>
 const BYOCModal = lazy(() =>
   import('../BYOCModal/BYOCModal').then((m) => ({ default: m.BYOCModal }))
 );
+const KeyReferenceModal = lazy(() =>
+  import('../KeyReference/KeyReferenceModal').then((m) => ({ default: m.KeyReferenceModal }))
+);
 const CheatsheetModal = lazy(() =>
   import('../CheatsheetModal/CheatsheetModal').then((m) => ({ default: m.CheatsheetModal }))
 );
@@ -124,6 +127,10 @@ export interface AppModalsProps {
     onClose: () => void;
     onExecuteKeys?: (keys: readonly string[]) => void;
   };
+  keyReference?: {
+    isOpen: boolean;
+    onClose: () => void;
+  };
 }
 
 /**
@@ -140,6 +147,7 @@ export function AppModals({
   fuzzyFinderHandlers,
   helpHandlers,
   cheatsheet,
+  keyReference,
 }: AppModalsProps) {
   const lessonModalLoaded = useOpenedOnce(lesson.isOpen);
   const customModalLoaded = useOpenedOnce(customMission.isOpen);
@@ -148,6 +156,7 @@ export function AppModals({
   const configModalLoaded = useOpenedOnce(config.isOpen);
   const byocModalLoaded = useOpenedOnce(byoc.isOpen);
   const cheatsheetModalLoaded = useOpenedOnce(Boolean(cheatsheet?.isOpen));
+  const keyReferenceLoaded = useOpenedOnce(Boolean(keyReference?.isOpen));
 
   return (
     <Suspense fallback={null}>
@@ -226,6 +235,10 @@ export function AppModals({
             onClose={cheatsheet.onClose}
             onExecuteKeys={cheatsheet.onExecuteKeys}
           />
+        )}
+
+        {keyReferenceLoaded && keyReference && (
+          <KeyReferenceModal isOpen={keyReference.isOpen} onClose={keyReference.onClose} />
         )}
       {editorState.fuzzyFinder?.isOpen && (
         <FuzzyFinder

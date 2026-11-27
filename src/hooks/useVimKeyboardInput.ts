@@ -3,6 +3,7 @@ import { VimMode } from '../vim-engine';
 import { HardcoreGuard } from '../utils/hardcoreGuard';
 import { normalizeImeKey } from '../utils/imeHelper';
 import { t } from '../i18n';
+import { isKeyReferenceShortcut } from '../utils/keyReferenceShortcut';
 
 interface UseVimKeyboardInputParams {
   isModalOrGameBlocked: boolean;
@@ -17,6 +18,8 @@ interface UseVimKeyboardInputParams {
   triggerHardcoreViolation: (msg: string, suggestion?: string) => void;
   setCoachingMessage: (msg: string | null) => void;
   processKeyInput: (key: string) => void;
+  /** Ctrl+/ 로 Vim 키 사전 창 열기 */
+  onOpenKeyReference?: () => void;
 }
 
 const STANDALONE_MODIFIERS = new Set(['Shift', 'Control', 'Alt', 'Meta', 'CapsLock']);
@@ -95,6 +98,7 @@ export function useVimKeyboardInput({
   triggerHardcoreViolation,
   setCoachingMessage,
   processKeyInput,
+  onOpenKeyReference,
 }: UseVimKeyboardInputParams) {
   useEffect(() => {
     const handleWindowFocus = () => setIsEditorFocused(true);
@@ -136,6 +140,12 @@ export function useVimKeyboardInput({
       }
 
       if (STANDALONE_MODIFIERS.has(e.key)) {
+        return;
+      }
+
+      if (onOpenKeyReference && isKeyReferenceShortcut(e)) {
+        e.preventDefault();
+        onOpenKeyReference();
         return;
       }
 
@@ -263,5 +273,6 @@ export function useVimKeyboardInput({
     triggerHardcoreViolation,
     setCoachingMessage,
     processKeyInput,
+    onOpenKeyReference,
   ]);
 }
