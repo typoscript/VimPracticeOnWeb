@@ -15,7 +15,9 @@
     "generate:golden": "tsx scripts/generateGoldenTests.ts",
     "check:vim-engine": "tsc -p src/vim-engine/tsconfig.json",
     "sync:docs": "node scripts/syncAgentDocs.mjs",
-    "prepare": "git config core.hooksPath .githooks || true"
+    "prepare": "git config core.hooksPath .githooks || true",
+    "fuzz:neovim": "tsx scripts/neovimFuzz.ts",
+    "fixtures:neovim-fuzz": "tsx scripts/neovimFuzzFixtures.ts"
   },
   "dependencies": {
     "react": "^19.0.0",

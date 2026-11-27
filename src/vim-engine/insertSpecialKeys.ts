@@ -291,7 +291,8 @@ export function handleInsertRegister(
     const regKey = key.length === 1 ? key : undefined;
     if (regKey) {
       const regClip = getRegisterContent(state, regKey);
-      const rawText = regClip?.content ?? '';
+      // Vim: 줄 단위 레지스터는 내용 뒤에 줄바꿈까지 넣어 커서가 다음 줄 시작에 옵니다 (i_CTRL-R).
+      const rawText = (regClip?.content ?? '') + (regClip?.type === 'line' && regClip.content ? '\n' : '');
       const currentLine = state.lines[state.cursor.line] ?? '';
       let textToInsert = rawText;
 

@@ -382,7 +382,9 @@ export function shiftLineIndent(
 export function indentLines(
   state: VimEditorState,
   count = 1,
-  direction: 'in' | 'out'
+  direction: 'in' | 'out',
+  /** 연산 전 커서 열. 'nostartofline'(기본값)이면 Vim 처럼 이 열을 유지합니다. */
+  keepCol: number = state.cursor.col
 ): VimEditorState {
   const stateWithUndo = pushUndoSnapshot(state);
   const startLine = state.cursor.line;
@@ -399,7 +401,10 @@ export function indentLines(
     newLines[i] = shiftLineIndent(newLines[i], direction, sw, ts, et, sr, 1);
   }
 
-  const newCursor = moveToFirstNonBlank(newLines, { line: startLine, col: 0 });
+  // Vim op_shift: beginline(BL_SOL | BL_FIX) — 'startofline' 이면 첫 비공백, 아니면 원래 열(줄 길이로 제한)
+  const newCursor = opts.startofline
+    ? moveToFirstNonBlank(newLines, { line: startLine, col: 0 })
+    : { line: startLine, col: Math.max(0, Math.min(keepCol, (newLines[startLine] ?? '').length - 1)) };
 
   return {
     ...stateWithUndo,

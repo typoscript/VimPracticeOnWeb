@@ -417,15 +417,19 @@ export function executeTextObjectOperator(
         ? getTreesitterObjectRange(curState.lines, curState.cursor, objectType as TreesitterObjectType, count)
         : getTextObjectRange(curState.lines, curState.cursor, objectType, count);
     if (!range) {
-      if (isMiniAi) {
-        return { ...curState, bell: true, pendingKeys: undefined };
+      // 빈 줄의 iw / iW / is 는 Vim 에서 빈 범위로 성공합니다 (ciw 는 INSERT 로 들어감).
+      const emptyLineWordObject =
+        step === 0 &&
+        (objectType === 'iw' || objectType === 'iW' || objectType === 'is') &&
+        (curState.lines[curState.cursor.line] ?? '') === '';
+      if (emptyLineWordObject) {
+        return operator === 'c'
+          ? { ...pushUndoSnapshot(curState), mode: 'INSERT', pendingKeys: undefined }
+          : { ...curState, pendingKeys: undefined };
       }
-      if (operator === 'c') {
-        return {
-          ...pushUndoSnapshot(curState),
-          mode: 'INSERT',
-          pendingKeys: undefined,
-        };
+      // Vim: 그 밖에 텍스트 객체가 없으면 연산자는 실패합니다 (ca( 가 INSERT 로 들어가지 않음, bell).
+      if (isMiniAi || step === 0) {
+        return { ...curState, bell: true, pendingKeys: undefined };
       }
       return { ...curState, pendingKeys: undefined };
     }

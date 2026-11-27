@@ -26,7 +26,7 @@ import { openLspDocumentSymbols } from './lspRefactorEngine';
 import { openFlashJump } from './flashJumpEngine';
 import { startMultiCursor } from './multiCursorEngine';
 import { executeTreesj } from './treesjEngine';
-import { joinLines, executeCaseMotion } from './lineOperators';
+import { joinLines, executeCaseMotion, changeCaseVisual, caseTypeForOperator } from './lineOperators';
 import { msg } from './messages';
 import { executeGn, executeWordSearch } from './searchMode';
 import {
@@ -38,6 +38,7 @@ import {
   evaluateMotionWithCount,
   executePutVariant,
   applyOperatorMotion,
+  findOperatorRangeByYank,
   RunHandleKeyFn,
 } from './engineHelpers';
 
@@ -179,6 +180,41 @@ export function handleNormalCommentFormatOrCaseG(
       return { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys, pendingKeys: undefined };
     }
     return { ...state, pendingKeys: undefined };
+  }
+
+  // gU{motion} 등 대소문자 연산자: f/t/F/T·마크·대괄호 접두와 연산자 뒤 카운트를 모은 뒤,
+  // 같은 모션의 y 로 범위를 구해 적용합니다 (gUfx 가 실패하면 아무것도 바꾸지 않음).
+  const caseMotion = state.pendingKeys?.match(/^([1-9][0-9]*)?(g[uU~?])([1-9][0-9]*)?([fFtT'`\[\]])?$/);
+  if (caseMotion && key !== 'i' && key !== 'a' && key !== 'g' && key !== caseMotion[2][1] && key !== 'Escape') {
+    const [, c1, op, c2, prefix] = caseMotion;
+    if (!prefix && (/^[1-9]$/.test(key) || (key === '0' && c2))) {
+      return { ...state, pendingKeys: state.pendingKeys + key };
+    }
+    if (!prefix && "fFtT'`[]".includes(key)) {
+      return { ...state, pendingKeys: state.pendingKeys + key };
+    }
+    const count = (c1 ? parseInt(c1, 10) : 1) * (c2 ? parseInt(c2, 10) : 1);
+    const motionKeys = prefix ? [prefix, key] : [key];
+    const range = findOperatorRangeByYank(state, motionKeys, count, runHandleKey);
+    if (!range) return ringBell({ ...state, pendingKeys: undefined });
+    const applied = changeCaseVisual(
+      {
+        ...state,
+        pendingKeys: undefined,
+        mode: range.linewise ? 'VISUAL_LINE' : 'VISUAL',
+        visualAnchor: range.start,
+        cursor: range.end,
+      },
+      caseTypeForOperator(op as 'gu' | 'gU' | 'g~' | 'g?')
+    );
+    const opKeys = [...(state.pendingKeys ?? '').split(''), key];
+    return {
+      ...applied,
+      mode: 'NORMAL',
+      cursor: clampCursor(applied.lines, range.cursor, 'NORMAL'),
+      pendingKeys: undefined,
+      lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys,
+    };
   }
 
   if (parsedOperator === 'gu' || parsedOperator === 'gU' || parsedOperator === 'g~' || parsedOperator === 'g?') {

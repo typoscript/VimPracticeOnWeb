@@ -1,4 +1,5 @@
 import { VimEditorState } from './types';
+import { executeOperatorMotion } from './operatorMotion';
 import { clampCursor } from './cursor';
 import {
   moveToNextWord,
@@ -20,7 +21,6 @@ import { deleteVisualSelection, yankVisualSelection } from './visual';
 import { findMatchingBracket } from './bracketMatch';
 import { computePercentJumpTarget } from './extraMotions';
 import { executeLinewiseObjectOperator } from './textObjects';
-import { deleteParagraph, changeParagraph, yankParagraph } from './advancedMotions';
 import { moveFind, executeFindOperator } from './findChar';
 import { deleteFoldOrLine, yankFoldOrLine } from './folding';
 import {
@@ -83,6 +83,25 @@ function startSearchOperator(
 /**
  * 연산자 결합 단축키 (d%/c%/y%/v% 및 d;/c;/y;/d,/c,/y,)를 처리합니다.
  */
+/**
+ * {count}d$ / c$ / y$ 의 범위: 커서부터 (count-1)줄 아래 줄 끝까지 (Vim nv_dollar).
+ * 마지막 줄에서 count 가 2 이상이면 Vim 처럼 실패(null)합니다.
+ */
+function endOfLineSpan(state: VimEditorState, count: number): { lastLine: number; content: string } | null {
+  const { line, col } = state.cursor;
+  const maxLine = state.lines.length - 1;
+  if (count > 1 && line >= maxLine) return null;
+  const lastLine = Math.min(maxLine, line + Math.max(1, count) - 1);
+  const first = (state.lines[line] ?? '').slice(col);
+  const rest = state.lines.slice(line + 1, lastLine + 1);
+  return { lastLine, content: [first, ...rest].join('\n') };
+}
+
+/** 마지막 줄에서 {count}dd / {count}yy 는 Vim 처럼 실패합니다 (nv_lineop 의 cursor_down 실패). */
+function lineOpFails(state: VimEditorState, count: number): boolean {
+  return count > 1 && state.cursor.line >= state.lines.length - 1;
+}
+
 export function handleNormalDCYCombineShortcut(
   state: VimEditorState,
   key: string,
@@ -204,6 +223,7 @@ export function handleNormalDCYOperators(
     if (key === 'o') return { handled: true, state: { ...diffObtain(state), pendingKeys: undefined } };
     if (key === 'p') return { handled: true, state: { ...diffPut(state), pendingKeys: undefined } };
     if (key === 'd') {
+      if (lineOpFails(state, parsed.totalCount)) return { handled: true, state: ringBell({ ...state, pendingKeys: undefined }) };
       const res = deleteFoldOrLine(state, parsed.totalCount);
       const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'd', 'd'] : ['d', 'd'];
       return {
@@ -266,27 +286,29 @@ export function handleNormalDCYOperators(
       };
     }
     if (key === '$') {
+      const span = endOfLineSpan(state, parsed.totalCount);
+      if (!span) return { handled: true, state: ringBell({ ...state, pendingKeys: undefined }) };
       const { line, col } = state.cursor;
       const cur = state.lines[line] ?? '';
-      const nextLines = [...state.lines];
-      nextLines[line] = cur.slice(0, col);
+      const nextLines = [...state.lines.slice(0, line), cur.slice(0, col), ...state.lines.slice(span.lastLine + 1)];
       const stateWithDel: VimEditorState = {
         ...pushUndoSnapshot(state),
         lines: nextLines,
         cursor: clampCursor(nextLines, { line, col }, 'NORMAL'),
-        clipboard: { type: 'text', content: cur.slice(col) },
+        clipboard: { type: 'text', content: span.content },
         pendingKeys: undefined,
       };
+      const dKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'd', '$'] : ['d', '$'];
       return {
         handled: true,
         state: {
           ...syncRegisters(state, stateWithDel, false),
-          lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['d', '$'],
+          lastChangeKeys: isReplayingDot ? state.lastChangeKeys : dKeys,
         },
       };
     }
     if (key === '}' || key === '{') {
-      const res = deleteParagraph(state, key === '}' ? 'next' : 'prev', parsed.totalCount);
+      const res = executeOperatorMotion(state, 'd', key, parsed.totalCount) ?? ringBell({ ...state, pendingKeys: undefined });
       const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'd', key] : ['d', key];
       return {
         handled: true,
@@ -373,17 +395,20 @@ export function handleNormalDCYOperators(
       };
     }
     if (key === '$') {
-      const res = changeToEndOfLine(state);
+      const span = endOfLineSpan(state, parsed.totalCount);
+      if (!span) return { handled: true, state: ringBell({ ...state, pendingKeys: undefined }) };
+      const res = changeToEndOfLine(state, parsed.totalCount);
+      const cKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'c', '$'] : ['c', '$'];
       return {
         handled: true,
         state: {
           ...syncRegisters(state, res, false),
-          currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['c', '$'],
+          currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
         },
       };
     }
     if (key === '}' || key === '{') {
-      const res = changeParagraph(state, key === '}' ? 'next' : 'prev', parsed.totalCount);
+      const res = executeOperatorMotion(state, 'c', key, parsed.totalCount) ?? ringBell({ ...state, pendingKeys: undefined });
       const cKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'c', key] : ['c', key];
       return {
         handled: true,
@@ -403,6 +428,7 @@ export function handleNormalDCYOperators(
 
   if (parsed.operator === 'y') {
     if (key === 'y') {
+      if (lineOpFails(state, parsed.totalCount)) return { handled: true, state: ringBell({ ...state, pendingKeys: undefined }) };
       return { handled: true, state: syncRegisters(state, yankFoldOrLine(state, parsed.totalCount), true) };
     }
     if (key === 'w' || key === 'e' || key === 'W' || key === 'E') {
@@ -464,8 +490,9 @@ export function handleNormalDCYOperators(
       };
     }
     if (key === '$') {
-      const { line, col } = state.cursor;
-      const yanked = (state.lines[line] ?? '').slice(col);
+      const span = endOfLineSpan(state, parsed.totalCount);
+      if (!span) return { handled: true, state: ringBell({ ...state, pendingKeys: undefined }) };
+      const yanked = span.content;
       return {
         handled: true,
         state: syncRegisters(
@@ -480,7 +507,7 @@ export function handleNormalDCYOperators(
         handled: true,
         state: syncRegisters(
           state,
-          yankParagraph(state, key === '}' ? 'next' : 'prev', parsed.totalCount),
+          executeOperatorMotion(state, 'y', key, parsed.totalCount) ?? ringBell({ ...state, pendingKeys: undefined }),
           true
         ),
       };

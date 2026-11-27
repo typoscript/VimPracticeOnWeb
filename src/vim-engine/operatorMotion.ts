@@ -1,5 +1,7 @@
 import { CursorPosition, VimEditorState } from './types';
-import { clampCursor } from './cursor';
+import { clampCursor, getFirstNonBlankCol } from './cursor';
+import { getOptions } from './setOptionsCore';
+import { findParagraphTarget } from './advancedMotions';
 import { pushUndoSnapshot } from './operators';
 import { moveToFirstNonBlank, moveToPrevWord, moveToPrevWORD } from './motions';
 import { EXTRA_MOTION_KEYS, evaluateExtraMotion } from './extraMotions';
@@ -45,6 +47,15 @@ export function executeOperatorMotion(
   if (EXTRA_MOTION_KEYS.has(motionKey)) {
     const res = evaluateExtraMotion(lines, cursor, motionKey, n);
     if (!res) return null;
+    // :help ]] — 연산자와 함께 쓰면 열 0 의 '}' 바로 아래 줄에서도 멈춥니다 (Vim findpar both=TRUE).
+    if (motionKey === ']]' && res.target.line > cursor.line) {
+      for (let l = cursor.line + 1; l < res.target.line; l++) {
+        if ((lines[l] ?? '').startsWith('}') && l + 1 < res.target.line) {
+          res.target = { line: l + 1, col: 0 };
+          break;
+        }
+      }
+    }
     const before = res.target.line < cursor.line || (res.target.line === cursor.line && res.target.col < cursor.col);
     const start = before ? res.target : cursor;
     const end = before ? cursor : res.target;
@@ -94,6 +105,16 @@ export function executeOperatorMotion(
         : applyCharwise(state, op, cursor, target);
     }
 
+    case '}':
+    case '{': {
+      const found = findParagraphTarget(lines, cursor, motionKey === '}' ? 'next' : 'prev', n);
+      if (!found) return null;
+      const t = found.target;
+      if (t.line === cursor.line && t.col === cursor.col) return { ...state, pendingKeys: undefined };
+      if (found.inclusive) return applyCharwise(state, op, cursor, { line: t.line, col: t.col + 1 });
+      return motionKey === '}' ? applyExclusive(state, op, cursor, t) : applyExclusive(state, op, t, cursor);
+    }
+
     case 'b':
     case 'B': {
       let target = cursor;
@@ -106,6 +127,19 @@ export function executeOperatorMotion(
   }
 
   return null;
+}
+
+/**
+ * 배타적 모션 범위에 연산자를 적용합니다 (:help exclusive-linewise).
+ * 끝이 다음 줄 첫 칸이고 시작이 그 줄의 첫 비공백 이전이면 줄 단위가 되고,
+ * 아니면 applyCharwise 가 끝을 이전 줄 끝으로 옮깁니다.
+ */
+function applyExclusive(state: VimEditorState, op: Operator, start: CursorPosition, end: CursorPosition): VimEditorState {
+  if (end.col === 0 && end.line > start.line) {
+    const firstNonBlank = getFirstNonBlankCol(state.lines[start.line] ?? '');
+    if (start.col <= firstNonBlank) return applyLinewise(state, op, start.line, end.line - 1);
+  }
+  return applyCharwise(state, op, start, end);
 }
 
 /** startLine ~ endLine 줄 전체에 연산자를 적용합니다. */
@@ -144,10 +178,15 @@ function applyLinewise(state: VimEditorState, op: Operator, startLine: number, e
   }
 
   const nextLines = before.length + after.length === 0 ? [''] : [...before, ...after];
+  const targetLine = Math.min(startLine, nextLines.length - 1);
+  // 'nostartofline'(기본값)이면 Vim 처럼 원래 열을 유지합니다 (dG, dk, dgg).
+  const cursor = getOptions(state).startofline
+    ? moveToFirstNonBlank(nextLines, { line: targetLine, col: 0 })
+    : clampCursor(nextLines, { line: targetLine, col: state.cursor.col }, 'NORMAL');
   return {
     ...stateWithSnapshot,
     lines: nextLines,
-    cursor: moveToFirstNonBlank(nextLines, { line: Math.min(startLine, nextLines.length - 1), col: 0 }),
+    cursor,
     clipboard,
     pendingKeys: undefined,
   };
@@ -169,6 +208,17 @@ function applyCharwise(
 
   const startText = lines[start.line] ?? '';
   const endText = lines[realEnd.line] ?? '';
+
+  // Vim op_delete: 여러 줄에 걸친 문자 단위 삭제가 들여쓰기 안에서 시작하고 끝 뒤에 공백만 남으면 줄 단위가 됩니다.
+  if (
+    op === 'd' &&
+    realEnd.line > start.line &&
+    start.col <= getFirstNonBlankCol(startText) &&
+    endText.slice(realEnd.col).trim() === ''
+  ) {
+    return applyLinewise(state, op, start.line, realEnd.line);
+  }
+
   const content =
     start.line === realEnd.line
       ? startText.slice(start.col, realEnd.col)

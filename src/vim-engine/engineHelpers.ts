@@ -176,6 +176,67 @@ export function findShiftRange(
   return { startLine: Math.min(state.cursor.line, moved.cursor.line), endLine };
 }
 
+/**
+ * 연산자 대상 범위를 같은 모션의 y(복사)로 알아냅니다.
+ * y 는 모든 모션·텍스트 객체·f/t·%·검색을 지원하고 '[ '] 와 레지스터 종류(문자/줄)를 정확히 남기므로,
+ * 대소문자 연산자처럼 자체 모션 해석이 없는 연산자가 Vim 과 같은 범위를 쓰도록 합니다.
+ * 모션이 실패(bell)하면 null 입니다. cursor 는 Vim 이 연산 후 두는 위치(문자 단위는 범위 시작)입니다.
+ */
+export function findOperatorRangeByYank(
+  state: VimEditorState,
+  motionKeys: string[],
+  count: number,
+  runHandleKey: RunHandleKeyFn
+): {
+  start: { line: number; col: number };
+  end: { line: number; col: number };
+  linewise: boolean;
+  cursor: { line: number; col: number };
+} | null {
+  // 복사 결과를 구분하기 위해 레지스터를 비운 상태에서 시험합니다 (원래 상태는 건드리지 않음).
+  const base: VimEditorState = {
+    ...state,
+    mode: 'NORMAL',
+    pendingKeys: undefined,
+    visualAnchor: undefined,
+    clipboard: undefined,
+    bell: false,
+  };
+  const countKeys = count > 1 ? String(count).split('') : [];
+  let probe = base;
+  for (const k of [...countKeys, 'y', ...motionKeys]) {
+    probe = runHandleKey(probe, k);
+    if (probe.bell) return null;
+  }
+  const yanked = probe.clipboard;
+  if (probe.mode !== 'NORMAL' || probe.pendingKeys || !yanked || probe.lines !== state.lines) return null;
+  // y 는 커서를 범위 시작으로 옮기고(줄 단위는 시작 줄) 정확한 텍스트를 레지스터에 남깁니다.
+  const parts = String(yanked.content ?? '').split('\n');
+  if (yanked.type === 'line') {
+    const startLine = probe.cursor.line;
+    const endLine = Math.min(state.lines.length - 1, startLine + parts.length - 1);
+    return {
+      start: { line: startLine, col: 0 },
+      end: { line: endLine, col: Math.max(0, (state.lines[endLine] ?? '').length - 1) },
+      linewise: true,
+      cursor: { ...probe.cursor },
+    };
+  }
+  const start = { ...probe.cursor };
+  if (parts.length === 1 && parts[0].length === 0) return null;
+  // 문자 단위인데 줄바꿈으로 끝나면 마지막 줄은 대상이 아닙니다 (이전 줄 끝까지).
+  if (parts.length > 1 && parts[parts.length - 1].length === 0) parts.pop();
+  const endLine = start.line + parts.length - 1;
+  const lastLen = parts[parts.length - 1].length;
+  const endCol = parts.length === 1 ? start.col + lastLen - 1 : lastLen - 1;
+  return {
+    start,
+    end: { line: endLine, col: Math.max(0, endCol) },
+    linewise: false,
+    cursor: { ...probe.cursor },
+  };
+}
+
 /** ga 출력: <A> 65, 16진수 41, 8진수 101 (빈 줄이면 NUL) */
 export function describeCharAt(line: string, col: number): string {
   const ch = [...line.slice(col)][0];

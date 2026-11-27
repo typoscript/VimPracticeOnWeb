@@ -30,7 +30,7 @@ import { findMatchingBracket } from './bracketMatch';
 import { computePercentJumpTarget } from './extraMotions';
 import { handleMiniMoveNormal } from './miniMoveEngine';
 import { enterTerminalInsertMode } from './terminalEngine';
-import { moveToNextParagraph, moveToPrevParagraph } from './advancedMotions';
+import { findParagraphTarget } from './advancedMotions';
 import { moveFind } from './findChar';
 import { getWordAtCursor } from './search';
 import { executeCommandLine } from './commandLine';
@@ -689,13 +689,11 @@ export function handleNormalEditingAndMotionFallback(
   }
 
   if ((key === '}' || key === '{') && !parsed.operator) {
-    const target =
-      key === '}'
-        ? moveToNextParagraph(state.lines, state.cursor, parsed.totalCount)
-        : moveToPrevParagraph(state.lines, state.cursor, parsed.totalCount);
+    const found = findParagraphTarget(state.lines, state.cursor, key === '}' ? 'next' : 'prev', parsed.totalCount);
+    if (!found) return ringBell({ ...state, pendingKeys: undefined });
     return {
       ...recordJump(state),
-      cursor: clampCursor(state.lines, target, 'NORMAL'),
+      cursor: clampCursor(state.lines, found.target, 'NORMAL'),
       pendingKeys: undefined,
     };
   }

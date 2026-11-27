@@ -239,7 +239,8 @@ export function handleNormalFilterShiftEqualPending(
     const res = indentLines(
       { ...state, cursor: { line: range.startLine, col: 0 }, pendingKeys: undefined },
       range.endLine - range.startLine + 1,
-      dir === '>' ? 'in' : 'out'
+      dir === '>' ? 'in' : 'out',
+      state.cursor.col
     );
     const keys = [...(state.pendingKeys ?? '').split(''), key];
     return {

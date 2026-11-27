@@ -14,7 +14,46 @@ export function isBlankLine(lineText: string | undefined): boolean {
 }
 
 /**
- * '}' : 다음 문단 경계(빈 줄 또는 파일 끝)로 이동합니다.
+ * Vim findpar(): '}' / '{' 의 목표 위치를 찾습니다.
+ * - 문단 경계는 완전히 빈 줄입니다 (공백만 있는 줄은 경계가 아님. ip/ap 텍스트 객체와 다름).
+ * - count 가 남았는데 버퍼 끝/처음에 닿으면 실패(null)이며 커서는 움직이지 않습니다.
+ * - '}' 가 마지막 줄에서 멈추면 그 줄의 마지막 문자로 가고 모션은 inclusive 가 됩니다 (:help }).
+ */
+export function findParagraphTarget(
+  lines: string[],
+  cursor: CursorPosition,
+  dir: 'next' | 'prev',
+  count = 1
+): { target: CursorPosition; inclusive: boolean } | null {
+  const max = lines.length - 1;
+  if (max < 0) return { target: { line: 0, col: 0 }, inclusive: false };
+  const step = dir === 'next' ? 1 : -1;
+  let curr = Math.max(0, Math.min(cursor.line, max));
+
+  for (let remaining = Math.max(1, count); remaining > 0; ) {
+    remaining--;
+    let didSkip = false;
+    for (let first = true; ; first = false) {
+      if ((lines[curr] ?? '') !== '') didSkip = true;
+      if (!first && didSkip && (lines[curr] ?? '') === '') break;
+      curr += step;
+      if (curr < 0 || curr > max) {
+        if (remaining > 0) return null;
+        curr -= step;
+        break;
+      }
+    }
+  }
+
+  if (dir === 'next' && curr === max) {
+    const len = (lines[curr] ?? '').length;
+    if (len > 0) return { target: { line: curr, col: len - 1 }, inclusive: true };
+  }
+  return { target: { line: curr, col: 0 }, inclusive: false };
+}
+
+/**
+ * '}' : 다음 문단 경계(빈 줄 또는 파일 끝)로 이동합니다. 실패하면 커서를 그대로 돌려줍니다.
  * @param count 반복 횟수 (기본 1)
  */
 export function moveToNextParagraph(
@@ -22,29 +61,7 @@ export function moveToNextParagraph(
   cursor: CursorPosition,
   count = 1
 ): CursorPosition {
-  if (lines.length === 0) return { line: 0, col: 0 };
-  let currentLine = Math.max(0, Math.min(cursor.line, lines.length - 1));
-  const maxLine = lines.length - 1;
-
-  for (let c = 0; c < count; c++) {
-    if (currentLine >= maxLine) break;
-
-    // 1. 현재 줄이 빈 줄인 경우, 연속된 빈 줄을 건너뜁니다.
-    while (currentLine < maxLine && isBlankLine(lines[currentLine])) {
-      currentLine++;
-    }
-
-    // 2. 내용이 있는 줄들을 건너뛰어 다음 빈 줄을 찾습니다.
-    while (currentLine < maxLine && !isBlankLine(lines[currentLine])) {
-      currentLine++;
-    }
-  }
-
-  // Vim: 마지막 줄에 도달하면 그 줄의 마지막 문자로 이동하고 모션은 inclusive 가 됩니다 (:help })
-  if (currentLine === maxLine) {
-    return { line: currentLine, col: Math.max(0, (lines[currentLine] ?? '').length - 1) };
-  }
-  return { line: currentLine, col: 0 };
+  return findParagraphTarget(lines, cursor, 'next', count)?.target ?? cursor;
 }
 
 /** '}' 의 목표가 마지막 줄이면 inclusive 이므로 끝 문자까지 포함하는 배타적 끝 컬럼을 돌려줍니다. */
@@ -53,7 +70,7 @@ function paragraphEndCol(lines: string[], target: CursorPosition): number {
 }
 
 /**
- * '{' : 이전 문단 경계(빈 줄 또는 파일 시작)로 이동합니다.
+ * '{' : 이전 문단 경계(빈 줄 또는 파일 시작)로 이동합니다. 실패하면 커서를 그대로 돌려줍니다.
  * @param count 반복 횟수 (기본 1)
  */
 export function moveToPrevParagraph(
@@ -61,24 +78,7 @@ export function moveToPrevParagraph(
   cursor: CursorPosition,
   count = 1
 ): CursorPosition {
-  if (lines.length === 0) return { line: 0, col: 0 };
-  let currentLine = Math.max(0, Math.min(cursor.line, lines.length - 1));
-
-  for (let c = 0; c < count; c++) {
-    if (currentLine <= 0) break;
-
-    // 1. 현재 줄이 빈 줄인 경우, 연속된 빈 줄을 뒤로 건너뜁니다.
-    while (currentLine > 0 && isBlankLine(lines[currentLine])) {
-      currentLine--;
-    }
-
-    // 2. 내용이 있는 줄들을 뒤로 건너뛰어 이전 빈 줄을 찾습니다.
-    while (currentLine > 0 && !isBlankLine(lines[currentLine])) {
-      currentLine--;
-    }
-  }
-
-  return { line: currentLine, col: 0 };
+  return findParagraphTarget(lines, cursor, 'prev', count)?.target ?? cursor;
 }
 
 /**
