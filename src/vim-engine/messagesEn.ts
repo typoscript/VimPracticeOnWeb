@@ -6,7 +6,6 @@ export const EN_MESSAGES: Record<string, string> = {
   "선언부로 이동: {word} ({v}번째 줄)": "Go to declaration: {word} (line {v})",
   "선언부(첫 등장)로 이동: {word} ({v}번째 줄)": "Go to declaration (first occurrence): {word} (line {v})",
   "E486: 선언부를 찾을 수 없습니다: {word}": "E486: Declaration not found: {word}",
-  "E662: 변경 목록이 비어 있습니다 (Empty changelist)": "E662: Empty changelist",
   "E662: 변경 목록의 시작입니다 (At start of changelist)": "E662: At start of changelist",
   "변경 목록 이전 위치 ({v}/{listCount})": "Changelist: previous position ({v}/{listCount})",
   "E663: 변경 목록의 끝입니다 (At end of changelist)": "E663: At end of changelist",

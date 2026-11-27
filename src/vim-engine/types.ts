@@ -733,6 +733,23 @@ export interface VimEditorState {
   bell?: boolean;
   /** 직전 줄 내 문자 탐색 정보 (';' 및 ',' 반복용) */
   lastCharSearch?: { type: 'f' | 'F' | 't' | 'T'; char: string } | null;
+  /** 현재 버퍼 로컬 상태(마크·변경 목록·gv·gi·폴드)가 속한 파일명 */
+  bufferLocalOwner?: string;
+  /** 다른 파일에 보관해 둔 버퍼 로컬 상태 (파일명 → 스냅샷, bufferLocalState.ts) */
+  bufferLocalSnapshots?: Record<
+    string,
+    Pick<
+      VimEditorState,
+      | 'marks'
+      | 'changeList'
+      | 'changeIndex'
+      | 'lastInsertPos'
+      | 'lastChangeMark'
+      | 'lastBracketMarks'
+      | 'lastVisualSelection'
+      | 'folds'
+    >
+  >;
   /** 마크 위치 저장소 (m{a-zA-Z}, 전역 마크 A-Z는 파일/버퍼 위치 포함) */
   marks?: Record<string, MarkPosition>;
   /** 점프 리스트 (Ctrl+o, Ctrl+i) */

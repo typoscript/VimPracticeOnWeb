@@ -37,6 +37,7 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'vfs.ts',
       'setOptionsCore.ts',
       'windowTree.ts',
+      'bufferLocalState.ts',
     ],
   },
   {

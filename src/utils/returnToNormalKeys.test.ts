@@ -27,3 +27,27 @@ describe('getReturnToNormalKeys (UI 버튼 키 주입 전 NORMAL 복귀)', () =>
     expect(getReturnToNormalKeys(pending)).toEqual(['Escape']);
   });
 });
+
+describe('getReturnToNormalKeys: 팝업·포커스 상태', () => {
+  const base = () => ({
+    ...createVimState(['const foo = 1;'], { line: 0, col: 0 }),
+    primaryFilename: 'a.ts',
+    virtualFiles: { 'a.ts': ['const foo = 1;'], 'b.ts': ['b'] },
+  });
+  const ex = (s: ReturnType<typeof createVimState>, cmd: string) => run(s, [':', ...cmd.split(''), 'Enter']);
+
+  it.each(['Neotree', 'HarpoonMenu', 'Files', 'Yanks'])('%s 가 키를 가로채는 상태에서도 다음 Ex 명령이 실행된다', (cmd) => {
+    let s = ex(base(), cmd);
+    s = run(s, [...getReturnToNormalKeys(s), ':', 'O', 'i', 'l', 'Enter']);
+    expect(s.oilSession?.isOpen).toBe(true);
+  });
+
+  it('Neo-tree 파일 생성 프롬프트에 입력되지 않는다', () => {
+    let s = ex(base(), 'Neotree');
+    s = run(s, ['a']);
+    expect(s.neotree?.prompt).toBeTruthy();
+    s = run(s, [...getReturnToNormalKeys(s), ':', 'O', 'i', 'l', 'Enter']);
+    expect(s.oilSession?.isOpen).toBe(true);
+    expect(Object.keys(s.virtualFiles ?? {}).some((f) => f.includes('Oil'))).toBe(false);
+  });
+});

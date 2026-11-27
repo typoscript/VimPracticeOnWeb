@@ -9,7 +9,7 @@ import { deepFreeze, assertValidVimState } from './invariants';
 import { executeCommandLine, handleConfirmSubstituteKey } from './commandLine';
 import { triggerAutocmd, triggerWindowAndTabAutocmds } from './autocmdEngine';
 import { handleCommandLineWindowKey } from './cmdlineWindow';
-import { handleNetrwKey } from './netrwEngine';
+import { handleNetrwKey, isNetrwBufferActive } from './netrwEngine';
 import { handleOilNavigationKey } from './oilEngine';
 import { handleNeotreeKey } from './neotreeEngine';
 import { handleHarpoonMenuKey } from './harpoonEngine';
@@ -23,6 +23,7 @@ import { handleFuzzyFinderKey } from './fuzzyFinder';
 import { handleHelpKey } from './helpEngine';
 import { syncLiveLspDiagnostics } from './lspEngine';
 import { getEffectiveGitBaseLines, syncGitBaseOwnership } from './gitSignsEngine';
+import { syncBufferLocalState } from './bufferLocalState';
 import { handleLspRenameKey, handleLspCodeActionKey } from './lspRefactorEngine';
 import { handleFlashJumpKey } from './flashJumpEngine';
 import { handleMultiCursorKey } from './multiCursorEngine';
@@ -66,7 +67,7 @@ function finishInsertNormalSession(
   if (
     nextState.mode === 'NORMAL' &&
     !nextState.cmdlineWindow &&
-    !nextState.netrw?.isOpen &&
+    !isNetrwBufferActive(nextState) &&
     !nextState.fuzzyFinder?.isOpen &&
     !nextState.helpSession?.isOpen &&
     !nextState.flashJump?.isOpen &&
@@ -157,7 +158,7 @@ export function rawHandleKey(
   }
 
   // Netrw 순정 파일 탐색기 활성화 시 전용 키 처리
-  if (state.netrw?.isOpen) {
+  if (isNetrwBufferActive(state) && state.mode === 'NORMAL') {
     const netrwHandled = handleNetrwKey(state, key);
     if (netrwHandled !== null) {
       return netrwHandled;
@@ -186,7 +187,7 @@ export function rawHandleKey(
   }
 
   // 순정 Vim 내장 도움말 창 (:help, K, F1) 활성화 시 전용 키 처리
-  if (state.helpSession?.isOpen) {
+  if (state.helpSession?.isOpen && state.mode === 'NORMAL') {
     const helpHandled = handleHelpKey(state, key);
     if (helpHandled !== null) {
       return helpHandled;
@@ -324,12 +325,16 @@ export function rawHandleKey(
   }
 
   // :set nomodifiable (noma) 상태에서 현재 버퍼 수정 또는 INSERT/REPLACE 진입 차단 (E21)
-  if (effectiveOpts.modifiable === false) {
+  // Netrw 탐색 버퍼도 Vim netrw 처럼 nomodifiable (Netrw 자체 동작 d/%/D/Enter/- 는 netrw 상태를 바꾸므로 허용)
+  const inNetrwBuffer = isNetrwBufferActive(state);
+  if (effectiveOpts.modifiable === false || inNetrwBuffer) {
     const sameContext =
       (nextState.currentBufferId ?? 1) === (state.currentBufferId ?? 1) &&
       (nextState.activePaneIndex ?? 0) === (state.activePaneIndex ?? 0) &&
       (nextState.currentTabId ?? 1) === (state.currentTabId ?? 1) &&
-      !nextState.netrw?.isOpen &&
+      (inNetrwBuffer
+        ? nextState.netrw === state.netrw && nextState.primaryFilename === state.primaryFilename
+        : !isNetrwBufferActive(nextState)) &&
       !nextState.helpSession?.isOpen &&
       !nextState.cmdlineWindow;
     const triedToEnterEditMode =
@@ -460,9 +465,6 @@ export function rawHandleKey(
     };
   }
 
-  // 현재 파일이 바뀌면 Gitsigns 기준선을 원래 파일 버퍼에 보관하고 새 파일의 기준선을 불러옴
-  nextState = syncGitBaseOwnership(state, nextState);
-
   // Gitsigns 기준선(gitBaseLines) 최초 버퍼 편집 시 자동 캡처
   if (
     !getEffectiveGitBaseLines(state) &&
@@ -471,7 +473,7 @@ export function rawHandleKey(
     (nextState.currentBufferId ?? 1) === (state.currentBufferId ?? 1) &&
     nextState.primaryFilename === state.primaryFilename &&
     !/^[a-z]+:\/\//i.test(nextState.primaryFilename ?? '') &&
-    !nextState.netrw?.isOpen &&
+    !isNetrwBufferActive(nextState) &&
     !nextState.oilSession?.isOpen &&
     !nextState.helpSession?.isOpen &&
     !nextState.cmdlineWindow
@@ -523,13 +525,21 @@ export function handleKey(
   let nextState: VimEditorState;
   if (getVimEngineConfig().devChecks) {
     deepFreeze(input);
-    nextState = rawHandleKey(input, key, isReplayingDot, macroDepth);
+    nextState = syncPerFileState(input, rawHandleKey(input, key, isReplayingDot, macroDepth));
     assertValidVimState(input, nextState, key);
   } else {
-    nextState = rawHandleKey(input, key, isReplayingDot, macroDepth);
+    nextState = syncPerFileState(input, rawHandleKey(input, key, isReplayingDot, macroDepth));
   }
   const withHl = releaseHlsearchSuppression(input, nextState, key);
   return processKeyAutocmds(input, withHl);
+}
+
+/**
+ * 현재 파일이 바뀌었으면 파일별 상태를 교체합니다: Gitsigns 기준선과 버퍼 로컬 상태
+ * (소문자 마크·변경 목록·gv·gi·폴드). Netrw·Oil·도움말 등 조기 반환 경로도 모두 거치도록 바깥 래퍼에서 실행합니다.
+ */
+function syncPerFileState(prev: VimEditorState, next: VimEditorState): VimEditorState {
+  return syncBufferLocalState(prev, syncGitBaseOwnership(prev, next));
 }
 
 function processKeyAutocmds(prev: VimEditorState, curr: VimEditorState): VimEditorState {

@@ -96,7 +96,8 @@ export function openOilBuffer(state: VimEditorState, targetDir?: string): VimEdi
     dir = prevOil.currentDir;
   } else {
     const curFile = state.primaryFilename ?? '';
-    const normFile = normalizeVfsPath(curFile);
+    // term://, oil:// 같은 특수 버퍼 이름은 파일 경로가 아니므로 루트에서 시작
+    const normFile = /^[a-z]+:\/\//i.test(curFile) ? '' : normalizeVfsPath(curFile);
     dir = normFile.includes('/') ? parentDirOf(normFile) : '';
   }
 

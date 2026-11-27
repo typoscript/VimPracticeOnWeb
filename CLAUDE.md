@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 212개 테스트 파일, 2,358개 테스트 100% 통과 필수)*
+  *(현재 214개 테스트 파일, 2,376개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -43,7 +43,11 @@
    - 모드(`NORMAL`, `INSERT`, `VISUAL` 등)에 따라 커서 col/line 범위가 엄격히 제한됩니다. 라인 수정 후 반드시 `clampCursor`를 적용하세요.
 3. **오퍼레이터 & 도트 반복(`.`) 일관성**:
    - 텍스트 변경을 유발하는 모든 연산자는 이전 상태를 `pushUndoSnapshot(state)`으로 스택에 기록하고, `lastChangeKeys`에 실행 키스트로크를 저장하여 `.` 반복이 동작하도록 해야 합니다.
-4. **미션(레슨) 추가 시 4대 동기화 필수 규칙**:
+4. **파일별 상태 분리 (`bufferLocalState.ts`, `gitSignsEngine.ts`)**:
+   - 소문자·특수 마크, 변경 목록(`g;`), `gv`/`gi` 위치, 폴드, Gitsigns 기준선(`gitBaseLines`)은 Vim 처럼 파일(버퍼)마다 따로입니다. `handleKey` 바깥 래퍼의 `syncPerFileState` 가 `primaryFilename` 이 바뀔 때마다 이전 파일 값을 보관(`bufferLocalSnapshots`, 버퍼의 `gitBaseLines`)하고 새 파일 값을 불러옵니다. 새 버퍼 로컬 상태를 추가하면 `BufferLocalSnapshot` 에도 넣으세요.
+   - Netrw·도움말 전용 키 처리는 NORMAL 모드에서 해당 버퍼가 활성일 때만 동작합니다(`isNetrwBufferActive`). 특수 버퍼 키 핸들러를 새로 붙일 때도 Ex 입력(COMMAND 모드)을 가로채지 않게 하세요.
+   - UI 버튼(바로 체험 칩, 치트시트 실행)으로 키를 주입할 때는 `src/utils/returnToNormalKeys.ts` 의 `getReturnToNormalKeys` 를 앞에 붙여 팝업·터미널·Neo-tree 포커스에서 먼저 빠져나오세요. `test/modeOverlay.fuzz.test.ts` 가 이 조합을 무작위로 검증합니다.
+5. **미션(레슨) 추가 시 4대 동기화 필수 규칙**:
    신규 레슨 $N$을 추가할 때 반드시 아래 4개 파일을 동시에 동기화해야 테스트가 깨지지 않습니다:
    - `src/data/missions.ts`: 신규 레슨 정의, 3성 기준 `par`, 최적 키 시퀀스 `optimalKeys`, `checkComplete` 작성.
    - `src/data/missions.test.ts`: 개별 레슨 테스트 추가 및 하단 `expect(MISSIONS.length).toBe(N)` 총 개수 갱신. (모든 레슨의 `optimalKeys`가 par 이하이며 실행 시 완료되는지 자동 검증됨)

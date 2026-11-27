@@ -225,7 +225,7 @@ function deleteSelectionsAndMaybeInsert(
   return {
     ...withUndo,
     lines: nextLines,
-    mode: 'NORMAL',
+    mode: 'INSERT',
     cursor: nextCursors[0] ?? state.cursor,
     multiCursor: {
       ...session,
@@ -339,6 +339,7 @@ export function handleMultiCursorKey(state: VimEditorState, key: string): VimEdi
       }));
       return {
         ...withUndo,
+        mode: 'INSERT',
         cursor: nextCursors[0] ?? state.cursor,
         multiCursor: {
           ...session,

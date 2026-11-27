@@ -272,6 +272,16 @@ export function formatNetrwBookmarks(state: VimEditorState): string {
 /**
  * Netrw 버퍼에서 키 입력을 처리합니다 (<CR>, -, v, o, t, q, %, d, D, mb, gb 등).
  */
+/**
+ * 현재 창이 Netrw 탐색 버퍼인지 여부. 다른 버퍼로 옮겨 가도 `netrw.isOpen` 은 남아 있으므로
+ * Netrw 전용 키·동작은 이 함수로 판단합니다.
+ */
+export function isNetrwBufferActive(
+  state: Pick<VimEditorState, 'netrw' | 'primaryFilename'>
+): boolean {
+  return Boolean(state.netrw?.isOpen && state.primaryFilename?.startsWith('Netrw ['));
+}
+
 export function handleNetrwKey(
   state: VimEditorState,
   key: string

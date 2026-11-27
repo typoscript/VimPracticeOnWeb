@@ -444,12 +444,8 @@ export function reselectLastVisual(state: VimEditorState): VimEditorState {
       pendingKeys: undefined,
     };
   }
-  return {
-    ...state,
-    mode: 'VISUAL',
-    visualAnchor: { ...state.cursor },
-    pendingKeys: undefined,
-  };
+  // Vim nv_gv: 이전 비주얼 선택이 없으면 벨만 울리고 NORMAL 유지
+  return { ...state, pendingKeys: undefined, bell: true };
 }
 
 /**
@@ -464,8 +460,9 @@ export function traverseChangeList(
   if (list.length === 0) {
     return {
       ...state,
-      commandMessage: msg('E662: 변경 목록이 비어 있습니다 (Empty changelist)'),
+      commandMessage: msg('E664: 변경 목록이 비어 있습니다 (changelist is empty)'),
       pendingKeys: undefined,
+      bell: true,
     };
   }
 

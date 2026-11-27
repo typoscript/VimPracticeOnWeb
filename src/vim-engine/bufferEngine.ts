@@ -3,6 +3,7 @@ import { getVfsFile, resolveVfsFilename } from './vfs';
 import { msg } from './messages';
 import { getGlobalOptions } from './setEngine';
 import { areLinesEqual } from './undoTreeEngine';
+import { syncBufferLocalState } from './bufferLocalState';
 
 /**
  * 버퍼 목록이 초기화되어 있지 않은 경우, 기본 1번 버퍼(및 2번 보조 버퍼)를 구성합니다.
@@ -168,7 +169,7 @@ export function switchBuffer(state: VimEditorState, target: number | string): Vi
     ...targetLocal,
   };
 
-  return {
+  return syncBufferLocalState(state, {
     ...syncedState,
     lines: [...targetBuf.lines],
     cursor: { ...targetBuf.cursor },
@@ -184,7 +185,7 @@ export function switchBuffer(state: VimEditorState, target: number | string): Vi
     currentBufferId: targetBuf.id,
     options: effectiveOpts,
     commandMessage: msg('"{name}" [버퍼 {id}]', { name: targetBuf.name, id: targetBuf.id }),
-  };
+  });
 }
 
 /**
@@ -291,7 +292,7 @@ export function editBuffer(state: VimEditorState, filename: string): VimEditorSt
 
   const nextBuffers = [...buffers, newBuf];
 
-  return {
+  return syncBufferLocalState(state, {
     ...syncedState,
     buffers: nextBuffers,
     lines: [...initialLines],
@@ -307,7 +308,7 @@ export function editBuffer(state: VimEditorState, filename: string): VimEditorSt
     alternateBufferId: curId,
     currentBufferId: newId,
     commandMessage: msg('"{cleanName}" [{v} 버퍼 {newId}]', { cleanName, v: vfsLines ? msg('파일 로드됨') : msg('새 파일'), newId }),
-  };
+  });
 }
 
 /**
