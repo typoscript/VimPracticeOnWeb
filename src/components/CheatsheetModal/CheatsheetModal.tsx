@@ -152,7 +152,7 @@ export const CHEATSHEET_ITEMS: ReadonlyArray<CheatsheetItem> = [
     category: 'search',
     keys: '* / # / cgn / .',
     titleKey: i18nKey('커서 단어 검색 & cgn 연속 치환'),
-    descKey: i18nKey('* 로 커서 단어를 검색하고 cgn 으로 첫 매치를 바꾼 뒤 . 연타로 선택적 치환을 이어갑니다.'),
+    descKey: i18nKey('* 로 커서(또는 그 뒤) 단어의 다음 매치로 이동한 뒤 cgn 으로 그 매치를 바꾸고 . 연타로 선택적 치환을 이어갑니다.'),
     tryKeys: ['Escape', 'G', '*'],
   },
   {

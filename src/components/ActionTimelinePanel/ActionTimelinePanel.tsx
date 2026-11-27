@@ -108,7 +108,7 @@ export const ActionTimelinePanel: React.FC<ActionTimelinePanelProps> = ({
       if (editorState.mode === 'INSERT') {
         return {
           badge: t('INSERT 모드'),
-          guide: t('텍스트 입력 중 (Ctrl+w: 단어삭제, Ctrl+u: 줄시작삭제, Ctrl+n: 자동완성, <Esc>: 복귀)'),
+          guide: t('텍스트 입력 중 (Ctrl+w: 단어삭제, Ctrl+u: 입력 시작점(다시 누르면 줄 시작)까지 삭제, Ctrl+n: 자동완성, <Esc>: 복귀)'),
           isPending: false,
         };
       }
