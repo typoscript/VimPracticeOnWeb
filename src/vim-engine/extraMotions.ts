@@ -228,8 +228,12 @@ export function evaluateExtraMotion(
     }
     case ')':
     case '(': {
-      const starts = getSentenceStarts(lines);
+      // Vim findsent: 버퍼 첫 문장은 앞의 들여쓰기를 건너뛰지 않고 (0,0) 에서 시작합니다 (빈 줄 뒤 문단은 건너뜀).
+      const starts = getSentenceStarts(lines).map((s) =>
+        s.line === 0 && s.col > 0 && /^\s*$/.test((lines[0] ?? '').slice(0, s.col)) ? { line: 0, col: 0 } : s
+      );
       let pos = cursor;
+      let reachedEnd = false;
       for (let i = 0; i < n; i++) {
         if (key === ')') {
           const next = starts.find((s) => comparePos(s, pos) > 0);
@@ -242,6 +246,7 @@ export function evaluateExtraMotion(
           // Vim: count 만큼 움직일 수 없으면 모션 전체가 실패합니다 (5) 가 끝에서 멈추지 않음).
           if (comparePos(end, pos) <= 0) return null;
           pos = end;
+          reachedEnd = true;
         } else {
           const prev = [...starts].reverse().find((s) => comparePos(s, pos) < 0);
           if (!prev) {
@@ -252,7 +257,8 @@ export function evaluateExtraMotion(
           pos = prev;
         }
       }
-      return { target: pos, kind: 'exclusive' };
+      // Vim: ) 가 버퍼 끝에 닿으면 마지막 글자까지 연산 범위에 넣습니다 (y) 가 마지막 글자를 빠뜨리지 않음).
+      return { target: pos, kind: reachedEnd ? 'inclusive' : 'exclusive' };
     }
     case '[(':
     case '[{':

@@ -211,6 +211,23 @@ const CASES: Case[] = [
   { id: 'dot-after-ex-or-failure-10', text: 'one\ntwo\nthree\nxe', cursor: { row: 0, col: 0 }, keys: 'Vj>:v/e/d<CR>.' },
   { id: 'norm-undo-one-step', text: 'a\nb\nc', cursor: { row: 0, col: 0 }, keys: ':%norm Ix<CR>u' },
   { id: 'norm-while-recording', text: 'a\nb\nc', cursor: { row: 0, col: 0 }, keys: 'qm:norm Ix<CR>jq@m' },
+  { id: 'sentence-buffer-start-1', text: '  indented line one\n    deeper item\n  back to one', cursor: { row: 0, col: 0 }, keys: 'G$(' },
+  { id: 'sentence-buffer-start-2', text: '  abc. def\n  ghi.', cursor: { row: 0, col: 0 }, keys: 'G$((' },
+  { id: 'sentence-buffer-start-3', text: '\n  abc', cursor: { row: 0, col: 0 }, keys: 'G$(' },
+  { id: 'sentence-buffer-start-4', text: 'x.\n\n  abc def', cursor: { row: 0, col: 0 }, keys: 'jj$((' },
+  { id: 'sentence-buffer-start-5', text: '    only line', cursor: { row: 0, col: 0 }, keys: '$(' },
+  { id: 'sentence-buffer-start-6', text: '  abc. def\n  ghi.', cursor: { row: 0, col: 0 }, keys: '))' },
+  { id: 'sentence-buffer-start-7', text: '  abc\n\n  def', cursor: { row: 0, col: 0 }, keys: ')' },
+  { id: 'sentence-buffer-start-8', text: '  abc. def\n  ghi.', cursor: { row: 0, col: 0 }, keys: 'G$d(' },
+  { id: 'sentence-buffer-start-9', text: '  abc. def\n  ghi.', cursor: { row: 0, col: 0 }, keys: 'y)' },
+  { id: 'sentence-to-buffer-end-1', text: 'one. two\nthree', cursor: { row: 0, col: 0 }, keys: 'y)' },
+  { id: 'sentence-to-buffer-end-2', text: 'a b\nc d', cursor: { row: 0, col: 0 }, keys: 'c)X<Esc>' },
+  { id: 'sentence-to-buffer-end-3', text: 'x.\nlast one', cursor: { row: 0, col: 0 }, keys: 'jd)' },
+  { id: 'sentence-to-buffer-end-4', text: 'a. b. c', cursor: { row: 0, col: 0 }, keys: 'wy2)' },
+  { id: 'undo-backward-delete-1', text: 'abcdef\nxyz', cursor: { row: 0, col: 0 }, keys: 'llXu' },
+  { id: 'undo-backward-delete-2', text: 'one two three', cursor: { row: 0, col: 0 }, keys: '$dbu' },
+  { id: 'undo-backward-delete-3', text: '  one two', cursor: { row: 0, col: 0 }, keys: '$d0u' },
+  { id: 'undo-backward-delete-4', text: 'banana split', cursor: { row: 0, col: 0 }, keys: '3ldFau' },
 ];
 
 const LUA = `

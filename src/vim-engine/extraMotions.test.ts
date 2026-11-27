@@ -18,7 +18,8 @@ describe('문장 모션 ( )', () => {
   it(') 는 다음 문장 시작, ( 는 현재/이전 문장 시작으로 이동한다', () => {
     expect(press(at(0, 2), [')']).cursor).toEqual({ line: 0, col: 24 });
     expect(press(at(0, 26), ['(']).cursor).toEqual({ line: 0, col: 24 });
-    expect(press(at(0, 24), ['(']).cursor).toEqual({ line: 0, col: 2 });
+    // 버퍼 첫 문장은 들여쓰기를 건너뛰지 않고 0열에서 시작합니다 (nvim 확인).
+    expect(press(at(0, 24), ['(']).cursor).toEqual({ line: 0, col: 0 });
   });
 
   it('빈 줄은 문장 경계이고, [count] 로 여러 문장을 건너뛴다', () => {

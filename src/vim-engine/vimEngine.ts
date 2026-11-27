@@ -607,6 +607,22 @@ function recordRepeatRegister(prev: VimEditorState, next: VimEditorState, isRepl
  * (o/O 처럼 줄이 늘어나는 경우는 원래 줄을 기억하므로 그대로 둡니다.)
  */
 function recordInsertStartCursor(prev: VimEditorState, next: VimEditorState): VimEditorState {
+  // 커서 왼쪽을 지우는 변경(X, db, d0, dF…)은 Vim 처럼 지운 범위의 시작(바뀐 뒤 커서)을 기억합니다.
+  if (
+    prev.mode === 'NORMAL' &&
+    next.mode === 'NORMAL' &&
+    next.undoStack &&
+    next.undoStack.length > 0 &&
+    next.undoStack !== prev.undoStack &&
+    next.lines.length === prev.lines.length &&
+    next.cursor.line === prev.cursor.line &&
+    next.cursor.col < prev.cursor.col &&
+    next.lines.every((l, i) => i === next.cursor.line || l === prev.lines[i]) &&
+    next.registers?.['"']?.type !== 'line'
+  ) {
+    const top = next.undoStack[next.undoStack.length - 1];
+    return { ...next, undoStack: [...next.undoStack.slice(0, -1), { ...top, cursor: { ...next.cursor } }] };
+  }
   if (prev.mode !== 'NORMAL' || next.mode !== 'INSERT') return next;
   const stack = next.undoStack;
   if (!stack || stack.length === 0 || stack === prev.undoStack) return next;
