@@ -417,7 +417,8 @@ export function handleNormalViewportAndNavOps(
   // J / ~: 줄 합치기 및 대소문자 토글
   if (key === 'J' && !parsed.operator) {
     if (state.cursor.line >= state.lines.length - 1) return ringBell(state);
-    const res = joinLines(state, parsed.totalCount);
+    // [count]J 는 count 줄을 합칩니다 (최소 2줄) → 이음 횟수는 count - 1
+    const res = joinLines(state, Math.max(1, parsed.totalCount - 1));
     const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'J'] : ['J'];
     return { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys };
   }

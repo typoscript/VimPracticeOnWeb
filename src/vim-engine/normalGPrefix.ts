@@ -463,7 +463,7 @@ export function handleNormalGOperator(
   }
   if (key === 'J') {
     if (state.cursor.line >= state.lines.length - 1) return { handled: true, state: ringBell(state) };
-    const res = joinLines(state, parsedTotalCount, false);
+    const res = joinLines(state, Math.max(1, parsedTotalCount - 1), false);
     const lKeys = parsedTotalCount > 1 ? [String(parsedTotalCount), 'g', 'J'] : ['g', 'J'];
     return {
       handled: true,

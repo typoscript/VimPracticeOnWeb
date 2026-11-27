@@ -198,8 +198,8 @@ describe('Line and Character Operators (J, ~, >>, <<, ==, Ctrl-a, Ctrl-x)', () =
       mode: 'NORMAL',
     };
 
-    state = handleKey(state, '2');
-    state = handleKey(state, 'J'); // 현재 줄 + 2개 줄 = 3줄 연결
+    state = handleKey(state, '3');
+    state = handleKey(state, 'J'); // Vim: [count]J 는 count 줄(여기서는 3줄)을 합칩니다
     expect(state.lines).toEqual(['Alpha Beta Gamma', 'Delta']);
   });
 

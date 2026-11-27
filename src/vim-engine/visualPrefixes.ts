@@ -212,7 +212,8 @@ export function handleVisualGSubcommand(
       };
       const joined = joinLines(tempState, joinCount, false);
       const changed = joined.lines !== state.lines;
-      const gKeys = joinCount > 1 ? [String(joinCount), 'g', 'J'] : ['g', 'J'];
+      // . 반복은 같은 줄 수로: [count]gJ 의 count 는 합칠 줄 수입니다.
+      const gKeys = joinCount > 1 ? [String(joinCount + 1), 'g', 'J'] : ['g', 'J'];
       return {
         ...joined,
         lastVisualSelection: snap,

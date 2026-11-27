@@ -1,5 +1,16 @@
 /** 퍼저·테스트가 함께 쓰는 Neovim 키 표기 → 엔진 키 변환 */
-const SPECIAL: Record<string, string> = { '<Esc>': 'Escape', '<CR>': 'Enter', '<C-a>': 'Ctrl-a', '<C-x>': 'Ctrl-x', '<C-r>': 'Ctrl-r', '<C-v>': 'Ctrl-v' };
+const SPECIAL: Record<string, string> = {
+  '<Esc>': 'Escape',
+  '<CR>': 'Enter',
+  '<BS>': 'Backspace',
+  '<C-a>': 'Ctrl-a',
+  '<C-x>': 'Ctrl-x',
+  '<C-r>': 'Ctrl-r',
+  '<C-v>': 'Ctrl-v',
+  '<C-w>': 'Ctrl-w',
+  '<C-u>': 'Ctrl-u',
+  '<C-o>': 'Ctrl-o',
+};
 
 export function toEngineKeys(notation: string): string[] {
   const keys: string[] = [];

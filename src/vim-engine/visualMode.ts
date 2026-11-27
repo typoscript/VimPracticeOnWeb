@@ -658,7 +658,8 @@ export function handleVisualModeKey(
     };
     const joined = joinLines(tempState, joinCount);
     const changed = joined.lines !== state.lines;
-    const jKeys = joinCount > 1 ? [String(joinCount), 'J'] : ['J'];
+    // . 반복은 같은 줄 수로: [count]J 의 count 는 합칠 줄 수입니다.
+    const jKeys = joinCount > 1 ? [String(joinCount + 1), 'J'] : ['J'];
     return {
       ...joined,
       lastVisualSelection: visualSnapshot,

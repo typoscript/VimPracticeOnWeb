@@ -457,6 +457,8 @@ export function yankVisualSelection(state: VimEditorState): VimEditorState {
 
     return {
       ...state,
+      // Vim: 줄 단위 비주얼 복사 후 커서는 첫 줄의 0열로 갑니다.
+      cursor: { line: minLine, col: 0 },
       mode: 'NORMAL',
       visualAnchor: undefined,
       clipboard: {

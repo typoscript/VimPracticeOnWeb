@@ -239,12 +239,13 @@ export function evaluateExtraMotion(
           }
           // 마지막 문장 뒤에서는 버퍼의 마지막 문자로
           const end = { line: last, col: Math.max(0, (lines[last] ?? '').length - 1) };
-          if (comparePos(end, pos) <= 0) return i === 0 ? null : { target: pos, kind: 'exclusive' };
+          // Vim: count 만큼 움직일 수 없으면 모션 전체가 실패합니다 (5) 가 끝에서 멈추지 않음).
+          if (comparePos(end, pos) <= 0) return null;
           pos = end;
         } else {
           const prev = [...starts].reverse().find((s) => comparePos(s, pos) < 0);
           if (!prev) {
-            if (pos.line === 0 && pos.col === 0) return i === 0 ? null : { target: pos, kind: 'exclusive' };
+            if (pos.line === 0 && pos.col === 0) return null;
             pos = { line: 0, col: 0 };
             continue;
           }

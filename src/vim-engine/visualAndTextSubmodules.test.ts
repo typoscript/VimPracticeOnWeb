@@ -125,7 +125,7 @@ describe('visualPrefixes submodule', () => {
 
     const gJ = handleVisualGSubcommand(base, 'J', parsePending('g'));
     expect(gJ?.lines).toEqual(['item 10item 20item 30']);
-    expect(gJ?.lastChangeKeys).toEqual(['2', 'g', 'J']);
+    expect(gJ?.lastChangeKeys).toEqual(['3', 'g', 'J']); // 3줄을 합쳤으므로 . 반복도 3gJ
 
     const gCtrlA = handleVisualDirectGCombo(base, 'g<Ctrl-a>', 1);
     expect(gCtrlA?.lines).toEqual(['item 11', 'item 22', 'item 33']);

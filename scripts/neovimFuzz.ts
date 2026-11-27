@@ -47,7 +47,17 @@ const MOTIONS = ['h', 'j', 'k', 'l', 'w', 'b', 'e', 'W', 'B', 'E', 'ge', '0', '^
 // H/L/M·스크롤은 창 높이에 따라 달라 비교하지 않습니다 (headless nvim 창은 2줄).
 const FIND_CHARS = ['a', 'e', 'o', 't', '(', ')', '"', ',', '.', ' ', '{', '}', 'x'];
 const TEXT_OBJECTS = ['iw', 'aw', 'iW', 'aW', 'i"', 'a"', "i'", "a'", 'i(', 'a(', 'ib', 'i{', 'a{', 'iB', 'i[', 'a[', 'i<', 'a<', 'it', 'at', 'ip', 'ap', 'is', 'as'];
-const OPERATORS = ['d', 'c', 'y', '>', '<', 'gU', 'gu', 'g~', '='];
+// '=' 는 비교하지 않습니다: 엔진의 = 는 중괄호 깊이로 다시 들여쓰는 의도된 기능이고, nvim -u NONE 은 윗줄 들여쓰기만 복사합니다.
+const OPERATORS = ['d', 'c', 'y', '>', '<', 'gU', 'gu', 'g~'];
+
+// 확장 명령 (Ex·입력 모드 편집 키·검색·이름 있는 레지스터·마크·매크로)
+const EX_COMMANDS = [
+  ':s/a/X/<CR>', ':s/\\w\\+/W/g<CR>', ':%s/e/E/g<CR>', ':2,3d<CR>', ':g/a/d<CR>', ':v/e/d<CR>',
+  ':norm A;<CR>', ':%norm I# <CR>', ':m0<CR>', ':t.<CR>', ':2<CR>', ':$<CR>', ':><CR>', ':2,3j<CR>',
+  ':%s/\\(\\w\\+\\) \\(\\w\\+\\)/\\2 \\1/<CR>', ':sort<CR>', ':2,$y<CR>', ':pu<CR>', ':1,2>><CR>',
+];
+const INSERT_EDITS = ['foo<C-w>', 'a b c<C-w><C-w>', 'xyz<BS><BS>', 'one two<C-u>', 'q<C-o>0', 'w<C-o>$!'];
+const SEARCHES = ['/total<CR>', '/a<CR>', '?e<CR>', '/x\\|y<CR>', '*', '#', '2/a<CR>'];
 const INSERT_TEXT = ['X', 'new', 'a b', '(', 'end;'];
 
 function maybeCount(rng: Rng, p = 0.25): string {
@@ -57,6 +67,29 @@ function maybeCount(rng: Rng, p = 0.25): string {
 // 한 케이스 안에서 앞선 f/t·변경이 있었는지 (없으면 ; , . 가 Neovim 의 이전 케이스 상태를 이어받음)
 let sawFind = false;
 let sawChange = false;
+let sawSearch = false;
+let sawMark = false;
+let sawMacro = false;
+
+function randomExtendedCommand(rng: Rng): string {
+  const r = rng.next();
+  if (r < 0.25) return rng.pick(EX_COMMANDS);
+  if (r < 0.45) return rng.pick(['i', 'a', 'A', 'o', 'I']) + rng.pick(INSERT_EDITS) + '<Esc>';
+  if (r < 0.62) {
+    if (sawSearch && rng.chance(0.4)) return rng.pick(['n', 'N', '2n']);
+    sawSearch = true;
+    return rng.pick(SEARCHES);
+  }
+  if (r < 0.82) {
+    if (sawMark && rng.chance(0.4)) return rng.pick(["'a", '`a', "d'a", 'y`a']);
+    const cmd = rng.pick(['"ayiw', '"ayy', '"ap', '"aP', '"_dd', '"Ayiw', 'ma', '"ayw"bdw"ap']);
+    if (cmd === 'ma') sawMark = true;
+    return cmd;
+  }
+  if (sawMacro && rng.chance(0.5)) return rng.pick(['@a', '2@a']);
+  sawMacro = true;
+  return rng.pick(['qaxq', 'qaA!<Esc>jq', 'qadwjq', 'qa0~jq']);
+}
 
 function randomMotion(rng: Rng): string {
   if (rng.chance(0.2)) {
@@ -75,6 +108,7 @@ function randomCommand(rng: Rng): string {
 }
 
 function randomCommandRaw(rng: Rng): string {
+  if (rng.chance(0.3)) return randomExtendedCommand(rng);
   const r = rng.next();
   if (r < 0.28) return maybeCount(rng) + randomMotion(rng);
   if (r < 0.5) {
@@ -84,7 +118,7 @@ function randomCommandRaw(rng: Rng): string {
     return maybeCount(rng, 0.15) + op + target + insert;
   }
   if (r < 0.6) {
-    const op = rng.pick(['dd', 'yy', 'cc', '>>', '<<', 'gUU', 'guu', 'g~~', '==']);
+    const op = rng.pick(['dd', 'yy', 'cc', '>>', '<<', 'gUU', 'guu', 'g~~']);
     const insert = op === 'cc' ? rng.pick(INSERT_TEXT) + '<Esc>' : '';
     return maybeCount(rng, 0.2) + op + insert;
   }
@@ -124,6 +158,9 @@ function generateCases(count: number, seed: number): FuzzCase[] {
     const n = 1 + Math.floor(rng.next() * 4);
     sawFind = false;
     sawChange = false;
+    sawSearch = false;
+    sawMark = false;
+    sawMacro = false;
     cases.push({ id: `fz-${seed}-${i}`, text, cursor: { row, col }, commands: Array.from({ length: n }, () => randomCommand(rng)) });
   }
   return cases;
@@ -140,20 +177,46 @@ interface Snapshot {
   reg: string;
   regType: 'char' | 'line' | 'block';
   error?: string;
+  steps?: StepSnapshot[];
 }
 
 function runEngine(c: FuzzCase): Snapshot {
-  let s: VimEditorState = { lines: c.text.split('\n'), cursor: { line: c.cursor.row, col: c.cursor.col }, mode: 'NORMAL' };
+  // Neovim 쪽과 같게 '.' 를 아무 일도 하지 않는 i<Esc> 로 시작합니다 (이전 케이스의 변경이 새지 않도록).
+  let s: VimEditorState = { lines: c.text.split('\n'), cursor: { line: c.cursor.row, col: c.cursor.col }, mode: 'NORMAL', lastChangeKeys: ['i', 'Escape'] };
+  const steps: StepSnapshot[] = [];
   try {
-    for (const cmd of c.commands) for (const k of toEngineKeys(cmd)) s = handleKey(s, k);
+    for (const cmd of c.commands) {
+      for (const k of toEngineKeys(cmd)) s = handleKey(s, k);
+      // Neovim 쪽과 같게, 명령이 끝났는데 NORMAL 이 아니면 Esc 를 누릅니다.
+      if (s.mode !== 'NORMAL') s = handleKey(s, 'Escape');
+      steps.push({ lines: s.lines, cursor: { row: s.cursor.line, col: s.cursor.col }, reg: regText(s) });
+    }
   } catch (e) {
     return { lines: [], cursor: { row: -1, col: -1 }, reg: '', regType: 'char', error: String(e) };
   }
   const entry = s.registers?.['"'];
   const type = entry?.type === 'line' ? 'line' : entry?.type === 'block' ? 'block' : 'char';
-  // Neovim 의 줄 단위 레지스터는 끝에 줄바꿈이 붙습니다.
-  const reg = entry ? String(entry.content ?? '') + (type === 'line' ? '\n' : '') : '';
-  return { lines: s.lines, cursor: { row: s.cursor.line, col: s.cursor.col }, reg, regType: entry ? type : 'char' };
+  return { lines: s.lines, cursor: { row: s.cursor.line, col: s.cursor.col }, reg: regText(s), regType: entry ? type : 'char', steps };
+}
+
+/** Neovim 의 줄 단위 레지스터는 끝에 줄바꿈이 붙습니다. */
+function regText(s: VimEditorState): string {
+  const entry = s.registers?.['"'];
+  return entry ? String(entry.content ?? '') + (entry.type === 'line' ? '\n' : '') : '';
+}
+
+interface StepSnapshot {
+  lines: string[];
+  cursor: { row: number; col: number };
+  reg: string;
+}
+
+/** 처음으로 상태가 달라진 명령의 번호 (없으면 -1). */
+function firstDivergence(a: StepSnapshot[] = [], b: StepSnapshot[] = []): number {
+  for (let i = 0; i < Math.min(a.length, b.length); i++) {
+    if (JSON.stringify(a[i].lines) !== JSON.stringify(b[i].lines) || a[i].cursor.row !== b[i].cursor.row || a[i].cursor.col !== b[i].cursor.col || a[i].reg !== b[i].reg) return i;
+  }
+  return -1;
 }
 
 // ---------------------------------------------------------------------------
@@ -166,18 +229,27 @@ vim.cmd("set tabstop=2 shiftwidth=2 expandtab noautoindent nosmartindent nosmart
 local results = {}
 for _, c in ipairs(cases) do
   vim.cmd("enew!")
+  -- '.' 는 지울 수 없으므로 아무 일도 하지 않는 i<Esc> 로 맞춥니다 (엔진도 같게 시작).
+  vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("i<Esc>", true, false, true), "ntx", false)
   -- 텍스트를 넣는 동작이 실행 취소 기록에 남지 않게 합니다.
   vim.bo.undolevels = -1
   vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.split(c.text, "\\n", { plain = true }))
   vim.bo.undolevels = 1000
-  for _, r in ipairs({ '"', '0', '1', '2', '3', '-', '/' }) do vim.fn.setreg(r, '') end
+  for _, r in ipairs({ '"', '0', '1', '2', '3', '-', '/', 'a', 'b' }) do vim.fn.setreg(r, '') end
+  vim.fn.histdel("search")
   vim.api.nvim_win_set_cursor(0, { c.cursor.row + 1, c.cursor.col })
+  local steps = {}
+  local function snap()
+    local cur = vim.api.nvim_win_get_cursor(0)
+    return { lines = vim.api.nvim_buf_get_lines(0, 0, -1, false), cursor = { row = cur[1] - 1, col = cur[2] }, reg = vim.fn.getreg('"') }
+  end
   local ok, err = pcall(function()
     for _, cmd in ipairs(c.commands) do
       vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(cmd, true, false, true), "ntx", false)
       if vim.fn.mode() ~= "n" then
         vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("<Esc>", true, false, true), "ntx", false)
       end
+      table.insert(steps, snap())
     end
   end)
   local cur = vim.api.nvim_win_get_cursor(0)
@@ -188,6 +260,7 @@ for _, c in ipairs(cases) do
     reg = vim.fn.getreg('"'),
     regType = (function() local t = vim.fn.getregtype('"'); if t == "V" then return "line" elseif t:sub(1, 1) == "\\22" then return "block" else return "char" end end)(),
     error = (not ok) and tostring(err) or nil,
+    steps = steps,
   })
 end
 local f = io.open(_G.arg[2], "w"); f:write(vim.json.encode(results)); f:close()
@@ -243,7 +316,19 @@ function main(): void {
     if (!expected || expected.error) continue; // Neovim 쪽 오류(드묾)는 비교하지 않음
     const actual = runEngine(c);
     const kinds = diffKinds(actual, expected);
-    if (kinds.length > 0) mismatches.push({ ...c, keys: c.commands.join(''), kinds, expected, actual });
+    if (kinds.length > 0) {
+      const at = firstDivergence(actual.steps, expected.steps);
+      const before = at > 0 ? expected.steps?.[at - 1] : { lines: c.text.split('\n'), cursor: c.cursor, reg: '' };
+      mismatches.push({
+        ...c,
+        keys: c.commands.join(''),
+        kinds,
+        // 처음 달라진 명령과 그 직전 상태 — 이 명령 하나만으로 재현됩니다.
+        culprit: at >= 0 ? { command: c.commands[at], before, expected: expected.steps?.[at], actual: actual.steps?.[at] } : null,
+        expected: { ...expected, steps: undefined },
+        actual: { ...actual, steps: undefined },
+      });
+    }
   }
   // 짧은 재현부터 보기 좋게 정렬
   mismatches.sort((a, b) => a.keys.length - b.keys.length);

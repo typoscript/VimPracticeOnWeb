@@ -1,4 +1,5 @@
 import { VimEditorState } from './types';
+import { clampCursor, getFirstNonBlankCol } from './cursor';
 import { pushUndoSnapshot } from './operators';
 import { getOptions } from './setEngine';
 import { parseWhichwrapFlags, hasFormatOption, extractCommentPrefix } from './setOptionsCore';
@@ -54,19 +55,19 @@ export function joinLines(state: VimEditorState, count = 1, insertSpace = true):
       }
     }
     if (!insertSpace) {
-      if (i === currentLineIdx + 1) firstJoinCol = currentJoined.length;
+      firstJoinCol = currentJoined.length;
       currentJoined += nextLineTrimmed;
     } else {
       if (currentJoined.length === 0) {
         currentJoined = nextLineTrimmed;
-        if (i === currentLineIdx + 1) firstJoinCol = 0;
+        firstJoinCol = 0;
       } else if (nextLineTrimmed.length === 0) {
-        if (i === currentLineIdx + 1) firstJoinCol = currentJoined.length;
+        firstJoinCol = currentJoined.length;
       } else if (currentJoined.endsWith(' ')) {
-        if (i === currentLineIdx + 1) firstJoinCol = currentJoined.length - 1;
+        firstJoinCol = currentJoined.length - 1;
         currentJoined += nextLineTrimmed;
       } else {
-        if (i === currentLineIdx + 1) firstJoinCol = currentJoined.length;
+        firstJoinCol = currentJoined.length;
         currentJoined += ' ' + nextLineTrimmed;
       }
     }
@@ -78,6 +79,7 @@ export function joinLines(state: VimEditorState, count = 1, insertSpace = true):
     ...state.lines.slice(maxJoinLine + 1),
   ];
 
+  // Vim: 커서는 마지막으로 이어 붙인 지점에 둡니다 (3J 는 두 번째 이음 자리).
   const targetCol = Math.max(0, Math.min(firstJoinCol, Math.max(0, currentJoined.length - 1)));
 
   return {
@@ -158,19 +160,33 @@ function rot13(ch: string): string {
  */
 export function changeCaseVisual(
   state: VimEditorState,
-  type: CaseType
+  type: CaseType,
+  /** 연산 후 커서 (기본: Vim 처럼 선택 영역의 시작). 실행 취소도 이 위치로 돌아옵니다. */
+  cursorAfter?: { line: number; col: number }
 ): VimEditorState {
   if (!state.visualAnchor) {
     return { ...state, mode: 'NORMAL', pendingKeys: undefined };
   }
 
-  const stateWithUndo = pushUndoSnapshot(state);
   const anchor = state.visualAnchor;
   const cursor = state.cursor;
   const mode = state.mode;
 
   const minLine = Math.min(anchor.line, cursor.line);
   const maxLine = Math.max(anchor.line, cursor.line);
+
+  // Vim: 연산 전 커서를 영역 시작으로 옮긴 뒤 실행 취소 지점을 저장합니다 (u 가 이 위치로 돌아옴).
+  // 줄 단위(V)는 시작 줄의 0열, 블록(Ctrl-v)은 왼쪽 위 모서리, 문자 단위는 앞쪽 끝입니다.
+  const startCursor =
+    cursorAfter ??
+    (mode === 'VISUAL_LINE' || mode === 'SELECT_LINE'
+      ? { line: minLine, col: 0 }
+      : mode === 'VISUAL_BLOCK' || mode === 'SELECT_BLOCK'
+        ? { line: minLine, col: Math.min(anchor.col, cursor.col) }
+        : anchor.line < cursor.line || (anchor.line === cursor.line && anchor.col <= cursor.col)
+          ? anchor
+          : cursor);
+  const stateWithUndo = pushUndoSnapshot({ ...state, cursor: { ...startCursor } });
 
   const newLines = [...state.lines];
 
@@ -196,14 +212,10 @@ export function changeCaseVisual(
     newLines[l] = chars.join('');
   }
 
-  const startCursor = anchor.line < cursor.line || (anchor.line === cursor.line && anchor.col <= cursor.col)
-    ? anchor
-    : cursor;
-
   return {
     ...stateWithUndo,
     lines: newLines,
-    cursor: { ...startCursor },
+    cursor: clampCursor(newLines, startCursor, 'NORMAL'),
     mode: 'NORMAL',
     visualAnchor: undefined,
     pendingKeys: undefined,
@@ -235,7 +247,13 @@ export function executeCaseMotion(
       visualAnchor: { line: state.cursor.line, col: 0 },
       cursor: { line: endLine, col: 0 },
     };
-    return changeCaseVisual(visualState, caseType);
+    // Vim nv_lineop: 모션 끝은 (끝 줄, 첫 비공백)이고 연산 후 커서는 원래 위치와 그중 앞쪽입니다.
+    // 그래서 guu 는 첫 비공백(커서가 그 뒤에 있으면), 4guu 는 원래 열에 남습니다.
+    const lineStart = state.cursor.line;
+    const fnb = getFirstNonBlankCol(state.lines[lineStart] ?? '');
+    const cursorAfter =
+      endLine > lineStart ? { line: lineStart, col: state.cursor.col } : { line: lineStart, col: Math.min(state.cursor.col, fnb) };
+    return changeCaseVisual(visualState, caseType, cursorAfter);
   }
 
   // 2. 모션에 따른 대상 좌표 계산
@@ -477,7 +495,10 @@ export function indentVisual(
     newLines[i] = shiftLineIndent(newLines[i], direction, sw, ts, et, sr, 1);
   }
 
-  const newCursor = moveToFirstNonBlank(newLines, { line: minLine, col: 0 });
+  // Vim op_shift: beginline(BL_SOL | BL_FIX) — 'nostartofline' 이면 비주얼을 끝낸 커서 열(curswant)을 유지
+  const newCursor = opts.startofline
+    ? moveToFirstNonBlank(newLines, { line: minLine, col: 0 })
+    : clampCursor(newLines, { line: minLine, col: state.cursor.col }, 'NORMAL');
 
   return {
     ...stateWithUndo,
