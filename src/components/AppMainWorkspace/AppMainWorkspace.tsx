@@ -12,6 +12,7 @@ import { ActionTimelinePanel } from '../ActionTimelinePanel/ActionTimelinePanel'
 import { AppTab } from '../AppHeader/AppHeader';
 import { EditorViewport } from '../EditorViewport/EditorViewport';
 import { VimEditorState, VimMode, computeSearchCount, parseGitConflicts } from '../../vim-engine';
+import { getReturnToNormalKeys } from '../../utils/returnToNormalKeys';
 import { Mission } from '../../types/mission';
 import { LessonProgress } from '../../utils/storage';
 import { t, i18nKey } from '../../i18n';
@@ -703,7 +704,8 @@ export const AppMainWorkspace: React.FC<AppMainWorkspaceProps> = ({
                       tabIndex={-1}
                       onClick={() => {
                         editor.onFocus();
-                        for (const k of chip.keys) {
+                        const keys = [...getReturnToNormalKeys(editorState), ...chip.keys];
+                        for (const k of keys) {
                           editor.processKeyInput(k);
                         }
                       }}

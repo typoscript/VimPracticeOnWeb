@@ -163,3 +163,63 @@ describe('gitsigns.nvim 스타일 Git Hunk 엔진 (]h/[h, :Gitsigns)', () => {
     }
   });
 });
+
+describe('Gitsigns 기준선은 파일별로 분리된다 (버퍼·Oil·터미널 전환)', () => {
+  const typeEx = (state: ReturnType<typeof createVimState>, cmd: string) =>
+    runKeys(state, [':', ...cmd.split(''), 'Enter']);
+
+  function sandboxLike(): ReturnType<typeof createVimState> {
+    const s = createVimState(['const a = 1;', 'const b = 2;'], { line: 0, col: 0 });
+    return {
+      ...s,
+      primaryFilename: 'main.ts',
+      gitBaseLines: ['const a = 0;', 'const b = 2;'],
+      virtualFiles: { 'main.ts': ['const a = 1;', 'const b = 2;'], 'other.ts': ['x', 'y'] },
+    };
+  }
+
+  it('편집하지 않은 :Oil 버퍼에는 Git Hunk 가 없고, 닫으면 원래 파일의 Hunk 가 돌아온다', () => {
+    let s = sandboxLike();
+    expect(getGitHunks(s).length).toBe(1);
+
+    s = typeEx(s, 'Oil');
+    expect(s.oilSession?.isOpen).toBe(true);
+    expect(getGitHunks(s)).toEqual([]);
+    s = runKeys(s, [']', 'h']);
+    expect(s.bell).toBe(true);
+
+    s = typeEx(s, 'q');
+    expect(s.oilSession?.isOpen).toBeFalsy();
+    expect(s.primaryFilename).toBe('main.ts');
+    expect(getGitHunks(s).length).toBe(1);
+  });
+
+  it(':e 로 다른 파일로 가면 이전 파일 기준선과 비교하지 않고, Ctrl-^ 로 돌아오면 복원된다', () => {
+    let s = sandboxLike();
+    s = typeEx(s, 'e other.ts');
+    expect(s.primaryFilename).toBe('other.ts');
+    expect(getGitHunks(s)).toEqual([]);
+
+    // 다른 파일은 자기 저장본(savedLines) 기준으로 Hunk 를 계산
+    s = runKeys(s, ['x']);
+    expect(getGitHunks(s).length).toBe(1);
+
+    s = runKeys(s, ['Ctrl-^']);
+    expect(s.primaryFilename).toBe('main.ts');
+    expect(s.gitBaseLines).toEqual(['const a = 0;', 'const b = 2;']);
+    expect(getGitHunks(s).length).toBe(1);
+
+    s = runKeys(s, ['Ctrl-^']);
+    expect(s.primaryFilename).toBe('other.ts');
+    expect(s.gitBaseLines).toBeUndefined();
+    expect(getGitHunks(s).length).toBe(1);
+  });
+
+  it('터미널 버퍼(term://)에는 Git Hunk 가 없고 기준선도 캡처하지 않는다', () => {
+    let s = sandboxLike();
+    s = typeEx(s, 'terminal');
+    expect(s.primaryFilename?.startsWith('term://')).toBe(true);
+    s = runKeys(s, ['l', 's', 'Enter']);
+    expect(getGitHunks(s)).toEqual([]);
+  });
+});

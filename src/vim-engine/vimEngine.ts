@@ -22,6 +22,7 @@ import {
 import { handleFuzzyFinderKey } from './fuzzyFinder';
 import { handleHelpKey } from './helpEngine';
 import { syncLiveLspDiagnostics } from './lspEngine';
+import { getEffectiveGitBaseLines, syncGitBaseOwnership } from './gitSignsEngine';
 import { handleLspRenameKey, handleLspCodeActionKey } from './lspRefactorEngine';
 import { handleFlashJumpKey } from './flashJumpEngine';
 import { handleMultiCursorKey } from './multiCursorEngine';
@@ -459,18 +460,27 @@ export function rawHandleKey(
     };
   }
 
+  // 현재 파일이 바뀌면 Gitsigns 기준선을 원래 파일 버퍼에 보관하고 새 파일의 기준선을 불러옴
+  nextState = syncGitBaseOwnership(state, nextState);
+
   // Gitsigns 기준선(gitBaseLines) 최초 버퍼 편집 시 자동 캡처
   if (
-    !state.gitBaseLines &&
+    !getEffectiveGitBaseLines(state) &&
     !nextState.gitBaseLines &&
     nextState.lines !== state.lines &&
     (nextState.currentBufferId ?? 1) === (state.currentBufferId ?? 1) &&
+    nextState.primaryFilename === state.primaryFilename &&
+    !/^[a-z]+:\/\//i.test(nextState.primaryFilename ?? '') &&
     !nextState.netrw?.isOpen &&
     !nextState.oilSession?.isOpen &&
     !nextState.helpSession?.isOpen &&
     !nextState.cmdlineWindow
   ) {
-    nextState = { ...nextState, gitBaseLines: [...state.lines] };
+    nextState = {
+      ...nextState,
+      gitBaseLines: [...state.lines],
+      gitBaseFilename: state.primaryFilename || 'source.ts',
+    };
   }
 
   // 실시간 LSP 진단 재계산 및 커서 이동/모드 전환 시 열린 LSP 호버·Git Hunk 미리보기 자동 닫기

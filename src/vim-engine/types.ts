@@ -955,6 +955,8 @@ export interface VimEditorState {
   diffHunks?: DiffHunk[];
   /** Gitsigns 기준 원본 스냅샷 (최초 편집 시 자동 캡처 또는 외부 주입) */
   gitBaseLines?: string[];
+  /** gitBaseLines 가 속한 파일명 (버퍼·특수 버퍼 전환 시 기준선이 다른 파일로 새지 않도록 구분) */
+  gitBaseFilename?: string;
   /** :Gitsigns stage_hunk 취소를 위한 이전 gitBaseLines 스택 */
   gitBaseHistory?: string[][];
   /** :Gitsigns preview_hunk 플로팅 미리보기 세션 */

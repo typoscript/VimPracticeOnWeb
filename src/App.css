@@ -555,8 +555,35 @@
     align-items: stretch;
   }
 
+  .app-nav-bar > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
   .nav-tabs {
     justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .nav-tab-btn {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.82rem;
+  }
+
+  .sandbox-top-row > *,
+  .sandbox-info {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .sandbox-info {
+    flex-wrap: wrap;
+  }
+
+  .sandbox-byoc-btn {
+    white-space: normal;
+    max-width: 100%;
+    text-align: center;
   }
 
   .nav-actions {

@@ -214,3 +214,30 @@
     display: none;
   }
 }
+
+/* 좁은 폰 화면: 키캡이 줄 너비에 맞게 줄어들어 가로 스크롤이 생기지 않도록 함 */
+@media (max-width: 480px) {
+  .virtual-keyboard-panel {
+    padding: 0.6rem 0.5rem;
+  }
+  .keyboard-layout {
+    padding: 4px;
+  }
+  .keyboard-row {
+    gap: 2px;
+  }
+  .vkey {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 2px 1px;
+    overflow: hidden;
+  }
+  .vkey.width-wide {
+    flex-grow: 1.5;
+    min-width: 0;
+  }
+  .vkey.width-extra-wide {
+    flex-grow: 2;
+    min-width: 0;
+  }
+}

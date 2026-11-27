@@ -4,6 +4,7 @@ import { AppHeader, AppTab } from './components/AppHeader/AppHeader';
 import { AppModals } from './components/AppModals/AppModals';
 import { AppMainWorkspace } from './components/AppMainWorkspace/AppMainWorkspace';
 import { VimEditorState, handleKey } from './vim-engine';
+import { getReturnToNormalKeys } from './utils/returnToNormalKeys';
 import { Mission } from './types/mission';
 import { MISSIONS } from './data/missions';
 import { sandboxInitialLines } from './data/sandbox';
@@ -474,7 +475,7 @@ export function App() {
           onExecuteKeys: (keys) => {
             setEditorState((prev) => {
               let next: VimEditorState = { ...prev, showCheatsheetModal: false };
-              for (const k of keys) {
+              for (const k of [...getReturnToNormalKeys(prev), ...keys]) {
                 next = handleKey(next, k);
               }
               return next;

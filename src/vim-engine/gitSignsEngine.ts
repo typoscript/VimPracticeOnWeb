@@ -5,17 +5,83 @@ import { pushUndoSnapshot } from './operators';
 import { getOptions } from './setEngine';
 import { msg } from './messages';
 
+type GitBaseState = Pick<
+  VimEditorState,
+  | 'gitBaseLines'
+  | 'gitBaseFilename'
+  | 'buffers'
+  | 'currentBufferId'
+  | 'primaryFilename'
+  | 'oilSession'
+  | 'helpSession'
+>;
+
+/** 기준선 소유 파일 비교에 쓰는 현재 파일 키 (`ensureBuffers` 기본 이름과 동일) */
+function currentGitFileKey(state: Pick<VimEditorState, 'primaryFilename'>): string {
+  return state.primaryFilename || 'source.ts';
+}
+
+/** Oil·도움말·터미널처럼 Git 추적 대상이 아닌 특수 버퍼가 활성인지 여부 */
+function isNonGitBuffer(state: GitBaseState): boolean {
+  if (state.oilSession?.isOpen || state.helpSession?.isOpen) return true;
+  const name = state.primaryFilename ?? '';
+  return /^[a-z]+:\/\//i.test(name);
+}
+
 /**
  * 현재 버퍼의 Git 기준선(HEAD 스냅샷) 줄 배열을 반환합니다.
- * 명시적 gitBaseLines 가 없으면 활성 버퍼의 gitBaseLines / savedLines 를 사용합니다.
+ * 명시적 gitBaseLines 가 현재 파일 소유이면 그것을, 아니면 활성 버퍼의 gitBaseLines / savedLines 를 사용합니다.
+ * Oil·도움말·터미널 같은 특수 버퍼에는 기준선이 없습니다.
  */
-export function getEffectiveGitBaseLines(
-  state: Pick<VimEditorState, 'gitBaseLines' | 'buffers' | 'currentBufferId'>
-): string[] | null {
-  if (state.gitBaseLines) return state.gitBaseLines;
+export function getEffectiveGitBaseLines(state: GitBaseState): string[] | null {
+  if (isNonGitBuffer(state)) return null;
+  const fileKey = currentGitFileKey(state);
+  if (
+    state.gitBaseLines &&
+    (state.gitBaseFilename === undefined || state.gitBaseFilename === fileKey)
+  ) {
+    return state.gitBaseLines;
+  }
   const curId = state.currentBufferId ?? 1;
   const activeBuf = state.buffers?.find((b) => b.id === curId);
-  return activeBuf?.gitBaseLines ?? activeBuf?.savedLines ?? null;
+  if (!activeBuf || (state.primaryFilename && activeBuf.name !== state.primaryFilename)) return null;
+  return activeBuf.gitBaseLines ?? activeBuf.savedLines ?? null;
+}
+
+/**
+ * 키 처리 후 현재 파일이 바뀌었으면 최상위 gitBaseLines 를 원래 파일의 버퍼에 보관하고,
+ * 새 파일 버퍼에 보관된 기준선을 최상위로 불러옵니다 (`prev` 는 키 처리 전 상태).
+ */
+export function syncGitBaseOwnership(prev: VimEditorState, next: VimEditorState): VimEditorState {
+  const fileKey = currentGitFileKey(next);
+  if (!next.gitBaseLines && !next.gitBaseFilename) {
+    if (currentGitFileKey(prev) === fileKey) return next;
+    const curBuf = next.buffers?.find(
+      (b) => b.id === (next.currentBufferId ?? 1) && b.name === fileKey
+    );
+    return curBuf?.gitBaseLines
+      ? { ...next, gitBaseLines: [...curBuf.gitBaseLines], gitBaseFilename: fileKey }
+      : next;
+  }
+  const owner = next.gitBaseFilename ?? currentGitFileKey(prev);
+  if (owner === fileKey) {
+    return next.gitBaseFilename === owner ? next : { ...next, gitBaseFilename: owner };
+  }
+
+  let buffers = next.buffers;
+  if (next.gitBaseLines && buffers?.some((b) => b.name === owner)) {
+    const stashed = next.gitBaseLines;
+    buffers = buffers.map((b) => (b.name === owner ? { ...b, gitBaseLines: [...stashed] } : b));
+  }
+  const curId = next.currentBufferId ?? 1;
+  const target = buffers?.find((b) => b.id === curId && b.name === fileKey);
+  const loaded = target?.gitBaseLines;
+  return {
+    ...next,
+    buffers,
+    gitBaseLines: loaded ? [...loaded] : undefined,
+    gitBaseFilename: loaded ? fileKey : undefined,
+  };
 }
 
 /**
@@ -57,9 +123,7 @@ export function computeGitHunks(baseLines: string[], currentLines: string[]): Gi
 /**
  * 현재 에디터 상태의 Git Hunk 목록을 반환합니다.
  */
-export function getGitHunks(
-  state: Pick<VimEditorState, 'lines' | 'gitBaseLines' | 'buffers' | 'currentBufferId'>
-): GitHunk[] {
+export function getGitHunks(state: GitBaseState & Pick<VimEditorState, 'lines'>): GitHunk[] {
   const baseLines = getEffectiveGitBaseLines(state);
   if (!baseLines) return [];
   return computeGitHunks(baseLines, state.lines);
@@ -68,9 +132,7 @@ export function getGitHunks(
 /**
  * 에디터 거터 렌더링용 줄별 Git Sign 맵(lineIndex -> 'add' | 'change' | 'delete')을 생성합니다.
  */
-export function getGitLineSigns(
-  state: Pick<VimEditorState, 'lines' | 'gitBaseLines' | 'buffers' | 'currentBufferId'>
-): Map<number, 'add' | 'change' | 'delete'> {
+export function getGitLineSigns(state: GitBaseState & Pick<VimEditorState, 'lines'>): Map<number, 'add' | 'change' | 'delete'> {
   const signs = new Map<number, 'add' | 'change' | 'delete'>();
   const hunks = getGitHunks(state);
   for (const h of hunks) {
@@ -298,6 +360,7 @@ export function stageGitHunk(state: VimEditorState): VimEditorState {
   return {
     ...state,
     gitBaseLines: nextBaseLines,
+    gitBaseFilename: currentGitFileKey(state),
     gitBaseHistory: [...prevHistory, [...baseLines]].slice(-30),
     gitHunkPreview: null,
     commandMessage: msg('[Gitsigns] Hunk #{id} 스테이징 완료', { id: hunk.id }),
@@ -321,6 +384,7 @@ export function undoStageGitHunk(state: VimEditorState): VimEditorState {
   return {
     ...state,
     gitBaseLines: [...prevBase],
+    gitBaseFilename: currentGitFileKey(state),
     gitBaseHistory: history.slice(0, -1),
     gitHunkPreview: null,
     commandMessage: msg('[Gitsigns] 직전 Hunk 스테이징을 취소했습니다'),
