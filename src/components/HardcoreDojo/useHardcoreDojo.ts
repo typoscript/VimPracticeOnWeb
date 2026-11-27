@@ -25,10 +25,8 @@ import {
   LessonProgress,
 } from '../../utils/storage';
 import { loadUserAnalytics } from '../../utils/analyticsStorage';
-import {
-  buildWeaknessDrillPlan,
-  WeaknessDrillPlan,
-} from '../../utils/weaknessDrillAnalyzer';
+import { buildWeaknessDrillPlan } from '../../utils/weaknessDrillPlan';
+import type { WeaknessDrillPlan } from '../../utils/weaknessDrillAnalyzer';
 import { t } from '../../i18n';
 
 export interface UseHardcoreDojoOptions {

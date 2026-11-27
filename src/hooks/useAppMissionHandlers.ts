@@ -1,11 +1,7 @@
 import { useCallback, useState, Dispatch, SetStateAction, MutableRefObject } from 'react';
 import { VimEditorState, editBuffer } from '../vim-engine';
-import {
-  downloadCurrentBuffer,
-  downloadWorkspaceAsZip,
-  mountLocalFilesIntoState,
-  readLocalFiles,
-} from '../utils/sandboxLocalFiles';
+// 로컬 파일 읽기·내보내기·ZIP 생성 모듈은 자유 연습장에서 버튼을 누를 때만 불러옵니다 (첫 화면 번들 경량화)
+const loadSandboxFiles = () => import('../utils/sandboxLocalFiles');
 import { Mission } from '../types/mission';
 import { MISSIONS } from '../data/missions';
 import { AntiPatternDetector } from '../utils/antiPatternDetector';
@@ -142,6 +138,7 @@ export function useAppMissionHandlers({
 
   const handleImportLocalFiles = useCallback(
     async (files: FileList | File[]) => {
+      const { readLocalFiles, mountLocalFilesIntoState } = await loadSandboxFiles();
       const { loaded, skipped } = await readLocalFiles(files);
       if (loaded.length === 0) {
         if (skipped.length > 0) {
@@ -180,7 +177,8 @@ export function useAppMissionHandlers({
     [handleStopGhostReplay, editorStateRef, resetSessionWithState, setCoachingMessage]
   );
 
-  const handleExportCurrentFile = useCallback(() => {
+  const handleExportCurrentFile = useCallback(async () => {
+    const { downloadCurrentBuffer } = await loadSandboxFiles();
     const payload = downloadCurrentBuffer(editorStateRef.current);
     setCoachingMessage(
       t('💾 "{filename}" ({lines}줄) 로컬 파일로 내보냈습니다.', {
@@ -190,7 +188,8 @@ export function useAppMissionHandlers({
     );
   }, [editorStateRef, setCoachingMessage]);
 
-  const handleExportWorkspaceZip = useCallback(() => {
+  const handleExportWorkspaceZip = useCallback(async () => {
+    const { downloadWorkspaceAsZip } = await loadSandboxFiles();
     const result = downloadWorkspaceAsZip(editorStateRef.current);
     setCoachingMessage(
       t('📦 워크스페이스 {count}개 파일을 "{filename}" 으로 내보냈습니다.', {

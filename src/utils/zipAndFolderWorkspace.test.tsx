@@ -110,7 +110,7 @@ describe('자유 연습장 폴더 열기 & 멀티파일 .zip 내보내기', () =
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
     fireEvent.click(screen.getByTestId('sandbox-export-zip-btn'));
-    expect(createSpy).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(createSpy).toHaveBeenCalledTimes(1));
     expect(clickSpy).toHaveBeenCalledTimes(1);
     expect(revokeSpy).toHaveBeenCalledWith('blob:workspace-zip');
 

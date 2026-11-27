@@ -4,9 +4,7 @@ import { ZipEntryInput, buildZipArchive } from './zipBuilder';
 /** 로컬 파일 불러오기 1개당 최대 크기 (512 KB) */
 export const MAX_LOCAL_FILE_BYTES = 512 * 1024;
 
-/** 파일 선택 다이얼로그 기본 허용 확장자 */
-export const LOCAL_FILE_ACCEPT =
-  '.ts,.tsx,.js,.jsx,.mjs,.cjs,.py,.rs,.go,.java,.c,.cc,.cpp,.h,.hpp,.cs,.rb,.php,.swift,.kt,.sh,.bash,.zsh,.vim,.lua,.html,.htm,.css,.scss,.less,.json,.yaml,.yml,.toml,.xml,.sql,.md,.mdx,.txt,.env,.gitignore';
+export { LOCAL_FILE_ACCEPT } from './sandboxFileAccept';
 
 export interface LoadedLocalFile {
   name: string;

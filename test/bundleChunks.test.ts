@@ -51,8 +51,13 @@ describe('Vite 번들 청크 분리 규칙 (resolveManualChunk)', () => {
     expect(resolveManualChunk('/repo/node_modules/react-dom/client.js')).toBe('react-vendor');
     expect(resolveManualChunk('/repo/src/i18n/en.ts')).toBe('i18n-en-ui');
     expect(resolveManualChunk('/repo/src/i18n/enContent.ts')).toBe('i18n-en-content');
+    expect(resolveManualChunk('/repo/src/i18n/enContentLessons1to79.ts')).toBe('i18n-en-content-1');
+    expect(resolveManualChunk('/repo/src/i18n/enContentLessons80Plus.ts')).toBe('i18n-en-content-2');
     expect(resolveManualChunk('/repo/src/data/missions.ts')).toBe('curriculum');
     expect(resolveManualChunk('/repo/src/data/missions/part1Basics.ts')).toBe('curriculum');
+    expect(resolveManualChunk('/repo/src/data/capstoneProjects.ts')).toBe('capstone-data');
+    expect(resolveManualChunk('/repo/src/components/RegisterInspector/RegisterInspector.tsx')).toBe('app-panels');
+    expect(resolveManualChunk('/repo/src/components/Editor/Editor.tsx')).toBeUndefined();
     expect(resolveManualChunk('/repo/src/App.tsx')).toBeUndefined();
   });
 

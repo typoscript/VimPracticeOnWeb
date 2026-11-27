@@ -5,7 +5,6 @@ import { VimEditorState, VimMode, handleKey } from '../vim-engine';
 import { Mission } from '../types/mission';
 import { saveLessonRecord, LessonProgress } from '../utils/storage';
 import { saveCapstoneCompletion } from '../data/capstoneProjects';
-import { recordLessonSrsReview } from '../utils/srsScheduler';
 import { AntiPatternDetector } from '../utils/antiPatternDetector';
 import { HardcoreGuard } from '../utils/hardcoreGuard';
 import { recordKeyInputStats, recordAntiPatternDetection } from '../utils/analyticsStorage';
@@ -105,7 +104,11 @@ export function useAppKeyAndCompletionEffects({
       playSuccessSound();
       if (currentTab === 'course') {
         const rating = calculateStars(keystrokeCount, currentMission.par);
-        recordLessonSrsReview(currentMission.id, rating.starCount);
+        // 복습 일정(SRS) 계산·약점 분석 모듈은 레슨 완료 시에만 불러옵니다 (첫 화면 번들 경량화)
+        const missionId = currentMission.id;
+        void import('../utils/srsScheduler').then(({ recordLessonSrsReview }) =>
+          recordLessonSrsReview(missionId, rating.starCount)
+        );
       } else if (currentTab === 'custom' && customMission?.capstoneId) {
         saveCapstoneCompletion(customMission.capstoneId, keystrokeCount);
       }

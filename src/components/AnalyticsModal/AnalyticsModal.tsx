@@ -5,7 +5,7 @@ import {
   calculateProficiency,
   getTopCommands,
 } from '../../utils/analyticsStorage';
-import { buildWeaknessDrillPlan } from '../../utils/weaknessDrillAnalyzer';
+import { buildWeaknessDrillPlan } from '../../utils/weaknessDrillPlan';
 import { buildSrsReviewQueue, loadSrsSchedule } from '../../utils/srsScheduler';
 import { MISSIONS } from '../../data/missions';
 import { KeystrokeHeatmap } from './KeystrokeHeatmap';

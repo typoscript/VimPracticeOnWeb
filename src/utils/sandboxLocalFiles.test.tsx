@@ -153,7 +153,7 @@ describe('자유 연습장(Sandbox) 로컬 파일 드래그&드롭 & 내보내�
     const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
 
     fireEvent.click(screen.getByTestId('sandbox-export-file-btn'));
-    expect(createUrlSpy).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(createUrlSpy).toHaveBeenCalledTimes(1));
     expect(clickSpy).toHaveBeenCalledTimes(1);
     expect(revokeUrlSpy).toHaveBeenCalledWith('blob:export-notes');
 

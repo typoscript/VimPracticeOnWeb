@@ -1,9 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import {
-  analyzeWeaknesses,
-  buildWeaknessDrillPlan,
-  ANTI_PATTERN_DRILL_BANK,
-} from './weaknessDrillAnalyzer';
+import { analyzeWeaknesses } from './weaknessDrillAnalyzer';
+import { buildWeaknessDrillPlan, ANTI_PATTERN_DRILL_BANK } from './weaknessDrillPlan';
 import { getDefaultAnalytics } from './analyticsStorage';
 import { createVimState, sendKeys } from '../vim-engine';
 

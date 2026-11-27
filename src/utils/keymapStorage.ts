@@ -1,4 +1,4 @@
-import { DEFAULT_KEYMAP_PRESETS } from './configGenerator';
+import { DEFAULT_KEYMAP_PRESETS } from './keymapPresets';
 import {
   STORAGE_KEYS,
   readStorageRaw,

@@ -1,5 +1,5 @@
 import React, { lazy, Suspense, useRef, useState } from 'react';
-import { LOCAL_FILE_ACCEPT } from '../../utils/sandboxLocalFiles';
+import { LOCAL_FILE_ACCEPT } from '../../utils/sandboxFileAccept';
 import { MissionPanel } from '../MissionPanel/MissionPanel';
 import { Keycaster } from '../Keycaster/Keycaster';
 import { DiffViewer } from '../DiffViewer/DiffViewer';
