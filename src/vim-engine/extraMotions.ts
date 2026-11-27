@@ -214,8 +214,9 @@ export function evaluateExtraMotion(
       return { target: { line: cursor.line, col: Math.max(0, Math.min(n - 1, len - 1)) }, kind: 'exclusive' };
     }
     case 'g_': {
-      const line = cursor.line + n - 1;
-      if (line > last) return null;
+      // Vim cursor_down: 마지막 줄에서 더 내려갈 수 없으면 실패, 그 밖에는 마지막 줄에서 멈춤.
+      if (n > 1 && cursor.line >= last) return null;
+      const line = Math.min(last, cursor.line + n - 1);
       const text = lines[line] ?? '';
       const trimmedLen = text.replace(/\s+$/, '').length;
       return { target: { line, col: Math.max(0, trimmedLen - 1) }, kind: 'inclusive' };
@@ -223,8 +224,15 @@ export function evaluateExtraMotion(
     case 'ge':
     case 'gE': {
       let pos: CursorPosition | null = cursor;
-      for (let i = 0; i < n && pos; i++) pos = wordEndBackward(lines, pos, key === 'gE');
-      return pos ? { target: pos, kind: 'inclusive' } : null;
+      let lastPos: CursorPosition = cursor;
+      for (let i = 0; i < n && pos; i++) {
+        pos = wordEndBackward(lines, pos, key === 'gE');
+        if (pos) lastPos = pos;
+      }
+      if (pos) return { target: pos, kind: 'inclusive' };
+      // Vim: 앞쪽 단어 끝이 모자라면 버퍼 맨 앞(0,0)에서 멈춥니다. 이미 맨 앞이면 실패.
+      if (lastPos.line === 0 && lastPos.col === 0) return null;
+      return { target: { line: 0, col: 0 }, kind: 'inclusive' };
     }
     case ')':
     case '(': {

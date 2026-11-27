@@ -48,6 +48,8 @@ describe('keyReferenceCatalog', () => {
     expect(lessonsForKey('Ctrl-w', MISSIONS, 'normal').map((m) => m.id)).toContain(24);
     expect(lessonsForKey('Ctrl-u', MISSIONS, 'insert').map((m) => m.id)).not.toContain(102);
     expect(lessonsForKey('o', MISSIONS, 'visual').length).toBeGreaterThan(0);
+    // 노멀 탭의 Esc 는 입력 모드에서 누른 Esc 도 연습으로 칩니다.
+    expect(lessonsForKey('Esc', MISSIONS, 'normal').length).toBeGreaterThan(0);
   });
 
   it('turns key events into reference key names', () => {

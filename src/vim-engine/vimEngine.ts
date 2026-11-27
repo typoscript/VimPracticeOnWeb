@@ -530,6 +530,8 @@ export function handleKey(
 ): VimEditorState {
   // bell은 "직전 키가 실패했다"는 일시적 신호이므로 매 키 입력마다 새로 시작합니다.
   const input = withoutBell(state);
+  const overflow = doubledLineOpOverflow(input, key);
+  if (overflow) return overflow;
   let nextState: VimEditorState;
   if (getVimEngineConfig().devChecks) {
     deepFreeze(input);
@@ -643,6 +645,29 @@ function keepRepeatOnFailure(prev: VimEditorState, next: VimEditorState, key: st
   }
   if (next.lastChangeKeys !== prev.lastChangeKeys) return { ...next, lastChangeKeys: prev.lastChangeKeys };
   return next;
+}
+
+/** 두 번 눌러 현재 줄에 쓰는 줄 단위 연산 (`>>`, `g~~`, `gUgU`, `gcc` …): 대기 키 → 마지막 키 */
+const DOUBLED_LINE_OPS = /^([1-9][0-9]*)?(>|<|=|g~g?|gUg?|gug?|g\?g?|gq|gw|gc)([1-9][0-9]*)?$/;
+const DOUBLED_LAST_KEY: Record<string, string> = { '>': '>', '<': '<', '=': '=', 'g~': '~', gU: 'U', gu: 'u', 'g?': '?', gq: 'q', gw: 'w', gc: 'c' };
+
+/**
+ * Vim nv_lineop → cursor_down(count-1): 커서가 이미 마지막 줄인데 [count] 가 2 이상이면 줄 단위 연산은 실패합니다.
+ * (마지막 줄이 아니면 마지막 줄까지만 적용 — 각 연산의 기존 처리에 맡깁니다.) dd/yy/cc 는 따로 처리합니다.
+ */
+function doubledLineOpOverflow(state: VimEditorState, key: string): VimEditorState | null {
+  if (state.mode !== 'NORMAL' || !state.pendingKeys) return null;
+  const m = DOUBLED_LINE_OPS.exec(state.pendingKeys);
+  if (!m) return null;
+  const op = m[2].replace(/g$/, '').replace(/^(g[~Uu?])g$/, '$1');
+  const base = op.length === 3 ? op.slice(0, 2) : op;
+  if (DOUBLED_LAST_KEY[base] !== key) return null;
+  const count = Number(m[1] ?? 1) * Number(m[3] ?? 1);
+  if (count < 2 || state.cursor.line < state.lines.length - 1) return null;
+  const recordingMacro = state.recordingMacro
+    ? { ...state.recordingMacro, keys: [...state.recordingMacro.keys, key] }
+    : state.recordingMacro;
+  return { ...state, pendingKeys: undefined, bell: true, recordingMacro };
 }
 
 /** `$` 뒤의 curswant: 세로 이동이 항상 줄 끝으로 갑니다 (Vim MAXCOL). */

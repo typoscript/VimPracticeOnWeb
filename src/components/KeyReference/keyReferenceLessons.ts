@@ -60,7 +60,10 @@ export function lessonsForKey(
   limit = 4
 ): Mission[] {
   const token = toMissionKeyToken(key);
-  const usesKey = (m: Mission) => Boolean(m.optimalKeys?.includes(token)) && keyUsage(m).has(`${mode}:${token}`);
+  // 노멀 탭의 Esc 는 "노멀 모드로 돌아가기" 이므로 입력·비주얼 모드에서 누른 Esc 도 연습으로 칩니다.
+  const modesToMatch: KeyReferenceMode[] = mode === 'normal' && token === 'Escape' ? ['normal', 'insert', 'visual'] : [mode];
+  const usesKey = (m: Mission) =>
+    Boolean(m.optimalKeys?.includes(token)) && modesToMatch.some((md) => keyUsage(m).has(`${md}:${token}`));
   const picked: Mission[] = [];
   const add = (m: Mission) => {
     if (picked.length < limit && !picked.includes(m) && usesKey(m)) picked.push(m);

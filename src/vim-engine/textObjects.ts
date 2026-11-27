@@ -394,6 +394,44 @@ export function getTextObjectRange(
 }
 
 /**
+ * count 번째로 커서를 감싼 괄호·태그 쌍의 범위 (Vim current_block / current_tagblock 의 [count]).
+ * 바깥쪽 쌍으로 가려면 지금 쌍의 여는 기호 바로 앞 글자에서 다시 찾습니다. 쌍이 모자라면 null.
+ */
+function getNestedPairRange(
+  lines: string[],
+  cursor: CursorPosition,
+  objectType: TextObjectType,
+  count: number
+): TextObjectRange | null {
+  const around = `a${objectType.slice(1)}` as TextObjectType;
+  let outer = getTextObjectRange(lines, cursor, around);
+  for (let level = 2; level <= count; level++) {
+    if (!outer) return null;
+    const line = outer.startLine ?? cursor.line;
+    const col = outer.startCol;
+    let back: CursorPosition | null = null;
+    if (col > 0) back = { line, col: col - 1 };
+    else if (line > 0) back = { line: line - 1, col: Math.max(0, (lines[line - 1] ?? '').length - 1) };
+    if (!back) return null;
+    const next = getTextObjectRange(lines, back, around);
+    // 새 쌍이 이전 쌍을 실제로 감싸야 합니다 (커서 뒤쪽 쌍을 잡으면 실패).
+    const prevStart = { line, col };
+    const prevEnd = { line: outer.endLine ?? line, col: outer.endCol };
+    const contains =
+      next &&
+      ((next.startLine ?? back.line) < prevStart.line ||
+        ((next.startLine ?? back.line) === prevStart.line && next.startCol < prevStart.col)) &&
+      ((next.endLine ?? back.line) > prevEnd.line ||
+        ((next.endLine ?? back.line) === prevEnd.line && next.endCol > prevEnd.col));
+    if (!contains) return null;
+    outer = next;
+  }
+  if (!outer) return null;
+  const opening = { line: outer.startLine ?? cursor.line, col: outer.startCol };
+  return getTextObjectRange(lines, opening, objectType);
+}
+
+/**
  * 텍스트 객체와 연산자(d, c, y, v, =, gu, gU, g~)를 조합하여 실행합니다. (숫자 카운트 및 멀티라인 지원)
  */
 export function executeTextObjectOperator(
@@ -408,14 +446,18 @@ export function executeTextObjectOperator(
   const isStructuralBlock =
     objectType === 'af' || objectType === 'if' || objectType === 'ac' || objectType === 'ic';
   const isMiniAi = /^[ia][nl].$/.test(objectType);
-  const steps = isSentence || isStructuralBlock || isMiniAi ? 1 : count;
+  // 괄호·태그 객체의 [count] 는 count 번째로 감싼 쌍을 고릅니다 (d2i( 는 바깥 괄호 안쪽). 쌍이 모자라면 실패.
+  const isNestedPair = /^[ia][()[\]{}<>bBt]$/.test(objectType);
+  const nestedRange = isNestedPair && count > 1 ? getNestedPairRange(curState.lines, curState.cursor, objectType, count) : undefined;
+  if (nestedRange === null) return { ...curState, bell: true, pendingKeys: undefined };
+  const steps = isSentence || isStructuralBlock || isMiniAi || isNestedPair ? 1 : count;
 
   for (let step = 0; step < steps; step++) {
-    const range = isSentence
+    const range = nestedRange ?? (isSentence
       ? getSentenceObjectRange(curState.lines, curState.cursor, objectType as 'is' | 'as', count)
       : isStructuralBlock
         ? getTreesitterObjectRange(curState.lines, curState.cursor, objectType as TreesitterObjectType, count)
-        : getTextObjectRange(curState.lines, curState.cursor, objectType, count);
+        : getTextObjectRange(curState.lines, curState.cursor, objectType, count));
     if (!range) {
       // 빈 줄의 iw / iW / is 는 Vim 에서 빈 범위로 성공합니다 (ciw 는 INSERT 로 들어감).
       const emptyLineWordObject =
