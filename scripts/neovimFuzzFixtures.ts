@@ -104,6 +104,33 @@ const CASES: Case[] = [
   { id: 'search-skips-cursor-match', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 0, col: 0 }, keys: '/a<CR>' },
   { id: 'search-count', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 0, col: 0 }, keys: '2/a<CR>' },
   { id: 'search-count-lines', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 0, col: 0 }, keys: '3/e<CR>' },
+  // curswant: 세로 이동은 처음 열을 기억, $ 는 줄 끝을 기억, 다른 명령은 다시 정함
+  { id: 'curswant-jjj', text: 'a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here', cursor: { row: 0, col: 15 }, keys: 'jjj' },
+  { id: 'curswant-jjjk', text: 'a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here', cursor: { row: 0, col: 15 }, keys: 'jjjk' },
+  { id: 'curswant-dollar', text: 'a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here', cursor: { row: 0, col: 15 }, keys: '$jjj' },
+  { id: 'curswant-G', text: 'a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here', cursor: { row: 0, col: 15 }, keys: 'jG' },
+  { id: 'curswant-gg', text: 'a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here', cursor: { row: 5, col: 12 }, keys: 'kkkgg' },
+  { id: 'curswant-failed-l-keeps', text: 'a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here', cursor: { row: 0, col: 15 }, keys: 'jljjj' },
+  { id: 'curswant-x-resets', text: 'a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here', cursor: { row: 0, col: 15 }, keys: 'jxjj' },
+  { id: 'curswant-zz-keeps', text: 'a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here', cursor: { row: 0, col: 15 }, keys: 'jzzjj' },
+  // 카운트가 붙은 줄 명령, 레지스터, P
+  { id: 'count-dd-partial', text: 'a1 b1\n  a2 b2\na3 b3\na4 b4\na5 b5', cursor: { row: 3, col: 0 }, keys: '3dd' },
+  { id: 'count-D-linewise', text: 'a1 b1\n  a2 b2\na3 b3\na4 b4\na5 b5', cursor: { row: 0, col: 0 }, keys: '3D' },
+  { id: 'count-D-charwise', text: 'a1 b1\n  a2 b2\na3 b3\na4 b4\na5 b5', cursor: { row: 0, col: 3 }, keys: '3D' },
+  { id: 'count-C-last-line-fails', text: 'a1 b1\n  a2 b2\na3 b3\na4 b4\na5 b5', cursor: { row: 4, col: 0 }, keys: '3CX<Esc>' },
+  { id: 'count-cc-last-line-fails', text: 'a1 b1\n  a2 b2\na3 b3\na4 b4\na5 b5', cursor: { row: 4, col: 0 }, keys: '2ccX<Esc>' },
+  { id: 'register-append-unnamed', text: 'a1 b1\n  a2 b2\na3 b3\na4 b4\na5 b5', cursor: { row: 0, col: 0 }, keys: '"ayiw"Ayiw' },
+  { id: 'P-cursor-last-char', text: 'ab cd ef', cursor: { row: 0, col: 0 }, keys: 'yiwP' },
+  { id: 'P-count-cursor', text: 'ab cd ef', cursor: { row: 0, col: 0 }, keys: 'yiw2P' },
+  // F / T 는 배타적, y 후 커서는 범위 시작
+  { id: 'yF-exclusive', text: '  log("big", total);', cursor: { row: 0, col: 13 }, keys: 'yF(' },
+  { id: 'yT-exclusive', text: '  log("big", total);', cursor: { row: 0, col: 13 }, keys: 'yTo' },
+  { id: 'dF-exclusive', text: '  log("big", total);', cursor: { row: 0, col: 13 }, keys: 'dF(' },
+  { id: 'dT-exclusive', text: '  log("big", total);', cursor: { row: 0, col: 13 }, keys: 'dTg' },
+  { id: 'y0-cursor', text: '  log("big", total);', cursor: { row: 0, col: 13 }, keys: 'y0' },
+  { id: 'gU-g-underscore', text: '  log("big", total);', cursor: { row: 0, col: 13 }, keys: 'gUg_' },
+  { id: 'gU-ge', text: '  log("big", total);', cursor: { row: 0, col: 13 }, keys: 'gUge' },
+  { id: 'g-delete-cursor-first-nonblank', text: '  keep\nzap a\n    stay here', cursor: { row: 0, col: 3 }, keys: ':g/a/d<CR>' },
 ];
 
 const LUA = `

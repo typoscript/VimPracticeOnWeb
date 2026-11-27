@@ -179,7 +179,21 @@ export function handleNormalCommentFormatOrCaseG(
       const opKeys = [...(count > 1 ? [String(count)] : []), op, 'g', key];
       return { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys, pendingKeys: undefined };
     }
-    return { ...state, pendingKeys: undefined };
+    // gUg_ / gUge / gUgE / gUgj … : g 로 시작하는 다른 모션은 같은 모션의 y 로 범위를 구합니다.
+    const range = findOperatorRangeByYank(state, ['g', key], count, runHandleKey);
+    if (!range) return ringBell({ ...state, pendingKeys: undefined });
+    const applied = changeCaseVisual(
+      { ...state, pendingKeys: undefined, mode: range.linewise ? 'VISUAL_LINE' : 'VISUAL', visualAnchor: range.start, cursor: range.end },
+      caseTypeForOperator(op)
+    );
+    const gKeys = [...(state.pendingKeys ?? '').split(''), key];
+    return {
+      ...applied,
+      mode: 'NORMAL',
+      cursor: clampCursor(applied.lines, range.cursor, 'NORMAL'),
+      pendingKeys: undefined,
+      lastChangeKeys: isReplayingDot ? state.lastChangeKeys : gKeys,
+    };
   }
 
   // gU{motion} 등 대소문자 연산자: f/t/F/T·마크·대괄호 접두와 연산자 뒤 카운트를 모은 뒤,

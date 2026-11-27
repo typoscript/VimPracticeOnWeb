@@ -112,15 +112,16 @@ export function executeFindOperator(
   } else if (motion === 'F') {
     const targetIdx = findCharBackward(lineText, fromCol, targetChar, count);
     if (targetIdx === null) return { ...state, pendingKeys: undefined };
+    // F / T 는 배타적 모션이라 커서 아래 글자는 범위에 들지 않습니다 (Vim: yF( 는 커서 앞까지).
     minCol = targetIdx;
-    maxCol = fromCol;
+    maxCol = fromCol - 1;
   } else if (motion === 'T') {
     const targetIdx = findCharBackward(lineText, fromCol, targetChar, count);
     if (targetIdx === null) return { ...state, pendingKeys: undefined };
     const toCol = targetIdx + 1;
-    if (toCol > fromCol) return { ...state, pendingKeys: undefined };
+    if (toCol > fromCol - 1) return { ...state, pendingKeys: undefined };
     minCol = toCol;
-    maxCol = fromCol;
+    maxCol = fromCol - 1;
   } else {
     return { ...state, pendingKeys: undefined };
   }
@@ -131,6 +132,8 @@ export function executeFindOperator(
   if (operator === 'y') {
     return {
       ...state,
+      // Vim: 복사 후 커서는 범위의 시작 (yF / yT 는 왼쪽으로 이동)
+      cursor: { line: state.cursor.line, col: minCol },
       clipboard: {
         type: 'text',
         content: deletedText,

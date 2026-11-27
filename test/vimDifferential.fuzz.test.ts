@@ -14,6 +14,118 @@ const NEOVIM_VERIFIED_CASES: Record<number, { keys: string; lines: string[]; cur
     lines: ['class UserManager {', '  getUser(id) {', '  }', '  }', '}'],
     cursor: { line: 2, col: 2 },
   },
+  // P 후 커서: Vim 은 붙여넣은 텍스트의 마지막 글자에 둡니다 (CodeMirror 는 한 칸 뒤).
+  // 아래는 nvim --headless -u NONE 에 같은 키를 한 번에 입력한 결과입니다.
+  1: {
+    keys: "F \" w f = F ; y $ P",
+    lines: ["class UserManager {UserManager {","  getUser(id) {","    return { id: id, name: \"Alice\" };","  }","}"],
+    cursor: { line: 0, col: 18 },
+  },
+  12: {
+    keys: "x l y e P f i c 0 v a l Escape",
+    lines: ["valine","","third line after empty","fourth line with words"],
+    cursor: { line: 0, col: 2 },
+  },
+  18: {
+    keys: "y e P . y w P c i w X Escape y w P r y",
+    lines: ["clasclasssclassXssclassyXssclass UserManager {","  getUser(id) {","    return { id: id, name: \"Alice\" };","  }","}"],
+    cursor: { line: 0, col: 23 },
+  },
+  26: {
+    keys: "y w P d w r x .",
+    lines: ["classxlass UserManager {","  getUser(id) {","    return { id: id, name: \"Alice\" };","  }","}"],
+    cursor: { line: 0, col: 5 },
+  },
+  30: {
+    keys: "c $ f o o Escape y w P w",
+    lines: ["fooo","const count = 42;","return greeting;"],
+    cursor: { line: 1, col: 0 },
+  },
+  31: {
+    keys: "y e P f ( y w p d w r x F ,",
+    lines: ["consttconstxonst greeting = \"hello world\";","const count = 42;","return greeting;"],
+    cursor: { line: 0, col: 11 },
+  },
+  44: {
+    keys: "d 0 ^ d a \" y $ P c a w v a l Escape",
+    lines: ["first valline","","third line after empty","fourth line with words"],
+    cursor: { line: 0, col: 8 },
+  },
+  47: {
+    keys: "y w P c 0 f o o Escape d a \" d i w F a F s",
+    lines: [" class UserManager {","  getUser(id) {","    return { id: id, name: \"Alice\" };","  }","}"],
+    cursor: { line: 0, col: 0 },
+  },
+  48: {
+    keys: "d d c i w b a r Escape c 0 f o o Escape 2 ^ y w P c i w f o o Escape y y P",
+    lines: ["foo","foo"],
+    cursor: { line: 0, col: 0 },
+  },
+  52: {
+    keys: "y e P y $ P d a (",
+    lines: ["classclass UserManager {sclass UserManager {","  getUser {","    return { id: id, name: \"Alice\" };","  }","}"],
+    cursor: { line: 1, col: 9 },
+  },
+  61: {
+    keys: "e y e P ^ r _ x y w p y e P",
+    lines: ["llpha pha pha betaa beta gamma delta epsilon zeta eta theta"],
+    cursor: { line: 0, col: 8 },
+  },
+  64: {
+    keys: "d d t , y e P % f \" c e X Escape y $ p",
+    lines: ["consXX count = 42; count = 42;","return greeting;"],
+    cursor: { line: 0, col: 17 },
+  },
+  68: {
+    keys: "y w P F ; c e f o o Escape F e d e x r _",
+    lines: ["first_","","third line after empty","fourth line with words"],
+    cursor: { line: 0, col: 5 },
+  },
+  69: {
+    keys: "l t a F , y y P F a 4 G y e P",
+    lines: ["function calculateTotal(items) {","function calculateTotal(items) {","  let sum = 0;","  for  for (let i = 0; i < items.length; i++) {","    sum += items[i].price;","  }","  return sum;","}"],
+    cursor: { line: 3, col: 4 },
+  },
+  70: {
+    keys: "y e P 3 w . 3 j d a { F a",
+    lines: ["firstfirst line","","firstthird line after empty","fourth line with words"],
+    cursor: { line: 3, col: 4 },
+  },
+  74: {
+    keys: "F u f ( y $ P",
+    lines: ["first linefirst line","","third line after empty","fourth line with words"],
+    cursor: { line: 0, col: 9 },
+  },
+  75: {
+    keys: "h 4 k y $ P d a { F i y w P",
+    lines: ["alpha beta gamma delta epsilon ilon zeta eta thetaalpha beta gamma delta epsilon zeta eta theta"],
+    cursor: { line: 0, col: 30 },
+  },
+  77: {
+    keys: "$ y w P 3 j y w p t ( t u",
+    lines: ["class UserManager {{","  getUser(id) {","    return { id: id, name: \"Alice\" };","  }}","}"],
+    cursor: { line: 3, col: 3 },
+  },
+  86: {
+    keys: "y w P y e p c $ X Escape y w P l",
+    lines: ["const  consXX","const count = 42;","return greeting;"],
+    cursor: { line: 0, col: 12 },
+  },
+  90: {
+    keys: "F = y e P d d . c $ b a r Escape c e X Escape",
+    lines: ["retubaX"],
+    cursor: { line: 0, col: 6 },
+  },
+  94: {
+    keys: "x c a w v a l Escape x d a w y $ P",
+    lines: ["(items) {(items) {","  let sum = 0;","  for (let i = 0; i < items.length; i++) {","    sum += items[i].price;","  }","  return sum;","}"],
+    cursor: { line: 0, col: 8 },
+  },
+  100: {
+    keys: "c e f o o Escape F ( f i f ; y w P",
+    lines: ["foo greeting = \"hello world\";;","const count = 42;","return greeting;"],
+    cursor: { line: 0, col: 28 },
+  },
 };
 
 /**

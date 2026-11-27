@@ -890,6 +890,11 @@ export interface VimEditorState {
   /** 마지막 검색 방향 (/ = forward, ? = backward). n/N 이 따릅니다 */
   lastSearchDirection?: 'forward' | 'backward';
   /** 검색 모드 진입 전 대기 중이던 연산자 정보 (예: d/pattern/e) */
+  /**
+   * Vim curswant: j/k 등 세로 이동이 돌아가려는 열. 짧은 줄을 지나도 원래 열을 기억합니다.
+   * `$` 뒤에는 CURSWANT_EOL(줄 끝). 다른 명령이 끝나면 현재 열로 다시 정해집니다.
+   */
+  curswant?: number;
   /** [count]/pattern 의 count (연산자 없이 검색을 시작할 때) */
   searchCount?: number;
   searchOperator?: {

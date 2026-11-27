@@ -328,6 +328,7 @@ export function handleNormalDCYOperators(
 
   if (parsed.operator === 'c') {
     if (key === 'c') {
+      if (lineOpFails(state, parsed.totalCount)) return { handled: true, state: ringBell({ ...state, pendingKeys: undefined }) };
       const res = changeLine(state, parsed.totalCount);
       const cKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'c', 'c'] : ['c', 'c'];
       return {
@@ -480,11 +481,13 @@ export function handleNormalDCYOperators(
     if (key === '0') {
       const { line, col } = state.cursor;
       const yanked = (state.lines[line] ?? '').slice(0, col);
+      if (yanked.length === 0) return { handled: true, state: { ...state, pendingKeys: undefined } };
       return {
         handled: true,
         state: syncRegisters(
           state,
-          { ...state, clipboard: { type: 'text', content: yanked }, pendingKeys: undefined },
+          // Vim: 복사 후 커서는 범위의 시작 (y0 → 0열)
+          { ...state, cursor: { line, col: 0 }, clipboard: { type: 'text', content: yanked }, pendingKeys: undefined },
           true
         ),
       };

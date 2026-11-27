@@ -69,9 +69,11 @@ export function executeGlobalCommand(
     const yanked = state.lines.filter((_, idx) => deleteSet.has(idx));
     const newLines = state.lines.filter((_, idx) => !deleteSet.has(idx));
     const finalLines = newLines.length === 0 ? [''] : newLines;
+    // Vim: 마지막 :d 뒤 커서 줄의 첫 비공백
+    const gLine = Math.min(matchedIndices[0], finalLines.length - 1);
     const nextCursor = clampCursor(
       finalLines,
-      { line: Math.min(matchedIndices[0], finalLines.length - 1), col: 0 },
+      { line: gLine, col: Math.max(0, (finalLines[gLine] ?? '').search(/\S/)) },
       'NORMAL'
     );
 
@@ -223,6 +225,7 @@ export function executeExPut(
   register?: string
 ): VimEditorState {
   const reg = register ?? '"';
+  // Vim: 한 번도 쓰지 않은 레지스터는 E353, 빈 문자열로 설정된 레지스터는 빈 줄 하나를 넣습니다.
   const clip = getRegisterContent(state, reg);
   if (!clip || clip.content === undefined || clip.content === null) {
     return {
@@ -235,7 +238,8 @@ export function executeExPut(
       bell: true,
     };
   }
-  const content = Array.isArray(clip.content) ? clip.content.join('\n') : clip.content;
+  const rawContent = clip.content;
+  const content = Array.isArray(rawContent) ? rawContent.join('\n') : rawContent;
   const inserted = content.replace(/\n$/, '').split('\n');
   const idx = insertAfterLine < 0 ? 0 : before ? insertAfterLine : insertAfterLine + 1;
   const newLines = [...state.lines.slice(0, idx), ...inserted, ...state.lines.slice(idx)];

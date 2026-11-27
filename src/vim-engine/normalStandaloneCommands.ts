@@ -499,10 +499,32 @@ export function handleNormalEditingAndMotionFallback(
   if (key === 'Y' && !parsed.operator) {
     return syncRegisters(state, yankFoldOrLine(state, parsed.totalCount), true);
   }
+  // Vim: 마지막 줄에서 {count}D / C / S 는 실패합니다 (아래로 count-1 줄을 갈 수 없음).
+  if ((key === 'D' || key === 'C' || key === 'S') && !parsed.operator && parsed.totalCount > 1 && state.cursor.line >= state.lines.length - 1) {
+    return ringBell({ ...state, pendingKeys: undefined });
+  }
   if (key === 'D' && !parsed.operator) {
     const { line, col } = state.cursor;
     const cur = state.lines[line] ?? '';
     const endLine = Math.min(state.lines.length - 1, line + parsed.totalCount - 1);
+    // Vim op_delete: 여러 줄 D 가 들여쓰기 안에서 시작하면 줄 단위 삭제가 됩니다.
+    if (endLine > line && col <= getFirstNonBlankCol(cur)) {
+      const removed = state.lines.slice(line, endLine + 1);
+      const rest = [...state.lines.slice(0, line), ...state.lines.slice(endLine + 1)];
+      const nextLines = rest.length > 0 ? rest : [''];
+      const targetLine = Math.min(line, nextLines.length - 1);
+      const linewiseState: VimEditorState = {
+        ...pushUndoSnapshot(state),
+        lines: nextLines,
+        cursor: clampCursor(nextLines, { line: targetLine, col }, 'NORMAL'),
+        clipboard: { type: 'line', content: removed.join('\n') },
+        pendingKeys: undefined,
+      };
+      return {
+        ...syncRegisters(state, linewiseState, false),
+        lastChangeKeys: isReplayingDot ? state.lastChangeKeys : [String(parsed.totalCount), 'D'],
+      };
+    }
     const deletedContent =
       endLine === line
         ? cur.slice(col)

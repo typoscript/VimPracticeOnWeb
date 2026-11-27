@@ -84,12 +84,15 @@ export function syncRegisters(
     }
   }
 
-  // 기본 무명 레지스터("")는 항상 동기화
-  newRegisters['"'] = {
-    type: regType,
-    content: clip.content,
-    ...blockWidthProp,
-  };
+  // 기본 무명 레지스터("")는 마지막으로 쓴 레지스터를 가리킵니다 ("Ayiw 뒤에는 이어 붙인 전체 내용).
+  const namedKey = reg && /^[a-zA-Z]$/.test(reg) ? reg.toLowerCase() : null;
+  newRegisters['"'] = namedKey && newRegisters[namedKey]
+    ? { ...newRegisters[namedKey] }
+    : {
+        type: regType,
+        content: clip.content,
+        ...blockWidthProp,
+      };
 
   // 시스템 클립보드 ("+, "*) 연동 동기화
   if (reg === '+' || reg === '*') {
@@ -97,8 +100,10 @@ export function syncRegisters(
     newRegisters['*'] = { type: regType, content: clip.content, ...blockWidthProp };
   }
 
-  // 복사(Yank) 연산인 경우 전용 "0 레지스터에도 저장
-  if (isYank) {
+  // Vim :help quote0 / quote1 — 이름 있는 레지스터를 지정한 복사·삭제는 "0 / "1 을 바꾸지 않습니다.
+  if (namedKey) {
+    // 번호 레지스터는 그대로 둡니다.
+  } else if (isYank) {
     newRegisters['0'] = {
       type: regType,
       content: clip.content,
@@ -559,9 +564,10 @@ export function putFromRegister(
   const nextLines = [...state.lines];
   nextLines[line] = newLine;
 
+  // Vim: p/P 후 커서는 붙여넣은 텍스트의 마지막 글자 (P 는 col 위치에 넣으므로 col+len-1)
   const targetCol = options?.leaveCursorAfter
     ? insertCol + textContent.length
-    : col + textContent.length;
+    : insertCol + textContent.length - 1;
   const newCol = clampCursor(nextLines, { line, col: targetCol }, 'NORMAL').col;
 
   return {

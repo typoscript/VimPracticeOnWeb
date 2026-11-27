@@ -5,7 +5,7 @@ import { VimEditorState } from './types';
 import { formatRegisters } from './registers';
 
 describe('Named Registers & Black Hole Register ("a~"z, "0, "_)', () => {
-  it('"ayiw: 단어를 명명된 레지스터 a에 복사하고 "0과 기본 레지스터에도 저장한다', () => {
+  it('"ayiw: 단어를 명명된 레지스터 a 와 기본 레지스터에 저장하고 "0 은 바꾸지 않는다 (Vim :help quote0)', () => {
     let state: VimEditorState = {
       lines: ['const secretToken = "abc";'],
       cursor: { line: 0, col: 7 }, // 's' of secretToken
@@ -27,10 +27,7 @@ describe('Named Registers & Black Hole Register ("a~"z, "0, "_)', () => {
       type: 'char',
       content: 'secretToken',
     });
-    expect(state.registers?.['0']).toEqual({
-      type: 'char',
-      content: 'secretToken',
-    });
+    expect(state.registers?.['0']).toBeUndefined();
     expect(state.registers?.['"']).toEqual({
       type: 'char',
       content: 'secretToken',

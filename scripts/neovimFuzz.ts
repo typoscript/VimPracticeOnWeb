@@ -54,7 +54,8 @@ const OPERATORS = ['d', 'c', 'y', '>', '<', 'gU', 'gu', 'g~'];
 const EX_COMMANDS = [
   ':s/a/X/<CR>', ':s/\\w\\+/W/g<CR>', ':%s/e/E/g<CR>', ':2,3d<CR>', ':g/a/d<CR>', ':v/e/d<CR>',
   ':norm A;<CR>', ':%norm I# <CR>', ':m0<CR>', ':t.<CR>', ':2<CR>', ':$<CR>', ':><CR>', ':2,3j<CR>',
-  ':%s/\\(\\w\\+\\) \\(\\w\\+\\)/\\2 \\1/<CR>', ':sort<CR>', ':2,$y<CR>', ':pu<CR>', ':1,2>><CR>',
+  ':%s/\\(\\w\\+\\) \\(\\w\\+\\)/\\2 \\1/<CR>', ':sort<CR>', ':2,$y<CR>', ':1,2>><CR>',
+  // :pu 는 제외: nvim 쪽에서 레지스터를 setreg('') 로 비우면 '빈 문자열로 설정됨'이 되어(빈 줄), 한 번도 안 쓴 레지스터(E353)와 다릅니다.
 ];
 const INSERT_EDITS = ['foo<C-w>', 'a b c<C-w><C-w>', 'xyz<BS><BS>', 'one two<C-u>', 'q<C-o>0', 'w<C-o>$!'];
 const SEARCHES = ['/total<CR>', '/a<CR>', '?e<CR>', '/x\\|y<CR>', '*', '#', '2/a<CR>'];
