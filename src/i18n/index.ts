@@ -26,6 +26,17 @@ function detectLocale(): Locale {
 
 let currentLocale: Locale = detectLocale();
 const listeners = new Set<() => void>();
+/**
+ * 언어가 바뀌거나 영어 사전이 늦게 도착할 때마다 올립니다.
+ * useSyncExternalStore 는 스냅샷이 바뀔 때만 다시 그리므로, 언어 값(getLocale)만 쓰면
+ * setLocale('en') 직후 사전이 비동기로 도착해도 화면이 한국어로 남습니다.
+ */
+let localeVersion = 0;
+
+function notifyLocaleListeners(): void {
+  localeVersion += 1;
+  listeners.forEach((fn) => fn());
+}
 
 let enDict: Record<string, string> = {};
 let enContentDict: Record<string, string> = {};
@@ -53,7 +64,7 @@ export function ensureLocaleDictionaries(locale: Locale = currentLocale): Promis
         enDict = enMod.EN;
         enContentDict = contentMod.EN_CONTENT;
         enLoaded = true;
-        listeners.forEach((fn) => fn());
+        notifyLocaleListeners();
       })
       .finally(() => {
         enLoadPromise = null;
@@ -89,7 +100,7 @@ export function setLocale(locale: Locale, options: { persist?: boolean } = {}): 
   if (locale === currentLocale) return;
   currentLocale = locale;
   applyLocale(locale);
-  listeners.forEach((fn) => fn());
+  notifyLocaleListeners();
 }
 
 export function subscribeLocale(listener: () => void): () => void {
@@ -98,8 +109,13 @@ export function subscribeLocale(listener: () => void): () => void {
 }
 
 /** 현재 언어를 구독합니다. 언어가 바뀌면 이 훅을 쓰는 컴포넌트가 다시 그려집니다. */
+function getLocaleVersion(): number {
+  return localeVersion;
+}
+
 export function useLocale(): Locale {
-  return useSyncExternalStore(subscribeLocale, getLocale, getLocale);
+  useSyncExternalStore(subscribeLocale, getLocaleVersion, getLocaleVersion);
+  return currentLocale;
 }
 
 /** 한국어 원문을 현재 언어로 바꿉니다. {name} 자리 표시는 params 로 채웁니다. */
