@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useEscapeToClose } from '../../hooks/useEscapeToClose';
 import {
   ConfigPlatform,
   generateVimrc,
@@ -51,6 +52,7 @@ export const ConfigExporterModal: React.FC<ConfigExporterModalProps> = ({
   userInitConfig,
   onApplyUserInitConfig,
 }) => {
+  useEscapeToClose(isOpen, onClose);
   const [activeMainTab, setActiveMainTab] = useState<'keymaps' | 'playground' | 'exporter' | 'backup'>('keymaps');
   const [activeTab, setActiveTab] = useState<ConfigPlatform>('vimrc');
   const [copied, setCopied] = useState(false);

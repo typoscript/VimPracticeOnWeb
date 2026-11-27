@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { useEscapeToClose } from '../../hooks/useEscapeToClose';
 import { t, i18nKey } from '../../i18n';
 import './CheatsheetModal.css';
 
@@ -255,6 +256,7 @@ export const CheatsheetModal: React.FC<CheatsheetModalProps> = ({
   onClose,
   onExecuteKeys,
 }) => {
+  useEscapeToClose(isOpen, onClose);
   const [searchQuery, setSearchQuery] = useState('');
   const [category, setCategory] = useState<CheatsheetCategoryId>('all');
 

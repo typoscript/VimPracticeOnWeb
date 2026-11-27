@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useEscapeToClose } from '../../hooks/useEscapeToClose';
 import { LessonProgress } from '../../utils/storage';
 import {
   loadUserAnalytics,
@@ -51,6 +52,7 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
   onStartWeaknessDrill,
   onSelectLesson,
 }) => {
+  useEscapeToClose(isOpen, onClose);
   const [activeTab, setActiveTab] = useState<'overview' | 'heatmap'>('overview');
 
   const analytics = useMemo(() => {

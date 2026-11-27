@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { useEscapeToClose } from '../../hooks/useEscapeToClose';
 import { Mission } from '../../types/mission';
 import { LessonProgress } from '../../utils/storage';
 import { loadUserAnalytics } from '../../utils/analyticsStorage';
@@ -58,17 +59,7 @@ export const LessonSelectModal: React.FC<LessonSelectModalProps> = ({
   }, [isOpen]);
 
   // ESC 키로 모달 닫기
-  useEffect(() => {
-    if (!isOpen) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation();
-        onClose();
-      }
-    };
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, onClose]);
+  useEscapeToClose(isOpen, onClose);
 
   // 필터링된 미션 목록
   const filteredMissions = useMemo(() => {

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useEscapeToClose } from '../../hooks/useEscapeToClose';
 import {
   CustomMissionData,
   CUSTOM_MISSION_PRESETS,
@@ -45,6 +46,7 @@ export const CustomMissionModal: React.FC<CustomMissionModalProps> = ({
   onClose,
   onPlayMission,
 }) => {
+  useEscapeToClose(isOpen, onClose);
   const [title, setTitle] = useState(t('함수 화살표 문법 리팩토링'));
   const [description, setDescription] = useState(t('일반 함수를 화살표 함수 및 템플릿 리터럴로 변환하세요.'));
   const [initialText, setInitialText] = useState(DEFAULT_INITIAL_TEXT);
