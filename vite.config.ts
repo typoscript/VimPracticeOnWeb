@@ -131,6 +131,8 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'treesjEngine.ts',
       'testRunnerEngine.ts',
       'luaEngine.ts',
+      'luaValues.ts',
+      'luaRuntime.ts',
       'fuzzyFinder.ts',
     ],
   },
