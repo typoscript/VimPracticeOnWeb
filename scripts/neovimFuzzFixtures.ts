@@ -182,6 +182,23 @@ const CASES: Case[] = [
   { id: 'dot-register-2', text: 'aa bb cc', cursor: { row: 0, col: 0 }, keys: '\"acwX<Esc>w.\"ap' },
   { id: 'dot-register-3', text: '1\n2\n3\n4\n5', cursor: { row: 0, col: 0 }, keys: '\"qdd\"Qdd.\"qp' },
   { id: 'dot-register-4', text: '1\n2\n3\n4', cursor: { row: 0, col: 0 }, keys: 'yy\"_dd.p' },
+  { id: 'count-register-1', text: '1\n2\n3\n4\n5', cursor: { row: 0, col: 0 }, keys: '2\"zdd\"zp' },
+  { id: 'count-register-2', text: '1\n2\n3', cursor: { row: 0, col: 0 }, keys: '2\"zyy\"zP' },
+  { id: 'count-register-3', text: 'ab cd', cursor: { row: 0, col: 0 }, keys: '\"xyw2\"xp' },
+  { id: 'count-register-4', text: 'abcdef', cursor: { row: 0, col: 0 }, keys: '3\"_x' },
+  { id: 'count-register-5', text: 'a b c d e f g', cursor: { row: 0, col: 0 }, keys: '2\"zdw.\"zp' },
+  { id: 'count-register-6', text: '1\n2\n3\n4\n5\n6\n7\n8', cursor: { row: 0, col: 0 }, keys: '2\"y3dd\"yp' },
+  { id: 'undo-insert-start-1', text: '  indented line one\n    deeper (nested) item', cursor: { row: 0, col: 0 }, keys: 'Axyz<BS><BS><Esc>Wu' },
+  { id: 'undo-insert-start-2', text: 'The quick brown fox. It jumps over\nthe lazy dog!', cursor: { row: 0, col: 3 }, keys: 'Aend;<Esc>u' },
+  { id: 'undo-insert-start-3', text: '  hello world\nnext', cursor: { row: 0, col: 7 }, keys: 'Inew<Esc>u' },
+  { id: 'undo-insert-start-4', text: 'alpha beta gamma\nfoo bar', cursor: { row: 0, col: 8 }, keys: 'ccnew<Esc>u' },
+  { id: 'undo-insert-start-5', text: 'alpha beta gamma\nfoo bar', cursor: { row: 0, col: 4 }, keys: 'anew<Esc>wu' },
+  { id: 'undo-saved-cursor-1', text: 'a\n    deeper item\nc', cursor: { row: 1, col: 9 }, keys: ':t.<CR>u' },
+  { id: 'undo-saved-cursor-2', text: 'one two three\nfour five', cursor: { row: 0, col: 4 }, keys: 'dwjjuu' },
+  { id: 'ex-range-past-end-1', text: 'plain 0x1f 007 -3 words\nsecond', cursor: { row: 0, col: 0 }, keys: 'W:2,3d<CR>' },
+  { id: 'ex-range-past-end-2', text: 'a\nb\nc', cursor: { row: 0, col: 0 }, keys: ':5d<CR>' },
+  { id: 'ex-range-past-end-3', text: 'a\nb\nc', cursor: { row: 0, col: 0 }, keys: ':2,9<CR>' },
+  { id: 'append-to-macro-register', text: 'aa bb\ncc dd\nee ff', cursor: { row: 0, col: 0 }, keys: 'qkdwjq\"Kyiw' },
 ];
 
 const LUA = `

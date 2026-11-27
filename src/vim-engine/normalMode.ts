@@ -64,6 +64,12 @@ export function handleNormalModeKey(
   isReplayingDot = false,
   macroDepth = 0
 ): VimEditorState {
+  // [count]"{reg}[count]{cmd}: 레지스터 앞뒤 count 를 곱해 명령의 count 로 씁니다.
+  if (state.countBeforeRegister !== undefined && !(/^[0-9]$/.test(key) && (key !== '0' || state.pendingKeys))) {
+    const after = state.pendingKeys?.match(/^([1-9][0-9]*)(.*)$/);
+    const total = state.countBeforeRegister * (after ? Number(after[1]) : 1);
+    state = { ...state, countBeforeRegister: undefined, pendingKeys: `${total}${after ? after[2] : state.pendingKeys ?? ''}` };
+  }
   const parsed = parsePending(state.pendingKeys);
 
   // 1. ESC 또는 타임아웃: 대기 중인 키매핑 접두사가 있으면 타임아웃 시 짧은 매핑을 해소하고, 그 외에는 대기 상태 초기화
@@ -85,9 +91,11 @@ export function handleNormalModeKey(
       forcedMotionwise: undefined,
       pendingKeymapPrefix: undefined,
       activeRegister: undefined,
+      countBeforeRegister: undefined,
       lspHover: state.lspHover?.isOpen ? null : state.lspHover,
     };
   }
+
 
   // 연산자 모션 강제 지정 활성 상태 (dv / dV / d<C-v> — :help o_v, o_V, o_CTRL-V)
   if (state.forcedMotionwise) {
@@ -120,8 +128,10 @@ export function handleNormalModeKey(
     state = userKeymapRes.state;
   }
 
-  // 1-0-a. 명명된 레지스터 지정 ("{register})
-  if (state.pendingKeys === '"') {
+  // 1-0-a. 명명된 레지스터 지정 ("{register}, [count]"{register} — 앞의 count 는 레지스터 뒤 명령에 그대로 이어짐)
+  const registerPrefix = state.pendingKeys?.match(/^([1-9][0-9]*)?"$/);
+  if (registerPrefix) {
+    const countBefore = registerPrefix[1];
     if (key === '=') {
       return {
         ...state,
@@ -137,7 +147,7 @@ export function handleNormalModeKey(
     }
     if (/^[a-zA-Z0-9"+*_\-:.%#\/]$/.test(key)) {
       const reg = key === '""' ? '"' : key;
-      return { ...state, activeRegister: reg, pendingKeys: undefined };
+      return { ...state, activeRegister: reg, pendingKeys: undefined, countBeforeRegister: countBefore ? Number(countBefore) : undefined };
     }
     return { ...state, pendingKeys: undefined };
   }
@@ -153,8 +163,8 @@ export function handleNormalModeKey(
     const wCount = countMatch ? parseInt(countMatch[1], 10) : undefined;
     return handleCtrlWKey(state, key, wCount);
   }
-  if (key === '"' && !state.pendingKeys) {
-    return { ...state, pendingKeys: '"' };
+  if (key === '"' && (!state.pendingKeys || /^[1-9][0-9]*$/.test(state.pendingKeys))) {
+    return { ...state, pendingKeys: `${state.pendingKeys ?? ''}"` };
   }
   if ((key === 'Ctrl-w' || key === 'Ctrl+w') && (!state.pendingKeys || /^\d+$/.test(state.pendingKeys))) {
     return { ...state, pendingKeys: `${state.pendingKeys ?? ''}Ctrl-w` };

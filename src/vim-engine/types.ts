@@ -728,6 +728,8 @@ export interface VimEditorState {
   registers?: Record<string, RegisterEntry>;
   /** 현재 선택된 대상 레지스터 ("a~"z, "0, "_ 등) */
   activeRegister?: string | null;
+  /** 레지스터 앞에 입력한 count (`2"a3dd` 의 2). 레지스터 뒤 count 와 곱해집니다 (Vim 규칙). */
+  countBeforeRegister?: number;
   /** 현재 매크로 녹화 상태 */
   recordingMacro?: { register: string; keys: string[] } | null;
   /** 가장 마지막에 실행했던 매크로 레지스터 이름 (@@ 재실행용) */

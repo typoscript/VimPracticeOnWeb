@@ -272,6 +272,13 @@ export function extractRangeAndCommand(
     hasSecond = true;
   }
 
+  // Vim invalid_range(): 범위를 받는 명령에서 주소가 마지막 줄을 넘으면 E16 (명령 없는 줄 이동 `:100` 은 마지막 줄로).
+  const cmdAfterRange = raw.slice(consumed).trimStart();
+  const highest = hasSecond ? Math.max(rangeStart, rangeEnd) : res1.line;
+  if (cmdAfterRange !== '' && highest > totalLines - 1) {
+    return { range: null, hasRange: true, command: '', error: msg('E16: 유효하지 않은 범위입니다') };
+  }
+
   if (hasSecond) {
     const startLine = Math.max(0, Math.min(rangeStart, rangeEnd));
     const endLine = Math.min(Math.max(0, totalLines - 1), Math.max(rangeStart, rangeEnd));

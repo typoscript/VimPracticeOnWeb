@@ -708,6 +708,57 @@ function describeUndoRedo(
 }
 
 /**
+ * 되살릴 줄(restored)과 현재 줄(current)이 top 부터 다를 때, 첫 번째 변경 묶음(hunk)에서
+ * 되살아나는 줄 수를 구합니다. Vim 은 변경 묶음마다 실행 취소 항목을 두므로 커서 판정도 첫 묶음 기준입니다.
+ */
+function firstHunkRestoredSize(restored: string[], current: string[], top: number): number {
+  let endR = restored.length;
+  let endC = current.length;
+  while (endR > top && endC > top && restored[endR - 1] === current[endC - 1]) {
+    endR--;
+    endC--;
+  }
+  const n = endR - top;
+  const m = endC - top;
+  if (n === 0 || m === 0 || n * m > 250_000) return n;
+  // LCS 표로 첫 공통 줄까지를 첫 변경 묶음으로 봅니다.
+  const lcs: Uint32Array[] = Array.from({ length: n + 1 }, () => new Uint32Array(m + 1));
+  for (let i = n - 1; i >= 0; i--) {
+    for (let j = m - 1; j >= 0; j--) {
+      lcs[i][j] = restored[top + i] === current[top + j] ? lcs[i + 1][j + 1] + 1 : Math.max(lcs[i + 1][j], lcs[i][j + 1]);
+    }
+  }
+  let i = 0;
+  let j = 0;
+  while (i < n && j < m) {
+    if (restored[top + i] === current[top + j] && lcs[i][j] === lcs[i + 1][j + 1] + 1) return i;
+    if (lcs[i + 1][j] >= lcs[i][j + 1]) i++;
+    else j++;
+  }
+  return n;
+}
+
+/**
+ * Vim u_undoredo 의 커서 규칙.
+ * - 변경을 시작할 때의 커서(스냅샷 커서)가 바뀐 범위(바로 윗줄 ~ 되살린 줄의 끝)에 있으면 그 위치로 돌아갑니다.
+ * - 아니면 실제로 바뀐 첫 줄로 가고, 열은 스냅샷 커서가 그 줄이면 그 열, 아니면 첫 비공백입니다.
+ *   (Vim 은 'nostartofline' 이면 curswant 열로 가지만, Ex 명령 뒤의 curswant 를 엔진이 따로 기억하지 않아 첫 비공백으로 둡니다.)
+ */
+function undoCursorPosition(state: VimEditorState, snapshot: StateSnapshot): { line: number; col: number } {
+  const restored = snapshot.lines;
+  const current = state.lines;
+  const saved = snapshot.cursor;
+  let top = 0;
+  while (top < Math.min(restored.length, current.length) && restored[top] === current[top]) top++;
+  if (top === restored.length && top === current.length) return saved;
+  const newSize = firstHunkRestoredSize(restored, current, top);
+  if (saved.line >= top - 1 && saved.line <= top + newSize) return saved;
+  const line = Math.min(top, Math.max(0, restored.length - 1));
+  if (saved.line === line) return { line, col: saved.col };
+  return { line, col: getFirstNonBlankCol(restored[line] ?? '') };
+}
+
+/**
  * 'u': 직전 상태로 실행 취소(Undo)합니다.
  */
 export function undo(state: VimEditorState): VimEditorState {
@@ -743,20 +794,7 @@ export function undo(state: VimEditorState): VimEditorState {
   }
 
   const undoneSeq = state.currentUndoSeq ?? state.undoStack.length;
-  // Vim u_undoredo: 커서는 바뀐 첫 줄로 갑니다. 변경 전 커서가 그 줄에 있었으면 그 열, 아니면 첫 비공백.
-  const restored = lastSnapshot.lines;
-  let topChanged = 0;
-  while (
-    topChanged < Math.min(restored.length, state.lines.length) &&
-    restored[topChanged] === state.lines[topChanged]
-  ) {
-    topChanged++;
-  }
-  topChanged = Math.min(topChanged, Math.max(0, restored.length - 1));
-  const undoCursor =
-    lastSnapshot.cursor.line === topChanged
-      ? lastSnapshot.cursor
-      : { line: topChanged, col: getFirstNonBlankCol(restored[topChanged] ?? '') };
+  const undoCursor = undoCursorPosition(state, lastSnapshot);
   return {
     ...state,
     lines: lastSnapshot.lines,

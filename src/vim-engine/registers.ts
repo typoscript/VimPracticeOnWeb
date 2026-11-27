@@ -45,13 +45,17 @@ export function syncRegisters(
     const existing = newRegisters[targetKey];
 
     if (isAppend && existing) {
-      const existingContent = Array.isArray(existing.content) ? existing.content.join('') : existing.content;
-      if (existing.type === 'line' && regType === 'line') {
+      // 녹화한 매크로는 Vim 에서 문자 단위 텍스트입니다 ("A 로 이어 붙이면 키 표기 뒤에 붙음).
+      const existingType = existing.type === 'macro' ? 'char' : existing.type;
+      const existingContent = Array.isArray(existing.content)
+        ? formatMacroKeysToString(existing.content)
+        : existing.content;
+      if (existingType === 'line' && regType === 'line') {
         newRegisters[targetKey] = {
           type: 'line',
           content: `${existingContent}\n${clip.content}`,
         };
-      } else if (existing.type === 'block' && regType === 'block') {
+      } else if (existingType === 'block' && regType === 'block') {
         const mergedContent = `${existingContent}\n${clip.content}`;
         const mergedWidth = Math.max(
           existing.blockWidth ?? 0,
@@ -63,7 +67,7 @@ export function syncRegisters(
           content: mergedContent,
           blockWidth: mergedWidth,
         };
-      } else if (existing.type === 'char' && regType === 'char') {
+      } else if (existingType === 'char' && regType === 'char') {
         newRegisters[targetKey] = {
           type: 'char',
           content: `${existingContent}${clip.content}`,

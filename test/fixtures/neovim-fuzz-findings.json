@@ -1,18 +1,17 @@
 [
   {
+    "id": "shift-keeps-col",
     "cursor": {
       "col": 7,
       "row": 2
     },
-    "id": "shift-keeps-col",
-    "keys": ">>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 7,
         "row": 2
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "const total = sum(a, b) + 42;",
@@ -22,22 +21,22 @@
         "return total;"
       ]
     },
-    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;"
+    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;",
+    "keys": ">>"
   },
   {
+    "id": "shift-left-keeps-col",
     "cursor": {
       "col": 18,
       "row": 1
     },
-    "id": "shift-left-keeps-col",
-    "keys": "<<",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 18,
         "row": 1
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "  indented line one",
@@ -46,22 +45,22 @@
         "last_word_here end"
       ]
     },
-    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end"
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "keys": "<<"
   },
   {
+    "id": "shift-motion-keeps-col",
     "cursor": {
       "col": 16,
       "row": 0
     },
-    "id": "shift-motion-keeps-col",
-    "keys": ">}",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 16,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "  const total = sum(a, b) + 42;",
@@ -71,22 +70,22 @@
         "  return total;"
       ]
     },
-    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;"
+    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;",
+    "keys": ">}"
   },
   {
+    "id": "shift-up-top-line",
     "cursor": {
       "col": 0,
       "row": 2
     },
-    "id": "shift-up-top-line",
-    "keys": ">k",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 1
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "const total = sum(a, b) + 42;",
@@ -96,22 +95,22 @@
         "return total;"
       ]
     },
-    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;"
+    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;",
+    "keys": ">k"
   },
   {
+    "id": "shift-left-clamps",
     "cursor": {
       "col": 11,
       "row": 2
     },
-    "id": "shift-left-clamps",
-    "keys": "<0",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 10,
         "row": 2
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "  indented line one",
@@ -120,22 +119,22 @@
         "last_word_here end"
       ]
     },
-    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end"
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "keys": "<0"
   },
   {
+    "id": "para-count-overflow-back",
     "cursor": {
       "col": 8,
       "row": 2
     },
-    "id": "para-count-overflow-back",
-    "keys": "3{",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 8,
         "row": 2
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "  indented line one",
@@ -144,22 +143,22 @@
         "last_word_here end"
       ]
     },
-    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end"
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "keys": "3{"
   },
   {
+    "id": "para-count-overflow-fwd",
     "cursor": {
       "col": 0,
       "row": 1
     },
-    "id": "para-count-overflow-fwd",
-    "keys": "4}",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 1
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a b",
@@ -168,22 +167,22 @@
         "g h"
       ]
     },
-    "text": "a b\nc d\ne f\ng h"
+    "text": "a b\nc d\ne f\ng h",
+    "keys": "4}"
   },
   {
+    "id": "para-whitespace-not-boundary",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "para-whitespace-not-boundary",
-    "keys": "}",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 3
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a",
@@ -193,22 +192,22 @@
         "c"
       ]
     },
-    "text": "a\n  \nb\n\nc"
+    "text": "a\n  \nb\n\nc",
+    "keys": "}"
   },
   {
+    "id": "para-back-whitespace",
     "cursor": {
       "col": 0,
       "row": 2
     },
-    "id": "para-back-whitespace",
-    "keys": "{",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a",
@@ -218,22 +217,22 @@
         "c"
       ]
     },
-    "text": "a\n  \nb\n\nc"
+    "text": "a\n  \nb\n\nc",
+    "keys": "{"
   },
   {
+    "id": "d-para-charwise",
     "cursor": {
       "col": 3,
       "row": 0
     },
-    "id": "d-para-charwise",
-    "keys": "d}",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 2,
         "row": 0
       },
       "reg": "cd\nef",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "ab ",
@@ -241,44 +240,44 @@
         "gh"
       ]
     },
-    "text": "ab cd\nef\n\ngh"
+    "text": "ab cd\nef\n\ngh",
+    "keys": "d}"
   },
   {
+    "id": "d-para-linewise-at-indent",
     "cursor": {
       "col": 2,
       "row": 0
     },
-    "id": "d-para-linewise-at-indent",
-    "keys": "d}",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "  ab cd\nef\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         "",
         "gh"
       ]
     },
-    "text": "  ab cd\nef\n\ngh"
+    "text": "  ab cd\nef\n\ngh",
+    "keys": "d}"
   },
   {
+    "id": "y-para-charwise",
     "cursor": {
       "col": 3,
       "row": 0
     },
-    "id": "y-para-charwise",
-    "keys": "y}",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 3,
         "row": 0
       },
       "reg": "cd\nef",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "ab cd",
@@ -287,22 +286,22 @@
         "gh"
       ]
     },
-    "text": "ab cd\nef\n\ngh"
+    "text": "ab cd\nef\n\ngh",
+    "keys": "y}"
   },
   {
+    "id": "c-para-charwise",
     "cursor": {
       "col": 3,
       "row": 0
     },
-    "id": "c-para-charwise",
-    "keys": "c}X<Esc>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 3,
         "row": 0
       },
       "reg": "cd\nef",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "ab X",
@@ -310,65 +309,65 @@
         "gh"
       ]
     },
-    "text": "ab cd\nef\n\ngh"
+    "text": "ab cd\nef\n\ngh",
+    "keys": "c}X<Esc>"
   },
   {
+    "id": "d-para-to-end",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "d-para-to-end",
-    "keys": "d}",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "ab\ncd\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         ""
       ]
     },
-    "text": "ab\ncd"
+    "text": "ab\ncd",
+    "keys": "d}"
   },
   {
+    "id": "d-para-back-mid",
     "cursor": {
       "col": 1,
       "row": 3
     },
-    "id": "d-para-back-mid",
-    "keys": "d{",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 1
       },
       "reg": "\ncd ef\ng",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "ab",
         "h"
       ]
     },
-    "text": "ab\n\ncd ef\ngh"
+    "text": "ab\n\ncd ef\ngh",
+    "keys": "d{"
   },
   {
+    "id": "d-para-end-not-col0",
     "cursor": {
       "col": 19,
       "row": 2
     },
-    "id": "d-para-end-not-col0",
-    "keys": "d}",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 18,
         "row": 2
       },
       "reg": "7 }",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "alpha beta gamma",
@@ -377,22 +376,22 @@
         ""
       ]
     },
-    "text": "alpha beta gamma\nfoo.bar(baz, \"qux\")\n{ key: 'value', n: 7 }\n"
+    "text": "alpha beta gamma\nfoo.bar(baz, \"qux\")\n{ key: 'value', n: 7 }\n",
+    "keys": "d}"
   },
   {
+    "id": "d-section-stops-below-brace",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "d-section-stops-below-brace",
-    "keys": "d]]",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "{\n  a\n}\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         "",
@@ -401,192 +400,192 @@
         "}"
       ]
     },
-    "text": "{\n  a\n}\n\n{\n  b\n}"
+    "text": "{\n  a\n}\n\n{\n  b\n}",
+    "keys": "d]]"
   },
   {
+    "id": "d-para-whole-lines-linewise",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "d-para-whole-lines-linewise",
-    "keys": "d}",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "ab\ncd\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         ""
       ]
     },
-    "text": "ab\ncd"
+    "text": "ab\ncd",
+    "keys": "d}"
   },
   {
+    "id": "dG-keeps-col",
     "cursor": {
       "col": 9,
       "row": 1
     },
-    "id": "dG-keeps-col",
-    "keys": "dG",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 9,
         "row": 0
       },
       "reg": "    deeper (nested) item\n  back to one\nlast_word_here end\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         "  indented line one"
       ]
     },
-    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end"
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "keys": "dG"
   },
   {
-    "cursor": {
-      "col": 9,
-      "row": 1
-    },
     "id": "dk-keeps-col",
-    "keys": "dk",
-    "expected": {
-      "mode": "n",
-      "cursor": {
-        "col": 9,
-        "row": 0
-      },
-      "reg": "  indented line one\n    deeper (nested) item\n",
-      "regType": "line",
-      "lines": [
-        "  back to one",
-        "last_word_here end"
-      ]
-    },
-    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end"
-  },
-  {
     "cursor": {
       "col": 9,
       "row": 1
     },
-    "id": "dgg-keeps-col",
-    "keys": "dgg",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 9,
         "row": 0
       },
       "reg": "  indented line one\n    deeper (nested) item\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         "  back to one",
         "last_word_here end"
       ]
     },
-    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end"
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "keys": "dk"
   },
   {
+    "id": "dgg-keeps-col",
+    "cursor": {
+      "col": 9,
+      "row": 1
+    },
+    "expected": {
+      "cursor": {
+        "col": 9,
+        "row": 0
+      },
+      "reg": "  indented line one\n    deeper (nested) item\n",
+      "mode": "n",
+      "regType": "line",
+      "lines": [
+        "  back to one",
+        "last_word_here end"
+      ]
+    },
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "keys": "dgg"
+  },
+  {
+    "id": "gU-caret-exclusive",
     "cursor": {
       "col": 1,
       "row": 0
     },
-    "id": "gU-caret-exclusive",
-    "keys": "gU^",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "Another paragraph here."
       ]
     },
-    "text": "Another paragraph here."
+    "text": "Another paragraph here.",
+    "keys": "gU^"
   },
   {
+    "id": "gU-find-fails",
     "cursor": {
       "col": 1,
       "row": 0
     },
-    "id": "gU-find-fails",
-    "keys": "gUfx",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 1,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "abc def"
       ]
     },
-    "text": "abc def"
+    "text": "abc def",
+    "keys": "gUfx"
   },
   {
+    "id": "gu-till-back-fails",
     "cursor": {
       "col": 5,
       "row": 0
     },
-    "id": "gu-till-back-fails",
-    "keys": "guTo",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 5,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "abc def"
       ]
     },
-    "text": "abc def"
+    "text": "abc def",
+    "keys": "guTo"
   },
   {
+    "id": "gU-find",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "gU-find",
-    "keys": "gUfe",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "ABC DEf"
       ]
     },
-    "text": "abc def"
+    "text": "abc def",
+    "keys": "gUfe"
   },
   {
+    "id": "gu-brace-to-start",
     "cursor": {
       "col": 6,
       "row": 3
     },
-    "id": "gu-brace-to-start",
-    "keys": "gu{",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "  indented line one",
@@ -595,22 +594,22 @@
         "last_word_here end"
       ]
     },
-    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end"
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "keys": "gu{"
   },
   {
+    "id": "gU-percent",
     "cursor": {
       "col": 7,
       "row": 1
     },
-    "id": "gU-percent",
-    "keys": "gU%",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 7,
         "row": 1
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "alpha beta gamma",
@@ -619,129 +618,129 @@
         ""
       ]
     },
-    "text": "alpha beta gamma\nfoo.bar(baz, \"qux\")\n{ key: 'value', n: 7 }\n"
+    "text": "alpha beta gamma\nfoo.bar(baz, \"qux\")\n{ key: 'value', n: 7 }\n",
+    "keys": "gU%"
   },
   {
-    "cursor": {
-      "col": 4,
-      "row": 0
-    },
     "id": "ca-paren-missing",
-    "keys": "ca(new<Esc>",
-    "expected": {
-      "mode": "n",
-      "cursor": {
-        "col": 11,
-        "row": 0
-      },
-      "reg": "",
-      "regType": "char",
-      "lines": [
-        "plain 0x1f 007"
-      ]
-    },
-    "text": "plain 0x1f 007"
-  },
-  {
     "cursor": {
       "col": 4,
       "row": 0
     },
-    "id": "ci-quote-missing",
-    "keys": "ci\"new<Esc>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 11,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "plain 0x1f 007"
       ]
     },
-    "text": "plain 0x1f 007"
+    "text": "plain 0x1f 007",
+    "keys": "ca(new<Esc>"
   },
   {
+    "id": "ci-quote-missing",
+    "cursor": {
+      "col": 4,
+      "row": 0
+    },
+    "expected": {
+      "cursor": {
+        "col": 11,
+        "row": 0
+      },
+      "reg": "",
+      "mode": "n",
+      "regType": "char",
+      "lines": [
+        "plain 0x1f 007"
+      ]
+    },
+    "text": "plain 0x1f 007",
+    "keys": "ci\"new<Esc>"
+  },
+  {
+    "id": "ciw-empty-line",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "ciw-empty-line",
-    "keys": "ciwbar<Esc>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 2,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "bar"
       ]
     },
-    "text": ""
+    "text": "",
+    "keys": "ciwbar<Esc>"
   },
   {
+    "id": "count-d-dollar",
     "cursor": {
       "col": 2,
       "row": 0
     },
-    "id": "count-d-dollar",
-    "keys": "3d$",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 1,
         "row": 0
       },
       "reg": "b\nc d\ne f",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a ",
         "g h"
       ]
     },
-    "text": "a b\nc d\ne f\ng h"
+    "text": "a b\nc d\ne f\ng h",
+    "keys": "3d$"
   },
   {
+    "id": "count-c-dollar",
     "cursor": {
       "col": 2,
       "row": 0
     },
-    "id": "count-c-dollar",
-    "keys": "3c$X<Esc>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 2,
         "row": 0
       },
       "reg": "b\nc d\ne f",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a X",
         "g h"
       ]
     },
-    "text": "a b\nc d\ne f\ng h"
+    "text": "a b\nc d\ne f\ng h",
+    "keys": "3c$X<Esc>"
   },
   {
+    "id": "count-y-dollar",
     "cursor": {
       "col": 2,
       "row": 0
     },
-    "id": "count-y-dollar",
-    "keys": "2y$",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 2,
         "row": 0
       },
       "reg": "b\nc d",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a b",
@@ -750,66 +749,66 @@
         "g h"
       ]
     },
-    "text": "a b\nc d\ne f\ng h"
+    "text": "a b\nc d\ne f\ng h",
+    "keys": "2y$"
   },
   {
-    "cursor": {
-      "col": 0,
-      "row": 1
-    },
     "id": "count-dd-last-line",
-    "keys": "2dd",
-    "expected": {
-      "mode": "n",
-      "cursor": {
-        "col": 0,
-        "row": 1
-      },
-      "reg": "",
-      "regType": "char",
-      "lines": [
-        "a b",
-        "c d"
-      ]
-    },
-    "text": "a b\nc d"
-  },
-  {
     "cursor": {
       "col": 0,
       "row": 1
     },
-    "id": "count-yy-last-line",
-    "keys": "4yy",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 1
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a b",
         "c d"
       ]
     },
-    "text": "a b\nc d"
+    "text": "a b\nc d",
+    "keys": "2dd"
   },
   {
+    "id": "count-yy-last-line",
+    "cursor": {
+      "col": 0,
+      "row": 1
+    },
+    "expected": {
+      "cursor": {
+        "col": 0,
+        "row": 1
+      },
+      "reg": "",
+      "mode": "n",
+      "regType": "char",
+      "lines": [
+        "a b",
+        "c d"
+      ]
+    },
+    "text": "a b\nc d",
+    "keys": "4yy"
+  },
+  {
+    "id": "insert-ctrl-r-linewise-O",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "insert-ctrl-r-linewise-O",
-    "keys": "\"ayyO<C-r>a<Esc>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 1
       },
       "reg": "one\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         "one",
@@ -818,22 +817,22 @@
         "two"
       ]
     },
-    "text": "one\ntwo"
+    "text": "one\ntwo",
+    "keys": "\"ayyO<C-r>a<Esc>"
   },
   {
+    "id": "insert-ctrl-r-linewise-A",
     "cursor": {
       "col": 1,
       "row": 1
     },
-    "id": "insert-ctrl-r-linewise-A",
-    "keys": "\"ayyjA <C-r>a<Esc>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 2
       },
       "reg": "two\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         "one",
@@ -841,22 +840,22 @@
         ""
       ]
     },
-    "text": "one\ntwo"
+    "text": "one\ntwo",
+    "keys": "\"ayyjA <C-r>a<Esc>"
   },
   {
+    "id": "insert-ctrl-r-linewise-then-type",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "insert-ctrl-r-linewise-then-type",
-    "keys": "yyjO<C-r>\"X<Esc>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 2
       },
       "reg": "one\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         "one",
@@ -865,22 +864,22 @@
         "two"
       ]
     },
-    "text": "one\ntwo"
+    "text": "one\ntwo",
+    "keys": "yyjO<C-r>\"X<Esc>"
   },
   {
+    "id": "visual-u-cursor-start",
     "cursor": {
       "col": 12,
       "row": 0
     },
-    "id": "visual-u-cursor-start",
-    "keys": "VjU",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "ALPHA BETA GAMMA",
@@ -889,22 +888,22 @@
         "the start"
       ]
     },
-    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start"
+    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start",
+    "keys": "VjU"
   },
   {
+    "id": "visual-shift-keeps-col",
     "cursor": {
       "col": 1,
       "row": 1
     },
-    "id": "visual-shift-keeps-col",
-    "keys": "Vw>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 2,
         "row": 1
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "alpha beta gamma",
@@ -913,22 +912,22 @@
         "the start"
       ]
     },
-    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start"
+    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start",
+    "keys": "Vw>"
   },
   {
+    "id": "visual-yank-col0",
     "cursor": {
       "col": 7,
       "row": 1
     },
-    "id": "visual-yank-col0",
-    "keys": "Vjy",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 1
       },
       "reg": "  foo bar baz\nThe end\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         "alpha beta gamma",
@@ -937,22 +936,22 @@
         "the start"
       ]
     },
-    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start"
+    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start",
+    "keys": "Vjy"
   },
   {
+    "id": "guu-first-nonblank",
     "cursor": {
       "col": 6,
       "row": 1
     },
-    "id": "guu-first-nonblank",
-    "keys": "guu",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 2,
         "row": 1
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "alpha beta gamma",
@@ -961,22 +960,22 @@
         "the start"
       ]
     },
-    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start"
+    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start",
+    "keys": "guu"
   },
   {
+    "id": "count-guu-keeps-col",
     "cursor": {
       "col": 6,
       "row": 1
     },
-    "id": "count-guu-keeps-col",
-    "keys": "2guu",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 6,
         "row": 1
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "alpha beta gamma",
@@ -985,22 +984,22 @@
         "the start"
       ]
     },
-    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start"
+    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start",
+    "keys": "2guu"
   },
   {
+    "id": "case-op-undo-cursor",
     "cursor": {
       "col": 8,
       "row": 0
     },
-    "id": "case-op-undo-cursor",
-    "keys": "vt g~u",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 8,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "alpha beta gamma",
@@ -1009,22 +1008,22 @@
         "the start"
       ]
     },
-    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start"
+    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start",
+    "keys": "vt g~u"
   },
   {
+    "id": "yiw-cursor-start",
     "cursor": {
       "col": 12,
       "row": 0
     },
-    "id": "yiw-cursor-start",
-    "keys": "yiw",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 11,
         "row": 0
       },
       "reg": "gamma",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "alpha beta gamma",
@@ -1033,22 +1032,22 @@
         "the start"
       ]
     },
-    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start"
+    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start",
+    "keys": "yiw"
   },
   {
+    "id": "yaw-cursor-start",
     "cursor": {
       "col": 12,
       "row": 0
     },
-    "id": "yaw-cursor-start",
-    "keys": "yaw",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 10,
         "row": 0
       },
       "reg": " gamma",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "alpha beta gamma",
@@ -1057,22 +1056,22 @@
         "the start"
       ]
     },
-    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start"
+    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start",
+    "keys": "yaw"
   },
   {
+    "id": "count-J-joins-count-lines",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "count-J-joins-count-lines",
-    "keys": "3J",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 3,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a b c",
@@ -1080,106 +1079,106 @@
         "e"
       ]
     },
-    "text": "a\nb\nc\nd\ne"
+    "text": "a\nb\nc\nd\ne",
+    "keys": "3J"
   },
   {
+    "id": "count-J-past-end",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "count-J-past-end",
-    "keys": "5J",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 3,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a b c"
       ]
     },
-    "text": "a\nb\nc"
+    "text": "a\nb\nc",
+    "keys": "5J"
   },
   {
+    "id": "sentence-count-overflow",
     "cursor": {
       "col": 5,
       "row": 0
     },
-    "id": "sentence-count-overflow",
-    "keys": "5)",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 5,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "One. Two. Three."
       ]
     },
-    "text": "One. Two. Three."
+    "text": "One. Two. Three.",
+    "keys": "5)"
   },
   {
+    "id": "sentence-count-ok",
     "cursor": {
       "col": 10,
       "row": 0
     },
-    "id": "sentence-count-ok",
-    "keys": "2(",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "One. Two. Three."
       ]
     },
-    "text": "One. Two. Three."
+    "text": "One. Two. Three.",
+    "keys": "2("
   },
   {
+    "id": "g-delete-register",
     "cursor": {
       "col": 5,
       "row": 0
     },
-    "id": "g-delete-register",
-    "keys": ":g/a/d<CR>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "the start\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         "The end"
       ]
     },
-    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start"
+    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start",
+    "keys": ":g/a/d<CR>"
   },
   {
+    "id": "v-delete-register",
     "cursor": {
       "col": 5,
       "row": 0
     },
-    "id": "v-delete-register",
-    "keys": ":v/e/d<CR>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 1
       },
       "reg": "  foo bar baz\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         "alpha beta gamma",
@@ -1187,22 +1186,22 @@
         "the start"
       ]
     },
-    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start"
+    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start",
+    "keys": ":v/e/d<CR>"
   },
   {
+    "id": "sort-byte-order",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "sort-byte-order",
-    "keys": ":sort<CR>gg",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 2,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "  foo bar baz",
@@ -1211,22 +1210,22 @@
         "the start"
       ]
     },
-    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start"
+    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start",
+    "keys": ":sort<CR>gg"
   },
   {
+    "id": "s-cursor-first-nonblank",
     "cursor": {
       "col": 9,
       "row": 1
     },
-    "id": "s-cursor-first-nonblank",
-    "keys": ":s/a/X/<CR>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 2,
         "row": 1
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "alpha beta gamma",
@@ -1235,22 +1234,22 @@
         "the start"
       ]
     },
-    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start"
+    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start",
+    "keys": ":s/a/X/<CR>"
   },
   {
+    "id": "percent-s-cursor-last-line",
     "cursor": {
       "col": 9,
       "row": 1
     },
-    "id": "percent-s-cursor-last-line",
-    "keys": ":%s/e/E/g<CR>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 3
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "alpha bEta gamma",
@@ -1259,22 +1258,22 @@
         "thE start"
       ]
     },
-    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start"
+    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start",
+    "keys": ":%s/e/E/g<CR>"
   },
   {
+    "id": "t-keeps-col",
     "cursor": {
       "col": 9,
       "row": 1
     },
-    "id": "t-keeps-col",
-    "keys": ":t.<CR>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 9,
         "row": 2
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "alpha beta gamma",
@@ -1284,22 +1283,22 @@
         "the start"
       ]
     },
-    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start"
+    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start",
+    "keys": ":t.<CR>"
   },
   {
+    "id": "m-keeps-col",
     "cursor": {
       "col": 3,
       "row": 0
     },
-    "id": "m-keeps-col",
-    "keys": ":m$<CR>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 3,
         "row": 3
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "  foo bar baz",
@@ -1308,22 +1307,22 @@
         "alpha beta gamma"
       ]
     },
-    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start"
+    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start",
+    "keys": ":m$<CR>"
   },
   {
+    "id": "insert-ctrl-u-stops-at-start",
     "cursor": {
       "col": 4,
       "row": 1
     },
-    "id": "insert-ctrl-u-stops-at-start",
-    "keys": "A one two<C-u><Esc>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 12,
         "row": 1
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "alpha beta gamma",
@@ -1332,22 +1331,22 @@
         "the start"
       ]
     },
-    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start"
+    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start",
+    "keys": "A one two<C-u><Esc>"
   },
   {
+    "id": "insert-ctrl-u-twice",
     "cursor": {
       "col": 4,
       "row": 1
     },
-    "id": "insert-ctrl-u-twice",
-    "keys": "A one two<C-u><C-u><Esc>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 1
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "alpha beta gamma",
@@ -1356,22 +1355,22 @@
         "the start"
       ]
     },
-    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start"
+    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start",
+    "keys": "A one two<C-u><C-u><Esc>"
   },
   {
+    "id": "insert-ctrl-w-twice",
     "cursor": {
       "col": 10,
       "row": 0
     },
-    "id": "insert-ctrl-w-twice",
-    "keys": "afoo<C-w><C-w><Esc>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 5,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "alpha gamma",
@@ -1380,22 +1379,22 @@
         "the start"
       ]
     },
-    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start"
+    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start",
+    "keys": "afoo<C-w><C-w><Esc>"
   },
   {
+    "id": "search-skips-cursor-match",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "search-skips-cursor-match",
-    "keys": "/a<CR>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 4,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "alpha beta gamma",
@@ -1404,22 +1403,22 @@
         "the start"
       ]
     },
-    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start"
+    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start",
+    "keys": "/a<CR>"
   },
   {
+    "id": "search-count",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "search-count",
-    "keys": "2/a<CR>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 9,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "alpha beta gamma",
@@ -1428,22 +1427,22 @@
         "the start"
       ]
     },
-    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start"
+    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start",
+    "keys": "2/a<CR>"
   },
   {
+    "id": "search-count-lines",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "search-count-lines",
-    "keys": "3/e<CR>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 4,
         "row": 2
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "alpha beta gamma",
@@ -1452,22 +1451,22 @@
         "the start"
       ]
     },
-    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start"
+    "text": "alpha beta gamma\n  foo bar baz\nThe end\nthe start",
+    "keys": "3/e<CR>"
   },
   {
+    "id": "curswant-jjj",
     "cursor": {
       "col": 15,
       "row": 0
     },
-    "id": "curswant-jjj",
-    "keys": "jjj",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 15,
         "row": 3
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a long line of text here",
@@ -1478,22 +1477,22 @@
         "tail end of the file here"
       ]
     },
-    "text": "a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here"
+    "text": "a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here",
+    "keys": "jjj"
   },
   {
+    "id": "curswant-jjjk",
     "cursor": {
       "col": 15,
       "row": 0
     },
-    "id": "curswant-jjjk",
-    "keys": "jjjk",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 2
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a long line of text here",
@@ -1504,22 +1503,22 @@
         "tail end of the file here"
       ]
     },
-    "text": "a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here"
+    "text": "a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here",
+    "keys": "jjjk"
   },
   {
+    "id": "curswant-dollar",
     "cursor": {
       "col": 15,
       "row": 0
     },
-    "id": "curswant-dollar",
-    "keys": "$jjj",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 24,
         "row": 3
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a long line of text here",
@@ -1530,22 +1529,22 @@
         "tail end of the file here"
       ]
     },
-    "text": "a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here"
+    "text": "a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here",
+    "keys": "$jjj"
   },
   {
+    "id": "curswant-G",
     "cursor": {
       "col": 15,
       "row": 0
     },
-    "id": "curswant-G",
-    "keys": "jG",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 15,
         "row": 5
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a long line of text here",
@@ -1556,22 +1555,22 @@
         "tail end of the file here"
       ]
     },
-    "text": "a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here"
+    "text": "a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here",
+    "keys": "jG"
   },
   {
+    "id": "curswant-gg",
     "cursor": {
       "col": 12,
       "row": 5
     },
-    "id": "curswant-gg",
-    "keys": "kkkgg",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 12,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a long line of text here",
@@ -1582,22 +1581,22 @@
         "tail end of the file here"
       ]
     },
-    "text": "a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here"
+    "text": "a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here",
+    "keys": "kkkgg"
   },
   {
+    "id": "curswant-failed-l-keeps",
     "cursor": {
       "col": 15,
       "row": 0
     },
-    "id": "curswant-failed-l-keeps",
-    "keys": "jljjj",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 4,
         "row": 4
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a long line of text here",
@@ -1608,22 +1607,22 @@
         "tail end of the file here"
       ]
     },
-    "text": "a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here"
+    "text": "a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here",
+    "keys": "jljjj"
   },
   {
+    "id": "curswant-x-resets",
     "cursor": {
       "col": 15,
       "row": 0
     },
-    "id": "curswant-x-resets",
-    "keys": "jxjj",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 3,
         "row": 3
       },
       "reg": "t",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a long line of text here",
@@ -1634,22 +1633,22 @@
         "tail end of the file here"
       ]
     },
-    "text": "a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here"
+    "text": "a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here",
+    "keys": "jxjj"
   },
   {
+    "id": "curswant-zz-keeps",
     "cursor": {
       "col": 15,
       "row": 0
     },
-    "id": "curswant-zz-keeps",
-    "keys": "jzzjj",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 15,
         "row": 3
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a long line of text here",
@@ -1660,22 +1659,22 @@
         "tail end of the file here"
       ]
     },
-    "text": "a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here"
+    "text": "a long line of text here\nshort\n\nanother quite long line!!\n  ind\ntail end of the file here",
+    "keys": "jzzjj"
   },
   {
+    "id": "count-dd-partial",
     "cursor": {
       "col": 0,
       "row": 3
     },
-    "id": "count-dd-partial",
-    "keys": "3dd",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 2
       },
       "reg": "a4 b4\na5 b5\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         "a1 b1",
@@ -1683,44 +1682,44 @@
         "a3 b3"
       ]
     },
-    "text": "a1 b1\n  a2 b2\na3 b3\na4 b4\na5 b5"
+    "text": "a1 b1\n  a2 b2\na3 b3\na4 b4\na5 b5",
+    "keys": "3dd"
   },
   {
+    "id": "count-D-linewise",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "count-D-linewise",
-    "keys": "3D",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "a1 b1\n  a2 b2\na3 b3\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         "a4 b4",
         "a5 b5"
       ]
     },
-    "text": "a1 b1\n  a2 b2\na3 b3\na4 b4\na5 b5"
+    "text": "a1 b1\n  a2 b2\na3 b3\na4 b4\na5 b5",
+    "keys": "3D"
   },
   {
+    "id": "count-D-charwise",
     "cursor": {
       "col": 3,
       "row": 0
     },
-    "id": "count-D-charwise",
-    "keys": "3D",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 2,
         "row": 0
       },
       "reg": "b1\n  a2 b2\na3 b3",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a1 ",
@@ -1728,47 +1727,22 @@
         "a5 b5"
       ]
     },
-    "text": "a1 b1\n  a2 b2\na3 b3\na4 b4\na5 b5"
+    "text": "a1 b1\n  a2 b2\na3 b3\na4 b4\na5 b5",
+    "keys": "3D"
   },
   {
-    "cursor": {
-      "col": 0,
-      "row": 4
-    },
     "id": "count-C-last-line-fails",
-    "keys": "3CX<Esc>",
-    "expected": {
-      "mode": "n",
-      "cursor": {
-        "col": 0,
-        "row": 4
-      },
-      "reg": "",
-      "regType": "char",
-      "lines": [
-        "a1 b1",
-        "  a2 b2",
-        "a3 b3",
-        "a4 b4",
-        "a5 b5"
-      ]
-    },
-    "text": "a1 b1\n  a2 b2\na3 b3\na4 b4\na5 b5"
-  },
-  {
     "cursor": {
       "col": 0,
       "row": 4
     },
-    "id": "count-cc-last-line-fails",
-    "keys": "2ccX<Esc>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 4
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a1 b1",
@@ -1778,22 +1752,47 @@
         "a5 b5"
       ]
     },
-    "text": "a1 b1\n  a2 b2\na3 b3\na4 b4\na5 b5"
+    "text": "a1 b1\n  a2 b2\na3 b3\na4 b4\na5 b5",
+    "keys": "3CX<Esc>"
   },
   {
+    "id": "count-cc-last-line-fails",
+    "cursor": {
+      "col": 0,
+      "row": 4
+    },
+    "expected": {
+      "cursor": {
+        "col": 0,
+        "row": 4
+      },
+      "reg": "",
+      "mode": "n",
+      "regType": "char",
+      "lines": [
+        "a1 b1",
+        "  a2 b2",
+        "a3 b3",
+        "a4 b4",
+        "a5 b5"
+      ]
+    },
+    "text": "a1 b1\n  a2 b2\na3 b3\na4 b4\na5 b5",
+    "keys": "2ccX<Esc>"
+  },
+  {
+    "id": "register-append-unnamed",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "register-append-unnamed",
-    "keys": "\"ayiw\"Ayiw",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "a1a1",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a1 b1",
@@ -1803,382 +1802,382 @@
         "a5 b5"
       ]
     },
-    "text": "a1 b1\n  a2 b2\na3 b3\na4 b4\na5 b5"
+    "text": "a1 b1\n  a2 b2\na3 b3\na4 b4\na5 b5",
+    "keys": "\"ayiw\"Ayiw"
   },
   {
+    "id": "P-cursor-last-char",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "P-cursor-last-char",
-    "keys": "yiwP",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 1,
         "row": 0
       },
       "reg": "ab",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "abab cd ef"
       ]
     },
-    "text": "ab cd ef"
+    "text": "ab cd ef",
+    "keys": "yiwP"
   },
   {
+    "id": "P-count-cursor",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "P-count-cursor",
-    "keys": "yiw2P",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 3,
         "row": 0
       },
       "reg": "ab",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "ababab cd ef"
       ]
     },
-    "text": "ab cd ef"
+    "text": "ab cd ef",
+    "keys": "yiw2P"
   },
   {
+    "id": "yF-exclusive",
     "cursor": {
       "col": 13,
       "row": 0
     },
-    "id": "yF-exclusive",
-    "keys": "yF(",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 5,
         "row": 0
       },
       "reg": "(\"big\", ",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "  log(\"big\", total);"
       ]
     },
-    "text": "  log(\"big\", total);"
+    "text": "  log(\"big\", total);",
+    "keys": "yF("
   },
   {
+    "id": "yT-exclusive",
     "cursor": {
       "col": 13,
       "row": 0
     },
-    "id": "yT-exclusive",
-    "keys": "yTo",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 4,
         "row": 0
       },
       "reg": "g(\"big\", ",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "  log(\"big\", total);"
       ]
     },
-    "text": "  log(\"big\", total);"
+    "text": "  log(\"big\", total);",
+    "keys": "yTo"
   },
   {
+    "id": "dF-exclusive",
     "cursor": {
       "col": 13,
       "row": 0
     },
-    "id": "dF-exclusive",
-    "keys": "dF(",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 5,
         "row": 0
       },
       "reg": "(\"big\", ",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "  logtotal);"
       ]
     },
-    "text": "  log(\"big\", total);"
+    "text": "  log(\"big\", total);",
+    "keys": "dF("
   },
   {
+    "id": "dT-exclusive",
     "cursor": {
       "col": 13,
       "row": 0
     },
-    "id": "dT-exclusive",
-    "keys": "dTg",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 10,
         "row": 0
       },
       "reg": "\", ",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "  log(\"bigtotal);"
       ]
     },
-    "text": "  log(\"big\", total);"
+    "text": "  log(\"big\", total);",
+    "keys": "dTg"
   },
   {
+    "id": "y0-cursor",
     "cursor": {
       "col": 13,
       "row": 0
     },
-    "id": "y0-cursor",
-    "keys": "y0",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "  log(\"big\", ",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "  log(\"big\", total);"
       ]
     },
-    "text": "  log(\"big\", total);"
+    "text": "  log(\"big\", total);",
+    "keys": "y0"
   },
   {
+    "id": "gU-g-underscore",
     "cursor": {
       "col": 13,
       "row": 0
     },
-    "id": "gU-g-underscore",
-    "keys": "gUg_",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 13,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "  log(\"big\", TOTAL);"
       ]
     },
-    "text": "  log(\"big\", total);"
+    "text": "  log(\"big\", total);",
+    "keys": "gUg_"
   },
   {
+    "id": "gU-ge",
     "cursor": {
       "col": 13,
       "row": 0
     },
-    "id": "gU-ge",
-    "keys": "gUge",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 11,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "  log(\"big\", Total);"
       ]
     },
-    "text": "  log(\"big\", total);"
+    "text": "  log(\"big\", total);",
+    "keys": "gUge"
   },
   {
+    "id": "g-delete-cursor-first-nonblank",
     "cursor": {
       "col": 3,
       "row": 0
     },
-    "id": "g-delete-cursor-first-nonblank",
-    "keys": ":g/a/d<CR>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 2,
         "row": 0
       },
       "reg": "    stay here\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         "  keep"
       ]
     },
-    "text": "  keep\nzap a\n    stay here"
+    "text": "  keep\nzap a\n    stay here",
+    "keys": ":g/a/d<CR>"
   },
   {
+    "id": "gJ-keeps-indent",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "gJ-keeps-indent",
-    "keys": "gJ",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 8,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "if (x) {  log(1);"
       ]
     },
-    "text": "if (x) {\n  log(1);"
+    "text": "if (x) {\n  log(1);",
+    "keys": "gJ"
   },
   {
+    "id": "ctrl-x-zero-pad",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "ctrl-x-zero-pad",
-    "keys": "<C-x>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 4,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a 006 b"
       ]
     },
-    "text": "a 007 b"
+    "text": "a 007 b",
+    "keys": "<C-x>"
   },
   {
+    "id": "ctrl-a-zero-pad-grow",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "ctrl-a-zero-pad-grow",
-    "keys": "<C-a>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 4,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a 100 b"
       ]
     },
-    "text": "a 099 b"
+    "text": "a 099 b",
+    "keys": "<C-a>"
   },
   {
+    "id": "ctrl-a-negative-zero-pad",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "ctrl-a-negative-zero-pad",
-    "keys": "<C-a>",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 5,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "a -006 b"
       ]
     },
-    "text": "a -007 b"
+    "text": "a -007 b",
+    "keys": "<C-a>"
   },
   {
-    "cursor": {
-      "col": 1,
-      "row": 0
-    },
     "id": "star-next-keyword",
-    "keys": "*",
-    "expected": {
-      "mode": "n",
-      "cursor": {
-        "col": 0,
-        "row": 1
-      },
-      "reg": "",
-      "regType": "char",
-      "lines": [
-        "x  foo bar",
-        "foo"
-      ]
-    },
-    "text": "x  foo bar\nfoo"
-  },
-  {
     "cursor": {
       "col": 1,
       "row": 0
     },
-    "id": "hash-next-keyword",
-    "keys": "#",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 1
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "x  foo bar",
         "foo"
       ]
     },
-    "text": "x  foo bar\nfoo"
+    "text": "x  foo bar\nfoo",
+    "keys": "*"
   },
   {
+    "id": "hash-next-keyword",
+    "cursor": {
+      "col": 1,
+      "row": 0
+    },
+    "expected": {
+      "cursor": {
+        "col": 0,
+        "row": 1
+      },
+      "reg": "",
+      "mode": "n",
+      "regType": "char",
+      "lines": [
+        "x  foo bar",
+        "foo"
+      ]
+    },
+    "text": "x  foo bar\nfoo",
+    "keys": "#"
+  },
+  {
+    "id": "gstar-non-keyword-run",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "gstar-non-keyword-run",
-    "keys": "g*",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 5,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "  ;; x",
         ";; y"
       ]
     },
-    "text": "  ;; x\n;; y"
+    "text": "  ;; x\n;; y",
+    "keys": "g*"
   },
   {
+    "id": "undo-g-delete-top-line",
     "cursor": {
       "col": 2,
       "row": 3
     },
-    "id": "undo-g-delete-top-line",
-    "keys": ":g/zap/d<CR>u",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 2,
         "row": 1
       },
       "reg": "zap b\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         "keep",
@@ -2187,22 +2186,22 @@
         "zap b"
       ]
     },
-    "text": "keep\n  zap a\nkeep2\nzap b"
+    "text": "keep\n  zap a\nkeep2\nzap b",
+    "keys": ":g/zap/d<CR>u"
   },
   {
+    "id": "undo-same-line-col",
     "cursor": {
       "col": 4,
       "row": 1
     },
-    "id": "undo-same-line-col",
-    "keys": "jdd2ku",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 4,
         "row": 2
       },
       "reg": "a3 b3\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         "a1 b1",
@@ -2210,22 +2209,22 @@
         "a3 b3"
       ]
     },
-    "text": "a1 b1\n  a2 b2\na3 b3"
+    "text": "a1 b1\n  a2 b2\na3 b3",
+    "keys": "jdd2ku"
   },
   {
-    "cursor": {
-      "col": 0,
-      "row": 0
-    },
     "id": "visual-repeat-1",
-    "keys": "vll~w.",
+    "cursor": {
+      "col": 0,
+      "row": 0
+    },
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 6,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "ALPha BETa gamma delta",
@@ -2235,22 +2234,22 @@
         "last line here ok"
       ]
     },
-    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok"
+    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok",
+    "keys": "vll~w."
   },
   {
-    "cursor": {
-      "col": 0,
-      "row": 0
-    },
     "id": "visual-repeat-2",
-    "keys": "vllUw.",
+    "cursor": {
+      "col": 0,
+      "row": 0
+    },
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 6,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "ALPha BETa gamma delta",
@@ -2260,22 +2259,22 @@
         "last line here ok"
       ]
     },
-    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok"
+    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok",
+    "keys": "vllUw."
   },
   {
+    "id": "visual-repeat-3",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-3",
-    "keys": "vlldw.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 3,
         "row": 0
       },
       "reg": "bet",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "ha a gamma delta",
@@ -2285,22 +2284,22 @@
         "last line here ok"
       ]
     },
-    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok"
+    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok",
+    "keys": "vlldw."
   },
   {
+    "id": "visual-repeat-4",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-4",
-    "keys": "Vj>j.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 1
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "  alpha beta gamma delta",
@@ -2310,43 +2309,43 @@
         "last line here ok"
       ]
     },
-    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok"
+    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok",
+    "keys": "Vj>j."
   },
   {
+    "id": "visual-repeat-5",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-5",
-    "keys": "Vjdj.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "x y z w v u\nlast line here ok\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         "aaaa bbbb cccc dddd"
       ]
     },
-    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok"
+    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok",
+    "keys": "Vjdj."
   },
   {
+    "id": "visual-repeat-6",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-6",
-    "keys": "VjUjj.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 2
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "ALPHA BETA GAMMA DELTA",
@@ -2356,22 +2355,22 @@
         "last line here ok"
       ]
     },
-    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok"
+    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok",
+    "keys": "VjUjj."
   },
   {
+    "id": "visual-repeat-7",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-7",
-    "keys": "vjl~jj.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 2
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "ALPHA BETA GAMMA DELTA",
@@ -2381,22 +2380,22 @@
         "last line here ok"
       ]
     },
-    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok"
+    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok",
+    "keys": "vjl~jj."
   },
   {
+    "id": "visual-repeat-8",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-8",
-    "keys": "vjldj.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 1
       },
       "reg": "aaaa bbbb cccc dddd\nx ",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "e two three four five",
@@ -2404,22 +2403,22 @@
         "last line here ok"
       ]
     },
-    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok"
+    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok",
+    "keys": "vjldj."
   },
   {
+    "id": "visual-repeat-9",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-9",
-    "keys": "<C-v>jlUw.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 6,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "ALpha BEta gamma delta",
@@ -2429,22 +2428,22 @@
         "last line here ok"
       ]
     },
-    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok"
+    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok",
+    "keys": "<C-v>jlUw."
   },
   {
+    "id": "visual-repeat-10",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-10",
-    "keys": "<C-v>jldw.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 4,
         "row": 0
       },
       "reg": "be\no ",
+      "mode": "n",
       "regType": "block",
       "lines": [
         "pha ta gamma delta",
@@ -2454,22 +2453,22 @@
         "last line here ok"
       ]
     },
-    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok"
+    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok",
+    "keys": "<C-v>jldw."
   },
   {
+    "id": "visual-repeat-11",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-11",
-    "keys": "vllr#w.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 3,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "######beta gamma delta",
@@ -2479,22 +2478,22 @@
         "last line here ok"
       ]
     },
-    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok"
+    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok",
+    "keys": "vllr#w."
   },
   {
+    "id": "visual-repeat-12",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-12",
-    "keys": "Vj~j.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 1
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "ALPHA BETA GAMMA DELTA",
@@ -2504,22 +2503,22 @@
         "last line here ok"
       ]
     },
-    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok"
+    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok",
+    "keys": "Vj~j."
   },
   {
+    "id": "visual-repeat-13",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-13",
-    "keys": "vee~W.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 6,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "ALPHA beta GAMMA delta",
@@ -2529,22 +2528,22 @@
         "last line here ok"
       ]
     },
-    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok"
+    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok",
+    "keys": "vee~W."
   },
   {
+    "id": "visual-repeat-14",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-14",
-    "keys": "VjJj.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 19,
         "row": 1
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "alpha beta gamma delta one two three four five",
@@ -2552,22 +2551,22 @@
         "last line here ok"
       ]
     },
-    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok"
+    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok",
+    "keys": "VjJj."
   },
   {
+    "id": "visual-repeat-15",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-15",
-    "keys": "vlllcX<Esc>w.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 3,
         "row": 0
       },
       "reg": "beta",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "Xa X gamma delta",
@@ -2577,22 +2576,22 @@
         "last line here ok"
       ]
     },
-    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok"
+    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok",
+    "keys": "vlllcX<Esc>w."
   },
   {
+    "id": "visual-repeat-16",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-16",
-    "keys": "Vj>.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "    alpha beta gamma delta",
@@ -2602,64 +2601,64 @@
         "last line here ok"
       ]
     },
-    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok"
+    "text": "alpha beta gamma delta\none two three four five\naaaa bbbb cccc dddd\nx y z w v u\nlast line here ok",
+    "keys": "Vj>."
   },
   {
+    "id": "visual-repeat-count-1",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-count-1",
-    "keys": "vll~w3.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 6,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "ALPha BETa gamma delta"
       ]
     },
-    "text": "alpha beta gamma delta"
+    "text": "alpha beta gamma delta",
+    "keys": "vll~w3."
   },
   {
+    "id": "visual-repeat-count-2",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-count-2",
-    "keys": "vlld2.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "def",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "ghijklmnop"
       ]
     },
-    "text": "abcdefghijklmnop"
+    "text": "abcdefghijklmnop",
+    "keys": "vlld2."
   },
   {
+    "id": "visual-repeat-count-3",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-count-3",
-    "keys": "Vj>3.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "    a",
@@ -2670,22 +2669,22 @@
         "f"
       ]
     },
-    "text": "a\nb\nc\nd\ne\nf"
+    "text": "a\nb\nc\nd\ne\nf",
+    "keys": "Vj>3."
   },
   {
+    "id": "visual-repeat-count-4",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-count-4",
-    "keys": "Vjdj2.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 1
       },
       "reg": "d\ne\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         "c",
@@ -2693,22 +2692,22 @@
         "g"
       ]
     },
-    "text": "a\nb\nc\nd\ne\nf\ng"
+    "text": "a\nb\nc\nd\ne\nf\ng",
+    "keys": "Vjdj2."
   },
   {
+    "id": "visual-repeat-count-5",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-count-5",
-    "keys": "vjlUj2.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 1
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "ABCDEF",
@@ -2718,22 +2717,22 @@
         "yzabcd"
       ]
     },
-    "text": "abcdef\nghijkl\nmnopqr\nstuvwx\nyzabcd"
+    "text": "abcdef\nghijkl\nmnopqr\nstuvwx\nyzabcd",
+    "keys": "vjlUj2."
   },
   {
+    "id": "visual-repeat-count-6",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-count-6",
-    "keys": "<C-v>jlUjj3.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 2
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "ABcdef",
@@ -2744,211 +2743,211 @@
         "efghij"
       ]
     },
-    "text": "abcdef\nghijkl\nmnopqr\nstuvwx\nyzabcd\nefghij"
+    "text": "abcdef\nghijkl\nmnopqr\nstuvwx\nyzabcd\nefghij",
+    "keys": "<C-v>jlUjj3."
   },
   {
+    "id": "visual-repeat-count-7",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-count-7",
-    "keys": "vllcX<Esc>w2.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 4,
         "row": 0
       },
       "reg": "bet",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "Xha Xa gamma delta"
       ]
     },
-    "text": "alpha beta gamma delta"
+    "text": "alpha beta gamma delta",
+    "keys": "vllcX<Esc>w2."
   },
   {
+    "id": "visual-repeat-count-8",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-count-8",
-    "keys": "vlrxw2.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 6,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "xxpha xxta gamma delta"
       ]
     },
-    "text": "alpha beta gamma delta"
+    "text": "alpha beta gamma delta",
+    "keys": "vlrxw2."
   },
   {
+    "id": "visual-repeat-count-9",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "visual-repeat-count-9",
-    "keys": "vll~w3.w.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 11,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "ALPha BETa GAMma delta epsilon"
       ]
     },
-    "text": "alpha beta gamma delta epsilon"
+    "text": "alpha beta gamma delta epsilon",
+    "keys": "vll~w3.w."
   },
   {
+    "id": "dot-count-1",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "dot-count-1",
-    "keys": "dw2.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "b c ",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "d e f g h"
       ]
     },
-    "text": "a b c d e f g h"
+    "text": "a b c d e f g h",
+    "keys": "dw2."
   },
   {
-    "cursor": {
-      "col": 0,
-      "row": 0
-    },
     "id": "dot-count-2",
-    "keys": "dw2..",
+    "cursor": {
+      "col": 0,
+      "row": 0
+    },
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "d e ",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "f g h"
       ]
     },
-    "text": "a b c d e f g h"
+    "text": "a b c d e f g h",
+    "keys": "dw2.."
   },
   {
-    "cursor": {
-      "col": 0,
-      "row": 0
-    },
     "id": "dot-count-3",
-    "keys": "3dw2.",
+    "cursor": {
+      "col": 0,
+      "row": 0
+    },
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "d e ",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "f g h"
       ]
     },
-    "text": "a b c d e f g h"
+    "text": "a b c d e f g h",
+    "keys": "3dw2."
   },
   {
+    "id": "dot-count-4",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "dot-count-4",
-    "keys": "d3w2.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "d e ",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "f g h i j"
       ]
     },
-    "text": "a b c d e f g h i j"
+    "text": "a b c d e f g h i j",
+    "keys": "d3w2."
   },
   {
+    "id": "dot-count-5",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "dot-count-5",
-    "keys": "xx3.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "cde",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "fghij"
       ]
     },
-    "text": "abcdefghij"
+    "text": "abcdefghij",
+    "keys": "xx3."
   },
   {
+    "id": "dot-count-6",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "dot-count-6",
-    "keys": "ix<Esc>3.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 2,
         "row": 0
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "xxxxabc"
       ]
     },
-    "text": "abc"
+    "text": "abc",
+    "keys": "ix<Esc>3."
   },
   {
+    "id": "dot-count-7",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "dot-count-7",
-    "keys": "\"add2.\"ap",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 1
       },
       "reg": "2\n3\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         "4",
@@ -2957,64 +2956,64 @@
         "5"
       ]
     },
-    "text": "1\n2\n3\n4\n5"
+    "text": "1\n2\n3\n4\n5",
+    "keys": "\"add2.\"ap"
   },
   {
+    "id": "dot-count-8",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "dot-count-8",
-    "keys": "dd10.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 0
       },
       "reg": "2\n3\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         ""
       ]
     },
-    "text": "1\n2\n3"
+    "text": "1\n2\n3",
+    "keys": "dd10."
   },
   {
+    "id": "dot-count-9",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "dot-count-9",
-    "keys": "cwX<Esc>w2.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 2,
         "row": 0
       },
       "reg": "bb cc",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "X X dd ee"
       ]
     },
-    "text": "aa bb cc dd ee"
+    "text": "aa bb cc dd ee",
+    "keys": "cwX<Esc>w2."
   },
   {
+    "id": "dot-count-10",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "dot-count-10",
-    "keys": ">>j3.",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 1
       },
       "reg": "",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "  a",
@@ -3024,22 +3023,22 @@
         "e"
       ]
     },
-    "text": "a\nb\nc\nd\ne"
+    "text": "a\nb\nc\nd\ne",
+    "keys": ">>j3."
   },
   {
+    "id": "dot-register-1",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "dot-register-1",
-    "keys": "\"add.\"ap",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 1
       },
       "reg": "2\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         "3",
@@ -3048,43 +3047,43 @@
         "5"
       ]
     },
-    "text": "1\n2\n3\n4\n5"
+    "text": "1\n2\n3\n4\n5",
+    "keys": "\"add.\"ap"
   },
   {
+    "id": "dot-register-2",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "dot-register-2",
-    "keys": "\"acwX<Esc>w.\"ap",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 4,
         "row": 0
       },
       "reg": "bb",
+      "mode": "n",
       "regType": "char",
       "lines": [
         "X Xbb cc"
       ]
     },
-    "text": "aa bb cc"
+    "text": "aa bb cc",
+    "keys": "\"acwX<Esc>w.\"ap"
   },
   {
+    "id": "dot-register-3",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "dot-register-3",
-    "keys": "\"qdd\"Qdd.\"qp",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 1
       },
       "reg": "1\n2\n3\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         "4",
@@ -3094,22 +3093,22 @@
         "5"
       ]
     },
-    "text": "1\n2\n3\n4\n5"
+    "text": "1\n2\n3\n4\n5",
+    "keys": "\"qdd\"Qdd.\"qp"
   },
   {
+    "id": "dot-register-4",
     "cursor": {
       "col": 0,
       "row": 0
     },
-    "id": "dot-register-4",
-    "keys": "yy\"_dd.p",
     "expected": {
-      "mode": "n",
       "cursor": {
         "col": 0,
         "row": 1
       },
       "reg": "1\n",
+      "mode": "n",
       "regType": "line",
       "lines": [
         "3",
@@ -3117,6 +3116,394 @@
         "4"
       ]
     },
-    "text": "1\n2\n3\n4"
+    "text": "1\n2\n3\n4",
+    "keys": "yy\"_dd.p"
+  },
+  {
+    "id": "count-register-1",
+    "cursor": {
+      "col": 0,
+      "row": 0
+    },
+    "expected": {
+      "cursor": {
+        "col": 0,
+        "row": 1
+      },
+      "reg": "1\n2\n",
+      "mode": "n",
+      "regType": "line",
+      "lines": [
+        "3",
+        "1",
+        "2",
+        "4",
+        "5"
+      ]
+    },
+    "text": "1\n2\n3\n4\n5",
+    "keys": "2\"zdd\"zp"
+  },
+  {
+    "id": "count-register-2",
+    "cursor": {
+      "col": 0,
+      "row": 0
+    },
+    "expected": {
+      "cursor": {
+        "col": 0,
+        "row": 0
+      },
+      "reg": "1\n2\n",
+      "mode": "n",
+      "regType": "line",
+      "lines": [
+        "1",
+        "2",
+        "1",
+        "2",
+        "3"
+      ]
+    },
+    "text": "1\n2\n3",
+    "keys": "2\"zyy\"zP"
+  },
+  {
+    "id": "count-register-3",
+    "cursor": {
+      "col": 0,
+      "row": 0
+    },
+    "expected": {
+      "cursor": {
+        "col": 6,
+        "row": 0
+      },
+      "reg": "ab ",
+      "mode": "n",
+      "regType": "char",
+      "lines": [
+        "aab ab b cd"
+      ]
+    },
+    "text": "ab cd",
+    "keys": "\"xyw2\"xp"
+  },
+  {
+    "id": "count-register-4",
+    "cursor": {
+      "col": 0,
+      "row": 0
+    },
+    "expected": {
+      "cursor": {
+        "col": 0,
+        "row": 0
+      },
+      "reg": "",
+      "mode": "n",
+      "regType": "char",
+      "lines": [
+        "def"
+      ]
+    },
+    "text": "abcdef",
+    "keys": "3\"_x"
+  },
+  {
+    "id": "count-register-5",
+    "cursor": {
+      "col": 0,
+      "row": 0
+    },
+    "expected": {
+      "cursor": {
+        "col": 4,
+        "row": 0
+      },
+      "reg": "c d ",
+      "mode": "n",
+      "regType": "char",
+      "lines": [
+        "ec d  f g"
+      ]
+    },
+    "text": "a b c d e f g",
+    "keys": "2\"zdw.\"zp"
+  },
+  {
+    "id": "count-register-6",
+    "cursor": {
+      "col": 0,
+      "row": 0
+    },
+    "expected": {
+      "cursor": {
+        "col": 0,
+        "row": 1
+      },
+      "reg": "1\n2\n3\n4\n5\n6\n",
+      "mode": "n",
+      "regType": "line",
+      "lines": [
+        "7",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "8"
+      ]
+    },
+    "text": "1\n2\n3\n4\n5\n6\n7\n8",
+    "keys": "2\"y3dd\"yp"
+  },
+  {
+    "id": "undo-insert-start-1",
+    "cursor": {
+      "col": 0,
+      "row": 0
+    },
+    "expected": {
+      "cursor": {
+        "col": 18,
+        "row": 0
+      },
+      "reg": "",
+      "mode": "n",
+      "regType": "char",
+      "lines": [
+        "  indented line one",
+        "    deeper (nested) item"
+      ]
+    },
+    "text": "  indented line one\n    deeper (nested) item",
+    "keys": "Axyz<BS><BS><Esc>Wu"
+  },
+  {
+    "id": "undo-insert-start-2",
+    "cursor": {
+      "col": 3,
+      "row": 0
+    },
+    "expected": {
+      "cursor": {
+        "col": 33,
+        "row": 0
+      },
+      "reg": "",
+      "mode": "n",
+      "regType": "char",
+      "lines": [
+        "The quick brown fox. It jumps over",
+        "the lazy dog!"
+      ]
+    },
+    "text": "The quick brown fox. It jumps over\nthe lazy dog!",
+    "keys": "Aend;<Esc>u"
+  },
+  {
+    "id": "undo-insert-start-3",
+    "cursor": {
+      "col": 7,
+      "row": 0
+    },
+    "expected": {
+      "cursor": {
+        "col": 2,
+        "row": 0
+      },
+      "reg": "",
+      "mode": "n",
+      "regType": "char",
+      "lines": [
+        "  hello world",
+        "next"
+      ]
+    },
+    "text": "  hello world\nnext",
+    "keys": "Inew<Esc>u"
+  },
+  {
+    "id": "undo-insert-start-4",
+    "cursor": {
+      "col": 8,
+      "row": 0
+    },
+    "expected": {
+      "cursor": {
+        "col": 0,
+        "row": 0
+      },
+      "reg": "alpha beta gamma\n",
+      "mode": "n",
+      "regType": "line",
+      "lines": [
+        "alpha beta gamma",
+        "foo bar"
+      ]
+    },
+    "text": "alpha beta gamma\nfoo bar",
+    "keys": "ccnew<Esc>u"
+  },
+  {
+    "id": "undo-insert-start-5",
+    "cursor": {
+      "col": 4,
+      "row": 0
+    },
+    "expected": {
+      "cursor": {
+        "col": 5,
+        "row": 0
+      },
+      "reg": "",
+      "mode": "n",
+      "regType": "char",
+      "lines": [
+        "alpha beta gamma",
+        "foo bar"
+      ]
+    },
+    "text": "alpha beta gamma\nfoo bar",
+    "keys": "anew<Esc>wu"
+  },
+  {
+    "id": "undo-saved-cursor-1",
+    "cursor": {
+      "col": 9,
+      "row": 1
+    },
+    "expected": {
+      "cursor": {
+        "col": 9,
+        "row": 1
+      },
+      "reg": "",
+      "mode": "n",
+      "regType": "char",
+      "lines": [
+        "a",
+        "    deeper item",
+        "c"
+      ]
+    },
+    "text": "a\n    deeper item\nc",
+    "keys": ":t.<CR>u"
+  },
+  {
+    "id": "undo-saved-cursor-2",
+    "cursor": {
+      "col": 4,
+      "row": 0
+    },
+    "expected": {
+      "cursor": {
+        "col": 4,
+        "row": 0
+      },
+      "reg": "two ",
+      "mode": "n",
+      "regType": "char",
+      "lines": [
+        "one two three",
+        "four five"
+      ]
+    },
+    "text": "one two three\nfour five",
+    "keys": "dwjjuu"
+  },
+  {
+    "id": "ex-range-past-end-1",
+    "cursor": {
+      "col": 0,
+      "row": 0
+    },
+    "expected": {
+      "cursor": {
+        "col": 6,
+        "row": 0
+      },
+      "reg": "",
+      "mode": "n",
+      "regType": "char",
+      "lines": [
+        "plain 0x1f 007 -3 words",
+        "second"
+      ]
+    },
+    "text": "plain 0x1f 007 -3 words\nsecond",
+    "keys": "W:2,3d<CR>"
+  },
+  {
+    "id": "ex-range-past-end-2",
+    "cursor": {
+      "col": 0,
+      "row": 0
+    },
+    "expected": {
+      "cursor": {
+        "col": 0,
+        "row": 0
+      },
+      "reg": "",
+      "mode": "n",
+      "regType": "char",
+      "lines": [
+        "a",
+        "b",
+        "c"
+      ]
+    },
+    "text": "a\nb\nc",
+    "keys": ":5d<CR>"
+  },
+  {
+    "id": "ex-range-past-end-3",
+    "cursor": {
+      "col": 0,
+      "row": 0
+    },
+    "expected": {
+      "cursor": {
+        "col": 0,
+        "row": 2
+      },
+      "reg": "",
+      "mode": "n",
+      "regType": "char",
+      "lines": [
+        "a",
+        "b",
+        "c"
+      ]
+    },
+    "text": "a\nb\nc",
+    "keys": ":2,9<CR>"
+  },
+  {
+    "id": "append-to-macro-register",
+    "cursor": {
+      "col": 0,
+      "row": 0
+    },
+    "expected": {
+      "cursor": {
+        "col": 0,
+        "row": 1
+      },
+      "reg": "dwjcc",
+      "mode": "n",
+      "regType": "char",
+      "lines": [
+        "bb",
+        "cc dd",
+        "ee ff"
+      ]
+    },
+    "text": "aa bb\ncc dd\nee ff",
+    "keys": "qkdwjq\"Kyiw"
   }
 ]

@@ -533,10 +533,10 @@ export function handleKey(
   let nextState: VimEditorState;
   if (getVimEngineConfig().devChecks) {
     deepFreeze(input);
-    nextState = recordRepeatRegister(input, recordVisualRepeat(input, applyCurswant(input, syncPerFileState(input, rawHandleKey(input, key, isReplayingDot, macroDepth)), key), key, isReplayingDot), isReplayingDot);
+    nextState = recordInsertStartCursor(input, recordRepeatRegister(input, recordVisualRepeat(input, applyCurswant(input, syncPerFileState(input, rawHandleKey(input, key, isReplayingDot, macroDepth)), key), key, isReplayingDot), isReplayingDot));
     assertValidVimState(input, nextState, key);
   } else {
-    nextState = recordRepeatRegister(input, recordVisualRepeat(input, applyCurswant(input, syncPerFileState(input, rawHandleKey(input, key, isReplayingDot, macroDepth)), key), key, isReplayingDot), isReplayingDot);
+    nextState = recordInsertStartCursor(input, recordRepeatRegister(input, recordVisualRepeat(input, applyCurswant(input, syncPerFileState(input, rawHandleKey(input, key, isReplayingDot, macroDepth)), key), key, isReplayingDot), isReplayingDot));
   }
   const withHl = releaseHlsearchSuppression(input, nextState, key);
   return processKeyAutocmds(input, withHl);
@@ -599,6 +599,20 @@ function recordRepeatRegister(prev: VimEditorState, next: VimEditorState, isRepl
     if (keys !== next.currentChangeKeys) return { ...next, currentChangeKeys: keys };
   }
   return next;
+}
+
+/**
+ * Vim 은 입력 모드로 들어가는 변경(A, a, I, cc, cw …)의 실행 취소 위치로 "입력을 시작한 곳"을 기억합니다.
+ * 이번 키로 새 실행 취소 스냅샷이 생기고 입력 모드에 들어갔다면 스냅샷 커서를 입력 시작 위치로 바꿉니다.
+ * (o/O 처럼 줄이 늘어나는 경우는 원래 줄을 기억하므로 그대로 둡니다.)
+ */
+function recordInsertStartCursor(prev: VimEditorState, next: VimEditorState): VimEditorState {
+  if (prev.mode !== 'NORMAL' || next.mode !== 'INSERT') return next;
+  const stack = next.undoStack;
+  if (!stack || stack.length === 0 || stack === prev.undoStack) return next;
+  if (next.lines.length !== prev.lines.length) return next;
+  const top = stack[stack.length - 1];
+  return { ...next, undoStack: [...stack.slice(0, -1), { ...top, cursor: { ...next.cursor } }] };
 }
 
 /** `$` 뒤의 curswant: 세로 이동이 항상 줄 끝으로 갑니다 (Vim MAXCOL). */
