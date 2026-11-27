@@ -143,6 +143,44 @@ function replayMacroRegister(
     : { ...curState, lastPlayedMacro: targetReg };
 }
 
+
+const DOT_COUNT_OPERATORS = new Set(['d', 'c', 'y', '<', '>', '=', '!']);
+const DOT_COUNT_G_OPERATORS = new Set(['u', 'U', '~', '?', 'q', 'w', 'c']);
+const isDigitKey = (k: string | undefined) => k !== undefined && /^[0-9]$/.test(k);
+
+/**
+ * Vim `[count].`: 새 count 가 반복할 명령의 원래 count 를 대신합니다 (`d3w` 뒤 `2.` 는 `d2w`).
+ * 비주얼 반복(`v`/`V`/`Ctrl-v` 로 다시 선택하는 키)과 Ex 명령은 count 를 쓰지 않습니다.
+ */
+export function withDotRepeatCount(keys: readonly string[], count: number): string[] {
+  let i = 0;
+  const skipCount = () => {
+    if (keys[i] !== undefined && /^[1-9]$/.test(keys[i])) {
+      while (isDigitKey(keys[i])) i++;
+    }
+  };
+  skipCount();
+  const head: string[] = [];
+  if (keys[i] === '"' && keys[i + 1] !== undefined) {
+    head.push(keys[i], keys[i + 1]);
+    i += 2;
+    skipCount();
+  }
+  let rest = keys.slice(i);
+  if (rest.length === 0 || ['v', 'V', 'Ctrl-v', ':'].includes(rest[0])) return [...keys];
+  const opLen = DOT_COUNT_OPERATORS.has(rest[0])
+    ? 1
+    : rest[0] === 'g' && DOT_COUNT_G_OPERATORS.has(rest[1])
+      ? 2
+      : 0;
+  if (opLen > 0 && rest[opLen] !== undefined && /^[1-9]$/.test(rest[opLen])) {
+    let j = opLen;
+    while (isDigitKey(rest[j])) j++;
+    rest = [...rest.slice(0, opLen), ...rest.slice(j)];
+  }
+  return [...head, ...String(count).split(''), ...rest];
+}
+
 /**
  * 매크로 녹화(q), 매크로 재생(@{reg}/@@/@:), Q 반복, 도트 반복(.), 단일 문자 교체(r)를 처리합니다.
  */
@@ -209,17 +247,20 @@ export function handleNormalMacroAndDot(
   }
 
   // 2. 직전 변경 반복 ('.' Dot Repeat — "1p ~ "8p 후 . 반복 시 번호 레지스터를 1씩 자동 증가)
-  if (key === '.' && !state.pendingKeys) {
+  if (key === '.' && (!state.pendingKeys || /^[1-9][0-9]*$/.test(state.pendingKeys))) {
     if (!state.lastChangeKeys || state.lastChangeKeys.length === 0) {
-      return state;
+      return { ...state, pendingKeys: undefined };
     }
-    const replayKeys = [...state.lastChangeKeys];
+    let replayKeys = [...state.lastChangeKeys];
     if (
       replayKeys.length >= 3 &&
       replayKeys[0] === '"' &&
       /^[1-8]$/.test(replayKeys[1])
     ) {
       replayKeys[1] = String(Number(replayKeys[1]) + 1);
+    }
+    if (state.pendingKeys) {
+      replayKeys = withDotRepeatCount(replayKeys, Number(state.pendingKeys));
     }
     let curState: VimEditorState = { ...state, pendingKeys: undefined };
     for (const rk of replayKeys) {

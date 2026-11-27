@@ -115,4 +115,9 @@ describe('useVimKeyboardInput', () => {
     expect(event.defaultPrevented).toBe(true);
     expect(processKeyInput).not.toHaveBeenCalled();
   });
+  it('Alt+W 는 명령줄·검색 입력 중에도 Ctrl-w 로 넘긴다 (Ctrl+W 는 브라우저가 탭을 닫음)', () => {
+    mountHook({ editorMode: 'COMMAND' });
+    fireKey('w', { code: 'KeyW', altKey: true });
+    expect(processKeyInput).toHaveBeenLastCalledWith('Ctrl-w');
+  });
 });

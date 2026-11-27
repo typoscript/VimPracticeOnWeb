@@ -181,4 +181,18 @@ describe('MissionPanel Component', () => {
 
     expect(handleStopGhostReplay).toHaveBeenCalledTimes(1);
   });
+  it('shows the Alt+W note only for lessons that use Ctrl-w', () => {
+    const props = {
+      missionIndex: 0,
+      totalMissions: 5,
+      isCompleted: false,
+      keystrokeCount: 0,
+      onSelectMission: vi.fn(),
+      onResetMission: vi.fn(),
+    };
+    const { rerender } = render(<MissionPanel {...props} mission={{ ...mockMission, optimalKeys: ['j', 'l'] }} />);
+    expect(screen.queryByTestId('mission-ctrl-w-note')).toBeNull();
+    rerender(<MissionPanel {...props} mission={{ ...mockMission, optimalKeys: [':', 'Ctrl-w', 'l'] }} />);
+    expect(screen.getByTestId('mission-ctrl-w-note')).toHaveTextContent('Alt+W');
+  });
 });

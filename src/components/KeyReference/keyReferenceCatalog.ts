@@ -163,7 +163,7 @@ export const KEY_REFERENCE_ENTRIES: readonly KeyReferenceEntry[] = [
   { key: 'q', category: 'other', ko: 'q{a-z}: 매크로 녹화 시작/끝 (q: 명령 이력 창)', en: 'q{a-z}: record a macro / stop (q: command history)' },
   { key: '@', category: 'other', ko: '@{a-z}: 매크로 실행 (@@ 직전 매크로, @: 직전 Ex)', en: '@{a-z}: run a macro (@@ last macro, @: last Ex command)' },
   { key: 'Q', category: 'other', ko: '마지막으로 녹화한 매크로 실행', en: 'Run the last recorded macro' },
-  { key: 'Ctrl-w', category: 'other', ko: '+창 명령 (분할·이동·닫기)', en: '+Window commands (split, move, close)', followUps: CTRL_W_ITEMS },
+  { key: 'Ctrl-w', category: 'other', ko: '+창 명령 (분할·이동·닫기). 브라우저에서는 Alt+W 로 누르세요 (Ctrl+W 는 탭을 닫음)', en: '+Window commands (split, move, close). In the browser press Alt+W (Ctrl+W closes the tab)', followUps: CTRL_W_ITEMS },
   { key: 'Ctrl-^', category: 'other', ko: '직전에 보던 파일로 전환', en: 'Switch to the alternate file' },
   { key: 'Ctrl-]', category: 'other', ko: '커서 단어의 태그(정의)로 점프', en: 'Jump to the tag under the cursor' },
   { key: 'Ctrl-t', category: 'other', ko: '태그 점프 이전 위치로 복귀', en: 'Jump back from a tag' },

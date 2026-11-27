@@ -50,11 +50,8 @@ const isNonTextInputMode = (mode: VimMode) =>
 
 const MODIFIER_SHORTCUTS: Record<string, ModifierShortcutRule> = {
   r: { allowAlt: false, vimKey: 'Ctrl-r', appliesTo: () => true },
-  w: {
-    allowAlt: true,
-    vimKey: 'Ctrl-w',
-    appliesTo: (mode) => isNormalOrVisual(mode) || mode === 'INSERT' || mode === 'TERMINAL',
-  },
+  // 브라우저는 Ctrl+W 를 페이지에 넘기지 않고 탭을 닫으므로 모든 모드에서 Alt+W 로 Ctrl-w 를 입력합니다.
+  w: { allowAlt: true, vimKey: 'Ctrl-w', appliesTo: () => true },
   h: { allowAlt: true, vimKey: 'Ctrl-h', appliesTo: (mode) => mode === 'INSERT' || mode === 'TERMINAL' },
   n: { allowAlt: true, vimKey: 'Ctrl-n', appliesTo: (mode) => mode === 'INSERT' || mode === 'TERMINAL' },
   p: { allowAlt: true, vimKey: 'Ctrl-p', appliesTo: (mode) => mode === 'INSERT' || mode === 'TERMINAL' },

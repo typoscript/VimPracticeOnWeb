@@ -296,6 +296,12 @@ export const MissionPanel: React.FC<MissionPanelProps> = ({
           {t(mission.hint)}
         </div>
       )}
+
+      {mission.optimalKeys?.includes('Ctrl-w') && (
+        <div className="mission-browser-key-note" data-testid="mission-ctrl-w-note">
+          {t('⚠️ 브라우저에서 Ctrl+W 는 탭을 닫습니다. 이 레슨의 Ctrl-w 는 Alt+W 로 누르세요.')}
+        </div>
+      )}
     </aside>
   );
 };

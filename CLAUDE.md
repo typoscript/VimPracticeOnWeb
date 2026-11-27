@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 227개 테스트 파일, 2,731개 테스트 100% 통과 필수)*
+  *(현재 228개 테스트 파일, 2,757개 테스트 100% 통과 필수)*
 - **실제 브라우저(E2E) 테스트 (Playwright)**:
   `npm run test:e2e`
   *(`e2e/*.e2e.ts`, `playwright.config.ts`. 프로덕션 빌드를 `vite preview` 로 띄워 Chromium 에서 레슨 완료·Ex 명령·Ctrl+v 차단·한글 IME 키 매핑·언어 전환·지연 로딩 탭을 검사합니다. 처음 한 번 `npx playwright install chromium` 이 필요하며, Linux 에서 공유 라이브러리가 없다고 나오면 `sudo npx playwright install-deps chromium` 을 실행하세요. 파일 이름을 `.e2e.ts` 로 두어 vitest 가 줍지 않게 합니다.)*
@@ -297,6 +297,7 @@
   - **`nvim-dap` / `nvim-dap-ui` 인터랙티브 디버거 (`:DapBp`, `:DapContinue`, `:DapStepOver`/`Into`/`Out`, `:DapWatch`, `:DapEval`, `:DapTerminate`, `:DapUiToggle`)**: `eval` 없는 안전한 자동 트레이스 빌더(변수 대입·산술/비교 표현식·`console.log`/`print` 콘솔 출력 추적) 및 커스텀 `dapScenarioTrace` 지원, 거터 중단점(`●` 클릭 토글)·활성 실행 화살표(`▶`)·`nvim-dap-virtual-text` 인라인 변수 요약, 지연 로딩(`React.lazy`) `DapPanel`(Scopes/Variables · Watch · Call Stack · Breakpoints · Console)과 `StatusBar` `[🐞 DAP LN]` 배지를 구현했습니다.
   - **신규 레슨 131~132강 & 실무 캡스톤 6번**: `git-conflict.nvim` 충돌 해결(레슨 131), `nvim-dap` 디버깅 피날레(레슨 132), 다중 파일 *머지 충돌 해결 & nvim-dap 런타임 버그 핫픽스* 캡스톤 6번, Sandbox `src/mergeDemo.ts` 및 퀵런처 칩(`:GitConflictListQf` · `:DapUiToggle`), 치트시트·Which-Key·한/영 번역 사전을 통합했습니다.
 - **Vim 키 사전 (`Ctrl+/`, `src/components/KeyReference/`)**: 헤더 아래에 늘 보이던 단축키 띠(`h j k l 이동` 등)를 없애고, `Ctrl+/`(macOS `Cmd+/`) 또는 헤더 아래 `⌨️ 키마다 하는 일 보기` 버튼으로 여는 지연 로딩 창으로 바꿨습니다. 창이 열린 동안 키를 누르면(한글 IME 키도 영문으로 변환) 그 키가 노멀 모드에서 하는 일을 보여 주고, `g`/`z`/`[`/`]`/`Ctrl-w`/`"`/연산자처럼 뒤에 키가 이어지는 키는 Which-Key 목록(`whichKeyCatalog.ts`)을 재사용해 후속 키도 함께 보여 줍니다. 키 설명은 `keyReferenceCatalog.ts` 에 한/영(`ko`/`en`)으로 직접 적습니다. `Esc` 또는 `Ctrl+/` 로 닫습니다.
+- **`[count].` · 레지스터 `.` 반복 · Ctrl+W 탭 닫힘 방지**: `.` 앞의 count 는 반복할 명령의 원래 count 를 대신합니다(`d3w` 뒤 `2.` 는 `d2w`, `normalStandaloneCommands.ts` 의 `withDotRepeatCount`). 비주얼 반복은 Neovim 처럼 count 를 무시합니다. 레지스터를 지정한 변경(`"add`, `"acw…`)은 `.` 도 같은 레지스터를 씁니다(`vimEngine.ts` 의 `recordRepeatRegister`). 브라우저가 Ctrl+W 를 페이지에 넘기지 않고 탭을 닫으므로 모든 모드에서 Alt+W 가 `Ctrl-w` 로 들어가고, `Ctrl-w` 를 쓰는 레슨에는 안내 문구가 나오며, 연습 중(키 입력이 있고 아직 완료 전)에는 `useTabCloseGuard` 가 탭 닫기 확인 창을 띄웁니다.
 
 ---
 

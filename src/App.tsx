@@ -20,6 +20,7 @@ import {
 } from './utils/missionInitialState';
 import { useEditorWorkspaceHandlers } from './hooks/useEditorWorkspaceHandlers';
 import { useHardcoreAndKeymaps } from './hooks/useHardcoreAndKeymaps';
+import { useTabCloseGuard } from './hooks/useTabCloseGuard';
 import { useVimKeyboardInput } from './hooks/useVimKeyboardInput';
 import { useGhostReplay } from './hooks/useGhostReplay';
 import { useActionTimeline } from './hooks/useActionTimeline';
@@ -204,6 +205,11 @@ export function App() {
     currentTab === 'arcade' ||
     currentTab === 'dungeon' ||
     currentTab === 'dojo';
+
+  // 연습 중(키를 눌렀고 아직 끝내지 않음)에는 Ctrl+W 등으로 탭이 닫히기 전에 확인합니다.
+  useTabCloseGuard(
+    keystrokeCount > 0 && !isCompleted && (currentTab === 'course' || currentTab === 'sandbox' || currentTab === 'custom')
+  );
 
   const { setIsKeyReferenceOpen } = viewSettings;
   const openKeyReference = useCallback(() => setIsKeyReferenceOpen(true), [setIsKeyReferenceOpen]);

@@ -314,6 +314,16 @@
   line-height: 1.45;
 }
 
+.mission-browser-key-note {
+  margin-top: 0.6rem;
+  padding: 0.45rem 0.75rem;
+  border-left: 3px solid #ed8796;
+  border-radius: 4px;
+  background-color: #1e2030;
+  font-size: 0.82rem;
+  color: #f4b8c0;
+}
+
 /* 실무 캡스톤 가상 테스트 러너 패널 */
 .capstone-test-suite {
   margin: 0.75rem 0;

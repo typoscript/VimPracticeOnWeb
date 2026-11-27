@@ -533,10 +533,10 @@ export function handleKey(
   let nextState: VimEditorState;
   if (getVimEngineConfig().devChecks) {
     deepFreeze(input);
-    nextState = recordVisualRepeat(input, applyCurswant(input, syncPerFileState(input, rawHandleKey(input, key, isReplayingDot, macroDepth)), key), key, isReplayingDot);
+    nextState = recordRepeatRegister(input, recordVisualRepeat(input, applyCurswant(input, syncPerFileState(input, rawHandleKey(input, key, isReplayingDot, macroDepth)), key), key, isReplayingDot), isReplayingDot);
     assertValidVimState(input, nextState, key);
   } else {
-    nextState = recordVisualRepeat(input, applyCurswant(input, syncPerFileState(input, rawHandleKey(input, key, isReplayingDot, macroDepth)), key), key, isReplayingDot);
+    nextState = recordRepeatRegister(input, recordVisualRepeat(input, applyCurswant(input, syncPerFileState(input, rawHandleKey(input, key, isReplayingDot, macroDepth)), key), key, isReplayingDot), isReplayingDot);
   }
   const withHl = releaseHlsearchSuppression(input, nextState, key);
   return processKeyAutocmds(input, withHl);
@@ -579,6 +579,26 @@ function recordVisualRepeat(prev: VimEditorState, next: VimEditorState, key: str
   const opKeys = [...(prev.pendingKeys ?? '').split('').filter(Boolean), key];
   const repeatKeys = [...reselect, ...opKeys];
   return entersInsert ? { ...next, currentChangeKeys: repeatKeys } : { ...next, lastChangeKeys: repeatKeys };
+}
+
+/**
+ * Vim 은 레지스터를 지정한 변경(`"add`, `"acw…`)을 `.` 로 반복할 때 같은 레지스터를 씁니다.
+ * 각 명령이 기록한 반복 키에 레지스터 접두사가 없으면 여기서 붙입니다 (비주얼 반복 제외).
+ */
+function recordRepeatRegister(prev: VimEditorState, next: VimEditorState, isReplayingDot: boolean): VimEditorState {
+  const reg = prev.activeRegister;
+  if (isReplayingDot || !reg) return next;
+  const withReg = (keys: string[] | undefined) =>
+    !keys || keys.length === 0 || keys[0] === '"' || ['v', 'V', 'Ctrl-v'].includes(keys[0]) ? keys : ['"', reg, ...keys];
+  if (next.lastChangeKeys !== prev.lastChangeKeys) {
+    const keys = withReg(next.lastChangeKeys);
+    if (keys !== next.lastChangeKeys) return { ...next, lastChangeKeys: keys };
+  }
+  if (next.currentChangeKeys !== prev.currentChangeKeys) {
+    const keys = withReg(next.currentChangeKeys);
+    if (keys !== next.currentChangeKeys) return { ...next, currentChangeKeys: keys };
+  }
+  return next;
 }
 
 /** `$` 뒤의 curswant: 세로 이동이 항상 줄 끝으로 갑니다 (Vim MAXCOL). */

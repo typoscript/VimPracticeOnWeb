@@ -1619,4 +1619,5 @@ export const EN: Record<string, string> = {
   "{key} 키는 노멀 모드에서 쓰지 않거나 사전에 없는 키입니다.": "{key} is not used in Normal mode or is not in this reference.",
   "아무 키나 눌러 보세요 (예: w, d, g, Ctrl-w). 아래 목록에서 클릭해도 됩니다.": "Press any key (for example w, d, g, Ctrl-w), or click one in the list below.",
   "⌨️ 키마다 하는 일 보기": "⌨️ See what each key does",
+  "⚠️ 브라우저에서 Ctrl+W 는 탭을 닫습니다. 이 레슨의 Ctrl-w 는 Alt+W 로 누르세요.": "⚠️ Ctrl+W closes the browser tab. Press Alt+W for this lesson's Ctrl-w.",
 };
