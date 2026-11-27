@@ -147,7 +147,7 @@ describe('MISSIONS 10 ~ 12 validation', () => {
         'First line with target item.',
         'Second line without any match.',
         'Third line has another target here.',
-        'Fourth line reaches the [FINAL_TARGET]!',
+        'Fourth line reaches the [FINAL] target!',
       ],
       cursor: { line: 0, col: 0 },
       mode: 'NORMAL',
@@ -159,9 +159,9 @@ describe('MISSIONS 10 ~ 12 validation', () => {
         'First line with target item.',
         'Second line without any match.',
         'Third line has another target here.',
-        'Fourth line reaches the [FINAL_TARGET]!',
+        'Fourth line reaches the [FINAL] target!',
       ],
-      cursor: { line: 3, col: 31 },
+      cursor: { line: 3, col: 32 },
       mode: 'NORMAL',
     };
     expect(lesson16!.checkComplete(stateDone)).toBe(true);
@@ -443,7 +443,9 @@ describe('MISSIONS 10 ~ 12 validation', () => {
       cursor: { line: 4, col: 31 },
       mode: 'NORMAL',
     };
-    expect(lesson27!.checkComplete(stateDone)).toBe(true);
+    // 세미콜론만 붙이고 { 로 다른 블록에 다녀오지 않았다면 아직 완료가 아닙니다.
+    expect(lesson27!.checkComplete(stateDone)).toBe(false);
+    expect(lesson27!.checkComplete({ ...stateDone, jumpList: [{ row: 4, col: 30 }] })).toBe(true);
   });
 
   it('레슨 28: 캡처 그룹 \\1, \\2와 \\u로 snake_case 코드를 camelCase로 리팩토링하기 완료 조건 검증', () => {

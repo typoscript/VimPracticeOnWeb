@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 219개 테스트 파일, 2,409개 테스트 100% 통과 필수)*
+  *(현재 219개 테스트 파일, 2,541개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -55,6 +55,7 @@
    신규 레슨 $N$을 추가할 때 반드시 아래 4개 파일을 동시에 동기화해야 테스트가 깨지지 않습니다:
    - `src/data/missions.ts`: 신규 레슨 정의, 3성 기준 `par`, 최적 키 시퀀스 `optimalKeys`, `checkComplete` 작성.
    - `src/data/missions.test.ts`: 개별 레슨 테스트 추가 및 하단 `expect(MISSIONS.length).toBe(N)` 총 개수 갱신. (모든 레슨의 `optimalKeys`가 par 이하이며 실행 시 완료되는지 자동 검증됨)
+     `src/data/missionCompletionRegression.test.ts` 는 모든 레슨이 시작 상태에서는 미완료이고 `optimalKeys` 의 마지막 핵심 키(끝의 `Escape` 제외) 전에는 완료되지 않는지 검사합니다. `checkComplete` 는 레슨이 가르치는 단계를 모두 거쳐야 참이 되게 작성하세요(검색 입력 중 `incsearch` 미리보기, 처음부터 있던 문자열 등에 주의).
    - `src/App.tsx`: `SPEEDRUN_CANDIDATE_IDS` 배열에 신규 레슨 ID 추가.
    - `README.md`: `## 🎯 튜토리얼 커리큘럼 (Lessons 1 ~ N)` 헤더 및 본문 목록 갱신.
    - (i18n) `src/i18n/enContent.ts`: 신규 레슨의 `title`·`description`·`hint` 영어 번역 추가.

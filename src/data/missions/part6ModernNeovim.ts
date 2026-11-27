@@ -51,7 +51,9 @@ export const MISSIONS_PART6: Mission[] = [
       const authLines = authBuf?.lines ?? state.virtualFiles?.['src/auth.ts'] ?? [];
       const authDone = authLines.some((l) => l.includes('https://prod.example.com/auth'));
       const hasQf = (state.quickfix?.items.length ?? 0) >= 2;
-      return apiDone && authDone && hasQf;
+      // 마지막 단계 Ctrl-^: :cdo 가 끝난 src/auth.ts 에서 원래 파일 src/api.ts 로 돌아왔는지
+      const backToApi = state.primaryFilename === 'src/api.ts';
+      return apiDone && authDone && hasQf && backToApi;
     },
   },
   {

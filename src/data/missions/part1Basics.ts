@@ -162,7 +162,8 @@ export const MISSIONS_PART1: Mission[] = [
       },
     ],
     checkComplete: (state) => {
-      return state.lines.some((l) => l.includes('Line 2'));
+      // 3번째 줄 'Line 3: Wait, where did Line 2 go?' 에도 'Line 2' 가 들어 있으므로 삭제된 줄 자체가 돌아왔는지 봅니다.
+      return state.lines.includes('Line 2: Important configuration data!');
     },
   },
   {
@@ -334,20 +335,22 @@ export const MISSIONS_PART1: Mission[] = [
   {
     id: 16,
     title: '레슨 16: 키워드 검색과 점프 (/, n, N, *)',
-    description: '/target을 입력하고 Enter를 눌러 첫 번째 target으로 점프한 뒤, n을 눌러 마지막 목표 지점인 [FINAL_TARGET]으로 이동하세요.',
-    hint: '/target 입력 후 Enter를 치고, n 키를 두 번 눌러 마지막 [FINAL_TARGET] 위치로 이동하세요.',
+    description: '/target을 입력하고 Enter를 눌러 첫 번째 target으로 점프한 뒤, n을 눌러 마지막 목표 지점인 [FINAL] target으로 이동하세요.',
+    hint: '/target 입력 후 Enter를 치고, n 키를 두 번 눌러 마지막 [FINAL] target 위치로 이동하세요.',
     par: 10,
-    optimalKeys: ['/', 'F', 'I', 'N', 'A', 'L', 'Enter'],
+    optimalKeys: ['/', 't', 'a', 'r', 'g', 'e', 't', 'Enter', 'n', 'n'],
     initialLines: [
       'First line with target item.',
       'Second line without any match.',
       'Third line has another target here.',
-      'Fourth line reaches the [FINAL_TARGET]!',
+      'Fourth line reaches the [FINAL] target!',
     ],
     initialCursor: { line: 0, col: 0 },
-    targetCursor: { line: 3, col: 31 },
+    targetCursor: { line: 3, col: 32 },
     checkComplete: (state) => {
+      // incsearch 미리보기로 커서가 움직이는 검색 입력 중에는 완료로 보지 않습니다.
       return (
+        state.mode === 'NORMAL' &&
         state.cursor.line === 3 &&
         state.cursor.col >= 24 &&
         state.cursor.col <= 37

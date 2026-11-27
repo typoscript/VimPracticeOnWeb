@@ -45,4 +45,24 @@ describe('레슨 완료 판정 회귀', () => {
   it('fixedLeaderKey 가 없는 레슨은 사용자 리더 키를 그대로 쓴다', () => {
     expect(missionState(1, ',').leaderKey).toBe(',');
   });
+
+  // 시작하자마자 완료되거나(레슨 8), 핵심 단계를 건너뛰어도 완료되는(레슨 16·27·67 등) 판정을 막습니다.
+  // 모범 풀이 끝에 남은 Escape 는 모드 정리일 뿐이라 그 전에 완료되어도 허용합니다.
+  describe.each(MISSIONS.map((m) => [m.id, m] as const))('레슨 %i', (_id, mission) => {
+    it('시작 상태에서는 완료가 아니고, optimalKeys 의 마지막 핵심 키를 쳐야 완료된다', () => {
+      const keys = mission.optimalKeys ?? [];
+      let lastEssential = keys.length;
+      while (lastEssential > 0 && keys[lastEssential - 1] === 'Escape') lastEssential--;
+
+      let state = missionState(mission.id);
+      expect(mission.checkComplete(state)).toBe(false);
+      const completedEarlyAt: number[] = [];
+      keys.forEach((key, idx) => {
+        state = handleKey(state, key);
+        if (idx < lastEssential - 1 && mission.checkComplete(state)) completedEarlyAt.push(idx + 1);
+      });
+      expect(completedEarlyAt).toEqual([]);
+      expect(mission.checkComplete(state)).toBe(true);
+    });
+  });
 });

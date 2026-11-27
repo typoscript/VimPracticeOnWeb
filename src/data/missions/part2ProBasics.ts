@@ -235,7 +235,9 @@ export const MISSIONS_PART2: Mission[] = [
         state.mode === 'NORMAL' &&
         state.lines.length === 5 &&
         state.lines[4] === 'const client = new ApiClient();' &&
-        state.cursor.line === 4
+        state.cursor.line === 4 &&
+        // 세미콜론만 붙이고 끝내지 않도록, { 로 윗 블록까지 점프했다가(점프 리스트에 기록) 돌아왔는지 확인합니다.
+        (state.jumpList ?? []).some((j) => j.row === 4)
       );
     },
   },

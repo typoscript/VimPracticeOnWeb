@@ -690,6 +690,8 @@ export const MISSIONS_PART5: Mission[] = [
       return (
         state.mode === 'NORMAL' &&
         Object.keys(state.userDigraphs ?? {}).length > 0 &&
+        // 마지막 단계: 커서 문자를 :ascii (:as) 로 확인했는지
+        /^as(c|ci|cii)?$/.test((state.commandHistory ?? []).at(-1)?.trim() ?? '') &&
         state.lines.length === target.length &&
         state.lines.every((l, idx) => l === target[idx])
       );
@@ -779,6 +781,12 @@ export const MISSIONS_PART5: Mission[] = [
         state.options?.wrap === false &&
         (state.options?.sidescroll ?? 0) > 0 &&
         (state.viewport?.leftCol ?? 0) > 0 &&
+        // 마지막 단계 ze: 커서가 화면 오른쪽 끝(sidescrolloff 여백)에 오도록 스크롤했는지
+        (() => {
+          const visCols = Math.max(1, state.viewport?.visibleCols ?? 80);
+          const siso = Math.max(0, Math.min(state.options?.sidescrolloff ?? 0, Math.floor((visCols - 1) / 2)));
+          return state.viewport?.leftCol === Math.max(0, state.cursor.col - (visCols - 1 - siso));
+        })() &&
         state.lines.length === target.length &&
         state.lines.every((l, idx) => l === target[idx])
       );
@@ -824,6 +832,8 @@ export const MISSIONS_PART5: Mission[] = [
         (state.options?.nrformats ?? '').includes('alpha') &&
         state.cursor.line === 3 &&
         state.lastJumpPos != null &&
+        // 마지막 단계 gg → `^: 1번 줄에서 마지막 삽입 위치로 점프해 돌아왔는지 (점프 리스트에 1번 줄이 남음)
+        (state.jumpList ?? []).some((j) => j.row === 0) &&
         state.lines.length === target.length &&
         state.lines.every((l, idx) => l === target[idx])
       );
