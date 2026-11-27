@@ -97,7 +97,8 @@ const SANDBOX_QUICK_TRY_CHIPS: ReadonlyArray<{
     id: 'yanky',
     label: '📋 :Yanks',
     titleKey: i18nKey('복사 링 히스토리 (:YankyRingHistory)'),
-    keys: ['Escape', ...':Yanks'.split(''), 'Enter'],
+    // 새 연습장은 복사 이력이 비어 있으므로 현재 줄을 한 번 복사한 뒤 엽니다.
+    keys: ['Escape', 'y', 'y', ...':Yanks'.split(''), 'Enter'],
   },
   {
     id: 'spectre',
@@ -169,7 +170,8 @@ const SANDBOX_QUICK_TRY_CHIPS: ReadonlyArray<{
     id: 'treesj',
     label: '🌳 gS',
     titleKey: i18nKey('구조적 Split/Join 토글 (gS / :TSJToggle)'),
-    keys: ['Escape', 'g', 'S'],
+    // 자유 연습장 17번 줄의 { ... } 객체로 이동해 나눕니다 (1번 줄 주석에서 실행하면 주석을 나눔).
+    keys: ['Escape', '1', '7', 'G', 'f', '{', 'g', 'S'],
   },
   {
     id: 'zenmode',

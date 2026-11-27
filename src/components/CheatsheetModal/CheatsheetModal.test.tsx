@@ -39,6 +39,6 @@ describe('인터랙티브 Vim/Neovim 단축키 치트시트 모달 (CheatsheetMo
     // [▶ 실행] 클릭 시 모달을 닫고 tryKeys 전달
     fireEvent.click(screen.getByTestId('cheatsheet-try-treesj-split'));
     expect(onClose).toHaveBeenCalledTimes(1);
-    expect(onExecuteKeys).toHaveBeenCalledWith(['Escape', 'g', 'S']);
+    expect(onExecuteKeys).toHaveBeenCalledWith(['Escape', 'o', ...'f(a, b, c)'.split(''), 'Escape', 'g', 'S']);
   });
 });

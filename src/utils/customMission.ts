@@ -33,7 +33,7 @@ export const CUSTOM_MISSION_PRESETS: readonly CustomMissionPreset[] = localized(
       description: '일반 함수를 화살표 함수 및 템플릿 리터럴로 변환하세요.',
       initialText: 'function greet(name) {\n  return "Hello, " + name + "!";\n}',
       targetText: 'const greet = (name) => `Hello, ${name}!`;',
-      par: 30,
+      par: 45,
     },
   },
   {

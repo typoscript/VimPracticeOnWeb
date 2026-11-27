@@ -407,7 +407,8 @@ export function resolveWhichKeyData(state: VimEditorState): WhichKeyPanelData | 
         { key: '(', labelKo: '소괄호 (...)', labelEn: 'Parentheses' },
         { key: '{', labelKo: '중괄호 {...}', labelEn: 'Curly braces' },
         { key: '[', labelKo: '대괄호 [...]', labelEn: 'Square brackets' },
-        { key: 't', labelKo: 'HTML 태그', labelEn: 'HTML tag' },
+        // 태그(t)는 ds 에서만 지원합니다 (cst / ysiwt 의 태그 입력 프롬프트는 아직 없음).
+        ...(stripped === 'ds' ? [{ key: 't', labelKo: 'HTML 태그', labelEn: 'HTML tag' }] : []),
       ],
     };
   }

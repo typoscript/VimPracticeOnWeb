@@ -49,7 +49,7 @@ export const CHEATSHEET_ITEMS: ReadonlyArray<CheatsheetItem> = [
     keys: '0 / ^ / $ / _ / g^ / g_',
     titleKey: i18nKey('줄 시작·첫 비공백·끝 이동'),
     descKey: i18nKey('줄 맨 앞(0), 첫 비공백(^, _, g^), 마지막 비공백(g_), 줄 끝($)으로 이동합니다.'),
-    tryKeys: ['Escape', '_'],
+    tryKeys: ['Escape', '$'],
   },
   {
     id: 'char-find',
@@ -57,7 +57,7 @@ export const CHEATSHEET_ITEMS: ReadonlyArray<CheatsheetItem> = [
     keys: 'f{c} / t{c} / ; / ,',
     titleKey: i18nKey('줄 내 문자 탐색 및 반복'),
     descKey: i18nKey('줄 안에서 대상 문자 위(f)나 직전(t)으로 점프하고 ; / , 로 순방향·역방향 반복합니다.'),
-    tryKeys: ['Escape', 'f', '('],
+    tryKeys: ['Escape', 'f', ' ', ';'],
   },
   {
     id: 'bracket-nav',
@@ -65,7 +65,7 @@ export const CHEATSHEET_ITEMS: ReadonlyArray<CheatsheetItem> = [
     keys: "]' / [' / [/ / ]/ / [I",
     titleKey: i18nKey('소문자 마크 · 주석 경계 · 키워드 줄 탐색'),
     descKey: i18nKey("다음·이전 소문자 마크(]'/['), 블록 주석 경계([//]/), 커서 단어 포함 줄 전체 조회([I)를 수행합니다."),
-    tryKeys: ['Escape', '[', 'I'],
+    tryKeys: ['Escape', 'G', '[', 'I'],
   },
   {
     id: 'flash-jump',
@@ -89,7 +89,7 @@ export const CHEATSHEET_ITEMS: ReadonlyArray<CheatsheetItem> = [
     keys: 'Ctrl-a / Ctrl-x',
     titleKey: i18nKey('dial.nvim 스마트 값 · 날짜 · 연산자 증감'),
     descKey: i18nKey('숫자뿐 아니라 true↔false, YYYY-MM-DD 날짜, ===↔!==, &&↔||, const↔let 을 한 타로 증감·토글합니다.'),
-    tryKeys: ['Escape', 'Ctrl-a'],
+    tryKeys: ['Escape', 'o', ...'2026-12-31'.split(''), 'Escape', 'Ctrl-a'],
   },
   {
     id: 'abolish-case',
@@ -97,7 +97,7 @@ export const CHEATSHEET_ITEMS: ReadonlyArray<CheatsheetItem> = [
     keys: 'crc / crs / crm / cru',
     titleKey: i18nKey('vim-abolish 식별자 케이스 즉시 변환'),
     descKey: i18nKey('커서 아래 단어를 camelCase(crc), snake_case(crs), PascalCase(crm), UPPER_SNAKE(cru)로 즉시 변환합니다.'),
-    tryKeys: ['Escape', 'c', 'r', 'c'],
+    tryKeys: ['Escape', 'o', ...'max_retry_count'.split(''), 'Escape', 'c', 'r', 'c'],
   },
   {
     id: 'treesj-split',
@@ -105,7 +105,7 @@ export const CHEATSHEET_ITEMS: ReadonlyArray<CheatsheetItem> = [
     keys: 'gS / :TSJToggle',
     titleKey: i18nKey('treesj 구조적 Split / Join'),
     descKey: i18nKey('객체·배열·인자 블록({...}, [...], (...))을 한 줄 ↔ 멀티라인으로 즉시 분할·병합합니다.'),
-    tryKeys: ['Escape', 'g', 'S'],
+    tryKeys: ['Escape', 'o', ...'f(a, b, c)'.split(''), 'Escape', 'g', 'S'],
   },
   {
     id: 'mini-move',
@@ -129,7 +129,7 @@ export const CHEATSHEET_ITEMS: ReadonlyArray<CheatsheetItem> = [
     keys: 'cin" / din( / cil"',
     titleKey: i18nKey('mini.ai Next(n) / Last(l) 원격 텍스트 객체'),
     descKey: i18nKey('커서를 옮기지 않고 다음(in/an) 또는 이전(il/al) 따옴표·괄호 쌍을 원격으로 즉시 편집합니다.'),
-    tryKeys: ['Escape', 'v', 'i', 'n', '"'],
+    tryKeys: ['Escape', 'o', ...'log("x", "y")'.split(''), 'Escape', '0', 'c', 'i', 'n', '"', ...'vim'.split(''), 'Escape'],
   },
   {
     id: 'treesitter-obj',
@@ -153,7 +153,7 @@ export const CHEATSHEET_ITEMS: ReadonlyArray<CheatsheetItem> = [
     keys: '* / # / cgn / .',
     titleKey: i18nKey('커서 단어 검색 & cgn 연속 치환'),
     descKey: i18nKey('* 로 커서 단어를 검색하고 cgn 으로 첫 매치를 바꾼 뒤 . 연타로 선택적 치환을 이어갑니다.'),
-    tryKeys: ['Escape', '*'],
+    tryKeys: ['Escape', 'G', '*'],
   },
   {
     id: 'sub-expr',
@@ -161,7 +161,8 @@ export const CHEATSHEET_ITEMS: ReadonlyArray<CheatsheetItem> = [
     keys: ':%s/old/new/g / :%s//\\=submatch(0)/g',
     titleKey: i18nKey('범위 정규식 치환 & 계산식(\\=) 치환'),
     descKey: i18nKey('버퍼 전체 치환(:%s), 확인 치환(gc), Vimscript 표현식(\\=expr) 계산 치환을 수행합니다.'),
-    tryKeys: ['Escape', ...':LiveGrep'.split(''), 'Enter'],
+    // 제목대로 \= 계산식 치환을 실행합니다 (숫자를 10배로).
+    tryKeys: ['Escape', ...':%s/\\d\\+/\\=submatch(0)*10/g'.split(''), 'Enter'],
   },
   {
     id: 'spectre-replace',
@@ -177,7 +178,7 @@ export const CHEATSHEET_ITEMS: ReadonlyArray<CheatsheetItem> = [
     keys: ':vsp / Ctrl-w hjkl / :bn / Ctrl-^',
     titleKey: i18nKey('창 분할 · 포커스 이동 · 대안 버퍼 전환'),
     descKey: i18nKey('수평(:sp)·수직(:vsp) 분할 창을 넘나들고 직전 버퍼(Ctrl-^)로 1타에 복귀합니다.'),
-    tryKeys: ['Escape', 'Ctrl-^'],
+    tryKeys: ['Escape', ...':vsp'.split(''), 'Enter', 'Ctrl-w', 'w'],
   },
   {
     id: 'oil-harpoon',
