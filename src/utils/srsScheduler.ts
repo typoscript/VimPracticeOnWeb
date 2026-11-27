@@ -2,7 +2,7 @@ import { Mission } from '../types/mission';
 import { UserAnalyticsData } from '../types/game';
 import { LessonProgress } from './storage';
 import { analyzeWeaknesses, WeaknessCategoryId, WeaknessFocus } from './weaknessDrillAnalyzer';
-import { i18nKey } from '../i18n';
+import { i18nKey, t } from '../i18n';
 import { STORAGE_KEYS, readStorageJson, writeStorageJson } from './localStorageClient';
 
 export const SRS_STORAGE_KEY = STORAGE_KEYS.SRS_SCHEDULE;
@@ -49,6 +49,18 @@ const WEAKNESS_TO_LESSON_IDS: Record<WeaknessCategoryId, number[]> = {
   lineStartOps: [11, 21, 79],
   wordReplace: [7, 12, 14, 15, 30],
 };
+
+/**
+ * 복습 추천 사유를 현재 언어로 만듭니다.
+ * 약점 라벨(label)은 언어와 무관하게 한국어 원문 키로 저장되므로 자리표시자에 넣기 전에 번역합니다.
+ */
+export function formatSrsReason(item: Pick<SrsReviewItem, 'reasonKey' | 'reasonParams'>): string {
+  const params = item.reasonParams;
+  if (!params) return t(item.reasonKey);
+  const translated: Record<string, string | number> = { ...params };
+  if (typeof params.label === 'string') translated.label = t(params.label);
+  return t(item.reasonKey, translated);
+}
 
 export function loadSrsSchedule(): SrsScheduleMap {
   const parsed = readStorageJson<unknown>(SRS_STORAGE_KEY, null);

@@ -38,7 +38,7 @@ const DAILY_TEMPLATES: Array<{
   {
     title: 'React Hook 종속성 배열 및 화살표 함수 리팩토링',
     description: 'useEffect의 첫 번째 인자 함수를 간결하게 정리하고, 누락된 종속성 배열을 추가하세요.',
-    hint: 'cw로 함수를 정리하고, A 키로 줄 끝으로 가 종속성 배열 [, [id]]을 추가하세요.',
+    hint: 'dw로 function을 지우고 ) 뒤에 " =>"를 넣은 뒤, 마지막 줄 ) 앞에 ", [id]"를 넣으세요.',
     initialLines: [
       'useEffect(function() {',
       '  fetchUserData(id);',
@@ -50,7 +50,7 @@ const DAILY_TEMPLATES: Array<{
       '}, [id]);',
     ],
     initialCursor: { line: 0, col: 10 },
-    par: 14,
+    par: 18,
   },
   {
     title: 'TypeScript Interface 타이핑 & 선택적 속성 변환',
@@ -87,12 +87,12 @@ const DAILY_TEMPLATES: Array<{
       '}',
     ],
     initialCursor: { line: 0, col: 23 },
-    par: 11,
+    par: 12,
   },
   {
     title: '배열 파이프라인 filter & map 체이닝 변환',
-    description: '반복문 대신 함수형 filter 체이닝으로 배열을 가공하세요.',
-    hint: 'cw와 A를 활용해 조건식을 filter 함수로 변환하세요.',
+    description: '배열 끝에 함수형 filter 체이닝을 붙여 빈 값을 걸러내세요.',
+    hint: '커서가 있는 ; 앞에서 i 로 .filter(Boolean)을 입력하세요.',
     initialLines: [
       'const items = rawList;',
       'const active = items.filter(x => x.active);',
@@ -102,12 +102,12 @@ const DAILY_TEMPLATES: Array<{
       'const active = items.filter(x => x.active);',
     ],
     initialCursor: { line: 0, col: 21 },
-    par: 15,
+    par: 18,
   },
   {
     title: 'JSON 키-값 쌍 포맷팅 및 따옴표 제거',
     description: '객체 리터럴의 불필요한 키 따옴표를 제거하고 값을 수정하세요.',
-    hint: 'di" 로 따옴표를 지우거나 x로 정리한 뒤 ciw로 값을 변경하세요.',
+    hint: 'ds" 또는 x로 키의 따옴표를 지우고 r3으로 값을 변경하세요.',
     initialLines: [
       'export const config = {',
       '  "timeout": 1000,',
@@ -124,9 +124,9 @@ const DAILY_TEMPLATES: Array<{
     par: 12,
   },
   {
-    title: 'CSS-in-JS 속성명 CamelCase 변환 및 단위 추가',
-    description: 'kebab-case 속성명을 camelCase로 변환하고 px 단위를 추가하세요.',
-    hint: '~로 대문자 변환하고 >>와 A로 단위를 보정하세요.',
+    title: 'CSS-in-JS 색상값 교체 및 px 문자열 단위 추가',
+    description: '배경색을 #000으로 바꾸고 margin 값을 "10px" 문자열로 바꾸세요.',
+    hint: '3r0으로 색상을 바꾸고 i/a로 "10px"을 만드세요.',
     initialLines: [
       'const style = {',
       '  backgroundColor: "#fff",',

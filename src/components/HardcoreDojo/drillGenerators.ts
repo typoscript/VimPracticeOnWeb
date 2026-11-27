@@ -118,16 +118,16 @@ const FT_SNIPER_SAMPLES = localized([
   {
     line: 'const connection = "postgres://root:secret_pwd@db.internal.net:5432/app?ssl=true";',
     targets: [
-      { char: '@', col: 44, hint: 'f@ 로 단번에 @ 골뱅이로 점프!' },
-      { char: '?', col: 69, hint: 'f? 로 쿼리 스트링 시작점으로 점프' },
-      { char: '5', col: 59, hint: 'f5 로 포트 번호 5432 저격' },
-      { char: ':', col: 25, hint: 'f: 로 프로토콜 콜론 저격' },
+      { char: '@', col: 46, hint: 'f@ 로 단번에 @ 골뱅이로 점프!' },
+      { char: '?', col: 71, hint: 'f? 로 쿼리 스트링 시작점으로 점프' },
+      { char: '5', col: 63, hint: 'f5 로 포트 번호 5432 저격' },
+      { char: ':', col: 28, hint: 'f: 로 프로토콜 콜론 저격' },
     ],
   },
   {
     line: 'function handleRequest(req: HttpRequest, res: HttpResponse): Promise<Result<Data>> {',
     targets: [
-      { char: '<', col: 67, hint: 'f< 로 제네릭 Result 시작 위치로 점프' },
+      { char: '<', col: 68, hint: 'f< 로 제네릭 Result 시작 위치로 점프' },
       { char: '{', col: 83, hint: 'f{ 로 함수 본문 중괄호로 착지' },
       { char: ',', col: 39, hint: 'f, 로 첫 번째 매개변수 끝 쉼표 저격' },
       { char: ':', col: 26, hint: 'f: 로 타입 콜론 위치로 점프' },
@@ -137,7 +137,7 @@ const FT_SNIPER_SAMPLES = localized([
     line: 'const { userId, userEmail, userRole, permissions } = payload.context.claims;',
     targets: [
       { char: '}', col: 49, hint: 'f} 로 구조 분해 닫는 중괄호로 점프' },
-      { char: '.', col: 60, hint: 'f. 후 ; 로 체이닝 점 연속 저격!' },
+      { char: '.', col: 60, hint: 'f. 로 체이닝 첫 점 저격!' },
       { char: ';', col: 75, hint: 'f; 또는 $ 로 줄 끝 세미콜론 착지' },
       { char: '=', col: 51, hint: 'f= 로 할당 연산자로 점프' },
     ],
@@ -155,9 +155,9 @@ const FT_SNIPER_SAMPLES = localized([
     line: 'const items = list.map((item) => ({ id: item.id, name: item.name }));',
     targets: [
       { char: '>', col: 31, hint: 'f> 로 화살표 함수 기호로 점프' },
-      { char: ':', col: 39, hint: 'f: 후 ; 로 객체 키-값 콜론 연속 저격' },
-      { char: ';', col: 69, hint: 'f; 로 줄 끝 세미콜론 착지' },
-      { char: '(', col: 23, hint: 'f( 로 map 콜백 괄호로 점프' },
+      { char: ':', col: 38, hint: 'f: 로 객체 키-값 콜론 저격' },
+      { char: ';', col: 68, hint: 'f; 로 줄 끝 세미콜론 착지' },
+      { char: '(', col: 23, hint: 'f( 후 ; 로 map 콜백 괄호로 점프' },
     ],
   },
 ]);
@@ -192,9 +192,9 @@ export function generateFTSniperProblem(prevIndex?: number): FTSniperProblem {
 const WORD_JUMP_SAMPLES = [
   {
     line: 'const res = api.v1.auth.tokens[user_id].refresh() || execute(callback);',
-    // Words: [0: const], [6: res], [10: =], [12: api.v1.auth.tokens[user_id].refresh()], [51: ||], [54: execute(callback);]
-    targetStartCol: 51,
-    targetEndCol: 52,
+    // Words: [0: const], [6: res], [10: =], [12: api.v1.auth.tokens[user_id].refresh()], [50: ||], [53: execute(callback);]
+    targetStartCol: 50,
+    targetEndCol: 51,
     targetToken: '||',
     optimalKeyCount: 4, // 4W from col 0
   },

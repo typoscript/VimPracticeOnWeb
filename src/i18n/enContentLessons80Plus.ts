@@ -44,7 +44,7 @@ export const EN_CONTENT_LESSONS_80_PLUS: Record<string, string> = {
   "괄호 포탈(%)을 타고 허공을 순간이동하여 열쇠를 획득하고 출구로 도달하세요.": "Ride the bracket portal (%) across the void, get the key, and reach the exit.",
   "Stage 4: 끊어진 심연과 연금술 다리": "Stage 4: The Broken Chasm and the Alchemy Bridge",
   "신전으로 향하는 길이 거대한 심연(____)으로 끊어져 있습니다. 좌측 창고의 [BRIDGE] 석재를 yiw로 복사(Yank)한 뒤, 끊어진 자리에 p(Put)로 다리를 건설하세요!": "A huge chasm (____) cuts the road to the temple. Yank the [BRIDGE] stone from the storeroom on the left with yiw, then build a bridge over the gap with p (put)!",
-  "BRIDGE 단어 위에서 yiw를 누른 뒤, 심연 틈새로 가서 p를 누르면 목재 다리가 복원됩니다.": "Press yiw on the word BRIDGE, then go to the gap in the chasm and press p to restore the wooden bridge.",
+  "BRIDGE 단어 위에서 yiw를 누른 뒤, e 로 심연(___) 끝에 착지해 p를 누르면 목재 다리가 복원됩니다. (심연에는 걸어서 들어갈 수 없습니다)": "Press yiw on the word BRIDGE, then land on the end of the chasm (___) with e and press p to restore the wooden bridge. (You cannot walk into the chasm.)",
   "yiw로 다리(BRIDGE)를 복사하고, 심연(____)에서 p로 다리를 놓아 통과하세요.": "Yank the bridge (BRIDGE) with yiw and put it into the chasm (____) with p to cross.",
   "Stage 5: 버그 로드의 둥지 (보스전)": "Stage 5: Lair of the Bug Lord (Boss Battle)",
   "던전의 최종 보스 [버그 로드]가 2중 보호막((\"BUG_LORD\"))을 두르고 있습니다! f\" 로 접근해 di\" 로 보스의 핵을 소멸시키고, da( 로 외벽 쉴드를 파괴하여 왕국을 구원하세요!": "The dungeon's final boss, the [Bug Lord], is wrapped in a double shield ((\"BUG_LORD\"))! Approach with f\", destroy the boss's core with di\", then shatter the outer shield with da( to save the kingdom!",

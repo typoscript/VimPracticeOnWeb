@@ -88,4 +88,24 @@ describe('레슨 완료 판정 회귀', () => {
     const mission = MISSIONS.find((m) => m.id === id)!;
     expect(mission.checkComplete(run(missionState(id), keys))).toBe(true);
   });
+
+  // CLAUDE.md: 레슨 에디터 버퍼는 checkComplete 가 그대로 비교하므로 번역하지 않고 영어로 작성합니다.
+  // 한국어가 섞이면 영어 화면에서도 그대로 보입니다.
+  it('레슨 버퍼(initialLines·targetLines·secondaryLines·가상 파일)에 한국어가 없다', () => {
+    const offenders: string[] = [];
+    for (const m of MISSIONS) {
+      const buffers: Record<string, readonly string[] | undefined> = {
+        initialLines: m.initialLines,
+        targetLines: m.targetLines,
+        secondaryLines: m.secondaryLines,
+        ...Object.fromEntries(Object.entries(m.initialVirtualFiles ?? {}).map(([k, v]) => [`vfs:${k}`, v])),
+      };
+      for (const [field, lines] of Object.entries(buffers)) {
+        (lines ?? []).forEach((line, idx) => {
+          if (/[가-힣]/.test(line)) offenders.push(`레슨 ${m.id} ${field}[${idx}]`);
+        });
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
 });

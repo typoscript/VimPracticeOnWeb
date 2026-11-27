@@ -725,14 +725,14 @@ export const MISSIONS_PART4: Mission[] = [
     ],
     primaryFilename: 'manual.ts',
     initialLines: [
-      '// 순정 Vim 내장 도움말(:help, K)로 기능을 확인하고 코드를 검증하세요.',
+      '// Use the built-in help (:help, K) to look up features and verify the code.',
       'const status = "motion";',
       'function check() {',
       '  return status === "verified";',
       '}',
     ],
     targetLines: [
-      '// 순정 Vim 내장 도움말(:help, K)로 기능을 확인하고 코드를 검증하세요.',
+      '// Use the built-in help (:help, K) to look up features and verify the code.',
       'const status = "verified";',
       'function check() {',
       '  return status === "verified";',
@@ -741,7 +741,7 @@ export const MISSIONS_PART4: Mission[] = [
     initialCursor: { line: 0, col: 0 },
     checkComplete: (state) => {
       const target = [
-        '// 순정 Vim 내장 도움말(:help, K)로 기능을 확인하고 코드를 검증하세요.',
+        '// Use the built-in help (:help, K) to look up features and verify the code.',
         'const status = "verified";',
         'function check() {',
         '  return status === "verified";',
@@ -774,7 +774,7 @@ export const MISSIONS_PART4: Mission[] = [
     ],
     primaryFilename: 'authMiddleware.ts',
     initialLines: [
-      '// 인증 미들웨어 디버그 코드를 주석 처리하고 비활성 블록을 복구하세요.',
+      '// Comment out the auth middleware debug code and restore the disabled block.',
       'function verifySession(userId: string) {',
       "  console.log('DEBUG userId:', userId);",
       '  const cacheKey = `session:${userId}`;',
@@ -787,7 +787,7 @@ export const MISSIONS_PART4: Mission[] = [
       '}',
     ],
     targetLines: [
-      '// 인증 미들웨어 디버그 코드를 주석 처리하고 비활성 블록을 복구하세요.',
+      '// Comment out the auth middleware debug code and restore the disabled block.',
       'function verifySession(userId: string) {',
       "  // console.log('DEBUG userId:', userId);",
       '  const cacheKey = `session:${userId}`;',
@@ -802,7 +802,7 @@ export const MISSIONS_PART4: Mission[] = [
     initialCursor: { line: 0, col: 0 },
     checkComplete: (state) => {
       const target = [
-        '// 인증 미들웨어 디버그 코드를 주석 처리하고 비활성 블록을 복구하세요.',
+        '// Comment out the auth middleware debug code and restore the disabled block.',
         'function verifySession(userId: string) {',
         "  // console.log('DEBUG userId:', userId);",
         '  const cacheKey = `session:${userId}`;',
@@ -839,7 +839,7 @@ export const MISSIONS_PART4: Mission[] = [
     primaryFilename: 'src/app.ts',
     initialVirtualFiles: {
       'src/app.ts': [
-        '// 참조 위치(src/config/routes.ts:4)의 timeout 값을 5000으로 상향하세요.',
+        '// Bump the timeout in (src/config/routes.ts:4) up to 5000.',
         "import { ROUTES } from './config/routes';",
         'const currentTimeout = ROUTES.timeout;',
       ],
@@ -852,12 +852,12 @@ export const MISSIONS_PART4: Mission[] = [
       ],
     },
     initialLines: [
-      '// 참조 위치(src/config/routes.ts:4)의 timeout 값을 5000으로 상향하세요.',
+      '// Bump the timeout in (src/config/routes.ts:4) up to 5000.',
       "import { ROUTES } from './config/routes';",
       'const currentTimeout = ROUTES.timeout;',
     ],
     targetLines: [
-      '// 참조 위치(src/config/routes.ts:4)의 timeout 값을 5000으로 상향하세요.',
+      '// Bump the timeout in (src/config/routes.ts:4) up to 5000.',
       "import { ROUTES } from './config/routes';",
       'const currentTimeout = ROUTES.timeout;',
     ],
@@ -892,7 +892,7 @@ export const MISSIONS_PART4: Mission[] = [
     ],
     primaryFilename: 'service.py',
     initialLines: [
-      '# :set fdm=indent 로 인덴트 폴드를 접고(za), 수동 폴드(zfip) 후 삭제(dd)하세요.',
+      '# Fold by indent with :set fdm=indent (za), then make a manual fold (zfip) and delete it (dd).',
       'def active_service():',
       '  host = "localhost"',
       '  port = 8080',
@@ -904,7 +904,7 @@ export const MISSIONS_PART4: Mission[] = [
       '  return old_a + old_b',
     ],
     targetLines: [
-      '# :set fdm=indent 로 인덴트 폴드를 접고(za), 수동 폴드(zfip) 후 삭제(dd)하세요.',
+      '# Fold by indent with :set fdm=indent (za), then make a manual fold (zfip) and delete it (dd).',
       'def active_service():',
       '  host = "localhost"',
       '  port = 8080',
@@ -914,7 +914,7 @@ export const MISSIONS_PART4: Mission[] = [
     initialCursor: { line: 0, col: 0 },
     checkComplete: (state) => {
       const target = [
-        '# :set fdm=indent 로 인덴트 폴드를 접고(za), 수동 폴드(zfip) 후 삭제(dd)하세요.',
+        '# Fold by indent with :set fdm=indent (za), then make a manual fold (zfip) and delete it (dd).',
         'def active_service():',
         '  host = "localhost"',
         '  port = 8080',
@@ -950,14 +950,14 @@ export const MISSIONS_PART4: Mission[] = [
     ],
     primaryFilename: 'invoice.ts',
     initialLines: [
-      '// 표현식 레지스터("=)로 계산 값을 삽입하고, 시스템 클립보드("+)로 내보내세요.',
+      '// Insert a computed value with the expression register ("=) and export it via the system clipboard ("+).',
       'const unitPrice = 250;',
       'const quantity = 4;',
       'const totalAmount = ;',
       'const exportedToken = "SYNC_OK";',
     ],
     targetLines: [
-      '// 표현식 레지스터("=)로 계산 값을 삽입하고, 시스템 클립보드("+)로 내보내세요.',
+      '// Insert a computed value with the expression register ("=) and export it via the system clipboard ("+).',
       'const unitPrice = 250;',
       'const quantity = 4;',
       'const totalAmount = 1000;',
@@ -966,7 +966,7 @@ export const MISSIONS_PART4: Mission[] = [
     initialCursor: { line: 0, col: 0 },
     checkComplete: (state) => {
       const target = [
-        '// 표현식 레지스터("=)로 계산 값을 삽입하고, 시스템 클립보드("+)로 내보내세요.',
+        '// Insert a computed value with the expression register ("=) and export it via the system clipboard ("+).',
         'const unitPrice = 250;',
         'const quantity = 4;',
         'const totalAmount = 1000;',

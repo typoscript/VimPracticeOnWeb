@@ -1,15 +1,15 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { DEFAULT_KEYMAP_PRESETS } from '../../utils/configGenerator';
 import { CustomKeymapItem } from '../../utils/keymapStorage';
-import { t } from '../../i18n';
+import { t, localized } from '../../i18n';
 
-const TEMPLATE_SUGGESTIONS = [
+const TEMPLATE_SUGGESTIONS = localized([
   { mode: 'normal' as const, from: 'Y', to: 'y$', desc: '줄 끝까지 복사' },
   { mode: 'normal' as const, from: '<leader>p', to: '"+p', desc: '클립보드 붙여넣기' },
   { mode: 'normal' as const, from: '<leader>y', to: '"+y', desc: '클립보드 복사' },
   { mode: 'insert' as const, from: 'fd', to: '<Esc>', desc: '빠른 노멀 모드 복귀' },
   { mode: 'normal' as const, from: '<leader>h', to: ':noh<CR>', desc: '검색 하이라이트 끄기' },
-];
+]);
 
 const SPECIAL_KEY_CHIPS = [
   '<leader>',

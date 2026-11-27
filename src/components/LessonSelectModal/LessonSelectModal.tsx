@@ -2,7 +2,7 @@ import React, { useEffect, useState, useMemo } from 'react';
 import { Mission } from '../../types/mission';
 import { LessonProgress } from '../../utils/storage';
 import { loadUserAnalytics } from '../../utils/analyticsStorage';
-import { buildSrsReviewQueue, loadSrsSchedule } from '../../utils/srsScheduler';
+import { buildSrsReviewQueue, formatSrsReason, loadSrsSchedule } from '../../utils/srsScheduler';
 import {
   filterMissions,
   getMissionTags,
@@ -369,7 +369,7 @@ export const LessonSelectModal: React.FC<LessonSelectModalProps> = ({
                     }}
                   >
                     <span className="chip-id">#{item.mission.id}</span>
-                    <span className="chip-reason">{t(item.reasonKey, item.reasonParams)}</span>
+                    <span className="chip-reason">{formatSrsReason(item)}</span>
                   </button>
                 ))}
               </div>

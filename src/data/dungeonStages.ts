@@ -166,7 +166,7 @@ export const DUNGEON_STAGES: DungeonStage[] = [
       '#~~K..((...))#',
       '#~~~~~D.E####',
     ],
-    allowedKeys: ['h', 'j', 'k', 'l', 'w', 'b', 'e', 'f', 't', 'F', 'T', '%', 'x', 'Escape'],
+    allowedKeys: ['h', 'j', 'k', 'l', 'w', 'b', 'e', 'f', 't', 'F', 'T', '(', ')', '%', 'x', 'Escape'],
     newSkillUnlocked: DUNGEON_SKILLS.alchemy_bridge,
     par: 14,
     objective: '괄호 포탈(%)을 타고 허공을 순간이동하여 열쇠를 획득하고 출구로 도달하세요.',
@@ -181,7 +181,7 @@ export const DUNGEON_STAGES: DungeonStage[] = [
     subtitle: 'The Broken Chasm & Alchemy Bridge',
     description:
       '신전으로 향하는 길이 거대한 심연(____)으로 끊어져 있습니다. 좌측 창고의 [BRIDGE] 석재를 yiw로 복사(Yank)한 뒤, 끊어진 자리에 p(Put)로 다리를 건설하세요!',
-    hint: 'BRIDGE 단어 위에서 yiw를 누른 뒤, 심연 틈새로 가서 p를 누르면 목재 다리가 복원됩니다.',
+    hint: 'BRIDGE 단어 위에서 yiw를 누른 뒤, e 로 심연(___) 끝에 착지해 p를 누르면 목재 다리가 복원됩니다. (심연에는 걸어서 들어갈 수 없습니다)',
     initialLines: [
       '###############',
       '#@..#...BRIDGE#',
@@ -281,7 +281,7 @@ export const DUNGEON_STAGES: DungeonStage[] = [
       shieldType: 'double',
     },
     newSkillUnlocked: DUNGEON_SKILLS.dragon_slayer,
-    par: 12,
+    par: 15,
     objective: '보스의 핵을 di"로 격파하고, da(로 잔여 쉴드를 깨뜨려 던전 마스터 칭호를 획득하세요!',
   },
 

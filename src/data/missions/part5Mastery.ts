@@ -17,7 +17,7 @@ export const MISSIONS_PART5: Mission[] = [
     ],
     primaryFilename: 'refactor.ts',
     initialLines: [
-      '// scrolloff(:set so=3) 설정 후 ]p(인덴트 맞춤)와 gp(커서 뒤 이동)를 마스터하세요.',
+      '// Set scrolloff (:set so=3), then master ]p (match indent) and gp (cursor after paste).',
       'const label = "";',
       '  const prefix = "v1";',
       'function runTask() {',
@@ -25,7 +25,7 @@ export const MISSIONS_PART5: Mission[] = [
       '}',
     ],
     targetLines: [
-      '// scrolloff(:set so=3) 설정 후 ]p(인덴트 맞춤)와 gp(커서 뒤 이동)를 마스터하세요.',
+      '// Set scrolloff (:set so=3), then master ]p (match indent) and gp (cursor after paste).',
       'const label = "v1_ok";',
       '  const prefix = "v1";',
       'function runTask() {',
@@ -36,7 +36,7 @@ export const MISSIONS_PART5: Mission[] = [
     initialCursor: { line: 0, col: 0 },
     checkComplete: (state) => {
       const target = [
-        '// scrolloff(:set so=3) 설정 후 ]p(인덴트 맞춤)와 gp(커서 뒤 이동)를 마스터하세요.',
+        '// Set scrolloff (:set so=3), then master ]p (match indent) and gp (cursor after paste).',
         'const label = "v1_ok";',
         '  const prefix = "v1";',
         'function runTask() {',
@@ -66,13 +66,13 @@ export const MISSIONS_PART5: Mission[] = [
     ],
     primaryFilename: 'notes.ts',
     initialLines: [
-      '// :iabbrev 로 자동 교정하고 :cabbrev 로 긴 Ex 명령을 단축하세요.',
+      '// Auto-correct typos with :iabbrev and shorten long Ex commands with :cabbrev.',
       'const msg = "";',
       'const itemB = 2;',
       'const itemA = 1;',
     ],
     targetLines: [
-      '// :iabbrev 로 자동 교정하고 :cabbrev 로 긴 Ex 명령을 단축하세요.',
+      '// Auto-correct typos with :iabbrev and shorten long Ex commands with :cabbrev.',
       'const msg = "the ok";',
       'const itemA = 1;',
       'const itemB = 2;',
@@ -80,7 +80,7 @@ export const MISSIONS_PART5: Mission[] = [
     initialCursor: { line: 0, col: 0 },
     checkComplete: (state) => {
       const target = [
-        '// :iabbrev 로 자동 교정하고 :cabbrev 로 긴 Ex 명령을 단축하세요.',
+        '// Auto-correct typos with :iabbrev and shorten long Ex commands with :cabbrev.',
         'const msg = "the ok";',
         'const itemA = 1;',
         'const itemB = 2;',
@@ -112,7 +112,7 @@ export const MISSIONS_PART5: Mission[] = [
     ],
     primaryFilename: 'apiConfig.ts',
     initialLines: [
-      '// Visual o/O, gJ, g Ctrl-g, Ctrl-v $ A/c 로 API 설정을 정리하세요.',
+      '// Tidy up the API config with Visual o/O, gJ, g Ctrl-g, and Ctrl-v $ A/c.',
       'const endpoint = "https://',
       '  api.dev/v1";',
       'old_host = "local"',
@@ -120,7 +120,7 @@ export const MISSIONS_PART5: Mission[] = [
       'old_mode = "prod"',
     ],
     targetLines: [
-      '// Visual o/O, gJ, g Ctrl-g, Ctrl-v $ A/c 로 API 설정을 정리하세요.',
+      '// Tidy up the API config with Visual o/O, gJ, g Ctrl-g, and Ctrl-v $ A/c.',
       'const endpoint = "https://api.dev/v1";',
       'new_host = "local";',
       'new_port = "8080";',
@@ -129,7 +129,7 @@ export const MISSIONS_PART5: Mission[] = [
     initialCursor: { line: 0, col: 0 },
     checkComplete: (state) => {
       const target = [
-        '// Visual o/O, gJ, g Ctrl-g, Ctrl-v $ A/c 로 API 설정을 정리하세요.',
+        '// Tidy up the API config with Visual o/O, gJ, g Ctrl-g, and Ctrl-v $ A/c.',
         'const endpoint = "https://api.dev/v1";',
         'new_host = "local";',
         'new_port = "8080";',
@@ -763,17 +763,17 @@ export const MISSIONS_PART5: Mission[] = [
     ],
     primaryFilename: 'gateway.ts',
     initialLines: [
-      '// :set nowrap 및 수평 스크롤(zl/zh/zL/zH/ze/zs)로 긴 한 줄의 오른쪽 끝 값을 점검하고 고치세요.',
+      '// Use :set nowrap and horizontal scrolling (zl/zh/zL/zH/ze/zs) to check and fix the value at the far right.',
       'const endpoint = "https://edge-gateway.internal.example.com/v2/clusters/ap-northeast-2/tenants/prod/flag=TODO";',
     ],
     targetLines: [
-      '// :set nowrap 및 수평 스크롤(zl/zh/zL/zH/ze/zs)로 긴 한 줄의 오른쪽 끝 값을 점검하고 고치세요.',
+      '// Use :set nowrap and horizontal scrolling (zl/zh/zL/zH/ze/zs) to check and fix the value at the far right.',
       'const endpoint = "https://edge-gateway.internal.example.com/v2/clusters/ap-northeast-2/tenants/prod/flag=READY";',
     ],
     initialCursor: { line: 0, col: 0 },
     checkComplete: (state) => {
       const target = [
-        '// :set nowrap 및 수평 스크롤(zl/zh/zL/zH/ze/zs)로 긴 한 줄의 오른쪽 끝 값을 점검하고 고치세요.',
+        '// Use :set nowrap and horizontal scrolling (zl/zh/zL/zH/ze/zs) to check and fix the value at the far right.',
         'const endpoint = "https://edge-gateway.internal.example.com/v2/clusters/ap-northeast-2/tenants/prod/flag=READY";',
       ];
       return (

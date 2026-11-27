@@ -1,4 +1,5 @@
 /// <reference types="vitest/config" />
+import { configDefaults } from 'vitest/config';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
@@ -221,6 +222,8 @@ export default defineConfig(({ mode }) => ({
   },
   test: {
     globals: true,
+    // 에이전트 작업용 git worktree(.claude/worktrees)의 복사본 테스트를 함께 줍지 않게 합니다.
+    exclude: [...configDefaults.exclude, '.claude/**'],
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
   },

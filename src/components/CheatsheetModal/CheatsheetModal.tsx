@@ -165,7 +165,7 @@ export const CHEATSHEET_ITEMS: ReadonlyArray<CheatsheetItem> = [
   {
     id: 'spectre-replace',
     category: 'search',
-    keys: ':Spectre [검색] [치환] / :SpectreApply',
+    keys: ':Spectre old new / :SpectreApply',
     titleKey: i18nKey('nvim-spectre 멀티파일 Diff 미리보기 치환'),
     descKey: i18nKey('프로젝트 전체 파일의 검색·치환 결과를 인라인 Diff로 미리 보고 한 번에 반영합니다.'),
     tryKeys: ['Escape', ...':Spectre'.split(''), 'Enter'],

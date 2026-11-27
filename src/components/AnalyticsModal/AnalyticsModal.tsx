@@ -6,7 +6,7 @@ import {
   getTopCommands,
 } from '../../utils/analyticsStorage';
 import { buildWeaknessDrillPlan } from '../../utils/weaknessDrillPlan';
-import { buildSrsReviewQueue, loadSrsSchedule } from '../../utils/srsScheduler';
+import { buildSrsReviewQueue, formatSrsReason, loadSrsSchedule } from '../../utils/srsScheduler';
 import { MISSIONS } from '../../data/missions';
 import { KeystrokeHeatmap } from './KeystrokeHeatmap';
 import './AnalyticsModal.css';
@@ -460,7 +460,7 @@ export const AnalyticsModal: React.FC<AnalyticsModalProps> = ({
                   </div>
                   <div className="srs-lesson-title">{t(item.mission.title)}</div>
                   <div className="srs-card-footer">
-                    <span className="srs-reason-pill">{t(item.reasonKey, item.reasonParams)}</span>
+                    <span className="srs-reason-pill">{formatSrsReason(item)}</span>
                     {onSelectLesson && (
                       <button
                         type="button"

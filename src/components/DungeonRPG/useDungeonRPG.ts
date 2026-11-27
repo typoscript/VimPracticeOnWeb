@@ -139,11 +139,21 @@ function dungeonReducer(state: DungeonState, action: DungeonAction): DungeonStat
 function resolveWalkCollision(
   stage: DungeonStage,
   nextState: VimEditorState,
-  prevCursor: VimEditorState['cursor'],
+  prevState: VimEditorState,
   doorOpen: boolean
 ): { state: VimEditorState; warning?: string } {
+  const prevCursor = prevState.cursor;
   const { line, col } = nextState.cursor;
   const targetTileChar = stage.tileMap[line]?.[col];
+
+  // 균열된 바위(X) 위에서는 x 로 부수기 전까지 위아래로 지나갈 수 없습니다.
+  const standingOnRock = prevState.lines[prevCursor.line]?.[prevCursor.col] === 'X';
+  if (standingOnRock && line !== prevCursor.line) {
+    return {
+      state: { ...nextState, cursor: prevCursor },
+      warning: t('🪨 균열된 바위(X)가 길을 막고 있습니다! x 로 부순 뒤 지나가세요.'),
+    };
+  }
 
   if (targetTileChar === '#') {
     return { state: { ...nextState, cursor: prevCursor }, warning: t('🧱 벽에 부딪혔습니다!') };
@@ -230,7 +240,6 @@ export function useDungeonRPG({ onPlayKeySound, onPlaySuccessSound }: UseDungeon
 
       onPlayKeySound(key, state.editorState.mode);
       recordKeyInputStats(key);
-      const prevCursor = { ...state.editorState.cursor };
 
       let nextState = safeHandleKey(state.editorState, key);
       let nextHasKey = state.hasKey;
@@ -239,7 +248,7 @@ export function useDungeonRPG({ onPlayKeySound, onPlaySuccessSound }: UseDungeon
 
       // 단일 보행(h/j/k/l) 충돌 검사
       if (['h', 'j', 'k', 'l'].includes(key)) {
-        const walkResult = resolveWalkCollision(stage, nextState, prevCursor, nextDoorOpen);
+        const walkResult = resolveWalkCollision(stage, nextState, state.editorState, nextDoorOpen);
         nextState = walkResult.state;
         if (walkResult.warning) showToast(walkResult.warning);
       }
@@ -270,8 +279,9 @@ export function useDungeonRPG({ onPlayKeySound, onPlaySuccessSound }: UseDungeon
 
       // 보스전(Stage 5) 특수 판정
       if (stage.id === 5) {
+        // 보스 줄을 통째로 지우는(dd·dj) 편법은 처치로 인정하지 않습니다.
         const hasBossAlive = nextState.lines.some((l) => l.includes('BUG_LORD'));
-        if (!hasBossAlive && !nextDoorOpen) {
+        if (!hasBossAlive && !nextDoorOpen && nextState.lines.length === stage.initialLines.length) {
           nextDoorOpen = true;
           nextHasKey = true;
           onPlaySuccessSound();
@@ -283,7 +293,7 @@ export function useDungeonRPG({ onPlayKeySound, onPlaySuccessSound }: UseDungeon
       // 최종 보스전(Stage 6) 특수 판정
       if (stage.id === 6) {
         const hasDragonAlive = nextState.lines.some((l) => l.includes('CHAOS_DRAGON'));
-        if (!hasDragonAlive && !nextDoorOpen) {
+        if (!hasDragonAlive && !nextDoorOpen && nextState.lines.length === stage.initialLines.length) {
           nextDoorOpen = true;
           nextHasKey = true;
           onPlaySuccessSound();
@@ -304,7 +314,9 @@ export function useDungeonRPG({ onPlayKeySound, onPlaySuccessSound }: UseDungeon
 
       // 출구(E) 도달 클리어 검사
       if (
-        (origCharInMap === 'E' || curCharInLine === 'E') &&
+        // 지도상의 출구 칸에 실제 E 가 남아 있어야 합니다 (본문의 다른 E 글자로는 탈출할 수 없음).
+        origCharInMap === 'E' &&
+        curCharInLine === 'E' &&
         (nextDoorOpen || nextHasKey || stage.id === 2 || stage.id === 3)
       ) {
         onPlaySuccessSound();

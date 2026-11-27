@@ -5,7 +5,7 @@ export const ARCADE_MISSIONS: ArcadeBugMission[] = localized([
   {
     id: 1,
     title: 'Wave 1: 버그 블록 처치',
-    instruction: 'f🐛 -> df/ 또는 d% 로 주석 버그 블록을 제거하세요!',
+    instruction: 'f/ -> d% 또는 D 로 주석 버그 블록을 제거하세요!',
     initialLines: ['const status = "ready"; /*🐛BUG*/'],
     targetLines: ['const status = "ready"; '],
     initialCursor: { line: 0, col: 0 },
@@ -97,8 +97,8 @@ export const ARCADE_MISSIONS: ArcadeBugMission[] = localized([
   },
   {
     id: 8,
-    title: 'Wave 8: 버그 단어 교체 (cw)',
-    instruction: 'ciw 로 🐛ERROR 단어를 SUCCESS 로 수정하세요!',
+    title: 'Wave 8: 버그 문자열 교체 (ci")',
+    instruction: 'ci" 로 따옴표 안의 🐛ERROR 를 SUCCESS 로 수정하세요 (Escape로 완료)! (🐛 는 별도 단어라 ciw 로는 남습니다)',
     initialLines: ['const result = "🐛ERROR";'],
     targetLines: ['const result = "SUCCESS";'],
     initialCursor: { line: 0, col: 16 },
