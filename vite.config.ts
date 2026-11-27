@@ -213,10 +213,15 @@ export default defineConfig(({ mode }) => ({
   base: mode === 'production' ? '/VimPracticeOnWeb/' : '/',
   plugins: [react()],
   build: {
-    rollupOptions: {
+    rolldownOptions: {
       output: {
-        // React·엔진 계층별 서브청크·커리큘럼·영문 사전을 장기 캐시용 청크로 분리합니다
-        manualChunks: resolveManualChunk,
+        // React·엔진 계층별 서브청크·커리큘럼·영문 사전을 장기 캐시용 청크로 분리합니다.
+        // Vite 8(Rolldown)은 그룹이 의존 모듈까지 끌어오는 것이 기본이라, 엔진 파일이 이를 import 하는
+        // app-panels 로 빨려 들어가지 않도록 includeDependenciesRecursively 를 끕니다.
+        codeSplitting: {
+          includeDependenciesRecursively: false,
+          groups: [{ name: (id: string) => resolveManualChunk(id) ?? null }],
+        },
       },
     },
   },

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useVimKeyboardInput } from './useVimKeyboardInput';
 import { HardcoreGuard } from '../utils/hardcoreGuard';
@@ -10,11 +10,11 @@ function fireKey(key: string, init: KeyboardEventInit = {}) {
 }
 
 describe('useVimKeyboardInput', () => {
-  let processKeyInput: ReturnType<typeof vi.fn>;
-  let handleStopGhostReplay: ReturnType<typeof vi.fn>;
-  let setIsEditorFocused: ReturnType<typeof vi.fn>;
-  let triggerHardcoreViolation: ReturnType<typeof vi.fn>;
-  let setCoachingMessage: ReturnType<typeof vi.fn>;
+  let processKeyInput: Mock<(key: string) => void>;
+  let handleStopGhostReplay: Mock<() => void>;
+  let setIsEditorFocused: Mock<(focused: boolean) => void>;
+  let triggerHardcoreViolation: Mock<(msg: string, suggestion?: string) => void>;
+  let setCoachingMessage: Mock<(msg: string | null) => void>;
 
   beforeEach(() => {
     processKeyInput = vi.fn();
