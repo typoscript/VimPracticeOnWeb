@@ -118,6 +118,7 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'gitFugitiveEngine.ts',
       'gitConflictEngine.ts',
       'dapEngine.ts',
+      'dapTrace.ts',
       'oilEngine.ts',
       'neotreeEngine.ts',
       'harpoonEngine.ts',
