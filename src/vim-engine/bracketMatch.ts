@@ -63,6 +63,45 @@ export function setActiveMatchpairs(raw?: string): void {
 }
 
 /**
+ * 커서가 C 주석의 여는 경계(슬래시+별표)나 닫는 경계(별표+슬래시) 위에 있으면
+ * 짝 경계의 슬래시 위치를 돌려줍니다 (Vim % 의 C 주석 짝 이동).
+ * Vim 처럼 커서가 경계 문자 위에 있을 때만 동작하고, 커서 뒤를 훑어 찾지는 않습니다.
+ * 주석 경계 위가 아니면 undefined, 경계 위인데 짝이 없으면 null 을 돌려줍니다.
+ */
+function findMatchingCommentDelimiter(
+  lines: string[],
+  cursor: CursorPosition
+): CursorPosition | null | undefined {
+  const line = lines[cursor.line] ?? '';
+  const c = cursor.col;
+  const ch = line[c];
+  let startCol = -1; // 여는 경계의 슬래시 위치
+  let endCol = -1; // 닫는 경계의 슬래시 위치
+  if (ch === '/' && line[c + 1] === '*') startCol = c;
+  else if (ch === '*' && line[c - 1] === '/') startCol = c - 1;
+  else if (ch === '*' && line[c + 1] === '/') endCol = c + 1;
+  else if (ch === '/' && line[c - 1] === '*') endCol = c;
+  else return undefined;
+
+  if (startCol >= 0) {
+    let from = startCol + 2;
+    for (let l = cursor.line; l < lines.length; l++) {
+      const idx = (lines[l] ?? '').indexOf('*/', l === cursor.line ? from : 0);
+      if (idx >= 0) return { line: l, col: idx + 1 };
+      from = 0;
+    }
+    return null;
+  }
+  for (let l = cursor.line; l >= 0; l--) {
+    const text = lines[l] ?? '';
+    const limit = l === cursor.line ? endCol - 2 : text.length;
+    const idx = limit < 0 ? -1 : text.lastIndexOf('/*', limit);
+    if (idx >= 0) return { line: l, col: idx };
+  }
+  return null;
+}
+
+/**
  * 현재 커서 위치 또는 현재 줄에서 커서 뒤로 가장 가까운 괄호의 짝(Matching Pair)을 찾습니다.
  * (단일 줄 및 여러 줄에 걸친 멀티라인 중첩 매칭, :set matchpairs 지원)
  */
@@ -77,6 +116,9 @@ export function findMatchingBracket(
 
   const { openSet, allSet, matchMap } =
     matchpairsOverride !== undefined ? compileMatchpairs(matchpairsOverride) : activeMatchpairs;
+
+  const commentMatch = findMatchingCommentDelimiter(lines, cursor);
+  if (commentMatch !== undefined) return commentMatch;
 
   const currentLine = lines[cursor.line] ?? '';
   let bracketCol = cursor.col;
