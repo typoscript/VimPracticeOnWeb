@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Editor } from '../Editor/Editor';
 import { StatusBar } from '../StatusBar/StatusBar';
 import { DiffViewer } from '../DiffViewer/DiffViewer';
-import { handleKey } from '../../vim-engine';
+import { safeHandleKey } from '../../utils/safeHandleKey';
 import { VimEditorState, VimMode } from '../../vim-engine';
 import { DailyChallengePuzzle, DailyRecord } from '../../types/game';
 import {
@@ -136,7 +136,7 @@ export const DailyChallengeModal: React.FC<DailyChallengeModalProps> = ({
       onPlayKeySound(key, editorState.mode);
       recordKeyInputStats(key);
 
-      const nextState = handleKey(editorState, key);
+      const nextState = safeHandleKey(editorState, key);
       setEditorState(nextState);
 
       // 클리어 조건 검사

@@ -1592,4 +1592,9 @@ export const EN: Record<string, string> = {
   "충돌 블록 간 점프(]x/[x) 후 현재(co)·유입(ct)·둘 다(cb)·제거(c0) 또는 :diffget //2·//3 으로 즉시 해결합니다.": "Jump between conflicts (]x/[x) and choose ours (co), theirs (ct), both (cb), none (c0), or :diffget //2·//3.",
   "nvim-dap 인터랙티브 디버거 & 변수 감시": "nvim-dap Interactive Debugger & Variable Watch",
   "중단점 설정(:DapBp)·실행(:DapContinue)·스텝(:DapStepOver/Into/Out)·Watch/Eval 로 런타임 버그를 추적합니다.": "Set breakpoints (:DapBp), continue (:DapContinue), step (:DapStepOver/Into/Out), and inspect variables via Watch/Eval.",
+  "⚠️ 내부 오류로 키 {key} 를 처리하지 못했습니다. 편집 내용은 그대로입니다.": "⚠️ An internal error stopped key {key} from being handled. Your edits are unchanged.",
+  "⚠️ 화면을 그리는 중 오류가 발생했습니다": "⚠️ Something went wrong while drawing the screen",
+  "학습 진행도와 설정은 브라우저에 저장되어 있어 그대로 남아 있습니다.": "Your progress and settings are saved in the browser and are still there.",
+  "다시 시도": "Try again",
+  "새로고침": "Reload",
 };

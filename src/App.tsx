@@ -3,7 +3,8 @@ import { CoachingToast } from './components/CoachingToast/CoachingToast';
 import { AppHeader, AppTab } from './components/AppHeader/AppHeader';
 import { AppModals } from './components/AppModals/AppModals';
 import { AppMainWorkspace } from './components/AppMainWorkspace/AppMainWorkspace';
-import { VimEditorState, handleKey } from './vim-engine';
+import { VimEditorState } from './vim-engine';
+import { safeHandleKey } from './utils/safeHandleKey';
 import { getReturnToNormalKeys } from './utils/returnToNormalKeys';
 import { Mission } from './types/mission';
 import { MISSIONS } from './data/missions';
@@ -476,7 +477,7 @@ export function App() {
             setEditorState((prev) => {
               let next: VimEditorState = { ...prev, showCheatsheetModal: false };
               for (const k of [...getReturnToNormalKeys(prev), ...keys]) {
-                next = handleKey(next, k);
+                next = safeHandleKey(next, k);
               }
               return next;
             });

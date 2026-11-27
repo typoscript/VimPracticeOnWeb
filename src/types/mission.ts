@@ -66,5 +66,10 @@ export interface Mission {
   capstoneId?: string;
   /** 캡스톤 추천 도구 배지 목록 */
   recommendedTools?: string[];
+  /**
+   * 이 레슨에서 사용자 설정과 무관하게 고정할 리더 키 (예: `<Space>dd` 를 가르치는 레슨 70).
+   * 지정하지 않으면 사용자 설정의 리더 키를 씁니다.
+   */
+  fixedLeaderKey?: string;
   checkComplete: (state: VimEditorState) => boolean;
 }

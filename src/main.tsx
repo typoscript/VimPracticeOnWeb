@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App';
+import { AppErrorBoundary } from './components/AppErrorBoundary/AppErrorBoundary';
 import { configureVimEngine } from './vim-engine';
 import { DEMO_VIMRC, DEMO_WORKSPACE_FILES } from './data/demoWorkspace';
 import { ensureLocaleDictionaries, getLocale } from './i18n';
@@ -14,7 +15,9 @@ function mountApp(): void {
   if (!rootElement) return;
   createRoot(rootElement).render(
     <StrictMode>
-      <App />
+      <AppErrorBoundary>
+        <App />
+      </AppErrorBoundary>
     </StrictMode>
   );
 }

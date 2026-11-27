@@ -1,5 +1,6 @@
 import { useReducer, useEffect, useRef, useCallback } from 'react';
-import { VimEditorState, VimMode, handleKey } from '../../vim-engine';
+import { VimEditorState, VimMode } from '../../vim-engine';
+import { safeHandleKey } from '../../utils/safeHandleKey';
 import {
   saveArcadeRecord,
   loadUserAnalytics,
@@ -443,7 +444,7 @@ export function useArcadeSurvival({
       onPlayKeySound(key, state.editorState.mode);
       recordKeyInputStats(key);
 
-      const nextEditorState = handleKey(state.editorState, key);
+      const nextEditorState = safeHandleKey(state.editorState, key);
       dispatch({ type: 'APPLY_KEY', key, nextEditorState, isArrow });
 
       const isTargetMatched =

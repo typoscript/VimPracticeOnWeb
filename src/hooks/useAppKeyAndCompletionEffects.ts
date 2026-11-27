@@ -1,7 +1,8 @@
 import { useEffect, useCallback, useRef, Dispatch, SetStateAction, MutableRefObject } from 'react';
 import { calculateStars } from '../components/MissionPanel/MissionPanel';
 import { AppTab } from '../components/AppHeader/AppHeader';
-import { VimEditorState, VimMode, handleKey } from '../vim-engine';
+import { VimEditorState, VimMode } from '../vim-engine';
+import { safeHandleKey } from '../utils/safeHandleKey';
 import { Mission } from '../types/mission';
 import { saveLessonRecord, LessonProgress } from '../utils/storage';
 import { saveCapstoneCompletion } from '../data/capstoneProjects';
@@ -188,7 +189,7 @@ export function useAppKeyAndCompletionEffects({
         recordAntiPatternDetection(coachingAdvice);
       }
 
-      const nextState = handleKey(baseState, key);
+      const nextState = safeHandleKey(baseState, key);
       editorStateRef.current = nextState;
       setEditorState(nextState);
       if (nextState.bell) {

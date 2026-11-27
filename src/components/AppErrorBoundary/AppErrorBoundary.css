@@ -1,0 +1,46 @@
+.app-error-boundary {
+  box-sizing: border-box;
+  max-width: 640px;
+  margin: 10vh auto;
+  padding: 24px 16px;
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.app-error-boundary h1 {
+  margin: 0 0 12px;
+  font-size: 1.25rem;
+}
+
+.app-error-boundary p {
+  margin: 0 0 12px;
+  color: var(--text-secondary);
+}
+
+.app-error-boundary-message {
+  margin: 0 0 16px;
+  padding: 12px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-muted);
+  background: var(--bg-elevated);
+  border-radius: 4px;
+}
+
+.app-error-boundary-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.app-error-boundary-actions button {
+  padding: 8px 16px;
+  color: var(--bg-app);
+  background: var(--accent-blue);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}

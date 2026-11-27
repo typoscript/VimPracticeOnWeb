@@ -310,6 +310,19 @@ export const MISSIONS_PART4: Mission[] = [
       );
       if (!hasSessionFile) return false;
 
+      // :mks dev.vim 직후에도 분할 창이 그대로라 창 구성만 보면 저장 단계에서 완료됩니다.
+      // 마지막 저장 이후 :so dev.vim 으로 세션을 다시 불러왔는지까지 확인합니다.
+      const history = state.commandHistory ?? [];
+      const normalize = (cmd: string) => cmd.trim().replace(/^:+/, '').replace(/\s+/g, ' ');
+      let lastSaveIdx = -1;
+      let lastSourceIdx = -1;
+      history.forEach((cmd, idx) => {
+        const c = normalize(cmd);
+        if (/^mk(s|se|ses|sess|sessi|sessio|session)!? dev\.vim$/.test(c)) lastSaveIdx = idx;
+        if (/^so(u|ur|urc|urce)? dev\.vim$/.test(c)) lastSourceIdx = idx;
+      });
+      if (lastSaveIdx < 0 || lastSourceIdx < lastSaveIdx) return false;
+
       const isSplitRestored =
         state.splitDirection === 'vertical' &&
         Boolean(state.splitPanes && state.splitPanes.length === 2);
@@ -451,6 +464,8 @@ export const MISSIONS_PART4: Mission[] = [
     ],
     initialCursor: { line: 0, col: 0 },
     targetCursor: { line: 1, col: 34 },
+    // 설명·optimalKeys 가 <Space>dd 를 가르치므로 사용자 리더 키 설정과 무관하게 Space 로 고정합니다.
+    fixedLeaderKey: ' ',
     checkComplete: (state) => {
       if (state.mode !== 'NORMAL') return false;
       const isImapRegistered =

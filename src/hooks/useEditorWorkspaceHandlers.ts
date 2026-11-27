@@ -1,7 +1,6 @@
 import { useCallback, useMemo, Dispatch, SetStateAction } from 'react';
 import {
   VimEditorState,
-  handleKey,
   syncPerFileState,
   switchPaneFocus,
   switchBuffer,
@@ -90,6 +89,7 @@ import {
   jumpOlder,
   jumpNewer,
 } from '../vim-engine';
+import { safeHandleKey } from '../utils/safeHandleKey';
 
 interface UseEditorWorkspaceHandlersParams {
   setEditorState: Dispatch<SetStateAction<VimEditorState>>;
@@ -188,7 +188,7 @@ export function useEditorWorkspaceHandlers({
 
   const handleExecuteCommandLineWindowLine = useCallback(
     (lineIdx: number) =>
-      applyAndFocus((prev) => handleKey(selectCommandLineWindowLine(prev, lineIdx), 'Enter')),
+      applyAndFocus((prev) => safeHandleKey(selectCommandLineWindowLine(prev, lineIdx), 'Enter')),
     [applyAndFocus]
   );
 

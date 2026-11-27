@@ -27,8 +27,9 @@ export interface UserKeymapSettings {
  */
 export function buildMissionInitialState(
   m: Mission,
-  { activePresets, leaderKey, customKeymaps }: UserKeymapSettings
+  { activePresets, leaderKey: userLeaderKey, customKeymaps }: UserKeymapSettings
 ): VimEditorState {
+  const leaderKey = m.fixedLeaderKey ?? userLeaderKey;
   const isSplit = m.initialSplit && m.initialSplit !== 'none';
   let splitPanes: SplitPaneState[] | undefined = undefined;
   if (isSplit) {

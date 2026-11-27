@@ -15,7 +15,8 @@ import {
   generateNeovimMasterProblem,
 } from './drillGenerators';
 import { HardcoreGuard } from '../../utils/hardcoreGuard';
-import { handleKey, VimEditorState, VimMode } from '../../vim-engine';
+import { VimEditorState, VimMode } from '../../vim-engine';
+import { safeHandleKey } from '../../utils/safeHandleKey';
 import {
   loadDojoHighScores,
   saveDojoHighScore,
@@ -686,7 +687,7 @@ export function useHardcoreDojo({
       }
 
       playKeySound?.(vimKey, state.editorState.mode);
-      const nextEditorState = handleKey(state.editorState, vimKey);
+      const nextEditorState = safeHandleKey(state.editorState, vimKey);
       dispatch({ type: 'APPLY_KEY', nextEditorState, nextProblemKeystrokes: nextProbKeys });
 
       const { hit, standardBonus } = evaluateProblemSuccess(

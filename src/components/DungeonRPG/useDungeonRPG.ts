@@ -1,7 +1,8 @@
 import { useReducer, useEffect, useCallback, useRef } from 'react';
 import { DUNGEON_STAGES } from '../../data/dungeonStages';
 import { DungeonStage, DungeonSkill, DungeonSaveData } from '../../types/dungeon';
-import { VimEditorState, VimMode, handleKey } from '../../vim-engine';
+import { VimEditorState, VimMode } from '../../vim-engine';
+import { safeHandleKey } from '../../utils/safeHandleKey';
 import { loadDungeonSave, recordStageClear } from '../../utils/dungeonStorage';
 import { recordKeyInputStats } from '../../utils/analyticsStorage';
 import { t } from '../../i18n';
@@ -231,7 +232,7 @@ export function useDungeonRPG({ onPlayKeySound, onPlaySuccessSound }: UseDungeon
       recordKeyInputStats(key);
       const prevCursor = { ...state.editorState.cursor };
 
-      let nextState = handleKey(state.editorState, key);
+      let nextState = safeHandleKey(state.editorState, key);
       let nextHasKey = state.hasKey;
       let nextDoorOpen = state.doorOpen;
       let nextSlash: SlashEffect | undefined;
