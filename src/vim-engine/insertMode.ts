@@ -42,6 +42,14 @@ function handleInsertEditingKey(
     return adjustInsertLineIndent(state, currentLine, -1, nextChangeKeys);
   }
 
+  // Vim: Ctrl-w / Ctrl-u 는 이번 입력에서 친 글자가 있으면 먼저 입력 시작 지점에서 멈춥니다.
+  // (이번 입력의 글자가 현재 줄에만 있을 때만 시작 열을 알 수 있습니다.)
+  const typedOnLine = state.currentInsertText ?? '';
+  const insertStartCol =
+    !state.blockInsertSession && typedOnLine.length > 0 && !typedOnLine.includes('\n') && col - typedOnLine.length >= 0
+      ? col - typedOnLine.length
+      : null;
+
   // Ctrl+w: 커서 앞의 단어 하나 즉시 삭제
   if (key === 'Ctrl-w' || key === 'Ctrl+w' || key === 'Alt-w' || key === 'Alt+w') {
     const nextChangeKeys = appendCurrentChange(state, 'Ctrl-w', isReplayingDot);
@@ -86,6 +94,7 @@ function handleInsertEditingKey(
             start--;
           }
         }
+        if (insertStartCol !== null && start < insertStartCol) start = insertStartCol;
       }
       const nextLines = [...state.lines];
       nextLines[line] = currentLine.slice(0, start) + currentLine.slice(col);
@@ -123,14 +132,15 @@ function handleInsertEditingKey(
       return { ...state, currentChangeKeys: nextChangeKeys };
     }
     if (col === 0 && line > 0) return mergeWithPreviousLine(state, nextChangeKeys);
+    const deleteFrom = insertStartCol !== null && insertStartCol < col ? insertStartCol : 0;
     const nextLines = [...state.lines];
-    nextLines[line] = currentLine.slice(col);
+    nextLines[line] = currentLine.slice(0, deleteFrom) + currentLine.slice(col);
     return {
       ...state,
       lines: nextLines,
-      cursor: { line, col: 0 },
+      cursor: { line, col: deleteFrom },
       currentChangeKeys: nextChangeKeys,
-      currentInsertText: trimInsertText(state.currentInsertText, col),
+      currentInsertText: trimInsertText(state.currentInsertText, col - deleteFrom),
     };
   }
 

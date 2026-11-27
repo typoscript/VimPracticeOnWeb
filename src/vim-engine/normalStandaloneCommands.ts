@@ -467,6 +467,7 @@ export function handleNormalEditingAndMotionFallback(
       mode: 'SEARCH',
       commandType: key,
       commandBuffer: '',
+      searchCount: parsed.totalCount > 1 ? parsed.totalCount : undefined,
       searchOriginCursor: { ...state.cursor },
       searchOriginViewport: state.viewport ? { ...state.viewport } : undefined,
       incsearchStepOffset: 0,

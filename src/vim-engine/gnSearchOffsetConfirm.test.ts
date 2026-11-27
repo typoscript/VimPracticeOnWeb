@@ -45,6 +45,8 @@ describe('gn / gN Search Match Text Object & Dot Repeat', () => {
     for (const k of ['/', 'i', 't', 'e', 'm', 'Enter']) {
       state = handleKey(state, k);
     }
+    // Vim 의 / 는 커서 다음 매치로 가므로, 0 으로 첫 매치 위로 돌아와 gn 이 그 매치를 고르게 합니다.
+    state = handleKey(state, '0');
     // 첫 번째 매치 선택
     state = handleKey(state, 'g');
     state = handleKey(state, 'n');
@@ -96,6 +98,8 @@ describe('gn / gN Search Match Text Object & Dot Repeat', () => {
     for (const k of ['/', 'a', 'p', 'p', 'l', 'e', 'Enter']) {
       state = handleKey(state, k);
     }
+    // Vim 의 / 는 커서 다음 매치로 가므로 0 으로 첫 apple 위로 돌아옵니다 (gn 은 커서 아래 매치를 고름).
+    state = handleKey(state, '0');
 
     // dgn 입력으로 첫 번째 apple 삭제
     state = handleKey(state, 'd');

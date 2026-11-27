@@ -5,7 +5,7 @@ import {
   IncCommandPreview,
   IncCommandPreviewMatch,
 } from './types';
-import { clampCursor } from './cursor';
+import { clampCursor, getFirstNonBlankCol } from './cursor';
 import { pushUndoSnapshot } from './operators';
 import { compileVimRegex, translateVimPattern } from './vimRegex';
 import { EvalContext, VimScriptError, evaluateVimScript, isList, toVimString } from './vimscriptEval';
@@ -507,7 +507,13 @@ export function executeSubstitution(
 
   nextLines = splitReplacedLines(nextLines);
   const stateWithSnapshot = pushUndoSnapshot(state);
-  const nextCursor = clampCursor(nextLines, state.cursor, 'NORMAL');
+  // Vim do_sub: 마지막으로 치환한 줄의 첫 비공백으로 갑니다.
+  const lastSubLine = Math.max(0, Math.min(lastModifiedLine, nextLines.length - 1));
+  const nextCursor = clampCursor(
+    nextLines,
+    { line: lastSubLine, col: getFirstNonBlankCol(nextLines[lastSubLine] ?? '') },
+    'NORMAL'
+  );
 
   let resultMessage = msg('{totalSubCount}개 항목을 치환했습니다.', { totalSubCount });
   if (lastModifiedLine >= 0 && (flags.includes('#') || flags.includes('l') || flags.includes('p'))) {

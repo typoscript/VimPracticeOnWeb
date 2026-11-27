@@ -515,6 +515,8 @@ export function executeTextObjectOperator(
     if (operator === 'y') {
       return {
         ...curState,
+        // Vim: 복사 후 커서는 복사한 범위의 시작으로 갑니다 (yiw 는 단어 첫 글자).
+        cursor: range.isEmpty ? curState.cursor : { line: startLine, col: startCol },
         clipboard: {
           type: 'text',
           content,

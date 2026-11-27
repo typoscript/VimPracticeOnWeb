@@ -17,8 +17,8 @@ describe('searchcount() & custom pattern highlight (:match / matchadd())', () =>
       'foo end',
     ]);
 
-    // /foo<Enter> -> 첫 번째 매치 (0, 0)
-    state = sendKeys(state, '/foo<CR>');
+    // /foo<Enter> 는 커서 다음 매치(0, 8)로 가므로 0 으로 첫 매치 (0, 0) 에 둡니다
+    state = sendKeys(state, '/foo<CR>0');
     const sc1 = evalVimExpression(state, 'searchcount()');
     expect(sc1.value).toEqual({
       kind: 'dict',

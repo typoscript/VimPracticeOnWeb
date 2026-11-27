@@ -890,6 +890,8 @@ export interface VimEditorState {
   /** 마지막 검색 방향 (/ = forward, ? = backward). n/N 이 따릅니다 */
   lastSearchDirection?: 'forward' | 'backward';
   /** 검색 모드 진입 전 대기 중이던 연산자 정보 (예: d/pattern/e) */
+  /** [count]/pattern 의 count (연산자 없이 검색을 시작할 때) */
+  searchCount?: number;
   searchOperator?: {
     op: string;
     count?: number;

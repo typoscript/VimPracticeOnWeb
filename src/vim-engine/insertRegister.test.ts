@@ -242,7 +242,8 @@ describe('Ctrl+r {reg} and Expression Register Ctrl+r =', () => {
       expect(state.commandBuffer).toBe('betaGamma');
       state = handleKey(state, 'Enter');
       expect(state.lastSearchQuery).toBe('betaGamma');
-      expect(state.cursor.line).toBe(0);
+      // Vim 의 / 는 커서 다음 매치(둘째 줄)로 갑니다
+      expect(state.cursor.line).toBe(1);
 
       // ?<C-r>a<Enter> -> 역방향 레지스터 검색
       state = runKeys(state, ['?', 'Ctrl-r', 'a']);

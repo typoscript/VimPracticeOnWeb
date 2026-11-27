@@ -393,6 +393,7 @@ export function executeSearchQuery(
     searchOriginCursor: undefined,
     searchOriginViewport: undefined,
     incsearchStepOffset: undefined,
+    searchCount: undefined,
   };
 
   if (rawQuery.length === 0) {
@@ -447,7 +448,14 @@ export function executeSearchQuery(
     };
   }
 
-  const found = findSearchTarget(state.lines, matches, returnCursor, offset, !backward, true)!;
+  // Vim: 검색은 커서 다음 위치부터이며, [count]/pat 은 count 번째 매치로 갑니다.
+  let found = findSearchTarget(state.lines, matches, returnCursor, offset, !backward)!;
+  let wrappedAny = found.wrapped;
+  for (let i = 1; i < Math.max(1, state.searchCount ?? 1); i++) {
+    found = findSearchTarget(state.lines, matches, { line: found.match.line, col: found.match.col }, offset, !backward)!;
+    wrappedAny = wrappedAny || found.wrapped;
+  }
+  found = { ...found, wrapped: wrappedAny };
   if (opts.wrapscan === false && found.wrapped) {
     return {
       ...failBase,

@@ -266,6 +266,8 @@ describe('Multi-Window Split Tree (3+ panes, nested layouts, :windo, Vimscript b
     expect(s.splitPanes![1].lines[0]).toBe('P3 bar 1');
     expect(s.splitPanes![2].lines[0]).toBe('P2 bar 1');
     expect(s.splitPanes!.every((p) => p.scrollbind === true)).toBe(true);
+    // Vim 처럼 :%s 는 커서를 마지막 치환 줄로 옮기므로 모든 창을 첫 줄로 되돌립니다.
+    s = runExCommand(s, 'windo 1');
 
     // Scrolling pane 0 with Ctrl-e scrolls panes 1 and 2 together
     s = handleKey(s, 'Ctrl-e');
@@ -380,6 +382,8 @@ describe('Multi-Window Split Tree (3+ panes, nested layouts, :windo, Vimscript b
     expect(s.splitPanes![0].lines[0]).toBe('row 1');
     expect(s.splitPanes![2].lines[0]).toBe('row 1');
     expect(s.splitPanes![1].lines[0]).toBe('independent');
+    // :%s 후 커서는 마지막 치환 줄에 있으므로(Vim 동작) 첫 줄로 돌아온 뒤 지웁니다.
+    s = sendKeys(s, 'gg');
 
     // Delete 2 lines in pane 0 via Normal mode (2dd) -> pane 2 shrinks to 2 lines and clamps cursor safely to line 1
     s = sendKeys(s, '2dd');

@@ -74,6 +74,36 @@ const CASES: Case[] = [
   { id: 'insert-ctrl-r-linewise-O', text: 'one\ntwo', cursor: { row: 0, col: 0 }, keys: '"ayyO<C-r>a<Esc>' },
   { id: 'insert-ctrl-r-linewise-A', text: 'one\ntwo', cursor: { row: 1, col: 1 }, keys: '"ayyjA <C-r>a<Esc>' },
   { id: 'insert-ctrl-r-linewise-then-type', text: 'one\ntwo', cursor: { row: 0, col: 0 }, keys: 'yyjO<C-r>"X<Esc>' },
+  // 커서 규칙: 비주얼 연산·줄 단위 대소문자·복사·Ex 명령 뒤
+  { id: 'visual-u-cursor-start', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 0, col: 12 }, keys: 'VjU' },
+  { id: 'visual-shift-keeps-col', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 1, col: 1 }, keys: 'Vw>' },
+  { id: 'visual-yank-col0', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 1, col: 7 }, keys: 'Vjy' },
+  { id: 'guu-first-nonblank', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 1, col: 6 }, keys: 'guu' },
+  { id: 'count-guu-keeps-col', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 1, col: 6 }, keys: '2guu' },
+  { id: 'case-op-undo-cursor', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 0, col: 8 }, keys: 'vt g~u' },
+  { id: 'yiw-cursor-start', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 0, col: 12 }, keys: 'yiw' },
+  { id: 'yaw-cursor-start', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 0, col: 12 }, keys: 'yaw' },
+  // [count]J, 문장 count 초과
+  { id: 'count-J-joins-count-lines', text: 'a\nb\nc\nd\ne', cursor: { row: 0, col: 0 }, keys: '3J' },
+  { id: 'count-J-past-end', text: 'a\nb\nc', cursor: { row: 0, col: 0 }, keys: '5J' },
+  { id: 'sentence-count-overflow', text: 'One. Two. Three.', cursor: { row: 0, col: 5 }, keys: '5)' },
+  { id: 'sentence-count-ok', text: 'One. Two. Three.', cursor: { row: 0, col: 10 }, keys: '2(' },
+  // Ex 명령
+  { id: 'g-delete-register', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 0, col: 5 }, keys: ':g/a/d<CR>' },
+  { id: 'v-delete-register', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 0, col: 5 }, keys: ':v/e/d<CR>' },
+  { id: 'sort-byte-order', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 0, col: 0 }, keys: ':sort<CR>gg' },
+  { id: 's-cursor-first-nonblank', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 1, col: 9 }, keys: ':s/a/X/<CR>' },
+  { id: 'percent-s-cursor-last-line', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 1, col: 9 }, keys: ':%s/e/E/g<CR>' },
+  { id: 't-keeps-col', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 1, col: 9 }, keys: ':t.<CR>' },
+  { id: 'm-keeps-col', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 0, col: 3 }, keys: ':m$<CR>' },
+  // 입력 모드 Ctrl-u / Ctrl-w 는 입력 시작에서 한 번 멈춤
+  { id: 'insert-ctrl-u-stops-at-start', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 1, col: 4 }, keys: 'A one two<C-u><Esc>' },
+  { id: 'insert-ctrl-u-twice', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 1, col: 4 }, keys: 'A one two<C-u><C-u><Esc>' },
+  { id: 'insert-ctrl-w-twice', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 0, col: 10 }, keys: 'afoo<C-w><C-w><Esc>' },
+  // 검색: 커서 다음부터, [count]
+  { id: 'search-skips-cursor-match', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 0, col: 0 }, keys: '/a<CR>' },
+  { id: 'search-count', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 0, col: 0 }, keys: '2/a<CR>' },
+  { id: 'search-count-lines', text: 'alpha beta gamma\n  foo bar baz\nThe end\nthe start', cursor: { row: 0, col: 0 }, keys: '3/e<CR>' },
 ];
 
 const LUA = `

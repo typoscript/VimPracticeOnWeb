@@ -1,5 +1,6 @@
 import { VimEditorState } from './types';
-import { clampCursor } from './cursor';
+import { clampCursor, getFirstNonBlankCol } from './cursor';
+import { getOptions } from './setOptionsCore';
 import { pushUndoSnapshot } from './operators';
 import { compileVimRegex } from './vimRegex';
 import { buildVfsMap, getVfsFile } from './vfs';
@@ -243,7 +244,8 @@ export function executeSort(
 
     const sa = parsed.ignoreCase ? a.subject.toLowerCase() : a.subject;
     const sb = parsed.ignoreCase ? b.subject.toLowerCase() : b.subject;
-    const cmp = sa.localeCompare(sb);
+    // Vim :sort 는 로캘이 아니라 바이트(코드 포인트) 순서입니다 (공백 < 대문자 < 소문자).
+    const cmp = sa < sb ? -1 : sa > sb ? 1 : 0;
     if (cmp !== 0) {
       return parsed.descending ? -cmp : cmp;
     }
@@ -291,9 +293,10 @@ export function executeSort(
     newLines.push('');
   }
 
+  // Vim ex_sort: 범위 첫 줄의 첫 비공백으로 갑니다.
   const nextCursor = clampCursor(
     newLines,
-    { line: minLine, col: 0 },
+    { line: minLine, col: getFirstNonBlankCol(newLines[minLine] ?? '') },
     'NORMAL'
   );
 
@@ -477,11 +480,10 @@ export function executeMove(
   ];
 
   const finalCursorLine = insertIndex + linesToMove.length - 1;
-  const nextCursor = clampCursor(
-    newLines,
-    { line: finalCursorLine, col: 0 },
-    'NORMAL'
-  );
+  // Vim ex_copy / ex_move: 마지막 줄로 가고 'nostartofline' 이면 열을 유지합니다.
+  const nextCursor = getOptions(state).startofline
+    ? clampCursor(newLines, { line: finalCursorLine, col: getFirstNonBlankCol(newLines[finalCursorLine] ?? '') }, 'NORMAL')
+    : clampCursor(newLines, { line: finalCursorLine, col: state.cursor.col }, 'NORMAL');
 
   return {
     ...stateWithUndo,
@@ -531,11 +533,10 @@ export function executeCopy(
   ];
 
   const finalCursorLine = insertIndex + linesToCopy.length - 1;
-  const nextCursor = clampCursor(
-    newLines,
-    { line: finalCursorLine, col: 0 },
-    'NORMAL'
-  );
+  // Vim ex_copy / ex_move: 마지막 줄로 가고 'nostartofline' 이면 열을 유지합니다.
+  const nextCursor = getOptions(state).startofline
+    ? clampCursor(newLines, { line: finalCursorLine, col: getFirstNonBlankCol(newLines[finalCursorLine] ?? '') }, 'NORMAL')
+    : clampCursor(newLines, { line: finalCursorLine, col: state.cursor.col }, 'NORMAL');
 
   return {
     ...stateWithUndo,

@@ -75,7 +75,8 @@ export function executeGlobalCommand(
       'NORMAL'
     );
 
-    return {
+    // Vim 은 줄마다 :d 를 실행하므로 무명 레지스터에는 마지막으로 지운 줄만 남습니다.
+    const deletedState: VimEditorState = {
       ...stateWithUndo,
       lines: finalLines,
       cursor: nextCursor,
@@ -83,13 +84,14 @@ export function executeGlobalCommand(
       visualAnchor: undefined,
       clipboard: {
         type: 'line',
-        content: yanked.join('\n'),
+        content: yanked[yanked.length - 1] ?? '',
       },
       commandBuffer: undefined,
       commandType: undefined,
       commandMessage: msg('{matchedIndicesCount}개 줄이 일괄 삭제되었습니다.', { matchedIndicesCount: matchedIndices.length }),
       lastChangeKeys: [':', commandStr, 'Enter'],
     };
+    return syncRegisters(state, deletedState, false);
   }
 
   // 2. :g/pattern/norm {cmd} (매칭 줄마다 Normal 명령어 일괄 실행)
