@@ -237,7 +237,7 @@ describe('Replace Mode (R - REPLACE)', () => {
 });
 
 describe('Join Without Spaces (gJ)', () => {
-  it('gJ는 공백을 추가하지 않고 뒷줄의 들여쓰기를 제거하여 두 줄을 결합한다', () => {
+  it('gJ는 공백을 넣거나 지우지 않고 두 줄을 결합한다 (뒷줄 들여쓰기 유지, Vim :help gJ)', () => {
     let state = createState([
       'https://',
       '   example.com/api',
@@ -248,7 +248,7 @@ describe('Join Without Spaces (gJ)', () => {
     state = handleKey(state, 'J');
 
     expect(state.lines).toEqual([
-      'https://example.com/api',
+      'https://   example.com/api',
     ]);
     expect(state.cursor).toEqual({ line: 0, col: 8 });
   });
@@ -265,7 +265,7 @@ describe('Join Without Spaces (gJ)', () => {
     ]);
   });
 
-  it('VISUAL 모드에서 gJ 입력 시 선택된 모든 줄을 공백 없이 결합한다', () => {
+  it('VISUAL 모드에서 gJ 입력 시 선택된 모든 줄을 공백을 넣지 않고 결합한다 (들여쓰기는 유지)', () => {
     let state = createState([
       'first',
       '  second',
@@ -280,7 +280,7 @@ describe('Join Without Spaces (gJ)', () => {
     state = handleKey(state, 'J');
 
     expect(state.lines).toEqual([
-      'firstsecondthird',
+      'first  second    third',
     ]);
   });
 });

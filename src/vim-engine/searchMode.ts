@@ -703,10 +703,23 @@ export function executeWordSearch(
   wholeWord = true
 ): VimEditorState {
   const currentLine = state.lines[state.cursor.line] ?? '';
-  const word = getWordAtCursor(currentLine, state.cursor.col);
+  // Vim find_ident_under_cursor: 커서 아래 키워드, 없으면 커서 뒤 줄 안의 첫 키워드를 쓰고 그 시작에서 찾습니다.
+  // 키워드가 없으면 커서 뒤 첫 비공백 문자열(;; 등)을 씁니다. 공백만 남았을 때만 E348 입니다.
+  let keywordCol = state.cursor.col;
+  while (keywordCol < currentLine.length && !/\w/.test(currentLine[keywordCol])) keywordCol++;
+  let word: string | null = null;
+  if (keywordCol < currentLine.length) {
+    while (keywordCol > 0 && /\w/.test(currentLine[keywordCol - 1])) keywordCol--;
+    word = getWordAtCursor(currentLine, keywordCol);
+  } else {
+    keywordCol = state.cursor.col;
+    while (keywordCol < currentLine.length && /\s/.test(currentLine[keywordCol])) keywordCol++;
+    word = currentLine.slice(keywordCol).match(/^[^\s\w]+/)?.[0] ?? null;
+  }
   if (!word) {
     return { ...state, pendingKeys: undefined, bell: true, commandMessage: msg('E348: 커서 아래에 단어가 없습니다') };
   }
+  const searchFrom = { line: state.cursor.line, col: keywordCol };
 
   const opts = getOptions(state);
   const query = starSearchPattern(word, wholeWord);
@@ -724,7 +737,7 @@ export function executeWordSearch(
     };
   }
 
-  const found = findSearchTarget(state.lines, matches, state.cursor, null, direction === 'forward', false)!;
+  const found = findSearchTarget(state.lines, matches, searchFrom, null, direction === 'forward', false)!;
   if (opts.wrapscan === false && found.wrapped) {
     return {
       ...state,

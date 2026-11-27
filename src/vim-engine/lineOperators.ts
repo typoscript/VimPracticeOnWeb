@@ -55,8 +55,9 @@ export function joinLines(state: VimEditorState, count = 1, insertSpace = true):
       }
     }
     if (!insertSpace) {
+      // gJ 는 공백을 넣거나 지우지 않습니다 (붙는 줄의 들여쓰기도 그대로 남음).
       firstJoinCol = currentJoined.length;
-      currentJoined += nextLineTrimmed;
+      currentJoined += rawNext;
     } else {
       if (currentJoined.length === 0) {
         currentJoined = nextLineTrimmed;

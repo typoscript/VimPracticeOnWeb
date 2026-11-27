@@ -413,13 +413,14 @@ describe('Visual & Visual Block Advanced Editing (o / O, g Ctrl-g, gJ, Ctrl-v $ 
   });
 
   it('Visual gJ 는 공백 없이 줄을 결합하고 gv 와 도트 반복(.) 정보를 유지한다', () => {
-    let state = createState(['a/', '  b/', '  c', 'd/', '  e/', '  f'], 0, 0);
+    // Vim 의 gJ 는 들여쓰기를 지우지 않으므로 들여쓰기 없는 줄로 결합을 확인합니다.
+    let state = createState(['a/', 'b/', 'c', 'd/', 'e/', 'f'], 0, 0);
     state = handleKey(state, 'V');
     state = handleKey(state, '2');
     state = handleKey(state, 'j');
     state = handleKey(state, 'g');
     state = handleKey(state, 'J');
-    expect(state.lines).toEqual(['a/b/c', 'd/', '  e/', '  f']);
+    expect(state.lines).toEqual(['a/b/c', 'd/', 'e/', 'f']);
     expect(state.lastVisualSelection?.mode).toBe('VISUAL_LINE');
 
     // 다음 줄(d/)에서 도트 반복(.)으로 3줄 재결합

@@ -114,7 +114,7 @@ export const MISSIONS_PART5: Mission[] = [
     initialLines: [
       '// Tidy up the API config with Visual o/O, gJ, g Ctrl-g, and Ctrl-v $ A/c.',
       'const endpoint = "https://',
-      '  api.dev/v1";',
+      'api.dev/v1";',
       'old_host = "local"',
       'old_port = "8080"',
       'old_mode = "prod"',

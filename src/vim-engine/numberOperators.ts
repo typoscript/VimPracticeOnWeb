@@ -79,6 +79,12 @@ function formatNumberTokenDelta(raw: string, delta: number, nrformats?: string):
 
   const parsed = parseInt(raw, 10);
   const nextVal = f.unsigned ? Math.max(0, parsed + delta) : parsed + delta;
+  // Vim: 앞에 0 이 붙은 수는 자릿수를 유지합니다 (007 → 006, 099 → 100, -007 → -006).
+  const digits = raw.replace(/^-/, '');
+  if (digits.length > 1 && digits.startsWith('0')) {
+    const sign = nextVal < 0 ? '-' : '';
+    return sign + String(Math.abs(nextVal)).padStart(digits.length, '0');
+  }
   return String(nextVal);
 }
 

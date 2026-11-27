@@ -384,8 +384,11 @@ describe('g* / g# 부분 검색, gD 전역 선언 점프, :center/:right/:left, 
     expect(s.cursor).toEqual({ line: 1, col: 0 });
     expect(s.lastSearchDirection).toBe('backward');
 
-    // 공백 위 g* 는 E348 bell
-    const noWord = sendKeys(createVimState(['  abc']), 'g*');
+    // Vim: 공백 위 g* 는 커서 뒤 첫 키워드(abc)를, 키워드가 없으면 첫 비공백 문자열(;;)을 찾습니다
+    expect(sendKeys(createVimState(['  abc']), 'g*').cursor).toEqual({ line: 0, col: 2 });
+    expect(sendKeys(createVimState(['  ;;']), 'g*').cursor).toEqual({ line: 0, col: 2 });
+    // 뒤에 공백만 있으면 E348 bell
+    const noWord = sendKeys(createVimState(['abc   '], { line: 0, col: 4 }), 'g*');
     expect(noWord.bell).toBe(true);
     expect(noWord.commandMessage).toContain('E348');
   });

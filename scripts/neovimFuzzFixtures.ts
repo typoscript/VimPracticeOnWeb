@@ -131,6 +131,17 @@ const CASES: Case[] = [
   { id: 'gU-g-underscore', text: '  log("big", total);', cursor: { row: 0, col: 13 }, keys: 'gUg_' },
   { id: 'gU-ge', text: '  log("big", total);', cursor: { row: 0, col: 13 }, keys: 'gUge' },
   { id: 'g-delete-cursor-first-nonblank', text: '  keep\nzap a\n    stay here', cursor: { row: 0, col: 3 }, keys: ':g/a/d<CR>' },
+  // gJ 는 들여쓰기를 지우지 않음, 0 이 붙은 수는 자릿수 유지, * # 는 커서 뒤 키워드/비공백 사용
+  { id: 'gJ-keeps-indent', text: 'if (x) {\n  log(1);', cursor: { row: 0, col: 0 }, keys: 'gJ' },
+  { id: 'ctrl-x-zero-pad', text: 'a 007 b', cursor: { row: 0, col: 0 }, keys: '<C-x>' },
+  { id: 'ctrl-a-zero-pad-grow', text: 'a 099 b', cursor: { row: 0, col: 0 }, keys: '<C-a>' },
+  { id: 'ctrl-a-negative-zero-pad', text: 'a -007 b', cursor: { row: 0, col: 0 }, keys: '<C-a>' },
+  { id: 'star-next-keyword', text: 'x  foo bar\nfoo', cursor: { row: 0, col: 1 }, keys: '*' },
+  { id: 'hash-next-keyword', text: 'x  foo bar\nfoo', cursor: { row: 0, col: 1 }, keys: '#' },
+  { id: 'gstar-non-keyword-run', text: '  ;; x\n;; y', cursor: { row: 0, col: 0 }, keys: 'g*' },
+  // u: 바뀐 첫 줄로 (변경 전 커서가 그 줄이면 그 열)
+  { id: 'undo-g-delete-top-line', text: 'keep\n  zap a\nkeep2\nzap b', cursor: { row: 3, col: 2 }, keys: ':g/zap/d<CR>u' },
+  { id: 'undo-same-line-col', text: 'a1 b1\n  a2 b2\na3 b3', cursor: { row: 1, col: 4 }, keys: 'jdd2ku' },
 ];
 
 const LUA = `

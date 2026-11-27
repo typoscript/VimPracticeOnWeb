@@ -743,10 +743,24 @@ export function undo(state: VimEditorState): VimEditorState {
   }
 
   const undoneSeq = state.currentUndoSeq ?? state.undoStack.length;
+  // Vim u_undoredo: 커서는 바뀐 첫 줄로 갑니다. 변경 전 커서가 그 줄에 있었으면 그 열, 아니면 첫 비공백.
+  const restored = lastSnapshot.lines;
+  let topChanged = 0;
+  while (
+    topChanged < Math.min(restored.length, state.lines.length) &&
+    restored[topChanged] === state.lines[topChanged]
+  ) {
+    topChanged++;
+  }
+  topChanged = Math.min(topChanged, Math.max(0, restored.length - 1));
+  const undoCursor =
+    lastSnapshot.cursor.line === topChanged
+      ? lastSnapshot.cursor
+      : { line: topChanged, col: getFirstNonBlankCol(restored[topChanged] ?? '') };
   return {
     ...state,
     lines: lastSnapshot.lines,
-    cursor: clampCursor(lastSnapshot.lines, lastSnapshot.cursor, 'NORMAL'),
+    cursor: clampCursor(lastSnapshot.lines, undoCursor, 'NORMAL'),
     undoStack: nextUndo,
     redoStack: nextRedo,
     currentUndoSeq: currentSeq,
