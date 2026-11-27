@@ -245,7 +245,7 @@ export const MISSIONS_PART2: Mission[] = [
     id: 28,
     title: '레슨 28: 캡처 그룹 \\1, \\2와 \\u로 snake_case 코드를 camelCase로 1초 만에 리팩토링하기',
     description: 'Vim의 정규식 치환(:%s)에서 캡처 그룹(\\(...\\))과 역참조(\\1), 대소문자 변환 플래그(\\u)를 조합하여 레거시 snake_case 함수들을 camelCase로 일괄 리팩토링하세요.',
-    hint: ':%s/get_\\(\\w\\+\\)/get\\u\\1/g (또는 :%s/get_(\\w+)/get\\u\\1/g)를 입력하고 Enter를 누르세요.',
+    hint: ':%s/get_\\(\\w\\+\\)/get\\u\\1/g (또는 very magic 으로 :%s/\\vget_(\\w+)/get\\u\\1/g)를 입력하고 Enter를 누르세요.',
     par: 27,
     optimalKeys: [
       ':', '%', 's', '/', 'g', 'e', 't', '_', '\\', '(', '\\', 'w', '\\', '+', '\\', ')', '/', 'g', 'e', 't', '\\', 'u', '\\', '1', '/', 'g', 'Enter',
@@ -278,7 +278,7 @@ export const MISSIONS_PART2: Mission[] = [
     id: 29,
     title: '레슨 29: 타이핑 도중 Ctrl+r 0으로 변수명 붙여넣고 Ctrl+r =로 매직 넘버 계산하기',
     description: 'INSERT 모드에서 빠져나가지 않고 Ctrl+r {reg}로 복사된 레지스터 값을 즉시 붙여넣고, Ctrl+r =로 수식을 계산하여 코드에 바로 삽입하세요.',
-    hint: 'yiw로 CHUNK_SIZE를 복사한 뒤, jA로 줄 끝에서 편집을 시작하세요. Ctrl+r 0으로 변수명을 붙여넣고, Ctrl+r =을 누른 뒤 1024*64 Enter로 계산값을 삽입하세요.',
+    hint: 'yiw로 CHUNK_SIZE를 복사한 뒤, jA로 줄 끝에서 편집을 시작하세요. Ctrl+r 0으로 변수명을 붙여넣고 공백 * 공백을 입력한 뒤, Ctrl+r =을 누르고 1024*64 Enter로 계산값을 삽입하세요. 마지막으로 ;를 입력하고 Esc를 누르세요.',
     par: 22,
     optimalKeys: [
       'y', 'i', 'w',

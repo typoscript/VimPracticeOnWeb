@@ -71,8 +71,8 @@ export const MISSIONS_PART1: Mission[] = [
   {
     id: 5,
     title: '레슨 5: 텍스트 입력 및 모드 복귀 (i, Esc)',
-    description: 'i 키를 눌러 INSERT 모드로 진입한 후 "rocks"를 입력하고, Esc를 눌러 NORMAL 모드로 복귀하세요.',
-    hint: '$ 키로 줄 끝으로 간 뒤 a 또는 i로 " rocks"를 입력하고 Esc를 누르세요.',
+    description: 'A 키(줄 끝에서 입력하는 i 계열 명령)로 INSERT 모드에 진입한 후 " rocks"를 입력하고, Esc를 눌러 NORMAL 모드로 복귀하세요.',
+    hint: 'A 를 누르거나 $ 키로 줄 끝으로 간 뒤 a 로 " rocks"를 입력하고 Esc를 누르세요. (i 는 커서 앞에 입력되므로 줄 끝에 붙지 않습니다)',
     par: 8,
     optimalKeys: ['A', ' ', 'r', 'o', 'c', 'k', 's', 'Escape'],
     initialLines: [
@@ -117,7 +117,7 @@ export const MISSIONS_PART1: Mission[] = [
     id: 7,
     title: '레슨 7: 단어 삭제 (dw)',
     description: 'dw 키를 눌러 문장 속 잘못 들어간 "wrong" 단어를 삭제하세요.',
-    hint: 'w 키를 눌러 "wrong" 단어로 이동한 뒤, d를 누르고 w를 누르세요.',
+    hint: 'w 키를 두 번(또는 2w) 눌러 "wrong" 단어로 이동한 뒤, d를 누르고 w를 누르세요.',
     par: 4,
     optimalKeys: ['2', 'w', 'd', 'w'],
     initialLines: [
@@ -387,7 +387,7 @@ export const MISSIONS_PART1: Mission[] = [
     id: 18,
     title: '레슨 18: 매크로 녹화와 괄호 점프 (% 및 qa, @a)',
     description: '% 키로 짝이 되는 괄호 위치를 확인하고, qa 매크로를 녹화하여 리스트 항목들을 일괄 포맷팅하세요.',
-    hint: '% 키를 누르면 짝 괄호로 점프합니다. qa -> I -> " -> $ -> a -> ", -> Esc -> j -> 0 -> q 로 매크로를 녹화한 뒤 @a로 반복 실행하세요.',
+    hint: '% 키를 누르면 짝 괄호로 점프합니다(% 를 한 번 더 눌러 돌아오세요). j 로 첫 항목 줄로 내려간 뒤 qa -> I -> " -> Esc -> A -> ", -> Esc -> j -> 0 -> q 로 매크로를 녹화하고 2@a로 나머지 줄에 반복 실행하세요.',
     par: 16,
     optimalKeys: ['j', 'q', 'a', 'I', '"', 'Escape', 'A', '"', ',', 'Escape', 'j', '0', 'q', '2', '@', 'a'],
     initialLines: [

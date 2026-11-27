@@ -65,4 +65,27 @@ describe('레슨 완료 판정 회귀', () => {
       expect(mission.checkComplete(state)).toBe(true);
     });
   });
+
+  // 힌트·설명에 적힌 경로대로 입력해도 레슨이 완료되는지 (모범 풀이와 다른 경로만)
+  const keysOf = (text: string) => text.split('');
+  const HINT_PATHS: Array<[number, string[]]> = [
+    [5, ['$', 'a', ...keysOf(' rocks'), 'Escape']],
+    [7, ['w', 'w', 'd', 'w']],
+    [18, ['%', '%', 'j', 'q', 'a', 'I', '"', 'Escape', 'A', '"', ',', 'Escape', 'j', '0', 'q', '2', '@', 'a']],
+    [28, [...keysOf(':%s/\\vget_(\\w+)/get\\u\\1/g'), 'Enter']],
+    [
+      128,
+      [
+        ...keysOf(':TSContextToggle'), 'Enter',
+        ...keysOf(':ColorizerToggle'), 'Enter',
+        ...keysOf(':IlluminateToggle'), 'Enter',
+        'f', '"', 'c', 'i', '"', ...keysOf('#7aa2f7'), 'Escape',
+        ...keysOf(':%s/accentColor/primaryColor/g'), 'Enter',
+      ],
+    ],
+  ];
+  it.each(HINT_PATHS)('레슨 %i 은 힌트에 적힌 경로로도 완료된다', (id, keys) => {
+    const mission = MISSIONS.find((m) => m.id === id)!;
+    expect(mission.checkComplete(run(missionState(id), keys))).toBe(true);
+  });
 });

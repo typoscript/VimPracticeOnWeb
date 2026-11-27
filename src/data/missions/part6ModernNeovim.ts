@@ -1369,10 +1369,8 @@ export const MISSIONS_PART6: Mission[] = [
         '}',
       ];
       return (
+        // :TSContextToggle 등은 기본 켜짐을 끄는 토글이라 시각 확인용으로만 쓰고 판정에는 넣지 않습니다.
         state.mode === 'NORMAL' &&
-        state.options?.tscontext !== false &&
-        state.options?.colorizer !== false &&
-        state.options?.illuminate !== false &&
         state.lines.length === target.length &&
         state.lines.every((l, i) => l === target[i])
       );
