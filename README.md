@@ -7,7 +7,7 @@ CodeMirror나 Monaco 같은 무거운 외부 에디터 라이브러리 없이, *
 
 - **📚 132개 실전 커리큘럼**: 기초 이동(`hjkl`)부터 매크로·Vimscript·정규식·Netrw·세션, 현대 Neovim 플러그인(`Telescope`, `LSP`, `Treesitter`, `Gitsigns`, `vim-fugitive`, `git-conflict.nvim`, `nvim-dap`/`nvim-dap-ui`, `neo-tree.nvim`, `Lua`, `Flash`, `Oil`, `Harpoon`, `mini.ai`, `mini.move`, `Trouble`, `Multi-Cursor`, `Undotree`, `Yanky`, `Spectre`, `:terminal`, `dial.nvim`, `vim-abolish`, `treesj`, `nvim-autopairs`, `LuaSnip`, `nvim-cmp`, `noice.nvim`, `indent-blankline`, `todo-comments`, `matchparen`/`rainbow-delimiters`, `bufferline.nvim`, `satellite.nvim`, `nvim-treesitter-context`, `nvim-colorizer`, `vim-illuminate`)까지 단계별 완주
 - **🎮 다채로운 훈련 모드**: 튜토리얼 코스(4개 학습 트랙 · 1:1 Vim Golf 비교기) · 실무 멀티파일 캡스톤 6종(`:TestRun`) · 타임어택 스피드런 · 아케이드 서바이벌(보스전/파워업) · 던전 RPG(6스테이지) · 하드코어 도장(Modern Neovim 10연타 포함) · 멀티파일 자유 연습장(로컬 파일/폴더 드래그&드롭 · `.zip` 내보내기) · BYOC 커스텀 미션
-- **🔬 높은 호환성 검증**: 실제 `nvim --headless` 대조 골든 회귀 **116종** 포함 **219개 테스트 파일 / 2,546개 테스트 100% 통과**
+- **🔬 높은 호환성 검증**: 실제 `nvim --headless` 대조 골든 회귀 **116종** 포함 **220개 테스트 파일 / 2,547개 테스트 100% 통과**
 
 ---
 
