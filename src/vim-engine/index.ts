@@ -14,7 +14,7 @@ export { configureVimEngine, getVimEngineConfig } from './config';
 export type { VimEngineConfig } from './config';
 
 // ---- 핵심: 키 입력 → 새 상태 ----
-export { handleKey, parsePending } from './vimEngine';
+export { handleKey, parsePending, syncPerFileState } from './vimEngine';
 export { createVimState, sendKeys, runExCommand, evalVimExpression } from './api';
 export { executeCommandLine, splitPipedCommands } from './commandLine';
 

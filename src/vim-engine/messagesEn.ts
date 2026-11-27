@@ -3,6 +3,7 @@
  * configureVimEngine({ locale: 'en' }) 일 때 msg() 가 사용합니다. 자리표시자 {이름} 은 원문과 같아야 하며 messages.test.ts 가 검사합니다.
  */
 export const EN_MESSAGES: Record<string, string> = {
+  "매크로 재생이 {limit}개 키를 넘어 중단되었습니다 (자기 자신을 부르는 재귀 매크로인지 확인하세요)": "Macro playback stopped after {limit} keys (check for a macro that calls itself)",
   "선언부로 이동: {word} ({v}번째 줄)": "Go to declaration: {word} (line {v})",
   "선언부(첫 등장)로 이동: {word} ({v}번째 줄)": "Go to declaration (first occurrence): {word} (line {v})",
   "E486: 선언부를 찾을 수 없습니다: {word}": "E486: Declaration not found: {word}",

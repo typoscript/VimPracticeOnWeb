@@ -2,7 +2,6 @@ import { VimEditorState, CursorPosition } from './types';
 import { executeCommandLine } from './commandLine';
 import { moveToLineStart, moveToLineEnd, moveToFirstNonBlank } from './motions';
 import { syncRegisters, putFromRegister } from './registers';
-import { alternateBuffer } from './bufferEngine';
 import { reselectLastVisual } from './advancedMotions';
 import {
   deleteVisualSelection,
@@ -178,7 +177,7 @@ export function handleVisualModeKey(
     };
   }
 
-  // 1-0-c. 직전 대안 버퍼 토글 (Ctrl-^ / Ctrl-6)
+  // 1-0-c. Ctrl-^ / Ctrl-6 은 비주얼 모드에서 동작하지 않음 (Neovim: 파일 전환 없이 선택 유지, 벨)
   if (
     key === 'Ctrl-^' ||
     key === 'Ctrl+^' ||
@@ -187,7 +186,7 @@ export function handleVisualModeKey(
     key === 'Ctrl+6' ||
     key === 'ctrl-6'
   ) {
-    return alternateBuffer(state);
+    return { ...state, bell: true };
   }
 
   // 비주얼 모드 커스텀 키매핑 (:xmap/:xnoremap 우선, :vmap/:vnoremap 폴백, 다중 키·<Cmd>·<nowait>·재귀 *map 지원)

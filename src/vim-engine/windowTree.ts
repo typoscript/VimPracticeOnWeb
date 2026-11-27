@@ -757,7 +757,9 @@ export function switchPaneFocusCore(
   const currentPane: SplitPaneState = {
     ...prevCurPane,
     winId: prevCurPane?.winId ?? 1000 + curIdx,
-    filename: prevCurPane?.filename || fallbackName,
+    filename: state.primaryFilename || prevCurPane?.filename || fallbackName,
+    bufferId:
+      prevCurPane?.bufferId !== undefined ? (state.currentBufferId ?? prevCurPane.bufferId) : prevCurPane?.bufferId,
     lines: [...state.lines],
     cursor: { ...state.cursor },
     mode: state.mode,
@@ -828,6 +830,8 @@ export function switchPaneFocusCore(
     activePaneIndex: targetPaneIndex,
     previousPaneIndex: curIdx,
     currentBufferId: nextCurrentBufferId,
+    // 현재 파일 = 포커스를 받은 창의 파일 (:w 저장 대상, 마크·Git 기준선 등 파일별 상태의 기준)
+    primaryFilename: targetPane.filename || state.primaryFilename,
     splitPanes: newPanes,
     locationList: targetPane.locationList,
     options: nextOptions,

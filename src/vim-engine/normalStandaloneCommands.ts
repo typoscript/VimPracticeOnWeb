@@ -63,6 +63,14 @@ import {
   ParsedPending,
 } from './engineHelpers';
 
+/**
+ * 한 번의 최상위 매크로 실행(@a 등)이 재생할 수 있는 키 총량.
+ * 자기 자신을 두 번 이상 부르는 재귀 매크로는 깊이 제한(100)만으로는 키 수가 지수적으로 늘어 브라우저가 멈추므로,
+ * 총량을 넘으면 실행을 멈추고 벨을 울립니다 (Vim 에서는 사용자가 Ctrl-C 로 끊는 상황).
+ */
+export const MAX_MACRO_REPLAY_KEYS = 100000;
+let macroReplayKeysLeft = MAX_MACRO_REPLAY_KEYS;
+
 function replayMacroRegister(
   state: VimEditorState,
   targetReg: string,
@@ -105,15 +113,34 @@ function replayMacroRegister(
     lastPlayedMacro: targetReg,
   };
 
-  for (let c = 0; c < count && !curState.bell; c++) {
+  if (macroDepth === 0) macroReplayKeysLeft = MAX_MACRO_REPLAY_KEYS;
+  let exhausted = false;
+  for (let c = 0; c < count && !curState.bell && !exhausted; c++) {
     if (macroDepth >= 100) break;
     for (const mk of macroKeys) {
+      if (macroReplayKeysLeft <= 0) {
+        exhausted = true;
+        break;
+      }
+      macroReplayKeysLeft--;
       curState = runHandleKey(curState, mk, false, macroDepth + 1);
       if (curState.bell) break;
     }
   }
 
-  return { ...curState, lastPlayedMacro: targetReg };
+  if (macroDepth === 0 && macroReplayKeysLeft <= 0) {
+    return {
+      ...curState,
+      bell: true,
+      lastPlayedMacro: targetReg,
+      commandMessage: msg('매크로 재생이 {limit}개 키를 넘어 중단되었습니다 (자기 자신을 부르는 재귀 매크로인지 확인하세요)', {
+        limit: MAX_MACRO_REPLAY_KEYS,
+      }),
+    };
+  }
+  return exhausted
+    ? { ...curState, bell: true, lastPlayedMacro: targetReg }
+    : { ...curState, lastPlayedMacro: targetReg };
 }
 
 /**

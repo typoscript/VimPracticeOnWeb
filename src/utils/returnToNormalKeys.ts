@@ -7,6 +7,7 @@ import { handleKey, type VimEditorState } from '../vim-engine';
 export function isReadyForUiKeys(state: VimEditorState): boolean {
   return (
     state.mode === 'NORMAL' &&
+    !state.insertNormalSession &&
     !state.pendingKeys &&
     !state.spellSuggest &&
     !state.flashJump?.isOpen &&
@@ -24,10 +25,26 @@ export function isReadyForUiKeys(state: VimEditorState): boolean {
 
 /** 현재 상태를 한 단계 NORMAL 쪽으로 되돌리는 키 */
 function nextCloseKeys(state: VimEditorState): string[] {
-  if (state.mode === 'TERMINAL') return ['Ctrl-\\', 'Ctrl-n'];
-  if (state.neotree?.isOpen && state.neotree.isFocused && !state.neotree.prompt && !state.pendingKeys) {
-    return ['Tab']; // Neo-tree → 에디터 창으로 포커스 이동 (트리는 열린 채 유지)
-  }
+  // 팝업 메뉴가 열려 있으면 그 메뉴가 키를 먼저 받으므로 Escape 로 먼저 닫고, 터미널 모드는 마지막에 빠져나옴
+  const popupOpen =
+    state.spellSuggest ||
+    state.flashJump?.isOpen ||
+    state.harpoonMenu?.isOpen ||
+    state.yankyMenu?.isOpen ||
+    state.multiCursor?.isOpen ||
+    state.lspRename?.isOpen ||
+    state.lspCodeActionMenu?.isOpen ||
+    state.confirmSubstitute ||
+    state.cmdlineWindow ||
+    state.fuzzyFinder?.isOpen;
+  if (state.mode === 'TERMINAL' && !popupOpen) return ['Ctrl-\\', 'Ctrl-n'];
+  // 다른 팝업이 모두 닫히고 Neo-tree 포커스만 남았을 때만 Tab 으로 에디터 창에 포커스를 돌려줌 (트리는 열린 채 유지)
+  const neotreeFocusedOnly =
+    state.neotree?.isOpen &&
+    state.neotree.isFocused &&
+    !state.neotree.prompt &&
+    isReadyForUiKeys({ ...state, neotree: { ...state.neotree, isFocused: false } });
+  if (neotreeFocusedOnly) return ['Tab'];
   return ['Escape'];
 }
 

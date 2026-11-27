@@ -267,6 +267,7 @@ export function assertValidVimState(
     !prevState.multiCursor?.isOpen &&
     !prevState.confirmSubstitute &&
     !prevState.spellSuggest &&
+    !(prevState.neotree?.isOpen && prevState.neotree.isFocused) &&
     key === 'u' &&
     prevState.undoStack &&
     prevState.undoStack.length > 0

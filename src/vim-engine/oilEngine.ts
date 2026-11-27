@@ -140,13 +140,28 @@ export function closeOilBuffer(state: VimEditorState): VimEditorState {
   const lines = oil.returnLines && oil.returnLines.length > 0 ? [...oil.returnLines] : [''];
   const cursor = oil.returnCursor ? clampCursor(lines, oil.returnCursor, 'NORMAL') : { line: 0, col: 0 };
 
+  // 돌아갈 버퍼가 그사이 삭제됐으면 같은 내용으로 새 버퍼를 만들어 버퍼 목록과 현재 버퍼 번호를 일치시킴
+  const returnName = oil.returnFilename ?? state.primaryFilename ?? 'source.ts';
+  const buffers = state.buffers ?? [];
+  const returnAlive =
+    oil.returnBufferId !== undefined && buffers.some((b) => b.id === oil.returnBufferId);
+  const reopenedId = Math.max(0, ...buffers.map((b) => b.id)) + 1;
+  const nextBuffers =
+    returnAlive || buffers.length === 0
+      ? state.buffers
+      : [
+          ...buffers,
+          { id: reopenedId, name: returnName, lines: [...lines], cursor, undoStack: [], redoStack: [], isModified: false },
+        ];
+
   return {
     ...state,
     lines,
     cursor,
     mode: 'NORMAL',
-    primaryFilename: oil.returnFilename ?? state.primaryFilename,
-    currentBufferId: oil.returnBufferId ?? state.currentBufferId,
+    buffers: nextBuffers,
+    primaryFilename: returnName,
+    currentBufferId: returnAlive || buffers.length === 0 ? (oil.returnBufferId ?? state.currentBufferId) : reopenedId,
     oilSession: null,
     pendingKeys: undefined,
     commandMessage: msg('[Oil] 탐색기 버퍼를 닫았습니다'),

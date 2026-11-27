@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { createVimState, handleKey, executeCommandLine } from '../vim-engine';
-import { getReturnToNormalKeys } from './returnToNormalKeys';
+import { createVimState, handleKey, executeCommandLine, switchPaneFocus, syncPerFileState } from '../vim-engine';
+import { getReturnToNormalKeys, isReadyForUiKeys } from './returnToNormalKeys';
 
 const run = (state: ReturnType<typeof createVimState>, keys: string[]) =>
   keys.reduce((s, k) => handleKey(s, k), state);
@@ -49,5 +49,19 @@ describe('getReturnToNormalKeys: 팝업·포커스 상태', () => {
     s = run(s, [...getReturnToNormalKeys(s), ':', 'O', 'i', 'l', 'Enter']);
     expect(s.oilSession?.isOpen).toBe(true);
     expect(Object.keys(s.virtualFiles ?? {}).some((f) => f.includes('Oil'))).toBe(false);
+  });
+});
+
+describe('getReturnToNormalKeys: 터미널 위 팝업', () => {
+  it('터미널 창에서 Harpoon 메뉴가 열려 있으면 메뉴를 먼저 닫고 터미널 모드를 빠져나온다', () => {
+    // 퍼즈 재현: :ToggleTerm → 코드 창 클릭 → :HarpoonMenu → 터미널 창 클릭
+    const ui = (x: ReturnType<typeof createVimState>, i: number) => syncPerFileState(x, switchPaneFocus(x, i));
+    let s = run({ ...createVimState(['a'], { line: 0, col: 0 }), primaryFilename: 'a.ts' }, [':', ...'ToggleTerm'.split(''), 'Enter']);
+    s = ui(s, 0);
+    s = run(s, [':', ...'HarpoonMenu'.split(''), 'Enter']);
+    s = ui(s, 1);
+    expect(s.harpoonMenu?.isOpen).toBe(true);
+    const after = run(s, getReturnToNormalKeys(s));
+    expect(isReadyForUiKeys(after)).toBe(true);
   });
 });

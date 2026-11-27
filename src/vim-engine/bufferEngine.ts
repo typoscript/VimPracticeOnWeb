@@ -1,6 +1,7 @@
 import { VimBuffer, VimEditorState } from './types';
 import { getVfsFile, resolveVfsFilename } from './vfs';
 import { msg } from './messages';
+import { clampCursor } from './cursor';
 import { getGlobalOptions } from './setEngine';
 import { areLinesEqual } from './undoTreeEngine';
 import { syncBufferLocalState } from './bufferLocalState';
@@ -172,7 +173,8 @@ export function switchBuffer(state: VimEditorState, target: number | string): Vi
   return syncBufferLocalState(state, {
     ...syncedState,
     lines: [...targetBuf.lines],
-    cursor: { ...targetBuf.cursor },
+    // 저장 당시 INSERT(줄 끝 다음 칸)였을 수 있으므로 NORMAL 범위로 복원
+    cursor: clampCursor(targetBuf.lines, targetBuf.cursor, 'NORMAL'),
     undoStack: targetBuf.undoStack ? [...targetBuf.undoStack] : [],
     redoStack: targetBuf.redoStack ? [...targetBuf.redoStack] : [],
     undoTreeNodes: undefined,
@@ -346,9 +348,54 @@ export function addBuffer(state: VimEditorState, filename: string, lineNum?: num
 }
 
 /**
+ * 삭제된 버퍼를 표시하던 다른 탭 페이지는 남은 버퍼로 바꿔 보여 줍니다
+ * (Vim 의 :bdelete 처럼 삭제된 버퍼를 가리키는 창이 남지 않도록).
+ */
+export function detachDeletedBuffersFromTabs(prev: VimEditorState, next: VimEditorState): VimEditorState {
+  if (!next.tabPages || next.tabPages.length < 2 || !next.buffers?.length) return next;
+  const alive = new Set(next.buffers.map((b) => b.id));
+  const deleted = new Set((prev.buffers ?? []).map((b) => b.id).filter((id) => !alive.has(id)));
+  if (deleted.size === 0) return next;
+  const fallback =
+    next.buffers.find((b) => b.id === next.currentBufferId) ?? next.buffers[0];
+  let changed = false;
+  const tabPages = next.tabPages.map((tab) => {
+    if (tab.id === (next.currentTabId ?? 1) || tab.currentBufferId === undefined || !deleted.has(tab.currentBufferId)) {
+      return tab;
+    }
+    changed = true;
+    return {
+      ...tab,
+      filename: fallback.name,
+      primaryFilename: fallback.name,
+      lines: [...fallback.lines],
+      cursor: clampCursor(fallback.lines, fallback.cursor, 'NORMAL'),
+      undoStack: [],
+      redoStack: [],
+      currentBufferId: fallback.id,
+      alternateBufferId: undefined,
+      splitPanes: undefined,
+      splitDirection: 'none' as const,
+      activePaneIndex: 0,
+      windowLayout: undefined,
+    };
+  });
+  return changed ? { ...next, tabPages } : next;
+}
+
+/**
  * 버퍼를 삭제·언로드·완전 제거합니다 (:bd, :bdelete, :bunload, :bwipeout).
  */
 export function deleteBuffer(
+  state: VimEditorState,
+  target?: number | string,
+  force = true,
+  kind: 'delete' | 'unload' | 'wipe' = 'delete'
+): VimEditorState {
+  return detachDeletedBuffersFromTabs(state, deleteBufferCore(state, target, force, kind));
+}
+
+function deleteBufferCore(
   state: VimEditorState,
   target?: number | string,
   force = true,

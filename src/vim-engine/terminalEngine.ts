@@ -373,7 +373,8 @@ function updateInputBuffer(
  */
 export function handleTerminalModeKey(state: VimEditorState, key: string): VimEditorState {
   const session = state.terminalSession;
-  if (!session?.isOpen) {
+  // 터미널 버퍼가 아닌 창에서는 셸 입력을 처리하지 않음 (다른 파일 내용이 터미널 출력으로 덮이지 않도록)
+  if (!session?.isOpen || state.primaryFilename !== TERM_FILENAME) {
     return { ...state, mode: 'NORMAL', cursor: clampCursor(state.lines, state.cursor, 'NORMAL') };
   }
 

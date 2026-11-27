@@ -1,6 +1,6 @@
 import { getVimEngineConfig } from './config';
 import { VimEditorState } from './types';
-import { setActiveCursorContext } from './cursor';
+import { setActiveCursorContext, clampCursor } from './cursor';
 import { setActiveIskeyword } from './wordMotion';
 import { setActiveMatchpairs } from './bracketMatch';
 import { getOptions } from './setEngine';
@@ -24,6 +24,8 @@ import { handleHelpKey } from './helpEngine';
 import { syncLiveLspDiagnostics } from './lspEngine';
 import { getEffectiveGitBaseLines, syncGitBaseOwnership } from './gitSignsEngine';
 import { syncBufferLocalState } from './bufferLocalState';
+import { detachDeletedBuffersFromTabs } from './bufferEngine';
+import { adjustFoldsForLineChange } from './folding';
 import { handleLspRenameKey, handleLspCodeActionKey } from './lspRefactorEngine';
 import { handleFlashJumpKey } from './flashJumpEngine';
 import { handleMultiCursorKey } from './multiCursorEngine';
@@ -534,12 +536,73 @@ export function handleKey(
   return processKeyAutocmds(input, withHl);
 }
 
+const VISUAL_LIKE_MODES = new Set(['VISUAL', 'VISUAL_LINE', 'VISUAL_BLOCK', 'SELECT', 'SELECT_LINE', 'SELECT_BLOCK']);
+
 /**
  * 현재 파일이 바뀌었으면 파일별 상태를 교체합니다: Gitsigns 기준선과 버퍼 로컬 상태
- * (소문자 마크·변경 목록·gv·gi·폴드). Netrw·Oil·도움말 등 조기 반환 경로도 모두 거치도록 바깥 래퍼에서 실행합니다.
+ * (소문자 마크·변경 목록·gv·gi·폴드). 또한 이전 파일 좌표에 묶인 비주얼 선택·다중 커서·Flash 세션을 닫고
+ * 커서를 새 파일·모드 범위로 맞춥니다.
+ * `handleKey` 바깥 래퍼(조기 반환 경로 포함)와, 키 입력 없이 엔진 함수를 직접 부르는 UI(버퍼라인·탭·분할 창 클릭)에서 호출합니다.
  */
-function syncPerFileState(prev: VimEditorState, next: VimEditorState): VimEditorState {
-  return syncBufferLocalState(prev, syncGitBaseOwnership(prev, next));
+export function syncPerFileState(prev: VimEditorState, next: VimEditorState): VimEditorState {
+  if (prev === next) return next;
+  const fileChanged = (prev.primaryFilename || 'source.ts') !== (next.primaryFilename || 'source.ts');
+  const bufferChanged = fileChanged || (prev.currentBufferId ?? 1) !== (next.currentBufferId ?? 1);
+  let synced = syncBufferLocalState(prev, syncGitBaseOwnership(prev, next));
+  // 어떤 경로로든 버퍼가 삭제되면(:bd, Netrw 닫기 등) 그 버퍼를 보여 주던 다른 탭을 남은 버퍼로 바꿈
+  if (prev.buffers !== synced.buffers) synced = detachDeletedBuffersFromTabs(prev, synced);
+
+  if (!bufferChanged) {
+    // 같은 파일에서 줄이 바뀌었고 이번 동작이 폴드를 직접 고치지 않았다면 폴드를 줄 변화에 맞춰 이동
+    if (synced.lines !== prev.lines && synced.folds && synced.folds.length > 0 && synced.folds === prev.folds) {
+      const folds = adjustFoldsForLineChange(synced.folds, prev.lines, synced.lines);
+      synced = { ...synced, folds: folds.length > 0 ? folds : undefined };
+    }
+  } else {
+    // 다른 버퍼로 바뀜: 이전 버퍼 좌표에 묶인 비주얼 선택·다중 커서·Flash 세션을 닫고 커서를 새 버퍼 범위로
+    if (VISUAL_LIKE_MODES.has(synced.mode)) {
+      synced = { ...synced, mode: 'NORMAL', visualAnchor: undefined, visualBlockEndOfLine: undefined };
+    }
+    // 터미널 창에서 다른 파일로 바뀌면 TERMINAL 모드 해제 (일반 파일에 셸 입력이 쓰이지 않도록)
+    if (synced.mode === 'TERMINAL' && !(synced.primaryFilename ?? '').startsWith('term://')) {
+      synced = { ...synced, mode: 'NORMAL' };
+    }
+    if (synced.multiCursor?.isOpen || synced.flashJump?.isOpen) {
+      synced = { ...synced, multiCursor: null, flashJump: null };
+    }
+    const clamped = clampCursor(synced.lines, synced.cursor, synced.mode);
+    if (clamped.line !== synced.cursor.line || clamped.col !== synced.cursor.col) {
+      synced = { ...synced, cursor: clamped };
+    }
+  }
+  return sanitizeWindowState(synced);
+}
+
+/** 폴드 범위·분할 창 커서·입력 모드 전용 대기 상태가 현재 버퍼/모드와 어긋나지 않게 맞춥니다 */
+function sanitizeWindowState(state: VimEditorState): VimEditorState {
+  let s = state;
+  const lastRow = s.lines.length - 1;
+  if (s.folds?.some((f) => f.endRow > lastRow || f.startRow > f.endRow || f.startRow < 0)) {
+    const folds = s.folds
+      .map((f) => ({ ...f, startRow: Math.max(0, f.startRow), endRow: Math.min(lastRow, f.endRow) }))
+      .filter((f) => f.startRow <= f.endRow);
+    s = { ...s, folds: folds.length > 0 ? folds : undefined };
+  }
+  if (s.splitPanes?.length) {
+    let panesChanged = false;
+    const panes = s.splitPanes.map((pane) => {
+      const c = clampCursor(pane.lines, pane.cursor, pane.mode ?? 'NORMAL');
+      if (c.line === pane.cursor.line && c.col === pane.cursor.col) return pane;
+      panesChanged = true;
+      return { ...pane, cursor: c };
+    });
+    if (panesChanged) s = { ...s, splitPanes: panes };
+  }
+  // Ctrl-r 레지스터 대기는 입력·명령행 모드 전용 (탭·버퍼 전환 등으로 NORMAL/VISUAL 이 되면 해제)
+  if (s.insertRegisterPending && (s.mode === 'NORMAL' || VISUAL_LIKE_MODES.has(s.mode))) {
+    s = { ...s, insertRegisterPending: undefined, insertRegisterMode: undefined };
+  }
+  return s;
 }
 
 function processKeyAutocmds(prev: VimEditorState, curr: VimEditorState): VimEditorState {

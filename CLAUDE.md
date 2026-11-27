@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 214개 테스트 파일, 2,376개 테스트 100% 통과 필수)*
+  *(현재 216개 테스트 파일, 2,395개 테스트 100% 통과 필수)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -46,6 +46,10 @@
 4. **파일별 상태 분리 (`bufferLocalState.ts`, `gitSignsEngine.ts`)**:
    - 소문자·특수 마크, 변경 목록(`g;`), `gv`/`gi` 위치, 폴드, Gitsigns 기준선(`gitBaseLines`)은 Vim 처럼 파일(버퍼)마다 따로입니다. `handleKey` 바깥 래퍼의 `syncPerFileState` 가 `primaryFilename` 이 바뀔 때마다 이전 파일 값을 보관(`bufferLocalSnapshots`, 버퍼의 `gitBaseLines`)하고 새 파일 값을 불러옵니다. 새 버퍼 로컬 상태를 추가하면 `BufferLocalSnapshot` 에도 넣으세요.
    - Netrw·도움말 전용 키 처리는 NORMAL 모드에서 해당 버퍼가 활성일 때만 동작합니다(`isNetrwBufferActive`). 특수 버퍼 키 핸들러를 새로 붙일 때도 Ex 입력(COMMAND 모드)을 가로채지 않게 하세요.
+   - `primaryFilename` 은 **포커스를 가진 창의 파일**입니다(`:w` 저장 대상·파일별 상태의 기준). 창 포커스·교환·회전·닫기 함수는 활성 창의 파일명과 `bufferId` 를 함께 갱신해야 합니다(같은 버퍼로 오인되면 `syncSharedBufferPanes` 가 다른 창 내용을 덮어씀).
+   - UI 클릭처럼 `handleKey` 를 거치지 않고 엔진 함수를 직접 부르면 `syncPerFileState(prev, next)` 로 감싸세요(`useEditorWorkspaceHandlers` 가 처리). 버퍼·파일이 바뀌면 비주얼/다중 커서/Flash/TERMINAL 모드를 정리하고 커서를 맞추며, 삭제된 버퍼를 보여 주던 다른 탭은 남은 버퍼로 바꾸고, 같은 파일의 줄 변화에 맞춰 폴드를 옮깁니다(`adjustFoldsForLineChange`). 탭 전환은 탭에 저장된 모드를 되살리지 않습니다(INSERT 중이었을 때만 유지).
+   - 매크로 재생은 최상위 `@` 한 번에 최대 `MAX_MACRO_REPLAY_KEYS`(100,000) 키까지만 실행합니다. 자기 자신을 여러 번 부르는 재귀 매크로가 브라우저를 멈추지 않게 하기 위함입니다.
+   - 창·탭·버퍼·매크로·Undo·UI 클릭 조합은 `test/windowBuffer.fuzz.test.ts`(하네스 `test/windowBufferFuzzHarness.ts`, 실패 시 최소 재현 순서 출력)가 무작위로 검증합니다.
    - UI 버튼(바로 체험 칩, 치트시트 실행)으로 키를 주입할 때는 `src/utils/returnToNormalKeys.ts` 의 `getReturnToNormalKeys` 를 앞에 붙여 팝업·터미널·Neo-tree 포커스에서 먼저 빠져나오세요. `test/modeOverlay.fuzz.test.ts` 가 이 조합을 무작위로 검증합니다.
 5. **미션(레슨) 추가 시 4대 동기화 필수 규칙**:
    신규 레슨 $N$을 추가할 때 반드시 아래 4개 파일을 동시에 동기화해야 테스트가 깨지지 않습니다:

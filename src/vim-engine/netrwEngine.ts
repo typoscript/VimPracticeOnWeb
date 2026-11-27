@@ -134,10 +134,17 @@ export function closeNetrw(state: VimEditorState): VimEditorState {
   }
 
   if (returnFile) {
+    // 돌아갈 버퍼가 그사이 삭제됐으면 파일을 새 버퍼로 다시 열어 버퍼 목록과 현재 버퍼 번호를 일치시킴
     const fileLines = state.netrw.files?.[returnFile] ?? [''];
+    const reopenedId =
+      Math.max(0, ...(state.buffers ?? []).map((b) => b.id)) + 1;
     return {
       ...state,
-      buffers: remainingBuffers,
+      buffers: [
+        ...remainingBuffers,
+        { id: reopenedId, name: returnFile, lines: [...fileLines], cursor: { line: 0, col: 0 }, undoStack: [], redoStack: [], isModified: false, savedLines: [...fileLines] },
+      ],
+      currentBufferId: reopenedId,
       primaryFilename: returnFile,
       lines: [...fileLines],
       cursor: { line: 0, col: 0 },

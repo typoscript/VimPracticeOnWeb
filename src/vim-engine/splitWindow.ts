@@ -66,7 +66,7 @@ export function exchangePanes(state: VimEditorState, count?: number): VimEditorS
     activePaneIndex: targetSlot,
     previousPaneIndex: normalized.previousPaneIndex,
     windowVars: normalized.windowVars,
-    primaryFilename: normalized.splitPanes![0].filename,
+    primaryFilename: newActive.filename,
     secondaryFilename: normalized.splitPanes![1]?.filename,
     commandMessage: msg('두 창의 위치를 맞바꿨습니다 (Ctrl-w x)'),
   };
@@ -107,7 +107,7 @@ export function rotatePanes(
     activePaneIndex: normalized.activePaneIndex,
     previousPaneIndex: normalized.previousPaneIndex,
     windowVars: normalized.windowVars,
-    primaryFilename: normalized.splitPanes![0].filename,
+    primaryFilename: newActive.filename,
     secondaryFilename: normalized.splitPanes![1]?.filename,
     commandMessage: counterClockwise
       ? msg('창을 반시계 방향으로 회전했습니다 (Ctrl-w R)')
@@ -152,7 +152,7 @@ export function movePaneToDirection(
     windowLayout: normalized.windowLayout,
     splitRatio: normalized.splitRatio,
     windowVars: normalized.windowVars,
-    primaryFilename: normalized.splitPanes![0].filename,
+    primaryFilename: activePane.filename,
     secondaryFilename: normalized.splitPanes![1]?.filename,
     commandMessage: msg('창 레이아웃을 {v}로 재배치했습니다 (Ctrl-w {dir})', {
       v: isVertical ? msg('세로') : msg('가로'),

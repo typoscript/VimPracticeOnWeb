@@ -1,5 +1,7 @@
-import { VimEditorState, VimTabPage, SplitPaneState } from './types';
+import { VimEditorState, VimTabPage, SplitPaneState, VimMode, CursorPosition } from './types';
 import { cloneWindowTree } from './windowTree';
+import { clampCursor } from './cursor';
+import { syncCurrentBuffer } from './bufferEngine';
 import { msg } from './messages';
 
 function clonePanes(panes: SplitPaneState[] | undefined): SplitPaneState[] | undefined {
@@ -7,9 +9,22 @@ function clonePanes(panes: SplitPaneState[] | undefined): SplitPaneState[] | und
     ? panes.map((pane) => ({
         ...pane,
         lines: [...pane.lines],
-        cursor: { ...pane.cursor },
+        // 저장 당시 INSERT 였을 수 있으므로 복원 시 NORMAL 범위로 맞춤
+        cursor: clampCursor(pane.lines, pane.cursor, 'NORMAL'),
       }))
     : undefined;
+}
+
+/**
+ * 탭 전환 후 모드: Vim 의 모드는 탭에 속하지 않으므로 저장된 탭 모드를 되살리지 않습니다.
+ * 입력 중(INSERT)에 탭을 바꾼 경우만 INSERT 를 유지하고, 그 밖에는 NORMAL 입니다.
+ */
+function modeAfterTabSwitch(current: VimMode): VimMode {
+  return current === 'INSERT' ? 'INSERT' : 'NORMAL';
+}
+
+function restoredTabCursor(lines: string[], cursor: CursorPosition, mode: VimMode): CursorPosition {
+  return clampCursor(lines, cursor, mode);
 }
 
 /**
@@ -125,12 +140,9 @@ export function switchTab(state: VimEditorState, targetId: number): VimEditorSta
   return {
     ...syncedState,
     lines: [...targetTab.lines],
-    cursor: { ...targetTab.cursor },
-    mode:
-      targetTab.mode === 'COMMAND' || targetTab.mode === 'SEARCH'
-        ? 'NORMAL'
-        : targetTab.mode || 'NORMAL',
-    visualAnchor: targetTab.visualAnchor ? { ...targetTab.visualAnchor } : undefined,
+    cursor: restoredTabCursor(targetTab.lines, targetTab.cursor, modeAfterTabSwitch(state.mode)),
+    mode: modeAfterTabSwitch(state.mode),
+    visualAnchor: undefined,
     undoStack: targetTab.undoStack ? [...targetTab.undoStack] : [],
     redoStack: targetTab.redoStack ? [...targetTab.redoStack] : [],
     splitDirection: targetTab.splitDirection,
@@ -155,7 +167,8 @@ export function switchTab(state: VimEditorState, targetId: number): VimEditorSta
  * 새 탭 페이지를 열어 전환합니다 (:tabnew, :tabedit, :tabe [filename]).
  */
 export function openNewTab(state: VimEditorState, filename?: string): VimEditorState {
-  const syncedState = syncCurrentTab(state);
+  // 버퍼 목록을 먼저 만들어 두어야 현재 탭 스냅샷에 버퍼 번호가 함께 저장됩니다
+  const syncedState = syncCurrentTab(syncCurrentBuffer(state));
   const tabPages = syncedState.tabPages!;
   const curId = syncedState.currentTabId ?? 1;
   const curIdx = tabPages.findIndex((t) => t.id === curId);
@@ -167,16 +180,27 @@ export function openNewTab(state: VimEditorState, filename?: string): VimEditorS
   let tabLines = [''];
   let tabName = filename ? filename.trim() : '[No Name]';
 
-  // 기존 버퍼에 동일 파일명이 존재하는지 확인하여 내용 복사
-  if (filename && syncedState.buffers) {
-    const existingBuf = syncedState.buffers.find(
-      (b) => b.name === tabName || b.name.includes(tabName)
-    );
-    if (existingBuf) {
-      tabLines = [...existingBuf.lines];
-      tabName = existingBuf.name;
-    }
+  // 현재 버퍼 내용을 버퍼 목록에 저장한 뒤, 새 탭이 표시할 버퍼를 정합니다
+  // (Vim :tabnew 처럼 기존 파일이면 그 버퍼를, 아니면 새 빈 버퍼를 만들어 currentBufferId 와 화면을 일치시킴)
+  const withBuffers = syncedState;
+  const buffers = withBuffers.buffers ?? [];
+  const existingBuf = filename
+    ? buffers.find((b) => b.name === tabName || b.name.includes(tabName))
+    : undefined;
+  let tabBufferId: number;
+  let nextBuffers = buffers;
+  if (existingBuf) {
+    tabLines = [...existingBuf.lines];
+    tabName = existingBuf.name;
+    tabBufferId = existingBuf.id;
+  } else {
+    tabBufferId = buffers.reduce((max, b) => Math.max(max, b.id), 0) + 1;
+    nextBuffers = [
+      ...buffers,
+      { id: tabBufferId, name: tabName, lines: [...tabLines], cursor: { line: 0, col: 0 }, undoStack: [], redoStack: [], isModified: false },
+    ];
   }
+  const prevBufferId = withBuffers.currentBufferId;
 
   const newTab: VimTabPage = {
     id: nextId,
@@ -187,6 +211,8 @@ export function openNewTab(state: VimEditorState, filename?: string): VimEditorS
     undoStack: [],
     redoStack: [],
     primaryFilename: tabName,
+    currentBufferId: tabBufferId,
+    alternateBufferId: prevBufferId,
   };
 
   const nextTabPages = [...tabPages];
@@ -194,6 +220,9 @@ export function openNewTab(state: VimEditorState, filename?: string): VimEditorS
 
   return {
     ...syncedState,
+    buffers: nextBuffers,
+    currentBufferId: tabBufferId,
+    alternateBufferId: prevBufferId,
     tabPages: nextTabPages,
     currentTabId: nextId,
     lines: [...newTab.lines],
@@ -263,9 +292,9 @@ export function closeTab(state: VimEditorState, targetIdx?: number): VimEditorSt
     tabPages: nextTabPages,
     currentTabId: fallbackTab.id,
     lines: [...fallbackTab.lines],
-    cursor: { ...fallbackTab.cursor },
-    mode: fallbackTab.mode || 'NORMAL',
-    visualAnchor: fallbackTab.visualAnchor ? { ...fallbackTab.visualAnchor } : undefined,
+    cursor: restoredTabCursor(fallbackTab.lines, fallbackTab.cursor, modeAfterTabSwitch(state.mode)),
+    mode: modeAfterTabSwitch(state.mode),
+    visualAnchor: undefined,
     undoStack: fallbackTab.undoStack ? [...fallbackTab.undoStack] : [],
     redoStack: fallbackTab.redoStack ? [...fallbackTab.redoStack] : [],
     splitDirection: fallbackTab.splitDirection,

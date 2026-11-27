@@ -1,5 +1,5 @@
 import { useCallback, useState, Dispatch, SetStateAction, MutableRefObject } from 'react';
-import { VimEditorState, editBuffer } from '../vim-engine';
+import { VimEditorState, editBuffer, syncPerFileState } from '../vim-engine';
 // 로컬 파일 읽기·내보내기·ZIP 생성 모듈은 자유 연습장에서 버튼을 누를 때만 불러옵니다 (첫 화면 번들 경량화)
 const loadSandboxFiles = () => import('../utils/sandboxLocalFiles');
 import { Mission } from '../types/mission';
@@ -201,7 +201,7 @@ export function useAppMissionHandlers({
 
   const handleOpenSandboxFile = useCallback(
     (filename: string) => {
-      setEditorState((prev) => editBuffer(prev, filename));
+      setEditorState((prev) => syncPerFileState(prev, editBuffer(prev, filename)));
     },
     [setEditorState]
   );

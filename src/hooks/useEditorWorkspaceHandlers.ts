@@ -2,6 +2,7 @@ import { useCallback, useMemo, Dispatch, SetStateAction } from 'react';
 import {
   VimEditorState,
   handleKey,
+  syncPerFileState,
   switchPaneFocus,
   switchBuffer,
   deleteBuffer,
@@ -100,9 +101,18 @@ interface UseEditorWorkspaceHandlersParams {
  * 인터랙션 핸들러 모음 훅입니다.
  */
 export function useEditorWorkspaceHandlers({
-  setEditorState,
+  setEditorState: setRawEditorState,
   setIsEditorFocused,
 }: UseEditorWorkspaceHandlersParams) {
+  // UI 클릭은 handleKey 를 거치지 않으므로, 파일이 바뀌면 파일별 상태(마크·폴드·Git 기준선)와 모드·커서를 여기서 맞춥니다
+  const setEditorState = useCallback<Dispatch<SetStateAction<VimEditorState>>>(
+    (update) =>
+      setRawEditorState((prev) =>
+        syncPerFileState(prev, typeof update === 'function' ? update(prev) : update)
+      ),
+    [setRawEditorState]
+  );
+
   const applyAndFocus = useCallback(
     (updater: (prevState: VimEditorState) => VimEditorState) => {
       setEditorState(updater);

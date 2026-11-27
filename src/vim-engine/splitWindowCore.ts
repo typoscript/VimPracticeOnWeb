@@ -1,3 +1,4 @@
+import { clampCursor } from './cursor';
 import { SplitPaneState, SplitPlacement, VimEditorState, WindowLayoutNode } from './types';
 import { msg } from './messages';
 import { getGlobalOptions, getOptions } from './setEngine';
@@ -37,7 +38,8 @@ export function loadPaneIntoTopLevel(
     : (state.globalArgList !== undefined ? state.globalArgList : state.argList);
   return {
     lines: [...pane.lines],
-    cursor: { ...pane.cursor },
+    // 저장된 창 모드(INSERT 등)가 복원 후 NORMAL 로 바뀔 수 있으므로 NORMAL 범위로 맞춤 (터미널 창 제외)
+    cursor: clampCursor(pane.lines, pane.cursor, pane.mode === 'TERMINAL' ? 'TERMINAL' : 'NORMAL'),
     mode: pane.mode ?? 'NORMAL',
     visualAnchor: pane.visualAnchor,
     visualBlockEndOfLine: pane.visualBlockEndOfLine,
@@ -187,7 +189,7 @@ export function splitWindow(
       previousPaneIndex: normalized.previousPaneIndex,
       windowVars: normalized.windowVars,
       nextWindowId: newWinId + 1,
-      primaryFilename: normalized.splitPanes?.[0]?.filename ?? synced.primaryFilename,
+      primaryFilename: normalized.splitPanes?.[normalized.activePaneIndex]?.filename ?? synced.primaryFilename,
       secondaryFilename: normalized.splitPanes?.[1]?.filename ?? synced.secondaryFilename,
       commandMessage:
         direction === 'vertical'
@@ -285,7 +287,7 @@ export function splitWindow(
     windowLayout: initialTree,
     nextWindowId: winId1 + 1,
     splitRatio: 50,
-    primaryFilename: orderedPanes[0].filename,
+    primaryFilename: orderedPanes[nextActiveIdx]?.filename ?? orderedPanes[0].filename,
     secondaryFilename: orderedPanes[1].filename,
     commandMessage:
       direction === 'vertical'
@@ -361,7 +363,7 @@ export function closeSplitWindow(state: VimEditorState): VimEditorState {
     activePaneIndex: normalized.activePaneIndex,
     previousPaneIndex: normalized.previousPaneIndex,
     windowVars: normalized.windowVars,
-    primaryFilename: normalized.splitPanes?.[0]?.filename ?? nextActivePane.filename,
+    primaryFilename: nextActivePane.filename ?? normalized.splitPanes?.[0]?.filename,
     secondaryFilename: normalized.splitPanes?.[1]?.filename,
     commandMessage: msg('분할 창을 닫았습니다 (:close)'),
   };
@@ -471,6 +473,9 @@ export function syncActivePane(state: VimEditorState): VimEditorState {
     idx === curIdx
       ? {
           ...pane,
+          // :bp / :e 등으로 활성 창의 파일이 바뀌었으면 창 이름도 맞춤 (같은 이름의 다른 창에 내용이 복사되지 않도록)
+          filename: state.primaryFilename ?? pane.filename,
+          bufferId: pane.bufferId !== undefined ? (state.currentBufferId ?? pane.bufferId) : undefined,
           lines: [...state.lines],
           cursor: { ...state.cursor },
           mode: state.mode,

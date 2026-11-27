@@ -796,3 +796,48 @@ export function jumpToFoldEdge(state: VimEditorState, edge: 'start' | 'end'): Vi
     pendingKeys: undefined,
   };
 }
+
+/**
+ * 버퍼 줄이 바뀐 뒤 폴드 범위를 따라 옮깁니다 (Vim 의 수동 폴드는 줄 삽입·삭제에 맞춰 이동).
+ * 이전/이후 줄 배열의 공통 앞부분·뒷부분으로 바뀐 구간을 찾고,
+ * 구간 뒤 폴드는 줄 수 차이만큼 이동, 구간과 겹치는 폴드는 줄이고, 줄이 모두 지워진 폴드는 없앱니다.
+ */
+export function adjustFoldsForLineChange(
+  folds: FoldRange[],
+  oldLines: string[],
+  newLines: string[]
+): FoldRange[] {
+  const oldLen = oldLines.length;
+  const newLen = newLines.length;
+  let prefix = 0;
+  while (prefix < oldLen && prefix < newLen && oldLines[prefix] === newLines[prefix]) prefix++;
+  let suffix = 0;
+  while (
+    suffix < oldLen - prefix &&
+    suffix < newLen - prefix &&
+    oldLines[oldLen - 1 - suffix] === newLines[newLen - 1 - suffix]
+  ) {
+    suffix++;
+  }
+  const oldEnd = oldLen - suffix; // 바뀐 구간 [prefix, oldEnd) → [prefix, newEnd)
+  const newEnd = newLen - suffix;
+  const delta = newLen - oldLen;
+
+  const mapRow = (row: number, isStart: boolean): number => {
+    if (row < prefix) return row;
+    if (row >= oldEnd) return row + delta;
+    // 바뀐 구간 안: 시작은 구간 시작으로, 끝은 새 구간의 마지막 줄로
+    return isStart ? prefix : newEnd - 1;
+  };
+
+  const result: FoldRange[] = [];
+  for (const f of folds) {
+    const fullyDeleted = f.startRow >= prefix && f.endRow < oldEnd && newEnd <= prefix;
+    if (fullyDeleted) continue;
+    const startRow = Math.max(0, mapRow(f.startRow, true));
+    const endRow = Math.min(newLen - 1, mapRow(f.endRow, false));
+    if (startRow > endRow) continue;
+    result.push(startRow === f.startRow && endRow === f.endRow ? f : { ...f, startRow, endRow });
+  }
+  return result;
+}
