@@ -6,7 +6,7 @@ import {
   DojoDrillMeta,
   DojoProblem,
 } from './HardcoreDojo.types';
-import { localized } from '../../i18n';
+import { i18nKey, localized } from '../../i18n';
 
 export const DOJO_DRILL_METAS: Record<string, DojoDrillMeta> = localized({
   'relative-jump': {
@@ -255,15 +255,15 @@ export function generateWordJumpProblem(prevIndex?: number): WordJumpProblem {
 
 export const PRO_MASTER_PROBLEMS: Array<Omit<ProMasterProblem, 'type' | 'index'>> = [
   {
-    prompt: '문자열 따옴표 내부를 비우세요!',
+    prompt: i18nKey('문자열 따옴표 내부를 비우세요!'),
     lines: ['const token = "EXPIRED_SECRET_KEY";'],
     initialCursor: { line: 0, col: 18 },
     targetLines: ['const token = "";'],
-    hint: 'ci" 후 Esc',
+    hint: i18nKey('ci" 후 Esc'),
     optimalKeys: 'ci"<Esc>',
   },
   {
-    prompt: '함수 인자 전체를 한 번에 삭제하세요!',
+    prompt: i18nKey('함수 인자 전체를 한 번에 삭제하세요!'),
     lines: ['const result = calculate(arg1, arg2, arg3);'],
     initialCursor: { line: 0, col: 26 },
     targetLines: ['const result = calculate();'],
@@ -271,15 +271,15 @@ export const PRO_MASTER_PROBLEMS: Array<Omit<ProMasterProblem, 'type' | 'index'>
     optimalKeys: 'di(',
   },
   {
-    prompt: '태그 내부의 텍스트를 비우세요!',
+    prompt: i18nKey('태그 내부의 텍스트를 비우세요!'),
     lines: ['<h1 className="title">Old Title</h1>'],
     initialCursor: { line: 0, col: 25 },
     targetLines: ['<h1 className="title"></h1>'],
-    hint: 'cit 후 Esc',
+    hint: i18nKey('cit 후 Esc'),
     optimalKeys: 'cit<Esc>',
   },
   {
-    prompt: '변수명을 대문자로 변환하세요!',
+    prompt: i18nKey('변수명을 대문자로 변환하세요!'),
     lines: ['const api_endpoint = "/v1/users";'],
     initialCursor: { line: 0, col: 6 },
     targetLines: ['const API_ENDPOINT = "/v1/users";'],
@@ -287,7 +287,7 @@ export const PRO_MASTER_PROBLEMS: Array<Omit<ProMasterProblem, 'type' | 'index'>
     optimalKeys: 'gUiw',
   },
   {
-    prompt: '버전 번호 9를 10으로 올리세요!',
+    prompt: i18nKey('버전 번호 9를 10으로 올리세요!'),
     lines: ['export const API_VERSION = 9;'],
     initialCursor: { line: 0, col: 27 },
     targetLines: ['export const API_VERSION = 10;'],
@@ -295,7 +295,7 @@ export const PRO_MASTER_PROBLEMS: Array<Omit<ProMasterProblem, 'type' | 'index'>
     optimalKeys: '<C-a>',
   },
   {
-    prompt: '라인을 들여쓰기하세요!',
+    prompt: i18nKey('라인을 들여쓰기하세요!'),
     lines: ['return isValid ? data : null;'],
     initialCursor: { line: 0, col: 0 },
     targetLines: ['  return isValid ? data : null;'],
@@ -303,7 +303,7 @@ export const PRO_MASTER_PROBLEMS: Array<Omit<ProMasterProblem, 'type' | 'index'>
     optimalKeys: '>>',
   },
   {
-    prompt: '두 줄을 한 줄로 합치세요!',
+    prompt: i18nKey('두 줄을 한 줄로 합치세요!'),
     lines: ['const message =', '  "Hello World!";'],
     initialCursor: { line: 0, col: 0 },
     targetLines: ['const message = "Hello World!";'],
@@ -311,7 +311,7 @@ export const PRO_MASTER_PROBLEMS: Array<Omit<ProMasterProblem, 'type' | 'index'>
     optimalKeys: 'J',
   },
   {
-    prompt: '주석 시작점부터 줄 끝까지 삭제하세요!',
+    prompt: i18nKey('주석 시작점부터 줄 끝까지 삭제하세요!'),
     lines: ['const debugLog = true; // REMOVE DEBUG COMMENT'],
     initialCursor: { line: 0, col: 23 },
     targetLines: ['const debugLog = true; '],
@@ -319,7 +319,7 @@ export const PRO_MASTER_PROBLEMS: Array<Omit<ProMasterProblem, 'type' | 'index'>
     optimalKeys: 'D',
   },
   {
-    prompt: '함수 본문(중괄호 안)을 비우세요!',
+    prompt: i18nKey('함수 본문(중괄호 안)을 비우세요!'),
     lines: ['function process() {', '  cleanData();', '  return true;', '}'],
     initialCursor: { line: 1, col: 4 },
     targetLines: ['function process() {', '}'],
@@ -327,11 +327,11 @@ export const PRO_MASTER_PROBLEMS: Array<Omit<ProMasterProblem, 'type' | 'index'>
     optimalKeys: 'di{',
   },
   {
-    prompt: '첫 번째 bad 변수를 good으로 바꾸세요!',
+    prompt: i18nKey('첫 번째 bad 변수를 good으로 바꾸세요!'),
     lines: ['const bad = 1;', 'const bad = 2;'],
     initialCursor: { line: 0, col: 6 },
     targetLines: ['const good = 1;', 'const bad = 2;'],
-    hint: 'cwgood 후 Esc',
+    hint: i18nKey('cwgood 후 Esc'),
     optimalKeys: 'cwgood<Esc>',
   },
 ];
@@ -353,15 +353,15 @@ export function generateProMasterProblem(combo = 0): ProMasterProblem {
 
 export const NEOVIM_MASTER_PROBLEMS: Array<Omit<ProMasterProblem, 'type' | 'index'>> = [
   {
-    prompt: '[mini.ai] 커서 밖에서 다음 따옴표 안을 바로 비우세요!',
+    prompt: i18nKey('[mini.ai] 커서 밖에서 다음 따옴표 안을 바로 비우세요!'),
     lines: ['const msg = "REMOVE_ME";'],
     initialCursor: { line: 0, col: 0 },
     targetLines: ['const msg = "";'],
-    hint: 'cin" 후 Esc',
+    hint: i18nKey('cin" 후 Esc'),
     optimalKeys: 'cin"<Esc>',
   },
   {
-    prompt: '[mini.ai] 커서 밖에서 다음 함수 괄호 인자를 비우세요!',
+    prompt: i18nKey('[mini.ai] 커서 밖에서 다음 함수 괄호 인자를 비우세요!'),
     lines: ['const res = runTask(oldA, oldB);'],
     initialCursor: { line: 0, col: 0 },
     targetLines: ['const res = runTask();'],
@@ -369,7 +369,7 @@ export const NEOVIM_MASTER_PROBLEMS: Array<Omit<ProMasterProblem, 'type' | 'inde
     optimalKeys: 'din(',
   },
   {
-    prompt: '[Treesitter] legacy() 함수 전체를 한 번에 삭제하세요!',
+    prompt: i18nKey('[Treesitter] legacy() 함수 전체를 한 번에 삭제하세요!'),
     lines: ['function legacy() {', '  return 0;', '}', 'const ok = true;'],
     initialCursor: { line: 0, col: 0 },
     targetLines: ['const ok = true;'],
@@ -377,7 +377,7 @@ export const NEOVIM_MASTER_PROBLEMS: Array<Omit<ProMasterProblem, 'type' | 'inde
     optimalKeys: 'daf',
   },
   {
-    prompt: '[Treesitter] 불필요한 unused 인자를 쉼표까지 깔끔히 삭제하세요!',
+    prompt: i18nKey('[Treesitter] 불필요한 unused 인자를 쉼표까지 깔끔히 삭제하세요!'),
     lines: ['function greet(name, unused) { return name; }'],
     initialCursor: { line: 0, col: 21 },
     targetLines: ['function greet(name) { return name; }'],
@@ -385,7 +385,7 @@ export const NEOVIM_MASTER_PROBLEMS: Array<Omit<ProMasterProblem, 'type' | 'inde
     optimalKeys: 'daa',
   },
   {
-    prompt: '[mini.move] 첫 줄(step2)을 아래 줄과 즉시 맞바꾸세요!',
+    prompt: i18nKey('[mini.move] 첫 줄(step2)을 아래 줄과 즉시 맞바꾸세요!'),
     lines: ['const step2 = 2;', 'const step1 = 1;'],
     initialCursor: { line: 0, col: 0 },
     targetLines: ['const step1 = 1;', 'const step2 = 2;'],
@@ -393,7 +393,7 @@ export const NEOVIM_MASTER_PROBLEMS: Array<Omit<ProMasterProblem, 'type' | 'inde
     optimalKeys: '<A-j>',
   },
   {
-    prompt: '[mini.move] 현재 줄을 오른쪽으로 1단계 들여쓰기하세요!',
+    prompt: i18nKey('[mini.move] 현재 줄을 오른쪽으로 1단계 들여쓰기하세요!'),
     lines: ['if (ok) {', 'run();', '}'],
     initialCursor: { line: 1, col: 0 },
     targetLines: ['if (ok) {', '  run();', '}'],
@@ -401,7 +401,7 @@ export const NEOVIM_MASTER_PROBLEMS: Array<Omit<ProMasterProblem, 'type' | 'inde
     optimalKeys: '<A-l>',
   },
   {
-    prompt: '[vim-abolish] user_profile_id 를 camelCase 로 변환하세요!',
+    prompt: i18nKey('[vim-abolish] user_profile_id 를 camelCase 로 변환하세요!'),
     lines: ['const user_profile_id = 42;'],
     initialCursor: { line: 0, col: 6 },
     targetLines: ['const userProfileId = 42;'],
@@ -409,7 +409,7 @@ export const NEOVIM_MASTER_PROBLEMS: Array<Omit<ProMasterProblem, 'type' | 'inde
     optimalKeys: 'crc',
   },
   {
-    prompt: '[vim-abolish] maxRetryCount 를 SCREAMING_SNAKE_CASE 로 변환하세요!',
+    prompt: i18nKey('[vim-abolish] maxRetryCount 를 SCREAMING_SNAKE_CASE 로 변환하세요!'),
     lines: ['const maxRetryCount = 3;'],
     initialCursor: { line: 0, col: 6 },
     targetLines: ['const MAX_RETRY_COUNT = 3;'],
@@ -417,7 +417,7 @@ export const NEOVIM_MASTER_PROBLEMS: Array<Omit<ProMasterProblem, 'type' | 'inde
     optimalKeys: 'cru',
   },
   {
-    prompt: '[dial.nvim] false 불리언을 true 로 즉시 토글하세요!',
+    prompt: i18nKey('[dial.nvim] false 불리언을 true 로 즉시 토글하세요!'),
     lines: ['const debugMode = false;'],
     initialCursor: { line: 0, col: 0 },
     targetLines: ['const debugMode = true;'],
@@ -425,7 +425,7 @@ export const NEOVIM_MASTER_PROBLEMS: Array<Omit<ProMasterProblem, 'type' | 'inde
     optimalKeys: '<C-a>',
   },
   {
-    prompt: '[treesj] 한 줄 config 객체를 멀티라인 블록으로 펼치세요!',
+    prompt: i18nKey('[treesj] 한 줄 config 객체를 멀티라인 블록으로 펼치세요!'),
     lines: ['const cfg = { host: "api", port: 8080 };'],
     initialCursor: { line: 0, col: 0 },
     targetLines: ['const cfg = {', '  host: "api",', '  port: 8080', '};'],
