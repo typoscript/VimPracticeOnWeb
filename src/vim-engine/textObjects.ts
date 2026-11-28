@@ -103,6 +103,11 @@ export function getTextObjectRange(
 
   // 1. 단어 / WORD: iw, aw, iW, aW
   if (objectType === 'iw' || objectType === 'aw' || objectType === 'iW' || objectType === 'aW') {
+    // Vim current_word: 버퍼 맨 끝 빈 줄의 iw 는 앞 줄 마지막 글자부터 줄바꿈까지 고릅니다 (yiw 가 ".\n").
+    if (lineText.length === 0 && objectType[0] === 'i' && cursor.line === lines.length - 1 && cursor.line > 0) {
+      const prev = lines[cursor.line - 1] ?? '';
+      return { startLine: cursor.line - 1, startCol: Math.max(0, prev.length - 1), endLine: cursor.line, endCol: 0 };
+    }
     if (lineText.length === 0) return null;
     const isBigWord = objectType[1] === 'W';
     const clsAt = (ch: string | undefined): CharClass => {

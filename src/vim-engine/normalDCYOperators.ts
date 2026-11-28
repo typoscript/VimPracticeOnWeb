@@ -46,6 +46,25 @@ function computeWordTarget(
   return target;
 }
 
+/**
+ * d/y + e·E·W 의 포함 끝 위치. W 는 배타적 모션이라 한 칸 앞에서 끝나고, 다음 줄로 넘어가면
+ * Vim 처럼 지나온 마지막 WORD 가 있던 줄 끝에서 멈춥니다 (dW 가 다음 줄 첫 글자를 지우지 않음).
+ */
+function wordOperatorEnd(
+  state: VimEditorState,
+  key: string,
+  target: VimEditorState['cursor']
+): VimEditorState['cursor'] {
+  if (key !== 'W') return target;
+  if (target.line === state.cursor.line && target.col > state.cursor.col) return { line: target.line, col: target.col - 1 };
+  if (target.line > state.cursor.line) {
+    const endLine = target.line - 1;
+    const endCol = Math.max(0, (state.lines[endLine] ?? '').length - 1);
+    if (endLine > state.cursor.line || endCol >= state.cursor.col) return { line: endLine, col: endCol };
+  }
+  return target;
+}
+
 function buildPendingSubOperator(state: VimEditorState, key: string): VimEditorState | null {
   if (
     key === 'f' || key === 'F' || key === 't' || key === 'T' ||
@@ -263,10 +282,7 @@ export function handleNormalDCYOperators(
           ...state,
           mode: 'VISUAL',
           visualAnchor: state.cursor,
-          cursor:
-            key === 'W' && target.line === state.cursor.line && target.col > state.cursor.col
-              ? { line: target.line, col: target.col - 1 }
-              : target,
+          cursor: wordOperatorEnd(state, key, target),
         };
         const delRes = deleteVisualSelection(stateWithAnchor);
         return {
@@ -469,10 +485,7 @@ export function handleNormalDCYOperators(
           ...state,
           mode: 'VISUAL',
           visualAnchor: state.cursor,
-          cursor:
-            key === 'W' && target.line === state.cursor.line && target.col > state.cursor.col
-              ? { line: target.line, col: target.col - 1 }
-              : target,
+          cursor: wordOperatorEnd(state, key, target),
         };
         return { handled: true, state: syncRegisters(state, yankVisualSelection(stateWithAnchor), true) };
       }

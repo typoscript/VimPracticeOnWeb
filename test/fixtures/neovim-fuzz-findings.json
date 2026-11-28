@@ -5723,5 +5723,445 @@
       "regType": "char",
       "mode": "n"
     }
+  },
+  {
+    "id": "misc-3-1",
+    "text": "alpha beta\ngamma delta\nepsilon",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>vGd",
+    "expected": {
+      "lines": [
+        "psilon"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "alpha beta\ngamma delta\ne",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-3-2",
+    "text": "alpha beta\ngamma delta\nepsilon",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>VGd",
+    "expected": {
+      "lines": [
+        ""
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "alpha beta\ngamma delta\nepsilon\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-3-3",
+    "text": "alpha beta\ngamma delta\nepsilon",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>jvGy",
+    "expected": {
+      "lines": [
+        "alpha beta",
+        "gamma delta",
+        "epsilon"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "gamma delta\ne",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-3-4",
+    "text": "alpha beta\ngamma delta\nepsilon",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>jVGy",
+    "expected": {
+      "lines": [
+        "alpha beta",
+        "gamma delta",
+        "epsilon"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "gamma delta\nepsilon\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-3-5",
+    "text": "alpha beta\ngamma delta\nepsilon",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>vGy",
+    "expected": {
+      "lines": [
+        "alpha beta",
+        "gamma delta",
+        "epsilon"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "alpha beta\ngamma delta\ne",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-3-6",
+    "text": "ab\ncd\nef gh",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>lvjGd",
+    "expected": {
+      "lines": [
+        "a gh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      },
+      "reg": "b\ncd\nef",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-3-7",
+    "text": "abc def\nnext line",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>wdW",
+    "expected": {
+      "lines": [
+        "abc ",
+        "next line"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "def",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-3-8",
+    "text": "abc def\nnext line",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>wyW",
+    "expected": {
+      "lines": [
+        "abc def",
+        "next line"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      },
+      "reg": "def",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-3-9",
+    "text": "abc def\nnext line",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>wcWX<Esc>",
+    "expected": {
+      "lines": [
+        "abc X",
+        "next line"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      },
+      "reg": "def",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-3-10",
+    "text": "a b c\n  d",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>wwdW",
+    "expected": {
+      "lines": [
+        "a b ",
+        "  d"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "c",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-3-11",
+    "text": "A. B.\n",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>Gyas",
+    "expected": {
+      "lines": [
+        "A. B.",
+        ""
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-3-12",
+    "text": "A. B.\n\n",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>Gdas",
+    "expected": {
+      "lines": [
+        "A. B.",
+        "",
+        ""
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-3-13",
+    "text": "abc.\n",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>Gyiw",
+    "expected": {
+      "lines": [
+        "abc.",
+        ""
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": ".\n",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-3-14",
+    "text": "x }\n",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>G\"kyiw",
+    "expected": {
+      "lines": [
+        "x }",
+        ""
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "}\n",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "blank-last-line-iw-1",
+    "text": "abc.\n",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>Gdiw",
+    "expected": {
+      "lines": [
+        "abc"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": ".\n",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "blank-last-line-iw-2",
+    "text": "abc.\n",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>GciwX<Esc>",
+    "expected": {
+      "lines": [
+        "abcX"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": ".\n",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "blank-last-line-iw-3",
+    "text": "abc.\n",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>Gviwy",
+    "expected": {
+      "lines": [
+        "abc.",
+        ""
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": ".\n",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "blank-last-line-iw-4",
+    "text": "abc.\n\n",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>Gyiw",
+    "expected": {
+      "lines": [
+        "abc.",
+        "",
+        ""
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "\n",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "blank-last-line-iw-5",
+    "text": "abc. \n",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>Gyiw",
+    "expected": {
+      "lines": [
+        "abc. ",
+        ""
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      },
+      "reg": " \n",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "blank-last-line-iw-6",
+    "text": "abc.\n",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>Gyaw",
+    "expected": {
+      "lines": [
+        "abc.",
+        ""
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
   }
 ]

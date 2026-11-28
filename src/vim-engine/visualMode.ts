@@ -743,6 +743,16 @@ export function handleVisualModeKey(
   const bracketRes = handleVisualBracketPrefix(state, key);
   if (bracketRes) return bracketRes;
 
+  // VISUAL 모드 G: count 가 없으면 마지막 줄, 있으면 그 줄로 ('nostartofline' 이면 열 유지, 아니면 첫 비공백)
+  if (key === 'G' && (!state.pendingKeys || /^[1-9][0-9]*$/.test(state.pendingKeys))) {
+    const target = parsed.count1 !== undefined ? Math.min(parsed.count1 - 1, state.lines.length - 1) : state.lines.length - 1;
+    const targetText = state.lines[target] ?? '';
+    const col = getOptions(state).startofline
+      ? Math.max(0, targetText.search(/\S/))
+      : Math.min(state.curswant ?? state.cursor.col, Math.max(0, targetText.length - 1));
+    return { ...state, cursor: { line: target, col }, visualBlockEndOfLine: state.mode === 'VISUAL_BLOCK' ? state.visualBlockEndOfLine : undefined, pendingKeys: undefined };
+  }
+
   // VISUAL 모드 내 커서 이동 (모션 평가 및 카운트 반영)
   const opts = getOptions(state);
   const motionCursor = evaluateMotionWithCount(
