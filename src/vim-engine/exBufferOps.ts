@@ -310,6 +310,8 @@ export function executeSort(
     commandBuffer: undefined,
     commandType: undefined,
     commandMessage: msg('{finalLinesCount}개 줄 정렬 완료', { finalLinesCount: finalLines.length }),
+    // Vim ex_sort: 줄 번호로 남는 마크는 그대로 두고 changed_lines(첫 줄, 0)
+    changeListHint: { kind: 'at', line: minLine, col: 0, keepRange: { start: minLine, end: maxLine } },
   };
 }
 
@@ -538,6 +540,7 @@ export function executeMove(
     commandBuffer: undefined,
     commandType: undefined,
     commandMessage: msg('{linesToMoveCount}개 줄 이동 완료', { linesToMoveCount: linesToMove.length }),
+    changeListHint: { kind: 'move', line1: startLine + 1, line2: endLine + 1, dest: targetLine + 1, undoLine: targetLine + 1 },
   });
 }
 

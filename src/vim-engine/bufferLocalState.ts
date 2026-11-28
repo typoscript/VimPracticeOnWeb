@@ -13,6 +13,7 @@ export type BufferLocalSnapshot = Pick<
   | 'marks'
   | 'changeList'
   | 'changeIndex'
+  | 'changeListNewChange'
   | 'lastInsertPos'
   | 'lastChangeMark'
   | 'lastBracketMarks'
@@ -51,6 +52,7 @@ export function syncBufferLocalState(prev: VimEditorState, next: VimEditorState)
     marks: local,
     changeList: next.changeList,
     changeIndex: next.changeIndex,
+    changeListNewChange: next.changeListNewChange,
     lastInsertPos: next.lastInsertPos,
     lastChangeMark: next.lastChangeMark,
     lastBracketMarks: next.lastBracketMarks,
@@ -65,6 +67,7 @@ export function syncBufferLocalState(prev: VimEditorState, next: VimEditorState)
     marks: Object.keys(restoredMarks).length > 0 ? restoredMarks : undefined,
     changeList: restored?.changeList,
     changeIndex: restored?.changeIndex,
+    changeListNewChange: restored?.changeListNewChange,
     lastInsertPos: restored?.lastInsertPos ?? null,
     lastChangeMark: restored?.lastChangeMark ?? null,
     lastBracketMarks: restored?.lastBracketMarks ?? null,

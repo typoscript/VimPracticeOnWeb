@@ -198,6 +198,8 @@ export function undoCurrentLine(state: VimEditorState): VimEditorState {
     lines: nextLines,
     cursor: clampedCursor,
     pendingKeys: undefined,
+    // Vim u_undoline(): changed_bytes(lnum, 0)
+    changeListHint: { kind: 'at', line, col: 0 },
     lineUndoSnapshot: {
       ...snap,
       toggledText: nextToggled,
@@ -300,6 +302,8 @@ export function replaceChar(state: VimEditorState, char: string, count = 1): Vim
     lines: nextLines,
     cursor: clampedCursor,
     pendingKeys: undefined,
+    // Vim nv_replace: 글자마다 ins_char → 마지막으로 바꾼 글자 자리
+    changeListHint: { kind: 'at', line, col: targetCol, force: true },
   };
 }
 

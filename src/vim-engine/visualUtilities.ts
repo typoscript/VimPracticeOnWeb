@@ -255,5 +255,7 @@ export function replaceVisualChars(
     pendingKeys: undefined,
     activeRegister: undefined,
     lastVisualSelection: snap,
+    // Vim op_replace: changed_lines(시작 줄, 시작 열)
+    changeListHint: { kind: 'at', line: targetPos.line, col: targetPos.col, force: true },
   };
 }

@@ -21,7 +21,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -45,7 +46,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -70,7 +72,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -95,7 +98,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -119,7 +123,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -143,7 +148,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -167,7 +173,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -192,7 +199,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -217,7 +225,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -240,7 +249,8 @@
       },
       "reg": "cd\nef",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -262,7 +272,8 @@
       },
       "reg": "  ab cd\nef\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -286,7 +297,8 @@
       },
       "reg": "cd\nef",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -309,7 +321,8 @@
       },
       "reg": "cd\nef",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:3|1"
     }
   },
   {
@@ -330,7 +343,8 @@
       },
       "reg": "ab\ncd\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -352,7 +366,8 @@
       },
       "reg": "\ncd ef\ng",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -376,7 +391,8 @@
       },
       "reg": "7 }",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:19|1"
     }
   },
   {
@@ -400,7 +416,8 @@
       },
       "reg": "{\n  a\n}\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -421,7 +438,8 @@
       },
       "reg": "ab\ncd\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -442,7 +460,8 @@
       },
       "reg": "    deeper (nested) item\n  back to one\nlast_word_here end\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -464,7 +483,8 @@
       },
       "reg": "  indented line one\n    deeper (nested) item\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -486,7 +506,8 @@
       },
       "reg": "  indented line one\n    deeper (nested) item\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -507,7 +528,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -528,7 +550,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -549,7 +572,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -570,7 +594,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -594,7 +619,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -618,7 +644,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:7|1"
     }
   },
   {
@@ -639,7 +666,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -660,7 +688,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -681,7 +710,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -703,7 +733,8 @@
       },
       "reg": "b\nc d\ne f",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -725,7 +756,8 @@
       },
       "reg": "b\nc d\ne f",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:2|1"
     }
   },
   {
@@ -749,7 +781,8 @@
       },
       "reg": "b\nc d",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -771,7 +804,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -793,7 +827,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -817,7 +852,8 @@
       },
       "reg": "one\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:3|1"
     }
   },
   {
@@ -840,7 +876,8 @@
       },
       "reg": "two\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:7|1"
     }
   },
   {
@@ -864,7 +901,8 @@
       },
       "reg": "one\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -888,7 +926,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -912,7 +951,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -936,7 +976,8 @@
       },
       "reg": "  foo bar baz\nThe end\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -960,7 +1001,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -984,7 +1026,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -1008,7 +1051,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -1032,7 +1076,8 @@
       },
       "reg": "gamma",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -1056,7 +1101,8 @@
       },
       "reg": " gamma",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -1079,7 +1125,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -1100,7 +1147,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -1121,7 +1169,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -1142,7 +1191,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -1163,7 +1213,8 @@
       },
       "reg": "the start\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -1186,7 +1237,8 @@
       },
       "reg": "  foo bar baz\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -1210,7 +1262,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -1234,7 +1287,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -1258,7 +1312,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -1283,7 +1338,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -1307,7 +1363,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -1331,7 +1388,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:13|1"
     }
   },
   {
@@ -1355,7 +1413,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -1379,7 +1438,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:6|1"
     }
   },
   {
@@ -1403,7 +1463,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -1427,7 +1488,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -1451,7 +1513,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -1477,7 +1540,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -1503,7 +1567,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -1529,7 +1594,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -1555,7 +1621,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -1581,7 +1648,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -1607,7 +1675,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -1633,7 +1702,8 @@
       },
       "reg": "t",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:4|1"
     }
   },
   {
@@ -1659,7 +1729,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -1682,7 +1753,8 @@
       },
       "reg": "a4 b4\na5 b5\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "3:0|1"
     }
   },
   {
@@ -1704,7 +1776,8 @@
       },
       "reg": "a1 b1\n  a2 b2\na3 b3\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -1727,7 +1800,8 @@
       },
       "reg": "b1\n  a2 b2\na3 b3",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -1752,7 +1826,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -1777,7 +1852,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -1802,7 +1878,8 @@
       },
       "reg": "a1a1",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -1823,7 +1900,8 @@
       },
       "reg": "ab",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -1844,7 +1922,8 @@
       },
       "reg": "ab",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -1865,7 +1944,8 @@
       },
       "reg": "(\"big\", ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -1886,7 +1966,8 @@
       },
       "reg": "g(\"big\", ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -1907,7 +1988,8 @@
       },
       "reg": "(\"big\", ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:5|1"
     }
   },
   {
@@ -1928,7 +2010,8 @@
       },
       "reg": "\", ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:10|1"
     }
   },
   {
@@ -1949,7 +2032,8 @@
       },
       "reg": "  log(\"big\", ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -1970,7 +2054,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:13|1"
     }
   },
   {
@@ -1991,7 +2076,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:11|1"
     }
   },
   {
@@ -2012,7 +2098,8 @@
       },
       "reg": "    stay here\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -2033,7 +2120,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -2054,7 +2142,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -2075,7 +2164,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -2096,7 +2186,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -2118,7 +2209,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -2140,7 +2232,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -2162,7 +2255,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -2186,7 +2280,8 @@
       },
       "reg": "zap b\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -2209,7 +2304,8 @@
       },
       "reg": "a3 b3\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -2234,7 +2330,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:6|1"
     }
   },
   {
@@ -2259,7 +2356,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:6|1"
     }
   },
   {
@@ -2284,7 +2382,8 @@
       },
       "reg": "bet",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:3|1"
     }
   },
   {
@@ -2309,7 +2408,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -2330,7 +2430,8 @@
       },
       "reg": "x y z w v u\nlast line here ok\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -2355,7 +2456,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 2:0|2"
     }
   },
   {
@@ -2380,7 +2482,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 2:0|2"
     }
   },
   {
@@ -2403,7 +2506,8 @@
       },
       "reg": "aaaa bbbb cccc dddd\nx ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0 2:0|2"
     }
   },
   {
@@ -2428,7 +2532,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -2453,7 +2558,8 @@
       },
       "reg": "be\no ",
       "regType": "block",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:4|1"
     }
   },
   {
@@ -2478,7 +2584,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:3|1"
     }
   },
   {
@@ -2503,7 +2610,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -2528,7 +2636,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:6|1"
     }
   },
   {
@@ -2551,7 +2660,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:19 2:0|2"
     }
   },
   {
@@ -2576,7 +2686,8 @@
       },
       "reg": "beta",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:3|1"
     }
   },
   {
@@ -2601,7 +2712,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -2622,7 +2734,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:6|1"
     }
   },
   {
@@ -2643,7 +2756,8 @@
       },
       "reg": "def",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -2669,7 +2783,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -2692,7 +2807,8 @@
       },
       "reg": "d\ne\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -2717,7 +2833,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -2743,7 +2860,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 2:0|2"
     }
   },
   {
@@ -2764,7 +2882,8 @@
       },
       "reg": "bet",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:4|1"
     }
   },
   {
@@ -2785,7 +2904,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:6|1"
     }
   },
   {
@@ -2806,7 +2926,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:11|1"
     }
   },
   {
@@ -2827,7 +2948,8 @@
       },
       "reg": "b c ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -2848,7 +2970,8 @@
       },
       "reg": "d e ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -2869,7 +2992,8 @@
       },
       "reg": "d e ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -2890,7 +3014,8 @@
       },
       "reg": "d e ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -2911,7 +3036,8 @@
       },
       "reg": "cde",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -2932,7 +3058,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:2|1"
     }
   },
   {
@@ -2956,7 +3083,8 @@
       },
       "reg": "2\n3\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -2977,7 +3105,8 @@
       },
       "reg": "2\n3\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -2998,7 +3127,8 @@
       },
       "reg": "bb cc",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:2|1"
     }
   },
   {
@@ -3023,7 +3153,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -3047,7 +3178,8 @@
       },
       "reg": "2\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -3068,7 +3200,8 @@
       },
       "reg": "bb",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:3|1"
     }
   },
   {
@@ -3093,7 +3226,8 @@
       },
       "reg": "1\n2\n3\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -3116,7 +3250,8 @@
       },
       "reg": "1\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -3141,7 +3276,8 @@
       },
       "reg": "1\n2\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -3166,7 +3302,8 @@
       },
       "reg": "1\n2\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -3187,7 +3324,8 @@
       },
       "reg": "ab ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:1|1"
     }
   },
   {
@@ -3208,7 +3346,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -3229,7 +3368,8 @@
       },
       "reg": "c d ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:1|1"
     }
   },
   {
@@ -3257,7 +3397,8 @@
       },
       "reg": "1\n2\n3\n4\n5\n6\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -3279,7 +3420,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -3301,7 +3443,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -3323,7 +3466,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -3345,7 +3489,8 @@
       },
       "reg": "alpha beta gamma\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -3367,7 +3512,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -3390,7 +3536,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -3412,7 +3559,8 @@
       },
       "reg": "two ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -3436,7 +3584,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -3460,7 +3609,8 @@
       },
       "reg": "ab cd ef gh\nzz\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -3484,7 +3634,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -3508,7 +3659,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -3532,7 +3684,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -3556,7 +3709,8 @@
       },
       "reg": "  ab cd ef gh\nzz\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -3579,7 +3733,8 @@
       },
       "reg": "b\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -3603,7 +3758,8 @@
       },
       "reg": "zzzzzz a\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -3626,7 +3782,8 @@
       },
       "reg": "  a\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -3652,7 +3809,8 @@
       },
       "reg": "  a\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -3676,7 +3834,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -3698,7 +3857,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -3723,7 +3883,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -3747,7 +3908,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "4:0|1"
     }
   },
   {
@@ -3771,7 +3933,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -3794,7 +3957,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -3818,7 +3982,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -3842,7 +4007,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -3866,7 +4032,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -3890,7 +4057,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -3914,7 +4082,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -3936,7 +4105,8 @@
       },
       "reg": ") {\n      r",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:49 0:23 1:0|3"
     }
   },
   {
@@ -3959,7 +4129,8 @@
       },
       "reg": "  plain words\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -3982,7 +4153,8 @@
       },
       "reg": "abc\n  plain words\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -4005,7 +4177,8 @@
       },
       "reg": "  plain words\nxyz\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -4028,7 +4201,8 @@
       },
       "reg": "ef\n  plai",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -4051,7 +4225,8 @@
       },
       "reg": "abc def\n  plain words\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -4074,7 +4249,8 @@
       },
       "reg": "ain",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -4097,7 +4273,8 @@
       },
       "reg": "\nconst",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -4119,7 +4296,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -4142,7 +4320,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -4165,7 +4344,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -4188,7 +4368,8 @@
       },
       "reg": "dwjcc",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -4210,7 +4391,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -4232,7 +4414,8 @@
       },
       "reg": "1\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -4254,7 +4437,8 @@
       },
       "reg": "d",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -4276,7 +4460,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -4298,7 +4483,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -4320,7 +4506,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -4342,7 +4529,8 @@
       },
       "reg": "d",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -4364,7 +4552,8 @@
       },
       "reg": "d",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -4387,7 +4576,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -4410,7 +4600,8 @@
       },
       "reg": "  two\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -4433,7 +4624,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -4456,7 +4648,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -4479,7 +4672,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -4501,7 +4695,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -4523,7 +4718,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -4546,7 +4742,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -4567,7 +4764,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -4589,7 +4787,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -4612,7 +4811,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -4633,7 +4833,8 @@
       },
       "reg": "def\n  ghi",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -4655,7 +4856,8 @@
       },
       "reg": "  abc. ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -4677,7 +4879,8 @@
       },
       "reg": "one. ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -4698,7 +4901,8 @@
       },
       "reg": "a b\nc d",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -4720,7 +4924,8 @@
       },
       "reg": "last one",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -4741,7 +4946,8 @@
       },
       "reg": ". b. ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -4763,7 +4969,8 @@
       },
       "reg": "b",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -4784,7 +4991,8 @@
       },
       "reg": "thre",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -4805,7 +5013,8 @@
       },
       "reg": "  one tw",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -4826,7 +5035,8 @@
       },
       "reg": "an",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -4849,7 +5059,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -4872,7 +5083,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -4895,7 +5107,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -4918,7 +5131,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -4941,7 +5155,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -4964,7 +5179,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -4987,7 +5203,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5010,7 +5227,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5033,7 +5251,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5056,7 +5275,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5079,7 +5299,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5102,7 +5323,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:5|1"
     }
   },
   {
@@ -5125,7 +5347,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5148,7 +5371,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5171,7 +5395,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5194,7 +5419,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5217,7 +5443,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5240,7 +5467,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5261,7 +5489,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5282,7 +5511,8 @@
       },
       "reg": "a, (x)",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5303,7 +5533,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5324,7 +5555,8 @@
       },
       "reg": "a, (x)",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:2|1"
     }
   },
   {
@@ -5345,7 +5577,8 @@
       },
       "reg": "(a, (x))",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:1|1"
     }
   },
   {
@@ -5366,7 +5599,8 @@
       },
       "reg": " <b>bb</b> ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:3|1"
     }
   },
   {
@@ -5389,7 +5623,8 @@
       },
       "reg": "{\n  b { c }\n}",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5410,7 +5645,8 @@
       },
       "reg": "1, [2, x]",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5431,7 +5667,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5454,7 +5691,8 @@
       },
       "reg": "j",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5475,7 +5713,8 @@
       },
       "reg": "a",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -5497,7 +5736,8 @@
       },
       "reg": "\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -5520,7 +5760,8 @@
       },
       "reg": "\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5543,7 +5784,8 @@
       },
       "reg": "\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -5566,7 +5808,8 @@
       },
       "reg": "  ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -5589,7 +5832,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5611,7 +5855,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -5634,7 +5879,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -5658,7 +5904,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0 0:0|2"
     }
   },
   {
@@ -5680,7 +5927,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -5713,7 +5961,8 @@
       },
       "reg": "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -5734,7 +5983,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5756,7 +6006,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5779,7 +6030,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5800,7 +6052,8 @@
       },
       "reg": "abc\nxyz\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -5822,7 +6075,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5844,7 +6098,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -5866,7 +6121,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -5888,7 +6144,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -5910,7 +6167,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -5932,7 +6190,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -5954,7 +6213,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -5976,7 +6236,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -5999,7 +6260,8 @@
       },
       "reg": "\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -6022,7 +6284,8 @@
       },
       "reg": "\n",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "3:0|1"
     }
   },
   {
@@ -6045,7 +6308,8 @@
       },
       "reg": "\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -6069,7 +6333,8 @@
       },
       "reg": "x y.\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -6099,7 +6364,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -6123,7 +6389,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -6147,7 +6414,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -6171,7 +6439,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -6195,7 +6464,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -6219,7 +6489,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -6243,7 +6514,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -6266,7 +6538,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -6290,7 +6563,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -6314,7 +6588,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -6338,7 +6613,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -6360,7 +6636,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -6385,7 +6662,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "4:0|1"
     }
   },
   {
@@ -6406,7 +6684,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -6427,7 +6706,8 @@
       },
       "reg": "alpha beta\ngamma delta\ne",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -6448,7 +6728,8 @@
       },
       "reg": "alpha beta\ngamma delta\nepsilon\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -6471,7 +6752,8 @@
       },
       "reg": "gamma delta\ne",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -6494,7 +6776,8 @@
       },
       "reg": "gamma delta\nepsilon\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -6517,7 +6800,8 @@
       },
       "reg": "alpha beta\ngamma delta\ne",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -6538,7 +6822,8 @@
       },
       "reg": "b\ncd\nef",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -6560,7 +6845,8 @@
       },
       "reg": "def",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:4|1"
     }
   },
   {
@@ -6582,7 +6868,8 @@
       },
       "reg": "def",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -6604,7 +6891,8 @@
       },
       "reg": "def",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:4|1"
     }
   },
   {
@@ -6626,7 +6914,8 @@
       },
       "reg": "c",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:4|1"
     }
   },
   {
@@ -6648,7 +6937,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -6671,7 +6961,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -6693,7 +6984,8 @@
       },
       "reg": ".\n",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -6715,7 +7007,8 @@
       },
       "reg": "}\n",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -6736,7 +7029,8 @@
       },
       "reg": ".\n",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -6757,7 +7051,8 @@
       },
       "reg": ".\n",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:3|1"
     }
   },
   {
@@ -6779,7 +7074,8 @@
       },
       "reg": ".\n",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -6802,7 +7098,8 @@
       },
       "reg": "\n",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -6824,7 +7121,8 @@
       },
       "reg": " \n",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -6846,7 +7144,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -6869,7 +7168,8 @@
       },
       "reg": "ab\nef",
       "regType": "block",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -6891,7 +7191,8 @@
       },
       "reg": "bcd\nfgh",
       "regType": "block",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -6913,7 +7214,8 @@
       },
       "reg": "a\ne",
       "regType": "block",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -6936,7 +7238,8 @@
       },
       "reg": "abcd\nefgh\nijkl\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -6959,7 +7262,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -6982,7 +7286,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -7005,7 +7310,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -7027,7 +7333,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -7049,7 +7356,8 @@
       },
       "reg": "efgh\nijkl\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -7071,7 +7379,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -7094,7 +7403,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:2|1"
     }
   },
   {
@@ -7116,7 +7426,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -7138,7 +7449,8 @@
       },
       "reg": "abcd\nefgh\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -7160,7 +7472,8 @@
       },
       "reg": "abcd\nefgh\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -7184,7 +7497,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -7207,7 +7521,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -7230,7 +7545,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -7254,7 +7570,8 @@
       },
       "reg": "alpha beta\nga",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -7277,7 +7594,8 @@
       },
       "reg": "a\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -7302,7 +7620,8 @@
       },
       "reg": "alpha b",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -7324,7 +7643,8 @@
       },
       "reg": "abc",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:1|1"
     }
   },
   {
@@ -7345,7 +7665,8 @@
       },
       "reg": "def",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -7368,7 +7689,8 @@
       },
       "reg": "a",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -7391,7 +7713,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -7415,7 +7738,8 @@
       },
       "reg": "q",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -7437,7 +7761,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -7461,7 +7786,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -7485,7 +7811,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -7507,7 +7834,8 @@
       },
       "reg": "r",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -7529,7 +7857,8 @@
       },
       "reg": "def",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -7550,7 +7879,8 @@
       },
       "reg": "a",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -7572,7 +7902,8 @@
       },
       "reg": "def",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -7593,7 +7924,8 @@
       },
       "reg": "an",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -7616,7 +7948,8 @@
       },
       "reg": "a",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -7640,7 +7973,8 @@
       },
       "reg": "c",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:2|1"
     }
   },
   {
@@ -7665,7 +7999,8 @@
       },
       "reg": "}",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -7689,7 +8024,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -7713,7 +8049,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "3:0|1"
     }
   },
   {
@@ -7735,7 +8072,8 @@
       },
       "reg": "xyz\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -7759,7 +8097,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -7783,7 +8122,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -7807,7 +8147,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "3:0|1"
     }
   },
   {
@@ -7831,7 +8172,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -7855,7 +8197,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -7881,7 +8224,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "5:0|1"
     }
   },
   {
@@ -7903,7 +8247,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -7927,7 +8272,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "3:0|1"
     }
   },
   {
@@ -7949,7 +8295,8 @@
       },
       "reg": "end\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -7973,7 +8320,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:3|1"
     }
   },
   {
@@ -7997,7 +8345,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -8021,7 +8370,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -8045,7 +8395,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 3:0|2"
     }
   },
   {
@@ -8069,7 +8420,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -8093,7 +8445,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 2:0|2"
     }
   },
   {
@@ -8117,7 +8470,8 @@
       },
       "reg": "q",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0 2:0|3"
     }
   },
   {
@@ -8141,7 +8495,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -8165,7 +8520,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -8189,7 +8545,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -8213,7 +8570,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -8237,7 +8595,8 @@
       },
       "reg": "\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -8259,7 +8618,8 @@
       },
       "reg": "\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -8281,7 +8641,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -8304,7 +8665,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -8326,7 +8688,8 @@
       },
       "reg": "/",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:33 1:0|2"
     }
   },
   {
@@ -8349,7 +8712,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -8373,7 +8737,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -8394,7 +8759,8 @@
       },
       "reg": "WtHE QUICK i",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -8415,7 +8781,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -8436,7 +8803,8 @@
       },
       "reg": "<div class=\"a\"><span>text</span></div>\nplain 0x1f 007 -3 words\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -8457,7 +8825,8 @@
       },
       "reg": "Hello world.\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -8479,7 +8848,8 @@
       },
       "reg": "Hello world.\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -8503,7 +8873,8 @@
       },
       "reg": "one\ntwo\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -8524,7 +8895,8 @@
       },
       "reg": "  indented line one    deeper (nested) item\n  back to one\nlast_word_here end\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -8546,7 +8918,8 @@
       },
       "reg": "\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -8568,7 +8941,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -8589,7 +8963,8 @@
       },
       "reg": "d\n",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -8611,7 +8986,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -8633,7 +9009,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -8655,7 +9032,8 @@
       },
       "reg": "h",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:4|1"
     }
   },
   {
@@ -8678,7 +9056,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -8701,7 +9080,8 @@
       },
       "reg": "words\nx!) y (a.)",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -8722,7 +9102,8 @@
       },
       "reg": " cd\nef",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -8743,7 +9124,8 @@
       },
       "reg": "ab\ncd\nef\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -8764,7 +9146,8 @@
       },
       "reg": "(\nthe",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -8785,7 +9168,8 @@
       },
       "reg": "const ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -8806,7 +9190,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -8830,7 +9215,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -8852,7 +9238,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -8874,7 +9261,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -8896,7 +9284,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:1|1"
     }
   },
   {
@@ -8918,7 +9307,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -8940,7 +9330,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -8962,7 +9353,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -8984,7 +9376,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -9006,7 +9399,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -9030,7 +9424,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -9054,7 +9449,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -9076,7 +9472,8 @@
       },
       "reg": "h",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:4|1"
     }
   },
   {
@@ -9098,7 +9495,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -9119,7 +9517,8 @@
       },
       "reg": "bc\n\n",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -9141,7 +9540,8 @@
       },
       "reg": "bc\n",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -9163,7 +9563,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -9185,7 +9586,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -9208,7 +9610,8 @@
       },
       "reg": "\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0 2:0|2"
     }
   },
   {
@@ -9231,7 +9634,8 @@
       },
       "reg": "  cd ef\ngh ij kl\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -9254,7 +9658,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -9278,7 +9683,8 @@
       },
       "reg": "    a\n    b\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -9300,7 +9706,8 @@
       },
       "reg": "\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -9323,7 +9730,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -9345,7 +9753,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -9367,7 +9776,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:24|1"
     }
   },
   {
@@ -9391,7 +9801,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "3:1|1"
     }
   },
   {
@@ -9416,7 +9827,8 @@
       },
       "reg": "A!\u001bj",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "3:1|1"
     }
   },
   {
@@ -9441,7 +9853,8 @@
       },
       "reg": "A!\u001bj;",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:25|1"
     }
   },
   {
@@ -9465,7 +9878,8 @@
       },
       "reg": "A!\u001bj.!",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0 3:23|2"
     }
   },
   {
@@ -9488,7 +9902,8 @@
       },
       "reg": "foo;A,\u001bj",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:3|1"
     }
   },
   {
@@ -9513,7 +9928,8 @@
       },
       "reg": "X",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "4:0|1"
     }
   },
   {
@@ -9538,7 +9954,8 @@
       },
       "reg": " ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:22|1"
     }
   },
   {
@@ -9560,7 +9977,8 @@
       },
       "reg": "!",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:7|1"
     }
   },
   {
@@ -9583,7 +10001,8 @@
       },
       "reg": "A;<Esc>j",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:2|1"
     }
   },
   {
@@ -9605,7 +10024,8 @@
       },
       "reg": "\ncd\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -9629,7 +10049,8 @@
       },
       "reg": "\ncd\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -9651,7 +10072,8 @@
       },
       "reg": "\ncd  \n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -9672,7 +10094,8 @@
       },
       "reg": "  ab\ncd\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -9693,7 +10116,8 @@
       },
       "reg": "  ab\ncd\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -9715,7 +10139,8 @@
       },
       "reg": "{\nab\n}\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -9737,7 +10162,8 @@
       },
       "reg": "  ab\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -9761,7 +10187,8 @@
       },
       "reg": "  ab\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -9782,7 +10209,8 @@
       },
       "reg": "  a b\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -9804,7 +10232,8 @@
       },
       "reg": "\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -9827,7 +10256,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -9849,7 +10279,8 @@
       },
       "reg": "ab cd\nef ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -9872,7 +10303,8 @@
       },
       "reg": "cd\n",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -9895,7 +10327,8 @@
       },
       "reg": "\n\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -9917,7 +10350,8 @@
       },
       "reg": "ab cd\nef",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -9941,7 +10375,8 @@
       },
       "reg": "\nef ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -9964,7 +10399,8 @@
       },
       "reg": "\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -9985,7 +10421,8 @@
       },
       "reg": "cd\nef",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -10008,7 +10445,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -10029,7 +10467,8 @@
       },
       "reg": "worl",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:6|1"
     }
   },
   {
@@ -10050,7 +10489,8 @@
       },
       "reg": "d\nx",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -10072,7 +10512,8 @@
       },
       "reg": "ab c",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -10094,7 +10535,8 @@
       },
       "reg": "c",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -10115,7 +10557,8 @@
       },
       "reg": "cd\nxy ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -10138,7 +10581,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -10160,7 +10604,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -10184,7 +10629,8 @@
       },
       "reg": "d",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:4 1:0|2"
     }
   },
   {
@@ -10208,7 +10654,8 @@
       },
       "reg": "d",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:4 1:0|2"
     }
   },
   {
@@ -10232,7 +10679,8 @@
       },
       "reg": "d",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -10256,7 +10704,8 @@
       },
       "reg": "d",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:4|1"
     }
   },
   {
@@ -10280,7 +10729,8 @@
       },
       "reg": "d",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:4 1:0|2"
     }
   },
   {
@@ -10304,7 +10754,8 @@
       },
       "reg": "d",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:4 1:0|2"
     }
   },
   {
@@ -10326,7 +10777,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -10347,7 +10799,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -10369,7 +10822,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -10392,7 +10846,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -10414,7 +10869,8 @@
       },
       "reg": " ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -10436,7 +10892,8 @@
       },
       "reg": "b",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:1|1"
     }
   },
   {
@@ -10459,7 +10916,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:4 1:0|2"
     }
   },
   {
@@ -10481,7 +10939,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -10505,7 +10964,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -10529,7 +10989,8 @@
       },
       "reg": "l",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -10553,7 +11014,8 @@
       },
       "reg": "b",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -10576,7 +11038,8 @@
       },
       "reg": "world a\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -10597,7 +11060,8 @@
       },
       "reg": "abcdef\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -10620,7 +11084,8 @@
       },
       "reg": "\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -10643,7 +11108,8 @@
       },
       "reg": "  indented line one\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -10667,7 +11133,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -10691,7 +11158,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -10715,7 +11183,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -10739,7 +11208,8 @@
       },
       "reg": "deeper",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -10760,7 +11230,8 @@
       },
       "reg": " ghi jk.",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -10781,7 +11252,8 @@
       },
       "reg": " ghi",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -10806,7 +11278,8 @@
       },
       "reg": "Another\nend x\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "4:0|1"
     }
   },
   {
@@ -10831,7 +11304,8 @@
       },
       "reg": "the lazy dog\n\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -10856,7 +11330,8 @@
       },
       "reg": "The quick\nthe lazy dog\n\nAnother\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -10881,7 +11356,8 @@
       },
       "reg": "The quick\nthe lazy dog\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -10902,7 +11378,8 @@
       },
       "reg": "\"hi\" ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:4|1"
     }
   },
   {
@@ -10923,7 +11400,8 @@
       },
       "reg": " \"hi\"",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:3|1"
     }
   },
   {
@@ -10944,7 +11422,8 @@
       },
       "reg": " 'x'",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -10965,7 +11444,8 @@
       },
       "reg": "`b`  ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:2|1"
     }
   },
   {
@@ -10986,7 +11466,8 @@
       },
       "reg": " b ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:5|1"
     }
   },
   {
@@ -11007,7 +11488,8 @@
       },
       "reg": "\"a\"",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:2|1"
     }
   },
   {
@@ -11028,7 +11510,8 @@
       },
       "reg": "\"a\" ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:2|1"
     }
   },
   {
@@ -11049,7 +11532,8 @@
       },
       "reg": "a\\\"b",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:3|1"
     }
   },
   {
@@ -11070,7 +11554,8 @@
       },
       "reg": "\"ab\" ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11091,7 +11576,8 @@
       },
       "reg": "ab",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:5|1"
     }
   },
   {
@@ -11112,7 +11598,8 @@
       },
       "reg": "\"",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11133,7 +11620,8 @@
       },
       "reg": "abc",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11154,7 +11642,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11175,7 +11664,8 @@
       },
       "reg": "\"hi\" ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11196,7 +11686,8 @@
       },
       "reg": "hi",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11217,7 +11708,8 @@
       },
       "reg": "\"hi\"",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11238,7 +11730,8 @@
       },
       "reg": "\"hi\"",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11259,7 +11752,8 @@
       },
       "reg": "\"b\" c \"d\" ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11282,7 +11776,8 @@
       },
       "reg": "dwj12",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -11304,7 +11799,8 @@
       },
       "reg": "cd",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11326,7 +11822,8 @@
       },
       "reg": "cd",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11348,7 +11845,8 @@
       },
       "reg": "cd",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11370,7 +11868,8 @@
       },
       "reg": "cd",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11392,7 +11891,8 @@
       },
       "reg": "cd",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11414,7 +11914,8 @@
       },
       "reg": "ab",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11436,7 +11937,8 @@
       },
       "reg": "ab",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11458,7 +11960,8 @@
       },
       "reg": "ab",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11480,7 +11983,8 @@
       },
       "reg": "ab",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11501,7 +12005,8 @@
       },
       "reg": "a b\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -11522,7 +12027,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:24|1"
     }
   },
   {
@@ -11544,7 +12050,8 @@
       },
       "reg": "funcend;tion greet(name) {\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -11567,7 +12074,8 @@
       },
       "reg": "f gh",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:1|1"
     }
   },
   {
@@ -11589,7 +12097,8 @@
       },
       "reg": "gh\nij",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:3|1"
     }
   },
   {
@@ -11610,7 +12119,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11631,7 +12141,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11655,7 +12166,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11677,7 +12189,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:28 1:0|2"
     }
   },
   {
@@ -11702,7 +12215,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 2:0|2"
     }
   },
   {
@@ -11727,7 +12241,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 2:0|2"
     }
   },
   {
@@ -11751,7 +12266,8 @@
       },
       "reg": "de\n  \n  \nde",
       "regType": "block",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11775,7 +12291,8 @@
       },
       "reg": "def\n      \n      \ndefgh",
       "regType": "block",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:2|1"
     }
   },
   {
@@ -11798,7 +12315,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -11822,7 +12340,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -11846,7 +12365,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -11871,7 +12391,8 @@
       },
       "reg": "onst total = \nf (total > 10\n log(\"big\", t\n\neturn total;",
       "regType": "block",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -11896,7 +12417,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "i"
+      "mode": "i",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -11919,7 +12441,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -11942,7 +12465,8 @@
       },
       "reg": "\nef",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -11965,7 +12489,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:5|1"
     }
   },
   {
@@ -11988,7 +12513,8 @@
       },
       "reg": "b cd",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -12011,7 +12537,8 @@
       },
       "reg": "d\n",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -12034,7 +12561,8 @@
       },
       "reg": "\n",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -12055,7 +12583,8 @@
       },
       "reg": "f\nab\n",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -12078,7 +12607,8 @@
       },
       "reg": "def\n   \n",
       "regType": "block",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -12099,7 +12629,8 @@
       },
       "reg": "x",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -12123,7 +12654,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:16|1"
     }
   },
   {
@@ -12148,7 +12680,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "4:0|1"
     }
   },
   {
@@ -12173,7 +12706,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "3:0|1"
     }
   },
   {
@@ -12194,7 +12728,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -12217,7 +12752,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -12239,7 +12775,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -12263,7 +12800,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "3:0|1"
     }
   },
   {
@@ -12287,7 +12825,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -12312,7 +12851,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:9|1"
     }
   },
   {
@@ -12334,7 +12874,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:2|1"
     }
   },
   {
@@ -12359,7 +12900,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -12383,7 +12925,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -12408,7 +12951,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -12433,7 +12977,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:20 3:0|2"
     }
   },
   {
@@ -12458,7 +13003,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:20|1"
     }
   },
   {
@@ -12483,7 +13029,8 @@
       },
       "reg": " ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -12507,7 +13054,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -12530,7 +13078,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -12553,7 +13102,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -12575,7 +13125,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -12600,7 +13151,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -12623,7 +13175,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -12644,7 +13197,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -12666,7 +13220,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:8 1:0|2"
     }
   },
   {
@@ -12688,7 +13243,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:6|2"
     }
   },
   {
@@ -12710,7 +13266,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:2 1:0|2"
     }
   },
   {
@@ -12732,7 +13289,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -12754,7 +13312,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:6|2"
     }
   },
   {
@@ -12776,7 +13335,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:6 1:5|2"
     }
   },
   {
@@ -12798,7 +13358,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:4|1"
     }
   },
   {
@@ -12820,7 +13381,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:5|2"
     }
   },
   {
@@ -12845,7 +13407,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "4:20|1"
     }
   },
   {
@@ -12868,7 +13431,8 @@
       },
       "reg": "k",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -12890,7 +13454,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:5 2:0|2"
     }
   },
   {
@@ -12911,7 +13476,8 @@
       },
       "reg": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -12932,7 +13498,8 @@
       },
       "reg": "<div class=\"a\"><span>text</span></div>\nplain 0x1f 007 -3 words\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -12954,7 +13521,8 @@
       },
       "reg": "abc\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -12975,7 +13543,8 @@
       },
       "reg": "\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 0:0|2"
     }
   },
   {
@@ -13000,7 +13569,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -13026,7 +13596,8 @@
       },
       "reg": "  ",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -13051,7 +13622,8 @@
       },
       "reg": ".\n",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "5:0 2:0|2"
     }
   },
   {
@@ -13073,7 +13645,8 @@
       },
       "reg": "  back to one\nlast_word_here end\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -13097,7 +13670,8 @@
       },
       "reg": "const x = [1, 2, 3];\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "4:0|1"
     }
   },
   {
@@ -13122,7 +13696,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "3:0 4:0|2"
     }
   },
   {
@@ -13147,7 +13722,8 @@
       },
       "reg": ")",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -13171,7 +13747,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -13196,7 +13773,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -13221,7 +13799,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -13246,7 +13825,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -13270,7 +13850,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "i"
+      "mode": "i",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -13295,7 +13876,8 @@
       },
       "reg": "(\n            \n(",
       "regType": "block",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "3:0 3:0 3:0|3"
     }
   },
   {
@@ -13316,7 +13898,8 @@
       },
       "reg": "bc def\n",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -13341,7 +13924,8 @@
       },
       "reg": ", total)",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -13366,7 +13950,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:4|1"
     }
   },
   {
@@ -13387,7 +13972,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -13409,7 +13995,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -13433,7 +14020,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -13456,7 +14044,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:21 1:0|2"
     }
   },
   {
@@ -13477,7 +14066,8 @@
       },
       "reg": "1f",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:8|1"
     }
   },
   {
@@ -13499,7 +14089,8 @@
       },
       "reg": "e",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:4|1"
     }
   },
   {
@@ -13520,7 +14111,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:6|1"
     }
   },
   {
@@ -13541,7 +14133,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:7|1"
     }
   },
   {
@@ -13562,7 +14155,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:35|1"
     }
   },
   {
@@ -13584,7 +14178,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:9 1:14|2"
     }
   },
   {
@@ -13606,7 +14201,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:4|1"
     }
   },
   {
@@ -13631,7 +14227,8 @@
       },
       "reg": "ij",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:2|1"
     }
   },
   {
@@ -13656,7 +14253,8 @@
       },
       "reg": "h",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:1|1"
     }
   },
   {
@@ -13680,7 +14278,8 @@
       },
       "reg": "f\ngh",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -13704,7 +14303,8 @@
       },
       "reg": "ij\nk",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "3:0|1"
     }
   },
   {
@@ -13727,7 +14327,8 @@
       },
       "reg": "\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -13749,7 +14350,8 @@
       },
       "reg": "\n",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -13772,7 +14374,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -13796,7 +14399,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -13818,7 +14422,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -13840,7 +14445,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -13863,7 +14469,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -13887,7 +14494,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -13909,7 +14517,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:9|1"
     }
   },
   {
@@ -13931,7 +14540,8 @@
       },
       "reg": "a",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -13954,7 +14564,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:2|1"
     }
   },
   {
@@ -13978,7 +14589,8 @@
       },
       "reg": "\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:2|1"
     }
   },
   {
@@ -14000,7 +14612,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -14022,7 +14635,8 @@
       },
       "reg": "x",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -14044,7 +14658,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:1|2"
     }
   },
   {
@@ -14066,7 +14681,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:12|1"
     }
   },
   {
@@ -14088,7 +14704,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
     }
   },
   {
@@ -14114,7 +14731,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -14141,7 +14759,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "3:2|1"
     }
   },
   {
@@ -14165,7 +14784,8 @@
       },
       "reg": "  cd\n\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -14191,7 +14811,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -14215,7 +14836,8 @@
       },
       "reg": "  <b>x</b> ef\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:2|1"
     }
   },
   {
@@ -14238,7 +14860,8 @@
       },
       "reg": "  ind ent\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -14261,7 +14884,8 @@
       },
       "reg": "abc def\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -14285,7 +14909,8 @@
       },
       "reg": "  ab  cd\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -14307,7 +14932,8 @@
       },
       "reg": "  dxx\n  ab cd ef\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -14330,7 +14956,8 @@
       },
       "reg": "  ab cd ef\nxyz abc d\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -14353,7 +14980,8 @@
       },
       "reg": "  b(1, 2);\n",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -14379,7 +15007,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -14402,7 +15031,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -14424,7 +15054,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -14446,7 +15077,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -14467,7 +15099,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -14488,7 +15121,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -14512,7 +15146,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -14534,7 +15169,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -14556,7 +15192,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:15|1"
     }
   },
   {
@@ -14578,7 +15215,8 @@
       },
       "reg": "<",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -14600,7 +15238,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -14621,7 +15260,8 @@
       },
       "reg": "  word\nab c",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -14645,7 +15285,8 @@
       },
       "reg": "f (\n b(\n\n",
       "regType": "block",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -14669,7 +15310,8 @@
       },
       "reg": "f \n b\n",
       "regType": "block",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:2|1"
     }
   },
   {
@@ -14694,7 +15336,8 @@
       },
       "reg": " }\n",
       "regType": "block",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:2|1"
     }
   },
   {
@@ -14718,7 +15361,8 @@
       },
       "reg": " b\n\n",
       "regType": "block",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -14742,7 +15386,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:2|1"
     }
   },
   {
@@ -14767,7 +15412,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -14791,7 +15437,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -14815,7 +15462,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -14839,7 +15487,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -14863,7 +15512,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -14888,7 +15538,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -14914,7 +15565,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -14939,7 +15591,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -14964,7 +15617,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -14989,7 +15643,8 @@
       },
       "reg": " retu\n",
       "regType": "block",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -15011,7 +15666,8 @@
       },
       "reg": "<\np",
       "regType": "block",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -15033,7 +15689,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -15057,7 +15714,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -15079,7 +15737,8 @@
       },
       "reg": "<div class=\"a\"><spa>text</span></div>",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -15103,7 +15762,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -15127,7 +15787,8 @@
       },
       "reg": "<li class=\"x\">three</li>",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:2|1"
     }
   },
   {
@@ -15148,7 +15809,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -15172,7 +15834,8 @@
       },
       "reg": "\n  <li>one <b>two</b></li>X\n  <li class=\"x\">three</li>\n",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -15193,7 +15856,8 @@
       },
       "reg": "<ul>\n  <li>one <b>two</b></q rli>\n  <li classx\">three</lq ri\n</ul>",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
     }
   },
   {
@@ -15216,7 +15880,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -15239,7 +15904,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:8|1"
     }
   },
   {
@@ -15262,7 +15928,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -15286,7 +15953,8 @@
       },
       "reg": "  bc\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -15312,7 +15980,8 @@
       },
       "reg": "\tb\tc\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:9|1"
     }
   },
   {
@@ -15338,7 +16007,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:2|1"
     }
   },
   {
@@ -15361,7 +16031,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:2|1"
     }
   },
   {
@@ -15383,7 +16054,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -15407,7 +16079,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -15432,7 +16105,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -15457,7 +16131,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -15481,7 +16156,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "2:0|1"
     }
   },
   {
@@ -15505,7 +16181,8 @@
       },
       "reg": "      deeper (nested) item\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -15529,7 +16206,8 @@
       },
       "reg": "  indented line one\n      deeper (nested) item\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -15554,7 +16232,8 @@
       },
       "reg": "\tif (a) {\n\t\tb(1, 2);\n\t}\nend\n",
       "regType": "line",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -15580,7 +16259,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "3:0|1"
     }
   },
   {
@@ -15602,7 +16282,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -15624,7 +16305,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -15645,7 +16327,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   },
   {
@@ -15668,7 +16351,8 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "|0"
     }
   },
   {
@@ -15693,7 +16377,1659 @@
       },
       "reg": "",
       "regType": "char",
-      "mode": "n"
+      "mode": "n",
+      "changelist": "0:0|1"
+    }
+  },
+  {
+    "id": "cl-basic",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "xjjxgg0g;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eee ffff",
+        "gggg hhhh",
+        "iii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 2
+      },
+      "reg": "i",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:6 3:3|1"
+    }
+  },
+  {
+    "id": "cl-count-clamp",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "xjjxG5g;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eee ffff",
+        "gggg hhhh",
+        "iii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 6
+      },
+      "reg": "i",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:6 3:3|0"
+    }
+  },
+  {
+    "id": "cl-comma-from-end",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "xjjxg,",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eee ffff",
+        "gggg hhhh",
+        "iii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 2
+      },
+      "reg": "i",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:6 3:3|1"
+    }
+  },
+  {
+    "id": "cl-start-error",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "xg;g;x",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd ee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 6
+      },
+      "reg": "e",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:6|1"
+    }
+  },
+  {
+    "id": "cl-empty-e664",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "g;x",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 6
+      },
+      "reg": "e",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:6|1"
+    }
+  },
+  {
+    "id": "cl-invalid-line-e19",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "xGddg;x",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eee ffff",
+        "gggg hhhh",
+        "iii"
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 2
+      },
+      "reg": "i",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:6 4:0 3:3|3"
+    }
+  },
+  {
+    "id": "cl-dd-undo",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "xjddug;g;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 6
+      },
+      "reg": "gggg hhhh\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "1:6 2:0|0"
+    }
+  },
+  {
+    "id": "cl-join",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "jxkkJg;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc dddd eeee ffff",
+        "gggg hhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "h",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:6 1:0|1"
+    }
+  },
+  {
+    "id": "cl-join-col-adjust",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "xjxggJg;g;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc dddd eee ffff",
+        "gggg hhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 6
+      },
+      "reg": "h",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:21 1:6 1:0|1"
+    }
+  },
+  {
+    "id": "cl-move",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "jx:m0<CR>g;g;",
+    "expected": {
+      "lines": [
+        "gggg hhh",
+        "aaaa bbbb cccc",
+        "dddd eeee ffff",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "h",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:0 0:0|0"
+    }
+  },
+  {
+    "id": "cl-sort",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "x:%sort!<CR>Gg;g;",
+    "expected": {
+      "lines": [
+        "jjjj",
+        "iiii",
+        "gggg hhhh",
+        "dddd eee ffff",
+        "aaaa bbbb cccc"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 3
+      },
+      "reg": "e",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:6 0:0|0"
+    }
+  },
+  {
+    "id": "cl-insert-batch",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "j0wixyz<Esc>gg$g;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eeee ffff",
+        "gggg xyzhhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 5
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "2:5|0"
+    }
+  },
+  {
+    "id": "cl-shift-noop",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "<<jg;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eeee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:0|0"
+    }
+  },
+  {
+    "id": "cl-put-undo",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "yyjpug;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eeee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 0
+      },
+      "reg": "dddd eeee ffff\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "3:0|0"
+    }
+  },
+  {
+    "id": "cl-put-before-undo",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "kyyjjPug;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eeee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 0
+      },
+      "reg": "aaaa bbbb cccc\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "3:0|0"
+    }
+  },
+  {
+    "id": "cl-g-d",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": ":g/i/d<CR>g;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eeee ffff",
+        "gggg hhhh",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 0
+      },
+      "reg": "iiii\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "3:0|0"
+    }
+  },
+  {
+    "id": "cl-macro-one-block",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "qaA!<Esc>jq2@ag;g;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eeee ffff!",
+        "gggg hhhh!",
+        "iiii!",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 14
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:14 3:4|0"
+    }
+  },
+  {
+    "id": "cl-linewise-change",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "x2Sab<Esc>ggg;g;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "ab",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 1
+      },
+      "reg": "dddd eee ffff\ngggg hhhh\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "1:6 1:0|0"
+    }
+  },
+  {
+    "id": "cl-replace-count",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "2Rxy<BS><Esc>0g;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd exxe ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 8
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:8|0"
+    }
+  },
+  {
+    "id": "cl-visual-bell",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "xjvg;d",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eee ffff",
+        "gggg hhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 6
+      },
+      "reg": "h",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:6 2:6|2"
+    }
+  },
+  {
+    "id": "cl-op-pending",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "xjdg;x",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eee ffff",
+        "gggg hhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 6
+      },
+      "reg": "h",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:6 2:6|2"
+    }
+  },
+  {
+    "id": "cl-case-op-start",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "w2g~~Gg;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "DDDD EEEE FFFF",
+        "GGGG HHHH",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:0|0"
+    }
+  },
+  {
+    "id": "cl-ctrl-a-col0",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "ji12<Esc>0w<C-a>$g;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eeee ffff",
+        "gggg h13hhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "2:0|0"
+    }
+  },
+  {
+    "id": "cl-r-count",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "3rZ0g;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eZZZ ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 8
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:8|0"
+    }
+  },
+  {
+    "id": "cl-charwise-delete-join",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "jxkvjd0g;g;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 6
+      },
+      "reg": "eee ffff\ngggg hh",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:12 2:0|0"
+    }
+  },
+  {
+    "id": "cl-insert-bs-join",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "jxji<BS><Esc>0g;g;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eeee ffff",
+        "gggg hhh",
+        "iii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 6
+      },
+      "reg": "h",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "2:6 3:2|0"
+    }
+  },
+  {
+    "id": "cl-ctrl-r-split",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "yyjA<C-r>\"x<Esc>gg0g;g;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eeee ffff",
+        "gggg hhhhdddd eeee ffff",
+        "x",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 0
+      },
+      "reg": "dddd eeee ffff\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "3:0|0"
+    }
+  },
+  {
+    "id": "cl-insert-count",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "3ia<Esc>0g;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eaaaeee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 8
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:8|0"
+    }
+  },
+  {
+    "id": "cl-dot",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "x3j.ggg;g;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 6
+      },
+      "reg": "j",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:6 4:3|0"
+    }
+  },
+  {
+    "id": "cl-undo-redo",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "xjjxuu<C-r>0g;g;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 6
+      },
+      "reg": "i",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:6 1:0|0"
+    }
+  },
+  {
+    "id": "cl-s-first-line",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "G:%s/[di]/Z/<CR>g;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "Zddd eeee ffff",
+        "gggg hhhh",
+        "Ziii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:0|0"
+    }
+  },
+  {
+    "id": "cl-gi-new-undo",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "iQ<Esc>jgiZ<Esc>u0g;",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eQeee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:0|0"
+    }
+  },
+  {
+    "id": "vi-v-I",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "vlIX<Esc>",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "Xdddd eeee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:0|1"
+    }
+  },
+  {
+    "id": "vi-v-A",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "vlAX<Esc>",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eeeXe ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 8
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:8|1"
+    }
+  },
+  {
+    "id": "vi-v-A-backward",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "vhAX<Esc>",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eXeee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 6
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:6|1"
+    }
+  },
+  {
+    "id": "vi-v-A-down",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "vjAX<Esc>",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eeee ffff",
+        "gggg hhXhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 7
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "2:7|1"
+    }
+  },
+  {
+    "id": "vi-V-A",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "VAX<Esc>",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eeXee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 7
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:7|1"
+    }
+  },
+  {
+    "id": "vi-V-A-up",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "VkAX<Esc>",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "Xdddd eeee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:0|1"
+    }
+  },
+  {
+    "id": "vi-V-I-up",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "VkIX<Esc>",
+    "expected": {
+      "lines": [
+        "aaaa bXbbb cccc",
+        "dddd eeee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 6
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:6|1"
+    }
+  },
+  {
+    "id": "vi-v-dollar-A",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "v$AX<Esc>",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eeee fffXf",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 13
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:13|1"
+    }
+  },
+  {
+    "id": "vi-vip-A",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "vipAX<Esc>",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eeee ffff",
+        "gggg hhhh",
+        "iiii",
+        "Xjjjj"
+      ],
+      "cursor": {
+        "row": 4,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "4:0|1"
+    }
+  },
+  {
+    "id": "vi-vip-I",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "vipIX<Esc>",
+    "expected": {
+      "lines": [
+        "Xaaaa bbbb cccc",
+        "dddd eeee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:0|1"
+    }
+  },
+  {
+    "id": "vi-viw-A",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "viwAX<Esc>",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eeeeX ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 9
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:9|1"
+    }
+  },
+  {
+    "id": "vi-count-I",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "v3IX<Esc>",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "XXXdddd eeee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:2|1"
+    }
+  },
+  {
+    "id": "vi-count-A",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "Vj2AX<Esc>",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eeee ffff",
+        "gggg hhXXhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 8
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "2:8|1"
+    }
+  },
+  {
+    "id": "vi-redo-I",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "vlIX<Esc>w.",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "Xdddd Xeeee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 6
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:6|1"
+    }
+  },
+  {
+    "id": "vi-redo-A",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "vlAX<Esc>0w.",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eXeeXe ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 6
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:6|1"
+    }
+  },
+  {
+    "id": "vi-redo-dollar",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "v$AX<Esc>k.",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccXc",
+        "dddd eeee fffXf",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 13
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:13 0:13|2"
+    }
+  },
+  {
+    "id": "vi-redo-multiline",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "vjAX<Esc>k.",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eeee ffff",
+        "gggg hhXXhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 8
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "2:8|1"
+    }
+  },
+  {
+    "id": "vi-redo-count",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "v3IX<Esc>w.",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "XXXdddd XXXeeee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 10
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:10|1"
+    }
+  },
+  {
+    "id": "vi-redo-ignores-count",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "vjIX<Esc>w3.",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "Xdddd Xeeee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 6
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:6|1"
+    }
+  },
+  {
+    "id": "vi-undo-V",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "VAX<Esc>u",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eeee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 7
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:0|1"
+    }
+  },
+  {
+    "id": "vi-undo-v",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "vjAX<Esc>u",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eeee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 7
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "2:0|1"
+    }
+  },
+  {
+    "id": "vi-V-A-col0",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "VAX<Esc>0VAY<Esc>",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "Ydddd eeXee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:0|1"
+    }
+  },
+  {
+    "id": "vi-enter",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "VA<CR>z<Esc>",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd ee",
+        "zee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "2:0|1"
+    }
+  },
+  {
+    "id": "vi-gi",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "vlIX<Esc>giY<Esc>",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "XYdddd eeee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 1
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:1|1"
+    }
+  },
+  {
+    "id": "vi-caret-mark",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "VAX<Esc>`^iZ<Esc>",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eeXZee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 8
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:8|1"
+    }
+  },
+  {
+    "id": "vi-stale-vcol-block",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "<C-v>jlly0vjAX<Esc>",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eeee ffff",
+        "gXggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 1
+      },
+      "reg": "eee\nhhh",
+      "regType": "block",
+      "mode": "n",
+      "changelist": "2:1|1"
+    }
+  },
+  {
+    "id": "vi-bs",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "VAab<BS>c<Esc>",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eeacee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 8
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:8|1"
+    }
+  },
+  {
+    "id": "vi-gv",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 1,
+      "col": 6
+    },
+    "keys": "vjAX<Esc>gvd",
+    "expected": {
+      "lines": [
+        "aaaa bbbb cccc",
+        "dddd eXhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 6
+      },
+      "reg": "eee ffff\ngggg hh",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:13 2:0|2"
+    }
+  },
+  {
+    "id": "vi-tab-A",
+    "text": "\tab\tcd\n\tef gh\nij",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "vlAX<Esc>",
+    "expected": {
+      "lines": [
+        "\taXb\tcd",
+        "\tef gh",
+        "ij"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:2|1"
+    }
+  },
+  {
+    "id": "vi-tab-V-A",
+    "text": "\tab\tcd\n\tef gh\nij",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "VAX<Esc>",
+    "expected": {
+      "lines": [
+        "\tXab\tcd",
+        "\tef gh",
+        "ij"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:1|1"
+    }
+  },
+  {
+    "id": "vi-tab-multi-A",
+    "text": "\tab\tcd\n\tef gh\nij",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "vjAX<Esc>",
+    "expected": {
+      "lines": [
+        "\tab\tcd",
+        "\tef gXh",
+        "ij"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 5
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:5|1"
+    }
+  },
+  {
+    "id": "vi-empty-line-A",
+    "text": "ab\n\ncd",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "VAX<Esc>",
+    "expected": {
+      "lines": [
+        "ab",
+        "X",
+        "cd"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:0|1"
     }
   }
 ]

@@ -113,11 +113,12 @@ export function deleteVisualBlock(state: VimEditorState): VimEditorState {
     nextLines[l] = res.text;
     if (l === op.startLine) cursorCol = res.cursorCol;
   }
+  const blockCursor = clampCursor(nextLines, { line: op.startLine, col: cursorCol }, 'NORMAL');
 
   return {
     ...stateWithSnapshot,
     lines: nextLines,
-    cursor: clampCursor(nextLines, { line: op.startLine, col: cursorCol }, 'NORMAL'),
+    cursor: blockCursor,
     mode: 'NORMAL',
     visualAnchor: undefined,
     visualBlockEndOfLine: undefined,
@@ -127,6 +128,8 @@ export function deleteVisualBlock(state: VimEditorState): VimEditorState {
       blockWidth: blockYankWidth(op),
     },
     pendingKeys: undefined,
+    // Vim op_delete(블록): changed_lines(커서 줄, 커서 열)
+    changeListHint: { kind: 'at', line: blockCursor.line, col: blockCursor.col },
   };
 }
 

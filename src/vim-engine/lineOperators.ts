@@ -40,6 +40,8 @@ export function joinSingleLastLine(state: VimEditorState, gJ: boolean): VimEdito
     cursor: { line: state.cursor.line, col: 0 },
     pendingKeys: undefined,
     lastChangeKeys: gJ ? ['g', 'J'] : ['J'],
+    // do_join(1) 도 changed_lines(줄, 줄 길이) 를 부릅니다
+    changeListHint: { kind: 'at', line: state.cursor.line, col: (state.lines[state.cursor.line] ?? '').length, force: true },
   };
 }
 
@@ -102,6 +104,8 @@ export function joinLines(state: VimEditorState, count = 1, insertSpace = true):
     lines: newLines,
     cursor: { line: currentLineIdx, col: targetCol },
     pendingKeys: undefined,
+    // Vim do_join: changed_lines(첫 줄, 첫 줄 길이) 뒤 이어 붙인 줄을 지움 (changelist.ts)
+    changeListHint: { kind: 'join', line: currentLineIdx, count: maxJoinLine - currentLineIdx, col: (state.lines[currentLineIdx] ?? '').length },
   };
 }
 
@@ -151,6 +155,7 @@ export function toggleCaseChar(state: VimEditorState, count = 1): VimEditorState
     lines: newLines,
     cursor: newCursor,
     pendingKeys: undefined,
+    changeListHint: { kind: 'at', line: state.cursor.line, col },
   };
 }
 
@@ -232,6 +237,10 @@ export function changeCaseVisual(
     newLines[l] = chars.join('');
   }
 
+  // Vim op_tilde: 바뀐 글자가 있으면 changed_lines(시작 줄, 시작 열) (줄 단위·블록은 0열)
+  const charwiseStart = anchor.line < cursor.line || (anchor.line === cursor.line && anchor.col <= cursor.col) ? anchor : cursor;
+  const hintCol = mode === 'VISUAL' || mode === 'SELECT' ? charwiseStart.col : 0;
+  const changed = newLines.some((l, i) => l !== state.lines[i]);
   return {
     ...stateWithUndo,
     lines: newLines,
@@ -239,6 +248,7 @@ export function changeCaseVisual(
     mode: 'NORMAL',
     visualAnchor: undefined,
     pendingKeys: undefined,
+    ...(changed ? { changeListHint: { kind: 'at' as const, line: minLine, col: hintCol } } : {}),
   };
 }
 
@@ -425,7 +435,15 @@ export function indentLines(
     lines: newLines,
     cursor: newCursor,
     pendingKeys: undefined,
+    // Vim op_shift: 바뀐 줄이 없어도 changed_lines(시작 줄, 0)
+    changeListHint: { kind: 'at', line: startLine, col: 0, force: true },
   };
+}
+
+function blockShiftEvents(lines: string[], minLine: number, maxLine: number, minCol: number): { line: number; col: number }[] {
+  const out: { line: number; col: number }[] = [];
+  for (let l = minLine; l <= maxLine; l++) if ((lines[l] ?? '').length > 0 && (lines[l] ?? '').length >= minCol) out.push({ line: l, col: minCol });
+  return out;
 }
 
 /**
@@ -469,6 +487,8 @@ export function indentVisual(
       visualAnchor: undefined,
       visualBlockEndOfLine: undefined,
       pendingKeys: undefined,
+      // Vim shift_block: 줄마다 changed_bytes(줄, 블록 열) 뒤 op_shift 의 changed_lines(시작 줄, 0)
+      changeListHint: { kind: 'at', line: minLine, col: 0, force: true, before: blockShiftEvents(state.lines, minLine, maxLine, minCol) },
     };
   }
 
@@ -489,6 +509,7 @@ export function indentVisual(
     mode: 'NORMAL',
     visualAnchor: undefined,
     pendingKeys: undefined,
+    changeListHint: { kind: 'at', line: minLine, col: 0, force: true },
   };
 }
 
@@ -565,11 +586,14 @@ export function formatIndentRange(
   // 실행 취소 커서(uh_cursor)는 연산 범위 시작(oap->start)입니다.
   const stateWithUndo = pushUndoSnapshotAt(state, opStart, { start: minLine, end: maxLine });
 
+  const firstChanged = changed ? formatted.findIndex((line, i) => line !== state.lines[i]) : -1;
   return {
     ...stateWithUndo,
     lines: newLines,
     cursor: equalOperatorCursor(state, newLines, minLine, keepCol),
     pendingKeys: undefined,
+    // Vim op_reindent: changed_lines(처음 바뀐 줄, 0)
+    ...(changed ? { changeListHint: { kind: 'at' as const, line: firstChanged, col: 0, undoLine: minLine } } : {}),
   };
 }
 

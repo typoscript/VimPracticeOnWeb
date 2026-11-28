@@ -76,7 +76,7 @@ export function resolveMarkPosition(
 export function computeSpecialMarksUpdate(
   prevState: VimEditorState,
   nextState: VimEditorState
-): { lastChangeMark: { row: number; col: number }; lastBracketMarks: { start: { row: number; col: number }; end: { row: number; col: number } } } | null {
+): { lastBracketMarks: { start: { row: number; col: number }; end: { row: number; col: number } } } | null {
   const prevLines = prevState.lines ?? [];
   const nextLines = nextState.lines ?? [];
   if (prevLines === nextLines) return null;
@@ -142,11 +142,8 @@ export function computeSpecialMarksUpdate(
     end = { row: safeLast, col: Math.max(0, (nextLines[safeLast] ?? '').length - 1) };
   }
 
-  const changeRow = Math.max(0, Math.min(nextState.cursor.line, Math.max(0, nextLines.length - 1)));
-  const changeCol = Math.max(0, nextState.cursor.col);
-
+  // '. 마크는 변경 목록과 함께 changelist.ts 가 정합니다 (Vim b_last_change)
   return {
-    lastChangeMark: { row: changeRow, col: changeCol },
     lastBracketMarks: { start, end },
   };
 }

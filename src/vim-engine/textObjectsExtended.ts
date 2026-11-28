@@ -4,6 +4,7 @@ import { pushUndoSnapshot } from './operators';
 import { getOptions } from './setOptionsCore';
 import { beginlineSolCol, pushUndoSnapshotAt } from './undoHistory';
 import { formatLinesRange, cindentOptionsFor, equalOperatorCursor, changeCaseVisual, caseTypeForOperator } from './lineOperators';
+import { reindentChangeHint } from './changelist';
 
 export interface TextObjectRange {
   startCol: number;
@@ -169,6 +170,7 @@ export function executeLinewiseObjectOperator(
       lines: nextLines,
       cursor: equalOperatorCursor(state, nextLines, startLine),
       pendingKeys: undefined,
+      ...reindentChangeHint(state.lines, nextLines, startLine),
     };
   }
 

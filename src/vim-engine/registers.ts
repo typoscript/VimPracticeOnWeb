@@ -479,6 +479,7 @@ export function putFromRegister(
         lastBracketMarks: bracketMarks,
         activeRegister: undefined,
         pendingKeys: undefined,
+        changeListHint: { kind: 'at', line: targetLine, col: 0, undoLine: line + 1 },
       };
     }
 
@@ -492,6 +493,7 @@ export function putFromRegister(
       lastBracketMarks: bracketMarks,
       activeRegister: undefined,
       pendingKeys: undefined,
+      changeListHint: { kind: 'at', line: targetLine, col: 0, undoLine: line + 1 },
     };
   }
 
@@ -582,6 +584,7 @@ export function putFromRegister(
       cursor: nextCursor,
       activeRegister: undefined,
       pendingKeys: undefined,
+      changeListHint: { kind: 'at', line, col: insertCol, undoLine: line + 1 },
     };
   }
 
@@ -604,6 +607,8 @@ export function putFromRegister(
     cursor: { line, col: newCol },
     activeRegister: undefined,
     pendingKeys: undefined,
+    // Vim do_put: changed_bytes(줄, 넣은 열). 시작할 때 u_save(커서 줄, 다음 줄) 를 하므로 실행 취소는 다음 줄도 기록
+    changeListHint: { kind: 'at', line, col: insertCol, undoLine: line + 1 },
   };
 }
 

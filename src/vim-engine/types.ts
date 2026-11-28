@@ -130,6 +130,8 @@ export interface StateSnapshot {
    * 헤더로 정하고, redo 뒤 다시 u 할 때도 같은 헤더를 씁니다.
    */
   header?: { cursor: CursorPosition; savedRange?: { start: number; end: number }; undoLine?: number };
+  /** 실행 취소 때 변경 목록에 마지막으로 남길 줄 (changelist.ts 가 변경 때 적음) */
+  changeListUndoLine?: number;
 }
 
 export interface MarkPosition {
@@ -575,6 +577,35 @@ export interface ChangeListItem {
   line: number;
 }
 
+/**
+ * 이번 변경의 변경 목록 위치를 알려 주는 일시적 힌트 (changelist.ts 가 읽고 지움).
+ * Vim changed_common() 에 넘기는 위치가 줄 비교만으로 정해지지 않는 명령이 남깁니다.
+ * `at`: 그 위치(변경 후 좌표) 한 번, `each`: 바뀐 덩어리마다 위에서부터(:g), `undo`/`redo`: 실행 취소 순서.
+ */
+export type ChangeListHint =
+  /** 그 위치(변경 후 좌표) 한 번. force 면 줄이 그대로여도 기록 (op_shift 는 늘 changed_lines) */
+  | {
+      kind: 'at';
+      line: number;
+      col: number;
+      force?: boolean;
+      keepRange?: { start: number; end: number };
+      before?: { line: number; col: number }[];
+      /** 실행 취소 때 마지막으로 기록할 줄 (do_put 은 시작할 때 커서 다음 줄을 빈 u_save 함) */
+      undoLine?: number;
+    }
+  /** 변경 없이 실행 취소 기록만 남긴 명령 (빈 레지스터 put, E353) */
+  | { kind: 'undoOnly'; undoLine: number }
+  /** 줄마다 :d (:g/pat/d): 지운 줄 번호(이전 버퍼 기준, 오름차순) */
+  | { kind: 'deletedLines'; lines: number[] }
+  /** do_join: line 줄에 아래 count 줄을 이어 붙임 (첫 줄 끝 col, 다음 줄 0열 두 번 기록) */
+  | { kind: 'join'; line: number; count: number; col: number }
+  /** do_move (:m): line1..line2 를 dest 줄 뒤로 (모두 1 기준, Vim 인자 그대로) */
+  | { kind: 'move'; line1: number; line2: number; dest: number; undoLine?: number }
+  | { kind: 'each' }
+  | { kind: 'undo'; thenLine?: number }
+  | { kind: 'redo' };
+
 
 export interface ViewportState {
   topRow: number;       // 현재 화면 최상단 행 번호 (0-indexed)
@@ -780,6 +811,7 @@ export interface VimEditorState {
       | 'marks'
       | 'changeList'
       | 'changeIndex'
+      | 'changeListNewChange'
       | 'lastInsertPos'
       | 'lastChangeMark'
       | 'lastBracketMarks'
@@ -916,8 +948,20 @@ export interface VimEditorState {
   lastVisualSelection?: LastVisualSelection | null;
   /** 버퍼 텍스트 변경 위치 히스토리 목록 (g;, g, 순회용) */
   changeList?: ChangeListItem[];
-  /** changeList 현재 인덱스 */
+  /** changeList 현재 인덱스 (목록 길이면 마지막 변경 뒤) */
   changeIndex?: number;
+  /** Vim b_new_change: 새 실행 취소 단위가 시작돼 다음 변경이 변경 목록에 새 항목을 만들 수 있음 (pushUndoSnapshot 이 켬) */
+  changeListNewChange?: boolean;
+  /** 여러 명령을 한 실행 취소 단위로 묶는 중(:g, :norm): pushUndoSnapshot 이 changeListNewChange 를 다시 켜지 않음 */
+  changeListUndoJoin?: boolean;
+  /** 변경 목록 위치 힌트 (일시적, changelist.ts) */
+  changeListHint?: ChangeListHint;
+  /** 변경 목록을 기록할 때마다 1씩 늘어남 (안쪽 키 재생이 이미 기록했는지 확인용) */
+  changeListTick?: number;
+  /** 입력 모드에서 이어서 친 글자 묶음의 시작 위치 (Vim insertchar 는 미리 입력된 글자를 한 번에 넣음) */
+  insertTypedRun?: { line: number; col: number };
+  /** Vim oparg 의 start_vcol / end_vcol: 비주얼 연산이 남기는 값 (문자·줄 단위 비주얼 A 가 읽음, visualInsert.ts) */
+  visualOpVcol?: { start: number; end: number };
   /** 마지막 검색 시 사용된 커서 오프셋 (/pattern/e, /pattern/+1 등) */
   lastSearchOffset?: SearchOffset | null;
   /** 마지막 검색 방향 (/ = forward, ? = backward). n/N 이 따릅니다 */

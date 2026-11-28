@@ -152,6 +152,7 @@ export function jumpUndoSeq(state: VimEditorState, targetSeq: number): VimEditor
     redoStack: [],
     currentUndoSeq: targetSeq,
     undoTimeIndex: timeIdx >= 0 ? timeIdx : 0,
+    changeListHint: { kind: 'undo' },
     commandMessage: msg('{targetSeq}번째 변경사항으로 이동했습니다.', { targetSeq }),
   };
 }

@@ -161,6 +161,8 @@ export function modifyNumberAtCursor(
     lines: newLines,
     cursor: { line: state.cursor.line, col: newCol },
     pendingKeys: undefined,
+    // Vim op_addsub: changed_lines(줄, 0)
+    changeListHint: { kind: 'at', line: state.cursor.line, col: 0 },
   };
 }
 
@@ -285,6 +287,7 @@ export function modifyNumberVisual(
     mode: 'NORMAL',
     visualAnchor: undefined,
     pendingKeys: undefined,
+    changeListHint: { kind: 'at', line: startLine, col: 0 },
     lastVisualSelection: {
       mode: state.mode as 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK',
       anchor: { ...anchor },

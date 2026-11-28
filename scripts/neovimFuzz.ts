@@ -1,9 +1,11 @@
 /**
  * 실제 Neovim 과 엔진을 무작위 키 시퀀스로 비교하는 퍼저입니다.
  *
- *   npm run fuzz:neovim -- [--cases 1500] [--seed 1] [--profile basic|wide] [--out path.json]
+ *   npm run fuzz:neovim -- [--cases 1500] [--seed 1] [--profile basic|wide] [--changelist] [--out path.json]
  *
- * `--profile wide` 는 블록 비주얼 I/A/c/r/>, 태그·꺾쇠 객체, gJ·gv·gi·g;, 입력 모드 Ctrl-r/Ctrl-w/Ctrl-u/Ctrl-t/Ctrl-d,
+ * `--changelist` 는 변경 목록(getchangelist(): 항목 줄·열과 현재 위치)도 비교합니다 (g; g, 없이도 기록 차이를 찾음).
+ *
+ * `--profile wide` 는 블록 비주얼 I/A/c/r/>, 문자·줄 단위 비주얼 I/A, 태그·꺾쇠 객체, gJ·gv·gi·g; g,, 입력 모드 Ctrl-r/Ctrl-w/Ctrl-u/Ctrl-t/Ctrl-d,
  * :normal 변형, R, xp·ddp, 그리고 케이스마다 옵션 묶음(ai, sol, ww=h,l, nows, sw=4 …, scripts/neovimFuzzWide.ts)을 더합니다.
  * 기본 프로필(basic)은 예전과 같은 난수열을 써서 seed 별 결과가 그대로입니다.
  *
@@ -77,6 +79,7 @@ let sawSearch = false;
 let sawMark = false;
 let sawMacro = false;
 let profile: 'basic' | 'wide' = 'basic';
+let compareChangelist = false;
 const wideCtx: WideContext = { sawVisual: false, sawInsert: false, sawChange: false };
 
 function randomExtendedCommand(rng: Rng): string {
@@ -197,6 +200,8 @@ interface Snapshot {
   regType: 'char' | 'line' | 'block';
   error?: string;
   steps?: StepSnapshot[];
+  /** 변경 목록 "줄:열 …|현재 위치" (--changelist) */
+  cl?: string;
 }
 
 function runEngine(c: FuzzCase): Snapshot {
@@ -206,19 +211,26 @@ function runEngine(c: FuzzCase): Snapshot {
   try {
     if (c.options) s = { ...executeCommandLine(s, `set ${c.options}`, handleKey), commandMessage: undefined };
     for (const cmd of c.commands) {
+      // nvim 은 feedkeys 호출마다 oparg 를 새로 만들어 start_vcol / end_vcol 이 0 에서 시작합니다 (비주얼 A, visualInsert.ts)
+      s = { ...s, visualOpVcol: undefined };
       for (const k of toEngineKeys(cmd)) s = handleKey(s, k);
       // 생성기가 [count] 뒤에 0 모션을 붙이면 '20' 처럼 count 만 남는데, Neovim 은 feedkeys('x') 가 끝날 때 남은 count 를 버립니다.
       if (s.mode === 'NORMAL' && s.pendingKeys && /^[1-9][0-9]*$/.test(s.pendingKeys)) s = { ...s, pendingKeys: undefined };
       // Neovim 쪽과 같게, 명령이 끝났는데 NORMAL 이 아니면 Esc 를 누릅니다.
       if (s.mode !== 'NORMAL') s = handleKey(s, 'Escape');
-      steps.push({ lines: s.lines, cursor: { row: s.cursor.line, col: s.cursor.col }, reg: regText(s) });
+      steps.push({ lines: s.lines, cursor: { row: s.cursor.line, col: s.cursor.col }, reg: regText(s), cl: changeListText(s) });
     }
   } catch (e) {
     return { lines: [], cursor: { row: -1, col: -1 }, reg: '', regType: 'char', error: String(e) };
   }
   const entry = s.registers?.['"'];
   const type = entry?.type === 'line' ? 'line' : entry?.type === 'block' ? 'block' : 'char';
-  return { lines: s.lines, cursor: { row: s.cursor.line, col: s.cursor.col }, reg: regText(s), regType: entry ? type : 'char', steps };
+  return { lines: s.lines, cursor: { row: s.cursor.line, col: s.cursor.col }, reg: regText(s), regType: entry ? type : 'char', steps, cl: changeListText(s) };
+}
+
+function changeListText(s: VimEditorState): string {
+  const list = s.changeList ?? [];
+  return `${list.map((e) => `${e.row}:${e.col}`).join(' ')}|${s.changeIndex ?? list.length}`;
 }
 
 /** Neovim 의 줄 단위 레지스터는 끝에 줄바꿈이 붙습니다. 녹화한 매크로는 Vim 처럼 실제 키 바이트(ESC = \x1b)로 비교합니다. */
@@ -231,12 +243,13 @@ interface StepSnapshot {
   lines: string[];
   cursor: { row: number; col: number };
   reg: string;
+  cl?: string;
 }
 
 /** 처음으로 상태가 달라진 명령의 번호 (없으면 -1). */
 function firstDivergence(a: StepSnapshot[] = [], b: StepSnapshot[] = []): number {
   for (let i = 0; i < Math.min(a.length, b.length); i++) {
-    if (JSON.stringify(a[i].lines) !== JSON.stringify(b[i].lines) || a[i].cursor.row !== b[i].cursor.row || a[i].cursor.col !== b[i].cursor.col || a[i].reg !== b[i].reg) return i;
+    if (JSON.stringify(a[i].lines) !== JSON.stringify(b[i].lines) || a[i].cursor.row !== b[i].cursor.row || a[i].cursor.col !== b[i].cursor.col || a[i].reg !== b[i].reg || (compareChangelist && a[i].cl !== b[i].cl)) return i;
   }
   return -1;
 }
@@ -264,9 +277,15 @@ for _, c in ipairs(cases) do
   vim.fn.histdel("search")
   vim.api.nvim_win_set_cursor(0, { c.cursor.row + 1, c.cursor.col })
   local steps = {}
+  local function cltext()
+    local cl = vim.fn.getchangelist()
+    local parts = {}
+    for _, e in ipairs(cl[1]) do table.insert(parts, (e.lnum - 1) .. ":" .. e.col) end
+    return table.concat(parts, " ") .. "|" .. cl[2]
+  end
   local function snap()
     local cur = vim.api.nvim_win_get_cursor(0)
-    return { lines = vim.api.nvim_buf_get_lines(0, 0, -1, false), cursor = { row = cur[1] - 1, col = cur[2] }, reg = vim.fn.getreg('"') }
+    return { lines = vim.api.nvim_buf_get_lines(0, 0, -1, false), cursor = { row = cur[1] - 1, col = cur[2] }, reg = vim.fn.getreg('"'), cl = cltext() }
   end
   local ok, err = pcall(function()
     for _, cmd in ipairs(c.commands) do
@@ -286,6 +305,7 @@ for _, c in ipairs(cases) do
     regType = (function() local t = vim.fn.getregtype('"'); if t == "V" then return "line" elseif t:sub(1, 1) == "\\22" then return "block" else return "char" end end)(),
     error = (not ok) and tostring(err) or nil,
     steps = steps,
+    cl = cltext(),
   })
 end
 local f = io.open(_G.arg[2], "w"); f:write(vim.json.encode(results)); f:close()
@@ -307,6 +327,7 @@ function diffKinds(a: Snapshot, b: Snapshot): string[] {
   if (JSON.stringify(a.lines) !== JSON.stringify(b.lines)) kinds.push('lines');
   if (a.cursor.row !== b.cursor.row || a.cursor.col !== b.cursor.col) kinds.push('cursor');
   if (a.reg !== b.reg || (a.reg !== '' && a.regType !== b.regType)) kinds.push('register');
+  if (compareChangelist && a.cl !== b.cl) kinds.push('changelist');
   return kinds;
 }
 
@@ -319,6 +340,7 @@ async function main(): Promise<void> {
   const count = Number(opt('cases', '1500'));
   const seed = Number(opt('seed', '1'));
   profile = opt('profile', 'basic') === 'wide' ? 'wide' : 'basic';
+  compareChangelist = args.includes('--changelist');
   const outPath = opt('out', path.join(os.tmpdir(), `neovim-fuzz-${profile === 'wide' ? 'wide-' : ''}${seed}.json`));
 
   const cases = generateCases(count, seed);

@@ -1,4 +1,4 @@
-import { VimEditorState, CursorPosition, ChangeListItem } from './types';
+import { VimEditorState, CursorPosition } from './types';
 import { clampCursor } from './cursor';
 import { recordJump } from './marks';
 import { getWordAtCursor, escapeRegExp } from './search';
@@ -419,12 +419,15 @@ export function goToLastInsert(state: VimEditorState): VimEditorState {
     row: state.cursor.line,
   };
   const clamped = clampCursor(state.lines, { line: target.line, col: target.col }, 'INSERT');
-  const stateWithJump = recordJump(state);
+  // i 처럼 새 실행 취소 단위로 입력을 시작합니다 (바꾼 것이 없으면 dropEmptyInsertUndo 가 지움)
+  const stateWithJump = recordJump(pushUndoSnapshot(state));
   return {
     ...stateWithJump,
     mode: 'INSERT',
     cursor: clamped,
     pendingKeys: undefined,
+    // Vim nv_g_cmd 'i': cmdchar 를 'i' 로 바꿔 nv_edit → `.` 는 커서 자리의 i 로 반복
+    currentChangeKeys: ['i'],
   };
 }
 
@@ -448,132 +451,5 @@ export function reselectLastVisual(state: VimEditorState): VimEditorState {
   return { ...state, pendingKeys: undefined, bell: true };
 }
 
-/**
- * 'g;' 및 'g,' : Change List 순회 이동
- */
-export function traverseChangeList(
-  state: VimEditorState,
-  direction: 'prev' | 'next',
-  count = 1
-): VimEditorState {
-  const list = state.changeList ?? [];
-  if (list.length === 0) {
-    return {
-      ...state,
-      commandMessage: msg('E664: 변경 목록이 비어 있습니다 (changelist is empty)'),
-      pendingKeys: undefined,
-      bell: true,
-    };
-  }
-
-  // changeIndex가 없으면 최신 변경 뒤(list.length)에서 시작
-  let idx = state.changeIndex ?? list.length;
-
-
-  if (direction === 'prev') {
-    // 만약 현재 커서가 이미 최신 변경 위치에 서 있다면, 한 단계 더 이전 변경으로 점프
-    if (idx >= list.length && list.length > 0) {
-      const last = list[list.length - 1];
-      if (last.row === state.cursor.line && last.col === state.cursor.col) {
-        idx = list.length - 1;
-      }
-    }
-
-    if (idx <= 0) {
-      const target = list[0];
-      const clamped = clampCursor(state.lines, { line: target.row, col: target.col }, 'NORMAL');
-      return {
-        ...state,
-        cursor: clamped,
-        changeIndex: 0,
-        commandMessage: msg('E662: 변경 목록의 시작입니다 (At start of changelist)'),
-        pendingKeys: undefined,
-      };
-    }
-    const newIdx = Math.max(0, idx - count);
-    const target = list[newIdx];
-    const clamped = clampCursor(state.lines, { line: target.row, col: target.col }, 'NORMAL');
-    const stateWithJump = recordJump(state);
-    return {
-      ...stateWithJump,
-      cursor: clamped,
-      changeIndex: newIdx,
-      commandMessage: msg('변경 목록 이전 위치 ({v}/{listCount})', { v: newIdx + 1, listCount: list.length }),
-      pendingKeys: undefined,
-    };
-  } else {
-    // direction === 'next'
-    if (idx >= list.length - 1) {
-      const target = list[list.length - 1];
-      const clamped = clampCursor(state.lines, { line: target.row, col: target.col }, 'NORMAL');
-      return {
-        ...state,
-        cursor: clamped,
-        changeIndex: list.length - 1,
-        commandMessage: msg('E663: 변경 목록의 끝입니다 (At end of changelist)'),
-        pendingKeys: undefined,
-      };
-    }
-    const newIdx = Math.min(list.length - 1, idx + count);
-    const target = list[newIdx];
-    const clamped = clampCursor(state.lines, { line: target.row, col: target.col }, 'NORMAL');
-    const stateWithJump = recordJump(state);
-    return {
-      ...stateWithJump,
-      cursor: clamped,
-      changeIndex: newIdx,
-      commandMessage: msg('변경 목록 다음 위치 ({v}/{listCount})', { v: newIdx + 1, listCount: list.length }),
-      pendingKeys: undefined,
-    };
-  }
-}
-
-/**
- * 텍스트 변경 위치를 changeList에 누적 기록합니다.
- * 동일한 줄에서 연속된 변경은 하나로 병합(Vim 스펙)됩니다.
- */
-export function recordChangePosition(
-  changeList: ChangeListItem[] | undefined,
-  pos: CursorPosition
-): { changeList: ChangeListItem[]; changeIndex: number } {
-  const list = changeList ? [...changeList] : [];
-  const last = list[list.length - 1];
-
-  if (last && last.row === pos.line) {
-    list[list.length - 1] = { row: pos.line, col: pos.col, line: pos.line };
-  } else {
-    list.push({ row: pos.line, col: pos.col, line: pos.line });
-    if (list.length > 50) {
-      list.shift();
-    }
-  }
-
-  return {
-    changeList: list,
-    changeIndex: list.length,
-  };
-}
-
-/**
- * :changes 명령어를 위한 체인지 리스트 포맷팅 문자열을 생성합니다.
- */
-export function formatChangeList(state: VimEditorState): string {
-  const list = state.changeList ?? [];
-  if (list.length === 0) {
-    return msg('E664: 변경 목록이 비어 있습니다 (changelist is empty)');
-  }
-
-  const header = 'change line  col text';
-  const lines = list.map((item, idx) => {
-    const isCurrent = idx === state.changeIndex;
-    const mark = isCurrent ? '>' : ' ';
-    const num = String(idx + 1).padStart(5, ' ');
-    const lineNum = String(item.line + 1).padStart(5, ' ');
-    const colNum = String(item.col + 1).padStart(4, ' ');
-    const textPreview = (state.lines[item.line] ?? '').trim();
-    return `${mark} ${num} ${lineNum} ${colNum} ${textPreview}`;
-  });
-
-  return [header, ...lines].join('\n');
-}
-
+// g; g, :changes 는 changelist.ts (Vim changed_common / get_changelist / ex_changes)
+export { traverseChangeList, formatChangeList } from './changelist';

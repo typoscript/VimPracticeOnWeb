@@ -1,7 +1,6 @@
 import { VimEditorState } from './types';
 import { clampCursor } from './cursor';
 import { getRegisterContent, macroKeyToRegisterText } from './registers';
-import { recordChangePosition } from './advancedMotions';
 import { lookupDigraph } from './digraphs';
 import { insertTextAtCursor } from './engineHelpers';
 import { getOptions } from './setOptionsCore';
@@ -410,7 +409,6 @@ function exitInsertToNormal(state: VimEditorState, isReplayingDot: boolean): Vim
     nextLastChange = [...targetState.currentChangeKeys, 'Escape'];
   }
   const lastPos = { line, col, row: line };
-  const changeRecord = recordChangePosition(targetState.changeList, { line, col });
 
   return {
     ...targetState,
@@ -428,8 +426,6 @@ function exitInsertToNormal(state: VimEditorState, isReplayingDot: boolean): Vim
     lastInsertedText: resolveLastInsertedText(state),
     currentInsertText: undefined,
     lastInsertPos: lastPos,
-    changeList: changeRecord.changeList,
-    changeIndex: changeRecord.changeIndex,
     marks: { ...(targetState.marks ?? {}), '^': { row: line, col } },
   };
 }
@@ -501,7 +497,6 @@ export function handleInsertEscape(state: VimEditorState, isReplayingDot: boolea
     const nextCol =
       insertMode === 'A' && unitText.length > 0 ? (startCol ?? minCol) : insertMode === 'I' && unitText.length > 0 ? (startCol ?? insertCol) : Math.max(0, finalFirstCol - 1);
     const lastPos = { line: firstLineIdx, col: insertCol, row: firstLineIdx };
-    const changeRecord = recordChangePosition(state.changeList, { line: firstLineIdx, col: insertCol });
     const nextLastChange =
       !isReplayingDot && state.currentChangeKeys
         ? [...state.currentChangeKeys, 'Escape']
@@ -520,8 +515,11 @@ export function handleInsertEscape(state: VimEditorState, isReplayingDot: boolea
       lastInsertedText: resolveLastInsertedText(state, insertedText),
       currentInsertText: undefined,
       lastInsertPos: lastPos,
-      changeList: changeRecord.changeList,
-      changeIndex: changeRecord.changeIndex,
+      // Vim block_insert(): 나머지 줄에 넣은 뒤 changed_lines(start + 1, 0) 로 변경 목록에 남깁니다
+      // (블록 c 는 여러 줄일 때만, op_change)
+      ...(insertMode !== 'c' || targetLines.length > 1
+        ? { changeListHint: { kind: 'at' as const, line: firstLineIdx + 1, col: 0, force: unitText.length > 0 } }
+        : {}),
       marks: { ...(state.marks ?? {}), '^': { row: firstLineIdx, col: insertCol } },
     };
   }

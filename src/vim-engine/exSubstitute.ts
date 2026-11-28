@@ -280,6 +280,8 @@ export function executeSubstitution(
     lines: nextLines,
     cursor: nextCursor,
     ...(endColumn ? { keepCurswantAt: { ...nextCursor } } : {}),
+    // Vim do_sub: changed_lines(first_line, 0, …) 한 번
+    changeListHint: { kind: 'at', line: Math.max(0, firstModifiedLine), col: 0 },
     mode: 'NORMAL',
     visualAnchor: undefined,
     commandBuffer: undefined,

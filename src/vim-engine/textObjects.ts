@@ -5,6 +5,7 @@ import { pushUndoSnapshot } from './operators';
 import { pushUndoSnapshotAt } from './undoHistory';
 import { formatLinesRange, cindentOptionsFor, equalOperatorCursor, changeCaseVisual, caseTypeForOperator } from './lineOperators';
 import { getTagTextObjectRange, vimTagBlock } from './tagTextObject';
+import { reindentChangeHint } from './changelist';
 import { getCountedWordObjectRange } from './wordObjectCount';
 import { currentSentence } from './sentenceVim';
 import { toOperatorRange } from './vimPosition';
@@ -574,6 +575,7 @@ export function executeTextObjectOperator(
         lines: nextLines,
         cursor: equalOperatorCursor(curState, nextLines, startLine),
         pendingKeys: undefined,
+        ...reindentChangeHint(curState.lines, nextLines, startLine),
       };
     }
 

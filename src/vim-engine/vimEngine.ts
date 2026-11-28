@@ -51,6 +51,8 @@ import { handleSurroundTagPromptKey } from './surroundEngine';
 import { recordUndoTreeChange } from './undoTreeEngine';
 import { pushUndoSnapshot } from './undoHistory';
 import { computeSpecialMarksUpdate } from './marks';
+import { recordChangeList } from './changelist';
+import { trackVisualOpVcol } from './visualInsert';
 import { applyScrollbindDelta } from './splitWindow';
 import {
   adjustViewport,
@@ -527,6 +529,8 @@ export function rawHandleKey(
       ...specialMarksPatch,
     };
   }
+  // 변경 목록(g; g,)·'. 마크 (Vim changed_common, changelist.ts)
+  nextState = recordChangeList(state, nextState, key);
 
   // Gitsigns 기준선(gitBaseLines) 최초 버퍼 편집 시 자동 캡처
   if (
@@ -582,6 +586,7 @@ function applyKeyRules(input: VimEditorState, raw: VimEditorState, key: string, 
     if (clamped.col !== next.cursor.col || clamped.line !== next.cursor.line) next = { ...next, cursor: clamped };
   }
   next = applyCurswant(input, next, key);
+  next = trackVisualOpVcol(input, next, key);
   next = recordVisualRepeat(input, next, key, isReplayingDot);
   next = redoLinewiseVisualCaseCursor(input, next, key, isReplayingDot);
   next = recordRepeatRegister(input, next, isReplayingDot);

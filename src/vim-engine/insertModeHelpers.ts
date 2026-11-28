@@ -11,7 +11,6 @@ import { buildProjectTags } from './tagEngine';
 import { getSpellSuggestions } from './spellEngine';
 import { getOptions } from './setEngine';
 import { startCmpCompletion, acceptCmpCompletion } from './cmpEngine';
-import { recordChangePosition } from './advancedMotions';
 import { AbbrevReplayCtx, DispatchKeyFn, insertTextAtCursor } from './engineHelpers';
 import { resolveLastInsertedText } from './insertSpecialKeys';
 import { AVAILABLE_COMMANDS, BUILTIN_VIM_FUNCTIONS } from './wildmenuCatalog';
@@ -222,7 +221,6 @@ export function executeInsertMapped(
       ];
     }
     const lastPos = { line, col: nextCol, row: line };
-    const changeRecord = recordChangePosition(state.changeList, { line, col: nextCol });
     const cleanedInsert =
       stripPendingCount > 0 &&
       state.pendingKeys &&
@@ -244,8 +242,6 @@ export function executeInsertMapped(
         lastInsertedText: resolveLastInsertedText(state, cleanedInsert),
         currentInsertText: undefined,
         lastInsertPos: lastPos,
-        changeList: changeRecord.changeList,
-        changeIndex: changeRecord.changeIndex,
         marks: { ...(state.marks ?? {}), '^': { row: line, col: nextCol } },
       },
       resolved.silent

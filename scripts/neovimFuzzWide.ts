@@ -28,9 +28,12 @@ export const WIDE_OPTION_SETS: readonly string[] = [
 ];
 
 const WIDE_INSERT_TEXT = ['X', 'ab', 'q r', '<b>'];
-// 블록에서 ip 같은 줄 단위 객체는 V 로 바뀌어 v_I / v_A(문자·줄 단위 비주얼, 엔진 미구현)가 되므로 넣지 않습니다.
 // 비주얼 S 는 엔진에서 vim-surround 라 nvim -u NONE 과 비교하지 않습니다.
 const BLOCK_MOVES = ['j', 'jj', 'k', 'l', 'll', 'w', 'e', '$', 'jl', 'jw', 'j$', 'G', '2j'];
+// 문자·줄 단위 비주얼 I / A (v_visop → 줄 단위 op_insert). `.` 는 같은 명령 안에서만 붙입니다: nvim 의 oparg
+// (start_vcol / end_vcol)는 feedkeys 호출마다 새로 시작하고, 엔진 실행기도 명령마다 visualOpVcol 을 비웁니다.
+const VISUAL_INSERT_MOVES = ['', 'l', 'h', 'j', 'k', 'jl', '$', 'w', 'b', 'iw', 'ip', 'ap', '0', 'gg', 'G', 'e'];
+const VISUAL_INSERT_AFTER = ['', '', '<Esc>j.', '<Esc>w.', '<Esc>0.', '<Esc>k.', '<Esc>u', '<Esc>gi!<Esc>', '<Esc>`^iY<Esc>'];
 const WIDE_OBJECTS = ['it', 'at', 'i<', 'a<', 'i>', 'a>', '2it', '2at', 'i)', 'a]', 'i}', 'a`', 'i`'];
 
 function pickText(rng: FuzzRng): string {
@@ -43,6 +46,16 @@ function count(rng: FuzzRng): string {
 
 export function randomWideCommand(rng: FuzzRng, ctx: WideContext): string {
   const r = rng.next();
+  if (rng.chance(0.08)) {
+    ctx.sawVisual = true;
+    ctx.sawInsert = true;
+    const head = `${rng.pick(['v', 'V'])}${rng.pick(VISUAL_INSERT_MOVES)}${count(rng)}${rng.pick(['I', 'A'])}${pickText(rng)}`;
+    return `${head}<Esc>${rng.pick(VISUAL_INSERT_AFTER)}`;
+  }
+  if (ctx.sawChange && rng.chance(0.06)) {
+    // 변경 목록: 엔진·nvim 모두 텍스트를 keepjumps 로 넣어 처음에는 비어 있습니다 (E664 부터 시작)
+    return rng.pick(['g;', 'g,', '2g;', '3g;', '2g,', '9g;', 'g;g;', 'g;g,', 'g;x', 'g;.', '5g;g,']);
+  }
   if (r < 0.16) {
     ctx.sawVisual = true;
     const moves = rng.pick(BLOCK_MOVES);
@@ -66,7 +79,6 @@ export function randomWideCommand(rng: FuzzRng, ctx: WideContext): string {
     const cmds = ['gJ', '3gJ', 'J', '3J', '4J', '~', '3~', '9~', 'xp', 'ddp', 'deep', 'yyp', 'Xp', 'ddP', '2xp'];
     if (ctx.sawVisual) cmds.push('gvd', 'gvy', 'gv>', 'gvU');
     if (ctx.sawInsert) cmds.push('giZ<Esc>', 'gi<C-w><Esc>');
-    // g; / g, (변경 목록)은 엔진이 모든 변경의 위치를 Vim 처럼 기록하지 않아 아직 넣지 않습니다 (CLAUDE.md 5절).
     return rng.pick(cmds);
   }
   if (r < 0.55) {

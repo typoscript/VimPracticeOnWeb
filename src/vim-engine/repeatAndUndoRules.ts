@@ -1,6 +1,7 @@
 import { StateSnapshot, VimEditorState } from './types';
 import { curswantColumnOn } from './virtualColumn';
 import { visualOperatorStart } from './undoHistory';
+import { isVisualInsertRedoKey } from './visualInsert';
 
 /**
  * handleKey 가 키 하나를 처리한 뒤 적용하는 `.` 반복·실행 취소 규칙 (Neovim 대조).
@@ -39,6 +40,8 @@ function visualReselectKeys(prev: VimEditorState): string[] | null {
 export function recordVisualRepeat(prev: VimEditorState, next: VimEditorState, key: string, isReplayingDot: boolean): VimEditorState {
   if (isReplayingDot || !VISUAL_REPEAT_MODES.has(prev.mode)) return next;
   if (VISUAL_REPEAT_MODES.has(next.mode) || next.pendingKeys) return next;
+  // 문자·줄 단위 비주얼 I / A 는 자기 반복 키를 남깁니다 (visualInsert.ts)
+  if (isVisualInsertRedoKey(next.currentChangeKeys?.[0])) return next;
   const entersInsert = next.mode === 'INSERT';
   // 복사·취소 등 변경이 아닌 연산. `=` 는 들여쓰기가 그대로여도 Vim 처럼 반복 대상이 됩니다.
   if (!entersInsert && next.lines === prev.lines && !(key === '=' && !prev.pendingKeys && !next.bell)) return next;
@@ -173,6 +176,7 @@ export function recordInsertStartCursor(prev: VimEditorState, next: VimEditorSta
  */
 export function recordVisualUndoCursor(prev: VimEditorState, next: VimEditorState): VimEditorState {
   if ((prev.mode !== 'VISUAL' && prev.mode !== 'VISUAL_LINE') || !prev.visualAnchor) return next;
+  if (isVisualInsertRedoKey(next.currentChangeKeys?.[0])) return next;
   const stack = next.undoStack;
   if (!stack || stack.length === 0 || stack === prev.undoStack) return next;
   const top = stack[stack.length - 1];

@@ -841,7 +841,7 @@ export function executeScriptBlock(
 /** 실행 취소·변경 이력 필드 (:call 의 한 번의 실행 취소 단위를 만들 때 base 의 값을 유지) */
 const UNDO_HISTORY_FIELDS = new Set<keyof VimEditorState>([
   'undoStack', 'redoStack', 'undoTreeNodes', 'currentUndoSeq', 'maxUndoSeq',
-  'undoTimeHistory', 'undoTimeIndex', 'changeList', 'changeIndex',
+  'undoTimeHistory', 'undoTimeIndex',
 ]);
 
 /** base 위에 before → after 에서 바뀐 필드만 덮어씁니다. (실행 취소 이력 필드는 base 의 값을 유지) */

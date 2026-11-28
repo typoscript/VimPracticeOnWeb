@@ -34,6 +34,9 @@ const TQ = 'The quick brown fox. It jumps over\nthe lazy dog! Then it rests.\n\n
 const TB = '\tif (a) {\n\t\tb(1, 2);\n\t}\nend';
 const TH = '<div class="a"><span>text</span></div>\nplain 0x1f 007 -3 words';
 
+const TC = 'aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj';
+const TT = '\tab\tcd\n\tef gh\nij';
+
 const CASES: Case[] = [
   // >> / << / >{motion}: nostartofline 이면 열을 유지
   { id: 'shift-keeps-col', text: T1, cursor: { row: 2, col: 7 }, keys: '>>' },
@@ -798,6 +801,72 @@ const CASES: Case[] = [
   { id: 'join-trailing-comment', text: 'x // a\n// b', cursor: { row: 0, col: 0 }, keys: 'J' },
   { id: 'gUg_-empty-line', text: '\n    deeper (nested) item\nx', cursor: { row: 0, col: 0 }, keys: 'gUg_j' },
   { id: 'gU-paren-linewise-cursor', text: TF, cursor: { row: 3, col: 0 }, keys: '4|gU(' },
+  // 변경 목록 g; g, (Vim changed_common / get_changelist, src/vim-engine/changelist.ts)
+  { id: 'cl-basic', text: TC, cursor: { row: 1, col: 6 }, keys: 'xjjxgg0g;' },
+  { id: 'cl-count-clamp', text: TC, cursor: { row: 1, col: 6 }, keys: 'xjjxG5g;' },
+  { id: 'cl-comma-from-end', text: TC, cursor: { row: 1, col: 6 }, keys: 'xjjxg,' },
+  { id: 'cl-start-error', text: TC, cursor: { row: 1, col: 6 }, keys: 'xg;g;x' },
+  { id: 'cl-empty-e664', text: TC, cursor: { row: 1, col: 6 }, keys: 'g;x' },
+  { id: 'cl-invalid-line-e19', text: TC, cursor: { row: 1, col: 6 }, keys: 'xGddg;x' },
+  { id: 'cl-dd-undo', text: TC, cursor: { row: 1, col: 6 }, keys: 'xjddug;g;' },
+  { id: 'cl-join', text: TC, cursor: { row: 1, col: 6 }, keys: 'jxkkJg;' },
+  { id: 'cl-join-col-adjust', text: TC, cursor: { row: 1, col: 6 }, keys: 'xjxggJg;g;' },
+  { id: 'cl-move', text: TC, cursor: { row: 1, col: 6 }, keys: 'jx:m0<CR>g;g;' },
+  { id: 'cl-sort', text: TC, cursor: { row: 1, col: 6 }, keys: 'x:%sort!<CR>Gg;g;' },
+  { id: 'cl-insert-batch', text: TC, cursor: { row: 1, col: 6 }, keys: 'j0wixyz<Esc>gg$g;' },
+  { id: 'cl-shift-noop', text: TC, cursor: { row: 1, col: 6 }, keys: '<<jg;' },
+  { id: 'cl-put-undo', text: TC, cursor: { row: 1, col: 6 }, keys: 'yyjpug;' },
+  { id: 'cl-put-before-undo', text: TC, cursor: { row: 1, col: 6 }, keys: 'kyyjjPug;' },
+  { id: 'cl-g-d', text: TC, cursor: { row: 1, col: 6 }, keys: ':g/i/d<CR>g;' },
+  { id: 'cl-macro-one-block', text: TC, cursor: { row: 1, col: 6 }, keys: 'qaA!<Esc>jq2@ag;g;' },
+  { id: 'cl-linewise-change', text: TC, cursor: { row: 1, col: 6 }, keys: 'x2Sab<Esc>ggg;g;' },
+  { id: 'cl-replace-count', text: TC, cursor: { row: 1, col: 6 }, keys: '2Rxy<BS><Esc>0g;' },
+  { id: 'cl-visual-bell', text: TC, cursor: { row: 1, col: 6 }, keys: 'xjvg;d' },
+  { id: 'cl-op-pending', text: TC, cursor: { row: 1, col: 6 }, keys: 'xjdg;x' },
+  { id: 'cl-case-op-start', text: TC, cursor: { row: 1, col: 6 }, keys: 'w2g~~Gg;' },
+  { id: 'cl-ctrl-a-col0', text: TC, cursor: { row: 1, col: 6 }, keys: 'ji12<Esc>0w<C-a>$g;' },
+  { id: 'cl-r-count', text: TC, cursor: { row: 1, col: 6 }, keys: '3rZ0g;' },
+  { id: 'cl-charwise-delete-join', text: TC, cursor: { row: 1, col: 6 }, keys: 'jxkvjd0g;g;' },
+  { id: 'cl-insert-bs-join', text: TC, cursor: { row: 1, col: 6 }, keys: 'jxji<BS><Esc>0g;g;' },
+  { id: 'cl-ctrl-r-split', text: TC, cursor: { row: 1, col: 6 }, keys: 'yyjA<C-r>"x<Esc>gg0g;g;' },
+  { id: 'cl-insert-count', text: TC, cursor: { row: 1, col: 6 }, keys: '3ia<Esc>0g;' },
+  { id: 'cl-dot', text: TC, cursor: { row: 1, col: 6 }, keys: 'x3j.ggg;g;' },
+  { id: 'cl-undo-redo', text: TC, cursor: { row: 1, col: 6 }, keys: 'xjjxuu<C-r>0g;g;' },
+  { id: 'cl-s-first-line', text: TC, cursor: { row: 1, col: 6 }, keys: 'G:%s/[di]/Z/<CR>g;' },
+  { id: 'cl-gi-new-undo', text: TC, cursor: { row: 1, col: 6 }, keys: 'iQ<Esc>jgiZ<Esc>u0g;' },
+  // 문자·줄 단위 비주얼 I / A (v_visop → op_insert, src/vim-engine/visualInsert.ts)
+  { id: 'vi-v-I', text: TC, cursor: { row: 1, col: 6 }, keys: 'vlIX<Esc>' },
+  { id: 'vi-v-A', text: TC, cursor: { row: 1, col: 6 }, keys: 'vlAX<Esc>' },
+  { id: 'vi-v-A-backward', text: TC, cursor: { row: 1, col: 6 }, keys: 'vhAX<Esc>' },
+  { id: 'vi-v-A-down', text: TC, cursor: { row: 1, col: 6 }, keys: 'vjAX<Esc>' },
+  { id: 'vi-V-A', text: TC, cursor: { row: 1, col: 6 }, keys: 'VAX<Esc>' },
+  { id: 'vi-V-A-up', text: TC, cursor: { row: 1, col: 6 }, keys: 'VkAX<Esc>' },
+  { id: 'vi-V-I-up', text: TC, cursor: { row: 1, col: 6 }, keys: 'VkIX<Esc>' },
+  { id: 'vi-v-dollar-A', text: TC, cursor: { row: 1, col: 6 }, keys: 'v$AX<Esc>' },
+  { id: 'vi-vip-A', text: TC, cursor: { row: 1, col: 6 }, keys: 'vipAX<Esc>' },
+  { id: 'vi-vip-I', text: TC, cursor: { row: 1, col: 6 }, keys: 'vipIX<Esc>' },
+  { id: 'vi-viw-A', text: TC, cursor: { row: 1, col: 6 }, keys: 'viwAX<Esc>' },
+  { id: 'vi-count-I', text: TC, cursor: { row: 1, col: 6 }, keys: 'v3IX<Esc>' },
+  { id: 'vi-count-A', text: TC, cursor: { row: 1, col: 6 }, keys: 'Vj2AX<Esc>' },
+  { id: 'vi-redo-I', text: TC, cursor: { row: 1, col: 6 }, keys: 'vlIX<Esc>w.' },
+  { id: 'vi-redo-A', text: TC, cursor: { row: 1, col: 6 }, keys: 'vlAX<Esc>0w.' },
+  { id: 'vi-redo-dollar', text: TC, cursor: { row: 1, col: 6 }, keys: 'v$AX<Esc>k.' },
+  { id: 'vi-redo-multiline', text: TC, cursor: { row: 1, col: 6 }, keys: 'vjAX<Esc>k.' },
+  { id: 'vi-redo-count', text: TC, cursor: { row: 1, col: 6 }, keys: 'v3IX<Esc>w.' },
+  { id: 'vi-redo-ignores-count', text: TC, cursor: { row: 1, col: 6 }, keys: 'vjIX<Esc>w3.' },
+  { id: 'vi-undo-V', text: TC, cursor: { row: 1, col: 6 }, keys: 'VAX<Esc>u' },
+  { id: 'vi-undo-v', text: TC, cursor: { row: 1, col: 6 }, keys: 'vjAX<Esc>u' },
+  { id: 'vi-V-A-col0', text: TC, cursor: { row: 1, col: 6 }, keys: 'VAX<Esc>0VAY<Esc>' },
+  { id: 'vi-enter', text: TC, cursor: { row: 1, col: 6 }, keys: 'VA<CR>z<Esc>' },
+  { id: 'vi-gi', text: TC, cursor: { row: 1, col: 6 }, keys: 'vlIX<Esc>giY<Esc>' },
+  { id: 'vi-caret-mark', text: TC, cursor: { row: 1, col: 6 }, keys: 'VAX<Esc>`^iZ<Esc>' },
+  { id: 'vi-stale-vcol-block', text: TC, cursor: { row: 1, col: 6 }, keys: '<C-v>jlly0vjAX<Esc>' },
+  { id: 'vi-bs', text: TC, cursor: { row: 1, col: 6 }, keys: 'VAab<BS>c<Esc>' },
+  { id: 'vi-gv', text: TC, cursor: { row: 1, col: 6 }, keys: 'vjAX<Esc>gvd' },
+  { id: 'vi-tab-A', text: TT, cursor: { row: 0, col: 0 }, keys: 'vlAX<Esc>' },
+  { id: 'vi-tab-V-A', text: TT, cursor: { row: 0, col: 0 }, keys: 'VAX<Esc>' },
+  { id: 'vi-tab-multi-A', text: TT, cursor: { row: 0, col: 3 }, keys: 'vjAX<Esc>' },
+  { id: 'vi-empty-line-A', text: 'ab\n\ncd', cursor: { row: 1, col: 0 }, keys: 'VAX<Esc>' },
 ];
 
 const LUA = `
@@ -825,6 +894,12 @@ for _, c in ipairs(cases) do
       reg = vim.fn.getreg('"'),
       regType = t == "V" and "line" or (t:sub(1, 1) == "\\22" and "block" or "char"),
       mode = vim.fn.mode(),
+      changelist = (function()
+        local cl = vim.fn.getchangelist()
+        local parts = {}
+        for _, e in ipairs(cl[1]) do table.insert(parts, (e.lnum - 1) .. ":" .. e.col) end
+        return table.concat(parts, " ") .. "|" .. cl[2]
+      end)(),
     },
   })
 end
@@ -838,7 +913,7 @@ interface FixtureResult {
   cursor: { row: number; col: number };
   keys: string;
   options?: string;
-  expected: { lines: string[]; cursor: { row: number; col: number }; reg: string; regType: string; mode: string };
+  expected: { lines: string[]; cursor: { row: number; col: number }; reg: string; regType: string; mode: string; changelist: string };
 }
 
 async function main(): Promise<void> {
@@ -857,6 +932,7 @@ async function main(): Promise<void> {
       reg: r.expected.reg,
       regType: r.expected.regType,
       mode: r.expected.mode,
+      changelist: r.expected.changelist,
     },
   }));
   const target = path.resolve('test/fixtures/neovim-fuzz-findings.json');

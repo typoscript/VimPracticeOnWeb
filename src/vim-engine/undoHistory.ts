@@ -33,31 +33,12 @@ export function pushUndoSnapshot(state: VimEditorState): VimEditorState {
     nextUndo.shift();
   }
 
-  const currentChangeList = treeState.changeList ? [...treeState.changeList] : [];
-  const lastChange = currentChangeList[currentChangeList.length - 1];
-  if (lastChange && lastChange.row === treeState.cursor.line) {
-    currentChangeList[currentChangeList.length - 1] = {
-      row: treeState.cursor.line,
-      col: treeState.cursor.col,
-      line: treeState.cursor.line,
-    };
-  } else {
-    currentChangeList.push({
-      row: treeState.cursor.line,
-      col: treeState.cursor.col,
-      line: treeState.cursor.line,
-    });
-    if (currentChangeList.length > MAX_HISTORY) {
-      currentChangeList.shift();
-    }
-  }
-
   return {
     ...treeState,
     undoStack: nextUndo,
     redoStack: [],
-    changeList: currentChangeList,
-    changeIndex: currentChangeList.length,
+    // Vim u_savecommon: 새 실행 취소 단위가 시작되면 다음 변경이 변경 목록에 새 항목을 만들 수 있습니다 (changelist.ts)
+    changeListNewChange: treeState.changeListUndoJoin ? treeState.changeListNewChange : true,
     pendingUndoJoin: undefined,
     lastActionWasUndo: undefined,
   };
@@ -279,6 +260,7 @@ export function undo(state: VimEditorState): VimEditorState {
     pendingKeys: undefined,
     pendingUndoJoin: undefined,
     lastActionWasUndo: true,
+    changeListHint: { kind: 'undo', thenLine: lastSnapshot.changeListUndoLine },
     commandMessage: describeUndoRedo(
       state.lines,
       lastSnapshot.lines,
@@ -336,6 +318,7 @@ export function redo(state: VimEditorState): VimEditorState {
     currentUndoSeq: currentSeq,
     undoTimeIndex: timeIdx,
     pendingKeys: undefined,
+    changeListHint: { kind: 'redo' },
     commandMessage: describeUndoRedo(
       state.lines,
       nextSnapshot.lines,

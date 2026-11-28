@@ -35,6 +35,8 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'setOptionsCore.ts',
       'windowTree.ts',
       'bufferLocalState.ts',
+      // 변경 목록(g; g, :changes)·'. 마크 (Vim changed_common, 코어 파일만 import)
+      'changelist.ts',
       // `=` 의 C 들여쓰기 (다른 엔진 파일을 import 하지 않는 순수 로직)
       'cindentScan.ts',
       'cindentRules.ts',
@@ -99,6 +101,8 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'search.ts',
       'visual.ts',
       'visualUtilities.ts',
+      // 문자·줄 단위 비주얼 I / A (v_visop → op_insert)
+      'visualInsert.ts',
       'marks.ts',
       'advancedMotions.ts',
       'tagEngine.ts',

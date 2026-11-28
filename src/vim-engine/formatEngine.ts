@@ -2,7 +2,6 @@ import { VimEditorState } from './types';
 import { msg } from './messages';
 import { pushUndoSnapshot } from './operators';
 import { clampCursor } from './cursor';
-import { recordChangePosition } from './advancedMotions';
 import { executeSetCommand, getOptions } from './setEngine';
 import { hasFormatOption } from './setOptionsCore';
 
@@ -350,14 +349,11 @@ export function formatRange(
     : state;
   const withUndo = pushUndoSnapshot(snapshotBase);
   const nextCursor = clampCursor(res.lines, cursorTarget, 'NORMAL');
-  const changeRecord = recordChangePosition(withUndo.changeList, nextCursor);
   return {
     ...withUndo,
     ...base,
     lines: res.lines,
     cursor: nextCursor,
-    changeList: changeRecord.changeList,
-    changeIndex: changeRecord.changeIndex,
   };
 }
 

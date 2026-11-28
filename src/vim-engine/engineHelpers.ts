@@ -765,7 +765,7 @@ export function executePutVariant(
   const keys = [...regPrefix, ...countAndBase];
   // nv_put 은 prep_redo 를 먼저 하므로 빈 레지스터로 실패한 붙여넣기도 `.` 대상입니다 (keepRepeatOnFailure 가 남김).
   if (isEmptyPut(state, res)) {
-    return { ...emptyRegisterBell(pushUndoSnapshot(state)), lastChangeKeys: isReplayingDot ? state.lastChangeKeys : keys };
+    return { ...emptyRegisterBell(pushUndoSnapshot(state)), changeListHint: { kind: 'undoOnly', undoLine: state.cursor.line + 1 }, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : keys };
   }
   return {
     ...res,

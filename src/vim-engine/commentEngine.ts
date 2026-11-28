@@ -2,7 +2,6 @@ import { VimEditorState } from './types';
 import { msg } from './messages';
 import { pushUndoSnapshot } from './operators';
 import { clampCursor } from './cursor';
-import { recordChangePosition } from './advancedMotions';
 import { getGlobalOptions, getLocalOptions } from './setEngine';
 import { getFiletypeCommentString } from './ftpluginEngine';
 import { detectFiletype } from './syntaxEngine';
@@ -200,7 +199,6 @@ export function toggleCommentRange(
   }
 
   const nextCursor = clampCursor(newLines, { line: start, col: 0 }, 'NORMAL');
-  const changeRecord = recordChangePosition(stateWithUndo.changeList, nextCursor);
 
   return {
     ...stateWithUndo,
@@ -209,8 +207,6 @@ export function toggleCommentRange(
     mode: 'NORMAL',
     visualAnchor: undefined,
     pendingKeys: undefined,
-    changeList: changeRecord.changeList,
-    changeIndex: changeRecord.changeIndex,
   };
 }
 

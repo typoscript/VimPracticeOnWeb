@@ -2,6 +2,7 @@ import { VimEditorState } from './types';
 import { syncRegisters } from './registers';
 import { pushUndoSnapshot } from './undoHistory';
 import { deleteVisualSelection, yankVisualBlock, startVisualBlockInsert, getOrderedRange } from './visual';
+import { startCharOrLineVisualInsert } from './visualInsert';
 
 type VisualKind = 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK';
 
@@ -55,6 +56,8 @@ export function handleVisualChangeKey(state: VimEditorState, key: string, totalC
     return null;
   }
 
+  // 문자·줄 단위 비주얼 I / A (Vim v_visop → 줄 단위 OP_INSERT / OP_APPEND, visualInsert.ts)
+  if (key === 'I' || key === 'A') return startCharOrLineVisualInsert(state, key, totalCount);
   if (key !== 'c' && key !== 's' && key !== 'C' && key !== 'S' && key !== 'R') return null;
   const snap = state.visualAnchor
     ? { mode: state.mode as VisualKind, anchor: { ...state.visualAnchor }, cursor: { ...state.cursor } }

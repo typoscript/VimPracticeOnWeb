@@ -136,6 +136,10 @@ export function handleVisualGSubcommand(
     if (key === '?') {
       return changeCaseVisual(state, 'rot13');
     }
+    // 비주얼 g~ / gu / gU 는 ~ / u / U 와 같은 연산자입니다
+    if (key === '~' || key === 'u' || key === 'U') {
+      return changeCaseVisual(state, key === '~' ? 'toggle' : key === 'u' ? 'lower' : 'upper');
+    }
     if (key === 'c') {
       if (!state.visualAnchor) return { ...state, mode: 'NORMAL', pendingKeys: undefined };
       const minLine = Math.min(state.visualAnchor.line, state.cursor.line);
@@ -284,7 +288,8 @@ export function handleVisualTextObject(state: VimEditorState, key: string): VimE
       return executeIndentObjectOperator(state, 'v', `${modifier}${key}` as IndentObjectType, count);
     }
     if (key === 'p') {
-      return executeParagraphObjectOperator(state, 'v', `${modifier}p` as ParagraphObjectType, count) ?? ringBell(state);
+      // Vim current_par(): 비주얼에서 커서는 마지막 줄의 0열
+      return executeParagraphObjectOperator({ ...state, cursor: { ...state.cursor, col: 0 } }, 'v', `${modifier}p` as ParagraphObjectType, count) ?? ringBell(state);
     }
     const validTargets = ['w', 'W', '"', "'", '`', '(', ')', '[', ']', '{', '}', 'b', 'B', 't', 's', '<', '>', 'f', 'c', 'a'];
     if (validTargets.includes(key)) {

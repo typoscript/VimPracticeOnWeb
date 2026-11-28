@@ -20,6 +20,8 @@ interface Finding {
     cursor: { row: number; col: number };
     reg: string;
     regType: 'char' | 'line' | 'block';
+    /** 변경 목록 "줄:열 …|현재 위치" (getchangelist()) */
+    changelist?: string;
   };
 }
 
@@ -39,5 +41,9 @@ describe('Neovim 비교 퍼저로 찾은 차이', () => {
     const entry = state.registers?.['"'];
     const reg = entry ? registerEntryText(entry) + (entry.type === 'line' ? '\n' : '') : '';
     expect(reg).toBe(f.expected.reg);
+    if (f.expected.changelist !== undefined) {
+      const list = state.changeList ?? [];
+      expect(`${list.map((e) => `${e.row}:${e.col}`).join(' ')}|${state.changeIndex ?? list.length}`).toBe(f.expected.changelist);
+    }
   });
 });

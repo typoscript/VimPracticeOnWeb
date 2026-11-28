@@ -8,6 +8,7 @@ import { getRegisterContent, isControlChar, registerTextToKeys, syncRegisters } 
 import { getOptions } from './setEngine';
 import { moveToFirstNonBlank } from './motions';
 import { joinLines, shiftLineIndent } from './lineOperators';
+import { recordChangeList } from './changelist';
 import type { KeyRunner } from './exSubstitute';
 import type { ExCommandRunner } from './exWorkspaceCommands';
 
@@ -97,7 +98,7 @@ export function executeGlobalCommand(
     // Vim 은 줄마다 :d 를 실행하므로 무명 레지스터에는 마지막으로 지운 줄만 남습니다.
     const deletedState: VimEditorState = {
       ...stateWithUndo,
-      lines: finalLines,
+      lines: finalLines, changeListHint: { kind: 'deletedLines', lines: matchedIndices },
       cursor: nextCursor,
       mode: 'NORMAL',
       visualAnchor: undefined,
@@ -167,8 +168,7 @@ function withUndoFieldsOf(state: VimEditorState, from: VimEditorState): VimEdito
     undoTimeHistory: from.undoTimeHistory,
     undoTimeIndex: from.undoTimeIndex,
     undoJoinMerged: from.undoJoinMerged,
-    changeList: from.changeList,
-    changeIndex: from.changeIndex,
+    changeListNewChange: from.changeListNewChange,
   };
 }
 
@@ -202,7 +202,7 @@ function executeGlobalExCommand(
   action: string,
   runEx: ExCommandRunner
 ): VimEditorState {
-  let cur: VimEditorState = { ...state, mode: 'NORMAL', visualAnchor: undefined, commandBuffer: undefined, commandType: undefined };
+  let cur: VimEditorState = { ...state, mode: 'NORMAL', visualAnchor: undefined, commandBuffer: undefined, commandType: undefined, changeListNewChange: true, changeListUndoJoin: true };
   let pending = [...matchedIndices];
   let firstUndoCursor: CursorPosition | undefined;
   let lastMessage: string | undefined;
@@ -215,7 +215,7 @@ function executeGlobalExCommand(
     const top = next.undoStack?.[next.undoStack.length - 1];
     if (!firstUndoCursor && top && top !== baseTop) firstUndoCursor = top.cursor;
     pending = remapMarkedLines(before.lines, next.lines, pending);
-    cur = withUndoFieldsOf(next, before);
+    cur = recordChangeList(before, withUndoFieldsOf(next, before));
     if (next.commandMessage) lastMessage = next.commandMessage;
     if (next.bell && !/^E486:/.test(next.commandMessage ?? '')) break;
   }
@@ -225,16 +225,16 @@ function executeGlobalExCommand(
     bell: false,
     commandBuffer: undefined,
     commandType: undefined,
-    commandMessage: lastMessage,
+    commandMessage: lastMessage, changeListUndoJoin: state.changeListUndoJoin,
   };
-  if (areSameLines(cur.lines, state.lines)) return finished;
+  if (areSameLines(cur.lines, state.lines)) return { ...finished, changeListNewChange: state.changeListNewChange };
   const withUndo = pushUndoSnapshot({ ...withUndoFieldsOf(cur, state), lines: state.lines, cursor: firstUndoCursor ?? state.cursor });
   return { ...withUndo, ...finished, ...undoFieldsOnly(withUndo) };
 }
 
 function undoFieldsOnly(s: VimEditorState): Partial<VimEditorState> {
-  const { undoStack, redoStack, undoTreeNodes, currentUndoSeq, maxUndoSeq, undoTimeHistory, undoTimeIndex, undoJoinMerged, changeList, changeIndex, pendingUndoJoin, lastActionWasUndo } = s;
-  return { undoStack, redoStack, undoTreeNodes, currentUndoSeq, maxUndoSeq, undoTimeHistory, undoTimeIndex, undoJoinMerged, changeList, changeIndex, pendingUndoJoin, lastActionWasUndo };
+  const { undoStack, redoStack, undoTreeNodes, currentUndoSeq, maxUndoSeq, undoTimeHistory, undoTimeIndex, undoJoinMerged, pendingUndoJoin, lastActionWasUndo } = s;
+  return { undoStack, redoStack, undoTreeNodes, currentUndoSeq, maxUndoSeq, undoTimeHistory, undoTimeIndex, undoJoinMerged, pendingUndoJoin, lastActionWasUndo };
 }
 
 function areSameLines(a: string[], b: string[]): boolean {
@@ -350,7 +350,7 @@ export function executeExPut(
     const col = Math.max(0, Math.min(state.cursor.col, (state.lines[line] ?? '').length - 1));
     // do_put 은 레지스터 검사 전에 u_save 하므로 빈 실행 취소 항목이 남습니다.
     return {
-      ...pushUndoSnapshot({ ...state, cursor: { line, col } }),
+      ...pushUndoSnapshot({ ...state, cursor: { line, col } }), changeListHint: { kind: 'undoOnly', undoLine: line + 1 },
       cursor: { line, col },
       mode: 'NORMAL',
       visualAnchor: undefined,
@@ -372,7 +372,7 @@ export function executeExPut(
   const lastText = newLines[lastLine] ?? '';
   const firstNonBlank = lastText.search(/\S/);
   return {
-    ...pushUndoSnapshot(state),
+    ...pushUndoSnapshot(state), changeListHint: { kind: 'at', line: idx, col: 0, undoLine: Math.max(0, insertAfterLine) + 1 },
     lines: newLines,
     cursor: clampCursor(newLines, { line: lastLine, col: firstNonBlank >= 0 ? firstNonBlank : Math.max(0, lastText.length - 1) }, 'NORMAL'),
     mode: 'NORMAL',
@@ -458,7 +458,7 @@ function runNormalKeysOnLine(
     ...(resetCurswant ? { curswant: 0 } : {}),
     mode: 'NORMAL',
     pendingKeys: undefined,
-    recordingMacro: null,
+    recordingMacro: null, changeListUndoJoin: true,
     ...(bang ? { keymapsDisabled: true } : {}),
   };
 
@@ -493,7 +493,7 @@ function runNormalKeysOnLine(
     state: {
       ...curState,
       keymapsDisabled: prevDisabled,
-      recordingMacro: prevRecording,
+      recordingMacro: prevRecording, changeListUndoJoin: state.changeListUndoJoin,
       undoStack: state.undoStack,
       redoStack: state.redoStack,
       undoTreeNodes: state.undoTreeNodes,
@@ -734,7 +734,7 @@ export function executeShiftRange(
 
   // op_shift(":>"): 마지막 줄의 새 들여쓰기 끝(set_indent) — w_set_curswant 를 켜지 않으므로 curswant 유지
   return keepCurswantIfNosol({
-    ...stateWithUndo,
+    ...stateWithUndo, changeListHint: { kind: 'at', line: startLine, col: 0, force: true },
     lines: nextLines,
     cursor: nextCursor,
     mode: 'NORMAL',

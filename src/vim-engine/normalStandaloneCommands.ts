@@ -47,6 +47,7 @@ import {
 } from './viewport';
 import { recordJump, jumpOlder, jumpNewer } from './marks';
 import { reselectVisualForRedo } from './visualRedo';
+import { beginChangeListUndoJoin, endChangeListUndoJoin } from './changelist';
 import { joinLines, joinSingleLastLine, toggleCaseChar, modifyNumberAtCursor } from './lineOperators';
 import { yankFoldOrLine } from './folding';
 import { msg } from './messages';
@@ -73,7 +74,11 @@ import {
 export const MAX_MACRO_REPLAY_KEYS = 100000;
 let macroReplayKeysLeft = MAX_MACRO_REPLAY_KEYS;
 
-function replayMacroRegister(
+/** 매크로 실행 전체가 변경 목록에서 한 실행 취소 단위입니다 (changelist.ts) */
+const replayMacroRegister = (state: VimEditorState, ...rest: [string, number, number, RunHandleKeyFn]): VimEditorState =>
+  endChangeListUndoJoin(state, replayMacroRegisterRaw(beginChangeListUndoJoin(state), ...rest));
+
+function replayMacroRegisterRaw(
   state: VimEditorState,
   targetReg: string,
   count: number,
@@ -89,11 +94,7 @@ function replayMacroRegister(
         commandMessage: msg('E30: 이전에 실행한 명령행이 없습니다'),
       };
     }
-    let curState: VimEditorState = {
-      ...state,
-      pendingKeys: undefined,
-      lastPlayedMacro: ':',
-    };
+    let curState: VimEditorState = { ...state, pendingKeys: undefined, lastPlayedMacro: ':' };
     for (let c = 0; c < count && !curState.bell; c++) {
       if (macroDepth >= 100) break;
       curState = executeCommandLine(curState, lastCmd, runHandleKey);
@@ -109,11 +110,7 @@ function replayMacroRegister(
   const macroKeys = Array.isArray(regEntry.content)
     ? regEntry.content
     : registerTextToKeys(regEntry.content); // Vim: 실제 ESC 글자만 Esc 이고, 손으로 친 `<Esc>` 는 글자 그대로 입력합니다.
-  let curState: VimEditorState = {
-    ...state,
-    pendingKeys: undefined,
-    lastPlayedMacro: targetReg,
-  };
+  let curState: VimEditorState = { ...state, pendingKeys: undefined, lastPlayedMacro: targetReg };
 
   if (macroDepth === 0) macroReplayKeysLeft = MAX_MACRO_REPLAY_KEYS;
   let exhausted = false;

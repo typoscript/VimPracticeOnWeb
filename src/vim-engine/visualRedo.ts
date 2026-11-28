@@ -1,6 +1,7 @@
 import { VimEditorState } from './types';
 import { CURSWANT_EOL } from './curswant';
 import { getGlobalOptions } from './setOptionsCore';
+import { redoVisualInsert } from './visualInsert';
 
 /**
  * `.` 로 비주얼 연산을 반복할 때 같은 크기의 영역을 직접 다시 고릅니다 (Vim do_pending_operator 의 redo_VIsual).
@@ -15,6 +16,9 @@ export function reselectVisualForRedo(
   state: VimEditorState,
   keys: readonly string[]
 ): { state: VimEditorState; rest: readonly string[]; restore: (s: VimEditorState) => VimEditorState } | null {
+  const identity = (s: VimEditorState) => s;
+  const visualInsert = redoVisualInsert(state, keys);
+  if (visualInsert) return { ...visualInsert, restore: identity };
   const head = keys[0];
   if (head !== 'Ctrl-v' && head !== 'v') return null;
   let i = 1;
@@ -30,7 +34,6 @@ export function reselectVisualForRedo(
   const top = state.cursor.line;
   const bottom = Math.min(state.lines.length - 1, top + lineCount);
   const bottomText = state.lines[bottom] ?? '';
-  const identity = (s: VimEditorState) => s;
 
   if (head === 'v') {
     if (lineCount === 0 || keys[i] !== '0') return null;
