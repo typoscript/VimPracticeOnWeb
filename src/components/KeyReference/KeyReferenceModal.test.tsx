@@ -50,6 +50,8 @@ describe('keyReferenceCatalog', () => {
     expect(lessonsForKey('o', MISSIONS, 'visual').length).toBeGreaterThan(0);
     // 노멀 탭의 Esc 는 입력 모드에서 누른 Esc 도 연습으로 칩니다.
     expect(lessonsForKey('Esc', MISSIONS, 'normal').length).toBeGreaterThan(0);
+    // 기본 레슨(레슨 6 "dd")이 고급 레슨보다 먼저 나옵니다.
+    expect(lessonsForKey('d', MISSIONS, 'normal')[0].id).toBe(6);
   });
 
   it('turns key events into reference key names', () => {

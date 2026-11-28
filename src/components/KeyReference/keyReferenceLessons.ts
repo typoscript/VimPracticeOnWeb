@@ -68,7 +68,17 @@ export function lessonsForKey(
   const add = (m: Mission) => {
     if (picked.length < limit && !picked.includes(m) && usesKey(m)) picked.push(m);
   };
-  missions.filter((m) => titleTokens(m.title).has(key)).forEach(add);
+  // 제목에 키가 적힌 레슨(단독 `d` 또는 `dd`·`dw` 처럼 그 키로 시작하는 짧은 명령)을 레슨 번호 순으로 먼저 보여 줍니다.
+  const titleMentions = (m: Mission) =>
+    [...titleTokens(m.title)].some((t) => t === key || (key.length === 1 && t.length <= 3 && t.startsWith(key) && /^[a-zA-Z]+$/.test(t)));
+  // 노멀 탭에서는 제목이 그 키를 가르친다고 적은 레슨도 연결합니다 (레슨 9 "VISUAL 선택"의 모범 답안은 v 를 안 씀).
+  missions
+    .filter(titleMentions)
+    .sort((a, b) => a.id - b.id)
+    .forEach((m) => {
+      if (picked.length >= limit || picked.includes(m)) return;
+      if (usesKey(m) || (mode === 'normal' && !m.optimalKeys?.includes(token))) picked.push(m);
+    });
   for (const m of missions) {
     if (picked.length >= limit) break;
     add(m);

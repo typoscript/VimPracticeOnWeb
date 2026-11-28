@@ -11,6 +11,10 @@
   font-family: inherit;
   position: relative;
   transition: all 0.2s ease-in-out;
+  /* 긴 키 문자열(jjlllll…)이 있어도 화면 폭을 넘지 않게 합니다 */
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 /* 1. Header */
@@ -133,6 +137,9 @@
   gap: 4px;
   font-size: 0.82rem;
   transition: border-color 0.2s;
+  /* 격자 칸이 내용 길이만큼 넓어지지 않게 (기본 min-width: auto) */
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .xray-badge.active-pending {
