@@ -111,6 +111,8 @@ function finishInsertNormalSession(prev: VimEditorState, nextState: VimEditorSta
       currentChangeKeys: ['i'],
       currentInsertText: undefined,
       insertStartCol: targetCol,
+      // Ctrl-o $ 의 '줄 끝' 기억은 이번 복귀에만 씁니다 (다음 Ctrl-o 0 이 줄 끝으로 가지 않게).
+      stickyDollar: undefined,
     };
   }
   return { ...nextState, insertNormalSession: undefined };
@@ -419,6 +421,8 @@ export function rawHandleKey(
 
   setActiveCursorContext(nextState.mode, getOptions(nextState).virtualedit);
 
+  nextState = trackAutoIndentPending(state, nextState, key, effectiveOpts);
+
   // INSERT 모드 신규 진입(Ctrl-o 일회성 복귀 제외) 시 직전 입력 텍스트 버퍼 및 시작 열 초기화
   if (state.mode !== 'INSERT' && nextState.mode === 'INSERT' && !state.insertNormalSession) {
     nextState = {
@@ -587,6 +591,28 @@ function applyKeyRules(input: VimEditorState, raw: VimEditorState, key: string, 
   next = applyEmptyBufferDelete(input, next, key);
   next = dropEmptyInsertUndo(input, next, key);
   return normalizeRepeatKeys(input, next);
+}
+
+const KEEPS_AUTO_INDENT = new Set(['Ctrl-t', 'Ctrl+t', 'Ctrl-d', 'Ctrl+d', 'Enter']);
+
+/**
+ * Vim did_ai: 'autoindent' 일 때 o / O / S / cc 로 입력 모드에 들어가면 켜고, 입력 모드에서 Ctrl-t / Ctrl-d / Enter 가 아닌
+ * 키를 누르면 끕니다. 켜진 채 Esc·Enter 를 누르면 공백만 남은 줄의 들여쓰기를 지웁니다 (insertSpecialKeys.ts, insertMode.ts).
+ */
+function trackAutoIndentPending(prev: VimEditorState, next: VimEditorState, key: string, opts: { autoindent?: boolean; smartindent?: boolean }): VimEditorState {
+  if (prev.mode === 'NORMAL' && next.mode === 'INSERT' && !prev.insertNormalSession) {
+    const pend = (prev.pendingKeys ?? '').replace(/^[1-9][0-9]*/, '');
+    const opensLine = !pend && (key === 'o' || key === 'O' || key === 'S');
+    // cc / 2cc / cj / cG … 처럼 줄 단위로 바꾸는 c (op_delete 의 OP_CHANGE 줄 단위 분기)
+    const changesLine = /^c[1-9]?[0-9]*$/.test(pend) && (key === 'c' || next.clipboard?.type === 'line');
+    const on = (opensLine || changesLine) && (opts.autoindent || (opts.smartindent && opensLine && key !== 'S'));
+    return on ? { ...next, autoIndentPending: true } : next;
+  }
+  if (prev.mode === 'INSERT' && next.autoIndentPending && !KEEPS_AUTO_INDENT.has(key)) {
+    return { ...next, autoIndentPending: undefined };
+  }
+  if (next.mode !== 'INSERT' && next.autoIndentPending) return { ...next, autoIndentPending: undefined };
+  return next;
 }
 
 /**

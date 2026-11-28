@@ -1,5 +1,6 @@
 // 실행 취소 기록(pushUndoSnapshot)과 u / Ctrl-r 실행 취소·다시 실행. operators.ts 에서 분리.
 import { CursorPosition, StateSnapshot, VimEditorState } from './types';
+import { columnForVirtual, cursorVirtualColumn, tabstopOf } from './virtualColumn';
 import { clampCursor, getFirstNonBlankCol } from './cursor';
 import { getOptions } from './setOptionsCore';
 import { areLinesEqual, ensureUndoTreeInitialized, recordUndoTreeChange, jumpUndoSeq } from './undoTreeEngine';
@@ -97,7 +98,7 @@ export function setLastUndoCursor(
  */
 export function beginlineSolCol(state: VimEditorState, lineText: string): number {
   if (getOptions(state).startofline) return getFirstNonBlankCol(lineText);
-  const want = state.curswant ?? state.cursor.col;
+  const want = columnForVirtual(lineText, state.curswant ?? cursorVirtualColumn(state), tabstopOf(state));
   return Math.max(0, Math.min(want, lineText.length - 1));
 }
 

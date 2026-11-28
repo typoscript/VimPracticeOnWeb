@@ -117,19 +117,41 @@ export function handleReplaceModeKey(
   isReplayingDot = false,
   _macroDepth = 0
 ): VimEditorState {
+  if (state.insertRepeatCount && (key.length === 1 || key === 'Backspace' || key === 'Enter')) {
+    const next = handleReplaceModeKeyInner(state, key, isReplayingDot);
+    return { ...next, replaceTypedKeys: [...(state.replaceTypedKeys ?? []), key] };
+  }
+  return handleReplaceModeKeyInner(state, key, isReplayingDot);
+}
+
+function handleReplaceModeKeyInner(state: VimEditorState, key: string, isReplayingDot: boolean): VimEditorState {
   const isVirtual = Boolean(state.virtualReplace);
 
   if (key === 'Escape') {
+    const repeat = state.insertRepeatCount ?? 1;
+    if (repeat > 1 && !isVirtual) {
+      // Vim 처럼 입력한 키(Backspace 포함)를 count-1 번 더 재생합니다. 실행 중인 변경 키 기록은 그대로 둡니다.
+      const typed = state.replaceTypedKeys ?? [];
+      let s: VimEditorState = { ...state, insertRepeatCount: undefined };
+      for (let i = 1; i < repeat; i++) for (const k of typed) s = { ...handleReplaceModeKey(s, k, true), currentChangeKeys: state.currentChangeKeys };
+      return handleReplaceModeKey(s, 'Escape', isReplayingDot);
+    }
     const curLine = state.lines[state.cursor.line] ?? '';
     const maxCol = getMaxCol(curLine, 'NORMAL');
     const newCol = Math.max(0, Math.min(state.cursor.col - 1, maxCol));
     const nextLastChange = state.currentChangeKeys ? [...state.currentChangeKeys, 'Escape'] : undefined;
+    // 입력 모드처럼 Esc 위치를 '^ 마크·gi 위치로 남깁니다.
+    const { line, col } = state.cursor;
     return {
       ...state,
       mode: 'NORMAL',
       cursor: { line: state.cursor.line, col: newCol },
+      lastInsertPos: { line, col, row: line },
+      marks: { ...(state.marks ?? {}), '^': { row: line, col } },
       replaceStack: undefined,
       virtualReplace: undefined,
+      insertRepeatCount: undefined,
+      replaceTypedKeys: undefined,
       currentChangeKeys: undefined,
       lastChangeKeys: isReplayingDot ? state.lastChangeKeys : nextLastChange,
     };

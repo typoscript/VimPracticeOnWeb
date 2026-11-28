@@ -1,5 +1,6 @@
 import { CursorPosition, VimEditorState, VimMode } from './types';
-import { clampCursor, hasVirtualEdit } from './cursor';
+import { curswantColumnOn } from './virtualColumn';
+import { clampCursor, getFirstNonBlankCol, hasVirtualEdit } from './cursor';
 import { getOptions } from './setEngine';
 import { pushUndoSnapshot } from './operators';
 import { pushUndoSnapshotAt, visualOperatorStart } from './undoHistory';
@@ -369,13 +370,11 @@ export function deleteVisualSelection(state: VimEditorState, visualKey = false):
     }
 
     const targetLine = Math.min(minLine, nextLines.length - 1);
-    // Vim do_pending_operator: 'nostartofline' 이면 줄 단위 삭제 뒤 연산 전 curswant(old_col) 열로 갑니다 (3EVkd; curswant 는 다시 정해짐).
-    const keepWant = !getOptions(state).startofline && state.curswant !== undefined;
-    const nextCursor = clampCursor(
-      nextLines,
-      { line: targetLine, col: keepWant ? (state.curswant as number) : cursor.col },
-      'NORMAL'
-    );
+    // Vim op_delete(줄 단위) 뒤 beginline: 'startofline' 이면 첫 비공백, 아니면 연산 전 curswant(old_col) 열입니다 (3EVkd; curswant 는 다시 정해짐).
+    const keepWant = state.curswant !== undefined;
+    const nextCursor = getOptions(state).startofline
+      ? { line: targetLine, col: getFirstNonBlankCol(nextLines[targetLine] ?? '') }
+      : clampCursor(nextLines, { line: targetLine, col: keepWant ? curswantColumnOn(state, nextLines, targetLine) : cursor.col }, 'NORMAL');
 
     return {
       ...stateWithSnapshot,

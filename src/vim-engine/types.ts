@@ -873,6 +873,11 @@ export interface VimEditorState {
   emptiedLines?: string[];
   /** i/a/I/A 로 들어갈 때 쌓은 실행 취소 스냅샷과 그 전 redo 목록 (아무것도 넣지 않고 나가면 되돌림) */
   emptyInsertUndo?: { snapshot: StateSnapshot; redoStack?: StateSnapshot[] };
+  /**
+   * Vim did_ai: 'autoindent' 로 o / O / cc / S / 입력 모드 Enter 가 만든 줄에서 아직 글자를 치지 않았음.
+   * 이대로 Esc 나 Enter 를 누르면 그 줄의 들여쓰기(공백만 있는 줄)를 지웁니다. Ctrl-t / Ctrl-d 는 유지합니다.
+   */
+  autoIndentPending?: boolean;
   /** Select 모드 일회성 Visual 명령 실행 세션 (Ctrl+o) */
   selectVisualOneShot?: boolean;
   /** Insert 모드 및 Command 모드 Ctrl+r 레지스터 입력 대기 상태 */
@@ -939,6 +944,8 @@ export interface VimEditorState {
   confirmSubstitute?: ConfirmSubstituteSession | null;
   /** REPLACE (R) / Virtual Replace (gR) 모드에서 백스페이스 시 복원할 원래 문자/줄 스택 */
   replaceStack?: { char: string; line: number; col: number; prevLine?: string }[];
+  /** [count]R 에서 Esc 때 다시 재생할, 이번 Replace 모드에서 누른 키 */
+  replaceTypedKeys?: string[];
   /** 열려 있는 버퍼 목록 (:ls, :b, :bn, :bp, :bd) */
   buffers?: VimBuffer[];
   /** 현재 활성화된 버퍼 ID */

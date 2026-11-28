@@ -1,7 +1,9 @@
 import { VimEditorState } from './types';
 import { clampCursor } from './cursor';
 import { getOptions } from './setEngine';
+import { columnForVirtual, cursorVirtualColumn, tabstopOf } from './virtualColumn';
 
+/** curswant 는 Vim 처럼 화면 열입니다 (탭이 있는 줄에서는 바이트 열과 다름, virtualColumn.ts). */
 /** `$` 뒤의 curswant: 세로 이동이 항상 줄 끝으로 갑니다 (Vim MAXCOL). */
 export const CURSWANT_EOL = Number.MAX_SAFE_INTEGER;
 
@@ -38,7 +40,7 @@ function keepsCurswant(prev: VimEditorState, key: string): boolean {
  * - `$` 는 '줄 끝'을 기억하고, 그 밖의 명령이 끝나면 현재 열을 새로 기억합니다.
  */
 export function applyCurswant(prev: VimEditorState, next: VimEditorState, key: string): VimEditorState {
-  const remembered = prev.curswant ?? prev.cursor.col;
+  const remembered = prev.curswant ?? cursorVirtualColumn(prev);
   // 입력 모드 Ctrl-o: Vim 은 커서를 줄 끝 다음 칸에 둔 채 명령을 받으므로 curswant 는 입력하던 열입니다 (A…<C-o>j).
   // 다시 시작한 입력에서 아직 아무것도 넣지 않았으면 이전 curswant(`<C-o>$` 의 줄 끝)를 그대로 씁니다.
   if (prev.mode === 'INSERT' && next.insertNormalSession && next.mode === 'NORMAL' && !prev.insertNormalSession) {
@@ -65,7 +67,7 @@ export function applyCurswant(prev: VimEditorState, next: VimEditorState, key: s
     const line = next.lines[next.cursor.line] ?? '';
     // 비주얼 모드는 줄 끝 다음 칸(NUL)까지 갈 수 있습니다 (Vim coladvance 의 one_more).
     const lastCol = next.mode.startsWith('VISUAL') ? line.length : Math.max(0, line.length - 1);
-    const col = Math.min(remembered, lastCol);
+    const col = Math.min(columnForVirtual(line, remembered, tabstopOf(next)), lastCol);
     const cursor = col === next.cursor.col ? next.cursor : clampCursor(next.lines, { line: next.cursor.line, col }, next.mode);
     return { ...next, cursor, curswant: remembered };
   }
@@ -103,6 +105,6 @@ export function applyCurswant(prev: VimEditorState, next: VimEditorState, key: s
     const pipeWant = pipeMatch[1] ? parseInt(pipeMatch[1], 10) - 1 : 0;
     return next.curswant === pipeWant ? next : { ...next, curswant: pipeWant };
   }
-  const want = isDollar ? CURSWANT_EOL : next.cursor.col;
+  const want = isDollar ? CURSWANT_EOL : cursorVirtualColumn(next);
   return next.curswant === want ? next : { ...next, curswant: want };
 }

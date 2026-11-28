@@ -20,6 +20,8 @@ export type MotionKind = 'exclusive' | 'inclusive' | 'linewise';
 export interface MotionResult {
   target: CursorPosition;
   kind: MotionKind;
+  /** 커서는 target 까지 옮겼지만 모션은 실패(beep, 연산자 취소)했습니다 (Vim bckend_word 가 버퍼 맨 앞에서 FAIL). */
+  failed?: boolean;
 }
 
 export const EXTRA_MOTION_KEYS = new Set([
@@ -220,16 +222,17 @@ export function evaluateExtraMotion(
     }
     case 'ge':
     case 'gE': {
-      let pos: CursorPosition | null = cursor;
-      let lastPos: CursorPosition = cursor;
-      for (let i = 0; i < n && pos; i++) {
-        pos = wordEndBackward(lines, pos, key === 'gE');
-        if (pos) lastPos = pos;
+      // Vim bckend_word: 단어·공백을 건너다 버퍼 맨 앞에 닿으면 남은 count 와 상관없이 (0,0) 에서 성공하고,
+      // 맨 앞에서 다음 count 를 시작하면 실패합니다 — 처음부터 맨 앞이면 움직이지 않고 실패, 몇 번 옮긴 뒤면
+      // 커서는 (0,0) 에 남고 실패(beep, 연산자 취소)입니다.
+      let pos: CursorPosition = cursor;
+      for (let i = 0; i < n; i++) {
+        if (pos.line === 0 && pos.col === 0) return i === 0 ? null : { target: pos, kind: 'inclusive', failed: true };
+        const prev = wordEndBackward(lines, pos, key === 'gE');
+        if (!prev) return { target: { line: 0, col: 0 }, kind: 'inclusive' };
+        pos = prev;
       }
-      if (pos) return { target: pos, kind: 'inclusive' };
-      // Vim: 앞쪽 단어 끝이 모자라면 버퍼 맨 앞(0,0)에서 멈춥니다. 이미 맨 앞이면 실패.
-      if (lastPos.line === 0 && lastPos.col === 0) return null;
-      return { target: { line: 0, col: 0 }, kind: 'inclusive' };
+      return { target: pos, kind: 'inclusive' };
     }
     case ')':
     case '(': {

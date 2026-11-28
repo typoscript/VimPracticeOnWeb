@@ -3,7 +3,7 @@
  *
  *   npx tsx scripts/neovimFuzzFixtures.ts
  *
- * 아래 CASES 를 `nvim --headless -u NONE` (엔진 기본 옵션: ts=2 sw=2 et noai nosol) 에서 실행해
+ * 아래 CASES 를 `nvim --headless -u NONE` (엔진 기본 옵션: ts=2 sw=2 et noai nosol, 케이스의 options 가 있으면 그 뒤 `:set`) 에서 실행해
  * test/fixtures/neovim-fuzz-findings.json 으로 저장합니다. test/neovimFuzzFindings.test.ts 가 nvim 없이 이 값과 비교합니다.
  */
 import { runNeovimIsolated } from './neovimRunner';
@@ -15,6 +15,8 @@ interface Case {
   text: string;
   cursor: { row: number; col: number };
   keys: string;
+  /** `:set` 인자 (퍼저 wide 프로필의 옵션 묶음). 엔진과 nvim 에 똑같이 적용합니다. */
+  options?: string;
 }
 
 const T1 = 'const total = sum(a, b) + 42;\nif (total > 10) {\n  log("big", total);\n}\nreturn total;';
@@ -684,6 +686,69 @@ const CASES: Case[] = [
   { id: 'paren-object-forward-next-line-unmatched', text: 'x =(\nif (t) {', cursor: { row: 0, col: 2 }, keys: 'gUib' },
   { id: 'equal-h-at-col0', text: T3, cursor: { row: 0, col: 0 }, keys: '=h' },
   { id: 'join-trailing-space-cursor', text: T3, cursor: { row: 0, col: 3 }, keys: 'Aa <Esc>J' },
+  // --- fuzz:neovim --profile wide 로 찾은 차이 (옵션 묶음은 options) ---
+  // :norm 은 범위가 없으면 커서 자리에서 실행
+  { id: 'norm-no-range-keeps-cursor', text: 'plain 0x1f 007', cursor: { row: 0, col: 8 }, keys: ':norm cwZ<CR>' },
+  { id: 'norm-bang-no-range', text: 'a b\nc d e', cursor: { row: 1, col: 2 }, keys: ':norm! wD<CR>' },
+  // [count]R 과 R 의 '^ 마크
+  { id: 'count-R', text: 'abc def ghi', cursor: { row: 0, col: 4 }, keys: '3RX<Esc>' },
+  { id: 'count-R-backspace', text: 'abc def ghi', cursor: { row: 0, col: 4 }, keys: '4Ra<BS>b<Esc>' },
+  { id: 'count-R-past-eol', text: 'abc def ghi', cursor: { row: 0, col: 4 }, keys: '2Rabcdefghijklmnop<Esc>' },
+  { id: 'count-R-dot', text: 'abc def ghi\nsecond line here', cursor: { row: 0, col: 4 }, keys: '3Rab<Esc>j.' },
+  { id: 'R-sets-insert-mark', text: 'abcdef\nabcdefg', cursor: { row: 0, col: 2 }, keys: 'Rab<Esc>ggjgiZ<Esc>' },
+  // 연산자 + <Space> / <BS> / whichwrap 의 h l, x / X
+  { id: 'd-space', text: 'ab\ncd ef\nghij\n\nk', cursor: { row: 2, col: 2 }, keys: '3d ' },
+  { id: 'd-backspace', text: 'ab\ncd ef\nghij\n\nk', cursor: { row: 2, col: 2 }, keys: 'd<BS>' },
+  { id: 'ww-dh-wraps', text: 'ab\ncd ef\nghij\nk', cursor: { row: 2, col: 2 }, keys: '4dh', options: 'ww=b,s,h,l' },
+  { id: 'ww-dl-wraps', text: 'ab\ncd ef\nghij\nk', cursor: { row: 2, col: 2 }, keys: '4dl', options: 'ww=b,s,h,l' },
+  { id: 'ww-x-empty-line', text: 'ab\n\ncd', cursor: { row: 1, col: 0 }, keys: 'x', options: 'ww=h,l' },
+  { id: 'ww-X-joins', text: 'abc\n  d', cursor: { row: 1, col: 0 }, keys: 'X', options: 'ww=h,l' },
+  // >> / << / :> 는 탭을 화면 폭으로 계산해 들여쓰기를 다시 만듦, curswant 는 화면 열
+  { id: 'shift-tab-indent-et', text: '\tif (a) {\n\t\tb(1, 2);\n   \t}', cursor: { row: 0, col: 0 }, keys: '>G' },
+  { id: 'shift-tab-indent-noet', text: '\tif (a) {\n  b(1, 2);\n   \t}', cursor: { row: 0, col: 0 }, keys: ':%><CR>', options: 'noet ts=4 sw=4' },
+  { id: 'shift-left-tab-curswant', text: '\tif (a) {\n\t\tb(1, 2);', cursor: { row: 1, col: 1 }, keys: '<<' },
+  { id: 'curswant-virtual-column-j', text: '\t\tabc\nabcdef', cursor: { row: 0, col: 1 }, keys: 'j' },
+  { id: 'visual-count-shift', text: '  abcdef\n      abcdefg\nxy', cursor: { row: 0, col: 2 }, keys: 'Vj3>' },
+  { id: 'visual-count-shift-dot', text: '  abcdef\n      abcdefg\nxy\nzzz', cursor: { row: 0, col: 2 }, keys: 'Vj2>j.' },
+  // 마지막 줄의 [count]J / gJ (count 3 이상)
+  { id: 'count-J-last-line-wide', text: 'abc def\nab  cd   ', cursor: { row: 1, col: 5 }, keys: '3J' },
+  { id: 'count-gJ-last-line-x', text: 'abc def\nab  cd   ', cursor: { row: 1, col: 5 }, keys: '3gJx' },
+  // 입력 모드 0 Ctrl-d, Ctrl-r 로 빈 줄 레지스터, Ctrl-o 뒤 . 반복
+  { id: 'insert-0-ctrl-d-mid-line', text: 'ab\ncd ef\nghij', cursor: { row: 2, col: 2 }, keys: 'i0<C-d><Esc>' },
+  { id: 'insert-ctrl-r-empty-linewise', text: 'ab\n\ncd', cursor: { row: 0, col: 1 }, keys: 'jyykA<C-r>"<Esc>' },
+  { id: 'insert-ctrl-o-dot-repeat', text: 'xyz uvw\nsecond', cursor: { row: 0, col: 2 }, keys: 'Iab<C-o>$cd<Esc>0.' },
+  { id: 'insert-ctrl-o-x-dot', text: 'xyz uvw\nsecond', cursor: { row: 0, col: 2 }, keys: 'iab<C-o>x<Esc>0.' },
+  { id: 'insert-ctrl-o-count-dropped', text: 'xyz uvw\nsecond', cursor: { row: 0, col: 2 }, keys: '3iab<C-o>0cd<Esc>j.' },
+  { id: 'insert-ctrl-o-twice', text: 'xyz uvw\nsecond', cursor: { row: 0, col: 2 }, keys: 'iab<C-o>$cd<C-o>0ef<Esc>$.' },
+  { id: 'insert-bs-at-buffer-start-not-repeated', text: 'xyz uvw\nsecond', cursor: { row: 0, col: 2 }, keys: 'iab<C-o>0<BS>x<Esc>j.' },
+  // 'autoindent': o<Esc> 는 들여쓰기를 지우고, cc 는 들여쓰기를 남김
+  { id: 'ai-o-esc-removes-indent', text: 'ab\n  cd\n\n    ef', cursor: { row: 1, col: 1 }, keys: 'o<C-t><Esc>', options: 'ai' },
+  { id: 'ai-enter-blank-line', text: 'ab\n  cd\n\n    ef', cursor: { row: 1, col: 1 }, keys: 'A<CR><CR>x<Esc>', options: 'ai' },
+  { id: 'ai-cj-esc', text: 'ab\n  cd\n\n    ef', cursor: { row: 1, col: 1 }, keys: 'cj<Esc>', options: 'ai' },
+  { id: 'ai-ctrl-o-removes-indent', text: 'ab\n  cd\n\n    ef', cursor: { row: 1, col: 1 }, keys: 'o<C-o>x<Esc>', options: 'ai' },
+  { id: 'ai-cc-keeps-indent', text: 'ab cd\n  <b>x</b> ef\nlast', cursor: { row: 1, col: 1 }, keys: 'ccnew<Esc>', options: 'ai' },
+  { id: 'cc-undo-cursor', text: 'ab cd\nxy zw\n  ind ent', cursor: { row: 2, col: 3 }, keys: 'ccab<Esc>u' },
+  // 'startofline': dd 와 V…d 뒤 첫 비공백, 'nostartofline' 이면 V…d 뒤 curswant
+  { id: 'sol-dd-first-nonblank', text: 'abc def\n  ab  cd\nxyz', cursor: { row: 0, col: 5 }, keys: 'dd', options: 'sol' },
+  { id: 'sol-dd-undo-cursor', text: 'abc def\n  ab  cd\nxyz', cursor: { row: 0, col: 5 }, keys: 'jddu', options: 'sol' },
+  { id: 'visual-line-delete-curswant', text: 'abc def\n  dxx\n  ab cd ef\nxyz abc d', cursor: { row: 2, col: 6 }, keys: 'Vkd' },
+  { id: 'visual-line-delete-sol', text: 'abc def\n  dxx\n  ab cd ef\nxyz abc d', cursor: { row: 2, col: 6 }, keys: 'Vjd', options: 'sol' },
+  // 비주얼 i} 는 줄바꿈까지, 블록 I 뒤 커서는 블록 왼쪽 위
+  { id: 'visual-inner-brace-newline', text: 'if (a) {\n  b(1, 2);\n}\nend', cursor: { row: 0, col: 5 }, keys: 'vi}d' },
+  { id: 'visual-inner-brace-shift', text: 'if (x) {\n  a(1);\n  b(\n    2);\n}\nend', cursor: { row: 1, col: 3 }, keys: 'vi}>' },
+  { id: 'block-insert-cursor-start', text: 'abcdef\nabcdefg\nxy', cursor: { row: 0, col: 2 }, keys: '<C-v>jIab<Esc>' },
+  // 괄호·꺾쇠 객체: 짝 없는 여는 괄호에서 실패(다른 쌍으로 넘어가지 않음), 빈 괄호
+  { id: 'angle-object-unmatched-fails', text: '< <i>b</i> c</p>\nx', cursor: { row: 0, col: 1 }, keys: 'yi>' },
+  { id: 'paren-object-unclosed-forward-fails', text: 'x ( (a) y\nz', cursor: { row: 0, col: 1 }, keys: 'da(' },
+  { id: 'empty-paren-yank-cursor', text: 'ab () cd', cursor: { row: 0, col: 1 }, keys: 'yi(' },
+  { id: 'empty-paren-case-cursor', text: 'ab () cd', cursor: { row: 0, col: 1 }, keys: 'gUi(' },
+  { id: 'empty-brace-block-cursor', text: 'z {\n}\nq {\n  }', cursor: { row: 2, col: 1 }, keys: 'di{' },
+  { id: 'shift-angle-object', text: '<div class="a"><span>text</span></div>\n  plain <0x1f> 007 -3 words', cursor: { row: 1, col: 9 }, keys: '>a>' },
+  { id: 'shift-failed-angle-clears-pending', text: '<div class="a"><span>text</span></div>\nplain 0x1f 007 -3 words', cursor: { row: 1, col: 15 }, keys: '<a<9~' },
+  // [count]ge 가 버퍼 맨 앞에서 모자라면 (0,0) 으로 옮긴 뒤 실패
+  { id: 'count-ge-stops-at-start', text: '<div class="a"><span>text\nab cd', cursor: { row: 0, col: 9 }, keys: '4gex' },
+  { id: 'count-ge-operator-cancelled', text: '<div class="a"><span>text\nab cd', cursor: { row: 0, col: 9 }, keys: 'd9ge' },
+  { id: 'count-ge-hits-start-mid-word', text: '  word\nab cd', cursor: { row: 1, col: 3 }, keys: 'd9ge' },
 ];
 
 const LUA = `
@@ -692,8 +757,11 @@ vim.cmd("set tabstop=2 shiftwidth=2 expandtab noautoindent nosmartindent nosmart
 local out = {}
 for _, c in ipairs(cases) do
   vim.cmd("enew!")
+  if c.options then vim.cmd("set " .. c.options) end
   vim.bo.undolevels = -1
-  vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.split(c.text, "\\n", { plain = true }))
+  -- keepjumps: 텍스트를 넣은 것이 변경 목록(g;)·'. 마크에 남지 않게 합니다.
+  _G.fuzz_lines = vim.split(c.text, "\\n", { plain = true })
+  vim.cmd("keepjumps lua vim.api.nvim_buf_set_lines(0, 0, -1, false, _G.fuzz_lines)")
   vim.bo.undolevels = 1000
   -- 레지스터는 비우지 않습니다: 케이스마다 새 nvim 이라 '한 번도 안 쓴' 상태이고, setreg('') 는 '빈 값으로 설정됨'이 되어 엔진과 달라집니다.
   vim.api.nvim_win_set_cursor(0, { c.cursor.row + 1, c.cursor.col })
@@ -701,7 +769,7 @@ for _, c in ipairs(cases) do
   local cur = vim.api.nvim_win_get_cursor(0)
   local t = vim.fn.getregtype('"')
   table.insert(out, {
-    id = c.id, text = c.text, cursor = c.cursor, keys = c.keys,
+    id = c.id, text = c.text, cursor = c.cursor, keys = c.keys, options = c.options,
     expected = {
       lines = vim.api.nvim_buf_get_lines(0, 0, -1, false),
       cursor = { row = cur[1] - 1, col = cur[2] },
@@ -720,6 +788,7 @@ interface FixtureResult {
   text: string;
   cursor: { row: number; col: number };
   keys: string;
+  options?: string;
   expected: { lines: string[]; cursor: { row: number; col: number }; reg: string; regType: string; mode: string };
 }
 
@@ -732,6 +801,7 @@ async function main(): Promise<void> {
     text: r.text,
     cursor: { row: r.cursor.row, col: r.cursor.col },
     keys: r.keys,
+    ...(r.options ? { options: r.options } : {}),
     expected: {
       lines: r.expected.lines,
       cursor: { row: r.expected.cursor.row, col: r.expected.cursor.col },

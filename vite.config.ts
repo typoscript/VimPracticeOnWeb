@@ -19,6 +19,7 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'types.ts',
       'messages.ts',
       'cursor.ts',
+      'virtualColumn.ts',
       'vimRegex.ts',
       'operators.ts',
       'undoHistory.ts',

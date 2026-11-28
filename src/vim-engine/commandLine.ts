@@ -405,7 +405,9 @@ function tryExecuteRangeExCommand(
       normMatch[2],
       trimmed,
       keyRunner,
-      normMatch[1] === '!'
+      normMatch[1] === '!',
+      // 범위가 없으면 Vim ex_normal 처럼 커서를 옮기지 않습니다 (범위가 있으면 줄마다 0열에서 시작).
+      !hasRange
     );
   }
 

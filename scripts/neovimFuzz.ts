@@ -1,7 +1,11 @@
 /**
  * 실제 Neovim 과 엔진을 무작위 키 시퀀스로 비교하는 퍼저입니다.
  *
- *   npm run fuzz:neovim -- [--cases 1500] [--seed 1] [--out path.json]
+ *   npm run fuzz:neovim -- [--cases 1500] [--seed 1] [--profile basic|wide] [--out path.json]
+ *
+ * `--profile wide` 는 블록 비주얼 I/A/c/r/>, 태그·꺾쇠 객체, gJ·gv·gi·g;, 입력 모드 Ctrl-r/Ctrl-w/Ctrl-u/Ctrl-t/Ctrl-d,
+ * :normal 변형, R, xp·ddp, 그리고 케이스마다 옵션 묶음(ai, sol, ww=h,l, nows, sw=4 …, scripts/neovimFuzzWide.ts)을 더합니다.
+ * 기본 프로필(basic)은 예전과 같은 난수열을 써서 seed 별 결과가 그대로입니다.
  *
  * 시드 고정 난수로 짧은 Vim 명령 시퀀스를 만들어 `nvim --headless -u NONE` 한 프로세스에서 일괄 실행하고
  * (키는 실제 입력처럼 feedkeys 't'), 같은 시퀀스를 엔진 handleKey 에 넣어 버퍼·커서·무명 레지스터를 비교합니다.
@@ -11,8 +15,10 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { configureVimEngine, handleKey, registerEntryText } from '../src/vim-engine';
+import { configureVimEngine, executeCommandLine, handleKey, registerEntryText } from '../src/vim-engine';
 import type { VimEditorState } from '../src/vim-engine';
+import { WIDE_OPTION_SETS, WIDE_TEXTS, randomWideCommand } from './neovimFuzzWide';
+import type { WideContext } from './neovimFuzzWide';
 
 configureVimEngine({ devChecks: false, locale: 'en' });
 
@@ -70,6 +76,8 @@ let sawChange = false;
 let sawSearch = false;
 let sawMark = false;
 let sawMacro = false;
+let profile: 'basic' | 'wide' = 'basic';
+const wideCtx: WideContext = { sawVisual: false, sawInsert: false, sawChange: false };
 
 function randomExtendedCommand(rng: Rng): string {
   const r = rng.next();
@@ -108,6 +116,10 @@ function randomCommand(rng: Rng): string {
 }
 
 function randomCommandRaw(rng: Rng): string {
+  if (profile === 'wide' && rng.chance(0.35)) {
+    wideCtx.sawChange = sawChange;
+    return randomWideCommand(rng, wideCtx);
+  }
   if (rng.chance(0.3)) return randomExtendedCommand(rng);
   const r = rng.next();
   if (r < 0.28) return maybeCount(rng) + randomMotion(rng);
@@ -145,13 +157,17 @@ interface FuzzCase {
   text: string;
   cursor: { row: number; col: number };
   commands: string[];
+  /** `:set` 인자 (wide 프로필). 엔진과 nvim 에 똑같이 적용합니다. */
+  options?: string;
 }
 
 function generateCases(count: number, seed: number): FuzzCase[] {
   const rng = new Rng(seed);
   const cases: FuzzCase[] = [];
+  const texts = profile === 'wide' ? [...TEXTS, ...WIDE_TEXTS] : TEXTS;
   for (let i = 0; i < count; i++) {
-    const text = rng.pick(TEXTS);
+    const text = rng.pick(texts);
+    const options = profile === 'wide' && rng.chance(0.5) ? rng.pick(WIDE_OPTION_SETS) : undefined;
     const lines = text.split('\n');
     const row = Math.floor(rng.next() * lines.length);
     const col = Math.floor(rng.next() * Math.max(1, lines[row].length));
@@ -161,7 +177,9 @@ function generateCases(count: number, seed: number): FuzzCase[] {
     sawSearch = false;
     sawMark = false;
     sawMacro = false;
-    cases.push({ id: `fz-${seed}-${i}`, text, cursor: { row, col }, commands: Array.from({ length: n }, () => randomCommand(rng)) });
+    Object.assign(wideCtx, { sawVisual: false, sawInsert: false, sawChange: false });
+    const id = profile === 'wide' ? `fzw-${seed}-${i}` : `fz-${seed}-${i}`;
+    cases.push({ id, text, cursor: { row, col }, commands: Array.from({ length: n }, () => randomCommand(rng)), ...(options ? { options } : {}) });
   }
   return cases;
 }
@@ -186,6 +204,7 @@ function runEngine(c: FuzzCase): Snapshot {
   let s: VimEditorState = { lines: c.text.split('\n'), cursor: { line: c.cursor.row, col: c.cursor.col }, mode: 'NORMAL', lastChangeKeys: ['i', 'Escape'] };
   const steps: StepSnapshot[] = [];
   try {
+    if (c.options) s = { ...executeCommandLine(s, `set ${c.options}`, handleKey), commandMessage: undefined };
     for (const cmd of c.commands) {
       for (const k of toEngineKeys(cmd)) s = handleKey(s, k);
       // 생성기가 [count] 뒤에 0 모션을 붙이면 '20' 처럼 count 만 남는데, Neovim 은 feedkeys('x') 가 끝날 때 남은 count 를 버립니다.
@@ -232,11 +251,14 @@ vim.cmd("set tabstop=2 shiftwidth=2 expandtab noautoindent nosmartindent nosmart
 local results = {}
 for _, c in ipairs(cases) do
   vim.cmd("enew!")
+  if c.options then vim.cmd("set " .. c.options) end
   -- '.' 는 지울 수 없으므로 아무 일도 하지 않는 i<Esc> 로 맞춥니다 (엔진도 같게 시작).
   vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes("i<Esc>", true, false, true), "ntx", false)
   -- 텍스트를 넣는 동작이 실행 취소 기록에 남지 않게 합니다.
   vim.bo.undolevels = -1
-  vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.split(c.text, "\\n", { plain = true }))
+  -- keepjumps: 텍스트를 넣은 것이 변경 목록(g;)·'. 마크에 남지 않게 합니다.
+  _G.fuzz_lines = vim.split(c.text, "\\n", { plain = true })
+  vim.cmd("keepjumps lua vim.api.nvim_buf_set_lines(0, 0, -1, false, _G.fuzz_lines)")
   vim.bo.undolevels = 1000
   -- 레지스터는 비우지 않습니다: 케이스마다 새 nvim 이라 '한 번도 안 쓴' 상태이고, setreg('') 는 '빈 값으로 설정됨'이 되어 엔진과 달라집니다.
   vim.fn.histdel("search")
@@ -296,7 +318,8 @@ async function main(): Promise<void> {
   };
   const count = Number(opt('cases', '1500'));
   const seed = Number(opt('seed', '1'));
-  const outPath = opt('out', path.join(os.tmpdir(), `neovim-fuzz-${seed}.json`));
+  profile = opt('profile', 'basic') === 'wide' ? 'wide' : 'basic';
+  const outPath = opt('out', path.join(os.tmpdir(), `neovim-fuzz-${profile === 'wide' ? 'wide-' : ''}${seed}.json`));
 
   const cases = generateCases(count, seed);
   const nvim = await runNeovim(cases);
@@ -325,7 +348,7 @@ async function main(): Promise<void> {
   fs.writeFileSync(outPath, JSON.stringify(mismatches, null, 2));
   const byKind: Record<string, number> = {};
   for (const m of mismatches) for (const k of m.kinds) byKind[k] = (byKind[k] ?? 0) + 1;
-  console.log(`[neovim-fuzz] seed=${seed} cases=${cases.length} mismatches=${mismatches.length} ${JSON.stringify(byKind)}`);
+  console.log(`[neovim-fuzz] profile=${profile} seed=${seed} cases=${cases.length} mismatches=${mismatches.length} ${JSON.stringify(byKind)}`);
   console.log(`[neovim-fuzz] details: ${outPath}`);
 }
 

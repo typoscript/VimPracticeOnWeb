@@ -1,6 +1,7 @@
 import { CursorPosition, VimEditorState } from './types';
+import { curswantColumnOn } from './virtualColumn';
 import { clampCursor } from './cursor';
-import { getOptions } from './setOptionsCore';
+import { getOptions, parseWhichwrapFlags } from './setOptionsCore';
 import { findParagraphTarget } from './advancedMotions';
 import { pushUndoSnapshot } from './operators';
 import { moveToFirstNonBlank, moveToPrevWord, moveToPrevWORD } from './motions';
@@ -20,7 +21,7 @@ import { EXTRA_MOTION_KEYS, evaluateExtraMotion } from './extraMotions';
 
 export const OPERATOR_MOTION_KEYS = new Set([
   'j', 'k', 'gj', 'gk', 'G', 'ArrowDown', 'ArrowUp',
-  'h', 'l', 'b', 'B', '^', 'ArrowLeft', 'ArrowRight',
+  'h', 'l', 'b', 'B', '^', 'ArrowLeft', 'ArrowRight', 'Backspace', ' ', 'Space',
   '(', ')', '+', '-', '_', 'Enter', '|',
   '[[', ']]', '[]', '][', '[m', ']m', '[M', ']M', '[f', ']f', '[F', ']F',
   '[/', ']/', '[*', ']*',
@@ -42,11 +43,12 @@ export function executeOperatorMotion(
   const { lines, cursor } = state;
   const n = Math.max(1, count ?? 1);
   const lastLine = lines.length - 1;
-  const lineText = lines[cursor.line] ?? '';
 
   if (EXTRA_MOTION_KEYS.has(motionKey)) {
     const res = evaluateExtraMotion(lines, cursor, motionKey, n);
     if (!res) return null;
+    // 커서만 옮기고 실패한 모션(d9ge): 연산은 취소되고 커서는 옮긴 자리에 남습니다 (Vim clearopbeep).
+    if (res.failed) return { ...state, cursor: { ...res.target }, pendingKeys: undefined, bell: true };
     // :help ]] — 연산자와 함께 쓰면 열 0 의 '}' 바로 아래 줄에서도 멈춥니다 (Vim findpar both=TRUE).
     if (motionKey === ']]' && res.target.line > cursor.line) {
       for (let l = cursor.line + 1; l < res.target.line; l++) {
@@ -93,17 +95,12 @@ export function executeOperatorMotion(
 
     case 'h':
     case 'ArrowLeft':
-      // Vim nv_left: 줄 처음에서는 삐 소리(beep_flush: 매크로 중단)를 내고 연산자는 빈 범위로 계속됩니다
-      // (ch 는 입력 모드, dh 는 빈 실행 취소 항목, yh 는 "" 복사).
-      if (cursor.col <= 0) return op === 'c' ? emptyRegion(state, op) : { ...emptyRegion(state, op), bell: true };
-      return applyCharwise(state, op, { line: cursor.line, col: Math.max(0, cursor.col - n) }, cursor);
-
+    case 'Backspace':
     case 'l':
     case 'ArrowRight':
-      // 연산자와 함께 쓰인 l은 줄 끝 너머(마지막 문자 포함)까지 이동할 수 있습니다. (dl == x)
-      // 빈 줄에서는 아무것도 하지 않지만 실패(beep)로 보지 않습니다. (Vim nv_right)
-      if (lineText.length === 0) return emptyRegion(state, op);
-      return applyCharwise(state, op, cursor, { line: cursor.line, col: Math.min(lineText.length, cursor.col + n) });
+    case ' ':
+    case 'Space':
+      return horizontalOperatorMotion(state, op, motionKey, n);
 
     case '^': {
       const target = moveToFirstNonBlank(lines, { line: cursor.line, col: 0 });
@@ -137,6 +134,64 @@ export function executeOperatorMotion(
   }
 
   return null;
+}
+
+const WRAP_FLAG: Record<string, string> = { h: 'h', ArrowLeft: '<', Backspace: 'b', l: 'l', ArrowRight: '>', ' ': 's', Space: 's' };
+
+/**
+ * 연산자 + h / l / <BS> / <Space> (Vim nv_left / nv_right). 'whichwrap' 에 해당 글자가 있으면 줄을 넘습니다:
+ * 오른쪽은 줄 끝에서 먼저 마지막 글자를 포함(inclusive)하고 다음 번에 다음 줄 0열로 가며, 왼쪽은 이전 줄 끝으로 가되
+ * d / c 이면 줄바꿈까지 지우도록 그 줄의 NUL 위치에 둡니다 (CA_NO_ADJ_OP_END: 배타적 끝 조정 없음).
+ */
+function horizontalOperatorMotion(state: VimEditorState, op: Operator, key: string, n: number): VimEditorState {
+  const { lines, cursor } = state;
+  const canWrap = parseWhichwrapFlags(getOptions(state).whichwrap).has(WRAP_FLAG[key]);
+  const cur = { ...cursor };
+  if (key === 'h' || key === 'ArrowLeft' || key === 'Backspace') {
+    let noAdjust = false;
+    for (let i = n; i > 0; i--) {
+      if (cur.col > 0) {
+        cur.col--;
+        continue;
+      }
+      if (canWrap && cur.line > 0) {
+        cur.line--;
+        const text = lines[cur.line] ?? '';
+        cur.col = (op === 'd' || op === 'c') && text.length > 0 ? text.length : Math.max(0, text.length - 1);
+        noAdjust = true;
+        continue;
+      }
+      // Vim nv_left: 줄 처음에서는 삐 소리(beep_flush: 매크로 중단)를 내고 연산자는 빈 범위로 계속됩니다
+      // (ch 는 입력 모드, dh 는 빈 실행 취소 항목, yh 는 "" 복사).
+      if (i === n) return op === 'c' ? emptyRegion(state, op) : { ...emptyRegion(state, op), bell: true };
+      break;
+    }
+    return applyCharwise(state, op, cur, cursor, !noAdjust);
+  }
+  let inclusive = false;
+  for (let i = n; i > 0; i--) {
+    const text = lines[cur.line] ?? '';
+    if (cur.col < text.length - 1) {
+      cur.col++;
+      continue;
+    }
+    if (canWrap && cur.line < lines.length - 1) {
+      if (!inclusive && text.length > 0) {
+        inclusive = true;
+      } else {
+        cur.line++;
+        cur.col = 0;
+        inclusive = false;
+      }
+      continue;
+    }
+    // 연산자와 함께 쓰인 l 은 마지막 글자까지 포함합니다 (dl == x). 빈 줄에서는 빈 범위이며 실패가 아닙니다.
+    if (text.length > 0) inclusive = true;
+    break;
+  }
+  if (inclusive) return applyCharwise(state, op, cursor, { line: cur.line, col: cur.col + 1 });
+  if (cur.line === cursor.line && cur.col === cursor.col) return emptyRegion(state, op);
+  return applyExclusive(state, op, cursor, cur);
 }
 
 /**
@@ -231,7 +286,7 @@ function applyLinewise(state: VimEditorState, op: Operator, startLine: number, e
   // 'nostartofline'(기본값)이면 Vim 처럼 원래 열을 유지합니다 (dG, dk, dgg).
   const cursor = getOptions(state).startofline || endAdjusted
     ? moveToFirstNonBlank(nextLines, { line: targetLine, col: 0 })
-    : clampCursor(nextLines, { line: targetLine, col: state.curswant ?? state.cursor.col }, 'NORMAL');
+    : clampCursor(nextLines, { line: targetLine, col: curswantColumnOn(state, nextLines, targetLine) }, 'NORMAL');
   return {
     ...stateWithSnapshot,
     lines: nextLines,
@@ -246,12 +301,13 @@ function applyCharwise(
   state: VimEditorState,
   op: Operator,
   start: CursorPosition,
-  end: CursorPosition
+  end: CursorPosition,
+  adjustEnd = true
 ): VimEditorState {
   const { lines } = state;
   // 배타적 모션의 끝이 다음 줄의 첫 칸이면 이전 줄 끝까지로 조정합니다. (:help exclusive)
   let realEnd = end;
-  if (end.col === 0 && end.line > start.line) {
+  if (adjustEnd && end.col === 0 && end.line > start.line) {
     realEnd = { line: end.line - 1, col: (lines[end.line - 1] ?? '').length };
   }
 

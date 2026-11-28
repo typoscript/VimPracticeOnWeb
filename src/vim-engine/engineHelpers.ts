@@ -150,6 +150,7 @@ export function moveByExtraMotion(state: VimEditorState, key: string, count: num
     cursor: clampCursor(state.lines, target, mode),
     stickyDollar: false,
     pendingKeys: undefined,
+    ...(res.failed ? { bell: true } : {}),
   };
 }
 

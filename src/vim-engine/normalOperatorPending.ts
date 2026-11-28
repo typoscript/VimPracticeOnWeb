@@ -1,4 +1,5 @@
 import { VimEditorState } from './types';
+import { cursorVirtualColumn } from './virtualColumn';
 import { getOptions } from './setOptionsCore';
 import { syncRegisters } from './registers';
 import { moveFind, executeFindOperator } from './findChar';
@@ -282,7 +283,7 @@ export function handleNormalFilterShiftEqualPending(
       range.endLine - range.startLine + 1,
       dir === '>' ? 'in' : 'out',
       // Vim op_shift 의 beginline(BL_SOL) / do_pending_operator 의 old_col: 연산 전 기억한 열. `|` 는 curswant 를 count-1 로 정합니다.
-      !prefix && key === '|' ? count - 1 : (state.curswant ?? state.cursor.col)
+      !prefix && key === '|' ? count - 1 : (state.curswant ?? cursorVirtualColumn(state))
     );
     const keys = [...(state.pendingKeys ?? '').split(''), key];
     // $ 와 g_ 는 Vim 에서 curswant 를 '줄 끝'(MAXCOL)으로 두므로, 'nostartofline' 이면 들여쓰기 뒤 커서가 줄 끝으로 갑니다.

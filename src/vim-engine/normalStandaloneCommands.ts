@@ -50,7 +50,8 @@ import { reselectVisualForRedo } from './visualRedo';
 import { joinLines, joinSingleLastLine, toggleCaseChar, modifyNumberAtCursor } from './lineOperators';
 import { yankFoldOrLine } from './folding';
 import { msg } from './messages';
-import { getOptions } from './setOptionsCore';
+import { getOptions, parseWhichwrapFlags } from './setOptionsCore';
+import { executeOperatorMotion } from './operatorMotion';
 import { repeatSearch, executeWordSearch } from './searchMode';
 import {
   ringBell,
@@ -664,17 +665,21 @@ export function handleNormalEditingAndMotionFallback(
       currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
     };
   }
+  // x / X 는 Vim 에서 dl / dh 라 'whichwrap' 의 l / h 가 있으면 줄을 넘어 지웁니다 (operatorMotion.ts).
+  const ww = key === 'x' || key === 'X' ? parseWhichwrapFlags(getOptions(state).whichwrap) : null;
   if (key === 'x') {
     const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'x'] : ['x'];
+    const deleted = ww?.has('l') ? executeOperatorMotion(state, 'd', 'l', parsed.totalCount) ?? state : deleteChar(state, parsed.totalCount);
     return {
-      ...syncRegisters(state, deleteChar(state, parsed.totalCount), false),
+      ...syncRegisters(state, deleted, false),
       lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
     };
   }
   if (key === 'X') {
     const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'X'] : ['X'];
+    const deleted = ww?.has('h') ? executeOperatorMotion(state, 'd', 'h', parsed.totalCount) ?? state : deleteCharBefore(state, parsed.totalCount);
     return {
-      ...syncRegisters(state, deleteCharBefore(state, parsed.totalCount), false),
+      ...syncRegisters(state, deleted, false),
       lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
     };
   }
@@ -745,13 +750,15 @@ export function handleNormalEditingAndMotionFallback(
       currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
     };
   }
-  if (key === 'R' && !parsed.operator && !state.pendingKeys) {
+  if (key === 'R' && !parsed.operator && (!state.pendingKeys || /^[0-9]+$/.test(state.pendingKeys))) {
+    // [count]R: Esc 를 누르면 입력한 글자를 count-1 번 더 덮어씁니다 (handleReplaceModeKey).
     return {
       ...pushUndoSnapshot(state),
       mode: 'REPLACE',
       replaceStack: [],
       pendingKeys: undefined,
-      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['R'],
+      insertRepeatCount: parsed.totalCount > 1 ? parsed.totalCount : undefined,
+      currentChangeKeys: isReplayingDot ? state.currentChangeKeys : parsed.totalCount > 1 ? [String(parsed.totalCount), 'R'] : ['R'],
     };
   }
   if (key === 'v') {

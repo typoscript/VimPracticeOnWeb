@@ -27,14 +27,17 @@ function handleInsertEditingKey(
   }
   if (key === 'Ctrl-d' || key === 'Ctrl+d' || key === 'Alt-d' || key === 'Alt+d') {
     const nextChangeKeys = appendCurrentChange(state, 'Ctrl-d', isReplayingDot);
-    const beforeCursor = currentLine.slice(0, col);
-    if (/^[ \t]*[0^]$/.test(beforeCursor)) {
+    // Vim ins_shift: 바로 전에 친 글자가 0 / ^ 이면 그 글자를 지우고 들여쓰기를 모두 없앱니다 (줄 어디서든).
+    const lastTyped = (state.currentInsertText ?? '').slice(-1);
+    if (col > 0 && (lastTyped === '0' || lastTyped === '^') && currentLine[col - 1] === lastTyped) {
+      const withoutChar = currentLine.slice(0, col - 1) + currentLine.slice(col);
+      const indentLen = (withoutChar.match(/^[ \t]*/) ?? [''])[0].length;
       const nextLines = [...state.lines];
-      nextLines[line] = currentLine.slice(col);
+      nextLines[line] = withoutChar.slice(indentLen);
       return {
         ...state,
         lines: nextLines,
-        cursor: { line, col: 0 },
+        cursor: { line, col: Math.max(0, col - 1 - indentLen) },
         currentChangeKeys: nextChangeKeys,
         currentInsertText: trimInsertText(state.currentInsertText, 1),
       };
@@ -164,6 +167,8 @@ function handleInsertEditingKey(
         },
       };
     }
+    // Vim ins_bs: 버퍼 첫 칸에서는 아무것도 못 지우고(beep) `.` 반복에도 남기지 않습니다.
+    if (col === 0 && line === 0 && !state.blockInsertSession) return state;
     const nextChangeKeys = appendCurrentChange(state, 'Backspace', isReplayingDot);
     const autopairBs = handleAutopairsBackspace(state, nextChangeKeys);
     if (autopairBs) return autopairBs;
@@ -213,7 +218,9 @@ function handleInsertEditingKey(
     const autopairEnter = handleAutopairsEnter(state, nextChangeKeys);
     if (autopairEnter) return autopairEnter;
     const opts = getOptions(state);
-    const beforeCursor = currentLine.slice(0, col);
+    // Vim open_line: 자동 들여쓰기만 있는 줄에서 Enter 를 누르면 그 줄 끝 공백(들여쓰기)을 지웁니다 (did_ai → truncate_spaces).
+    const rawBefore = currentLine.slice(0, col);
+    const beforeCursor = state.autoIndentPending ? rawBefore.replace(/[ \t]+$/, '') : rawBefore;
     const afterCursor = currentLine.slice(col);
     let indent = '';
     let nextLineBody = afterCursor;
@@ -222,7 +229,7 @@ function handleInsertEditingKey(
       indent = comment.contPrefix;
       nextLineBody = afterCursor.replace(/^[ \t]+/, '');
     } else if (opts.autoindent || opts.smartindent) {
-      const baseIndent = beforeCursor.match(/^[ \t]*/)?.[0] ?? '';
+      const baseIndent = rawBefore.match(/^[ \t]*/)?.[0] ?? '';
       if (opts.smartindent && beforeCursor.trimEnd().endsWith('{')) {
         const sw = opts.shiftwidth || 2;
         const unit = opts.expandtab !== false ? ' '.repeat(sw) : '\t';
@@ -245,6 +252,7 @@ function handleInsertEditingKey(
       blockInsertSession: null,
       currentChangeKeys: nextChangeKeys,
       currentInsertText: (state.currentInsertText ?? '') + '\n',
+      autoIndentPending: opts.autoindent || opts.smartindent ? true : undefined,
     };
   }
 
@@ -578,16 +586,21 @@ export function handleInsertModeKey(
   // Ctrl+o: 일회성 Normal 명령 실행 (INSERT (normal))
   // Vim ins_ctrl_o 는 지금까지의 입력을 끝냅니다(ins_esc, count 0): `.` 는 여기까지의 입력이고 [count] 반복은 버립니다.
   if (key === 'Ctrl-o' || key === 'Ctrl+o' || key === 'Alt-o' || key === 'Alt+o') {
+    // Esc 처럼 자동 들여쓰기만 있는 줄이면 들여쓰기를 지웁니다 (did_ai).
+    const curLine = state.cursor.line;
+    const blankAuto = state.autoIndentPending && /^[ \t]+$/.test(state.lines[curLine] ?? '');
+    const lines = blankAuto ? state.lines.map((l, i) => (i === curLine ? '' : l)) : state.lines;
     return {
       ...state,
       lastChangeKeys: !isReplayingDot && state.currentChangeKeys && !state.insertRestartPending ? [...state.currentChangeKeys, 'Escape'] : state.lastChangeKeys,
+      lines,
+      mode: 'NORMAL',
+      insertNormalSession: true,
+      cursor: clampCursor(lines, blankAuto ? { line: curLine, col: 0 } : state.cursor, 'NORMAL'),
+      pendingKeys: undefined,
       currentChangeKeys: undefined,
       insertRepeatCount: undefined,
       insertRepeatNewline: undefined,
-      mode: 'NORMAL',
-      insertNormalSession: true,
-      cursor: clampCursor(state.lines, state.cursor, 'NORMAL'),
-      pendingKeys: undefined,
     };
   }
 

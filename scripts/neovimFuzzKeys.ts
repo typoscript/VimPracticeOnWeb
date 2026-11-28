@@ -10,6 +10,8 @@ const SPECIAL: Record<string, string> = {
   '<C-w>': 'Ctrl-w',
   '<C-u>': 'Ctrl-u',
   '<C-o>': 'Ctrl-o',
+  '<C-t>': 'Ctrl-t',
+  '<C-d>': 'Ctrl-d',
 };
 
 export function toEngineKeys(notation: string): string[] {

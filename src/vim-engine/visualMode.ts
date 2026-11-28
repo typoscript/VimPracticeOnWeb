@@ -1,4 +1,5 @@
 import { VimEditorState, CursorPosition } from './types';
+import { curswantColumnOn } from './virtualColumn';
 import { executeCommandLine } from './commandLine';
 import { moveToLineStart, moveToLineEnd, moveToFirstNonBlank } from './motions';
 import { syncRegisters, putFromRegister } from './registers';
@@ -692,11 +693,8 @@ export function handleVisualModeKey(
   }
 
   // 들여쓰기 / 내어쓰기 / 정렬 (>, <, =)
-  if (key === '>') {
-    return indentVisual(state, 'in');
-  }
-  if (key === '<') {
-    return indentVisual(state, 'out');
+  if (key === '>' || key === '<') {
+    return indentVisual(state, key === '>' ? 'in' : 'out', parsed.count1 ?? 1);
   }
   if (key === '=') {
     return formatIndentVisual(state);
@@ -761,7 +759,7 @@ export function handleVisualModeKey(
     const targetText = state.lines[target] ?? '';
     const col = getOptions(state).startofline
       ? Math.max(0, targetText.search(/\S/))
-      : Math.min(state.curswant ?? state.cursor.col, targetText.length);
+      : curswantColumnOn(state, state.lines, target);
     return { ...state, cursor: { line: target, col }, visualBlockEndOfLine: state.mode === 'VISUAL_BLOCK' ? state.visualBlockEndOfLine : undefined, pendingKeys: undefined };
   }
 

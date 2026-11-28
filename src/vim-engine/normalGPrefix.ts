@@ -1,4 +1,5 @@
 import { VimEditorState } from './types';
+import { curswantColumnOn } from './virtualColumn';
 import { clampCursor, getFirstNonBlankCol, getMaxCol } from './cursor';
 import { getOptions } from './setOptionsCore';
 import { moveToFirstLine } from './motions';
@@ -180,7 +181,7 @@ export function handleNormalCommentFormatOrCaseG(
       let res = executeCaseMotion({ ...state, pendingKeys: undefined }, op, motionKey, count);
       // gugg 는 줄 단위: 'nostartofline' 이면 첫 줄로 가되 원래 열을 유지합니다 (Vim op_tilde).
       if (motionKey === 'gg' && !res.bell && !getOptions(state).startofline) {
-        res = { ...res, cursor: clampCursor(res.lines, { line: res.cursor.line, col: state.curswant ?? state.cursor.col }, 'NORMAL') };
+        res = { ...res, cursor: clampCursor(res.lines, { line: res.cursor.line, col: curswantColumnOn(state, res.lines, res.cursor.line) }, 'NORMAL') };
         // op_tilde 는 커서를 연산 시작(oap->start)에 둔 채 u_save 하므로 실행 취소도 그 열로 돌아옵니다.
         res = setLastUndoCursor(res, state, res.cursor);
       }
@@ -237,7 +238,7 @@ export function handleNormalCommentFormatOrCaseG(
     // 줄 단위 모션(gugg, guj …)은 'nostartofline' 에서 범위 첫 줄로 가되 원래 열을 유지합니다 (Vim op_tilde).
     // 단, - 는 모션 목적지(첫 비공백)가 연산 시작이라 그 자리로 갑니다 (g~- , Neovim 대조).
     const keepCol = range.linewise && !getOptions(state).startofline && key !== '-';
-    const caseCursor = keepCol ? { line: range.start.line, col: state.curswant ?? state.cursor.col } : range.cursor;
+    const caseCursor = keepCol ? { line: range.start.line, col: curswantColumnOn(state, applied.lines, range.start.line) } : range.cursor;
     const finalCursor = clampCursor(applied.lines, caseCursor, 'NORMAL');
     // op_tilde 는 커서를 연산 시작에 둔 채 u_save 하므로, 줄 단위 모션(g~k, gUj, g~G)의 실행 취소도 그 열로 돌아옵니다.
     const withUndoCursor = keepCol ? setLastUndoCursor(applied, state, finalCursor) : applied;

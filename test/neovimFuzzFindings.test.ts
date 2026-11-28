@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { handleKey, registerEntryText } from '../src/vim-engine';
+import { handleKey, registerEntryText, runExCommand } from '../src/vim-engine';
 import type { VimEditorState } from '../src/vim-engine';
 import { toEngineKeys } from '../scripts/neovimFuzzKeys';
 import findings from './fixtures/neovim-fuzz-findings.json';
@@ -13,6 +13,8 @@ interface Finding {
   text: string;
   cursor: { row: number; col: number };
   keys: string;
+  /** `:set` 인자 (퍼저 wide 프로필). 키보다 먼저 적용합니다. */
+  options?: string;
   expected: {
     lines: string[];
     cursor: { row: number; col: number };
@@ -28,6 +30,7 @@ describe('Neovim 비교 퍼저로 찾은 차이', () => {
       cursor: { line: f.cursor.row, col: f.cursor.col },
       mode: 'NORMAL',
     };
+    if (f.options) state = { ...runExCommand(state, `set ${f.options}`), commandMessage: undefined };
     for (const key of toEngineKeys(f.keys)) state = handleKey(state, key);
 
     expect(state.lines).toEqual(f.expected.lines);

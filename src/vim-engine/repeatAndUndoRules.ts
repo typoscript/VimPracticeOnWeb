@@ -1,4 +1,5 @@
 import { StateSnapshot, VimEditorState } from './types';
+import { curswantColumnOn } from './virtualColumn';
 import { visualOperatorStart } from './undoHistory';
 
 /**
@@ -149,11 +150,19 @@ export function recordInsertStartCursor(prev: VimEditorState, next: VimEditorSta
       ? 0
       : start === prev.cursor.line
         ? prev.cursor.col
-        : Math.min(prev.curswant ?? prev.cursor.col, Math.max(0, lineLen(start) - 1));
+        : Math.min(curswantColumnOn(prev, prev.lines, start), Math.max(0, lineLen(start) - 1));
     const col = Math.max(0, Math.min(startCol, lineLen(start + 1) - 1));
     return { ...next, undoStack: [...stack.slice(0, -1), { ...top, cursor: { line: start + 1, col } }] };
   }
   if (next.lines.length !== prev.lines.length) return next;
+  // 한 줄을 줄 단위로 바꾸는 cc / S: 실행 취소 커서는 원래 열이되 첫 비공백을 넘지 않습니다 (Neovim 대조, 'autoindent' 와 무관).
+  const linewiseChange =
+    (next.registers !== prev.registers && next.registers?.['"']?.type === 'line') || (next.clipboard !== prev.clipboard && next.clipboard?.type === 'line');
+  if (linewiseChange && next.cursor.line === prev.cursor.line) {
+    const fnb = (prev.lines[prev.cursor.line] ?? '').search(/\S|$/);
+    const col = Math.max(0, Math.min(prev.cursor.col, fnb));
+    return { ...next, undoStack: [...stack.slice(0, -1), { ...top, cursor: { line: prev.cursor.line, col } }] };
+  }
   return { ...next, undoStack: [...stack.slice(0, -1), { ...top, cursor: { ...next.cursor } }] };
 }
 

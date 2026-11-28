@@ -392,14 +392,15 @@ export function executeRangeNorm(
   normKeys: string,
   _commandStr: string,
   keyRunner?: KeyRunner,
-  bang = false
+  bang = false,
+  keepCursor = false
 ): VimEditorState {
   let curState = pushUndoSnapshot(state);
   const count = range.endLine - range.startLine + 1;
 
   let firstUndoCursor: CursorPosition | undefined;
   for (let l = range.startLine; l <= range.endLine; l++) {
-    ({ state: curState, firstUndoCursor } = runNormalKeysOnLine(curState, l, normKeys, keyRunner, bang, firstUndoCursor, l > range.startLine));
+    ({ state: curState, firstUndoCursor } = runNormalKeysOnLine(curState, l, normKeys, keyRunner, bang, firstUndoCursor, l > range.startLine, keepCursor));
   }
   if (firstUndoCursor) curState = setLastUndoCursor(curState, state, firstUndoCursor);
   // 안쪽 키가 아무것도 바꾸지 않았으면(u_save 없음) Vim 처럼 실행 취소 항목을 남기지 않습니다.
@@ -440,7 +441,8 @@ function runNormalKeysOnLine(
   keyRunner: KeyRunner | undefined,
   bang: boolean,
   firstUndoCursor: CursorPosition | undefined,
-  resetCurswant = false
+  resetCurswant = false,
+  keepCursor = false
 ): { state: VimEditorState; firstUndoCursor: CursorPosition | undefined } {
   if (lineIdx < 0 || lineIdx >= state.lines.length) {
     return { state, firstUndoCursor };
@@ -451,7 +453,7 @@ function runNormalKeysOnLine(
   const prevRecording = state.recordingMacro;
   let curState: VimEditorState = {
     ...state,
-    cursor: { line: lineIdx, col: 0 },
+    cursor: keepCursor ? state.cursor : { line: lineIdx, col: 0 },
     // [range]:norm 은 둘째 줄부터 curswant 를 0열로 다시 정합니다 (nvim: :1,2norm dd 뒤 0열, :g/pat/norm dd 는 원래 열 유지).
     ...(resetCurswant ? { curswant: 0 } : {}),
     mode: 'NORMAL',

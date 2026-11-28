@@ -1,7 +1,8 @@
 import { VimEditorState } from './types';
+import { curswantColumnOn } from './virtualColumn';
 import { clampCursor, getFirstNonBlankCol, getMaxCol } from './cursor';
 import { getOptions, hasFormatOption, extractCommentPrefix } from './setOptionsCore';
-import { pushUndoSnapshot } from './undoHistory';
+import { pushUndoSnapshot, pushUndoSnapshotAt } from './undoHistory';
 
 export { pushUndoSnapshot, undo, redo } from './undoHistory';
 
@@ -9,8 +10,13 @@ export { pushUndoSnapshot, undo, redo } from './undoHistory';
  * 'dd' / '[count]dd': 현재 줄부터 count개의 줄을 삭제하고 클립보드에 라인 단위로 복사합니다.
  */
 export function deleteLine(state: VimEditorState, count = 1): VimEditorState {
-  const stateWithSnapshot = pushUndoSnapshot(state);
   const { line } = state.cursor;
+  // Vim nv_lineop: dd 는 연산 전에 beginline(BL_SOL | BL_FIX) 로 커서를 옮기므로(실행 취소 커서도 그 위치),
+  // 'startofline' 이면 첫 비공백, 아니면 기억한 열입니다.
+  const startCol = getOptions(state).startofline
+    ? getFirstNonBlankCol(state.lines[line] ?? '')
+    : Math.min(curswantColumnOn(state, state.lines, line), Math.max(0, (state.lines[line] ?? '').length - 1));
+  const stateWithSnapshot = pushUndoSnapshot({ ...state, cursor: { line, col: startCol } });
 
   const deleteCount = Math.min(count, state.lines.length - line);
   const deletedLines = state.lines.slice(line, line + deleteCount).join('\n');
@@ -25,9 +31,13 @@ export function deleteLine(state: VimEditorState, count = 1): VimEditorState {
 
   const targetLine = Math.min(line, nextLines.length - 1);
   // Vim do_pending_operator: 'nostartofline' 이면 줄 단위 삭제 뒤 기억한 열(curswant)로 갑니다 (빈 줄을 지나온 3G 뒤 dd 도 원래 열로).
+  // 'startofline' 이면 op_delete 의 beginline(BL_WHITE | BL_FIX): 첫 비공백으로 갑니다.
   const clampedCursor = clampCursor(
     nextLines,
-    { line: targetLine, col: getOptions(state).startofline ? state.cursor.col : state.curswant ?? state.cursor.col },
+    {
+      line: targetLine,
+      col: getOptions(state).startofline ? getFirstNonBlankCol(nextLines[targetLine] ?? '') : curswantColumnOn(state, nextLines, targetLine),
+    },
     'NORMAL'
   );
 
@@ -202,16 +212,18 @@ export function changeLine(state: VimEditorState, count = 1): VimEditorState {
   const deleteCount = Math.min(count, state.lines.length - line);
   const deletedLines = state.lines.slice(line, line + deleteCount).join('\n');
 
+  // Vim op_change(줄 단위): 'autoindent' 이면 첫 줄의 들여쓰기를 남기고 그 뒤에서 입력합니다.
+  const indent = getOptions(state).autoindent ? ((state.lines[line] ?? '').match(/^[ \t]*/)?.[0] ?? '') : '';
   const nextLines = [
     ...state.lines.slice(0, line),
-    '',
+    indent,
     ...state.lines.slice(line + deleteCount),
   ];
 
   return {
     ...stateWithSnapshot,
     lines: nextLines,
-    cursor: { line, col: 0 },
+    cursor: { line, col: indent.length },
     mode: 'INSERT',
     clipboard: {
       type: 'line',
@@ -341,7 +353,8 @@ export function computeAutoIndent(
  * 'o': 현재 줄 아래에 새 빈 줄을 삽입하고 INSERT 모드 진입
  */
 export function openLineBelow(state: VimEditorState): VimEditorState {
-  const stateWithSnapshot = pushUndoSnapshot(state);
+  // Vim open_line 은 u_save(lnum, lnum + 1) 이라 실행 취소 커서 판정 범위는 새 줄 자리입니다 (빈 줄 옆에 빈 줄을 열어도 그 자리로).
+  const stateWithSnapshot = pushUndoSnapshotAt(state, state.cursor, { start: state.cursor.line + 1, end: state.cursor.line + 1 });
   const { line } = state.cursor;
   const targetLine = line + 1;
   const opts = getOptions(state);
@@ -368,7 +381,7 @@ export function openLineBelow(state: VimEditorState): VimEditorState {
  * 'O': 현재 줄 위에 새 빈 줄을 삽입하고 INSERT 모드 진입
  */
 export function openLineAbove(state: VimEditorState): VimEditorState {
-  const stateWithSnapshot = pushUndoSnapshot(state);
+  const stateWithSnapshot = pushUndoSnapshotAt(state, state.cursor, { start: state.cursor.line, end: state.cursor.line });
   const { line } = state.cursor;
   const opts = getOptions(state);
   const curLine = state.lines[line] ?? '';

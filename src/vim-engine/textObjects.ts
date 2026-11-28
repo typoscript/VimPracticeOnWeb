@@ -76,6 +76,72 @@ function getCharClass(ch: string | undefined): CharClass {
  * 주어진 텍스트 객체 타입에 따라 현재 커서 위치의 범위를 구합니다.
  * (단어 iw/aw, 따옴표 i"/a"/i'/a'/i`/a`, 괄호 및 중괄호 i(/a(/i[/a[/i{/a{ 등 멀티라인 지원)
  */
+/**
+ * Vim current_block 이 괄호 쌍을 찾는 방법 (findmatch): 커서가 여는 괄호 위면 그 괄호, 아니면 커서 앞에서
+ * 짝이 없는 여는 괄호를 뒤로 찾고(사이의 짝 맞은 괄호는 건너뜀), 없으면 커서 뒤에서 처음 나오는 여는 괄호를 찾습니다.
+ * 그 괄호의 짝(닫는 괄호)이 없으면 실패합니다 — 더 바깥 쌍이나 다른 쌍으로 넘어가지 않습니다. 따옴표는 무시합니다.
+ */
+export function findVimBlock(
+  lines: string[],
+  cursor: CursorPosition,
+  openChar: string,
+  closeChar: string
+): { open: CursorPosition; close: CursorPosition } | null {
+  const charAt = (p: CursorPosition) => (lines[p.line] ?? '')[p.col];
+  const prev = (p: CursorPosition): CursorPosition | null => {
+    if (p.col > 0) return { line: p.line, col: p.col - 1 };
+    for (let l = p.line - 1; l >= 0; l--) if ((lines[l] ?? '').length > 0) return { line: l, col: lines[l].length - 1 };
+    return null;
+  };
+  const next = (p: CursorPosition): CursorPosition | null => {
+    if (p.col + 1 < (lines[p.line] ?? '').length) return { line: p.line, col: p.col + 1 };
+    for (let l = p.line + 1; l < lines.length; l++) if ((lines[l] ?? '').length > 0) return { line: l, col: 0 };
+    return null;
+  };
+  let open: CursorPosition | null = null;
+  if (charAt(cursor) === openChar) {
+    open = { ...cursor };
+  } else {
+    let depth = 0;
+    for (let p = prev(cursor); p; p = prev(p)) {
+      const ch = charAt(p);
+      if (ch === closeChar) depth++;
+      else if (ch === openChar) {
+        if (depth === 0) {
+          open = p;
+          break;
+        }
+        depth--;
+      }
+    }
+    if (!open) {
+      depth = 0;
+      for (let p = next(cursor); p; p = next(p)) {
+        const ch = charAt(p);
+        if (ch === closeChar) depth++;
+        else if (ch === openChar) {
+          if (depth === 0) {
+            open = p;
+            break;
+          }
+          depth--;
+        }
+      }
+    }
+  }
+  if (!open) return null;
+  let depth = 0;
+  for (let p = next(open); p; p = next(p)) {
+    const ch = charAt(p);
+    if (ch === openChar) depth++;
+    else if (ch === closeChar) {
+      if (depth === 0) return { open, close: p };
+      depth--;
+    }
+  }
+  return null;
+}
+
 export function getTextObjectRange(
   lines: string[],
   cursor: CursorPosition,
@@ -195,61 +261,7 @@ export function getTextObjectRange(
   }
 
   if (openChar && closeChar) {
-    interface BracketPair {
-      open: CursorPosition;
-      close: CursorPosition;
-    }
-    const pairs: BracketPair[] = [];
-    const stack: CursorPosition[] = [];
-
-    for (let l = 0; l < lines.length; l++) {
-      const line = lines[l] ?? '';
-      for (let c = 0; c < line.length; c++) {
-        const ch = line[c];
-        if (ch === openChar) {
-          stack.push({ line: l, col: c });
-        } else if (ch === closeChar) {
-          if (stack.length > 0) {
-            const openPos = stack.pop()!;
-            pairs.push({ open: openPos, close: { line: l, col: c } });
-          }
-        }
-      }
-    }
-
-    if (pairs.length === 0) {
-      return null;
-    }
-
-    const posCompare = (p1: CursorPosition, p2: CursorPosition) =>
-      p1.line !== p2.line ? p1.line - p2.line : p1.col - p2.col;
-
-    // 커서를 감싸고 있는 쌍들 중 가장 안쪽(가장 범위가 작은) 쌍 찾기
-    const enclosing = pairs
-      .filter((p) => posCompare(p.open, cursor) <= 0 && posCompare(cursor, p.close) <= 0)
-      .sort((a, b) => {
-        const diffA = (a.close.line - a.open.line) * 100000 + (a.close.col - a.open.col);
-        const diffB = (b.close.line - b.open.line) * 100000 + (b.close.col - b.open.col);
-        return diffA - diffB;
-      });
-
-    let target = enclosing[0];
-
-    // 커서를 감싸는 쌍이 없으면, 커서 뒤에 나타나는 첫 번째 괄호 쌍 선택.
-    // 단 커서 앞(또는 위)에 짝 없는 여는 괄호가 있으면 Vim current_block 은 그 괄호를 블록 시작으로 보고 실패합니다.
-    const unmatchedOpenBefore = stack.some((p) => posCompare(p, cursor) <= 0);
-    if (!target && unmatchedOpenBefore) return null;
-    // 앞으로 찾을 때도 커서 뒤 첫 여는 괄호가 짝이 없으면 실패합니다 (`x = ( (t)` 의 da().
-    const firstUnmatchedAfter = stack.find((p) => posCompare(p, cursor) > 0);
-    const firstPairAfter = pairs.filter((p) => posCompare(p.open, cursor) > 0).sort((a, b) => posCompare(a.open, b.open))[0];
-    if (!target && firstUnmatchedAfter && (!firstPairAfter || posCompare(firstUnmatchedAfter, firstPairAfter.open) < 0)) return null;
-    if (!target) {
-      const upcoming = pairs
-        .filter((p) => posCompare(p.open, cursor) >= 0)
-        .sort((a, b) => posCompare(a.open, b.open));
-      target = upcoming[0];
-    }
-
+    const target = findVimBlock(lines, cursor, openChar, closeChar);
     if (!target) {
       return null;
     }
@@ -317,12 +329,13 @@ export function getTextObjectRange(
         ? { line: target.close.line - 1, col: Math.max(0, (lines[target.close.line - 1] ?? '').length - 1) }
         : { line: target.close.line, col: target.close.col - 1 };
       if (start.line > end.line) {
-        // 괄호 사이에 내용이 없음 ({ 다음 줄에 바로 })
+        // 괄호 사이에 내용이 없음 ({ 다음 줄에 바로 }): Vim 은 다음 줄로 넘어간 시작(닫는 괄호 위)에 빈 범위를 둡니다.
+        const at = openAtEol ? { line: target.open.line + 1, col: 0 } : { line: target.open.line, col: target.open.col + 1 };
         return {
-          startLine: target.open.line,
-          startCol: target.open.col + 1,
-          endLine: target.open.line,
-          endCol: target.open.col,
+          startLine: at.line,
+          startCol: at.col,
+          endLine: at.line,
+          endCol: at.col - 1,
           isEmpty: true,
         };
       }
@@ -512,6 +525,12 @@ export function executeTextObjectOperator(
       return executeLinewiseObjectOperator(curState, operator, { startLine, endLine }, range.linewise ? range.endAdjusted ?? true : false, isStructuralBlock);
     }
 
+    const emptyBracket = range.isEmpty && /^[ia][()[\]{}<>bB]$/.test(objectType);
+    // 빈 괄호 객체(`()`, `{` 다음 줄 `}`)의 대소문자 연산은 아무것도 바꾸지 않고 커서만 빈 범위 시작으로 갑니다 (Vim current_block).
+    if (emptyBracket && (operator === 'gu' || operator === 'gU' || operator === 'g~' || operator === 'g?')) {
+      return { ...curState, cursor: { line: startLine, col: startCol }, pendingKeys: undefined };
+    }
+
     // 대소문자 변환 (gu, gU, g~)
     if (operator === 'gu' || operator === 'gU' || operator === 'g~' || operator === 'g?') {
       const visualState: VimEditorState = {
@@ -555,7 +574,8 @@ export function executeTextObjectOperator(
         },
         cursor: {
           line: endLine,
-          col: isMulti ? Math.max(0, endCol) : Math.max(startCol, endCol),
+          // Vim current_block: 여는 괄호가 줄 끝이라 다음 줄부터 고른 i{ / i( 는 끝 줄의 줄바꿈까지 고릅니다 (커서가 NUL 위, vi}d 가 줄을 합침).
+          col: range.linewise ? (curState.lines[endLine] ?? '').length : isMulti ? Math.max(0, endCol) : Math.max(startCol, endCol),
         },
         pendingKeys: undefined,
       };
@@ -585,7 +605,7 @@ export function executeTextObjectOperator(
         ...curState,
         // Vim: 복사 후 커서는 복사한 범위의 시작으로 갑니다 (yiw 는 단어 첫 글자).
         // 빈 i" (`""`) 는 Vim 처럼 빈 범위의 시작(닫는 따옴표)으로 갑니다.
-        cursor: range.isEmpty && !isQuote ? curState.cursor : { line: startLine, col: startCol },
+        cursor: range.isEmpty && !isQuote && !emptyBracket ? curState.cursor : { line: startLine, col: startCol },
         clipboard: {
           type: 'text',
           content,

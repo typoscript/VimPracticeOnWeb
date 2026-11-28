@@ -1,4 +1,5 @@
 import { CursorPosition, VimEditorState } from './types';
+import { columnForVirtual, curswantColumnOn, cursorVirtualColumn, tabstopOf } from './virtualColumn';
 import { clampCursor, getFirstNonBlankCol } from './cursor';
 import { pushUndoSnapshot } from './operators';
 import { pushUndoSnapshotAt, visualOperatorStart } from './undoHistory';
@@ -354,7 +355,10 @@ export function executeCaseMotion(
 }
 
 /**
- * 단일 줄에 들여쓰기/내어쓰기를 적용합니다. shiftround 옵션이 켜져 있으면 shiftwidth 배수로 정렬합니다.
+ * 단일 줄에 들여쓰기/내어쓰기를 적용합니다 (Vim shift_line + set_indent).
+ * 들여쓰기 화면 폭(탭은 tabstop 기준)에 shiftwidth 를 더하거나 빼고('shiftround' 면 배수로 맞춤),
+ * 들여쓰기를 새로 만듭니다: 'expandtab' 이면 공백만, 아니면 탭 다음 남는 공백.
+ * Vim op_shift 처럼 빈 줄은 건드리지 않습니다.
  */
 export function shiftLineIndent(
   line: string,
@@ -365,54 +369,24 @@ export function shiftLineIndent(
   shiftround: boolean,
   times = 1
 ): string {
-  const unit = et ? ' '.repeat(sw) : '\t';
-  if (direction === 'in' && line.length === 0) return line;
-
+  if (line.length === 0) return line;
+  const tabstop = Math.max(1, ts);
+  let idx = 0;
+  let width = 0;
+  while (idx < line.length && (line[idx] === ' ' || line[idx] === '\t')) {
+    width += line[idx] === '\t' ? tabstop - (width % tabstop) : 1;
+    idx++;
+  }
+  let nextWidth: number;
   if (shiftround) {
-    let idx = 0;
-    let curWidth = 0;
-    while (idx < line.length) {
-      const ch = line[idx];
-      if (ch === ' ') {
-        curWidth += 1;
-        idx++;
-      } else if (ch === '\t') {
-        curWidth += ts - (curWidth % ts);
-        idx++;
-      } else {
-        break;
-      }
-    }
-    const body = line.slice(idx);
-    const nextWidth =
-      direction === 'in'
-        ? (Math.floor(curWidth / sw) + times) * sw
-        : Math.max(0, (Math.ceil(curWidth / sw) - times) * sw);
-    const rebuiltIndent = et
-      ? ' '.repeat(nextWidth)
-      : '\t'.repeat(Math.floor(nextWidth / ts)) + ' '.repeat(nextWidth % ts);
-    return rebuiltIndent + body;
-  }
-
-  let res = line;
-  if (direction === 'in') {
-    res = unit.repeat(times) + res;
+    const units = Math.floor(width / sw);
+    const amount = width % sw !== 0 && direction === 'out' ? times - 1 : times;
+    nextWidth = (direction === 'out' ? Math.max(0, units - amount) : units + amount) * sw;
   } else {
-    for (let t = 0; t < times; t++) {
-      if (res.startsWith(unit)) {
-        res = res.slice(unit.length);
-      } else if (res.startsWith('\t')) {
-        res = res.slice(1);
-      } else if (res.startsWith(' ')) {
-        let spaces = 0;
-        while (spaces < sw && res[spaces] === ' ') {
-          spaces++;
-        }
-        res = res.slice(spaces);
-      }
-    }
+    nextWidth = direction === 'out' ? Math.max(0, width - sw * times) : width + sw * times;
   }
-  return res;
+  const indent = et ? ' '.repeat(nextWidth) : '\t'.repeat(Math.floor(nextWidth / tabstop)) + ' '.repeat(nextWidth % tabstop);
+  return indent + line.slice(idx);
 }
 
 /**
@@ -423,7 +397,7 @@ export function indentLines(
   count = 1,
   direction: 'in' | 'out',
   /** 연산 전 기억한 열(curswant). 'nostartofline'(기본값)이면 Vim 처럼 이 열로 갑니다 (do_pending_operator 의 old_col). */
-  keepCol: number = state.curswant ?? state.cursor.col
+  keepCol: number = state.curswant ?? cursorVirtualColumn(state)
 ): VimEditorState {
   const stateWithUndo = pushUndoSnapshot(state);
   const startLine = state.cursor.line;
@@ -443,7 +417,7 @@ export function indentLines(
   // Vim op_shift: beginline(BL_SOL | BL_FIX) — 'startofline' 이면 첫 비공백, 아니면 원래 열(줄 길이로 제한)
   const newCursor = opts.startofline
     ? moveToFirstNonBlank(newLines, { line: startLine, col: 0 })
-    : { line: startLine, col: Math.max(0, Math.min(keepCol, (newLines[startLine] ?? '').length - 1)) };
+    : { line: startLine, col: Math.max(0, Math.min(columnForVirtual(newLines[startLine] ?? '', keepCol, tabstopOf(state)), (newLines[startLine] ?? '').length - 1)) };
 
   return {
     ...stateWithUndo,
@@ -458,7 +432,9 @@ export function indentLines(
  */
 export function indentVisual(
   state: VimEditorState,
-  direction: 'in' | 'out'
+  direction: 'in' | 'out',
+  /** 비주얼 [count]> 는 count 번 들여씁니다 (Vim op_shift 의 amount). */
+  times = 1
 ): VimEditorState {
   if (!state.visualAnchor) {
     return { ...state, mode: 'NORMAL', pendingKeys: undefined };
@@ -478,7 +454,7 @@ export function indentVisual(
   const newLines = [...state.lines];
   if (state.mode === 'VISUAL_BLOCK') {
     const minCol = Math.min(state.visualAnchor.col, state.cursor.col);
-    for (let i = minLine; i <= maxLine; i++) {
+    for (let i = minLine; i <= maxLine; i++) for (let t = 0; t < Math.max(1, times); t++) {
       const line = newLines[i];
       // Vim shift_block: 블록 왼쪽 열에 못 미치는 줄만 건너뜁니다 (줄 끝이 딱 그 열이면 끝에 공백이 붙음).
       if (line.length < minCol) continue;
@@ -515,14 +491,14 @@ export function indentVisual(
   }
 
   for (let i = minLine; i <= maxLine; i++) {
-    newLines[i] = shiftLineIndent(newLines[i], direction, sw, ts, et, sr, 1);
+    newLines[i] = shiftLineIndent(newLines[i], direction, sw, ts, et, sr, Math.max(1, times));
   }
 
   // Vim op_shift: beginline(BL_SOL | BL_FIX) — 'nostartofline' 이면 coladvance(w_curswant): 기억한 열로 갑니다
   // (vkl> 처럼 짧은 줄에서 l 이 실패해도 k 전의 열, v$> 는 줄 끝).
   const newCursor = opts.startofline
     ? moveToFirstNonBlank(newLines, { line: minLine, col: 0 })
-    : clampCursor(newLines, { line: minLine, col: state.curswant ?? state.cursor.col }, 'NORMAL');
+    : clampCursor(newLines, { line: minLine, col: curswantColumnOn(state, newLines, minLine) }, 'NORMAL');
 
   return {
     ...stateWithUndo,
@@ -581,11 +557,11 @@ export function equalOperatorCursor(
   state: VimEditorState,
   lines: string[],
   startLine: number,
-  keepCol: number = state.curswant ?? state.cursor.col
+  keepCol: number = state.curswant ?? cursorVirtualColumn(state)
 ): { line: number; col: number } {
   if (getOptions(state).startofline) return moveToFirstNonBlank(lines, { line: startLine, col: 0 });
   const len = (lines[startLine] ?? '').length;
-  return { line: startLine, col: Math.max(0, Math.min(keepCol, len - 1)) };
+  return { line: startLine, col: Math.max(0, Math.min(columnForVirtual(lines[startLine] ?? '', keepCol, tabstopOf(state)), len - 1)) };
 }
 
 /**

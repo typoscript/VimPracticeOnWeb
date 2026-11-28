@@ -294,7 +294,7 @@ export function handleInsertRegister(
     if (regKey) {
       const regClip = getRegisterContent(state, regKey);
       // Vim: 줄 단위 레지스터는 내용 뒤에 줄바꿈까지 넣어 커서가 다음 줄 시작에 옵니다 (i_CTRL-R).
-      const rawText = (regClip?.content ?? '') + (regClip?.type === 'line' && regClip.content ? '\n' : '');
+      const rawText = (regClip?.content ?? '') + (regClip?.type === 'line' ? '\n' : '');
       const currentLine = state.lines[state.cursor.line] ?? '';
       let textToInsert = rawText;
 
@@ -341,6 +341,15 @@ export function handleInsertRegister(
 
 function exitInsertToNormal(state: VimEditorState, isReplayingDot: boolean): VimEditorState {
   let targetState = state;
+  // Vim ins_esc: 'autoindent' 가 만든 들여쓰기만 있는 줄이면 들여쓰기를 지웁니다 (o<Esc> 는 빈 줄을 남김).
+  if (state.autoIndentPending) {
+    const cur = state.lines[state.cursor.line] ?? '';
+    if (cur.length > 0 && /^[ \t]*$/.test(cur)) {
+      const lines = [...state.lines];
+      lines[state.cursor.line] = '';
+      targetState = { ...state, lines, cursor: { line: state.cursor.line, col: 0 } };
+    }
+  }
   const repeatCount = state.insertRepeatCount ?? 1;
   const repeatNewline = Boolean(state.insertRepeatNewline);
   const rawInserted = state.currentInsertText ?? '';
@@ -386,6 +395,7 @@ function exitInsertToNormal(state: VimEditorState, isReplayingDot: boolean): Vim
     insertStartCol: undefined,
     insertRepeatCount: undefined,
     insertRepeatNewline: undefined,
+    autoIndentPending: undefined,
     lastChangeKeys: nextLastChange,
     currentChangeKeys: undefined,
     lastInsertedText: resolveLastInsertedText(state),
@@ -454,8 +464,9 @@ export function handleInsertEscape(state: VimEditorState, isReplayingDot: boolea
     }
 
     const finalFirstCol = col + (repeatCount > 1 ? unitText.length * (repeatCount - 1) : 0);
-    // Vim op_insert: 블록 A 로 글자를 넣었으면 커서는 블록 왼쪽 위(oap->start.col)로 돌아갑니다.
-    const nextCol = insertMode === 'A' && unitText.length > 0 ? minCol : Math.max(0, finalFirstCol - 1);
+    // Vim op_insert: 블록 I / A 로 글자를 넣었으면 커서는 블록 왼쪽 위(oap->start.col)로 돌아갑니다.
+    const nextCol =
+      insertMode === 'A' && unitText.length > 0 ? minCol : insertMode === 'I' && unitText.length > 0 ? insertCol : Math.max(0, finalFirstCol - 1);
     const lastPos = { line: firstLineIdx, col: insertCol, row: firstLineIdx };
     const changeRecord = recordChangePosition(state.changeList, { line: firstLineIdx, col: insertCol });
     const nextLastChange =
