@@ -25,7 +25,7 @@
   *(현재 230개 테스트 파일, 2,853개 테스트 100% 통과 필수. 지연 로딩 화면을 기다리는 `findBy*`/`waitFor` 상한은 `src/test/setup.ts` 에서 5초, 테스트 하나의 상한은 `vite.config.ts` 에서 15초로 두어 CI 나 동시 실행으로 컴퓨터가 바쁠 때도 흔들리지 않게 했습니다)*
 - **실제 브라우저(E2E) 테스트 (Playwright)**:
   `npm run test:e2e`
-  *(`e2e/*.e2e.ts`, `playwright.config.ts`. 프로덕션 빌드를 `vite preview` 로 띄워 Chromium 에서 레슨 완료·Ex 명령·Ctrl+v 차단·한글 IME 키 매핑·언어 전환·지연 로딩 탭을 검사합니다. 처음 한 번 `npx playwright install chromium` 이 필요하며, Linux 에서 공유 라이브러리가 없다고 나오면 `sudo npx playwright install-deps chromium` 을 실행하세요. 파일 이름을 `.e2e.ts` 로 두어 vitest 가 줍지 않게 합니다.)*
+  *(`e2e/*.e2e.ts`, `playwright.config.ts`. 프로덕션 빌드를 `vite preview` 로 띄워 Chromium 에서 레슨 완료·Ex 명령·Ctrl+v 차단·한글 IME 키 매핑·언어 전환·지연 로딩 탭·키 사전(`Ctrl+/`)·Alt+W(`Ctrl-w`) 창 이동·자유 연습장 자동 저장을 검사합니다. 처음 한 번 `npx playwright install chromium` 이 필요하며, Linux 에서 공유 라이브러리가 없다고 나오면 `sudo npx playwright install-deps chromium` 을 실행하세요. 파일 이름을 `.e2e.ts` 로 두어 vitest 가 줍지 않게 합니다.)*
 - **TypeScript 타입 체크 및 Vite 프로덕션 빌드**:
   `npm run build`
   *(strictNullChecks 및 noUnusedLocals 활성화 상태로 TS6133 등 미사용 변수 에러 발생 주의)*
@@ -302,5 +302,4 @@
   - Ex 명령(`:g`, `:s`, `:%norm`) 뒤 `u` 의 커서 열 (~10건). Vim 은 변경 단위마다 시작 커서(`uh_cursor`)를 저장하고 `nostartofline` 이면 curswant 열로 갑니다. curswant 를 Ex 명령 뒤에도 유지하는 간단한 시도는 효과가 없어 되돌렸습니다.
   - `"Ayiw`·`"ayiw` 조합(빈 마지막 줄의 `iw` 는 Vim 에서 앞 줄 끝까지 고름), 매크로를 녹화한 레지스터를 `"ap` 로 붙였을 때의 특수 키 표기(엔진은 `<Esc>`, Vim 은 실제 ESC 글자), `gugg`·`das`·`[count]$` 등 몇 건씩.
 - **`=` 재들여쓰기**: 엔진은 중괄호 기준으로 다시 들여쓰므로 Vim 의 `cindent`/`indentexpr` 와 다릅니다(퍼저에서 제외). 언어별 규칙이 필요해 큰 작업입니다.
-- **E2E 보강**: 키 사전(`Ctrl+/`), Alt+W(`Ctrl-w`), 자유 연습장 자동 저장은 단위 테스트와 수동 브라우저 확인만 했습니다. `e2e/app.e2e.ts` 에 시나리오를 넣을 수 있습니다.
 - **큰 파일**: 800줄 권장 상한을 넘는 파일(`neotreeEngine.ts` 904줄, `operators.ts` 870줄 등)은 크게 고칠 때 나누세요.
