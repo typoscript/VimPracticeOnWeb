@@ -2,7 +2,7 @@ import { VimEditorState } from './types';
 import { getMaxCol } from './cursor';
 import { syncRegisters, putFromRegister } from './registers';
 import { nextTab, prevTab } from './tabEngine';
-import { deleteVisualSelection } from './visual';
+import { deleteVisualSelection, failedVisualJoinCursor } from './visual';
 import { executeGCtrlG } from './visualUtilities';
 import { goToDeclaration, reselectLastVisual, traverseChangeList } from './advancedMotions';
 import {
@@ -216,6 +216,8 @@ export function handleVisualGSubcommand(
       const gKeys = joinCount > 1 ? [String(joinCount + 1), 'g', 'J'] : ['g', 'J'];
       return {
         ...joined,
+        // 합칠 줄이 없어 실패하면(마지막 줄) 커서는 연산 범위 시작에 남습니다 (Vim do_pending_operator).
+        cursor: changed ? joined.cursor : failedVisualJoinCursor(state),
         lastVisualSelection: snap,
         lastChangeKeys: changed ? gKeys : state.lastChangeKeys,
       };

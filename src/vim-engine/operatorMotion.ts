@@ -59,9 +59,14 @@ export function executeOperatorMotion(
     const before = res.target.line < cursor.line || (res.target.line === cursor.line && res.target.col < cursor.col);
     const start = before ? res.target : cursor;
     const end = before ? cursor : res.target;
-    if (res.kind === 'linewise') return applyLinewise(state, op, start.line, end.line);
+    if (res.kind === 'linewise') {
+      const applied = applyLinewise(state, op, start.line, end.line);
+      // y- 는 위로 가는 줄 단위 모션이라 커서가 모션 목적지(그 줄의 첫 비공백)에 남습니다 (Vim op_yank 는 oap->start 로).
+      if (op === 'y' && motionKey === '-' && applied) return { ...applied, cursor: { ...res.target } };
+      return applied;
+    }
     if (res.kind === 'inclusive') return applyCharwise(state, op, start, { line: end.line, col: end.col + 1 });
-    if (start.line === end.line && start.col === end.col) return { ...state, pendingKeys: undefined };
+    if (start.line === end.line && start.col === end.col) return emptyRegion(state, op);
     // 배타적 모션(( ) [( 등)도 :help exclusive-linewise 규칙을 따릅니다 (d( / d) / c( 가 빈 줄에서 끝날 때 줄 단위).
     return applyExclusive(state, op, start, end);
   }
@@ -88,19 +93,20 @@ export function executeOperatorMotion(
 
     case 'h':
     case 'ArrowLeft':
-      if (cursor.col <= 0) return null;
+      // Vim nv_left: 줄 처음에서는 삐 소리만 내고 연산자는 빈 범위로 계속됩니다 (ch 는 입력 모드로).
+      if (cursor.col <= 0) return op === 'c' ? emptyRegion(state, op) : null;
       return applyCharwise(state, op, { line: cursor.line, col: Math.max(0, cursor.col - n) }, cursor);
 
     case 'l':
     case 'ArrowRight':
       // 연산자와 함께 쓰인 l은 줄 끝 너머(마지막 문자 포함)까지 이동할 수 있습니다. (dl == x)
       // 빈 줄에서는 아무것도 하지 않지만 실패(beep)로 보지 않습니다. (Vim nv_right)
-      if (lineText.length === 0) return { ...state, pendingKeys: undefined };
+      if (lineText.length === 0) return emptyRegion(state, op);
       return applyCharwise(state, op, cursor, { line: cursor.line, col: Math.min(lineText.length, cursor.col + n) });
 
     case '^': {
       const target = moveToFirstNonBlank(lines, { line: cursor.line, col: 0 });
-      if (target.col === cursor.col) return { ...state, pendingKeys: undefined };
+      if (target.col === cursor.col) return emptyRegion(state, op);
       return target.col < cursor.col
         ? applyCharwise(state, op, target, cursor)
         : applyCharwise(state, op, cursor, target);
@@ -111,8 +117,9 @@ export function executeOperatorMotion(
       const found = findParagraphTarget(lines, cursor, motionKey === '}' ? 'next' : 'prev', n);
       if (!found) return null;
       const t = found.target;
-      if (t.line === cursor.line && t.col === cursor.col) return { ...state, pendingKeys: undefined };
-      if (found.inclusive) return applyCharwise(state, op, cursor, { line: t.line, col: t.col + 1 });
+      // 마지막 줄 끝에서 멈춘 } 는 포함 모션이라 커서가 이미 마지막 글자여도 그 글자가 범위입니다 (d} 가 마지막 글자를 지움).
+      if (found.inclusive && motionKey === '}') return applyCharwise(state, op, cursor, { line: t.line, col: t.col + 1 });
+      if (t.line === cursor.line && t.col === cursor.col) return emptyRegion(state, op);
       return motionKey === '}' ? applyExclusive(state, op, cursor, t) : applyExclusive(state, op, t, cursor);
     }
 
@@ -128,6 +135,15 @@ export function executeOperatorMotion(
   }
 
   return null;
+}
+
+/**
+ * 움직이지 않고 성공한 모션의 빈 범위 (Vim: 'cpoptions' 에 E 가 없으면 빈 범위도 오류가 아님).
+ * d / y 는 아무것도 하지 않고, c 는 그 자리에서 입력 모드로 들어갑니다 (c0 / c^ / ch 처럼).
+ */
+function emptyRegion(state: VimEditorState, op: Operator): VimEditorState {
+  if (op === 'c') return { ...pushUndoSnapshot(state), mode: 'INSERT', pendingKeys: undefined };
+  return { ...state, pendingKeys: undefined };
 }
 
 /**
@@ -165,9 +181,9 @@ function applyLinewise(state: VimEditorState, op: Operator, startLine: number, e
   const before = state.lines.slice(0, startLine);
   const after = state.lines.slice(endLine + 1);
 
-  // cj / ck: 대상 줄들을 첫 줄 들여쓰기만 남긴 빈 줄 하나로 교체 후 INSERT (autoindent)
+  // cj / ck: 대상 줄들을 빈 줄 하나로 교체 후 INSERT ('autoindent' 이면 첫 줄 들여쓰기를 남김, Vim op_change)
   if (op === 'c') {
-    const indentStr = (state.lines[startLine] ?? '').match(/^[ \t]*/)?.[0] ?? '';
+    const indentStr = getOptions(state).autoindent ? (state.lines[startLine] ?? '').match(/^[ \t]*/)?.[0] ?? '' : '';
     return {
       ...stateWithSnapshot,
       lines: [...before, indentStr, ...after],

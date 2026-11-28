@@ -238,9 +238,9 @@ export function handleNormalDCYOperators(
   isReplayingDot: boolean
 ): PrefixStepResult | null {
   // Vim exclusive-linewise 규칙: 빈 줄(마지막 줄 제외)에서 dw / cw / dW / cW 는 그 줄을 줄 단위로 다룹니다
-  // (dw = dd, cw = cc). 단, `.` 반복 키는 원래 키(d w)로 남깁니다.
+  // (dw = dd, cw = cc, yw = yy). 단, `.` 반복 키는 원래 키(d w)로 남깁니다.
   if (
-    (parsed.operator === 'd' || parsed.operator === 'c') &&
+    (parsed.operator === 'd' || parsed.operator === 'c' || parsed.operator === 'y') &&
     (key === 'w' || key === 'W') &&
     parsed.totalCount === 1 &&
     (state.lines[state.cursor.line] ?? '') === '' &&
@@ -248,6 +248,7 @@ export function handleNormalDCYOperators(
   ) {
     const op = parsed.operator;
     const res = handleNormalDCYOperators(state, op, parsed, true);
+    if (res?.handled && op === 'y') return res;
     if (res?.handled) {
       const keys = [op, key];
       return {

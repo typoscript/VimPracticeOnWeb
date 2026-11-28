@@ -5,6 +5,9 @@ import { pushUndoSnapshot } from './operators';
 import { pushUndoSnapshotAt } from './undoHistory';
 import { formatLinesRange, cindentOptionsFor, equalOperatorCursor, changeCaseVisual, caseTypeForOperator } from './lineOperators';
 import { getTagTextObjectRange } from './tagTextObject';
+import { getCountedWordObjectRange } from './wordObjectCount';
+import { currentSentence } from './sentenceVim';
+import { toOperatorRange } from './vimPosition';
 export { getTagTextObjectRange };
 import {
   TreesitterObjectType,
@@ -437,6 +440,21 @@ function getNestedPairRange(
 }
 
 /**
+ * 문자 단위 텍스트 객체가 d 와 함께 줄 단위로 바뀌는 경우입니다 (Vim op_delete):
+ * 여러 줄에 걸치고, 시작이 들여쓰기 안이며 끝 뒤에 공백만 남으면 줄 단위 삭제입니다.
+ */
+function becomesLinewise(lines: string[], range: TextObjectRange, operator: string): boolean {
+  if (range.isEmpty || operator === 'v') return false;
+  const startLine = range.startLine ?? 0;
+  const endLine = range.endLine ?? startLine;
+  const startText = lines[startLine] ?? '';
+  const endText = lines[endLine] ?? '';
+  const inIndent = startText.slice(0, range.startCol).trim() === '';
+  if (!inIndent) return false;
+  return operator === 'd' && endLine > startLine && endText.slice(range.endCol + 1).trim() === '';
+}
+
+/**
  * 텍스트 객체와 연산자(d, c, y, v, =, gu, gU, g~)를 조합하여 실행합니다. (숫자 카운트 및 멀티라인 지원)
  */
 export function executeTextObjectOperator(
@@ -455,10 +473,30 @@ export function executeTextObjectOperator(
   const isNestedPair = /^[ia][()[\]{}<>bBt]$/.test(objectType);
   const nestedRange = isNestedPair && count > 1 ? getNestedPairRange(curState.lines, curState.cursor, objectType, count) : undefined;
   if (nestedRange === null) return { ...curState, bell: true, pendingKeys: undefined };
-  const steps = isSentence || isStructuralBlock || isMiniAi || isNestedPair ? 1 : count;
+  // 연산자와 함께 쓴 [count]iw/aw/iW/aW 는 Vim current_word 로 한 번에 범위를 구합니다 (여러 줄에 걸침).
+  const isWordObject = operator !== 'v' && /^[ia][wW]$/.test(objectType);
+  const wordRange = isWordObject
+    ? getCountedWordObjectRange(curState.lines, curState.cursor, objectType[0] === 'a', objectType[1] === 'W', count)
+    : undefined;
+  if (wordRange && 'failed' in wordRange) return { ...curState, cursor: wordRange.failed, bell: true, pendingKeys: undefined };
+  // 문장 객체는 Vim current_sent 이식으로 범위(연산자) 또는 새 선택(비주얼)을 구합니다.
+  if (isSentence && operator === 'v') {
+    const sel = currentSentence(curState.lines, curState.cursor, count, objectType[0] === 'a', curState.visualAnchor ?? curState.cursor);
+    if (sel.kind === 'visual') {
+      const fit = (p: CursorPosition) => ({ line: p.line, col: Math.max(0, Math.min(p.col, (curState.lines[p.line] ?? '').length - 1)) });
+      return { ...curState, mode: 'VISUAL', visualAnchor: fit(sel.anchor), cursor: fit(sel.cursor), pendingKeys: undefined };
+    }
+  }
+  const sentenceRange = isSentence && operator !== 'v'
+    ? (() => {
+        const res = currentSentence(curState.lines, curState.cursor, count, objectType[0] === 'a');
+        return res.kind === 'operator' ? toOperatorRange(curState.lines, res.start, res.end, res.inclusive) : undefined;
+      })()
+    : undefined;
+  const steps = isSentence || isStructuralBlock || isMiniAi || isNestedPair || isWordObject ? 1 : count;
 
   for (let step = 0; step < steps; step++) {
-    const range = nestedRange ?? (isSentence
+    const range = sentenceRange ?? (wordRange as TextObjectRange | undefined) ?? nestedRange ?? (isSentence
       ? getSentenceObjectRange(curState.lines, curState.cursor, objectType as 'is' | 'as', count)
       : isStructuralBlock
         ? getTreesitterObjectRange(curState.lines, curState.cursor, objectType as TreesitterObjectType, count)
@@ -489,8 +527,8 @@ export function executeTextObjectOperator(
     const endCol = range.endCol;
 
     // 줄 단위 블록 (여러 줄 i{ 등): d / c / y / = / 대소문자 연산은 줄 단위로
-    if (range.linewise && operator !== 'v') {
-      return executeLinewiseObjectOperator(curState, operator, { startLine, endLine }, true);
+    if ((range.linewise || becomesLinewise(curState.lines, range, operator)) && operator !== 'v') {
+      return executeLinewiseObjectOperator(curState, operator, { startLine, endLine }, range.linewise ? range.endAdjusted ?? true : false, isStructuralBlock);
     }
 
     // 대소문자 변환 (gu, gU, g~)

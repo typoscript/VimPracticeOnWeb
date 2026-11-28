@@ -28,9 +28,11 @@ describe('문장 모션 ( )', () => {
     expect(press(createState(lines), ['3', ')']).cursor).toEqual({ line: 2, col: 0 });
   });
 
-  it('더 갈 곳이 없으면 bell', () => {
-    expect(press(at(2, 6), [')']).bell).toBe(true);
-    expect(press(at(0, 0), ['(']).bell).toBe(true);
+  it('더 갈 곳이 없으면 bell (count 가 남을 때만; 한 번은 제자리에서 성공, nvim 확인)', () => {
+    expect(press(at(2, 6), ['2', ')']).bell).toBe(true);
+    expect(press(at(0, 0), ['2', '(']).bell).toBe(true);
+    expect(press(at(2, 6), [')']).bell).toBeFalsy();
+    expect(press(at(0, 0), ['(']).bell).toBeFalsy();
   });
 });
 

@@ -39,6 +39,7 @@ import {
   executePutVariant,
   applyOperatorMotion,
   findOperatorRangeByYank,
+  isEmptyRegionMotion,
   RunHandleKeyFn,
 } from './engineHelpers';
 
@@ -214,6 +215,9 @@ export function handleNormalCommentFormatOrCaseG(
     const count = (c1 ? parseInt(c1, 10) : 1) * (c2 ? parseInt(c2, 10) : 1);
     const motionKeys = prefix ? [prefix, key] : [key];
     const range = findOperatorRangeByYank(state, motionKeys, count, runHandleKey);
+    if (!range && isEmptyRegionMotion(state, motionKeys, count, runHandleKey)) {
+      return { ...emptyRegionCaseChange(state, op as 'gu' | 'gU' | 'g~' | 'g?'), lastChangeKeys: isReplayingDot ? state.lastChangeKeys : [...(state.pendingKeys ?? '').split(''), key] };
+    }
     if (!range) return ringBell({ ...state, pendingKeys: undefined });
     const applied = changeCaseVisual(
       {
@@ -227,7 +231,8 @@ export function handleNormalCommentFormatOrCaseG(
     );
     const opKeys = [...(state.pendingKeys ?? '').split(''), key];
     // 줄 단위 모션(gugg, guj …)은 'nostartofline' 에서 범위 첫 줄로 가되 원래 열을 유지합니다 (Vim op_tilde).
-    const keepCol = range.linewise && !getOptions(state).startofline;
+    // 단, - 는 모션 목적지(첫 비공백)가 연산 시작이라 그 자리로 갑니다 (g~- , Neovim 대조).
+    const keepCol = range.linewise && !getOptions(state).startofline && key !== '-';
     const caseCursor = keepCol ? { line: range.start.line, col: state.curswant ?? state.cursor.col } : range.cursor;
     return {
       ...applied,
@@ -568,4 +573,22 @@ export function handleNormalGOperator(
   }
 
   return { handled: false, state: { ...state, pendingKeys: undefined } };
+}
+
+/**
+ * 빈 범위의 대소문자 연산 (Neovim op_tilde 동작 그대로): 배타적 빈 범위의 끝을 dec() 로 한 칸 당기면
+ * 첫 줄에서는 움직이지 못해 커서 글자 하나가, 그 밖에서는 끝이 이전 줄로 넘어가 커서부터 줄 끝까지가 바뀝니다.
+ * (gUh / gU0 / g~( 를 줄 처음에서 누를 때. 커서는 그대로)
+ */
+function emptyRegionCaseChange(state: VimEditorState, op: 'gu' | 'gU' | 'g~' | 'g?'): VimEditorState {
+  const { line, col } = state.cursor;
+  const len = (state.lines[line] ?? '').length;
+  if (len === 0) return { ...state, pendingKeys: undefined };
+  const endCol = line === 0 ? col : len - 1;
+  const applied = changeCaseVisual(
+    { ...state, pendingKeys: undefined, mode: 'VISUAL', visualAnchor: { line, col }, cursor: { line, col: endCol } },
+    caseTypeForOperator(op),
+    { line, col }
+  );
+  return { ...applied, mode: 'NORMAL', cursor: { line, col }, pendingKeys: undefined };
 }

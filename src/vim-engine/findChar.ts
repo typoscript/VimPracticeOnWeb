@@ -80,6 +80,12 @@ export function moveFind(
   return null;
 }
 
+/** t/T 가 바로 옆 글자라 움직이지 않으면 빈 범위로 성공합니다 (Vim: cta 는 그 자리에서 입력 모드). */
+function emptyFindRegion(state: VimEditorState, operator: 'd' | 'c' | 'y'): VimEditorState {
+  if (operator === 'c') return { ...pushUndoSnapshot(state), mode: 'INSERT', pendingKeys: undefined };
+  return { ...state, pendingKeys: undefined };
+}
+
 /**
  * 'd', 'c', 'y' 연산자와 'f', 'F', 't', 'T' 모션의 결합 연산을 수행합니다.
  * (예: df), ct", yf,)
@@ -106,7 +112,7 @@ export function executeFindOperator(
     const targetIdx = findCharForward(lineText, fromCol, targetChar, count);
     if (targetIdx === null) return { ...state, pendingKeys: undefined };
     const toCol = targetIdx - 1;
-    if (toCol < fromCol) return { ...state, pendingKeys: undefined };
+    if (toCol < fromCol) return emptyFindRegion(state, operator);
     minCol = fromCol;
     maxCol = toCol;
   } else if (motion === 'F') {
@@ -119,7 +125,7 @@ export function executeFindOperator(
     const targetIdx = findCharBackward(lineText, fromCol, targetChar, count);
     if (targetIdx === null) return { ...state, pendingKeys: undefined };
     const toCol = targetIdx + 1;
-    if (toCol > fromCol - 1) return { ...state, pendingKeys: undefined };
+    if (toCol > fromCol - 1) return emptyFindRegion(state, operator);
     minCol = toCol;
     maxCol = fromCol - 1;
   } else {

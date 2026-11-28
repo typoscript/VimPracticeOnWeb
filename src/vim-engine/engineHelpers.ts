@@ -127,6 +127,9 @@ export const FAILABLE_MOTION_KEYS = new Set([
 export const NORMAL_EXTRA_KEYS = new Set(['(', ')', '+', '-', '_', 'Enter', '|']);
 export const VISUAL_EXTRA_KEYS = new Set(['(', ')', '+', '-', '_', 'Enter', '|']);
 
+/** 포함(inclusive) 모션: 끝이 다음 줄 0열이어도 그 줄을 포함합니다 */
+const INCLUSIVE_SHIFT_MOTIONS = new Set(['e', 'E', '$', '%', 'g_', 'ge', 'gE']);
+
 /** 줄 단위 모션 (끝 줄을 항상 포함) */
 export const LINEWISE_SHIFT_MOTIONS = new Set(['j', 'k', 'G', 'gg', '+', '-', 'Enter', 'ArrowUp', 'ArrowDown', '_']);
 
@@ -135,9 +138,11 @@ export function moveByExtraMotion(state: VimEditorState, key: string, count: num
   const res = evaluateExtraMotion(state.lines, state.cursor, key, count);
   if (!res) return ringBell(state);
   const mode = state.mode === 'NORMAL' ? 'NORMAL' : state.mode;
+  // ]] 가 버퍼 끝에 닿으면 연산자와 함께일 때만 마지막 줄 끝(포함)이고, 커서 이동은 0열입니다 (Vim findpar).
+  const target = key === ']]' && res.kind === 'inclusive' ? { line: res.target.line, col: 0 } : res.target;
   return {
     ...state,
-    cursor: clampCursor(state.lines, res.target, mode),
+    cursor: clampCursor(state.lines, target, mode),
     stickyDollar: false,
     pendingKeys: undefined,
   };
@@ -158,6 +163,11 @@ export function findShiftRange(
   const earlier = (a: { line: number; col: number }, b: { line: number; col: number }) =>
     a.line < b.line || (a.line === b.line && a.col <= b.col) ? a : b;
   const countKeys = count > 1 ? String(count).split('') : [];
+  // 단어·문장 객체는 연산자용 범위(Vim current_word / current_sent, [count] 가 여러 줄에 걸침)를 씁니다.
+  if ((keys[0] === 'i' || keys[0] === 'a') && keys.length === 2 && 'wWs'.includes(keys[1])) {
+    const range = findOperatorRangeByYank(state, keys, count, runHandleKey);
+    if (range) return { startLine: range.start.line, endLine: range.end.line, startCol: range.start.col };
+  }
   if (keys[0] === 'i' || keys[0] === 'a') {
     const selected = [...['v'], ...countKeys, ...keys].reduce((s, k) => runHandleKey(s, k), base);
     if (!selected.mode.startsWith('VISUAL') || !selected.visualAnchor || selected.bell) return null;
@@ -167,8 +177,13 @@ export function findShiftRange(
       startCol: earlier(selected.visualAnchor, selected.cursor).col,
     };
   }
+  // Vim nv_left: 줄 처음의 h 는 삐 소리만 내고 연산자는 빈 범위(커서 줄)로 계속됩니다 (>h 가 그 줄을 들여씀).
+  if ((keys[0] === 'h' || keys[0] === 'ArrowLeft') && keys.length === 1 && state.cursor.col === 0) {
+    return { startLine: state.cursor.line, endLine: state.cursor.line, startCol: 0 };
+  }
   let moved = base;
-  for (const k of [...countKeys, ...keys]) {
+  // 0 은 count 를 받지 않습니다 (3>0 의 '30' 을 줄 번호로 읽지 않게).
+  for (const k of [...(keys[0] === '0' ? [] : countKeys), ...keys]) {
     moved = runHandleKey(moved, k);
     if (moved.bell) return null;
   }
@@ -176,10 +191,30 @@ export function findShiftRange(
   let endLine = Math.max(state.cursor.line, moved.cursor.line);
   // 배타적(exclusive) 모션이 아래 줄의 첫 칸에서 끝나면 그 줄은 범위에서 제외 (:help exclusive, 예: >} )
   const motionKey = keys.join('');
-  if (!LINEWISE_SHIFT_MOTIONS.has(motionKey) && moved.cursor.line > state.cursor.line && moved.cursor.col === 0) {
-    endLine = Math.max(state.cursor.line, moved.cursor.line - 1);
+  // 포함 모션(e $ f …)은 해당하지 않고, 뒤로 가는 배타적 모션(>B)은 원래 커서 쪽 끝을 봅니다.
+  const inclusive = INCLUSIVE_SHIFT_MOTIONS.has(motionKey) || keys[0] === 'f' || keys[0] === 't';
+  const forward = moved.cursor.line > state.cursor.line;
+  const later = forward ? moved.cursor : state.cursor;
+  const startLine = Math.min(state.cursor.line, moved.cursor.line);
+  if (!LINEWISE_SHIFT_MOTIONS.has(motionKey) && !inclusive && later.line > startLine && later.col === 0) {
+    endLine = later.line - 1;
   }
   return { startLine: Math.min(state.cursor.line, moved.cursor.line), endLine, startCol: earlier(state.cursor, moved.cursor).col };
+}
+
+/**
+ * 모션이 움직이지 않고 성공해 빈 범위가 되는지 (0 / ^ / | / ( / 바로 옆 t·T, 그리고 줄 처음의 h).
+ * Vim 은 'cpoptions' 에 E 가 없으면 빈 범위에도 연산자를 실행합니다. 같은 모션의 y 로 알아봅니다.
+ */
+export function isEmptyRegionMotion(state: VimEditorState, motionKeys: string[], count: number, runHandleKey: RunHandleKeyFn): boolean {
+  // Vim nv_left: 줄 처음의 h 는 삐 소리만 내고 연산자는 계속됩니다.
+  if (motionKeys.length === 1 && (motionKeys[0] === 'h' || motionKeys[0] === 'ArrowLeft') && state.cursor.col === 0) return true;
+  let probe: VimEditorState = { ...state, mode: 'NORMAL', pendingKeys: undefined, visualAnchor: undefined, clipboard: undefined, bell: false };
+  for (const k of [...(count > 1 ? String(count).split('') : []), 'y', ...motionKeys]) {
+    probe = runHandleKey(probe, k);
+    if (probe.bell) return false;
+  }
+  return probe.mode === 'NORMAL' && !probe.pendingKeys && probe.lines === state.lines && !probe.clipboard;
 }
 
 /**

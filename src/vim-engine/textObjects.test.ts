@@ -202,9 +202,9 @@ describe('textObjects module (iw, i", i(, i))', () => {
       };
 
       const next = executeTextObjectOperator(state, 'c', 'i{');
-      // 실제 Vim/Neovim: { 가 줄 끝, } 가 줄 처음이면 안쪽 줄 전체가 줄 단위로 바뀌고 들여쓰기가 남은 빈 줄에서 입력
-      expect(next.lines).toEqual(['function compute() {', '  ', '}']);
-      expect(next.cursor).toEqual({ line: 1, col: 2 });
+      // 실제 Vim/Neovim: { 가 줄 끝, } 가 줄 처음이면 안쪽 줄 전체가 줄 단위로 바뀌고, noautoindent(엔진 기본값)이면 빈 줄에서 입력
+      expect(next.lines).toEqual(['function compute() {', '', '}']);
+      expect(next.cursor).toEqual({ line: 1, col: 0 });
       expect(next.mode).toBe('INSERT');
       expect(next.clipboard?.type).toBe('line');
       expect(next.clipboard?.content).toContain('const a = 10;');

@@ -3,7 +3,7 @@ import { executeCommandLine } from './commandLine';
 import { moveToLineStart, moveToLineEnd, moveToFirstNonBlank } from './motions';
 import { syncRegisters, putFromRegister } from './registers';
 import { reselectLastVisual } from './advancedMotions';
-import { deleteVisualSelection, yankVisualSelection, yankVisualBlock, startVisualBlockInsert, swapVisualCursorAnchor } from './visual';
+import { deleteVisualSelection, yankVisualSelection, yankVisualBlock, startVisualBlockInsert, swapVisualCursorAnchor, failedVisualJoinCursor } from './visual';
 import { replaceVisualChars } from './visualUtilities';
 import { moveFind, moveFindRepeat } from './findChar';
 import { findMatches, findSearchTarget, getWordAtCursor } from './search';
@@ -414,7 +414,7 @@ export function handleVisualModeKey(
         lastVisualSelection: snap,
       };
     }
-    const delRes = deleteVisualSelection(state);
+    const delRes = deleteVisualSelection(state, true);
     const synced = syncRegisters(state, delRes, false);
     return {
       ...synced,
@@ -596,14 +596,14 @@ export function handleVisualModeKey(
 
   // 선택 영역 삭제 (d / x)
   if (key === 'd' || key === 'x') {
-    const res = deleteVisualSelection(state);
+    const res = deleteVisualSelection(state, true);
     const synced = syncRegisters(state, res, false);
     return { ...synced, lastVisualSelection: visualSnapshot };
   }
 
   // 선택 영역 복사 (y)
   if (key === 'y') {
-    const res = yankVisualSelection(state);
+    const res = yankVisualSelection(state, true);
     const synced = syncRegisters(state, res, true);
     return { ...synced, lastVisualSelection: visualSnapshot };
   }
@@ -667,6 +667,8 @@ export function handleVisualModeKey(
     const jKeys = joinCount > 1 ? [String(joinCount + 1), 'J'] : ['J'];
     return {
       ...joined,
+      // 합칠 줄이 없어 실패하면(마지막 줄) 커서는 연산 범위 시작에 남습니다 (Vim do_pending_operator).
+      cursor: changed ? joined.cursor : failedVisualJoinCursor(state),
       lastVisualSelection: visualSnapshot,
       lastChangeKeys: changed ? jKeys : state.lastChangeKeys,
     };
@@ -739,7 +741,7 @@ export function handleVisualModeKey(
   }
 
   // VISUAL 모드 보조 모션 (, ), +, -, Enter, |
-  if (!state.pendingKeys && VISUAL_EXTRA_KEYS.has(key)) {
+  if ((!state.pendingKeys || /^[1-9][0-9]*$/.test(state.pendingKeys)) && VISUAL_EXTRA_KEYS.has(key)) {
     return moveByExtraMotion(state, key, parsed.totalCount);
   }
 

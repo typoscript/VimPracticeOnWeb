@@ -714,9 +714,11 @@ export function executeWordSearch(
   } else {
     keywordCol = state.cursor.col;
     while (keywordCol < currentLine.length && /\s/.test(currentLine[keywordCol])) keywordCol++;
-    // 앞쪽의 같은 종류(구두점) 글자까지 거슬러 올라가고, 끝은 공백 전까지입니다 (`"qux")` 의 `)` 에서 `")`).
-    while (keywordCol > 0 && keywordCol < currentLine.length && /[^\s\w]/.test(currentLine[keywordCol - 1])) keywordCol--;
-    word = currentLine.slice(keywordCol).match(/^\S+/)?.[0] ?? null;
+    // 커서가 문자열 가운데면 그 비공백·비키워드 문자열의 처음부터 씁니다 (") 의 ) 에서 * 는 ") 를 찾음).
+    if (keywordCol === state.cursor.col) {
+      while (keywordCol > 0 && /[^\s\w]/.test(currentLine[keywordCol - 1])) keywordCol--;
+    }
+    word = currentLine.slice(keywordCol).match(/^[^\s\w]+/)?.[0] ?? null;
   }
   if (!word) {
     return { ...state, pendingKeys: undefined, bell: true, commandMessage: msg('E348: 커서 아래에 단어가 없습니다') };

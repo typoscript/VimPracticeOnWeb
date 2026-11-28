@@ -1,6 +1,7 @@
 import { CursorPosition } from './types';
 import { isKeywordChar } from './wordMotion';
-import { getSentenceStarts, findFunctionJumpTarget } from './textObjects';
+import { findFunctionJumpTarget } from './textObjects';
+import { findSentence } from './sentenceVim';
 
 /**
  * 보조 모션 (:help motion.txt)
@@ -86,10 +87,6 @@ function firstNonBlankCol(text: string): number {
   const m = text.match(/^\s*/);
   const col = m ? m[0].length : 0;
   return col >= text.length ? Math.max(0, text.length - 1) : col;
-}
-
-function comparePos(a: CursorPosition, b: CursorPosition): number {
-  return a.line - b.line || a.col - b.col;
 }
 
 // ---- ge / gE ----------------------------------------------------------------
@@ -236,37 +233,13 @@ export function evaluateExtraMotion(
     }
     case ')':
     case '(': {
-      // Vim findsent: 버퍼 첫 문장은 앞의 들여쓰기를 건너뛰지 않고 (0,0) 에서 시작합니다 (빈 줄 뒤 문단은 건너뜀).
-      const starts = getSentenceStarts(lines).map((s) =>
-        s.line === 0 && s.col > 0 && /^\s*$/.test((lines[0] ?? '').slice(0, s.col)) ? { line: 0, col: 0 } : s
-      );
-      let pos = cursor;
-      let reachedEnd = false;
-      for (let i = 0; i < n; i++) {
-        if (key === ')') {
-          const next = starts.find((s) => comparePos(s, pos) > 0);
-          if (next) {
-            pos = next;
-            continue;
-          }
-          // 마지막 문장 뒤에서는 버퍼의 마지막 문자로
-          const end = { line: last, col: Math.max(0, (lines[last] ?? '').length - 1) };
-          // Vim: count 만큼 움직일 수 없으면 모션 전체가 실패합니다 (5) 가 끝에서 멈추지 않음).
-          if (comparePos(end, pos) <= 0) return null;
-          pos = end;
-          reachedEnd = true;
-        } else {
-          const prev = [...starts].reverse().find((s) => comparePos(s, pos) < 0);
-          if (!prev) {
-            if (pos.line === 0 && pos.col === 0) return null;
-            pos = { line: 0, col: 0 };
-            continue;
-          }
-          pos = prev;
-        }
-      }
-      // Vim: ) 가 버퍼 끝에 닿으면 마지막 글자까지 연산 범위에 넣습니다 (y) 가 마지막 글자를 빠뜨리지 않음).
-      return { target: pos, kind: reachedEnd ? 'inclusive' : 'exclusive' };
+      // Vim findsent 이식 (sentenceVim.ts). 실패하면 null(bell).
+      const found = findSentence(lines, cursor, key === ')', n);
+      if (!found) return null;
+      // Vim adjust_cursor: 줄 끝(NUL)에 서면 마지막 글자로 오고 연산 범위는 그 글자까지 포함합니다 (d) 가 마지막 글자를 지움).
+      const len = (lines[found.line] ?? '').length;
+      if (len > 0 && found.col >= len) return { target: { line: found.line, col: len - 1 }, kind: 'inclusive' };
+      return { target: found, kind: 'exclusive' };
     }
     case '[(':
     case '[{':
@@ -290,7 +263,11 @@ export function evaluateExtraMotion(
             return { target: { line, col: 0 }, kind: 'exclusive' };
           }
         }
-        if (cursor.line === last && cursor.col === 0) return null;
+        // Vim findpar: 마지막 번째 이동만 버퍼 끝에서 멈출 수 있고(count 가 남으면 실패),
+        // ]] 는 마지막 줄 끝(포함), ][ 는 마지막 줄 0열로 갑니다.
+        if (found < n - 1) return null;
+        const lastLen = (lines[last] ?? '').length;
+        if (key === ']]' && lastLen > 0) return { target: { line: last, col: lastLen - 1 }, kind: 'inclusive' };
         return { target: { line: last, col: 0 }, kind: 'exclusive' };
       }
       if (cursor.col > 0 && (lines[cursor.line] ?? '').startsWith(targetChar) && ++found === n) {
@@ -301,7 +278,7 @@ export function evaluateExtraMotion(
           return { target: { line, col: 0 }, kind: 'exclusive' };
         }
       }
-      if (cursor.line === 0 && cursor.col === 0) return null;
+      if (found < n - 1) return null;
       return { target: { line: 0, col: 0 }, kind: 'exclusive' };
     }
     // ]m, [m: 다음/이전 메서드·블록 여는 중괄호 '{' 로 이동 (:help ]m / [m)

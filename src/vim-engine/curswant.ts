@@ -58,14 +58,16 @@ export function applyCurswant(prev: VimEditorState, next: VimEditorState, key: s
   // v / V / Ctrl-v 로 비주얼 모드를 시작해도 Vim(n_start_visual_mode)은 curswant 를 바꾸지 않습니다.
   const startsVisual =
     prev.mode === 'NORMAL' && !prev.pendingKeys && (key === 'v' || key === 'V' || key === 'Ctrl-v') && next.mode.startsWith('VISUAL');
-  // 매크로 녹화 시작·끝(q{reg}, q)과 마크(m{a})는 Vim 에서 curswant 를 건드리지 않습니다.
   const pending = prev.pendingKeys ?? '';
+  const isDollar = key === '$' && /^([1-9][0-9]*)?$/.test(pending) && CURSWANT_MODES.has(prev.mode);
+  // Vim nv_dollar: 줄이 모자라 [count]$ 가 실패해도 curswant 는 먼저 줄 끝으로 정해집니다 (3$ 뒤 G 가 줄 끝으로).
+  if (isDollar && next.bell && sameText && sameCursor) return { ...next, curswant: CURSWANT_EOL };
+  // 매크로 녹화 시작·끝(q{reg}, q)과 마크(m{a})는 Vim 에서 curswant 를 건드리지 않습니다.
   const keepsForRecordOrMark =
     prev.mode === 'NORMAL' && ((key === 'q' && !pending && !!prev.recordingMacro) || pending === 'q' || pending === 'm');
   if ((next.bell || startsVisual || keepsForRecordOrMark) && sameText && sameCursor) {
     return next.curswant === remembered ? next : { ...next, curswant: remembered };
   }
-  const isDollar = key === '$' && /^([1-9][0-9]*)?$/.test(prev.pendingKeys ?? '') && CURSWANT_MODES.has(prev.mode);
   const want = isDollar ? CURSWANT_EOL : next.cursor.col;
   return next.curswant === want ? next : { ...next, curswant: want };
 }

@@ -34,12 +34,17 @@ describe('Operator + Motion: 줄 단위 모션 (j, k, G, gg)', () => {
     expect(press(createState([...LINES], { line: 2, col: 0 }), ['2', 'd', 'g', 'g']).lines).toEqual(['one two']);
   });
 
-  it('cj 는 두 줄을 들여쓰기만 남긴 한 줄로 바꾸고 INSERT 모드로 진입한다', () => {
+  it('cj 는 두 줄을 한 줄로 바꾸고 INSERT 모드로 진입한다 (autoindent 일 때만 들여쓰기를 남김, Vim op_change)', () => {
     let state = press(createState(['  a', '  b', 'c'], { line: 0, col: 2 }), ['c', 'j']);
     expect(state.mode).toBe('INSERT');
-    expect(state.lines).toEqual(['  ', 'c']);
+    expect(state.lines).toEqual(['', 'c']);
     state = press(state, ['x', 'Escape']);
-    expect(state.lines).toEqual(['  x', 'c']);
+    expect(state.lines).toEqual(['x', 'c']);
+
+    let ai = press(createState(['  a', '  b', 'c'], { line: 0, col: 2 }), [...':set ai', 'Enter', 'c', 'j']);
+    expect(ai.lines).toEqual(['  ', 'c']);
+    ai = press(ai, ['x', 'Escape']);
+    expect(ai.lines).toEqual(['  x', 'c']);
   });
 
   it('yj / yk 는 버퍼를 바꾸지 않고 복사하며, yk 는 커서를 위 줄로 옮긴다', () => {

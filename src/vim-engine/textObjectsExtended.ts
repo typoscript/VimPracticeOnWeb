@@ -1,6 +1,7 @@
 import { CursorPosition, VimEditorState } from './types';
 import { clampCursor, getFirstNonBlankCol } from './cursor';
 import { pushUndoSnapshot } from './operators';
+import { getOptions } from './setOptionsCore';
 import { beginlineSolCol, pushUndoSnapshotAt } from './undoHistory';
 import { formatLinesRange, cindentOptionsFor, equalOperatorCursor, changeCaseVisual, caseTypeForOperator } from './lineOperators';
 
@@ -12,6 +13,8 @@ export interface TextObjectRange {
   isEmpty?: boolean;
   /** i{ 처럼 여는 괄호가 줄 끝, 닫는 괄호가 줄 처음(들여쓰기 뒤)에 있으면 사이 줄 전체를 줄 단위로 다룸 */
   linewise?: boolean;
+  /** :help exclusive-linewise 로 줄 단위가 됨 (d 뒤 커서는 첫 비공백) */
+  endAdjusted?: boolean;
 }
 
 /** 인덴트 텍스트 객체 타입: ii(안쪽), ai(+위 헤더 줄), iI(=ii), aI(+위·아래 경계 줄) */
@@ -118,7 +121,7 @@ export function executeIndentObjectOperator(
   if (!range) {
     return { ...state, pendingKeys: undefined };
   }
-  return executeLinewiseObjectOperator(state, operator, range);
+  return executeLinewiseObjectOperator(state, operator, range, false, true);
 }
 
 /**
@@ -128,8 +131,10 @@ export function executeLinewiseObjectOperator(
   state: VimEditorState,
   operator: 'd' | 'c' | 'y' | 'v' | '=' | 'gu' | 'gU' | 'g~' | 'g?',
   range: IndentObjectRange,
-  /** 여러 줄 `di(` 처럼 문자 단위 범위를 줄 단위로 바꾼 객체(Vim oap->end_adjusted)는 지운 뒤 첫 비공백으로 갑니다. */
-  endAdjusted = false
+  /** :help exclusive-linewise 로 줄 단위가 된 범위 (Vim end_adjusted: d 뒤 커서가 첫 비공백) */
+  endAdjusted = false,
+  /** 플러그인 객체(ii · if/af 등)는 c 뒤 들여쓰기를 남깁니다 ('autoindent' 와 무관) */
+  keepIndent = false
 ): VimEditorState {
   const { startLine, endLine } = range;
   const content = state.lines.slice(startLine, endLine + 1).join('\n');
@@ -187,7 +192,8 @@ export function executeLinewiseObjectOperator(
   const after = state.lines.slice(endLine + 1);
 
   if (operator === 'c') {
-    const indentStr = (state.lines[startLine] ?? '').match(/^[ \t]*/)?.[0] ?? '';
+    // Vim op_change: 줄 단위 c 는 'autoindent' 일 때만 들여쓰기를 남깁니다.
+    const indentStr = keepIndent || getOptions(state).autoindent ? (state.lines[startLine] ?? '').match(/^[ \t]*/)?.[0] ?? '' : '';
     return {
       ...stateWithSnapshot,
       lines: [...before, indentStr, ...after],
@@ -206,7 +212,7 @@ export function executeLinewiseObjectOperator(
     lines: nextLines,
     cursor: {
       line: cursorLine,
-      col: endAdjusted ? getFirstNonBlankCol(nextLines[cursorLine] ?? '') : beginlineSolCol(state, nextLines[cursorLine] ?? ''),
+      col: endAdjusted || keepIndent ? getFirstNonBlankCol(nextLines[cursorLine] ?? '') : beginlineSolCol(state, nextLines[cursorLine] ?? ''),
     },
     clipboard,
     pendingKeys: undefined,

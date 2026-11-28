@@ -324,7 +324,7 @@ export function startVisualBlockInsert(
 /**
  * VISUAL 모드에서 선택 영역을 삭제하고 NORMAL 모드로 복귀합니다.
  */
-export function deleteVisualSelection(state: VimEditorState): VimEditorState {
+export function deleteVisualSelection(state: VimEditorState, visualKey = false): VimEditorState {
   if (!state.visualAnchor) {
     return { ...state, mode: 'NORMAL', pendingKeys: undefined };
   }
@@ -378,16 +378,24 @@ export function deleteVisualSelection(state: VimEditorState): VimEditorState {
   // 문자 단위 VISUAL 모드
   const { start, end } = getOrderedRange(anchor, cursor);
 
-  // Vim: 빈 줄(마지막 줄 제외)을 문자 단위로 고르면 줄바꿈까지 고른 것입니다 — vd 는 그 줄을 지우고 레지스터는 "\n".
-  if (start.line === end.line && (state.lines[start.line] ?? '') === '' && start.line < state.lines.length - 1) {
-    const nextLines = [...state.lines.slice(0, start.line), ...state.lines.slice(start.line + 1)];
+  // Vim: 끝이 줄 끝(NUL)이면 그 줄의 줄바꿈까지 고른 것입니다 — vjd 가 빈 줄에서 끝나면 다음 줄과 합쳐집니다.
+  // (비주얼 모드에서 누른 d / y / c 만. d{motion} 처럼 내부에서 비주얼 범위를 빌려 쓰는 호출은 빈 줄 하나만 봅니다.)
+  if (visualKey ? visualEndIncludesNewline(state, end) : start.line === end.line && (state.lines[start.line] ?? '') === '' && start.line < state.lines.length - 1) {
+    const startLineText = state.lines[start.line] ?? '';
+    const endLineText = state.lines[end.line] ?? '';
+    const content =
+      start.line === end.line
+        ? startLineText.slice(start.col) + '\n'
+        : [startLineText.slice(start.col), ...state.lines.slice(start.line + 1, end.line), endLineText].join('\n') + '\n';
+    const merged = startLineText.slice(0, start.col) + (state.lines[end.line + 1] ?? '');
+    const nextLines = [...state.lines.slice(0, start.line), merged, ...state.lines.slice(end.line + 2)];
     return {
       ...stateWithSnapshot,
       lines: nextLines,
-      cursor: clampCursor(nextLines, { line: start.line, col: 0 }, 'NORMAL'),
+      cursor: clampCursor(nextLines, start, 'NORMAL'),
       mode: 'NORMAL',
       visualAnchor: undefined,
-      clipboard: { type: 'text', content: '\n' },
+      clipboard: { type: 'text', content },
       pendingKeys: undefined,
     };
   }
@@ -455,6 +463,20 @@ export function deleteVisualSelection(state: VimEditorState): VimEditorState {
 }
 
 /**
+ * 문자 단위 비주얼의 끝이 줄 끝 다음 칸(Vim 의 NUL)에 있어 줄바꿈까지 고른 것인지 (마지막 줄 제외).
+ * 빈 줄이거나, 끝이 커서이고 $ / 짧은 줄로 내려온 j·k 로 기억한 열(curswant)이 줄 길이 이상일 때입니다.
+ */
+export function visualEndIncludesNewline(state: VimEditorState, end: CursorPosition): boolean {
+  if (end.line >= state.lines.length - 1) return false;
+  const len = (state.lines[end.line] ?? '').length;
+  if (len === 0) return true;
+  const anchor = state.visualAnchor;
+  const cursorIsEnd = state.cursor.line === end.line && state.cursor.col === end.col;
+  const moved = !anchor || anchor.line !== state.cursor.line || anchor.col !== state.cursor.col;
+  return cursorIsEnd && moved && (state.curswant ?? -1) >= len;
+}
+
+/**
  * 줄 단위 비주얼 연산(Vy, V~, Vu …) 뒤 커서 열 ('nostartofline' 기준, Neovim 대조).
  */
 export function linewiseVisualCol(state: VimEditorState, line: number): number {
@@ -469,7 +491,7 @@ export function linewiseVisualCol(state: VimEditorState, line: number): number {
 /**
  * VISUAL 모드에서 선택 영역을 복사(Yank)하고 NORMAL 모드로 복귀합니다.
  */
-export function yankVisualSelection(state: VimEditorState): VimEditorState {
+export function yankVisualSelection(state: VimEditorState, visualKey = false): VimEditorState {
   if (!state.visualAnchor) {
     return { ...state, mode: 'NORMAL', pendingKeys: undefined };
   }
@@ -507,7 +529,13 @@ export function yankVisualSelection(state: VimEditorState): VimEditorState {
   const { start, end } = getOrderedRange(anchor, cursor);
   let content = '';
 
-  if (start.line === end.line) {
+  if (visualKey && visualEndIncludesNewline(state, end)) {
+    const startLineText = state.lines[start.line] ?? '';
+    content =
+      start.line === end.line
+        ? startLineText.slice(start.col) + '\n'
+        : [startLineText.slice(start.col), ...state.lines.slice(start.line + 1, end.line + 1)].join('\n') + '\n';
+  } else if (start.line === end.line) {
     const currentLine = state.lines[start.line] ?? '';
     content = currentLine.slice(start.col, end.col + 1);
   } else {
@@ -580,4 +608,12 @@ export function swapVisualCursorAnchor(
     visualAnchor: nextAnchor,
     pendingKeys: undefined,
   };
+}
+
+/** 비주얼 J / gJ 가 실패했을 때 커서: 연산 범위 시작 (줄 단위는 0열, 블록은 왼쪽 위). */
+export function failedVisualJoinCursor(state: VimEditorState): CursorPosition {
+  const anchor = state.visualAnchor ?? state.cursor;
+  const { start } = getOrderedRange(anchor, state.cursor);
+  const col = state.mode === 'VISUAL_LINE' ? 0 : state.mode === 'VISUAL_BLOCK' ? Math.min(anchor.col, state.cursor.col) : start.col;
+  return clampCursor(state.lines, { line: start.line, col }, 'NORMAL');
 }

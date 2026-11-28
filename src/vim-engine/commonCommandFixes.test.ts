@@ -48,13 +48,14 @@ describe('여러 줄 i{ / i( 는 줄 단위 (Vim current_block 규칙)', () => {
     expect(state.registers?.['"']).toEqual({ type: 'line', content: '  const x = 1;\n  return x;' });
   });
 
-  it('yi{ 는 줄 단위로 복사하고 커서를 안쪽 첫 줄 첫 칸으로, ci{ 는 들여쓰기만 남긴 줄에서 입력', () => {
+  it('yi{ 는 줄 단위로 복사하고 커서를 안쪽 첫 줄 첫 칸으로, ci{ 는 (noautoindent 이면) 빈 줄에서 입력', () => {
     const y = press(createState([...BLOCK], { line: 2, col: 4 }), ['y', 'i', '{']);
     expect(y.cursor).toEqual({ line: 1, col: 0 });
     expect(y.registers?.['0']?.type).toBe('line');
 
     const c = press(createState([...BLOCK], { line: 1, col: 2 }), ['c', 'i', '{', 'X', 'Escape']);
-    expect(c.lines).toEqual(['function foo() {', '  X', '}']);
+    // Vim op_change: 줄 단위 c 는 'autoindent' 일 때만 들여쓰기를 남깁니다 (nvim --headless -u NONE, noai 확인)
+    expect(c.lines).toEqual(['function foo() {', 'X', '}']);
   });
 
   it('{ 가 줄 끝이 아니면 문자 단위: { 뒤부터 } 앞 줄 끝까지', () => {

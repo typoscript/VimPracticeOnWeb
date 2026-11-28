@@ -8417,5 +8417,935 @@
       "regType": "char",
       "mode": "n"
     }
+  },
+  {
+    "id": "sent-das-whole-buffer",
+    "text": "<div class=\"a\"><span>text</span></div>\nplain 0x1f 007 -3 words",
+    "cursor": {
+      "row": 0,
+      "col": 2
+    },
+    "keys": "das",
+    "expected": {
+      "lines": [
+        ""
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "<div class=\"a\"><span>text</span></div>\nplain 0x1f 007 -3 words\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "sent-dis-line-linewise",
+    "text": "Hello world.\nNext line here.",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "dis",
+    "expected": {
+      "lines": [
+        "Next line here."
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "Hello world.\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "sent-cis-linewise",
+    "text": "Hello world.\nNext line here.",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "cisX<Esc>",
+    "expected": {
+      "lines": [
+        "X",
+        "Next line here."
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "Hello world.\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "sent-yas-before-blank",
+    "text": "one\ntwo\n\nthree",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "yas",
+    "expected": {
+      "lines": [
+        "one",
+        "two",
+        "",
+        "three"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "one\ntwo\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "sent-4dis",
+    "text": "  indented line one    deeper (nested) item\n  back to one\nlast_word_here end",
+    "cursor": {
+      "row": 0,
+      "col": 19
+    },
+    "keys": "4dis",
+    "expected": {
+      "lines": [
+        ""
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "  indented line one    deeper (nested) item\n  back to one\nlast_word_here end\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "sent-das-empty-line",
+    "text": "ab cd\n\nef",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "das",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "ef"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "sent-cas-empty-last",
+    "text": "ab cd\n",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "casX<Esc>",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "X"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "sent-vasd-empty-last",
+    "text": "ab cd\n",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "vasd",
+    "expected": {
+      "lines": [
+        "ab c"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "d\n",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "sent-paren-start-c",
+    "text": "ab cd\nef gh",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "c(X<Esc>",
+    "expected": {
+      "lines": [
+        "Xab cd",
+        "ef gh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "sent-paren-start-2-fails",
+    "text": "ab cd\nef gh",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "c2(X<Esc>",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "ef gh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "sent-d-close-last-char",
+    "text": "ab cd\nef gh",
+    "cursor": {
+      "row": 1,
+      "col": 4
+    },
+    "keys": "d)",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "ef g"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 3
+      },
+      "reg": "h",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "sent-2close-empty-last",
+    "text": "ab. cd\nef gh\n",
+    "cursor": {
+      "row": 1,
+      "col": 4
+    },
+    "keys": "2)",
+    "expected": {
+      "lines": [
+        "ab. cd",
+        "ef gh",
+        ""
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "sent-visual-count",
+    "text": "e.g. this two words Hi.\nend. two words\nx!) y (a.)",
+    "cursor": {
+      "row": 1,
+      "col": 9
+    },
+    "keys": "v2)y",
+    "expected": {
+      "lines": [
+        "e.g. this two words Hi.",
+        "end. two words",
+        "x!) y (a.)"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 9
+      },
+      "reg": "words\nx!) y (a.)",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "word-d2aw-next-line",
+    "text": "ab cd\nef",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "d2aw",
+    "expected": {
+      "lines": [
+        "ab"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      },
+      "reg": " cd\nef",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "word-d3aw-linewise",
+    "text": "ab\ncd\nef",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "d3aw",
+    "expected": {
+      "lines": [
+        ""
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "ab\ncd\nef\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "word-2diw-newline",
+    "text": "(\nthe lazy dog",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "2diw",
+    "expected": {
+      "lines": [
+        " lazy dog"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "(\nthe",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "word-2yiW",
+    "text": "const x = [1, 2, 3];",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "2yiW",
+    "expected": {
+      "lines": [
+        "const x = [1, 2, 3];"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "const ",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "word-d2iw-fails",
+    "text": "ab cd",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "d2iw",
+    "expected": {
+      "lines": [
+        "ab cd"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "word-shift-2aw",
+    "text": ".Hi.\nHi.\nend.\n",
+    "cursor": {
+      "row": 1,
+      "col": 2
+    },
+    "keys": ">2aw",
+    "expected": {
+      "lines": [
+        ".Hi.",
+        "  Hi.",
+        "  end.",
+        ""
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "empty-ch",
+    "text": "ab cd\nef gh",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "chX<Esc>",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "Xef gh"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "empty-c-caret",
+    "text": "ab cd\nef gh",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "c^X<Esc>",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "Xef gh"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "empty-cTa",
+    "text": "ab cd\nef gh",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "cTaX<Esc>",
+    "expected": {
+      "lines": [
+        "aXb cd",
+        "ef gh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "empty-cl-empty-line",
+    "text": "ab cd\n",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "clX<Esc>",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "X"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "empty-gUh-first-line",
+    "text": "abc def\nxyz",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "gUh",
+    "expected": {
+      "lines": [
+        "Abc def",
+        "xyz"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "empty-gUh-later-line",
+    "text": "a\nx const = [1, 2, 3];",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "gUh",
+    "expected": {
+      "lines": [
+        "a",
+        "X CONST = [1, 2, 3];"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "empty-shift-h",
+    "text": "ab cd\nef gh",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": ">h",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "  ef gh"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "shift-count-zero",
+    "text": "ab cd\nef gh",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "3>0",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "  ef gh"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "shift-back-B",
+    "text": "ab\n  cd ef\ngh ij kl\nX",
+    "cursor": {
+      "row": 3,
+      "col": 0
+    },
+    "keys": ">B",
+    "expected": {
+      "lines": [
+        "ab",
+        "  cd ef",
+        "  gh ij kl",
+        "X"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "shift-e-next-line",
+    "text": "alpha beta gamma\nfoo.bar(baz, \"qux\")X\n{ key: 'value', n: 7 }\n",
+    "cursor": {
+      "row": 1,
+      "col": 19
+    },
+    "keys": ">e",
+    "expected": {
+      "lines": [
+        "alpha beta gamma",
+        "  foo.bar(baz, \"qux\")X",
+        "  { key: 'value', n: 7 }",
+        ""
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 19
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "d-brace-last-char",
+    "text": "ab cd\nef gh",
+    "cursor": {
+      "row": 1,
+      "col": 4
+    },
+    "keys": "d}",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "ef g"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 3
+      },
+      "reg": "h",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "c-section-start",
+    "text": "ab cd\nef gh",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "c[[X<Esc>",
+    "expected": {
+      "lines": [
+        "Xab cd",
+        "ef gh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-end-empty-line",
+    "text": "abc\n\ndef",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "vjd",
+    "expected": {
+      "lines": [
+        "adef"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      },
+      "reg": "bc\n\n",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-dollar-newline",
+    "text": "abc\n\ndef",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "v$d",
+    "expected": {
+      "lines": [
+        "a",
+        "def"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "bc\n",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-J-last-line",
+    "text": "ab cd\nef gh",
+    "cursor": {
+      "row": 1,
+      "col": 3
+    },
+    "keys": "vjJ",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "ef gh"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 3
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-J-fail-start",
+    "text": "<div class=\"a\"><span>text</span></div>\nplain 0x1f 007 -3 words",
+    "cursor": {
+      "row": 1,
+      "col": 17
+    },
+    "keys": "veeJ",
+    "expected": {
+      "lines": [
+        "<div class=\"a\"><span>text</span></div>",
+        "plain 0x1f 007 -3 words"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 17
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "yw-empty-line-linewise",
+    "text": "ab\n\ncd",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "\"ayw\"bdw\"ap",
+    "expected": {
+      "lines": [
+        "ab",
+        "cd",
+        ""
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      },
+      "reg": "\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "y-minus-cursor",
+    "text": "ab\n  cd ef\ngh ij kl",
+    "cursor": {
+      "row": 2,
+      "col": 4
+    },
+    "keys": "y-",
+    "expected": {
+      "lines": [
+        "ab",
+        "  cd ef",
+        "gh ij kl"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 2
+      },
+      "reg": "  cd ef\ngh ij kl\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "tilde-minus-cursor",
+    "text": "ab\n  cd ef\ngh ij kl",
+    "cursor": {
+      "row": 2,
+      "col": 4
+    },
+    "keys": "2g~-",
+    "expected": {
+      "lines": [
+        "AB",
+        "  CD EF",
+        "GH IJ KL"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "c-minus-noai",
+    "text": "x\n    a\n    b\n\ny",
+    "cursor": {
+      "row": 2,
+      "col": 4
+    },
+    "keys": "c-X<Esc>",
+    "expected": {
+      "lines": [
+        "x",
+        "X",
+        "",
+        "y"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "    a\n    b\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "dip-keeps-col",
+    "text": "\n  return \"Hello, \" + name;\nconst x = [1, 2, 3];",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "dip",
+    "expected": {
+      "lines": [
+        "  return \"Hello, \" + name;",
+        "const x = [1, 2, 3];"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "star-nonkeyword-run",
+    "text": "alpha beta gamma\nfoo.bar(baz, \"qux\")\n",
+    "cursor": {
+      "row": 1,
+      "col": 18
+    },
+    "keys": "*",
+    "expected": {
+      "lines": [
+        "alpha beta gamma",
+        "foo.bar(baz, \"qux\")",
+        ""
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 17
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "failed-dollar-curswant",
+    "text": "<div class=\"a\"><span>text</span></div>\nplain 0x1f 007 -3 words",
+    "cursor": {
+      "row": 1,
+      "col": 9
+    },
+    "keys": "3$G",
+    "expected": {
+      "lines": [
+        "<div class=\"a\"><span>text</span></div>",
+        "plain 0x1f 007 -3 words"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 22
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
   }
 ]
