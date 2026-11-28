@@ -4,7 +4,7 @@ import { pushUndoSnapshot } from './operators';
 import { beginlineSolCol, keepCurswant, keepCurswantIfNosol, pushUndoSnapshotAt, setLastUndoCursor } from './undoHistory';
 import { compileVimRegex } from './vimRegex';
 import { msg } from './messages';
-import { getRegisterContent, syncRegisters } from './registers';
+import { getRegisterContent, isControlChar, registerTextToKeys, syncRegisters } from './registers';
 import { getOptions } from './setEngine';
 import { moveToFirstNonBlank } from './motions';
 import { joinLines, shiftLineIndent } from './lineOperators';
@@ -510,6 +510,9 @@ export function parseKeyTokens(keysStr: string): string[] {
       tokens.push('Enter');
     } else if (lower === '<space>') {
       tokens.push(' ');
+    } else if (isControlChar(tok)) {
+      // `:exe "norm A\<Esc>"` 처럼 실제 제어 글자는 그 키입니다.
+      tokens.push(...registerTextToKeys(tok));
     } else {
       tokens.push(tok);
     }

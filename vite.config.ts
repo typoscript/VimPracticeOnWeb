@@ -24,6 +24,7 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'undoHistory.ts',
       'undoTreeEngine.ts',
       'digraphs.ts',
+      'registerText.ts',
       'invariants.ts',
       'bracketMatch.ts',
       'wordMotion.ts',

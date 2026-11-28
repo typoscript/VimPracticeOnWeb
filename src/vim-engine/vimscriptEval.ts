@@ -1,5 +1,6 @@
 import { VimScriptFuncref, VimScriptValue } from './types';
 import { msg } from './messages';
+import { registerEntryText } from './registerText';
 import {
   VimScriptError,
   EvalContext,
@@ -129,9 +130,7 @@ export function writeLValue(ctx: EvalContext, lv: LValue, value: VimScriptValue)
     const reg = rawReg === '"' ? '"' : rawReg.toLowerCase();
     const strVal = toVimString(value);
     const prevEntry = ctx.state.registers?.[reg];
-    const prevStr = prevEntry
-      ? (Array.isArray(prevEntry.content) ? prevEntry.content.join('') : prevEntry.content)
-      : '';
+    const prevStr = prevEntry ? registerEntryText(prevEntry) : '';
     const finalContent = isAppend && prevEntry ? `${prevStr}${strVal}` : strVal;
     const nextEntry = {
       type: (isAppend && prevEntry && prevEntry.type === 'line' ? 'line' : 'char') as 'char' | 'line',

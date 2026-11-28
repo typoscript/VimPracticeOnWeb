@@ -1,6 +1,7 @@
 import React from 'react';
 import './DiffViewer.css';
 import { t } from '../../i18n';
+import { renderVisibleControlText } from '../../utils/visibleControlChars';
 
 export interface DiffViewerProps {
   currentLines: string[];
@@ -79,7 +80,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
                 <span className="diff-line-no">{row.lineNum}</span>
                 <span className="diff-line-marker">{row.isMatch ? ' ' : '-'}</span>
                 <span className="diff-line-content">
-                  {row.current !== undefined ? row.current || <span className="diff-blank">{t('〈빈 줄〉')}</span> : <span className="diff-none">{t('〈줄 없음〉')}</span>}
+                  {row.current !== undefined ? (row.current && renderVisibleControlText(row.current)) || <span className="diff-blank">{t('〈빈 줄〉')}</span> : <span className="diff-none">{t('〈줄 없음〉')}</span>}
                 </span>
               </div>
             ))}
@@ -98,7 +99,7 @@ export const DiffViewer: React.FC<DiffViewerProps> = ({
                 <span className="diff-line-no">{row.lineNum}</span>
                 <span className="diff-line-marker">{row.isMatch ? '✓' : '+'}</span>
                 <span className="diff-line-content">
-                  {row.target !== undefined ? row.target || <span className="diff-blank">{t('〈빈 줄〉')}</span> : <span className="diff-none">{t('〈줄 삭제 대상〉')}</span>}
+                  {row.target !== undefined ? (row.target && renderVisibleControlText(row.target)) || <span className="diff-blank">{t('〈빈 줄〉')}</span> : <span className="diff-none">{t('〈줄 삭제 대상〉')}</span>}
                 </span>
               </div>
             ))}

@@ -1,5 +1,6 @@
 import { VimEditorState, VimScriptValue } from './types';
 import { msg } from './messages';
+import { registerEntryText } from './registerText';
 import { compileVimRegex, computeSearchCount } from './vimRegex';
 import { getOptions } from './setOptionsCore';
 import {
@@ -228,7 +229,7 @@ export const EXTRA_EDITOR_BUILTINS: Record<string, ExtraBuiltin> = {
       const entry = s.registers?.[key];
       let content: string | undefined;
       if (entry) {
-        content = Array.isArray(entry.content) ? entry.content.join('') : entry.content;
+        content = registerEntryText(entry);
       } else if (key === '"' && s.clipboard) {
         content = s.clipboard.content;
       } else if ((key === '+' || key === '*') && s.systemClipboard !== undefined) {
@@ -251,7 +252,7 @@ export const EXTRA_EDITOR_BUILTINS: Record<string, ExtraBuiltin> = {
       if (entry) {
         if (entry.type === 'line') return 'V';
         if (entry.type === 'block') {
-          const text = Array.isArray(entry.content) ? entry.content.join('') : entry.content;
+          const text = registerEntryText(entry);
           const w = entry.blockWidth ?? Math.max(0, ...text.split('\n').map((l) => l.length));
           return `\x16${w}`;
         }
@@ -327,9 +328,7 @@ export const EXTRA_EDITOR_BUILTINS: Record<string, ExtraBuiltin> = {
       const existing = ctx.state.registers?.[key];
       let finalContent = incomingText;
       if (isAppend && existing) {
-        const prevText = Array.isArray(existing.content)
-          ? existing.content.join('')
-          : existing.content;
+        const prevText = registerEntryText(existing);
         finalContent =
           nextType === 'line' || nextType === 'block' || existing.type === 'line'
             ? `${prevText}\n${incomingText}`

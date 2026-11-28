@@ -1,6 +1,6 @@
 import { getVimEngineConfig } from './config';
 import { RegisterEntry, VimEditorState } from './types';
-import { formatMacroKeysToString } from './registers';
+import { macroKeysToRegisterText, registerEntryText } from './registers';
 import { applyCurswant, CURSWANT_EOL } from './curswant';
 import {
   doubledLineOpOverflow,
@@ -225,11 +225,16 @@ export function rawHandleKey(
       const macroEntry = { type: 'macro' as const, content: recordedKeys };
       const newRegisters: Record<string, RegisterEntry> = { ...(state.registers ?? {}), [targetReg]: macroEntry };
       // Vim 의 무명 레지스터는 마지막으로 쓴 레지스터를 가리킵니다. "ayiw 뒤 qa…q 처럼 무명 레지스터가
-      // 녹화 대상 레지스터를 보여 주고 있었다면 새 매크로 내용을 보여 줍니다 (키 표기 텍스트, 문자 단위).
+      // 녹화 대상 레지스터를 보여 주고 있었다면 새 매크로 내용을 보여 줍니다 (실제 키 바이트 `A!\x1bj`, 문자 단위).
       const unnamed = state.registers?.['"'];
       const previous = state.registers?.[targetReg];
-      if (unnamed && previous && JSON.stringify(unnamed.content) === JSON.stringify(previous.content) && unnamed.type === previous.type) {
-        newRegisters['"'] = { type: 'char', content: formatMacroKeysToString(recordedKeys) };
+      // 내용만 같은 다른 레지스터("ayw 뒤 "bdw 로 같은 글자)와 구별하려고 가리키는 레지스터 이름(unnamedRegisterLink)도 확인합니다.
+      if (
+        unnamed && previous && state.unnamedRegisterLink === targetReg &&
+        registerEntryText(unnamed) === registerEntryText(previous) &&
+        (unnamed.type === 'line') === (previous.type === 'line')
+      ) {
+        newRegisters['"'] = { type: 'char', content: macroKeysToRegisterText(recordedKeys) };
       }
       return {
         ...state,

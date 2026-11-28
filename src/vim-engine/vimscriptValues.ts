@@ -1,6 +1,7 @@
 import { VimEditorState, VimScriptDict, VimScriptFuncref, VimScriptValue } from './types';
 import { compileVimRegex } from './vimRegex';
 import { msg } from './messages';
+import { registerEntryText } from './registerText';
 import { getEffectiveCwd } from './vfs';
 
 /**
@@ -321,7 +322,7 @@ export function readRegister(state: VimEditorState, reg: string): string {
   if (reg === '/') return state.lastSearchQuery ?? '';
   const key = reg === '"' ? '"' : reg.toLowerCase();
   const entry = state.registers?.[key];
-  if (entry) return Array.isArray(entry.content) ? entry.content.join('') : entry.content;
+  if (entry) return registerEntryText(entry);
   if (key === '"') return state.clipboard?.content ?? '';
   if ((key === '+' || key === '*') && state.systemClipboard !== undefined) return state.systemClipboard;
   return '';

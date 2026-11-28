@@ -706,6 +706,12 @@
   opacity: 0.85;
 }
 
+/* Vim SpecialKey: 버퍼 안의 제어 글자 (ESC → ^[, CR → ^M). 글자 하나지만 두 칸을 차지합니다. */
+.special-key-char {
+  color: #89dceb;
+  font-weight: 600;
+}
+
 /* Neovim :set inccommand=nosplit|split 실시간 치환 미리보기 하이라이트 */
 .inccommand-match {
   background-color: rgba(249, 226, 175, 0.28);

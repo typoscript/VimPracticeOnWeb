@@ -169,6 +169,12 @@ export {
 export {
   formatMacroKeysToString,
   parseMacroStringToKeys,
+  macroKeysToRegisterText,
+  registerTextToKeys,
+  registerEntryText,
+  controlCharDisplay,
+  isControlChar,
+  toPrintableRegisterText,
   getRegisterContent,
   putFromRegister,
   setSystemClipboard,

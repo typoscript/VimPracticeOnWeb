@@ -98,4 +98,14 @@ describe('EditorLineRenderer', () => {
     expect(container.textContent).toContain('••');
     expect(screen.getByTestId('listchar-eol')).toHaveTextContent('¬');
   });
+
+  it('renders control characters like Vim (ESC as ^[ in SpecialKey colour) while counting them as one column', () => {
+    const { container } = renderLine({ text: 'A;\x1bj', cursor: { line: 0, col: 2 } });
+    const cursor = screen.getByTestId('vim-cursor');
+    expect(cursor).toHaveTextContent('^[');
+    expect(cursor.className).toContain('special-key-char');
+    expect(container.textContent).toBe('A;^[j');
+    // 글자마다 span 하나: ESC 도 span 하나 (엔진 열 하나)
+    expect(container.querySelectorAll('[data-testid="line-wrap"] > span').length).toBe(4);
+  });
 });

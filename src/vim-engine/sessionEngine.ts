@@ -9,6 +9,7 @@ import {
   WindowLayoutNode,
 } from './types';
 import { msg } from './messages';
+import { registerEntryText } from './registerText';
 import { buildVfsMap } from './vfs';
 import { getOptions } from './setEngine';
 import { syncActivePane } from './splitWindow';
@@ -136,7 +137,7 @@ export function generateSessionScript(state: VimEditorState, sessionFile: string
   if (state.registers) {
     for (const [k, v] of Object.entries(state.registers)) {
       if (!v) continue;
-      const content = Array.isArray(v.content) ? v.content.join('') : v.content;
+      const content = registerEntryText(v);
       const escaped = content.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
       lines.push(`let @${k} = "${escaped}"`);
     }

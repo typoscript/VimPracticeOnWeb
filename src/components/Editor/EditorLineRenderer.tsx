@@ -17,6 +17,8 @@ import {
   isPositionSelected,
   tokenizeLine,
   getSyntaxTokensMap,
+  controlCharDisplay,
+  isControlChar,
 } from '../../vim-engine';
 import type {
   ColorizerSpan,
@@ -410,6 +412,13 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
         listCharClass = ' listchar listchar-eol';
         eolRenderedOnCursor = true;
       }
+    }
+
+    // Vim 처럼 제어 글자("ap 로 붙여 넣은 매크로의 ESC 등)는 `^[`·`^M`·`<80>` 으로 색을 달리해 보여 줍니다.
+    // 엔진은 글자 하나(한 열)로 세고 화면에서만 두 칸 이상을 차지합니다 (Vim 도 바이트 하나·두 칸).
+    if (listCharDisplay === null && i < text.length && isControlChar(char)) {
+      listCharDisplay = controlCharDisplay(char);
+      listCharClass = ' special-key-char';
     }
 
     // 빈 줄이거나 줄 끝 뒤의 가상 커서 위치에서는 공백 너비 유지를 위해 non-breaking space 사용

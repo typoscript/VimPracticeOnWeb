@@ -2,6 +2,17 @@ import { ClipboardRegister, RegisterEntry, VimEditorState } from './types';
 import { clampCursor } from './cursor';
 import { pushUndoSnapshot } from './operators';
 import { getOptions } from './setEngine';
+import { registerEntryText, toPrintableRegisterText } from './registerText';
+
+export {
+  macroKeysToRegisterText,
+  macroKeyToRegisterText,
+  registerTextToKeys,
+  registerEntryText,
+  controlCharDisplay,
+  isControlChar,
+  toPrintableRegisterText,
+} from './registerText';
 
 /**
  * 연산(d, y, c, x 등) 완료 후 activeRegister에 따라 registers와 clipboard를 동기화합니다.
@@ -53,11 +64,9 @@ export function syncRegisters(
     const existing = newRegisters[targetKey];
 
     if (isAppend && existing) {
-      // 녹화한 매크로는 Vim 에서 문자 단위 텍스트입니다 ("A 로 이어 붙이면 키 표기 뒤에 붙음).
+      // 녹화한 매크로는 Vim 에서 문자 단위 텍스트입니다 ("A 로 이어 붙이면 실제 키 바이트 `A!\x1bj` 뒤에 붙음).
       const existingType = existing.type === 'macro' ? 'char' : existing.type;
-      const existingContent = Array.isArray(existing.content)
-        ? formatMacroKeysToString(existing.content)
-        : existing.content;
+      const existingContent = registerEntryText(existing);
       if (existingType === 'line' && regType === 'line') {
         newRegisters[targetKey] = {
           type: 'line',
@@ -149,6 +158,7 @@ export function syncRegisters(
   return {
     ...nextState,
     registers: newRegisters,
+    unnamedRegisterLink: namedKey ?? undefined,
     systemClipboard: (reg === '+' || reg === '*') ? clip.content : nextState.systemClipboard,
     activeRegister: undefined,
   };
@@ -325,9 +335,7 @@ export function getRegisterContent(
     const regKey = /^[A-Z]$/.test(targetReg) ? targetReg.toLowerCase() : targetReg;
     const entry = state.registers?.[regKey];
     if (!entry) return null;
-    const content = Array.isArray(entry.content)
-      ? (entry.type === 'macro' ? formatMacroKeysToString(entry.content) : entry.content.join(''))
-      : entry.content;
+    const content = registerEntryText(entry);
     const type: ClipboardRegister['type'] =
       entry.type === 'line' ? 'line' : entry.type === 'block' ? 'block' : 'text';
     return {
@@ -340,9 +348,7 @@ export function getRegisterContent(
   // 기본 무명 레지스터("") 또는 clipboard
   if (state.registers?.['"']) {
     const entry = state.registers['"'];
-    const content = Array.isArray(entry.content)
-      ? (entry.type === 'macro' ? formatMacroKeysToString(entry.content) : entry.content.join(''))
-      : entry.content;
+    const content = registerEntryText(entry);
     const type: ClipboardRegister['type'] =
       entry.type === 'line' ? 'line' : entry.type === 'block' ? 'block' : 'text';
     return {
@@ -659,23 +665,7 @@ export function formatRegisters(state: VimEditorState, filterArg?: string): stri
   for (const k of alphaKeys) {
     const entry = state.registers?.[k];
     if (entry && entry.content) {
-      const isMacro = entry.type === 'macro';
-      let rawContent = '';
-      if (Array.isArray(entry.content)) {
-        if (isMacro) {
-          rawContent = entry.content
-            .map((tok) => {
-              if (tok === 'Escape') return '<Esc>';
-              if (tok === 'Enter') return '<CR>';
-              return tok;
-            })
-            .join('');
-        } else {
-          rawContent = entry.content.join('');
-        }
-      } else {
-        rawContent = entry.content;
-      }
+      const rawContent = registerEntryText(entry);
 
       if (rawContent) {
         list.push({
@@ -765,7 +755,8 @@ export function formatRegisters(state: VimEditorState, filterArg?: string): stri
   }
 
   const lines = filtered.map((item) => {
-    const singleLinePreview = item.content.replace(/\r?\n/g, '^J');
+    // Vim 처럼 제어 글자는 `^[`·`^M`·`<80>` 으로, 줄바꿈은 `^J` 로 보여 줍니다.
+    const singleLinePreview = toPrintableRegisterText(item.content);
     return `"${item.name}   ${item.type}   ${singleLinePreview}`;
   });
 

@@ -182,7 +182,7 @@ describe('Named Registers & Black Hole Register ("a~"z, "0, "_)', () => {
           '"': { type: 'char', content: 'unnamed content' },
           '0': { type: 'line', content: 'line 1\nline 2' },
           a: { type: 'char', content: 'alpha token' },
-          m: { type: 'macro', content: ['c', 'i', 'w', 'hello', 'Escape'] },
+          m: { type: 'macro', content: ['c', 'i', 'w', 'h', 'i', 'Escape', 'Ctrl-w', 'Enter'] },
         },
       };
 
@@ -191,7 +191,8 @@ describe('Named Registers & Black Hole Register ("a~"z, "0, "_)', () => {
       expect(out).toContain('""   c   unnamed content');
       expect(out).toContain('"0   l   line 1^Jline 2');
       expect(out).toContain('"a   c   alpha token');
-      expect(out).toContain('"m   m   ciwhello<Esc>');
+      // Vim 처럼 제어 글자는 ^[ · ^W · ^M 으로 보입니다.
+      expect(out).toContain('"m   m   ciwhi^[^W^M');
       expect(out).toContain('"%   c   app.ts');
       expect(out).toContain('"/   c   findMe');
       expect(out).toContain('":   c   reg');
@@ -288,7 +289,7 @@ describe('Named Registers & Black Hole Register ("a~"z, "0, "_)', () => {
   });
 
   describe('Macro register put & yank workflow ("ap & "ay)', () => {
-    it('녹화된 매크로를 "ap 로 붙여넣으면 특수키가 <Esc>, <CR> 등의 Vim 표기로 붙여넣어진다', () => {
+    it('녹화된 매크로를 "ap 로 붙여넣으면 특수키가 Vim 처럼 실제 제어 글자(ESC)로 붙여넣어진다', () => {
       let state: VimEditorState = {
         lines: ['', 'line 1', 'line 2'],
         cursor: { line: 0, col: 0 },
@@ -306,13 +307,31 @@ describe('Named Registers & Black Hole Register ("a~"z, "0, "_)', () => {
       state = handleKey(state, 'a');
       state = handleKey(state, 'p');
 
-      expect(state.lines[0]).toBe('A;<Esc>j');
+      expect(state.lines[0]).toBe('A;\x1bj');
+      // 붙여 넣은 줄을 다시 "ay$ 로 복사해 @a 로 실행하면 ESC 글자가 Esc 키로 동작합니다.
+      state = handleKey(state, '0');
+      for (const k of ['"', 'a', 'y', '$', 'j', '@', 'a']) state = handleKey(state, k);
+      expect(state.registers?.a).toEqual({ type: 'char', content: 'A;\x1bj' });
+      expect(state.lines[1]).toBe('line 1;');
+      expect(state.mode).toBe('NORMAL');
+      expect(state.cursor.line).toBe(2);
+    });
+
+    it('손으로 친 <Esc> 다섯 글자는 Vim 처럼 Esc 가 아니라 글자 그대로 입력된다', () => {
+      let state: VimEditorState = {
+        lines: ['0i// <Esc>j', 'item 1'],
+        cursor: { line: 0, col: 0 },
+        mode: 'NORMAL',
+      };
+      for (const k of ['"', 'a', 'y', '$', 'j', '@', 'a']) state = handleKey(state, k);
+      expect(state.lines[1]).toBe('// <Esc>jitem 1');
+      expect(state.mode).toBe('INSERT');
     });
 
     it('버퍼에서 수정한 매크로 문자열을 "ay$ 로 레지스터에 복사한 후 @a 로 실행할 수 있다', () => {
       let state: VimEditorState = {
         lines: [
-          '0i// <Esc>j',
+          '0i// \x1bj',
           'item 1',
           'item 2',
         ],
@@ -326,7 +345,7 @@ describe('Named Registers & Black Hole Register ("a~"z, "0, "_)', () => {
       state = handleKey(state, 'y');
       state = handleKey(state, '$');
 
-      expect(state.registers?.a?.content).toBe('0i// <Esc>j');
+      expect(state.registers?.a?.content).toBe('0i// \x1bj');
 
       // 줄 1(item 1)로 이동하여 @a 실행
       state = handleKey(state, 'j');

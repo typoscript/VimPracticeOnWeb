@@ -1,4 +1,5 @@
 import { msg } from './messages';
+import { keyNotationToKey, macroKeyToRegisterText } from './registerText';
 import { VimScriptError, toNumber } from './vimscriptValues';
 
 export type TokenBody =
@@ -54,7 +55,17 @@ export function tokenize(src: string): Token[] {
       while (j < src.length && src[j] !== '"') {
         if (src[j] === '\\' && j + 1 < src.length) {
           const esc = src[j + 1];
-          out += esc === 'n' ? '\n' : esc === 't' ? '\t' : esc === 'e' ? '\x1b' : esc;
+          // "\<Esc>" · "\<CR>" · "\<C-w>" 은 실제 키 글자입니다 (Vim expr-quote).
+          if (esc === '<') {
+            const end = src.indexOf('>', j + 2);
+            const key = end > j + 2 ? keyNotationToKey(src.slice(j + 2, end)) : null;
+            if (key !== null) {
+              out += macroKeyToRegisterText(key);
+              j = end + 1;
+              continue;
+            }
+          }
+          out += esc === 'n' ? '\n' : esc === 't' ? '\t' : esc === 'e' ? '\x1b' : esc === 'r' ? '\r' : esc;
           j += 2;
         } else {
           out += src[j++];

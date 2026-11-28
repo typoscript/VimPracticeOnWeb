@@ -736,6 +736,8 @@ export interface VimEditorState {
   commandMessage?: string;
   /** 멀티 레지스터 저장소 */
   registers?: Record<string, RegisterEntry>;
+  /** 무명 레지스터가 가리키는 이름 있는 레지스터 (Vim `y_previous`; `"ayiw` 뒤 'a', 이름 없는 복사·삭제 뒤 undefined) */
+  unnamedRegisterLink?: string;
   /** 현재 선택된 대상 레지스터 ("a~"z, "0, "_ 등) */
   activeRegister?: string | null;
   /** 레지스터 앞에 입력한 count (`2"a3dd` 의 2). 레지스터 뒤 count 와 곱해집니다 (Vim 규칙). */

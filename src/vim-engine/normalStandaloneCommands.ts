@@ -16,7 +16,7 @@ import {
   redo,
   pushUndoSnapshot,
 } from './operators';
-import { syncRegisters, parseMacroStringToKeys } from './registers';
+import { syncRegisters, registerTextToKeys } from './registers';
 import { virtualReplaceChar } from './replaceMode';
 import { openCommandLineWindow } from './cmdlineWindow';
 import { openHelp } from './helpEngine';
@@ -106,7 +106,7 @@ function replayMacroRegister(
 
   const macroKeys = Array.isArray(regEntry.content)
     ? regEntry.content
-    : parseMacroStringToKeys(regEntry.content);
+    : registerTextToKeys(regEntry.content); // Vim: 실제 ESC 글자만 Esc 이고, 손으로 친 `<Esc>` 는 글자 그대로 입력합니다.
   let curState: VimEditorState = {
     ...state,
     pendingKeys: undefined,

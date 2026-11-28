@@ -5,6 +5,12 @@ import {
   formatMacroKeysToString,
   parseMacroStringToKeys,
 } from '../../vim-engine';
+import {
+  fromVisibleControlText,
+  hasControlChars,
+  renderVisibleControlText,
+  toVisibleControlText,
+} from '../../utils/visibleControlChars';
 import './RegisterInspector.css';
 import { t } from '../../i18n';
 
@@ -168,7 +174,8 @@ export const RegisterInspector: React.FC<RegisterInspectorProps> = ({
     if (item.type === 'macro' && item.rawKeys) {
       setEditInput(formatKeysToMacroInput(item.rawKeys));
     } else {
-      setEditInput(item.content);
+      // 제어 글자는 입력 칸에서 보이지 않으므로 Vim 화면처럼 ^[ 로 보여 주고, 저장할 때 되돌립니다.
+      setEditInput(toVisibleControlText(item.content));
     }
   };
 
@@ -183,7 +190,8 @@ export const RegisterInspector: React.FC<RegisterInspectorProps> = ({
       const keys = parseMacroInputToKeys(editInput);
       onUpdateRegister(item.rawKey, keys, 'macro');
     } else {
-      onUpdateRegister(item.rawKey, editInput, item.type);
+      const content = hasControlChars(item.content) ? fromVisibleControlText(editInput) : editInput;
+      onUpdateRegister(item.rawKey, content, item.type);
     }
     setEditingKey(null);
     setEditInput('');
@@ -345,8 +353,10 @@ export const RegisterInspector: React.FC<RegisterInspectorProps> = ({
                             ))}
                           </div>
                         ) : item.content ? (
-                          <code className="content-code" title={item.content}>
-                            {item.content.length > 60 ? `${item.content.slice(0, 60)}…` : item.content}
+                          <code className="content-code" title={toVisibleControlText(item.content)}>
+                            {renderVisibleControlText(
+                              item.content.length > 60 ? `${item.content.slice(0, 60)}…` : item.content
+                            )}
                           </code>
                         ) : (
                           <span className="empty-content">{t('(비어 있음)')}</span>

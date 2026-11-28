@@ -1,6 +1,6 @@
 import { VimEditorState } from './types';
 import { clampCursor } from './cursor';
-import { getRegisterContent } from './registers';
+import { getRegisterContent, macroKeyToRegisterText } from './registers';
 import { recordChangePosition } from './advancedMotions';
 import { lookupDigraph } from './digraphs';
 import { insertTextAtCursor } from './engineHelpers';
@@ -109,8 +109,10 @@ export function handleInsertLiteralNext(
     if (key === 'U') {
       return { handled: true, state: { ...state, literalNextPending: { kind: 'hex8', digits: '' } } };
     }
-    if (key.length === 1 || key === 'Tab') {
-      const ch = key === 'Tab' ? '\t' : key;
+    // Vim i_CTRL-V: Esc·Enter·Ctrl-x 는 실제 제어 글자(화면에 `^[`·`^M`·`^W`)를 넣습니다.
+    const controlKey = key === 'Escape' || key === 'Enter' || /^Ctrl-[a-z[\]\\^_]$/.test(key);
+    if (key.length === 1 || key === 'Tab' || controlKey) {
+      const ch = key === 'Tab' ? '\t' : controlKey ? macroKeyToRegisterText(key) : key;
       return { handled: true, state: insertLiteralChar(state, ch, ['Ctrl-v', key], isReplayingDot) };
     }
     return { handled: false, state: { ...state, literalNextPending: undefined } };

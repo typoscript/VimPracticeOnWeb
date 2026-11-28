@@ -9347,5 +9347,243 @@
       "regType": "char",
       "mode": "n"
     }
+  },
+  {
+    "id": "macro-put-raw-esc",
+    "text": "<div class=\"a\"><span>text</span></div>\nplain 0x1f 007 -3 words",
+    "cursor": {
+      "row": 1,
+      "col": 13
+    },
+    "keys": "qaA!<Esc>jqvGt)U\"ap",
+    "expected": {
+      "lines": [
+        "<div class=\"a\"><span>text</span></div>",
+        "plain 0x1f 007 -3 words!A!\u001bj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 27
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "macro-put-after-insert",
+    "text": "The quick brown fox. It jumps over\nthe lazy dog! Then it rests.\n\nAnother paragraph here.",
+    "cursor": {
+      "row": 3,
+      "col": 8
+    },
+    "keys": "qaA!<Esc>jqgua<IX<Esc>\"ap",
+    "expected": {
+      "lines": [
+        "The quick brown fox. It jumps over",
+        "the lazy dog! Then it rests.",
+        "",
+        "XA!\u001bjAnother paragraph here.!"
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 4
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "macro-unnamed-follows-named",
+    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;",
+    "cursor": {
+      "row": 3,
+      "col": 0
+    },
+    "keys": "2Y\"AyiwqaA!<Esc>jq",
+    "expected": {
+      "lines": [
+        "const total = sum(a, b) + 42;",
+        "if (total > 10) {",
+        "  log(\"big\", total);",
+        "}!",
+        "return total;"
+      ],
+      "cursor": {
+        "row": 4,
+        "col": 1
+      },
+      "reg": "A!\u001bj",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "macro-append-yiw",
+    "text": "function greet(name) {\n  return \"Hello, \" + name;\n}\n\nconst x = [1, 2, 3];",
+    "cursor": {
+      "row": 1,
+      "col": 11
+    },
+    "keys": "2%aa b<Esc>qaA!<Esc>jq\"Ayiw",
+    "expected": {
+      "lines": [
+        "function grea bet(name) {!",
+        "  return \"Hello, \" + name;",
+        "}",
+        "",
+        "const x = [1, 2, 3];"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 25
+      },
+      "reg": "A!\u001bj;",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "macro-append-after-play",
+    "text": "The quick brown fox. It jumps over\nthe lazy dog! Then it rests.\n\nAnother paragraph here.",
+    "cursor": {
+      "row": 2,
+      "col": 0
+    },
+    "keys": "qaA!<Esc>jq@a\"Ayiw",
+    "expected": {
+      "lines": [
+        "The quick brown fox. It jumps over",
+        "the lazy dog! Then it rests.",
+        "!",
+        "Another paragraph here.!"
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 22
+      },
+      "reg": "A!\u001bj.!",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "macro-put-yank-replay",
+    "text": "foo\nbar\nbaz",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "qaA,<Esc>jqk\"ap0f,r;0\"ay$j@a",
+    "expected": {
+      "lines": [
+        "foo;A,\u001bj",
+        "bar",
+        "baz"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "foo;A,\u001bj",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "macro-unnamed-not-linked-after-x",
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "cursor": {
+      "row": 3,
+      "col": 16
+    },
+    "keys": "oX<Esc>\"AyiwdF.qaxq",
+    "expected": {
+      "lines": [
+        "  indented line one",
+        "    deeper (nested) item",
+        "  back to one",
+        "last_word_here end",
+        ""
+      ],
+      "cursor": {
+        "row": 4,
+        "col": 0
+      },
+      "reg": "X",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "macro-unnamed-not-linked-after-bdw",
+    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;",
+    "cursor": {
+      "row": 2,
+      "col": 14
+    },
+    "keys": "==aa b c<C-w><C-w><Esc>\"ayw\"bdw\"apqaA!<Esc>jq",
+    "expected": {
+      "lines": [
+        "const total = sum(a, b) + 42;",
+        "if (total > 10) {",
+        "  log(\"big\", toat al);!",
+        "}",
+        "return total;"
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 0
+      },
+      "reg": " ",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "macro-rerecord-keeps-link",
+    "text": "foo bar\nbaz",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "\"ayiwqaA!<Esc>qqax<Esc>q",
+    "expected": {
+      "lines": [
+        "foo bar",
+        "baz"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 6
+      },
+      "reg": "!",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "typed-esc-notation-is-literal",
+    "text": "A;<Esc>j\nx1\nx2",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "0\"ay$j@a<Esc>",
+    "expected": {
+      "lines": [
+        "A;<Esc>j",
+        "x1;<Esc>j",
+        "x2"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 8
+      },
+      "reg": "A;<Esc>j",
+      "regType": "char",
+      "mode": "n"
+    }
   }
 ]

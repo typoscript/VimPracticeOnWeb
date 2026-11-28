@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { handleKey } from '../src/vim-engine';
+import { handleKey, registerEntryText } from '../src/vim-engine';
 import type { VimEditorState } from '../src/vim-engine';
 import { toEngineKeys } from '../scripts/neovimFuzzKeys';
 import findings from './fixtures/neovim-fuzz-findings.json';
@@ -34,7 +34,7 @@ describe('Neovim 비교 퍼저로 찾은 차이', () => {
     expect({ row: state.cursor.line, col: state.cursor.col }).toEqual(f.expected.cursor);
     expect(state.mode).toBe('NORMAL');
     const entry = state.registers?.['"'];
-    const reg = entry ? String(entry.content ?? '') + (entry.type === 'line' ? '\n' : '') : '';
+    const reg = entry ? registerEntryText(entry) + (entry.type === 'line' ? '\n' : '') : '';
     expect(reg).toBe(f.expected.reg);
   });
 });

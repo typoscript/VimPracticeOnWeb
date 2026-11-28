@@ -232,4 +232,26 @@ describe('RegisterInspector Component', () => {
       expect(formatted).toBe('ciwfoo<Esc>j0<CR>');
     });
   });
+
+  it('"ap 로 붙일 매크로 텍스트의 ESC 는 Vim 처럼 ^[ 로 보이고, 편집해 저장하면 실제 ESC 로 되돌린다', () => {
+    const onUpdateRegister = vi.fn();
+    render(
+      <RegisterInspector
+        isOpen={true}
+        onToggle={vi.fn()}
+        onUpdateRegister={onUpdateRegister}
+        registers={{ a: { type: 'char', content: 'A!\x1bj' } }}
+      />
+    );
+    const row = screen.getByTestId('register-row-a');
+    expect(row.textContent).toContain('A!^[j');
+    expect(screen.getAllByTestId('special-key-char')[0]).toHaveTextContent('^[');
+
+    fireEvent.click(screen.getByTestId('edit-reg-a'));
+    const input = screen.getByTestId('inline-edit-input-a') as HTMLInputElement;
+    expect(input.value).toBe('A!^[j');
+    fireEvent.change(input, { target: { value: 'A;^[j' } });
+    fireEvent.click(screen.getByTestId('save-reg-a'));
+    expect(onUpdateRegister).toHaveBeenCalledWith('a', 'A;\x1bj', 'char');
+  });
 });

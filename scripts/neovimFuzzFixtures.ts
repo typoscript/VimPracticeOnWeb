@@ -475,6 +475,18 @@ const CASES: Case[] = [
   { id: 'dip-keeps-col', text: '\n  return "Hello, " + name;\nconst x = [1, 2, 3];', cursor: { row: 0, col: 0 }, keys: 'dip' },
   { id: 'star-nonkeyword-run', text: 'alpha beta gamma\nfoo.bar(baz, "qux")\n', cursor: { row: 1, col: 18 }, keys: '*' },
   { id: 'failed-dollar-curswant', text: '<div class="a"><span>text</span></div>\nplain 0x1f 007 -3 words', cursor: { row: 1, col: 9 }, keys: '3$G' },
+  // 녹화한 매크로 레지스터는 실제 키 바이트 (ESC = \x1b): "ap 는 ESC 글자를 붙이고, "A 는 그 뒤에 이어 붙임
+  { id: 'macro-put-raw-esc', text: '<div class="a"><span>text</span></div>\nplain 0x1f 007 -3 words', cursor: { row: 1, col: 13 }, keys: 'qaA!<Esc>jqvGt)U"ap' },
+  { id: 'macro-put-after-insert', text: 'The quick brown fox. It jumps over\nthe lazy dog! Then it rests.\n\nAnother paragraph here.', cursor: { row: 3, col: 8 }, keys: 'qaA!<Esc>jqgua<IX<Esc>"ap' },
+  { id: 'macro-unnamed-follows-named', text: T1, cursor: { row: 3, col: 0 }, keys: '2Y"AyiwqaA!<Esc>jq' },
+  { id: 'macro-append-yiw', text: 'function greet(name) {\n  return "Hello, " + name;\n}\n\nconst x = [1, 2, 3];', cursor: { row: 1, col: 11 }, keys: '2%aa b<Esc>qaA!<Esc>jq"Ayiw' },
+  { id: 'macro-append-after-play', text: 'The quick brown fox. It jumps over\nthe lazy dog! Then it rests.\n\nAnother paragraph here.', cursor: { row: 2, col: 0 }, keys: 'qaA!<Esc>jq@a"Ayiw' },
+  { id: 'macro-put-yank-replay', text: 'foo\nbar\nbaz', cursor: { row: 0, col: 0 }, keys: 'qaA,<Esc>jqk"ap0f,r;0"ay$j@a' },
+  // 무명 레지스터는 내용이 아니라 마지막으로 쓴 레지스터(y_previous)를 가리킴: 같은 글자를 다른 곳에 쓴 뒤 qa…q 는 "" 를 바꾸지 않음
+  { id: 'macro-unnamed-not-linked-after-x', text: T3, cursor: { row: 3, col: 16 }, keys: 'oX<Esc>"AyiwdF.qaxq' },
+  { id: 'macro-unnamed-not-linked-after-bdw', text: T1, cursor: { row: 2, col: 14 }, keys: '==aa b c<C-w><C-w><Esc>"ayw"bdw"apqaA!<Esc>jq' },
+  { id: 'macro-rerecord-keeps-link', text: 'foo bar\nbaz', cursor: { row: 0, col: 0 }, keys: '"ayiwqaA!<Esc>qqax<Esc>q' },
+  { id: 'typed-esc-notation-is-literal', text: 'A;<Esc>j\nx1\nx2', cursor: { row: 0, col: 0 }, keys: '0"ay$j@a<Esc>' },
 ];
 
 const LUA = `

@@ -11,7 +11,7 @@
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { configureVimEngine, handleKey } from '../src/vim-engine';
+import { configureVimEngine, handleKey, registerEntryText } from '../src/vim-engine';
 import type { VimEditorState } from '../src/vim-engine';
 
 configureVimEngine({ devChecks: false, locale: 'en' });
@@ -200,10 +200,10 @@ function runEngine(c: FuzzCase): Snapshot {
   return { lines: s.lines, cursor: { row: s.cursor.line, col: s.cursor.col }, reg: regText(s), regType: entry ? type : 'char', steps };
 }
 
-/** Neovim 의 줄 단위 레지스터는 끝에 줄바꿈이 붙습니다. */
+/** Neovim 의 줄 단위 레지스터는 끝에 줄바꿈이 붙습니다. 녹화한 매크로는 Vim 처럼 실제 키 바이트(ESC = \x1b)로 비교합니다. */
 function regText(s: VimEditorState): string {
   const entry = s.registers?.['"'];
-  return entry ? String(entry.content ?? '') + (entry.type === 'line' ? '\n' : '') : '';
+  return entry ? registerEntryText(entry) + (entry.type === 'line' ? '\n' : '') : '';
 }
 
 interface StepSnapshot {
