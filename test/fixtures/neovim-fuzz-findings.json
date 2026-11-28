@@ -18031,5 +18031,257 @@
       "mode": "n",
       "changelist": "1:0|1"
     }
+  },
+  {
+    "id": "macro-undo-two-changes",
+    "text": "a1 one\nb2 two\nc3 three\nd4 four\ne5 five\nf6 six\ng7 seven",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "qqA!<Esc>jA?<Esc>jq@qu",
+    "expected": {
+      "lines": [
+        "a1 one!",
+        "b2 two?",
+        "c3 three",
+        "d4 four",
+        "e5 five",
+        "f6 six",
+        "g7 seven"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 7
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:6 1:6 2:0|3"
+    }
+  },
+  {
+    "id": "macro-undo-count",
+    "text": "a1 one\nb2 two\nc3 three\nd4 four\ne5 five\nf6 six\ng7 seven",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "qqxjq2@qu",
+    "expected": {
+      "lines": [
+        "1 one",
+        "b2 two",
+        "c3 three",
+        "d4 four",
+        "e5 five",
+        "f6 six",
+        "g7 seven"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "c",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
+    }
+  },
+  {
+    "id": "macro-undo-separate-runs",
+    "text": "a1 one\nb2 two\nc3 three\nd4 four\ne5 five\nf6 six\ng7 seven",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "qqxjq@q@qu",
+    "expected": {
+      "lines": [
+        "1 one",
+        "2 two",
+        "c3 three",
+        "d4 four",
+        "e5 five",
+        "f6 six",
+        "g7 seven"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      },
+      "reg": "c",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:0 1:0 2:0|3"
+    }
+  },
+  {
+    "id": "macro-undo-at-at",
+    "text": "a1 one\nb2 two\nc3 three\nd4 four\ne5 five\nf6 six\ng7 seven",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "qqxjxjq@q@@uu",
+    "expected": {
+      "lines": [
+        "1 one",
+        "2 two",
+        "c3 three",
+        "d4 four",
+        "e5 five",
+        "f6 six",
+        "g7 seven"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      },
+      "reg": "f",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:0 1:0 3:0 2:0|4"
+    }
+  },
+  {
+    "id": "macro-undo-nested",
+    "text": "a1 one\nb2 two\nc3 three\nd4 four\ne5 five\nf6 six\ng7 seven",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "qaxjqqbA!<Esc>@aq@bu",
+    "expected": {
+      "lines": [
+        "1 one",
+        "b2 two",
+        "c3 three",
+        "d4 four",
+        "e5 five",
+        "f6 six",
+        "g7 seven"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 7
+      },
+      "reg": "!",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:0 1:6 2:0|3"
+    }
+  },
+  {
+    "id": "macro-undo-dot",
+    "text": "a1 one\nb2 two\nc3 three\nd4 four\ne5 five\nf6 six\ng7 seven",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "qqxj.jq@qu",
+    "expected": {
+      "lines": [
+        "1 one",
+        "2 two",
+        "c3 three",
+        "d4 four",
+        "e5 five",
+        "f6 six",
+        "g7 seven"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      },
+      "reg": "d",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:0 1:0 2:0|3"
+    }
+  },
+  {
+    "id": "macro-records-dot-once",
+    "text": "a1 one\nb2 two\nc3 three\nd4 four\ne5 five\nf6 six\ng7 seven",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "qqxj.jq@q",
+    "expected": {
+      "lines": [
+        "1 one",
+        "2 two",
+        "3 three",
+        "4 four",
+        "e5 five",
+        "f6 six",
+        "g7 seven"
+      ],
+      "cursor": {
+        "row": 4,
+        "col": 0
+      },
+      "reg": "d",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:0 1:0 3:0|3"
+    }
+  },
+  {
+    "id": "macro-records-dot-count",
+    "text": "a1 one\nb2 two\nc3 three\nd4 four\ne5 five\nf6 six\ng7 seven",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "qqdwj2.jq@q",
+    "expected": {
+      "lines": [
+        "one",
+        "",
+        "three",
+        "",
+        "e5 five",
+        "f6 six",
+        "g7 seven"
+      ],
+      "cursor": {
+        "row": 4,
+        "col": 0
+      },
+      "reg": "d4 four",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:0 1:0 3:0|3"
+    }
+  },
+  {
+    "id": "macro-undo-redo-lines",
+    "text": "a1 one\nb2 two\nc3 three\nd4 four\ne5 five\nf6 six\ng7 seven",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "qqA!<Esc>jA?<Esc>jq@qu<C-r>u",
+    "expected": {
+      "lines": [
+        "a1 one!",
+        "b2 two?",
+        "c3 three",
+        "d4 four",
+        "e5 five",
+        "f6 six",
+        "g7 seven"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 7
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:6 1:6 2:0|3"
+    }
   }
 ]

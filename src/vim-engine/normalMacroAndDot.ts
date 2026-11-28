@@ -8,6 +8,7 @@ import { executeCommandLine } from './commandLine';
 import { reselectVisualForRedo } from './visualRedo';
 import { beginChangeListUndoJoin, endChangeListUndoJoin } from './changelist';
 import { msg } from './messages';
+import { pushUndoSnapshot } from './undoHistory';
 import { ringBell, RunHandleKeyFn, ParsedPending } from './engineHelpers';
 
 /* 노멀 모드 매크로 녹화·재생(q @ Q), `.` 반복, r/gr (normalStandaloneCommands.ts 에서 분리) */
@@ -21,8 +22,45 @@ export const MAX_MACRO_REPLAY_KEYS = 100000;
 let macroReplayKeysLeft = MAX_MACRO_REPLAY_KEYS;
 
 /** 매크로 실행 전체가 변경 목록에서 한 실행 취소 단위입니다 (changelist.ts) */
-const replayMacroRegister = (state: VimEditorState, ...rest: [string, number, number, RunHandleKeyFn]): VimEditorState =>
-  endChangeListUndoJoin(state, replayMacroRegisterRaw(beginChangeListUndoJoin(state), ...rest));
+const replayMacroRegister = (state: VimEditorState, ...rest: [string, number, number, RunHandleKeyFn]): VimEditorState => {
+  const played = endChangeListUndoJoin(state, replayMacroRegisterRaw(beginChangeListUndoJoin(state), ...rest));
+  return rest[2] === 0 ? joinMacroUndo(state, played) : played;
+};
+
+/**
+ * Vim 은 레지스터를 실행하는 동안 실행 취소를 끊지 않으므로(u_sync 는 직접 친 키에서만) 최상위 `@q`·`[count]@q` 한 번의
+ * 변경 전체가 `u` 한 번에 되돌아갑니다. 안쪽에서 생긴 실행 취소 기록을 하나로 합치고, 커서는 첫 변경을 시작한 위치입니다.
+ * 매크로가 스스로 실행 취소·다시 실행을 했거나(기록이 시작 때 것을 앞부분으로 갖지 않음) 입력 모드로 끝나면 그대로 둡니다.
+ */
+function joinMacroUndo(before: VimEditorState, after: VimEditorState): VimEditorState {
+  const base = before.undoStack ?? [];
+  const stack = after.undoStack ?? [];
+  if (stack.length - base.length < 2) return after;
+  if (base.some((snap, i) => stack[i] !== snap)) return after;
+  if (after.mode !== 'NORMAL') return after;
+  const undoFields = {
+    undoStack: before.undoStack,
+    redoStack: before.redoStack,
+    undoTreeNodes: before.undoTreeNodes,
+    currentUndoSeq: before.currentUndoSeq,
+    maxUndoSeq: before.maxUndoSeq,
+    undoTimeHistory: before.undoTimeHistory,
+    undoTimeIndex: before.undoTimeIndex,
+    undoJoinMerged: before.undoJoinMerged,
+    pendingUndoJoin: before.pendingUndoJoin,
+    lastActionWasUndo: before.lastActionWasUndo,
+  };
+  const joined = pushUndoSnapshot({ ...after, ...undoFields, lines: before.lines, cursor: stack[base.length].cursor });
+  const {
+    undoStack, redoStack, undoTreeNodes, currentUndoSeq, maxUndoSeq,
+    undoTimeHistory, undoTimeIndex, undoJoinMerged, pendingUndoJoin, lastActionWasUndo,
+  } = joined;
+  return {
+    ...after,
+    undoStack, redoStack, undoTreeNodes, currentUndoSeq, maxUndoSeq,
+    undoTimeHistory, undoTimeIndex, undoJoinMerged, pendingUndoJoin, lastActionWasUndo,
+  };
+}
 
 function replayMacroRegisterRaw(
   state: VimEditorState,

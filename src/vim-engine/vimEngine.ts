@@ -280,7 +280,8 @@ export function rawHandleKey(
     }
 
     // 매크로 재생 중이 아닌(최상위 입력) 경우에만 키 스트림을 녹화 버퍼에 누적
-    if (macroDepth === 0) {
+    // (`.` 가 안에서 다시 실행하는 키는 넣지 않음: Vim 은 친 키 `.` 만 녹화하므로 재생 때 변경이 두 번 일어나지 않음)
+    if (macroDepth === 0 && !isReplayingDot) {
       state = {
         ...state,
         recordingMacro: {

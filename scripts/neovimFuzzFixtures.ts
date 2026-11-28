@@ -28,6 +28,7 @@ const T6 = 'a\n  \nb\n\nc';
 const T7 = 'a b\nc d\ne f\ng h';
 const TG = 'abc\nxyz\nhello there\nend';
 const TS = 'a b a\nxa ya za\nq a\nlong a line here';
+const TM = 'a1 one\nb2 two\nc3 three\nd4 four\ne5 five\nf6 six\ng7 seven';
 const TJ = 'alpha beta\n  gamma delta\nepsilon\nzeta eta';
 const TF = 'function greet(name) {\n  return "Hello, " + name;\n}\n\nconst x = [1, 2, 3];';
 const TQ = 'The quick brown fox. It jumps over\nthe lazy dog! Then it rests.\n\nAnother paragraph here.';
@@ -867,6 +868,17 @@ const CASES: Case[] = [
   { id: 'vi-tab-V-A', text: TT, cursor: { row: 0, col: 0 }, keys: 'VAX<Esc>' },
   { id: 'vi-tab-multi-A', text: TT, cursor: { row: 0, col: 3 }, keys: 'vjAX<Esc>' },
   { id: 'vi-empty-line-A', text: 'ab\n\ncd', cursor: { row: 1, col: 0 }, keys: 'VAX<Esc>' },
+  // 최상위 @q·[count]@q 한 번의 변경 전체가 u 한 번 (Vim 은 레지스터 실행 중 u_sync 를 하지 않음)
+  { id: 'macro-undo-two-changes', text: TM, cursor: { row: 0, col: 0 }, keys: 'qqA!<Esc>jA?<Esc>jq@qu' },
+  { id: 'macro-undo-count', text: TM, cursor: { row: 0, col: 0 }, keys: 'qqxjq2@qu' },
+  { id: 'macro-undo-separate-runs', text: TM, cursor: { row: 0, col: 0 }, keys: 'qqxjq@q@qu' },
+  { id: 'macro-undo-at-at', text: TM, cursor: { row: 0, col: 0 }, keys: 'qqxjxjq@q@@uu' },
+  { id: 'macro-undo-nested', text: TM, cursor: { row: 0, col: 0 }, keys: 'qaxjqqbA!<Esc>@aq@bu' },
+  { id: 'macro-undo-dot', text: TM, cursor: { row: 0, col: 0 }, keys: 'qqxj.jq@qu' },
+  // 녹화 중 `.` 는 친 키 `.` 만 녹화 (안에서 다시 실행한 키가 매크로에 들어가면 재생 때 변경이 두 번 일어남)
+  { id: 'macro-records-dot-once', text: TM, cursor: { row: 0, col: 0 }, keys: 'qqxj.jq@q' },
+  { id: 'macro-records-dot-count', text: TM, cursor: { row: 0, col: 0 }, keys: 'qqdwj2.jq@q' },
+  { id: 'macro-undo-redo-lines', text: TM, cursor: { row: 0, col: 0 }, keys: 'qqA!<Esc>jA?<Esc>jq@qu<C-r>u' },
 ];
 
 const LUA = `
