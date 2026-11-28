@@ -79,22 +79,96 @@ function findLineComment(b: CBuffer): CPos | null {
   return null;
 }
 
-/** /* 주석 안의 줄 ('comments' 기본값 s1:/*,mb:*,ex:*\/) */
-function commentLineIndent(b: CBuffer, o: Cino, theline: string, commentPos: CPos, curLnum: number): number {
-  let amount = b.getvcol(commentPos);
-  if (theline.startsWith('*') && !theline.startsWith('*/')) {
-    if (b.cur.lnum > 1) {
-      const look = sw(b.ml(b.cur.lnum - 1));
-      if (look.startsWith('/*')) {
-        amount = b.getIndentLnum(b.cur.lnum - 1);
-      } else if (look.startsWith('*')) {
-        return b.getIndentLnum(b.cur.lnum - 1);
-      } else if (!b.ml(commentPos.lnum).startsWith('/*', commentPos.col)) {
-        return amount;
+/** Vim 'comments' 기본값 (cindent 가 세 부분 주석 정렬에 쓰는 부분). */
+export const DEFAULT_COMMENTS = 's1:/*,mb:*,ex:*/,://,b:#,:%,:XCOMM,n:>,fb:-';
+
+interface CommentPart {
+  what: string;
+  align: string;
+  off: number;
+  text: string;
+}
+
+function parseComments(comments: string): CommentPart[] {
+  const parts: CommentPart[] = [];
+  let i = 0;
+  while (i < comments.length) {
+    let what = '';
+    let align = '';
+    let off = 0;
+    while (i < comments.length && comments[i] !== ':') {
+      const c = comments[i];
+      if (c === 's' || c === 'e' || c === 'm') {
+        what = c;
+        i++;
+      } else if (c === 'l' || c === 'r') {
+        align = c;
+        i++;
+      } else if (/[-0-9]/.test(c)) {
+        const m = /^-?\d*/.exec(comments.slice(i))![0];
+        off = Number(m) || 0;
+        i += Math.max(1, m.length);
+      } else {
+        i++;
       }
     }
-    return amount + 1;
+    if (comments[i] === ':') i++;
+    let text = '';
+    while (i < comments.length && comments[i] !== ',') {
+      if (comments[i] === '\\' && i + 1 < comments.length) i++;
+      text += comments[i++];
+    }
+    if (comments[i] === ',') i++;
+    parts.push({ what, align, off, text });
   }
+  return parts;
+}
+
+/** /* 주석 안의 줄: Vim get_c_indent 의 'comments' 세 부분(s/m/e) 정렬 */
+function commentLineIndent(b: CBuffer, o: Cino, theline: string, commentPos: CPos, curLnum: number): number {
+  let amount = b.getvcol(commentPos);
+  // Vim 은 s/m 부분을 만나기 전 빈 문자열을 길이 2·1 로 비교하므로 아무 줄과도 맞지 않습니다.
+  let leadStart = '\0\0';
+  let leadMiddle = '\0';
+  let startOff = 0;
+  let startAlign = '';
+  let done = false;
+  for (const part of parseComments(o.comments ?? DEFAULT_COMMENTS)) {
+    if (part.what === 's') {
+      leadStart = part.text;
+      startOff = part.off;
+      startAlign = part.align;
+    } else if (part.what === 'm') {
+      leadMiddle = part.text;
+    } else if (part.what === 'e') {
+      const leadEnd = part.text;
+      if (theline.startsWith(leadMiddle) && !theline.startsWith(leadEnd)) {
+        done = true;
+        if (b.cur.lnum > 1) {
+          const look = sw(b.ml(b.cur.lnum - 1));
+          if (look.startsWith(leadStart)) {
+            amount = b.getIndentLnum(b.cur.lnum - 1);
+          } else if (look.startsWith(leadMiddle)) {
+            amount = b.getIndentLnum(b.cur.lnum - 1);
+            break;
+          } else if (!b.ml(commentPos.lnum).startsWith(leadStart, commentPos.col)) {
+            continue;
+          }
+        }
+        if (startOff !== 0) amount += startOff;
+        else if (startAlign === 'r') amount += leadStart.length - leadMiddle.length;
+        break;
+      }
+      if (!theline.startsWith(leadMiddle) && theline.startsWith(leadEnd)) {
+        amount = b.getIndentLnum(b.cur.lnum - 1);
+        if (part.off !== 0) amount += part.off;
+        else if (part.align === 'r') amount += leadStart.length - leadMiddle.length;
+        done = true;
+        break;
+      }
+    }
+  }
+  if (done) return amount;
   if (theline[0] === '*') return amount + 1;
 
   for (let lnum = curLnum - 1; lnum > commentPos.lnum; lnum--) {

@@ -18,7 +18,8 @@
     "prepare": "git config core.hooksPath .githooks || true",
     "fuzz:neovim": "tsx scripts/neovimFuzz.ts",
     "fixtures:neovim-fuzz": "tsx scripts/neovimFuzzFixtures.ts",
-    "fixtures:neovim-cindent": "tsx scripts/neovimCindentFixtures.ts"
+    "fixtures:neovim-cindent": "tsx scripts/neovimCindentFixtures.ts",
+    "fixtures:neovim-jsindent": "tsx scripts/neovimJsIndentFixtures.ts"
   },
   "dependencies": {
     "react": "^19.0.0",

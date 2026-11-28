@@ -35,6 +35,11 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'cindentScan.ts',
       'cindentRules.ts',
       'cindent.ts',
+      // `=` 의 JS/TS 파일타입 들여쓰기 (runtime/indent/{javascript,typescript}.vim 포팅, cindent 만 import)
+      'jsIndentSyntax.ts',
+      'tsIndent.ts',
+      'jsIndent.ts',
+      'filetypeIndent.ts',
     ],
   },
   {

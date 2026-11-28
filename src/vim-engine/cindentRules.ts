@@ -39,6 +39,8 @@ export interface Cino {
   unclosed2: number;
   inComment: number;
   maxparen: number;
+  /** 'comments' (없으면 Vim 기본값). 주석 안 줄의 세 부분 주석 정렬에 씁니다. */
+  comments?: string;
 }
 
 export function defaultCino(sw: number): Cino {

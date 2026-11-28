@@ -18,6 +18,7 @@ import {
 } from './motions';
 import { isPositionSelected, linewiseVisualCol } from './visual';
 import { cindentLines, type CIndentOptions } from './cindent';
+import { indentexprLines, jsIndentKindForFilename, jsIndentKindForFiletype, type JsIndentKind } from './filetypeIndent';
 export { modifyNumberAtCursor, modifyNumberVisual } from './numberOperators';
 
 /**
@@ -513,22 +514,42 @@ export function indentVisual(
   };
 }
 
-/** `=` 가 쓰는 shiftwidth / tabstop / expandtab (Vim 처럼 shiftwidth 0 이면 tabstop). */
-export function cindentOptionsFor(state: VimEditorState): CIndentOptions {
-  const opts = getOptions(state);
-  return { shiftwidth: opts.shiftwidth, tabstop: opts.tabstop, expandtab: opts.expandtab };
+/** `=` 가 쓰는 옵션. `indentexpr` 가 있으면 cindent 대신 그 파일타입 들여쓰기 스크립트를 씁니다. */
+export interface EqualIndentOptions extends CIndentOptions {
+  indentexpr?: JsIndentKind;
 }
 
 /**
- * `=` 연산자: 줄 범위를 Vim 의 C 들여쓰기(cindent, 기본 'cinoptions') 규칙으로 다시 들여씁니다.
+ * `=` 가 쓰는 shiftwidth / tabstop / expandtab (Vim 처럼 shiftwidth 0 이면 tabstop) 와 파일타입 들여쓰기.
+ * Neovim 기본값(`filetype plugin indent on`)처럼 `:filetype indent off` 가 아니면, 'filetype'(없으면 파일 이름으로
+ * 감지)이 javascript / typescript(+react) 일 때 runtime/indent 스크립트를 씁니다. 파일타입이 없으면 cindent 입니다.
+ */
+export function cindentOptionsFor(state: VimEditorState): EqualIndentOptions {
+  const opts = getOptions(state);
+  const base: EqualIndentOptions = { shiftwidth: opts.shiftwidth, tabstop: opts.tabstop, expandtab: opts.expandtab };
+  const settings = state.filetypeSettings;
+  if (settings?.indent === false) return base;
+  const explicit = opts.filetype?.trim();
+  const kind = explicit
+    ? jsIndentKindForFiletype(explicit)
+    : settings?.detect === false
+    ? null
+    : jsIndentKindForFilename(state.primaryFilename);
+  return kind ? { ...base, indentexpr: kind } : base;
+}
+
+/**
+ * `=` 연산자: 줄 범위를 다시 들여씁니다. 기본은 Vim 의 C 들여쓰기(cindent, 기본 'cinoptions') 규칙으로,
  * 'indentexpr'·'equalprg' 가 비어 있는 `nvim -u NONE` 의 `=` 와 같습니다 (`cindent.ts`).
+ * `opts.indentexpr` 가 있으면 JS/TS 들여쓰기 스크립트를 씁니다 (`filetypeIndent.ts`).
  */
 export function formatLinesRange(
   lines: string[],
   fromLine: number,
   toLine: number,
-  opts: CIndentOptions = { shiftwidth: 2, tabstop: 2, expandtab: true }
+  opts: EqualIndentOptions = { shiftwidth: 2, tabstop: 2, expandtab: true }
 ): string[] {
+  if (opts.indentexpr) return indentexprLines(lines, fromLine, toLine, opts, opts.indentexpr);
   return cindentLines(lines, fromLine, toLine, opts);
 }
 
