@@ -3,7 +3,7 @@ import { executeCommandLine } from './commandLine';
 import { moveToLineStart, moveToLineEnd, moveToFirstNonBlank } from './motions';
 import { syncRegisters, putFromRegister } from './registers';
 import { reselectLastVisual } from './advancedMotions';
-import { deleteVisualSelection, yankVisualSelection, startVisualBlockInsert, swapVisualCursorAnchor } from './visual';
+import { deleteVisualSelection, yankVisualSelection, yankVisualBlock, startVisualBlockInsert, swapVisualCursorAnchor } from './visual';
 import { replaceVisualChars } from './visualUtilities';
 import { moveFind } from './findChar';
 import { findMatches, findSearchTarget, getWordAtCursor } from './search';
@@ -371,11 +371,12 @@ export function handleVisualModeKey(
     if (key === 'A') {
       return startVisualBlockInsert(state, 'A', parsed.totalCount);
     }
-    if (key === 'c' || key === 's') {
-      return startVisualBlockInsert(state, 'c', parsed.totalCount);
-    }
-    if (key === 'C') {
-      return startVisualBlockInsert({ ...state, visualBlockEndOfLine: true }, 'c', parsed.totalCount);
+    // 블록 c / s / C 는 Vim 처럼 지운 블록을 레지스터에 넣습니다 (블록 단위).
+    if (key === 'c' || key === 's' || key === 'C') {
+      const source = key === 'C' ? { ...state, visualBlockEndOfLine: true } : state;
+      const deleted = yankVisualBlock(source).clipboard;
+      const res = startVisualBlockInsert(source, 'c', parsed.totalCount);
+      return syncRegisters(state, { ...res, clipboard: deleted }, false);
     }
   } else if (!isTextObjPending && (key === 'c' || key === 's' || key === 'C' || key === 'S' || key === 'R')) {
     const snap = state.visualAnchor

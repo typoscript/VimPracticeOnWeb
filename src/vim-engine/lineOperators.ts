@@ -16,7 +16,7 @@ import {
   moveToFirstLine,
   moveToLastLine,
 } from './motions';
-import { isPositionSelected } from './visual';
+import { isPositionSelected, linewiseVisualCol } from './visual';
 import { cindentLines, type CIndentOptions } from './cindent';
 export { modifyNumberAtCursor, modifyNumberVisual } from './numberOperators';
 
@@ -156,6 +156,7 @@ function rot13(ch: string): string {
   return ch;
 }
 
+
 /**
  * VISUAL 모드 대소문자 변환:
  * ~ (대소문자 반전), u (모두 소문자), U (모두 대문자)
@@ -182,7 +183,7 @@ export function changeCaseVisual(
   const startCursor =
     cursorAfter ??
     (mode === 'VISUAL_LINE' || mode === 'SELECT_LINE'
-      ? { line: minLine, col: 0 }
+      ? { line: minLine, col: linewiseVisualCol(state, minLine) }
       : mode === 'VISUAL_BLOCK' || mode === 'SELECT_BLOCK'
         ? { line: minLine, col: Math.min(anchor.col, cursor.col) }
         : anchor.line < cursor.line || (anchor.line === cursor.line && anchor.col <= cursor.col)

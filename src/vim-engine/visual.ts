@@ -450,6 +450,18 @@ export function deleteVisualSelection(state: VimEditorState): VimEditorState {
 }
 
 /**
+ * 줄 단위 비주얼 연산(Vy, V~, Vu …) 뒤 커서 열 ('nostartofline' 기준, Neovim 대조).
+ */
+export function linewiseVisualCol(state: VimEditorState, line: number): number {
+  if (getOptions(state).startofline) return 0;
+  // Vim: 커서가 선택의 위쪽 끝이면 그 열을 유지하고, 앵커가 위쪽이면 0열로 갑니다 (Vggy → 열 유지, Vjy → 0열).
+  const anchor = state.visualAnchor;
+  if (!anchor || state.cursor.line >= anchor.line) return 0;
+  const len = (state.lines[line] ?? '').length;
+  return Math.max(0, Math.min(state.cursor.col, len - 1));
+}
+
+/**
  * VISUAL 모드에서 선택 영역을 복사(Yank)하고 NORMAL 모드로 복귀합니다.
  */
 export function yankVisualSelection(state: VimEditorState): VimEditorState {
@@ -472,7 +484,7 @@ export function yankVisualSelection(state: VimEditorState): VimEditorState {
     return {
       ...state,
       // Vim: 줄 단위 비주얼 복사 후 커서는 첫 줄의 0열로 갑니다.
-      cursor: { line: minLine, col: 0 },
+      cursor: { line: minLine, col: linewiseVisualCol(state, minLine) },
       mode: 'NORMAL',
       visualAnchor: undefined,
       clipboard: {

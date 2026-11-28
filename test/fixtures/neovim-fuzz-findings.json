@@ -6163,5 +6163,319 @@
       "regType": "char",
       "mode": "n"
     }
+  },
+  {
+    "id": "visual-cursor-reg-1",
+    "text": "abcd\nefgh\nij",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc><C-v>jlcX<Esc>",
+    "expected": {
+      "lines": [
+        "Xcd",
+        "Xgh",
+        "ij"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "ab\nef",
+      "regType": "block",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-cursor-reg-2",
+    "text": "abcd\nefgh",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>l<C-v>j$cX<Esc>",
+    "expected": {
+      "lines": [
+        "aX",
+        "eX"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      },
+      "reg": "bcd\nfgh",
+      "regType": "block",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-cursor-reg-3",
+    "text": "abcd\nefgh",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc><C-v>jcX<Esc>",
+    "expected": {
+      "lines": [
+        "Xbcd",
+        "Xfgh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "a\ne",
+      "regType": "block",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-cursor-reg-4",
+    "text": "abcd\nefgh\nijkl",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>jjllVggy",
+    "expected": {
+      "lines": [
+        "abcd",
+        "efgh",
+        "ijkl"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "abcd\nefgh\nijkl\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-cursor-reg-5",
+    "text": "ABCD\nEFGH\nIJKL",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>jjllVku",
+    "expected": {
+      "lines": [
+        "ABCD",
+        "efgh",
+        "ijkl"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-cursor-reg-6",
+    "text": "abcd\nefgh\nijkl",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>jjllVk~",
+    "expected": {
+      "lines": [
+        "abcd",
+        "EFGH",
+        "IJKL"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-cursor-reg-7",
+    "text": "abcd\nefgh\nijkl",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>jjllVk>",
+    "expected": {
+      "lines": [
+        "abcd",
+        "  efgh",
+        "  ijkl"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-cursor-reg-8",
+    "text": "abcd\nefgh\nijkl",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>jjllVkJ",
+    "expected": {
+      "lines": [
+        "abcd",
+        "efgh ijkl"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 4
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-cursor-reg-9",
+    "text": "abcd\nefgh\nijkl\nmn",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>jjllVkd",
+    "expected": {
+      "lines": [
+        "abcd",
+        "mn"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 1
+      },
+      "reg": "efgh\nijkl\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-cursor-reg-10",
+    "text": "abcd\nefgh\nijkl",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>jjllvkJ",
+    "expected": {
+      "lines": [
+        "abcd",
+        "efgh ijkl"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 4
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-cursor-reg-11",
+    "text": "abcd\nefgh\nijkl",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>jjllvkU",
+    "expected": {
+      "lines": [
+        "abcd",
+        "efGH",
+        "IJKl"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-line-col-1",
+    "text": "ABCD\nx",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>llVu",
+    "expected": {
+      "lines": [
+        "abcd",
+        "x"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-line-col-2",
+    "text": "abcd\nefgh",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>jllVky",
+    "expected": {
+      "lines": [
+        "abcd",
+        "efgh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "abcd\nefgh\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-line-col-3",
+    "text": "abcd\nefgh",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "i<Esc>llVjy",
+    "expected": {
+      "lines": [
+        "abcd",
+        "efgh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "abcd\nefgh\n",
+      "regType": "line",
+      "mode": "n"
+    }
   }
 ]

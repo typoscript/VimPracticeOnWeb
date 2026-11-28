@@ -317,6 +317,20 @@ const CASES: Case[] = [
   { id: 'blank-last-line-iw-4', text: 'abc.\n\n', cursor: { row: 0, col: 0 }, keys: 'i<Esc>Gyiw' },
   { id: 'blank-last-line-iw-5', text: 'abc. \n', cursor: { row: 0, col: 0 }, keys: 'i<Esc>Gyiw' },
   { id: 'blank-last-line-iw-6', text: 'abc.\n', cursor: { row: 0, col: 0 }, keys: 'i<Esc>Gyaw' },
+  { id: 'visual-cursor-reg-1', text: 'abcd\nefgh\nij', cursor: { row: 0, col: 0 }, keys: 'i<Esc><C-v>jlcX<Esc>' },
+  { id: 'visual-cursor-reg-2', text: 'abcd\nefgh', cursor: { row: 0, col: 0 }, keys: 'i<Esc>l<C-v>j$cX<Esc>' },
+  { id: 'visual-cursor-reg-3', text: 'abcd\nefgh', cursor: { row: 0, col: 0 }, keys: 'i<Esc><C-v>jcX<Esc>' },
+  { id: 'visual-cursor-reg-4', text: 'abcd\nefgh\nijkl', cursor: { row: 0, col: 0 }, keys: 'i<Esc>jjllVggy' },
+  { id: 'visual-cursor-reg-5', text: 'ABCD\nEFGH\nIJKL', cursor: { row: 0, col: 0 }, keys: 'i<Esc>jjllVku' },
+  { id: 'visual-cursor-reg-6', text: 'abcd\nefgh\nijkl', cursor: { row: 0, col: 0 }, keys: 'i<Esc>jjllVk~' },
+  { id: 'visual-cursor-reg-7', text: 'abcd\nefgh\nijkl', cursor: { row: 0, col: 0 }, keys: 'i<Esc>jjllVk>' },
+  { id: 'visual-cursor-reg-8', text: 'abcd\nefgh\nijkl', cursor: { row: 0, col: 0 }, keys: 'i<Esc>jjllVkJ' },
+  { id: 'visual-cursor-reg-9', text: 'abcd\nefgh\nijkl\nmn', cursor: { row: 0, col: 0 }, keys: 'i<Esc>jjllVkd' },
+  { id: 'visual-cursor-reg-10', text: 'abcd\nefgh\nijkl', cursor: { row: 0, col: 0 }, keys: 'i<Esc>jjllvkJ' },
+  { id: 'visual-cursor-reg-11', text: 'abcd\nefgh\nijkl', cursor: { row: 0, col: 0 }, keys: 'i<Esc>jjllvkU' },
+  { id: 'visual-line-col-1', text: 'ABCD\nx', cursor: { row: 0, col: 0 }, keys: 'i<Esc>llVu' },
+  { id: 'visual-line-col-2', text: 'abcd\nefgh', cursor: { row: 0, col: 0 }, keys: 'i<Esc>jllVky' },
+  { id: 'visual-line-col-3', text: 'abcd\nefgh', cursor: { row: 0, col: 0 }, keys: 'i<Esc>llVjy' },
 ];
 
 const LUA = `
