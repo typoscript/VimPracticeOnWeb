@@ -1,7 +1,7 @@
 import { CursorPosition, VimEditorState } from './types';
 import { clampCursor } from './cursor';
 import { pushUndoSnapshot } from './operators';
-import { beginlineSolCol, keepCurswantIfNosol, pushUndoSnapshotAt, setLastUndoCursor } from './undoHistory';
+import { beginlineSolCol, keepCurswant, keepCurswantIfNosol, pushUndoSnapshotAt, setLastUndoCursor } from './undoHistory';
 import { compileVimRegex } from './vimRegex';
 import { msg } from './messages';
 import { getRegisterContent, syncRegisters } from './registers';
@@ -9,6 +9,7 @@ import { getOptions } from './setEngine';
 import { moveToFirstNonBlank } from './motions';
 import { joinLines, shiftLineIndent } from './lineOperators';
 import type { KeyRunner } from './exSubstitute';
+import type { ExCommandRunner } from './exWorkspaceCommands';
 
 /**
  * :g 및 :v 글로벌 명령을 실행합니다.
@@ -17,7 +18,8 @@ export function executeGlobalCommand(
   state: VimEditorState,
   gMatch: RegExpMatchArray,
   _commandStr: string,
-  keyRunner?: KeyRunner
+  keyRunner?: KeyRunner,
+  runEx?: ExCommandRunner
 ): VimEditorState {
   const gType = gMatch[1];
   const bang = gMatch[2];
@@ -42,6 +44,14 @@ export function executeGlobalCommand(
       commandMessage: msg('E486: 잘못된 정규식 패턴입니다: {pattern}', { pattern }),
     };
   }
+
+  // Vim ex_global: 패턴은 마지막 검색·치환 패턴이 됩니다 (`n`, `:s//X/` 가 이어서 씀).
+  state = {
+    ...state,
+    lastSearchQuery: pattern,
+    hlsearchSuppressed: undefined,
+    ...(state.lastSubstitute ? { lastSubstitute: { ...state.lastSubstitute, pattern } } : {}),
+  };
 
   const matchedIndices: number[] = [];
   state.lines.forEach((lineText, idx) => {
@@ -103,19 +113,20 @@ export function executeGlobalCommand(
   }
 
   // 2. :g/pattern/norm {cmd} (매칭 줄마다 Normal 명령어 일괄 실행)
-  const normMatch = action.match(/^(norm|normal)(!?)\s*(.*)$/);
+  const normMatch = action.match(/^(normal|norm)(!?)\s*(.*)$/);
   if (normMatch) {
     const bang = normMatch[2] === '!';
     const normKeys = normMatch[3];
     let curState = pushUndoSnapshot(state);
 
-    // 'dd' 줄 삭제인 경우 줄 번호 왜곡을 방지하기 위해 역순(아래에서 위로) 실행
-    const isLineDelete = normKeys.trim() === 'dd';
-    const sortedIndices = isLineDelete ? [...matchedIndices].reverse() : matchedIndices;
-
+    // Vim 처럼 위에서부터 실행하고, 지워지거나 바뀐 줄의 표시는 버립니다 (`:g/x/norm dd` 의 레지스터는 마지막으로 지운 줄).
+    let pending = [...matchedIndices];
     let firstUndoCursor: CursorPosition | undefined;
-    for (const idx of sortedIndices) {
+    while (pending.length > 0) {
+      const idx = pending.shift() as number;
+      const before = curState.lines;
       ({ state: curState, firstUndoCursor } = runNormalKeysOnLine(curState, idx, normKeys, keyRunner, bang, firstUndoCursor));
+      pending = remapMarkedLines(before, curState.lines, pending);
     }
     if (firstUndoCursor) curState = setLastUndoCursor(curState, state, firstUndoCursor);
 
@@ -129,6 +140,9 @@ export function executeGlobalCommand(
     };
   }
 
+  // 3. 그 밖의 Ex 명령 (:g/pat/s//X/, :g/^/m0, :g/pat/t$, :g/pat/j …)
+  if (runEx) return executeGlobalExCommand(state, matchedIndices, action, runEx);
+
   return {
     ...state,
     mode: 'NORMAL',
@@ -137,6 +151,92 @@ export function executeGlobalCommand(
     commandType: undefined,
     commandMessage: msg('지원하지 않는 글로벌 작업입니다: {action}', { action }),
   };
+}
+
+/** 실행 취소 기록 관련 값을 `from` 의 것으로 되돌립니다 (안쪽 명령이 만든 기록을 버림). */
+function withUndoFieldsOf(state: VimEditorState, from: VimEditorState): VimEditorState {
+  return {
+    ...state,
+    undoStack: from.undoStack,
+    redoStack: from.redoStack,
+    undoTreeNodes: from.undoTreeNodes,
+    currentUndoSeq: from.currentUndoSeq,
+    maxUndoSeq: from.maxUndoSeq,
+    undoTimeHistory: from.undoTimeHistory,
+    undoTimeIndex: from.undoTimeIndex,
+    undoJoinMerged: from.undoJoinMerged,
+    changeList: from.changeList,
+    changeIndex: from.changeIndex,
+  };
+}
+
+/**
+ * 명령 하나를 실행한 뒤 아직 처리하지 않은 표시 줄 번호를 새 버퍼 기준으로 옮깁니다. Vim 은 줄마다 표시(ml_setmarked)를
+ * 하므로 지워지거나 바뀐 줄의 표시는 사라집니다. 바뀐 구간은 뒤쪽 공통 부분을 먼저 맞춰 찾습니다(남은 표시는 모두 뒤쪽).
+ */
+function remapMarkedLines(before: string[], after: string[], pending: number[]): number[] {
+  if (before === after) return pending;
+  let suffix = 0;
+  while (suffix < before.length && suffix < after.length && before[before.length - 1 - suffix] === after[after.length - 1 - suffix]) suffix++;
+  let prefix = 0;
+  const maxPrefix = Math.min(before.length, after.length) - suffix;
+  while (prefix < maxPrefix && before[prefix] === after[prefix]) prefix++;
+  const delta = after.length - before.length;
+  const out: number[] = [];
+  for (const idx of pending) {
+    if (idx < prefix) out.push(idx);
+    else if (idx >= before.length - suffix) out.push(idx + delta);
+  }
+  return out;
+}
+
+/**
+ * Vim global_exe: 표시한 줄마다 커서를 그 줄 0열에 두고 Ex 명령을 실행합니다. 전체가 실행 취소 한 단위이고,
+ * 오류가 나면 멈춥니다 (`:s` 의 '패턴 없음'은 :g 안에서 오류가 아님).
+ */
+function executeGlobalExCommand(
+  state: VimEditorState,
+  matchedIndices: number[],
+  action: string,
+  runEx: ExCommandRunner
+): VimEditorState {
+  let cur: VimEditorState = { ...state, mode: 'NORMAL', visualAnchor: undefined, commandBuffer: undefined, commandType: undefined };
+  let pending = [...matchedIndices];
+  let firstUndoCursor: CursorPosition | undefined;
+  let lastMessage: string | undefined;
+  while (pending.length > 0) {
+    const idx = pending.shift() as number;
+    if (idx < 0 || idx >= cur.lines.length) continue;
+    const before = cur;
+    const next = runEx({ ...cur, cursor: { line: idx, col: 0 }, bell: false }, action);
+    const baseTop = before.undoStack?.[before.undoStack.length - 1];
+    const top = next.undoStack?.[next.undoStack.length - 1];
+    if (!firstUndoCursor && top && top !== baseTop) firstUndoCursor = top.cursor;
+    pending = remapMarkedLines(before.lines, next.lines, pending);
+    cur = withUndoFieldsOf(next, before);
+    if (next.commandMessage) lastMessage = next.commandMessage;
+    if (next.bell && !/^E486:/.test(next.commandMessage ?? '')) break;
+  }
+  const finished: VimEditorState = {
+    ...cur,
+    mode: 'NORMAL',
+    bell: false,
+    commandBuffer: undefined,
+    commandType: undefined,
+    commandMessage: lastMessage,
+  };
+  if (areSameLines(cur.lines, state.lines)) return finished;
+  const withUndo = pushUndoSnapshot({ ...withUndoFieldsOf(cur, state), lines: state.lines, cursor: firstUndoCursor ?? state.cursor });
+  return { ...withUndo, ...finished, ...undoFieldsOnly(withUndo) };
+}
+
+function undoFieldsOnly(s: VimEditorState): Partial<VimEditorState> {
+  const { undoStack, redoStack, undoTreeNodes, currentUndoSeq, maxUndoSeq, undoTimeHistory, undoTimeIndex, undoJoinMerged, changeList, changeIndex, pendingUndoJoin, lastActionWasUndo } = s;
+  return { undoStack, redoStack, undoTreeNodes, currentUndoSeq, maxUndoSeq, undoTimeHistory, undoTimeIndex, undoJoinMerged, changeList, changeIndex, pendingUndoJoin, lastActionWasUndo };
+}
+
+function areSameLines(a: string[], b: string[]): boolean {
+  return a === b || (a.length === b.length && a.every((l, i) => l === b[i]));
 }
 
 /** `:d x 3`, `:y 3` 의 [x] [count] 인자를 파싱합니다. 형식이 맞지 않으면 null */
@@ -245,8 +345,9 @@ export function executeExPut(
     // Vim do_one_cmd: 명령이 실패해도 커서는 먼저 주소의 줄로 갑니다 (:0pu → 첫 줄, 열은 curswant).
     const line = Math.max(0, Math.min(insertAfterLine, state.lines.length - 1));
     const col = Math.max(0, Math.min(state.curswant ?? state.cursor.col, (state.lines[line] ?? '').length - 1));
+    // do_put 은 레지스터 검사 전에 u_save 하므로 빈 실행 취소 항목이 남습니다.
     return {
-      ...state,
+      ...pushUndoSnapshot({ ...state, cursor: { line, col } }),
       cursor: { line, col },
       mode: 'NORMAL',
       visualAnchor: undefined,
@@ -501,11 +602,28 @@ export function executeJoinRange(
   range: { startLine: number; endLine: number } | null,
   hasRange: boolean,
   bang: boolean,
-  count?: number
+  count?: number,
+  addrCount = hasRange ? 1 : 0
 ): VimEditorState {
   const maxIdx = Math.max(0, state.lines.length - 1);
   let joinStart: number;
   let joinEnd: number;
+
+  // Vim ex_join: 커서를 먼저 범위 첫 줄로 옮깁니다(열은 그대로). `:2,2j` 처럼 주소 둘이 같은 줄이면 아무것도 하지 않고,
+  // 주소 하나로 마지막 줄을 가리키면(`:j` 를 마지막 줄에서) bell 입니다.
+  if (count === undefined && (!range || range.startLine === range.endLine)) {
+    const line = Math.max(0, Math.min(range ? range.startLine : state.cursor.line, maxIdx));
+    const moved = keepCurswant({
+      ...state,
+      cursor: clampCursor(state.lines, { line, col: state.cursor.col }, 'NORMAL'),
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    });
+    if (addrCount >= 2) return moved;
+    if (line >= maxIdx) return { ...moved, bell: true };
+  }
 
   if (count !== undefined) {
     joinStart = Math.max(0, Math.min(range ? range.endLine : state.cursor.line, maxIdx));

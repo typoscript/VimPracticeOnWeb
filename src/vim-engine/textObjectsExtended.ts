@@ -1,8 +1,8 @@
 import { CursorPosition, VimEditorState } from './types';
-import { clampCursor } from './cursor';
+import { clampCursor, getFirstNonBlankCol } from './cursor';
 import { pushUndoSnapshot } from './operators';
+import { beginlineSolCol, pushUndoSnapshotAt } from './undoHistory';
 import { formatLinesRange, cindentOptionsFor, equalOperatorCursor, changeCaseVisual, caseTypeForOperator } from './lineOperators';
-import { moveToFirstNonBlank } from './motions';
 
 export interface TextObjectRange {
   startCol: number;
@@ -127,7 +127,9 @@ export function executeIndentObjectOperator(
 export function executeLinewiseObjectOperator(
   state: VimEditorState,
   operator: 'd' | 'c' | 'y' | 'v' | '=' | 'gu' | 'gU' | 'g~' | 'g?',
-  range: IndentObjectRange
+  range: IndentObjectRange,
+  /** 여러 줄 `di(` 처럼 문자 단위 범위를 줄 단위로 바꾼 객체(Vim oap->end_adjusted)는 지운 뒤 첫 비공백으로 갑니다. */
+  endAdjusted = false
 ): VimEditorState {
   const { startLine, endLine } = range;
   const content = state.lines.slice(startLine, endLine + 1).join('\n');
@@ -154,7 +156,8 @@ export function executeLinewiseObjectOperator(
   }
 
   if (operator === '=') {
-    const stateWithSnapshot = pushUndoSnapshot(state);
+    // 줄 단위 객체의 연산 시작(oap->start)은 첫 줄 0열입니다 (실행 취소 커서).
+    const stateWithSnapshot = pushUndoSnapshotAt(state, { line: startLine, col: 0 }, { start: startLine, end: endLine });
     const nextLines = formatLinesRange(state.lines, startLine, endLine, cindentOptionsFor(state));
     return {
       ...stateWithSnapshot,
@@ -196,10 +199,15 @@ export function executeLinewiseObjectOperator(
   }
 
   const nextLines = before.length + after.length === 0 ? [''] : [...before, ...after];
+  // Vim op_delete 는 beginline(BL_WHITE) 뒤 do_pending_operator 가 'nostartofline' 이면 원래 curswant 열로 돌아갑니다.
+  const cursorLine = Math.min(startLine, nextLines.length - 1);
   return {
     ...stateWithSnapshot,
     lines: nextLines,
-    cursor: moveToFirstNonBlank(nextLines, { line: Math.min(startLine, nextLines.length - 1), col: 0 }),
+    cursor: {
+      line: cursorLine,
+      col: endAdjusted ? getFirstNonBlankCol(nextLines[cursorLine] ?? '') : beginlineSolCol(state, nextLines[cursorLine] ?? ''),
+    },
     clipboard,
     pendingKeys: undefined,
   };

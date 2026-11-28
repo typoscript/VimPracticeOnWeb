@@ -33,6 +33,8 @@ export interface SubstituteOptions {
   replacementExpanded?: boolean;
   /** Ex 명령 실행 콜백 (사용자 함수 호출 시 사용) */
   runEx?: (state: VimEditorState, cmd: string) => VimEditorState;
+  /** Vim do_sub 의 endcolumn: 패턴 없이 반복(`:s`·`:&`·`&`)할 때 `$` 뒤(curswant 가 줄 끝)면 커서를 줄 끝에 둠 */
+  endColumn?: boolean;
 }
 
 /**
@@ -240,9 +242,14 @@ export function executeSubstitution(
   const stateWithSnapshot = pushUndoSnapshotAt(state, { line: Math.max(0, firstModifiedLine), col: 0 });
   // Vim do_sub: 마지막으로 치환한 줄의 첫 비공백으로 갑니다.
   const lastSubLine = Math.max(0, Math.min(lastModifiedLine, nextLines.length - 1));
+  // 패턴 없는 반복(`:s`, `&`)을 `$` 뒤에 하면 Vi 호환 동작으로 줄 끝(coladvance(MAXCOL))에 두고 curswant 도 유지합니다.
+  const endColumn = options.endColumn === true;
   const nextCursor = clampCursor(
     nextLines,
-    { line: lastSubLine, col: getFirstNonBlankCol(nextLines[lastSubLine] ?? '') },
+    {
+      line: lastSubLine,
+      col: endColumn ? Math.max(0, (nextLines[lastSubLine] ?? '').length - 1) : getFirstNonBlankCol(nextLines[lastSubLine] ?? ''),
+    },
     'NORMAL'
   );
 
@@ -272,6 +279,7 @@ export function executeSubstitution(
     ...remembered,
     lines: nextLines,
     cursor: nextCursor,
+    ...(endColumn ? { keepCurswantAt: { ...nextCursor } } : {}),
     mode: 'NORMAL',
     visualAnchor: undefined,
     commandBuffer: undefined,

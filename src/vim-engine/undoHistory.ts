@@ -208,6 +208,13 @@ function undoCursorPosition(state: VimEditorState, snapshot: StateSnapshot): { l
   let top = 0;
   while (top < Math.min(restored.length, current.length) && restored[top] === current[top]) top++;
   if (top === restored.length && top === current.length) return saved;
+  if (snapshot.undoLine !== undefined) {
+    // u_undoredo 끝: 저장한 커서 바로 아랫줄이면 한 줄 올리고, 버퍼 끝을 넘으면 마지막 줄 0열입니다.
+    let line = snapshot.undoLine;
+    if (saved.line + 1 === line && line > 0) line = saved.line;
+    if (line > restored.length - 1) return { line: Math.max(0, restored.length - 1), col: 0 };
+    return saved.line === line ? saved : { line, col: beginlineSolCol(state, restored[line] ?? '') };
+  }
   if (snapshot.savedRange) {
     // 한 번의 u_save 항목: 저장한 커서가 그 범위(바로 윗줄 ~ 범위 다음 줄) 안이면 그 위치
     const { start, end } = snapshot.savedRange;

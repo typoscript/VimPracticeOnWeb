@@ -58,7 +58,11 @@ export function applyCurswant(prev: VimEditorState, next: VimEditorState, key: s
   // v / V / Ctrl-v 로 비주얼 모드를 시작해도 Vim(n_start_visual_mode)은 curswant 를 바꾸지 않습니다.
   const startsVisual =
     prev.mode === 'NORMAL' && !prev.pendingKeys && (key === 'v' || key === 'V' || key === 'Ctrl-v') && next.mode.startsWith('VISUAL');
-  if ((next.bell || startsVisual) && sameText && sameCursor) {
+  // 매크로 녹화 시작·끝(q{reg}, q)과 마크(m{a})는 Vim 에서 curswant 를 건드리지 않습니다.
+  const pending = prev.pendingKeys ?? '';
+  const keepsForRecordOrMark =
+    prev.mode === 'NORMAL' && ((key === 'q' && !pending && !!prev.recordingMacro) || pending === 'q' || pending === 'm');
+  if ((next.bell || startsVisual || keepsForRecordOrMark) && sameText && sameCursor) {
     return next.curswant === remembered ? next : { ...next, curswant: remembered };
   }
   const isDollar = key === '$' && /^([1-9][0-9]*)?$/.test(prev.pendingKeys ?? '') && CURSWANT_MODES.has(prev.mode);

@@ -120,6 +120,11 @@ export interface StateSnapshot {
    * 범위 전체를 한 항목으로 저장하는 명령에서, 실행 취소 커서가 '저장한 커서가 바뀐 범위 안인지'를 이 범위로 판정합니다.
    */
   savedRange?: { start: number; end: number };
+  /**
+   * 실행 취소 뒤 커서 줄을 명령이 미리 계산해 둔 값(0부터). `:m` 처럼 u_save 를 여러 번 하는 명령은 Vim u_undoredo 가
+   * 항목마다 커서를 정하므로, 그 결과 줄을 여기 적어 둡니다. 열은 저장한 커서가 그 줄이면 그 열, 아니면 beginline 입니다.
+   */
+  undoLine?: number;
 }
 
 export interface MarkPosition {

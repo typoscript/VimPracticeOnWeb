@@ -177,9 +177,10 @@ function equalMotionRange(
   motionKeys: string[],
   count: number,
   runHandleKey: RunHandleKeyFn
-): { startLine: number; endLine: number } | null {
+): { startLine: number; endLine: number; opStart: { line: number; col: number } } | null {
   const range = findOperatorRangeByYank(state, motionKeys, count, runHandleKey);
-  if (range) return { startLine: range.start.line, endLine: range.end.line };
+  // y 는 커서를 연산 범위 시작(oap->start)에 두므로 그 위치가 `=` 의 실행 취소 커서입니다.
+  if (range) return { startLine: range.start.line, endLine: range.end.line, opStart: range.cursor };
   // 커서가 움직이지 않아도 성공하는 모션만 빈 범위(커서 줄)로 봅니다 (0, ^, |, t/T 바로 옆 글자, 마크).
   if (!'0^|tT`\''.includes(motionKeys[0])) return null;
   let probe: VimEditorState = { ...state, mode: 'NORMAL', pendingKeys: undefined, visualAnchor: undefined, bell: false };
@@ -188,7 +189,7 @@ function equalMotionRange(
     if (probe.bell) return null;
   }
   if (probe.mode !== 'NORMAL' || probe.pendingKeys || probe.lines !== state.lines) return null;
-  return { startLine: state.cursor.line, endLine: state.cursor.line };
+  return { startLine: state.cursor.line, endLine: state.cursor.line, opStart: { ...probe.cursor } };
 }
 
 /**
@@ -336,7 +337,7 @@ export function handleNormalFilterShiftEqualPending(
     // `$`·`g_`·`|` 는 Vim 처럼 기억한 열(curswant)을 바꿉니다.
     const toEol = (!prefix && key === '$') || (prefix === 'g' && key === '_');
     const keepCol = toEol ? Number.MAX_SAFE_INTEGER : !prefix && key === '|' ? count - 1 : undefined;
-    const res = formatIndentRange(state, range.startLine, range.endLine, keepCol);
+    const res = formatIndentRange(state, range.startLine, range.endLine, keepCol, range.opStart);
     return { handled: true, state: { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : keys } };
   }
 

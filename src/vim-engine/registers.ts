@@ -24,6 +24,14 @@ export function syncRegisters(
   }
 
   const clip = nextState.clipboard;
+  // Vim op_delete: 빈 범위(`d0` 를 0열에서, 마지막 빈 줄의 `vd`·`vc`)는 지울 것이 없어 레지스터를 건드리지 않습니다 (복사 `y0` 는 "" 를 씀).
+  if (clip && !isYank && clip.type !== 'line' && clip.content === '') {
+    return {
+      ...nextState,
+      clipboard: prevState.clipboard,
+      activeRegister: undefined,
+    };
+  }
   if (!clip) {
     return {
       ...nextState,

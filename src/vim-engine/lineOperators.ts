@@ -1,6 +1,7 @@
-import { VimEditorState } from './types';
+import { CursorPosition, VimEditorState } from './types';
 import { clampCursor, getFirstNonBlankCol } from './cursor';
 import { pushUndoSnapshot } from './operators';
+import { pushUndoSnapshotAt, visualOperatorStart } from './undoHistory';
 import { getOptions } from './setEngine';
 import { parseWhichwrapFlags, hasFormatOption, extractCommentPrefix } from './setOptionsCore';
 import {
@@ -575,15 +576,17 @@ export function formatIndentRange(
   state: VimEditorState,
   startLine: number,
   endLine: number,
-  keepCol?: number
+  keepCol?: number,
+  opStart: CursorPosition = state.cursor
 ): VimEditorState {
   const minLine = Math.max(0, Math.min(startLine, endLine));
   const maxLine = Math.min(state.lines.length - 1, Math.max(startLine, endLine));
   const formatted = formatLinesRange(state.lines, minLine, maxLine, cindentOptionsFor(state));
-  // 들여쓰기가 바뀐 줄이 없으면 Vim 처럼 실행 취소 단위를 만들지 않습니다.
   const changed = formatted.some((line, i) => line !== state.lines[i]);
   const newLines = changed ? formatted : state.lines;
-  const stateWithUndo = changed ? pushUndoSnapshot(state) : state;
+  // Vim op_reindent: 들여쓰기가 바뀌지 않아도 범위를 u_save 하므로 실행 취소 단위가 생기고,
+  // 실행 취소 커서(uh_cursor)는 연산 범위 시작(oap->start)입니다.
+  const stateWithUndo = pushUndoSnapshotAt(state, opStart, { start: minLine, end: maxLine });
 
   return {
     ...stateWithUndo,
@@ -602,7 +605,10 @@ export function formatIndentLines(
 ): VimEditorState {
   const startLine = state.cursor.line;
   const endLine = Math.min(state.lines.length - 1, startLine + Math.max(1, count) - 1);
-  return formatIndentRange(state, startLine, endLine);
+  // Vim nv_lineop: count 가 1 이면 커서를 첫 비공백으로 옮긴 뒤 범위를 정하므로 연산 시작 열은 둘 중 앞쪽입니다.
+  const firstNonBlank = getFirstNonBlankCol(state.lines[startLine] ?? '');
+  const startCol = endLine === startLine ? Math.min(state.cursor.col, firstNonBlank) : state.cursor.col;
+  return formatIndentRange(state, startLine, endLine, undefined, { line: startLine, col: startCol });
 }
 
 /**
@@ -615,7 +621,10 @@ export function formatIndentVisual(state: VimEditorState): VimEditorState {
 
   const minLine = Math.min(state.visualAnchor.line, state.cursor.line);
   const maxLine = Math.max(state.visualAnchor.line, state.cursor.line);
-  const res = formatIndentRange(state, minLine, maxLine);
+  const opStart = state.mode === 'VISUAL_BLOCK'
+    ? { line: minLine, col: Math.min(state.visualAnchor.col, state.cursor.col) }
+    : visualOperatorStart(state.mode === 'VISUAL_LINE', state.visualAnchor, state.cursor);
+  const res = formatIndentRange(state, minLine, maxLine, undefined, opStart);
 
   return {
     ...res,

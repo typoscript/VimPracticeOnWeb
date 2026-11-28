@@ -39,6 +39,7 @@ import {
   moveWindowToNewTab,
 } from './splitWindow';
 import { msg } from './messages';
+import { pushUndoSnapshot } from './undoHistory';
 
 /**
  * 대기 중인 키(pendingKeys)에서 숫자 카운트와 연산자를 분해 파싱합니다.
@@ -695,7 +696,8 @@ export function executePutVariant(
   isReplayingDot: boolean
 ): VimEditorState {
   const res = putFromRegister(state, state.activeRegister, isBefore, count, options);
-  if (isEmptyPut(state, res)) return emptyRegisterBell(state);
+  // Vim do_put 은 레지스터가 비었는지 보기 전에 u_save 하므로, 실패해도 빈 실행 취소 항목이 남습니다 (`u` 가 그 커서로 돌아감).
+  if (isEmptyPut(state, res)) return emptyRegisterBell(pushUndoSnapshot(state));
   const regPrefix = state.activeRegister ? ['"', state.activeRegister] : [];
   const countAndBase = count > 1 ? [String(count), ...baseKeys] : baseKeys;
   const keys = [...regPrefix, ...countAndBase];

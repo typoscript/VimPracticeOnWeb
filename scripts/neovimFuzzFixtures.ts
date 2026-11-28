@@ -24,6 +24,9 @@ const T4 = 'ab cd\nef\n\ngh';
 const T5 = '  ab cd\nef\n\ngh';
 const T6 = 'a\n  \nb\n\nc';
 const T7 = 'a b\nc d\ne f\ng h';
+const TG = 'abc\nxyz\nhello there\nend';
+const TS = 'a b a\nxa ya za\nq a\nlong a line here';
+const TJ = 'alpha beta\n  gamma delta\nepsilon\nzeta eta';
 
 const CASES: Case[] = [
   // >> / << / >{motion}: nostartofline 이면 열을 유지
@@ -368,6 +371,63 @@ const CASES: Case[] = [
   { id: 'put-unset-register-4', text: 'alpha beta\ngamma delta\nx', cursor: { row: 0, col: 0 }, keys: 'vjlc(<Esc>:pu<CR>' },
   { id: 'put-unset-register-5', text: 'a\nb', cursor: { row: 0, col: 0 }, keys: 'yy:0pu<CR>' },
   { id: 'put-unset-register-6', text: 'alpha beta gamma\nfoo.bar(baz, \"qux\")\n{ key: \'value\', n: 7 }\n', cursor: { row: 0, col: 0 }, keys: 'vWc(<Esc>:pu<CR>' },
+  // 빈 범위 삭제는 레지스터를 건드리지 않음, 빈 줄 D·d$ 는 아무것도 안 함(실행 취소 없음), 빈 줄 yiw 는 "" 복사
+  { id: 'empty-delete-keeps-register-1', text: 'abc\n', cursor: { row: 0, col: 0 }, keys: 'yiwjvc(<Esc>p' },
+  { id: 'empty-delete-keeps-register-2', text: 'abc def', cursor: { row: 0, col: 0 }, keys: 'wyiw0d0P' },
+  { id: 'empty-line-D-noop', text: 'abc\n\nx', cursor: { row: 0, col: 0 }, keys: 'yiwjxDkxu' },
+  { id: 'empty-line-yiw', text: 'abc\n\nx', cursor: { row: 0, col: 0 }, keys: 'yiwjyiwkp' },
+  // = 는 들여쓰기가 그대로여도 실행 취소 항목을 만들고, 실행 취소 커서는 연산 시작(oap->start)
+  { id: 'equal-noop-undo-entry', text: 'foo bar\nbaz qux\n\nend', cursor: { row: 1, col: 4 }, keys: 'x==u' },
+  { id: 'equal-iw-undo-cursor', text: '<div class="a"><span>text</span></div>\nplain 0x1f 007 -3 words', cursor: { row: 1, col: 4 }, keys: '=iwu' },
+  { id: 'equal-k-undo-cursor', text: 'foo (bar\nbaz qux\n\nend', cursor: { row: 1, col: 4 }, keys: 'l=ku' },
+  { id: 'equal-visual-undo-cursor', text: 'foo (bar\nbaz qux\n\nend', cursor: { row: 1, col: 4 }, keys: 'Vk=u' },
+  { id: 'equal-line-undo-cursor', text: 'foo;\n    bar;', cursor: { row: 1, col: 6 }, keys: 'x==u' },
+  // 실행 취소 커서: 커서 자리부터 지워 줄 끝으로 당겨진 삭제는 원래 커서로
+  { id: 'undo-cursor-d-dollar', text: 'abc def\nxyz', cursor: { row: 0, col: 4 }, keys: 'd$u' },
+  { id: 'undo-cursor-x-at-end', text: 'banana split aa', cursor: { row: 0, col: 14 }, keys: 'xu' },
+  { id: 'undo-cursor-dw-last-word', text: 'abc def\nxyz', cursor: { row: 0, col: 4 }, keys: 'dwu' },
+  { id: 'undo-cursor-dFa', text: 'banana split', cursor: { row: 0, col: 3 }, keys: 'dFau' },
+  // :m — 제자리 이동은 실행 취소 항목 없음, 실행 취소 커서는 do_move 의 두 u_save 규칙
+  { id: 'move-noop-no-undo', text: 'aaa\n  bbb\nccc', cursor: { row: 0, col: 2 }, keys: 'x:m0<CR>u' },
+  { id: 'move-noop-range', text: 'aaa\n  bbb\nccc\nddd', cursor: { row: 0, col: 2 }, keys: ':2,3m1<CR>x' },
+  { id: 'move-undo-cursor', text: 'function greet(name) {\n  return "Hello, " + name;\n}\n\nconst x = [1, 2, 3];', cursor: { row: 2, col: 0 }, keys: ':m0<CR>"ayiwu' },
+  { id: 'move-undo-last-line', text: 'l0 aaa\n  l1 bbb\nl2 ccc\nl3 d', cursor: { row: 1, col: 3 }, keys: ':4m0<CR>u' },
+  { id: 'move-undo-down', text: 'l0 aaa\n  l1 bbb\nl2 ccc\nl3 d', cursor: { row: 3, col: 3 }, keys: ':1,2m3<CR>u' },
+  // :g/:v — 패턴이 마지막 검색 패턴, 그 밖의 Ex 명령도 줄마다 실행 (한 번에 실행 취소)
+  { id: 'global-sets-search', text: TG, cursor: { row: 0, col: 0 }, keys: ':v/e/d<CR>n' },
+  { id: 'global-substitute', text: TG, cursor: { row: 0, col: 0 }, keys: ':g/e/s/l/L/<CR>n' },
+  { id: 'global-substitute-undo', text: TG, cursor: { row: 0, col: 0 }, keys: ':g/e/s/l/L/<CR>u' },
+  { id: 'global-substitute-empty-pattern', text: TG, cursor: { row: 0, col: 0 }, keys: ':g/e/s//E/g<CR>' },
+  { id: 'global-move-reverse', text: TG, cursor: { row: 0, col: 0 }, keys: ':g/^/m0<CR>' },
+  { id: 'global-move-reverse-undo', text: TG, cursor: { row: 0, col: 0 }, keys: ':g/^/m0<CR>u' },
+  { id: 'global-copy', text: TG, cursor: { row: 0, col: 0 }, keys: ':g/e/t$<CR>' },
+  { id: 'global-join', text: TG, cursor: { row: 0, col: 0 }, keys: ':g/./j<CR>' },
+  { id: 'global-shift', text: TG, cursor: { row: 0, col: 0 }, keys: ':g/e/><CR>' },
+  { id: 'global-normal-full-name', text: TG, cursor: { row: 0, col: 0 }, keys: ':g/e/normal dd<CR>' },
+  { id: 'global-norm-search', text: TG, cursor: { row: 0, col: 0 }, keys: ':g/x/norm Ax<CR>ggn' },
+  // 패턴 없는 :s 반복(:s, :&&, &)은 `$` 뒤면 줄 끝에 남음, [count]& 는 count 줄, & 는 . 대상 아님
+  { id: 'sub-repeat-endcolumn', text: TS, cursor: { row: 0, col: 0 }, keys: ':s/a/X/<CR>$j&j' },
+  { id: 'sub-repeat-colon-s-endcolumn', text: TS, cursor: { row: 0, col: 0 }, keys: ':s/a/X/<CR>$j:s<CR>' },
+  { id: 'sub-repeat-flags-endcolumn', text: TS, cursor: { row: 0, col: 0 }, keys: ':s/a/X/<CR>$jjj:&&<CR>k' },
+  { id: 'sub-full-not-endcolumn', text: TS, cursor: { row: 0, col: 0 }, keys: '$:s/a/X/<CR>j' },
+  { id: 'amp-count', text: TS, cursor: { row: 0, col: 0 }, keys: ':s/a/X/<CR>jj2&' },
+  { id: 'amp-not-dot-repeatable', text: TS, cursor: { row: 0, col: 0 }, keys: ':s/a/X/<CR>jx&j.' },
+  { id: 'amp-count-past-end', text: TS, cursor: { row: 0, col: 0 }, keys: ':s/a/X/<CR>j9&' },
+  // :j — 같은 줄 두 주소(:2,2j)는 커서만 옮기고 아무것도 안 함, 마지막 줄 :j 는 실패
+  { id: 'join-same-two-addresses', text: TJ, cursor: { row: 0, col: 3 }, keys: ':2,2j<CR>' },
+  { id: 'join-same-two-addresses-curswant', text: TJ, cursor: { row: 0, col: 3 }, keys: '$:2,2j<CR>j' },
+  { id: 'join-last-line', text: TJ, cursor: { row: 0, col: 3 }, keys: ':4j<CR>' },
+  // 줄 단위 텍스트 객체 삭제(dip/dap) 뒤 커서는 'nostartofline' 의 curswant 열
+  { id: 'dip-nosol-col', text: 'abcdef\n\n    bcdefg\n\nzz', cursor: { row: 0, col: 5 }, keys: 'jdip' },
+  { id: 'dip-blank-line-col', text: '\n  abc\nx', cursor: { row: 0, col: 0 }, keys: 'dip' },
+  // 빈 레지스터 p / :pu 도 빈 실행 취소 항목을 남김, q·m 은 curswant 유지, * # 의 구두점 문자열, t 반복 ; 는 옆 글자를 건너뜀
+  { id: 'empty-put-undo-entry', text: 'abc def\nxyz', cursor: { row: 0, col: 1 }, keys: 'pwu' },
+  { id: 'empty-ex-put-undo-entry', text: 'abc def\nxyz\nq', cursor: { row: 0, col: 1 }, keys: ':pu<CR>ju' },
+  { id: 'record-keeps-curswant', text: '<div class="a"><span>text</span></div>\nplain 0x1f 007 -3 words', cursor: { row: 0, col: 33 }, keys: 'qadwjq>^' },
+  { id: 'mark-keeps-curswant', text: 'abcdef\nab\nabcdef', cursor: { row: 0, col: 4 }, keys: 'jmaj' },
+  { id: 'star-punct-string', text: 'alpha beta gamma\nfoo.bar(baz, "qux")\nfoo.bar(baz, "qux")\nz', cursor: { row: 2, col: 18 }, keys: '#' },
+  { id: 'semicolon-till-skips-adjacent', text: 'neWtHE QUICK it jumps over t', cursor: { row: 0, col: 0 }, keys: 'ttv;y' },
+  { id: 'semicolon-count', text: 'neWtHE QUICK it jumps over t', cursor: { row: 0, col: 0 }, keys: 'tt2;' },
 ];
 
 const LUA = `

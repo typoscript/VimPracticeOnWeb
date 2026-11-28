@@ -192,6 +192,8 @@ export function extractRangeAndCommand(
   command: string;
   error?: string;
   isLineZero?: boolean;
+  /** 주어진 주소 수 (Vim `addr_count`): `%`·`'<,'>`·`a,b` 는 2, 주소 하나는 1 */
+  addrCount?: number;
 } {
   const raw = rawInput.replace(/^:\s*/, '').trimStart();
   const totalLines = state.lines.length;
@@ -207,6 +209,7 @@ export function extractRangeAndCommand(
       range: { startLine: 0, endLine: Math.max(0, totalLines - 1) },
       hasRange: true,
       command: cmd,
+      addrCount: 2,
     };
   }
 
@@ -223,6 +226,7 @@ export function extractRangeAndCommand(
       range: { startLine, endLine },
       hasRange: true,
       command: cmd,
+      addrCount: 2,
     };
   }
 
@@ -287,6 +291,7 @@ export function extractRangeAndCommand(
       range: { startLine, endLine },
       hasRange: true,
       command: cmd,
+      addrCount: 2,
     };
   } else {
     // 단일 주소 범위
@@ -297,6 +302,7 @@ export function extractRangeAndCommand(
       hasRange: true,
       command: cmd,
       isLineZero: res1.line === -1,
+      addrCount: 1,
     };
   }
 }

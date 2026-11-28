@@ -180,3 +180,21 @@ export function executeFindOperator(
     pendingKeys: undefined,
   };
 }
+
+/**
+ * `;` / `,` 로 f/t/F/T 를 반복합니다. Vim searchc: 'cpoptions' 에 `;` 가 없으면 count 1 의 t/T 반복은
+ * 바로 옆 글자에 멈춰 제자리에 머무르지 않고 그다음 글자 앞까지 갑니다 (`tt;`).
+ */
+export function moveFindRepeat(
+  lines: string[],
+  cursor: CursorPosition,
+  motion: 'f' | 'F' | 't' | 'T',
+  targetChar: string,
+  count = 1
+): CursorPosition | null {
+  const pos = moveFind(lines, cursor, motion, targetChar, count);
+  if (pos && count === 1 && (motion === 't' || motion === 'T') && pos.line === cursor.line && pos.col === cursor.col) {
+    return moveFind(lines, cursor, motion, targetChar, 2);
+  }
+  return pos;
+}

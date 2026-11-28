@@ -365,7 +365,7 @@ function tryExecuteRangeExCommand(
       last.replacement,
       repeatFlags,
       trimmed,
-      { keyRunner, runEx, replacementExpanded: true }
+      { keyRunner, runEx, replacementExpanded: true, endColumn: state.curswant === Number.MAX_SAFE_INTEGER /* CURSWANT_EOL (`$` 뒤) */ }
     );
   }
 
@@ -477,7 +477,7 @@ function tryExecuteRangeExCommand(
   const joinMatch = cmdTrimmed.match(/^j(?:o(?:i(?:n)?)?)?(!)?(?:\s+(\d+))?$/);
   if (joinMatch) {
     const count = joinMatch[2] !== undefined ? parseInt(joinMatch[2], 10) : undefined;
-    return executeJoinRange(state, range, hasRange, joinMatch[1] === '!', count);
+    return executeJoinRange(state, range, hasRange, joinMatch[1] === '!', count, extracted.addrCount ?? 0);
   }
 
   // 범위 들여쓰기/내어쓰기: :[range]>[>] [count], :[range]<[<] [count]
@@ -603,7 +603,7 @@ export function executeCommandLine(
   // 2. 글로벌 명령: :g/pattern/cmd, :v/pattern/cmd, :g!/pattern/cmd
   const gMatch = trimmed.match(/^:?\s*(g|global|v|vglobal)(!?)\s*\/([^\/]+)\/(.*)$/);
   if (gMatch) {
-    return finalize(withRedir(executeGlobalCommand(state, gMatch, commandStr, keyRunner)));
+    return finalize(withRedir(executeGlobalCommand(state, gMatch, commandStr, keyRunner, runEx)));
   }
 
   // 3. 작업공간(창/버퍼/탭/Netrw/저장·종료) 및 도구(퀵픽스/옵션/마크/태그/매핑) 명령어

@@ -2,6 +2,7 @@ import { CursorPosition, VimEditorState } from './types';
 import { clampCursor } from './cursor';
 import { isKeywordChar } from './wordMotion';
 import { pushUndoSnapshot } from './operators';
+import { pushUndoSnapshotAt } from './undoHistory';
 import { formatLinesRange, cindentOptionsFor, equalOperatorCursor, changeCaseVisual, caseTypeForOperator } from './lineOperators';
 import { getTagTextObjectRange } from './tagTextObject';
 export { getTagTextObjectRange };
@@ -469,9 +470,11 @@ export function executeTextObjectOperator(
         (objectType === 'iw' || objectType === 'iW' || objectType === 'is') &&
         (curState.lines[curState.cursor.line] ?? '') === '';
       if (emptyLineWordObject) {
-        return operator === 'c'
-          ? { ...pushUndoSnapshot(curState), mode: 'INSERT', pendingKeys: undefined }
-          : { ...curState, pendingKeys: undefined };
+        if (operator === 'c') return { ...pushUndoSnapshot(curState), mode: 'INSERT', pendingKeys: undefined };
+        if (operator === '=') return { ...pushUndoSnapshot(curState), pendingKeys: undefined };
+        // Vim: 빈 범위의 복사는 빈 문자열을 레지스터에 씁니다 (삭제는 레지스터를 건드리지 않음).
+        if (operator === 'y') return { ...curState, clipboard: { type: 'text', content: '' }, pendingKeys: undefined };
+        return { ...curState, pendingKeys: undefined };
       }
       // Vim: 그 밖에 텍스트 객체가 없으면 연산자는 실패합니다 (ca( 가 INSERT 로 들어가지 않음, bell).
       if (isMiniAi || step === 0) {
@@ -487,7 +490,7 @@ export function executeTextObjectOperator(
 
     // 줄 단위 블록 (여러 줄 i{ 등): d / c / y / = / 대소문자 연산은 줄 단위로
     if (range.linewise && operator !== 'v') {
-      return executeLinewiseObjectOperator(curState, operator, { startLine, endLine });
+      return executeLinewiseObjectOperator(curState, operator, { startLine, endLine }, true);
     }
 
     // 대소문자 변환 (gu, gU, g~)
@@ -510,7 +513,8 @@ export function executeTextObjectOperator(
 
     // 자동 들여쓰기 정렬 (=)
     if (operator === '=') {
-      const stateWithSnapshot = pushUndoSnapshot(curState);
+      // Vim op_reindent: 바뀐 줄이 없어도 실행 취소 단위가 생기고, 실행 취소 커서는 객체 시작(oap->start)입니다.
+      const stateWithSnapshot = pushUndoSnapshotAt(curState, { line: startLine, col: startCol }, { start: startLine, end: endLine });
       const nextLines = formatLinesRange(curState.lines, startLine, endLine, cindentOptionsFor(curState));
       return {
         ...stateWithSnapshot,

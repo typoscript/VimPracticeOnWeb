@@ -31,7 +31,7 @@ import { computePercentJumpTarget } from './extraMotions';
 import { handleMiniMoveNormal } from './miniMoveEngine';
 import { enterTerminalInsertMode } from './terminalEngine';
 import { findParagraphTarget } from './advancedMotions';
-import { moveFind } from './findChar';
+import { moveFindRepeat } from './findChar';
 import { getWordAtCursor } from './search';
 import { executeCommandLine } from './commandLine';
 import {
@@ -336,9 +336,9 @@ export function handleNormalViewportAndNavOps(
   }
 
   // 단독 ; / ,: 줄 내 탐색 반복
-  if (key === ';' && !state.pendingKeys) {
+  if (key === ';' && /^([1-9][0-9]*)?$/.test(state.pendingKeys ?? '')) {
     if (state.lastCharSearch) {
-      const nextPos = moveFind(
+      const nextPos = moveFindRepeat(
         state.lines,
         state.cursor,
         state.lastCharSearch.type,
@@ -349,10 +349,10 @@ export function handleNormalViewportAndNavOps(
     }
     return ringBell(state);
   }
-  if (key === ',' && !state.pendingKeys) {
+  if (key === ',' && /^([1-9][0-9]*)?$/.test(state.pendingKeys ?? '')) {
     if (state.lastCharSearch) {
       const oppMotion = getOppositeMotion(state.lastCharSearch.type);
-      const nextPos = moveFind(
+      const nextPos = moveFindRepeat(
         state.lines,
         state.cursor,
         oppMotion,
@@ -438,9 +438,11 @@ export function handleNormalViewportAndNavOps(
   }
 
   // &: 직전 :s 재실행
-  if (key === '&' && !state.pendingKeys) {
-    const res = executeCommandLine({ ...state, pendingKeys: undefined }, 's', runHandleKey);
-    return res.bell ? res : { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['&'] };
+  // Vim nv_optrans: `[count]&` 는 `[count]:s<CR>` (현재 줄부터 count 줄). Ex 명령이라 `.` 반복 대상이 아닙니다.
+  if (key === '&' && /^([1-9][0-9]*)?$/.test(state.pendingKeys ?? '')) {
+    const n = parseInt(state.pendingKeys || '1', 10);
+    const cmd = n > 1 ? `.,.+${n - 1}s` : 's';
+    return executeCommandLine({ ...state, pendingKeys: undefined }, cmd, runHandleKey);
   }
 
   // F1 / K: 도움말 및 LSP 호버
@@ -565,6 +567,10 @@ export function handleNormalEditingAndMotionFallback(
         ...syncRegisters(state, linewiseState, false),
         lastChangeKeys: isReplayingDot ? state.lastChangeKeys : [String(parsed.totalCount), 'D'],
       };
+    }
+    // Vim op_delete: 빈 줄 한 줄의 D 는 아무것도 하지 않습니다 (실행 취소 항목·레지스터 없음, `.` 는 D).
+    if (endLine === line && cur === '') {
+      return { ...state, pendingKeys: undefined, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['D'] };
     }
     const deletedContent =
       endLine === line

@@ -5,7 +5,7 @@ import { syncRegisters, putFromRegister } from './registers';
 import { reselectLastVisual } from './advancedMotions';
 import { deleteVisualSelection, yankVisualSelection, yankVisualBlock, startVisualBlockInsert, swapVisualCursorAnchor } from './visual';
 import { replaceVisualChars } from './visualUtilities';
-import { moveFind } from './findChar';
+import { moveFind, moveFindRepeat } from './findChar';
 import { findMatches, findSearchTarget, getWordAtCursor } from './search';
 import { starSearchPattern } from './vimRegex';
 import { getOptions } from './setOptionsCore';
@@ -515,7 +515,7 @@ export function handleVisualModeKey(
   // ';' 및 ',' 키: 줄 내 문자 탐색 반복
   if (key === ';') {
     if (state.lastCharSearch) {
-      const nextPos = moveFind(
+      const nextPos = moveFindRepeat(
         state.lines,
         state.cursor,
         state.lastCharSearch.type,
@@ -536,7 +536,7 @@ export function handleVisualModeKey(
   if (key === ',') {
     if (state.lastCharSearch) {
       const oppMotion = getOppositeMotion(state.lastCharSearch.type);
-      const nextPos = moveFind(
+      const nextPos = moveFindRepeat(
         state.lines,
         state.cursor,
         oppMotion,

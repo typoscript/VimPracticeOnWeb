@@ -34,10 +34,11 @@ describe('[count]% percentage jump', () => {
     expect(state.lines.length).toBe(5);
     expect(state.lines[0]).toBe('  line 6');
 
-    // Visual 100% extends selection to last line (preserving col 2 from d50%)
+    // nostartofline: d50% 뒤 커서는 원래 curswant 열(0)이고, Visual 100% 도 그 열을 유지합니다 (nvim 대조)
+    expect(state.cursor).toEqual({ line: 0, col: 0 });
     state = sendKeys(state, 'v100%');
     expect(state.mode).toBe('VISUAL');
-    expect(state.cursor).toEqual({ line: 4, col: 2 });
+    expect(state.cursor).toEqual({ line: 4, col: 0 });
   });
 });
 

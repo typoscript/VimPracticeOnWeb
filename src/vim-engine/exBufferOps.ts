@@ -421,6 +421,34 @@ export function executeRead(
 }
 
 /**
+ * `:m` 실행 취소 뒤 커서 줄 (Vim do_move 는 새 자리에 넣을 때 u_save(dest, dest+1), 원래 줄을 지울 때
+ * u_save(line1+extra-1, line2+extra+1) 을 하고, u_undoredo 는 나중 항목부터 '저장한 커서가 그 범위 안이면 그 줄'을 고릅니다).
+ */
+function withMoveUndoLine(
+  next: VimEditorState,
+  prev: VimEditorState,
+  startLine: number,
+  endLine: number,
+  targetLine: number
+): VimEditorState {
+  const stack = next.undoStack ?? [];
+  const top = stack[stack.length - 1];
+  if (!top || top === prev.undoStack?.[prev.undoStack.length - 1]) return next;
+  // 아래 계산은 Vim 의 1부터 세는 줄 번호입니다.
+  const line1 = startLine + 1;
+  const n = endLine - startLine + 1;
+  const dest = targetLine + 1;
+  const extra = dest < line1 ? n : 0;
+  const c = prev.cursor.line + 1;
+  const delTop = line1 + extra - 1;
+  let lnum: number;
+  if (c >= delTop && c <= delTop + n + 1) lnum = c;
+  else if (c >= dest && c <= dest + 1 && dest < delTop) lnum = c;
+  else lnum = delTop + 1;
+  return { ...next, undoStack: [...stack.slice(0, -1), { ...top, undoLine: lnum - 1 }] };
+}
+
+/**
  * :[range]m[ove] {address} 명령어를 실행합니다.
  */
 export function executeMove(
@@ -458,7 +486,20 @@ export function executeMove(
     };
   }
 
-  const stateWithUndo = pushUndoSnapshot(state);
+  // Vim do_move: 제자리 이동(`:m0` 을 첫 줄에서, `:m.`)은 아무것도 바꾸지 않아 실행 취소 항목도 메시지도 없고,
+  // 커서만 옮긴 것처럼 범위 마지막 줄로 갑니다 (열은 beginline).
+  if (targetLine === startLine - 1 || targetLine === endLine) {
+    return keepCurswantIfNosol({
+      ...state,
+      cursor: clampCursor(state.lines, { line: endLine, col: beginlineSolCol(state, state.lines[endLine] ?? '') }, 'NORMAL'),
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      commandBuffer: undefined,
+      commandType: undefined,
+    });
+  }
+
+  const stateWithUndo = withMoveUndoLine(pushUndoSnapshot(state), state, startLine, endLine, targetLine);
   const count = endLine - startLine + 1;
   const linesToMove = state.lines.slice(startLine, endLine + 1);
 

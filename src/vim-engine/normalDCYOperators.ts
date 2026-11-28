@@ -336,6 +336,11 @@ export function handleNormalDCYOperators(
           state: { ...syncRegisters(state, res, false), lastChangeKeys: isReplayingDot ? state.lastChangeKeys : dKeys },
         };
       }
+      const dKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'd', '$'] : ['d', '$'];
+      // Vim op_delete: 빈 줄 한 줄에서의 문자 단위 삭제는 아무것도 하지 않습니다 (실행 취소 항목·레지스터 없음).
+      if (span.lastLine === line && cur === '') {
+        return { handled: true, state: { ...state, pendingKeys: undefined, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : dKeys } };
+      }
       const nextLines = [...state.lines.slice(0, line), cur.slice(0, col), ...state.lines.slice(span.lastLine + 1)];
       const stateWithDel: VimEditorState = {
         ...pushUndoSnapshot(state),
@@ -344,7 +349,6 @@ export function handleNormalDCYOperators(
         clipboard: { type: 'text', content: span.content },
         pendingKeys: undefined,
       };
-      const dKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'd', '$'] : ['d', '$'];
       return {
         handled: true,
         state: {

@@ -73,7 +73,21 @@ export function recordRepeatRegister(prev: VimEditorState, next: VimEditorState,
  * 이번 키로 새 실행 취소 스냅샷이 생기고 입력 모드에 들어갔다면 스냅샷 커서를 입력 시작 위치로 바꿉니다.
  * (o/O 처럼 줄이 늘어나는 경우는 원래 줄을 기억하므로 그대로 둡니다.)
  */
-export function recordInsertStartCursor(prev: VimEditorState, next: VimEditorState): VimEditorState {
+/** 이번 변경이 커서 왼쪽을 지웠는지: 지운 구간이 정확히 [새 커서, 원래 커서) 이고, 커서 자리부터 지워 줄 끝으로 당겨진 것(`d$`, 끝 글자 `x`)으로는 설명되지 않거나 키가 왼쪽 삭제(X, dh, db, dF …)일 때. */
+function isLeftwardDelete(prev: VimEditorState, next: VimEditorState, key: string): boolean {
+  const before = prev.lines[prev.cursor.line] ?? '';
+  const after = next.lines[next.cursor.line] ?? '';
+  const n = next.cursor.col;
+  const p = prev.cursor.col;
+  if (after !== before.slice(0, n) + before.slice(p)) return false;
+  const clampedRightDelete = n === after.length - 1 && after.length <= p && before.startsWith(after);
+  if (!clampedRightDelete) return true;
+  const pending = prev.pendingKeys ?? '';
+  if (!pending) return key === 'X';
+  return /[FT]$/.test(pending) || (/d$/.test(pending) && 'hbB0^'.includes(key));
+}
+
+export function recordInsertStartCursor(prev: VimEditorState, next: VimEditorState, key = ''): VimEditorState {
   // 커서 왼쪽을 지우는 변경(X, db, d0, dF…)은 Vim 처럼 지운 범위의 시작(바뀐 뒤 커서)을 기억합니다.
   if (
     prev.mode === 'NORMAL' &&
@@ -85,7 +99,9 @@ export function recordInsertStartCursor(prev: VimEditorState, next: VimEditorSta
     next.cursor.line === prev.cursor.line &&
     next.cursor.col < prev.cursor.col &&
     next.lines.every((l, i) => i === next.cursor.line || l === prev.lines[i]) &&
-    next.registers?.['"']?.type !== 'line'
+    next.registers?.['"']?.type !== 'line' &&
+    // 커서 자리부터 지워 줄 끝으로 당겨진 경우(`d$`, 끝 글자 `x`, 마지막 단어 `dw`)는 원래 커서를 기억합니다.
+    isLeftwardDelete(prev, next, key)
   ) {
     const top = next.undoStack[next.undoStack.length - 1];
     return { ...next, undoStack: [...next.undoStack.slice(0, -1), { ...top, cursor: { ...next.cursor } }] };
