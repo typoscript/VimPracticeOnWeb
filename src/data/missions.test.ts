@@ -365,12 +365,10 @@ describe('MISSIONS 10 ~ 12 validation', () => {
       lines: [
         'function App() {',
         'const title = "Vim";',
-        'return (',
-        '<button>Old</button>',
-        ');',
+        '    return <button>Click Me</button>;',
         '}',
       ],
-      cursor: { line: 3, col: 8 },
+      cursor: { line: 2, col: 20 },
       mode: 'NORMAL',
     };
     expect(lesson25!.checkComplete(stateNotDone)).toBe(false);
@@ -379,9 +377,7 @@ describe('MISSIONS 10 ~ 12 validation', () => {
       lines: [
         'function App() {',
         '  const title = "Vim";',
-        '  return (',
-        '    <button>Click Me</button>',
-        '  );',
+        '  return <button>Click Me</button>;',
         '}',
       ],
       cursor: { line: 0, col: 0 },

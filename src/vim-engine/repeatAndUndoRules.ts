@@ -38,7 +38,8 @@ export function recordVisualRepeat(prev: VimEditorState, next: VimEditorState, k
   if (isReplayingDot || !VISUAL_REPEAT_MODES.has(prev.mode)) return next;
   if (VISUAL_REPEAT_MODES.has(next.mode) || next.pendingKeys) return next;
   const entersInsert = next.mode === 'INSERT';
-  if (!entersInsert && next.lines === prev.lines) return next; // 복사·취소 등 변경이 아닌 연산
+  // 복사·취소 등 변경이 아닌 연산. `=` 는 들여쓰기가 그대로여도 Vim 처럼 반복 대상이 됩니다.
+  if (!entersInsert && next.lines === prev.lines && !(key === '=' && !prev.pendingKeys && !next.bell)) return next;
   const reselect = visualReselectKeys(prev);
   if (!reselect) return next;
   const opKeys = [...(prev.pendingKeys ?? '').split('').filter(Boolean), key];

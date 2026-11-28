@@ -17,6 +17,7 @@ import {
   moveToLastLine,
 } from './motions';
 import { isPositionSelected } from './visual';
+import { cindentLines, type CIndentOptions } from './cindent';
 export { modifyNumberAtCursor, modifyNumberVisual } from './numberOperators';
 
 /**
@@ -511,89 +512,38 @@ export function indentVisual(
   };
 }
 
+/** `=` 가 쓰는 shiftwidth / tabstop / expandtab (Vim 처럼 shiftwidth 0 이면 tabstop). */
+export function cindentOptionsFor(state: VimEditorState): CIndentOptions {
+  const opts = getOptions(state);
+  return { shiftwidth: opts.shiftwidth, tabstop: opts.tabstop, expandtab: opts.expandtab };
+}
+
 /**
- * 코드 전체 문맥의 중괄호({}) 블록 깊이를 계산하여指定된 줄 범위의 들여쓰기를 2 spaces 단위로 맞춥니다.
+ * `=` 연산자: 줄 범위를 Vim 의 C 들여쓰기(cindent, 기본 'cinoptions') 규칙으로 다시 들여씁니다.
+ * 'indentexpr'·'equalprg' 가 비어 있는 `nvim -u NONE` 의 `=` 와 같습니다 (`cindent.ts`).
  */
 export function formatLinesRange(
   lines: string[],
   fromLine: number,
-  toLine: number
+  toLine: number,
+  opts: CIndentOptions = { shiftwidth: 2, tabstop: 2, expandtab: true }
 ): string[] {
-  const minLine = Math.max(0, Math.min(fromLine, toLine));
-  const maxLine = Math.min(lines.length - 1, Math.max(fromLine, toLine));
-  const newLines = [...lines];
+  return cindentLines(lines, fromLine, toLine, opts);
+}
 
-  let currentIndentDepth = 0;
-
-  for (let i = 0; i <= maxLine; i++) {
-    const lineText = newLines[i];
-    const trimmed = lineText.trim();
-
-    if (trimmed.length === 0) {
-      if (i >= minLine) {
-        newLines[i] = '';
-      }
-      continue;
-    }
-
-    // 현재 행이 닫는 괄호(}, ), ]) 또는 닫는 태그(</)로 시작하면 해당 행 자체의 들여쓰기를 먼저 1단계 줄임
-    let leadingCloses = 0;
-    if (trimmed.startsWith('</')) {
-      leadingCloses = 1;
-    } else {
-      for (const ch of trimmed) {
-        if (ch === '}' || ch === ')' || ch === ']') {
-          leadingCloses++;
-        } else {
-          break;
-        }
-      }
-    }
-
-    const effectiveDepth = Math.max(0, currentIndentDepth - leadingCloses);
-
-    if (i >= minLine) {
-      newLines[i] = '  '.repeat(effectiveDepth) + trimmed;
-    }
-
-    // 문자열 리터럴 내부를 제외한 중괄호/괄호/HTML태그 변화량을 계산하여 다음 줄 들여쓰기 갱신
-    let inQuote: string | null = null;
-    let netBrackets = 0;
-    for (let c = 0; c < trimmed.length; c++) {
-      const ch = trimmed[c];
-      if (inQuote) {
-        if (ch === inQuote && trimmed[c - 1] !== '\\') {
-          inQuote = null;
-        }
-      } else {
-        if (ch === '"' || ch === "'" || ch === '`') {
-          inQuote = ch;
-        } else if (ch === '{' || ch === '(' || ch === '[') {
-          netBrackets++;
-        } else if (ch === '}' || ch === ')' || ch === ']') {
-          netBrackets--;
-        }
-      }
-    }
-
-    // HTML / JSX 태그 변화량 계산 (문자열 밖)
-    let netTags = 0;
-    const tagRegex = /<(\/)?([a-zA-Z0-9_\-.:]+)((?:[^>"'`]|"[^"]*"|'[^']*'|`[^`]*`)*)(\/?)>/g;
-    let tm: RegExpExecArray | null;
-    while ((tm = tagRegex.exec(trimmed)) !== null) {
-      const isClose = tm[1] === '/';
-      const isSelf = !isClose && (tm[4] === '/' || (tm[3] ?? '').trim().endsWith('/'));
-      if (isClose) {
-        netTags--;
-      } else if (!isSelf) {
-        netTags++;
-      }
-    }
-
-    currentIndentDepth = Math.max(0, currentIndentDepth + netBrackets + netTags);
-  }
-
-  return newLines;
+/**
+ * `=` 뒤 커서 (Vim op_reindent 의 beginline(BL_SOL | BL_FIX)): 범위 첫 줄로 가서
+ * 'startofline' 이면 첫 비공백, 아니면 기억한 열(curswant, `$` 뒤면 줄 끝)입니다.
+ */
+export function equalOperatorCursor(
+  state: VimEditorState,
+  lines: string[],
+  startLine: number,
+  keepCol: number = state.curswant ?? state.cursor.col
+): { line: number; col: number } {
+  if (getOptions(state).startofline) return moveToFirstNonBlank(lines, { line: startLine, col: 0 });
+  const len = (lines[startLine] ?? '').length;
+  return { line: startLine, col: Math.max(0, Math.min(keepCol, len - 1)) };
 }
 
 /**
@@ -602,18 +552,21 @@ export function formatLinesRange(
 export function formatIndentRange(
   state: VimEditorState,
   startLine: number,
-  endLine: number
+  endLine: number,
+  keepCol?: number
 ): VimEditorState {
-  const stateWithUndo = pushUndoSnapshot(state);
   const minLine = Math.max(0, Math.min(startLine, endLine));
   const maxLine = Math.min(state.lines.length - 1, Math.max(startLine, endLine));
-  const newLines = formatLinesRange(state.lines, minLine, maxLine);
-  const newCursor = moveToFirstNonBlank(newLines, { line: minLine, col: 0 });
+  const formatted = formatLinesRange(state.lines, minLine, maxLine, cindentOptionsFor(state));
+  // 들여쓰기가 바뀐 줄이 없으면 Vim 처럼 실행 취소 단위를 만들지 않습니다.
+  const changed = formatted.some((line, i) => line !== state.lines[i]);
+  const newLines = changed ? formatted : state.lines;
+  const stateWithUndo = changed ? pushUndoSnapshot(state) : state;
 
   return {
     ...stateWithUndo,
     lines: newLines,
-    cursor: newCursor,
+    cursor: equalOperatorCursor(state, newLines, minLine, keepCol),
     pendingKeys: undefined,
   };
 }

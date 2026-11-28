@@ -309,19 +309,20 @@ describe('textObjects module (iw, i", i(, i))', () => {
       expect(next.cursor).toEqual({ line: 0, col: 21 }); // '>' of </span>
     });
 
-    it('=it: 태그 내부 영역의 들여쓰기를 자동 정렬한다', () => {
+    it('=it: 태그 내부 영역의 줄을 C 들여쓰기로 다시 들여쓴다 (nvim -u NONE 과 같음)', () => {
       const state: VimEditorState = {
         lines: [
           '<div>',
-          '<h1>Title</h1>',
+          '    <h1>Title</h1>',
           '</div>',
         ],
-        cursor: { line: 1, col: 0 },
+        cursor: { line: 1, col: 4 },
         mode: 'NORMAL',
       };
 
+      // C 들여쓰기는 HTML 태그를 모르므로 최상위 줄은 윗줄 들여쓰기를 따릅니다.
       const next = executeTextObjectOperator(state, '=', 'it');
-      expect(next.lines[1]).toBe('  <h1>Title</h1>');
+      expect(next.lines[1]).toBe('<h1>Title</h1>');
       expect(next.mode).toBe('NORMAL');
     });
   });

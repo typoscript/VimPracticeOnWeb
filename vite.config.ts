@@ -31,6 +31,10 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'setOptionsCore.ts',
       'windowTree.ts',
       'bufferLocalState.ts',
+      // `=` 의 C 들여쓰기 (다른 엔진 파일을 import 하지 않는 순수 로직)
+      'cindentScan.ts',
+      'cindentRules.ts',
+      'cindent.ts',
     ],
   },
   {

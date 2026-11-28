@@ -282,6 +282,21 @@ const CASES: Case[] = [
   { id: 'misc-2-14', text: 'a\nb\n\nc', cursor: { row: 0, col: 0 }, keys: 'jjvd' },
   { id: 'misc-2-15', text: 'a.\nb\n\nc', cursor: { row: 0, col: 0 }, keys: 'jjd)' },
   { id: 'misc-2-16', text: 'A. B.\nx y.\n\nAnother.', cursor: { row: 0, col: 0 }, keys: 'jjc(X<Esc>' },
+  // = (C 들여쓰기): 모든 모션, 커서는 첫 줄의 기억한 열(nostartofline), 바뀐 것이 없으면 실행 취소 단위 없음
+  { id: 'equal-cindent-whole', text: 'function f(a) {\nif (a) {\nx = 1 +\n2;\n} else {\ny();\n}\nfoo(a,\nb);\n}', cursor: { row: 0, col: 0 }, keys: 'gg=G' },
+  { id: 'equal-cindent-object-label', text: 'const o = {\na: 1,\nb: 2,\n};', cursor: { row: 0, col: 0 }, keys: '=G' },
+  { id: 'equal-line-up', text: T2, cursor: { row: 1, col: 16 }, keys: '=-' },
+  { id: 'equal-word-back', text: T2, cursor: { row: 1, col: 15 }, keys: '=b' },
+  { id: 'equal-aw', text: T3, cursor: { row: 2, col: 8 }, keys: '=aw' },
+  { id: 'equal-find-fails', text: T3, cursor: { row: 1, col: 2 }, keys: '=fz' },
+  { id: 'equal-count-lines', text: T3, cursor: { row: 1, col: 23 }, keys: '4==k' },
+  { id: 'equal-inner-brace', text: 'function greet(name) {\n    return "Hello, " + name;\n}', cursor: { row: 1, col: 4 }, keys: 'l=i{' },
+  { id: 'equal-dollar-col', text: T3, cursor: { row: 1, col: 0 }, keys: '=$' },
+  { id: 'equal-curswant-col', text: 'function f(a) {\nif (a) {\nx = 1 +\n2;', cursor: { row: 2, col: 0 }, keys: '$=k' },
+  { id: 'equal-visual-dot', text: 'The quick brown fox. It jumps over\nthe lazy dog! Then it rests.\n\nAnother paragraph here.', cursor: { row: 1, col: 3 }, keys: 'Vh)=.' },
+  { id: 'equal-block', text: 'The quick brown fox. It jumps over\nthe lazy dog! Then it rests.', cursor: { row: 0, col: 9 }, keys: '<C-v>%=' },
+  { id: 'equal-noop-undo', text: 'if (x) {\n  y();\n}\nz();\n  w();', cursor: { row: 1, col: 0 }, keys: '==jjj==u' },
+  { id: 'semicolon-without-find-fails', text: 'abc def', cursor: { row: 0, col: 2 }, keys: 'd;' },
 ];
 
 const LUA = `

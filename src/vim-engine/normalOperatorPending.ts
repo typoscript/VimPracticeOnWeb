@@ -24,6 +24,7 @@ import { indentLines, formatIndentLines, formatIndentRange } from './lineOperato
 import {
   ringBell,
   findShiftRange,
+  findOperatorRangeByYank,
   RunHandleKeyFn,
   ParsedPending,
 } from './engineHelpers';
@@ -168,6 +169,29 @@ export function handleNormalMarkPending(
 }
 
 /**
+ * ={motion} 의 줄 범위. 같은 모션의 y 로 구하고, 빈 범위(커서 줄의 `0` 등)는 커서 줄 하나입니다.
+ * 모션이 실패(bell)하면 null.
+ */
+function equalMotionRange(
+  state: VimEditorState,
+  motionKeys: string[],
+  count: number,
+  runHandleKey: RunHandleKeyFn
+): { startLine: number; endLine: number } | null {
+  const range = findOperatorRangeByYank(state, motionKeys, count, runHandleKey);
+  if (range) return { startLine: range.start.line, endLine: range.end.line };
+  // 커서가 움직이지 않아도 성공하는 모션만 빈 범위(커서 줄)로 봅니다 (0, ^, |, t/T 바로 옆 글자, 마크).
+  if (!'0^|tT`\''.includes(motionKeys[0])) return null;
+  let probe: VimEditorState = { ...state, mode: 'NORMAL', pendingKeys: undefined, visualAnchor: undefined, bell: false };
+  for (const k of [...(count > 1 ? String(count).split('') : []), 'y', ...motionKeys]) {
+    probe = runHandleKey(probe, k);
+    if (probe.bell) return null;
+  }
+  if (probe.mode !== 'NORMAL' || probe.pendingKeys || probe.lines !== state.lines) return null;
+  return { startLine: state.cursor.line, endLine: state.cursor.line };
+}
+
+/**
  * 셸 필터(!{motion}/!!), 들여쓰기(>{motion}/<<), 자동 정렬(={motion}/==) 대기 상태를 처리합니다.
  */
 export function handleNormalFilterShiftEqualPending(
@@ -287,71 +311,32 @@ export function handleNormalFilterShiftEqualPending(
     return { handled: false, state: { ...state, pendingKeys: undefined } };
   }
 
-  // =g 대기 상태 (예: =gg 또는 1=gg)
-  if (state.pendingKeys?.endsWith('=g')) {
-    if (key === 'g') {
-      const res = formatIndentRange(state, 0, state.cursor.line);
-      return {
-        handled: true,
-        state: { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['=', 'g', 'g'] },
-      };
+  // ={motion} / [count]== : C 들여쓰기 (Vim cindent, cindent.ts)
+  const equalMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?=([1-9][0-9]*)?([gfFtT'`\[\]])?$/);
+  if (equalMatch) {
+    const [, c1, c2, prefix] = equalMatch;
+    const count = (c1 ? parseInt(c1, 10) : 1) * (c2 ? parseInt(c2, 10) : 1);
+    const keys = [...(state.pendingKeys ?? '').split(''), key];
+    if (!prefix && key === '=') {
+      const res = formatIndentLines(state, count);
+      return { handled: true, state: { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : keys } };
     }
-    return { handled: false, state: { ...state, pendingKeys: undefined } };
-  }
-
-  if (parsed.operator === '=') {
-    if (key === '=') {
-      const res = formatIndentLines(state, parsed.totalCount);
-      const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), '=', '='] : ['=', '='];
-      return {
-        handled: true,
-        state: { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys },
-      };
+    if (!prefix && (/^[1-9]$/.test(key) || (key === '0' && c2))) {
+      return { handled: true, state: { ...state, pendingKeys: state.pendingKeys + key } };
     }
-    if (key === 'G') {
-      const res = formatIndentRange(state, state.cursor.line, state.lines.length - 1);
-      return {
-        handled: true,
-        state: { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['=', 'G'] },
-      };
+    // =i{ / =ap 등 텍스트 객체는 텍스트 객체 대기 상태가, 2타 모션(gg, f{char} 등)은 다음 키가 처리합니다.
+    if (!prefix && (key === 'i' || key === 'a' || "gfFtT'`[]".includes(key))) {
+      return { handled: true, state: { ...state, pendingKeys: state.pendingKeys + key } };
     }
-    if (key === 'g') {
-      return {
-        handled: true,
-        state: {
-          ...state,
-          pendingKeys: (parsed.count1 ? String(parsed.count1) : '') + '=g',
-        },
-      };
-    }
-    if (key === 'j') {
-      const endLine = Math.min(state.lines.length - 1, state.cursor.line + parsed.totalCount);
-      const res = formatIndentRange(state, state.cursor.line, endLine);
-      const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), '=', 'j'] : ['=', 'j'];
-      return {
-        handled: true,
-        state: { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys },
-      };
-    }
-    if (key === 'k') {
-      const startLine = Math.max(0, state.cursor.line - parsed.totalCount);
-      const res = formatIndentRange(state, startLine, state.cursor.line);
-      const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), '=', 'k'] : ['=', 'k'];
-      return {
-        handled: true,
-        state: { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys },
-      };
-    }
-    if (key === 'i' || key === 'a') {
-      return {
-        handled: true,
-        state: {
-          ...state,
-          pendingKeys: (parsed.count1 ? String(parsed.count1) : '') + '=' + key,
-        },
-      };
-    }
-    return { handled: false, state: { ...state, pendingKeys: undefined } };
+    if (key === 'Escape') return { handled: true, state: { ...state, pendingKeys: undefined } };
+    // 모션 범위는 같은 모션의 y 로 구합니다 (exclusive/linewise 규칙과 실패 시 bell 이 Vim 과 같음).
+    const range = equalMotionRange(state, prefix ? [prefix, key] : [key], count, runHandleKey);
+    if (!range) return { handled: true, state: ringBell(state) };
+    // `$`·`g_`·`|` 는 Vim 처럼 기억한 열(curswant)을 바꿉니다.
+    const toEol = (!prefix && key === '$') || (prefix === 'g' && key === '_');
+    const keepCol = toEol ? Number.MAX_SAFE_INTEGER : !prefix && key === '|' ? count - 1 : undefined;
+    const res = formatIndentRange(state, range.startLine, range.endLine, keepCol);
+    return { handled: true, state: { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : keys } };
   }
 
   return null;

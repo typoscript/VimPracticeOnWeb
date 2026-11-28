@@ -1,0 +1,8033 @@
+[
+ {
+  "id": "jsx-paren",
+  "lines": [
+   "function App() {",
+   "const title = \"Vim\";",
+   "return (",
+   "<button>Click Me</button>",
+   ");",
+   "}"
+  ],
+  "expected": [
+   "function App() {",
+   "  const title = \"Vim\";",
+   "  return (",
+   "      <button>Click Me</button>",
+   "      );",
+   "}"
+  ]
+ },
+ {
+  "id": "if-else-braces",
+  "lines": [
+   "function f(a, b) {",
+   "if (a) {",
+   "return b;",
+   "} else {",
+   "return a;",
+   "}",
+   "}"
+  ],
+  "expected": [
+   "function f(a, b) {",
+   "  if (a) {",
+   "    return b;",
+   "  } else {",
+   "    return a;",
+   "  }",
+   "}"
+  ]
+ },
+ {
+  "id": "if-no-brace-top",
+  "lines": [
+   "if (x)",
+   "y();",
+   "z();"
+  ],
+  "expected": [
+   "if (x)",
+   "  y();",
+   "  z();"
+  ]
+ },
+ {
+  "id": "if-no-brace-in-fn",
+  "lines": [
+   "function g() {",
+   "if (x)",
+   "y();",
+   "z();",
+   "while (a)",
+   "b();",
+   "for (;;)",
+   "c();",
+   "}"
+  ],
+  "expected": [
+   "function g() {",
+   "  if (x)",
+   "    y();",
+   "  z();",
+   "  while (a)",
+   "    b();",
+   "  for (;;)",
+   "    c();",
+   "}"
+  ]
+ },
+ {
+  "id": "call-args",
+  "lines": [
+   "function h() {",
+   "foo(a,",
+   "b,",
+   "c);",
+   "bar();",
+   "}"
+  ],
+  "expected": [
+   "function h() {",
+   "  foo(a,",
+   "      b,",
+   "      c);",
+   "  bar();",
+   "}"
+  ]
+ },
+ {
+  "id": "continuation",
+  "lines": [
+   "function h() {",
+   "const total = sum(a, b) +",
+   "42;",
+   "next();",
+   "}"
+  ],
+  "expected": [
+   "function h() {",
+   "  const total = sum(a, b) +",
+   "    42;",
+   "  next();",
+   "}"
+  ]
+ },
+ {
+  "id": "switch-case",
+  "lines": [
+   "switch (x) {",
+   "case 1:",
+   "a();",
+   "break;",
+   "case 2: {",
+   "b();",
+   "}",
+   "default:",
+   "c();",
+   "}"
+  ],
+  "expected": [
+   "switch (x) {",
+   "  case 1:",
+   "    a();",
+   "    break;",
+   "  case 2: {",
+   "            b();",
+   "          }",
+   "  default:",
+   "          c();",
+   "}"
+  ]
+ },
+ {
+  "id": "switch-in-fn",
+  "lines": [
+   "function s(x) {",
+   "switch (x) {",
+   "case 'a':",
+   "return 1;",
+   "default:",
+   "return 2;",
+   "}",
+   "}"
+  ],
+  "expected": [
+   "function s(x) {",
+   "  switch (x) {",
+   "    case 'a':",
+   "      return 1;",
+   "    default:",
+   "      return 2;",
+   "  }",
+   "}"
+  ]
+ },
+ {
+  "id": "comments",
+  "lines": [
+   "// comment one",
+   "// comment two",
+   "int main() {",
+   "// inner",
+   "/* block",
+   "comment",
+   "*/",
+   "/*",
+   "* star",
+   "*/",
+   "return 0;",
+   "}"
+  ],
+  "expected": [
+   "// comment one",
+   "// comment two",
+   "int main() {",
+   "  // inner",
+   "  /* block",
+   "     comment",
+   "   */",
+   "  /*",
+   "   * star",
+   "   */",
+   "  return 0;",
+   "}"
+  ]
+ },
+ {
+  "id": "object-literal",
+  "lines": [
+   "const o = {",
+   "a: 1,",
+   "b: 2,",
+   "};"
+  ],
+  "expected": [
+   "const o = {",
+   "a: 1,",
+   "   b: 2,",
+   "};"
+  ]
+ },
+ {
+  "id": "array-literal",
+  "lines": [
+   "const arr = [",
+   "1,",
+   "2,",
+   "3,",
+   "];"
+  ],
+  "expected": [
+   "const arr = [",
+   "  1,",
+   "  2,",
+   "  3,",
+   "];"
+  ]
+ },
+ {
+  "id": "nested-object",
+  "lines": [
+   "function k() {",
+   "const o = {",
+   "a: 1,",
+   "b: { c: 2 },",
+   "};",
+   "return o;",
+   "}"
+  ],
+  "expected": [
+   "function k() {",
+   "  const o = {",
+   "a: 1,",
+   "   b: { c: 2 },",
+   "  };",
+   "  return o;",
+   "}"
+  ]
+ },
+ {
+  "id": "string-brace",
+  "lines": [
+   "function m() {",
+   "const s = \"{ not a brace\";",
+   "x();",
+   "}"
+  ],
+  "expected": [
+   "function m() {",
+   "  const s = \"{ not a brace\";",
+   "  x();",
+   "}"
+  ]
+ },
+ {
+  "id": "label",
+  "lines": [
+   "label:",
+   "for (;;) {",
+   "x();",
+   "}"
+  ],
+  "expected": [
+   "label:",
+   "for (;;) {",
+   "  x();",
+   "}"
+  ]
+ },
+ {
+  "id": "do-while",
+  "lines": [
+   "function n() {",
+   "do {",
+   "x();",
+   "} while (y);",
+   "z();",
+   "}"
+  ],
+  "expected": [
+   "function n() {",
+   "  do {",
+   "    x();",
+   "  } while (y);",
+   "  z();",
+   "}"
+  ]
+ },
+ {
+  "id": "callback-in-call",
+  "lines": [
+   "foo(function() {",
+   "x();",
+   "});"
+  ],
+  "expected": [
+   "foo(function() {",
+   "    x();",
+   "    });"
+  ]
+ },
+ {
+  "id": "promise-chain",
+  "lines": [
+   "promise.then((r) => {",
+   "log(r);",
+   "}).catch((e) => {",
+   "err(e);",
+   "});"
+  ],
+  "expected": [
+   "promise.then((r) => {",
+   "    log(r);",
+   "    }).catch((e) => {",
+   "      err(e);",
+   "      });"
+  ]
+ },
+ {
+  "id": "class",
+  "lines": [
+   "class A {",
+   "constructor() {",
+   "this.x = 1;",
+   "}",
+   "method() {",
+   "return this.x;",
+   "}",
+   "}"
+  ],
+  "expected": [
+   "class A {",
+   "  constructor() {",
+   "    this.x = 1;",
+   "  }",
+   "  method() {",
+   "    return this.x;",
+   "  }",
+   "}"
+  ]
+ },
+ {
+  "id": "tabs",
+  "lines": [
+   "\tfunction tabbed() {",
+   "\t\tif (a) {",
+   "\t\t\t\tb();",
+   "\t\t}",
+   "\t}"
+  ],
+  "expected": [
+   "function tabbed() {",
+   "  if (a) {",
+   "    b();",
+   "  }",
+   "}"
+  ]
+ },
+ {
+  "id": "else-one-line",
+  "lines": [
+   "function e() {",
+   "if (a) b();",
+   "else c();",
+   "d();",
+   "}"
+  ],
+  "expected": [
+   "function e() {",
+   "  if (a) b();",
+   "  else c();",
+   "  d();",
+   "}"
+  ]
+ },
+ {
+  "id": "ternary",
+  "lines": [
+   "function ternary() {",
+   "const v = cond ?",
+   "one :",
+   "two;",
+   "next();",
+   "}"
+  ],
+  "expected": [
+   "function ternary() {",
+   "  const v = cond ?",
+   "    one :",
+   "    two;",
+   "  next();",
+   "}"
+  ]
+ },
+ {
+  "id": "top-level-mix",
+  "lines": [
+   "const total = sum(a, b) + 42;",
+   "if (total > 10) {",
+   "log(\"big\", total);",
+   "}",
+   "return total;"
+  ],
+  "expected": [
+   "const total = sum(a, b) + 42;",
+   "if (total > 10) {",
+   "  log(\"big\", total);",
+   "}",
+   "return total;"
+  ]
+ },
+ {
+  "id": "funcdecl-next-line",
+  "lines": [
+   "x = 1",
+   "foo()",
+   "bar;"
+  ],
+  "expected": [
+   "x = 1",
+   "foo()",
+   "  bar;"
+  ]
+ },
+ {
+  "id": "decl-comma",
+  "lines": [
+   "int a,",
+   "b;",
+   "c;"
+  ],
+  "expected": [
+   "int a,",
+   "    b;",
+   "c;"
+  ]
+ },
+ {
+  "id": "kr-params",
+  "lines": [
+   "void f()",
+   "int a;",
+   "{",
+   "}"
+  ],
+  "expected": [
+   "void f()",
+   "  int a;",
+   "{",
+   "}"
+  ]
+ },
+ {
+  "id": "multiline-condition",
+  "lines": [
+   "function q() {",
+   "if (a &&",
+   "b) {",
+   "c();",
+   "}",
+   "d();",
+   "}"
+  ],
+  "expected": [
+   "function q() {",
+   "  if (a &&",
+   "      b) {",
+   "    c();",
+   "  }",
+   "  d();",
+   "}"
+  ]
+ },
+ {
+  "id": "nested-calls",
+  "lines": [
+   "function r() {",
+   "return foo(bar(1,",
+   "2),",
+   "3);",
+   "}"
+  ],
+  "expected": [
+   "function r() {",
+   "  return foo(bar(1,",
+   "        2),",
+   "      3);",
+   "}"
+  ]
+ },
+ {
+  "id": "try-catch",
+  "lines": [
+   "async function load() {",
+   "try {",
+   "await fetch(url);",
+   "} catch (e) {",
+   "console.error(e);",
+   "} finally {",
+   "done();",
+   "}",
+   "}"
+  ],
+  "expected": [
+   "async function load() {",
+   "  try {",
+   "    await fetch(url);",
+   "  } catch (e) {",
+   "    console.error(e);",
+   "  } finally {",
+   "    done();",
+   "  }",
+   "}"
+  ]
+ },
+ {
+  "id": "export-object",
+  "lines": [
+   "export default {",
+   "name: 'x',",
+   "data() {",
+   "return { a: 1 };",
+   "},",
+   "};"
+  ],
+  "expected": [
+   "export default {",
+   "name: 'x',",
+   "        data() {",
+   "          return { a: 1 };",
+   "        },",
+   "};"
+  ]
+ },
+ {
+  "id": "dangling-if-else",
+  "lines": [
+   "function v() {",
+   "if (a)",
+   "if (b)",
+   "c();",
+   "else",
+   "d();",
+   "e();",
+   "}"
+  ],
+  "expected": [
+   "function v() {",
+   "  if (a)",
+   "    if (b)",
+   "      c();",
+   "    else",
+   "      d();",
+   "  e();",
+   "}"
+  ]
+ },
+ {
+  "id": "let-comma",
+  "lines": [
+   "function w() {",
+   "let a = 1,",
+   "b = 2;",
+   "c();",
+   "}"
+  ],
+  "expected": [
+   "function w() {",
+   "  let a = 1,",
+   "      b = 2;",
+   "  c();",
+   "}"
+  ]
+ },
+ {
+  "id": "preprocessor",
+  "lines": [
+   "#include <stdio.h>",
+   "int main(void) {",
+   "#ifdef X",
+   "x();",
+   "#endif",
+   "}"
+  ],
+  "expected": [
+   "#include <stdio.h>",
+   "int main(void) {",
+   "#ifdef X",
+   "  x();",
+   "#endif",
+   "}"
+  ]
+ },
+ {
+  "id": "trailing-comment",
+  "lines": [
+   "function cm() {",
+   "x(); // trailing",
+   "// next comment",
+   "y();",
+   "}"
+  ],
+  "expected": [
+   "function cm() {",
+   "  x(); // trailing",
+   "       // next comment",
+   "  y();",
+   "}"
+  ]
+ },
+ {
+  "id": "doc-comment",
+  "lines": [
+   "/**",
+   " * Doc comment",
+   " * more",
+   " */",
+   "function doc() {",
+   "}"
+  ],
+  "expected": [
+   "/**",
+   " * Doc comment",
+   " * more",
+   " */",
+   "function doc() {",
+   "}"
+  ]
+ },
+ {
+  "id": "method-chain",
+  "lines": [
+   "function chain() {",
+   "foo",
+   ".bar()",
+   ".baz();",
+   "}"
+  ],
+  "expected": [
+   "function chain() {",
+   "  foo",
+   "    .bar()",
+   "    .baz();",
+   "}"
+  ]
+ },
+ {
+  "id": "deep-nesting",
+  "lines": [
+   "function deep() {",
+   "if (a) {",
+   "if (b) {",
+   "if (c) {",
+   "d();",
+   "}",
+   "}",
+   "}",
+   "}"
+  ],
+  "expected": [
+   "function deep() {",
+   "  if (a) {",
+   "    if (b) {",
+   "      if (c) {",
+   "        d();",
+   "      }",
+   "    }",
+   "  }",
+   "}"
+  ]
+ },
+ {
+  "id": "return-object",
+  "lines": [
+   "function obj() {",
+   "return {",
+   "a: 1,",
+   "b: 2",
+   "};",
+   "}"
+  ],
+  "expected": [
+   "function obj() {",
+   "  return {",
+   "a: 1,",
+   "     b: 2",
+   "  };",
+   "}"
+  ]
+ },
+ {
+  "id": "already-indented",
+  "lines": [
+   "  indented line one",
+   "    deeper (nested) item",
+   "  back to one",
+   "last_word_here end"
+  ],
+  "expected": [
+   "indented line one",
+   "deeper (nested) item",
+   "back to one",
+   "last_word_here end"
+  ]
+ },
+ {
+  "id": "prose",
+  "lines": [
+   "The quick brown fox. It jumps over",
+   "the lazy dog! Then it rests.",
+   "",
+   "Another paragraph here."
+  ],
+  "expected": [
+   "The quick brown fox. It jumps over",
+   "the lazy dog! Then it rests.",
+   "",
+   "Another paragraph here."
+  ]
+ },
+ {
+  "id": "random-11-0",
+  "lines": [
+   " case 1:",
+   "\t\t});",
+   "end \\",
+   ".then(r => r)",
+   "\t\tconst o = {"
+  ],
+  "expected": [
+   "case 1:",
+   "});",
+   "end \\",
+   "      .then(r => r)",
+   "      const o = {"
+  ]
+ },
+ {
+  "id": "random-11-1",
+  "lines": [
+   " for (;;)",
+   "\t#endif",
+   "  // comment {",
+   " a && b",
+   "\t\tb,",
+   "async function g() {"
+  ],
+  "expected": [
+   "for (;;)",
+   "#endif",
+   "// comment {",
+   "a && b",
+   "b,",
+   "  async function g() {"
+  ]
+ },
+ {
+  "id": "random-11-2",
+  "lines": [
+   "    b,",
+   " } else if (b) {",
+   "      if (a) b(); else c();",
+   "  \t.catch(e);",
+   " } else if (b) {",
+   "await p;"
+  ],
+  "expected": [
+   "b,",
+   "  } else if (b) {",
+   "    if (a) b(); else c();",
+   "    .catch(e);",
+   "  } else if (b) {",
+   "    await p;"
+  ]
+ },
+ {
+  "id": "random-11-3",
+  "lines": [
+   "A::A() :",
+   "      case 1:",
+   "  \t} catch (e) {",
+   ".catch(e);",
+   "    s = \"{ (\";"
+  ],
+  "expected": [
+   "A::A() :",
+   "  case 1:",
+   "    } catch (e) {",
+   "      .catch(e);",
+   "      s = \"{ (\";"
+  ]
+ },
+ {
+  "id": "random-11-4",
+  "lines": [
+   "/* block",
+   "  public:",
+   "\t\t} else if (b) {",
+   "c);",
+   "  x = cond ?",
+   "int a,",
+   "   ",
+   "return {",
+   "#endif"
+  ],
+  "expected": [
+   "/* block",
+   "   public:",
+   "   } else if (b) {",
+   "   c);",
+   "   x = cond ?",
+   "   int a,",
+   "",
+   "   return {",
+   "#endif"
+  ]
+ },
+ {
+  "id": "random-11-5",
+  "lines": [
+   "    .catch(e);",
+   "    key: value,",
+   "\tkey: value,",
+   "label:",
+   "\t};",
+   ""
+  ],
+  "expected": [
+   ".catch(e);",
+   "key: value,",
+   "  key: value,",
+   "  label:",
+   "  };",
+   ""
+  ]
+ },
+ {
+  "id": "random-11-6",
+  "lines": [
+   " ]",
+   " [1, 2],",
+   "  \tdo {"
+  ],
+  "expected": [
+   "]",
+   "[1, 2],",
+   "  do {"
+  ]
+ },
+ {
+  "id": "random-11-7",
+  "lines": [
+   "      one :",
+   "\telse",
+   "label:",
+   "      label:",
+   "  \ts = 'a{b';",
+   "  \tpublic:",
+   "\t1,",
+   "x(); // trail",
+   " || c)"
+  ],
+  "expected": [
+   "one :",
+   "else",
+   "label:",
+   "label:",
+   "s = 'a{b';",
+   "  public:",
+   "    1,",
+   "      x(); // trail",
+   "    || c)"
+  ]
+ },
+ {
+  "id": "random-11-8",
+  "lines": [
+   "\tfunction f(a, b) {",
+   "\tc = '{';",
+   "\tY",
+   "total = a +",
+   "\t\tasync function g() {"
+  ],
+  "expected": [
+   "function f(a, b) {",
+   "  c = '{';",
+   "  Y",
+   "    total = a +",
+   "    async function g() {"
+  ]
+ },
+ {
+  "id": "random-11-9",
+  "lines": [
+   "  a: 1,",
+   "for (;;)",
+   "if (a) {",
+   "    );",
+   "  if (a) b(); else c();",
+   "  \tlabel:",
+   "  \t/* block",
+   "  } finally {",
+   "\tbar();",
+   " s = 'a{b';",
+   " bar();"
+  ],
+  "expected": [
+   "a: 1,",
+   "  for (;;)",
+   "  if (a) {",
+   "    );",
+   "    if (a) b(); else c();",
+   "label:",
+   "    /* block",
+   "       } finally {",
+   "       bar();",
+   "       s = 'a{b';",
+   "       bar();"
+  ]
+ },
+ {
+  "id": "random-11-10",
+  "lines": [
+   "  #if Y",
+   "    private:",
+   "  ]",
+   "\t#define X 1",
+   "\t\ta && b",
+   "\t\tasync function g() {",
+   "];",
+   "\t.then(r => r)",
+   " total = a +"
+  ],
+  "expected": [
+   "#if Y",
+   "private:",
+   "]",
+   "#define X 1",
+   "a && b",
+   "async function g() {",
+   "  ];",
+   "  .then(r => r)",
+   "    total = a +"
+  ]
+ },
+ {
+  "id": "random-11-11",
+  "lines": [
+   "      });",
+   "\t\tc);",
+   "      x++;",
+   "  \t);",
+   "more",
+   "// note",
+   "   ",
+   "#if Y",
+   "      (",
+   "z;",
+   "let v = ["
+  ],
+  "expected": [
+   "});",
+   "c);",
+   "x++;",
+   ");",
+   "more",
+   "// note",
+   "",
+   "#if Y",
+   "(",
+   " z;",
+   " let v = ["
+  ]
+ },
+ {
+  "id": "random-11-12",
+  "lines": [
+   "       ",
+   "  c);",
+   "if (a)"
+  ],
+  "expected": [
+   "",
+   "c);",
+   "if (a)"
+  ]
+ },
+ {
+  "id": "random-11-13",
+  "lines": [
+   "bar();",
+   " switch (x) {",
+   "\tb,",
+   "  void m()",
+   " a: 1,",
+   "  \tx = cond ?",
+   ".then(r => r)",
+   "      {",
+   "b: 2"
+  ],
+  "expected": [
+   "bar();",
+   "switch (x) {",
+   "  b,",
+   "    void m()",
+   "      a: 1,",
+   "    x = cond ?",
+   "      .then(r => r)",
+   "      {",
+   "b: 2"
+  ]
+ },
+ {
+  "id": "random-11-14",
+  "lines": [
+   "    (",
+   "\t#endif",
+   "  \t} finally {"
+  ],
+  "expected": [
+   "(",
+   "#endif",
+   " } finally {"
+  ]
+ },
+ {
+  "id": "random-11-15",
+  "lines": [
+   "\tlabel:",
+   "\tasync function g() {",
+   "    foo(a,",
+   "} while (0);",
+   "\t1,",
+   "      X,",
+   "for (;;)",
+   "  \t|| c)",
+   "  \t} while (0);",
+   "*/"
+  ],
+  "expected": [
+   "label:",
+   "async function g() {",
+   "  foo(a,",
+   "      } while (0);",
+   "      1,",
+   "      X,",
+   "      for (;;)",
+   "      || c)",
+   "  } while (0);",
+   "*/"
+  ]
+ },
+ {
+  "id": "random-11-16",
+  "lines": [
+   "\ts = 'a{b';",
+   "  label:",
+   "\t\ts = \"{ (\";",
+   "b +",
+   "\tprivate:",
+   "  \tswitch (x) {"
+  ],
+  "expected": [
+   "s = 'a{b';",
+   "label:",
+   "  s = \"{ (\";",
+   "  b +",
+   "  private:",
+   "    switch (x) {"
+  ]
+ },
+ {
+  "id": "random-11-17",
+  "lines": [
+   "      total = a +",
+   "      1,",
+   "  \t});"
+  ],
+  "expected": [
+   "total = a +",
+   "1,",
+   "  });"
+  ]
+ },
+ {
+  "id": "random-11-18",
+  "lines": [
+   "} while (0);",
+   "  case 1:",
+   "",
+   " ]",
+   "\tg(x => {",
+   "      f(function() {",
+   "  );",
+   "",
+   "do",
+   "    else x();",
+   "\t\tA::A() :"
+  ],
+  "expected": [
+   "} while (0);",
+   "case 1:",
+   "",
+   "]",
+   "g(x => {",
+   "    f(function() {",
+   "     );",
+   "",
+   "    do",
+   "    else x();",
+   "    A::A() :"
+  ]
+ },
+ {
+  "id": "random-11-19",
+  "lines": [
+   "    { a: 1 },",
+   "    }",
+   "\t\tend \\",
+   "s = \"{ (\";",
+   "{ a: 1 },",
+   "      else x();",
+   "\t// note",
+   "      else"
+  ],
+  "expected": [
+   "{ a: 1 },",
+   "  }",
+   "end \\",
+   "      s = \"{ (\";",
+   "{ a: 1 },",
+   "  else x();",
+   "// note",
+   "else"
+  ]
+ },
+ {
+  "id": "random-11-20",
+  "lines": [
+   "  if (a) b(); else c();",
+   "\tx = cond ?",
+   " Y",
+   "c;",
+   "} else {",
+   "\tlabel:",
+   "      end \\",
+   "  enum E {",
+   " while (x);",
+   "} finally {",
+   "1,",
+   " b: 2",
+   "\t\t// note",
+   "      one :"
+  ],
+  "expected": [
+   "if (a) b(); else c();",
+   "x = cond ?",
+   "Y",
+   "c;",
+   "} else {",
+   "label:",
+   "  end \\",
+   "    enum E {",
+   "      while (x);",
+   "    } finally {",
+   "      1,",
+   "      b: 2",
+   "        // note",
+   "        one :"
+  ]
+ },
+ {
+  "id": "random-11-21",
+  "lines": [
+   "",
+   " b: 2",
+   "\tb: 2",
+   ");",
+   "\t/* one */",
+   "  \t)",
+   "  c = '{';",
+   "\targ",
+   "let v = [",
+   "      two;"
+  ],
+  "expected": [
+   "",
+   "b: 2",
+   "b: 2",
+   ");",
+   "/* one */",
+   ")",
+   "c = '{';",
+   "arg",
+   "let v = [",
+   "  two;"
+  ]
+ },
+ {
+  "id": "random-11-22",
+  "lines": [
+   "  c = '{';",
+   "switch (x) {",
+   " #if Y",
+   "a && b",
+   "\t\t* star",
+   "\t/* one */",
+   "enum E {"
+  ],
+  "expected": [
+   "c = '{';",
+   "switch (x) {",
+   "#if Y",
+   "  a && b",
+   "    * star",
+   "    /* one */",
+   "    enum E {"
+  ]
+ },
+ {
+  "id": "random-11-23",
+  "lines": [
+   "let v = [",
+   "    else x();",
+   "      do"
+  ],
+  "expected": [
+   "let v = [",
+   "  else x();",
+   "  do"
+  ]
+ },
+ {
+  "id": "random-11-24",
+  "lines": [
+   "\t\tcase 1:",
+   "Y",
+   "      z;",
+   "    #endif",
+   "    x++;",
+   "\tbreak;",
+   " } catch (e) {",
+   "      int a,",
+   "    await p;",
+   "\t\tlet v = [",
+   "// comment {"
+  ],
+  "expected": [
+   "case 1:",
+   "Y",
+   "z;",
+   "#endif",
+   "x++;",
+   "break;",
+   "} catch (e) {",
+   "  int a,",
+   "      await p;",
+   "  let v = [",
+   "    // comment {"
+  ]
+ },
+ {
+  "id": "random-11-25",
+  "lines": [
+   "  int a,",
+   "* star",
+   "      f(function() {",
+   "2",
+   "\tclass A {"
+  ],
+  "expected": [
+   "int a,",
+   "    * star",
+   "    f(function() {",
+   "        2",
+   "        class A {"
+  ]
+ },
+ {
+  "id": "random-11-26",
+  "lines": [
+   " } while (0);",
+   "      // comment {",
+   "  \tfor (i = 0; i < n; i++) {",
+   "  \tA::A() :",
+   " int a,",
+   "  \t} while (x);",
+   " } while (x);",
+   "#if Y",
+   " b: 2",
+   "\t\telse",
+   " if (a) {",
+   "      key: value,",
+   " a: 1,"
+  ],
+  "expected": [
+   "} while (0);",
+   "// comment {",
+   "for (i = 0; i < n; i++) {",
+   "  A::A() :",
+   "    int a,",
+   "} while (x);",
+   "} while (x);",
+   "#if Y",
+   "b: 2",
+   "else",
+   "if (a) {",
+   "key: value,",
+   "       a: 1,"
+  ]
+ },
+ {
+  "id": "random-11-27",
+  "lines": [
+   "// comment {",
+   "\t/* block",
+   " #if Y",
+   "if (a)",
+   " b +",
+   "f(function() {",
+   "#if Y",
+   "b,",
+   "} while (x);",
+   "    else",
+   "  a && b",
+   "      class A {",
+   " async function g() {",
+   "} while (0);"
+  ],
+  "expected": [
+   "// comment {",
+   "/* block",
+   "#if Y",
+   "if (a)",
+   "b +",
+   "f(function() {",
+   "#if Y",
+   "b,",
+   "} while (x);",
+   "else",
+   "a && b",
+   "class A {",
+   "async function g() {",
+   "} while (0);"
+  ]
+ },
+ {
+  "id": "random-11-28",
+  "lines": [
+   "one :",
+   "      struct S s = {",
+   "default:",
+   "\t\ta && b",
+   "\t\tf(function() {",
+   "\t// comment {",
+   "\t\tc);",
+   "  two;",
+   "  class A {",
+   "\t\ts = 'a{b';",
+   "  default:",
+   " class A {",
+   "    do",
+   "      x(); // trail"
+  ],
+  "expected": [
+   "one :",
+   "struct S s = {",
+   "  default:",
+   "    a && b",
+   "      f(function() {",
+   "          // comment {",
+   "          c);",
+   "      two;",
+   "      class A {",
+   "        s = 'a{b';",
+   "          default:",
+   "            class A {",
+   "              do",
+   "                x(); // trail"
+  ]
+ },
+ {
+  "id": "random-11-29",
+  "lines": [
+   "  \tfunction f(a, b) {",
+   "\t(",
+   "} else if (b) {",
+   "    /* one */",
+   "#define X 1",
+   " */",
+   " const arr = [",
+   "  \tfunction f(a, b) {",
+   "  \t});",
+   "",
+   "do",
+   "      #if Y"
+  ],
+  "expected": [
+   "function f(a, b) {",
+   "  (",
+   "   } else if (b) {",
+   "   /* one */",
+   "#define X 1",
+   "   */",
+   "   const arr = [",
+   "   function f(a, b) {",
+   "   });",
+   "",
+   "  do",
+   "#if Y"
+  ]
+ },
+ {
+  "id": "random-11-30",
+  "lines": [
+   "s = \"{ (\";",
+   "    key: value,",
+   "\tenum E {",
+   "  \tvoid m()",
+   "case 1:",
+   "do",
+   "  x(0)",
+   "b: 2",
+   "  \tcase 1:",
+   "x(0)",
+   "\tb +",
+   "      label:",
+   "\tY"
+  ],
+  "expected": [
+   "s = \"{ (\";",
+   "key: value,",
+   "  enum E {",
+   "    void m()",
+   "    case 1:",
+   "      do",
+   "        x(0)",
+   "          b: 2",
+   "    case 1:",
+   "          x(0)",
+   "            b +",
+   "            label:",
+   "            Y"
+  ]
+ },
+ {
+  "id": "random-11-31",
+  "lines": [
+   "",
+   "    if (a)",
+   "  \t|| c)",
+   "  || c)",
+   "\t\t];",
+   "more",
+   "      /* one */"
+  ],
+  "expected": [
+   "",
+   "if (a)",
+   "  || c)",
+   "  || c)",
+   "  ];",
+   "  more",
+   "  /* one */"
+  ]
+ },
+ {
+  "id": "random-11-32",
+  "lines": [
+   "  \t};",
+   "x = 1;",
+   "    } while (0);",
+   "  \t{ a: 1 },",
+   "  \tb +",
+   "\t\tlet v = [",
+   " }"
+  ],
+  "expected": [
+   "};",
+   "x = 1;",
+   "} while (0);",
+   "{ a: 1 },",
+   "  b +",
+   "  let v = [",
+   "    }"
+  ]
+ },
+ {
+  "id": "random-11-33",
+  "lines": [
+   "  \tclass A {",
+   "    x = 1;",
+   " s = \"{ (\";",
+   "      z;",
+   "  \tdo",
+   "Y",
+   " f(function() {",
+   "\t\tg(x => {",
+   "A::A() :",
+   "      let v = [",
+   "      const o = {",
+   "  \tcase 2: y();",
+   "\t\t#endif"
+  ],
+  "expected": [
+   "class A {",
+   "  x = 1;",
+   "  s = \"{ (\";",
+   "  z;",
+   "  do",
+   "    Y",
+   "      f(function() {",
+   "          g(x => {",
+   "              A::A() :",
+   "              let v = [",
+   "              const o = {",
+   "              case 2: y();",
+   "#endif"
+  ]
+ },
+ {
+  "id": "random-11-34",
+  "lines": [
+   "  { a: 1 },",
+   "// comment {",
+   "  */",
+   "    const o = {",
+   "\t\t/* block",
+   "for (;;)"
+  ],
+  "expected": [
+   "{ a: 1 },",
+   "  // comment {",
+   "  */",
+   "  const o = {",
+   "    /* block",
+   "       for (;;)"
+  ]
+ },
+ {
+  "id": "random-11-35",
+  "lines": [
+   "      (",
+   "\t\tkey: value,",
+   "x = cond ?",
+   "   ",
+   "\t[1, 2],",
+   " } catch (e) {"
+  ],
+  "expected": [
+   "(",
+   " key: value,",
+   " x = cond ?",
+   "",
+   " [1, 2],",
+   " } catch (e) {"
+  ]
+ },
+ {
+  "id": "random-11-36",
+  "lines": [
+   "  break;",
+   ".then(r => r)",
+   "      #endif",
+   ");",
+   "\t\t|| c)",
+   "      } else if (b) {",
+   "#define X 1",
+   "\ttotal = a +",
+   "\tawait p;",
+   "\tx++;",
+   "\t\tfoo(a,",
+   "\t\telse x();",
+   "\tif (a) b(); else c();",
+   "x = cond ?"
+  ],
+  "expected": [
+   "break;",
+   ".then(r => r)",
+   "#endif",
+   "  );",
+   "  || c)",
+   "  } else if (b) {",
+   "#define X 1",
+   "    total = a +",
+   "      await p;",
+   "    x++;",
+   "    foo(a,",
+   "        else x();",
+   "        if (a) b(); else c();",
+   "        x = cond ?"
+  ]
+ },
+ {
+  "id": "random-11-37",
+  "lines": [
+   "      c);",
+   "      while (x);",
+   " function f(a, b) {",
+   "    arg",
+   "default:",
+   "s = 'a{b';",
+   "      class A {",
+   "more",
+   "      .catch(e);",
+   " a && b"
+  ],
+  "expected": [
+   "c);",
+   "while (x);",
+   "function f(a, b) {",
+   "  arg",
+   "  default:",
+   "    s = 'a{b';",
+   "      class A {",
+   "        more",
+   "          .catch(e);",
+   "        a && b"
+  ]
+ },
+ {
+  "id": "random-11-38",
+  "lines": [
+   "b: 2",
+   "\t\t} finally {",
+   "      /* block",
+   " b: 2"
+  ],
+  "expected": [
+   "b: 2",
+   "} finally {",
+   "  /* block",
+   "b: 2"
+  ]
+ },
+ {
+  "id": "random-11-39",
+  "lines": [
+   "",
+   " struct S s = {",
+   "  label:",
+   "if (a) b(); else c();",
+   "\ts = 'a{b';",
+   "  \ts = 'a{b';",
+   "\tasync function g() {",
+   "call(",
+   "\t\ttry {",
+   "      class A {"
+  ],
+  "expected": [
+   "",
+   "struct S s = {",
+   "label:",
+   "  if (a) b(); else c();",
+   "  s = 'a{b';",
+   "    s = 'a{b';",
+   "      async function g() {",
+   "        call(",
+   "            try {",
+   "            class A {"
+  ]
+ },
+ {
+  "id": "random-11-40",
+  "lines": [
+   "    ",
+   " do {",
+   "\tawait p;",
+   "} else {",
+   ""
+  ],
+  "expected": [
+   "",
+   "do {",
+   "  await p;",
+   "} else {",
+   ""
+  ]
+ },
+ {
+  "id": "random-11-41",
+  "lines": [
+   "function f(a, b) {",
+   "\telse",
+   "A::A() :",
+   " (",
+   "      #define X 1",
+   "  \tlabel:",
+   "\ts = \"{ (\";",
+   " x(0)",
+   "  // comment {"
+  ],
+  "expected": [
+   "function f(a, b) {",
+   "  else",
+   "    A::A() :",
+   "      (",
+   "#define X 1",
+   "       label:",
+   "       s = \"{ (\";",
+   "       x(0)",
+   "       // comment {"
+  ]
+ },
+ {
+  "id": "random-11-42",
+  "lines": [
+   "const o = {",
+   "\t\t#endif",
+   "arg",
+   "  \tc);",
+   "      x(); // trail",
+   "    b +",
+   "    a && b",
+   "x(0)",
+   "/* one */"
+  ],
+  "expected": [
+   "const o = {",
+   "#endif",
+   "  arg",
+   "    c);",
+   "  x(); // trail",
+   "  b +",
+   "    a && b",
+   "    x(0)",
+   "    /* one */"
+  ]
+ },
+ {
+  "id": "random-11-43",
+  "lines": [
+   "      #define X 1",
+   "    x(0)",
+   "return {",
+   "\tfor (i = 0; i < n; i++) {",
+   " /* block",
+   " int a,",
+   " */",
+   "\t\tmore"
+  ],
+  "expected": [
+   "#define X 1",
+   "x(0)",
+   "  return {",
+   "    for (i = 0; i < n; i++) {",
+   "      /* block",
+   "         int a,",
+   "       */",
+   "      more"
+  ]
+ },
+ {
+  "id": "random-11-44",
+  "lines": [
+   "#endif",
+   "#if Y",
+   "X,",
+   "      try {",
+   "\t\t#endif",
+   "  #if Y",
+   "b,",
+   "\t\tlabel:"
+  ],
+  "expected": [
+   "#endif",
+   "#if Y",
+   "X,",
+   "  try {",
+   "#endif",
+   "#if Y",
+   "    b,",
+   "    label:"
+  ]
+ },
+ {
+  "id": "random-11-45",
+  "lines": [
+   "      else",
+   "      class A {",
+   " int a,",
+   " x = 1;",
+   "\t\tf(function() {",
+   "      // note",
+   "      g(x => {",
+   "\tb +",
+   "\t{"
+  ],
+  "expected": [
+   "else",
+   "class A {",
+   "  int a,",
+   "      x = 1;",
+   "  f(function() {",
+   "      // note",
+   "      g(x => {",
+   "          b +",
+   "          {"
+  ]
+ },
+ {
+  "id": "random-11-46",
+  "lines": [
+   "    x(); // trail",
+   "  \treturn x;",
+   ");",
+   "for (i = 0; i < n; i++) {",
+   "else",
+   "bar();",
+   "for (i = 0; i < n; i++) {"
+  ],
+  "expected": [
+   "x(); // trail",
+   "return x;",
+   ");",
+   "for (i = 0; i < n; i++) {",
+   "  else",
+   "    bar();",
+   "  for (i = 0; i < n; i++) {"
+  ]
+ },
+ {
+  "id": "random-11-47",
+  "lines": [
+   "  \tasync function g() {",
+   "\t(",
+   "f(function() {",
+   "    else x();",
+   "/* one */",
+   "\t\t} while (x);",
+   "do",
+   "[1, 2],"
+  ],
+  "expected": [
+   "async function g() {",
+   "  (",
+   "   f(function() {",
+   "     else x();",
+   "     /* one */",
+   "     } while (x);",
+   "     do",
+   "     [1, 2],"
+  ]
+ },
+ {
+  "id": "random-11-48",
+  "lines": [
+   "  \ttotal = a +",
+   " A::A() :",
+   "b +",
+   "    int a,",
+   " x(0)",
+   "",
+   "      while (x);"
+  ],
+  "expected": [
+   "total = a +",
+   "A::A() :",
+   "  b +",
+   "  int a,",
+   "  x(0)",
+   "",
+   "  while (x);"
+  ]
+ },
+ {
+  "id": "random-11-49",
+  "lines": [
+   "const arr = [",
+   "\t\tvoid m()",
+   "  \tdo {",
+   " }",
+   "  public:",
+   " function f(a, b) {"
+  ],
+  "expected": [
+   "const arr = [",
+   "void m()",
+   "  do {",
+   "  }",
+   "public:",
+   "function f(a, b) {"
+  ]
+ },
+ {
+  "id": "random-11-50",
+  "lines": [
+   "      void m()",
+   "\tA::A() :",
+   "    } else {",
+   "  c);",
+   "public:",
+   "a: 1,",
+   "\t\tdo",
+   "default:",
+   "case 2: y();"
+  ],
+  "expected": [
+   "void m()",
+   "  A::A() :",
+   "    } else {",
+   "      c);",
+   "      public:",
+   "a: 1,",
+   "     do",
+   "      default:",
+   "      case 2: y();"
+  ]
+ },
+ {
+  "id": "random-11-51",
+  "lines": [
+   "\t\t];",
+   "  enum E {",
+   " switch (x) {",
+   "struct S s = {",
+   "  for (;;)",
+   "\t} while (x);",
+   "      return {"
+  ],
+  "expected": [
+   "];",
+   "enum E {",
+   "  switch (x) {",
+   "    struct S s = {",
+   "      for (;;)",
+   "    } while (x);",
+   "    return {"
+  ]
+ },
+ {
+  "id": "random-11-52",
+  "lines": [
+   "/* one */",
+   "  async function g() {",
+   "      } while (x);",
+   "    one :",
+   " case 1:",
+   "} else if (b) {",
+   "  \tx = 1;",
+   "      (",
+   "  \t#endif",
+   "\tx++;",
+   "return x;"
+  ],
+  "expected": [
+   "/* one */",
+   "async function g() {",
+   "} while (x);",
+   "one :",
+   "case 1:",
+   "} else if (b) {",
+   "  x = 1;",
+   "  (",
+   "#endif",
+   "   x++;",
+   "   return x;"
+  ]
+ },
+ {
+  "id": "random-11-53",
+  "lines": [
+   "});",
+   "x = 1;",
+   "    Y",
+   "  \tclass A {",
+   "    c;",
+   "    2",
+   " public:",
+   "  arg"
+  ],
+  "expected": [
+   "});",
+   "x = 1;",
+   "Y",
+   "class A {",
+   "  c;",
+   "  2",
+   "  public:",
+   "    arg"
+  ]
+ },
+ {
+  "id": "random-11-54",
+  "lines": [
+   "  \tif (a) b(); else c();",
+   "\t\t// note",
+   "    } catch (e) {",
+   "\t\t2"
+  ],
+  "expected": [
+   "if (a) b(); else c();",
+   "// note",
+   "} catch (e) {",
+   "  2"
+  ]
+ },
+ {
+  "id": "random-11-55",
+  "lines": [
+   "\tif (a)",
+   "\tz;",
+   "    if (a) b(); else c();",
+   "  \tdo",
+   "  enum E {",
+   "} else if (b) {",
+   "    else x();",
+   " );",
+   "\tx = 1;",
+   "    more",
+   "for (i = 0; i < n; i++) {",
+   "x = cond ?",
+   "    );",
+   " foo(a,"
+  ],
+  "expected": [
+   "if (a)",
+   "  z;",
+   "  if (a) b(); else c();",
+   "  do",
+   "  enum E {",
+   "  } else if (b) {",
+   "    else x();",
+   "    );",
+   "    x = 1;",
+   "    more",
+   "      for (i = 0; i < n; i++) {",
+   "        x = cond ?",
+   "          );",
+   "        foo(a,"
+  ]
+ },
+ {
+  "id": "random-11-56",
+  "lines": [
+   "\t   ",
+   " label:",
+   "    key: value,",
+   " x(); // trail",
+   ".then(r => r)",
+   ""
+  ],
+  "expected": [
+   "",
+   "label:",
+   "key: value,",
+   "  x(); // trail",
+   ".then(r => r)",
+   ""
+  ]
+ },
+ {
+  "id": "random-11-57",
+  "lines": [
+   "  \tdo",
+   "while (x)",
+   " b +",
+   "\t#define X 1",
+   "more",
+   "   ",
+   "label:",
+   "\tbreak;",
+   "\t\t} else {"
+  ],
+  "expected": [
+   "do",
+   "while (x)",
+   "  b +",
+   "#define X 1",
+   "  more",
+   "",
+   "  label:",
+   "  break;",
+   "  } else {"
+  ]
+ },
+ {
+  "id": "random-11-58",
+  "lines": [
+   "#if Y",
+   "      */",
+   " return {",
+   "    if (a) b(); else c();"
+  ],
+  "expected": [
+   "#if Y",
+   "*/",
+   "return {",
+   "  if (a) b(); else c();"
+  ]
+ },
+ {
+  "id": "random-11-59",
+  "lines": [
+   "more",
+   "    }",
+   "#if Y",
+   "  return {",
+   "x++;",
+   "x++;",
+   "#define X 1",
+   "return {"
+  ],
+  "expected": [
+   "more",
+   "}",
+   "#if Y",
+   "return {",
+   "  x++;",
+   "  x++;",
+   "#define X 1",
+   "  return {"
+  ]
+ },
+ {
+  "id": "random-11-60",
+  "lines": [
+   "      break;",
+   "case 2: y();",
+   ".then(r => r)",
+   "  \t#endif",
+   "\t\tfor (i = 0; i < n; i++) {",
+   "else x();",
+   "  case 1:",
+   " X,",
+   "\t});",
+   "\t\t* star",
+   ""
+  ],
+  "expected": [
+   "break;",
+   "case 2: y();",
+   ".then(r => r)",
+   "#endif",
+   "  for (i = 0; i < n; i++) {",
+   "    else x();",
+   "    case 1:",
+   "    X,",
+   "  });",
+   "* star",
+   ""
+  ]
+ },
+ {
+  "id": "random-11-61",
+  "lines": [
+   "  \t} catch (e) {",
+   "  \t} while (0);",
+   "public:",
+   "} while (x);",
+   "      break;",
+   "\tg(x => {"
+  ],
+  "expected": [
+   "} catch (e) {",
+   "} while (0);",
+   "public:",
+   "} while (x);",
+   "break;",
+   "g(x => {"
+  ]
+ },
+ {
+  "id": "random-11-62",
+  "lines": [
+   "  /* one */",
+   "\t)",
+   "  });",
+   " (",
+   "  \t.then(r => r)",
+   "      for (;;)",
+   "\t\t#if Y",
+   "}",
+   "  key: value,"
+  ],
+  "expected": [
+   "/* one */",
+   ")",
+   "});",
+   "  (",
+   "   .then(r => r)",
+   "   for (;;)",
+   "#if Y",
+   "   }",
+   "key: value,"
+  ]
+ },
+ {
+  "id": "random-11-63",
+  "lines": [
+   "2",
+   "} catch (e) {",
+   "if (a) b(); else c();",
+   "      int a,",
+   "f(function() {",
+   ")",
+   "|| c)"
+  ],
+  "expected": [
+   "2",
+   "} catch (e) {",
+   "  if (a) b(); else c();",
+   "  int a,",
+   "      f(function() {",
+   "       )",
+   "         || c)"
+  ]
+ },
+ {
+  "id": "random-11-64",
+  "lines": [
+   ");",
+   " do {",
+   "  (",
+   "end \\",
+   "  \t)",
+   "b,",
+   "\tx(); // trail",
+   " function f(a, b) {",
+   "else",
+   " { a: 1 },",
+   "      // note",
+   "1,"
+  ],
+  "expected": [
+   ");",
+   "do {",
+   "  (",
+   "   end \\",
+   "  )",
+   "    b,",
+   "    x(); // trail",
+   "  function f(a, b) {",
+   "    else",
+   "    { a: 1 },",
+   "      // note",
+   "      1,"
+  ]
+ },
+ {
+  "id": "random-11-65",
+  "lines": [
+   " z;",
+   "    while (x)",
+   "    (",
+   "\t\tenum E {",
+   "\t|| c)",
+   "// comment {",
+   "f(function() {"
+  ],
+  "expected": [
+   "z;",
+   "while (x)",
+   "  (",
+   "   enum E {",
+   "   || c)",
+   "     // comment {",
+   "     f(function() {"
+  ]
+ },
+ {
+  "id": "random-11-66",
+  "lines": [
+   "  if (a) b(); else c();",
+   "      more",
+   "    [1, 2],",
+   "key: value,",
+   "bar();",
+   "  \t);",
+   "\tdo",
+   "  foo(a,",
+   "\tint a,",
+   "  \t// note",
+   ")",
+   "  } while (0);",
+   " void m()",
+   "  ]"
+  ],
+  "expected": [
+   "if (a) b(); else c();",
+   "more",
+   "[1, 2],",
+   "  key: value,",
+   "  bar();",
+   ");",
+   "  do",
+   "foo(a,",
+   "    int a,",
+   "    // note",
+   "   )",
+   "  } while (0);",
+   "void m()",
+   "  ]"
+  ]
+ },
+ {
+  "id": "random-11-67",
+  "lines": [
+   "      } else if (b) {",
+   "\t\tx(); // trail",
+   "  \t} else if (b) {",
+   "  \tif (a) {",
+   "\tconst arr = [",
+   "    if (a) b(); else c();",
+   "  \tif (a) b(); else c();",
+   " .then(r => r)"
+  ],
+  "expected": [
+   "} else if (b) {",
+   "  x(); // trail",
+   "} else if (b) {",
+   "  if (a) {",
+   "    const arr = [",
+   "      if (a) b(); else c();",
+   "    if (a) b(); else c();",
+   "    .then(r => r)"
+  ]
+ },
+ {
+  "id": "random-11-68",
+  "lines": [
+   "\ts = 'a{b';",
+   "  if (a) {",
+   "  a && b",
+   "try {",
+   " #define X 1",
+   "\t// comment {",
+   "function f(a, b) {",
+   "         ",
+   "    switch (x) {"
+  ],
+  "expected": [
+   "s = 'a{b';",
+   "  if (a) {",
+   "    a && b",
+   "      try {",
+   "#define X 1",
+   "        // comment {",
+   "        function f(a, b) {",
+   "",
+   "          switch (x) {"
+  ]
+ },
+ {
+  "id": "random-11-69",
+  "lines": [
+   "    enum E {",
+   "  key: value,",
+   "  X,",
+   "   "
+  ],
+  "expected": [
+   "enum E {",
+   "key: value,",
+   "     X,",
+   ""
+  ]
+ },
+ {
+  "id": "random-11-70",
+  "lines": [
+   "void m()",
+   " private:",
+   "      break;",
+   "void m()",
+   "  \t2",
+   " case 2: y();",
+   "for (i = 0; i < n; i++) {"
+  ],
+  "expected": [
+   "void m()",
+   "  private:",
+   "  break;",
+   "void m()",
+   "  2",
+   "  case 2: y();",
+   "  for (i = 0; i < n; i++) {"
+  ]
+ },
+ {
+  "id": "random-11-71",
+  "lines": [
+   "",
+   " };",
+   "      A::A() :",
+   "/* one */",
+   "\t\telse",
+   "return x;",
+   "  } finally {",
+   "    [1, 2],",
+   "\t} else if (b) {",
+   "\tc;",
+   "x(0)"
+  ],
+  "expected": [
+   "",
+   "};",
+   "A::A() :",
+   "  /* one */",
+   "  else",
+   "  return x;",
+   "  } finally {",
+   "    [1, 2],",
+   "  } else if (b) {",
+   "    c;",
+   "    x(0)"
+  ]
+ },
+ {
+  "id": "random-11-72",
+  "lines": [
+   "",
+   "\t});",
+   "if (a) b(); else c();"
+  ],
+  "expected": [
+   "",
+   "});",
+   "if (a) b(); else c();"
+  ]
+ },
+ {
+  "id": "random-11-73",
+  "lines": [
+   "\tc);",
+   "  * star",
+   "\t[1, 2],",
+   "\t\tlabel:",
+   "\t\tclass A {",
+   "f(function() {",
+   " call("
+  ],
+  "expected": [
+   "c);",
+   "* star",
+   "[1, 2],",
+   "  label:",
+   "  class A {",
+   "    f(function() {",
+   "        call("
+  ]
+ },
+ {
+  "id": "random-11-74",
+  "lines": [
+   "\t];",
+   " foo(a,",
+   "];",
+   "/* one */",
+   "\ttwo;",
+   "  \ts = 'a{b';",
+   "#if Y",
+   "    2",
+   " /* block"
+  ],
+  "expected": [
+   "];",
+   "foo(a,",
+   "    ];",
+   "    /* one */",
+   "    two;",
+   "    s = 'a{b';",
+   "#if Y",
+   "    2",
+   "    /* block"
+  ]
+ },
+ {
+  "id": "random-11-75",
+  "lines": [
+   "    s = 'a{b';",
+   " g(x => {",
+   "    s = 'a{b';",
+   "g(x => {",
+   "\t.then(r => r)",
+   "} while (0);",
+   "f(function() {",
+   "\t   "
+  ],
+  "expected": [
+   "s = 'a{b';",
+   "  g(x => {",
+   "      s = 'a{b';",
+   "      g(x => {",
+   "          .then(r => r)",
+   "          } while (0);",
+   "          f(function() {",
+   ""
+  ]
+ },
+ {
+  "id": "random-11-76",
+  "lines": [
+   "\t\tx++;",
+   "      )",
+   "      if (a) {",
+   "\t}",
+   "a && b",
+   "// comment {",
+   "    .then(r => r)",
+   "      a && b",
+   "\targ"
+  ],
+  "expected": [
+   "x++;",
+   ")",
+   "if (a) {",
+   "}",
+   "a && b",
+   "// comment {",
+   ".then(r => r)",
+   "  a && b",
+   "  arg"
+  ]
+ },
+ {
+  "id": "random-11-77",
+  "lines": [
+   "\t\t{ a: 1 },",
+   "\tc;",
+   " if (a) {",
+   "  for (;;)",
+   "  \t)",
+   "\tpublic:"
+  ],
+  "expected": [
+   "{ a: 1 },",
+   "  c;",
+   "if (a) {",
+   "  for (;;)",
+   "    )",
+   "  public:"
+  ]
+ },
+ {
+  "id": "random-11-78",
+  "lines": [
+   "  \t/* one */",
+   " total = a +",
+   "   ",
+   "\t#if Y",
+   " Y",
+   "  do {",
+   "// comment {",
+   "  for (;;)",
+   "\t* star"
+  ],
+  "expected": [
+   "/* one */",
+   "total = a +",
+   "",
+   "#if Y",
+   "Y",
+   "do {",
+   "  // comment {",
+   "  for (;;)",
+   "    * star"
+  ]
+ },
+ {
+  "id": "random-11-79",
+  "lines": [
+   "\t\tb,",
+   " { a: 1 },",
+   "\t\tasync function g() {",
+   "\t\tenum E {",
+   "  \tc = '{';",
+   " b +",
+   "while (x);",
+   "{ a: 1 },",
+   "default:",
+   "x(0)",
+   "c = '{';",
+   "\tbreak;",
+   "    ",
+   "  };"
+  ],
+  "expected": [
+   "b,",
+   "{ a: 1 },",
+   "  async function g() {",
+   "    enum E {",
+   "      c = '{';",
+   "      b +",
+   "        while (x);",
+   "      { a: 1 },",
+   "      default:",
+   "        x(0)",
+   "          c = '{';",
+   "        break;",
+   "",
+   "    };"
+  ]
+ },
+ {
+  "id": "random-11-80",
+  "lines": [
+   "*/",
+   "      X,",
+   "\ttwo;",
+   "} while (x);",
+   "      b +",
+   "break;",
+   "\tc = '{';",
+   "enum E {",
+   "\tx = 1;",
+   "2",
+   "#endif"
+  ],
+  "expected": [
+   "*/",
+   "X,",
+   "  two;",
+   "} while (x);",
+   "b +",
+   "break;",
+   "c = '{';",
+   "enum E {",
+   "  x = 1;",
+   "  2",
+   "#endif"
+  ]
+ },
+ {
+  "id": "random-11-81",
+  "lines": [
+   "      private:",
+   "\t// comment {",
+   "  s = 'a{b';",
+   "\t\tc = '{';",
+   "2",
+   "  \tconst arr = [",
+   "\t\tif (a)",
+   "one :"
+  ],
+  "expected": [
+   "private:",
+   "// comment {",
+   "s = 'a{b';",
+   "  c = '{';",
+   "  2",
+   "    const arr = [",
+   "    if (a)",
+   "      one :"
+  ]
+ },
+ {
+  "id": "random-11-82",
+  "lines": [
+   "  \ts = 'a{b';",
+   "",
+   "// comment {",
+   "]",
+   "one :",
+   "    end \\",
+   "switch (x) {",
+   "      const o = {",
+   "* star",
+   "  */"
+  ],
+  "expected": [
+   "s = 'a{b';",
+   "",
+   "  // comment {",
+   "  ]",
+   "    one :",
+   "    end \\",
+   "    switch (x) {",
+   "      const o = {",
+   "        * star",
+   "          */"
+  ]
+ },
+ {
+  "id": "random-11-83",
+  "lines": [
+   "  \tb,",
+   "}",
+   "      c;",
+   " bar();",
+   "  \t(",
+   "      switch (x) {",
+   "\t\tc;",
+   "*/",
+   "      end \\",
+   "class A {",
+   "    call(",
+   "} else {"
+  ],
+  "expected": [
+   "b,",
+   "  }",
+   "c;",
+   "bar();",
+   "(",
+   " switch (x) {",
+   " c;",
+   " */",
+   " end \\",
+   " class A {",
+   " call(",
+   "     } else {"
+  ]
+ },
+ {
+  "id": "random-11-84",
+  "lines": [
+   "\t\t2",
+   "    );",
+   "\t\tlet v = [",
+   "  \tcall(",
+   "more",
+   " b: 2",
+   "\t\tlabel:",
+   "};",
+   "  \t#endif"
+  ],
+  "expected": [
+   "2",
+   ");",
+   "let v = [",
+   "  call(",
+   "      more",
+   "      b: 2",
+   "      label:",
+   "      };",
+   "#endif"
+  ]
+ },
+ {
+  "id": "random-11-85",
+  "lines": [
+   "      function f(a, b) {",
+   "  \t   ",
+   " } else {",
+   "    enum E {",
+   "(",
+   "void m()",
+   "a && b",
+   "\t\t2",
+   " // note",
+   "",
+   "async function g() {",
+   "  \tx(); // trail",
+   "\t\tif (a)",
+   "/* block"
+  ],
+  "expected": [
+   "function f(a, b) {",
+   "",
+   "} else {",
+   "  enum E {",
+   "    (",
+   "     void m()",
+   "     a && b",
+   "     2",
+   "     // note",
+   "",
+   "     async function g() {",
+   "     x(); // trail",
+   "     if (a)",
+   "     /* block"
+  ]
+ },
+ {
+  "id": "random-11-86",
+  "lines": [
+   "      await p;",
+   "\tcase 2: y();",
+   "      z;",
+   ".then(r => r)",
+   "\t\ts = 'a{b';"
+  ],
+  "expected": [
+   "await p;",
+   "case 2: y();",
+   "z;",
+   ".then(r => r)",
+   "  s = 'a{b';"
+  ]
+ },
+ {
+  "id": "random-11-87",
+  "lines": [
+   "  key: value,",
+   "\t.then(r => r)",
+   "\tpublic:"
+  ],
+  "expected": [
+   "key: value,",
+   "  .then(r => r)",
+   "  public:"
+  ]
+ },
+ {
+  "id": "random-11-88",
+  "lines": [
+   "  enum E {",
+   "  s = 'a{b';",
+   "      2",
+   "\tpublic:",
+   "  \tif (a) b(); else c();",
+   "    label:",
+   "  let v = ["
+  ],
+  "expected": [
+   "enum E {",
+   "  s = 'a{b';",
+   "    2",
+   "    public:",
+   "      if (a) b(); else c();",
+   "label:",
+   "      let v = ["
+  ]
+ },
+ {
+  "id": "random-11-89",
+  "lines": [
+   "      async function g() {",
+   "\t} finally {",
+   " #endif",
+   "  \t];",
+   "#endif",
+   "      return x;",
+   "\tA::A() :",
+   "do",
+   "\t* star",
+   "if (a)",
+   "",
+   "    /* block",
+   "#define X 1"
+  ],
+  "expected": [
+   "async function g() {",
+   "} finally {",
+   "#endif",
+   "  ];",
+   "#endif",
+   "  return x;",
+   "  A::A() :",
+   "    do",
+   "    * star",
+   "    if (a)",
+   "",
+   "    /* block",
+   "#define X 1"
+  ]
+ },
+ {
+  "id": "random-11-90",
+  "lines": [
+   "\t\targ",
+   "\t\tcase 1:",
+   "    do",
+   "  c);",
+   "} finally {",
+   " case 1:",
+   "Y",
+   "\t\t} else if (b) {",
+   "  \t)",
+   "end \\",
+   "\ttotal = a +",
+   "      return {"
+  ],
+  "expected": [
+   "arg",
+   "case 1:",
+   "do",
+   "c);",
+   "} finally {",
+   "  case 1:",
+   "    Y",
+   "} else if (b) {",
+   "  )",
+   "    end \\",
+   "    total = a +",
+   "    return {"
+  ]
+ },
+ {
+  "id": "random-11-91",
+  "lines": [
+   "  /* one */",
+   "} else if (b) {",
+   "\t\t*/",
+   "    };",
+   "public:",
+   "\t} else if (b) {"
+  ],
+  "expected": [
+   "/* one */",
+   "} else if (b) {",
+   "  */",
+   "};",
+   "public:",
+   "} else if (b) {"
+  ]
+ },
+ {
+  "id": "random-11-92",
+  "lines": [
+   "    ];",
+   "      a: 1,",
+   "\t\t};",
+   "for (;;)",
+   "  \ts = \"{ (\";",
+   "       ",
+   " if (a)",
+   "    // comment {",
+   " try {",
+   "      if (a) b(); else c();",
+   " void m()",
+   "  \t} finally {",
+   " do {",
+   "\ttwo;"
+  ],
+  "expected": [
+   "];",
+   "a: 1,",
+   "  };",
+   "for (;;)",
+   "s = \"{ (\";",
+   "",
+   "if (a)",
+   "  // comment {",
+   "  try {",
+   "    if (a) b(); else c();",
+   "    void m()",
+   "  } finally {",
+   "    do {",
+   "      two;"
+  ]
+ },
+ {
+  "id": "random-11-93",
+  "lines": [
+   "arg",
+   "\t.then(r => r)",
+   "",
+   "\t// note",
+   "    default:"
+  ],
+  "expected": [
+   "arg",
+   ".then(r => r)",
+   "",
+   "  // note",
+   "  default:"
+  ]
+ },
+ {
+  "id": "random-11-94",
+  "lines": [
+   "\twhile (x)",
+   "break;",
+   "\t\t[1, 2],",
+   "}"
+  ],
+  "expected": [
+   "while (x)",
+   "  break;",
+   "  [1, 2],",
+   "  }"
+  ]
+ },
+ {
+  "id": "random-11-95",
+  "lines": [
+   "\tg(x => {",
+   " #if Y",
+   " );",
+   "    x(0)",
+   "if (a)",
+   "\t)",
+   "    c;",
+   "\t\t];"
+  ],
+  "expected": [
+   "g(x => {",
+   "#if Y",
+   " );",
+   "x(0)",
+   "  if (a)",
+   "    )",
+   "      c;",
+   "];"
+  ]
+ },
+ {
+  "id": "random-11-96",
+  "lines": [
+   "\telse",
+   "  \tc;",
+   "      2",
+   "x(0)",
+   "\t\tone :",
+   "  .then(r => r)",
+   "      public:",
+   "   ",
+   "  case 2: y();",
+   "\t\tenum E {",
+   "    a && b",
+   "\tlabel:",
+   "  \tX,",
+   "public:"
+  ],
+  "expected": [
+   "else",
+   "c;",
+   "  2",
+   "x(0)",
+   "  one :",
+   ".then(r => r)",
+   "  public:",
+   "",
+   "  case 2: y();",
+   "  enum E {",
+   "    a && b",
+   "      label:",
+   "      X,",
+   "    public:"
+  ]
+ },
+ {
+  "id": "random-11-97",
+  "lines": [
+   "b: 2",
+   "  x(); // trail",
+   " b: 2",
+   "s = \"{ (\";",
+   "    const arr = [",
+   "\t\t} finally {",
+   "    {",
+   "    #if Y",
+   "  function f(a, b) {",
+   "\t} finally {",
+   "    ];",
+   "\t);",
+   "  Y",
+   "  \t} catch (e) {"
+  ],
+  "expected": [
+   "b: 2",
+   "x(); // trail",
+   "b: 2",
+   "s = \"{ (\";",
+   "const arr = [",
+   "  } finally {",
+   "    {",
+   "#if Y",
+   "      function f(a, b) {",
+   "      } finally {",
+   "];",
+   ");",
+   "Y",
+   "      } catch (e) {"
+  ]
+ },
+ {
+  "id": "random-11-98",
+  "lines": [
+   "    x(); // trail",
+   "two;",
+   "[1, 2],",
+   "  \t#define X 1",
+   "      1,",
+   "else",
+   "x = 1;",
+   "  else",
+   " #define X 1",
+   "\t\ttotal = a +",
+   "b: 2",
+   "} while (x);",
+   "switch (x) {",
+   "while (x)"
+  ],
+  "expected": [
+   "x(); // trail",
+   "two;",
+   "[1, 2],",
+   "#define X 1",
+   "  1,",
+   "  else",
+   "  x = 1;",
+   "  else",
+   "#define X 1",
+   "  total = a +",
+   "  b: 2",
+   "  } while (x);",
+   "switch (x) {",
+   "  while (x)"
+  ]
+ },
+ {
+  "id": "random-11-99",
+  "lines": [
+   "\t\t(",
+   ");",
+   "  \t/* block",
+   " c;",
+   "\t\t});",
+   "} while (0);",
+   "\t\tb +",
+   "};",
+   "{ a: 1 },",
+   "  \tswitch (x) {",
+   "    */"
+  ],
+  "expected": [
+   "(",
+   ");",
+   "/* block",
+   "   c;",
+   "   });",
+   "   } while (0);",
+   "   b +",
+   "   };",
+   "   { a: 1 },",
+   "   switch (x) {",
+   " */"
+  ]
+ },
+ {
+  "id": "random-11-100",
+  "lines": [
+   "foo(a,",
+   "      #define X 1",
+   "/* one */",
+   "\t\tg(x => {",
+   "  call(",
+   "      #endif",
+   "    )",
+   "      } else if (b) {",
+   "\t} else {"
+  ],
+  "expected": [
+   "foo(a,",
+   "#define X 1",
+   "    /* one */",
+   "    g(x => {",
+   "      call(",
+   "#endif",
+   "          )",
+   "      } else if (b) {",
+   "      } else {"
+  ]
+ },
+ {
+  "id": "random-11-101",
+  "lines": [
+   "",
+   "\t|| c)",
+   "\t\t(",
+   "let v = [",
+   " .catch(e);",
+   "for (;;)"
+  ],
+  "expected": [
+   "",
+   "|| c)",
+   "(",
+   " let v = [",
+   " .catch(e);",
+   " for (;;)"
+  ]
+ },
+ {
+  "id": "random-11-102",
+  "lines": [
+   " call(",
+   "\t\t* star",
+   "} while (0);",
+   "\t\t{",
+   " b,",
+   "",
+   "  \tg(x => {",
+   "    2",
+   "  case 2: y();",
+   "s = \"{ (\";"
+  ],
+  "expected": [
+   "call(",
+   "    * star",
+   "    } while (0);",
+   "    {",
+   "    b,",
+   "",
+   "    g(x => {",
+   "        2",
+   "        case 2: y();",
+   "        s = \"{ (\";"
+  ]
+ },
+ {
+  "id": "random-11-103",
+  "lines": [
+   "\t\t} catch (e) {",
+   "\t\t(",
+   "  .catch(e);",
+   "#define X 1",
+   "#endif",
+   "b,",
+   "    ",
+   "async function g() {",
+   "\t\t};",
+   "try {",
+   "    if (a) {",
+   "A::A() :"
+  ],
+  "expected": [
+   "} catch (e) {",
+   "  (",
+   "   .catch(e);",
+   "#define X 1",
+   "#endif",
+   "   b,",
+   "",
+   "   async function g() {",
+   "   };",
+   "   try {",
+   "   if (a) {",
+   "   A::A() :"
+  ]
+ },
+ {
+  "id": "random-11-104",
+  "lines": [
+   "",
+   "  const o = {",
+   "    * star",
+   "enum E {",
+   "  \tX,",
+   "      int a,",
+   "x(); // trail",
+   "      label:",
+   "x(0)",
+   "  one :"
+  ],
+  "expected": [
+   "",
+   "const o = {",
+   "  * star",
+   "    enum E {",
+   "      X,",
+   "      int a,",
+   "      x(); // trail",
+   "label:",
+   "      x(0)",
+   "        one :"
+  ]
+ },
+ {
+  "id": "random-11-105",
+  "lines": [
+   "    call(",
+   "} while (0);",
+   "\tone :",
+   "while (x)"
+  ],
+  "expected": [
+   "call(",
+   "    } while (0);",
+   "one :",
+   "while (x)"
+  ]
+ },
+ {
+  "id": "random-11-106",
+  "lines": [
+   "c = '{';",
+   "\t#define X 1",
+   "switch (x) {",
+   " // note",
+   "  \tfunction f(a, b) {",
+   "    struct S s = {",
+   " } else {",
+   "\t\ttotal = a +",
+   " try {",
+   "    x++;",
+   " /* block"
+  ],
+  "expected": [
+   "c = '{';",
+   "#define X 1",
+   "switch (x) {",
+   "  // note",
+   "  function f(a, b) {",
+   "    struct S s = {",
+   "    } else {",
+   "      total = a +",
+   "        try {",
+   "          x++;",
+   "          /* block"
+  ]
+ },
+ {
+  "id": "random-11-107",
+  "lines": [
+   "if (a)",
+   "\tlabel:",
+   "      b +",
+   "\t];",
+   "  \tenum E {",
+   "    );",
+   "  let v = [",
+   "\tif (a) b(); else c();",
+   "  \tz;",
+   "   ",
+   "for (i = 0; i < n; i++) {",
+   "      b +",
+   " async function g() {",
+   "\t\tlet v = ["
+  ],
+  "expected": [
+   "if (a)",
+   "  label:",
+   "  b +",
+   "  ];",
+   "  enum E {",
+   "    );",
+   "    let v = [",
+   "      if (a) b(); else c();",
+   "    z;",
+   "",
+   "    for (i = 0; i < n; i++) {",
+   "      b +",
+   "        async function g() {",
+   "          let v = ["
+  ]
+ },
+ {
+  "id": "random-11-108",
+  "lines": [
+   "      let v = [",
+   " Y",
+   "\t\t.catch(e);",
+   "\t\t* star",
+   "#endif",
+   "      // note",
+   "      case 2: y();",
+   "      });"
+  ],
+  "expected": [
+   "let v = [",
+   "  Y",
+   "  .catch(e);",
+   "  * star",
+   "#endif",
+   "  // note",
+   "  case 2: y();",
+   "  });"
+  ]
+ },
+ {
+  "id": "random-11-109",
+  "lines": [
+   "void m()",
+   "  else",
+   "two;",
+   "x = cond ?",
+   "case 1:",
+   "\t\tmore",
+   "  public:",
+   " public:",
+   "  \tif (a)",
+   "  \tf(function() {"
+  ],
+  "expected": [
+   "void m()",
+   "  else",
+   "  two;",
+   "  x = cond ?",
+   "  case 1:",
+   "  more",
+   "  public:",
+   "  public:",
+   "if (a)",
+   "  f(function() {"
+  ]
+ },
+ {
+  "id": "random-11-110",
+  "lines": [
+   "call(",
+   "\tconst arr = [",
+   "} catch (e) {",
+   "  });",
+   " else x();",
+   "      s = 'a{b';",
+   "      total = a +",
+   "  \tcase 1:",
+   "  g(x => {",
+   "x = cond ?",
+   " b +",
+   "];",
+   "      } while (0);"
+  ],
+  "expected": [
+   "call(",
+   "    const arr = [",
+   "    } catch (e) {",
+   "    });",
+   "else x();",
+   "s = 'a{b';",
+   "  total = a +",
+   "  case 1:",
+   "    g(x => {",
+   "        x = cond ?",
+   "        b +",
+   "    ];",
+   "    } while (0);"
+  ]
+ },
+ {
+  "id": "random-11-111",
+  "lines": [
+   "\tc);",
+   " } catch (e) {",
+   ")",
+   "if (a) {",
+   "end \\",
+   "\t\tprivate:",
+   "call(",
+   "      b: 2",
+   "  \tfor (i = 0; i < n; i++) {",
+   "a && b",
+   "      struct S s = {"
+  ],
+  "expected": [
+   "c);",
+   "} catch (e) {",
+   "  )",
+   "    if (a) {",
+   "      end \\",
+   "      private:",
+   "        call(",
+   "            b: 2",
+   "            for (i = 0; i < n; i++) {",
+   "            a && b",
+   "            struct S s = {"
+  ]
+ },
+ {
+  "id": "random-11-112",
+  "lines": [
+   " }",
+   " case 2: y();",
+   "else x();",
+   "b: 2",
+   "\t\tdefault:"
+  ],
+  "expected": [
+   "}",
+   "case 2: y();",
+   "else x();",
+   "b: 2",
+   "default:"
+  ]
+ },
+ {
+  "id": "random-11-113",
+  "lines": [
+   " // note",
+   "  \tb,",
+   "\t|| c)",
+   "\t\tdo",
+   "\tdo {",
+   "       ",
+   "    do"
+  ],
+  "expected": [
+   "// note",
+   "b,",
+   "  || c)",
+   "  do",
+   "  do {",
+   "",
+   "    do"
+  ]
+ },
+ {
+  "id": "random-11-114",
+  "lines": [
+   "const arr = [",
+   "  switch (x) {",
+   "struct S s = {",
+   "  \ts = \"{ (\";",
+   "      (",
+   "  (",
+   "\t\t.then(r => r)",
+   "\t{ a: 1 },",
+   "if (a)",
+   "struct S s = {",
+   "\tif (a)",
+   "]",
+   "  z;",
+   "      class A {"
+  ],
+  "expected": [
+   "const arr = [",
+   "  switch (x) {",
+   "    struct S s = {",
+   "      s = \"{ (\";",
+   "      (",
+   "       (",
+   "        .then(r => r)",
+   "        { a: 1 },",
+   "        if (a)",
+   "        struct S s = {",
+   "        if (a)",
+   "]",
+   "z;",
+   "class A {"
+  ]
+ },
+ {
+  "id": "random-11-115",
+  "lines": [
+   "    f(function() {",
+   "      || c)",
+   "\t} catch (e) {",
+   "    z;",
+   "    void m()",
+   "{",
+   "one :",
+   "  .catch(e);",
+   "      s = \"{ (\";",
+   "a && b",
+   "/* block"
+  ],
+  "expected": [
+   "f(function() {",
+   "    || c)",
+   "} catch (e) {",
+   "  z;",
+   "  void m()",
+   "  {",
+   "one :",
+   "    .catch(e);",
+   "    s = \"{ (\";",
+   "    a && b",
+   "      /* block"
+  ]
+ },
+ {
+  "id": "random-11-116",
+  "lines": [
+   "c;",
+   "/* block",
+   "do {",
+   "* star",
+   "      b: 2",
+   "      c = '{';",
+   "\t\t);",
+   "} catch (e) {",
+   "s = 'a{b';",
+   "      function f(a, b) {",
+   "    break;",
+   "// comment {",
+   "\tf(function() {",
+   "struct S s = {"
+  ],
+  "expected": [
+   "c;",
+   "/* block",
+   "   do {",
+   " * star",
+   "b: 2",
+   "c = '{';",
+   ");",
+   "} catch (e) {",
+   "s = 'a{b';",
+   "function f(a, b) {",
+   "break;",
+   "// comment {",
+   "f(function() {",
+   "struct S s = {"
+  ]
+ },
+ {
+  "id": "random-11-117",
+  "lines": [
+   " switch (x) {",
+   "    z;",
+   " x = 1;",
+   "      while (x)"
+  ],
+  "expected": [
+   "switch (x) {",
+   "  z;",
+   "  x = 1;",
+   "  while (x)"
+  ]
+ },
+ {
+  "id": "random-11-118",
+  "lines": [
+   "\t\tclass A {",
+   "      public:",
+   "while (x)",
+   "  \tprivate:",
+   "x(); // trail",
+   "    for (i = 0; i < n; i++) {",
+   "\telse",
+   "  \tx++;",
+   "\tif (a) b(); else c();",
+   "\t} finally {",
+   "  \ttry {",
+   "    c;",
+   "    ];"
+  ],
+  "expected": [
+   "class A {",
+   "  public:",
+   "    while (x)",
+   "  private:",
+   "      x(); // trail",
+   "      for (i = 0; i < n; i++) {",
+   "        else",
+   "          x++;",
+   "        if (a) b(); else c();",
+   "      } finally {",
+   "        try {",
+   "          c;",
+   "          ];"
+  ]
+ },
+ {
+  "id": "random-11-119",
+  "lines": [
+   "\t\t|| c)",
+   " bar();",
+   "  (",
+   "} while (x);",
+   "  \t.catch(e);",
+   "      { a: 1 },",
+   "\t\t.then(r => r)",
+   "\t\tif (a) b(); else c();",
+   " a: 1,",
+   "  \tasync function g() {",
+   "    if (a)"
+  ],
+  "expected": [
+   "|| c)",
+   "bar();",
+   "(",
+   " } while (x);",
+   " .catch(e);",
+   " { a: 1 },",
+   " .then(r => r)",
+   " if (a) b(); else c();",
+   "a: 1,",
+   "async function g() {",
+   "if (a)"
+  ]
+ },
+ {
+  "id": "random-11-120",
+  "lines": [
+   "\t\tb,",
+   "else x();",
+   "  x = 1;",
+   "  \ttry {",
+   "      await p;",
+   " } finally {",
+   "\t\tenum E {"
+  ],
+  "expected": [
+   "b,",
+   "  else x();",
+   "x = 1;",
+   "try {",
+   "  await p;",
+   "} finally {",
+   "  enum E {"
+  ]
+ },
+ {
+  "id": "random-11-121",
+  "lines": [
+   "(",
+   " function f(a, b) {",
+   "  \tb,",
+   "  \t// comment {",
+   "  \tawait p;",
+   "",
+   "      } else if (b) {",
+   "// comment {",
+   "arg",
+   " )",
+   "bar();",
+   "arg",
+   "",
+   " ]"
+  ],
+  "expected": [
+   "(",
+   " function f(a, b) {",
+   " b,",
+   " // comment {",
+   " await p;",
+   "",
+   " } else if (b) {",
+   " // comment {",
+   " arg",
+   " )",
+   " bar();",
+   " arg",
+   "",
+   "   ]"
+  ]
+ },
+ {
+  "id": "random-11-122",
+  "lines": [
+   "\tconst o = {",
+   "    struct S s = {",
+   " Y",
+   "  two;",
+   "do {",
+   "      #if Y"
+  ],
+  "expected": [
+   "const o = {",
+   "  struct S s = {",
+   "    Y",
+   "      two;",
+   "    do {",
+   "#if Y"
+  ]
+ },
+ {
+  "id": "random-11-123",
+  "lines": [
+   "} else if (b) {",
+   "  total = a +",
+   "    ",
+   " do",
+   "  try {",
+   "foo(a,",
+   "    const o = {",
+   "  a && b",
+   "while (x)"
+  ],
+  "expected": [
+   "} else if (b) {",
+   "  total = a +",
+   "",
+   "    do",
+   "      try {",
+   "        foo(a,",
+   "            const o = {",
+   "            a && b",
+   "            while (x)"
+  ]
+ },
+ {
+  "id": "random-11-124",
+  "lines": [
+   "case 2: y();",
+   "Y",
+   "else x();",
+   "",
+   "      do",
+   "  \tdo",
+   "  bar();",
+   "void m()",
+   " } else {",
+   "b: 2",
+   "function f(a, b) {",
+   "    c);",
+   " #if Y"
+  ],
+  "expected": [
+   "case 2: y();",
+   "Y",
+   "else x();",
+   "",
+   "do",
+   "do",
+   "bar();",
+   "void m()",
+   "  } else {",
+   "b: 2",
+   "     function f(a, b) {",
+   "       c);",
+   "#if Y"
+  ]
+ },
+ {
+  "id": "random-11-125",
+  "lines": [
+   "      class A {",
+   "\ttry {",
+   "  };",
+   "} finally {",
+   "  #if Y"
+  ],
+  "expected": [
+   "class A {",
+   "  try {",
+   "  };",
+   "} finally {",
+   "#if Y"
+  ]
+ },
+ {
+  "id": "random-11-126",
+  "lines": [
+   "\tb: 2",
+   "      case 2: y();",
+   "switch (x) {",
+   "\tmore",
+   "X,",
+   "  \tb,",
+   "  if (a)"
+  ],
+  "expected": [
+   "b: 2",
+   "case 2: y();",
+   "switch (x) {",
+   "  more",
+   "    X,",
+   "    b,",
+   "    if (a)"
+  ]
+ },
+ {
+  "id": "random-11-127",
+  "lines": [
+   "// note",
+   "let v = [",
+   "\t} finally {",
+   "x = 1;",
+   "      } while (0);",
+   "let v = [",
+   " Y"
+  ],
+  "expected": [
+   "// note",
+   "let v = [",
+   "  } finally {",
+   "    x = 1;",
+   "  } while (0);",
+   "let v = [",
+   "  Y"
+  ]
+ },
+ {
+  "id": "random-11-128",
+  "lines": [
+   "case 2: y();",
+   "\t\t/* block",
+   "x++;",
+   "      .catch(e);",
+   "\ttry {",
+   "\t\tvoid m()",
+   "c);",
+   "\t[1, 2],"
+  ],
+  "expected": [
+   "case 2: y();",
+   "/* block",
+   "   x++;",
+   "   .catch(e);",
+   "   try {",
+   "   void m()",
+   "   c);",
+   "   [1, 2],"
+  ]
+ },
+ {
+  "id": "random-11-129",
+  "lines": [
+   "x = cond ?",
+   "while (x);",
+   "",
+   "\t\t} while (0);",
+   "2",
+   " #if Y",
+   "  )",
+   "\t\tx++;",
+   "    switch (x) {",
+   "      c);",
+   "#endif",
+   "1,",
+   "  \telse x();",
+   "    foo(a,"
+  ],
+  "expected": [
+   "x = cond ?",
+   "while (x);",
+   "",
+   "} while (0);",
+   "2",
+   "#if Y",
+   ")",
+   "x++;",
+   "switch (x) {",
+   "  c);",
+   "#endif",
+   "  1,",
+   "    else x();",
+   "    foo(a,"
+  ]
+ },
+ {
+  "id": "random-11-130",
+  "lines": [
+   "    else x();",
+   "    #define X 1",
+   "  total = a +",
+   "      b +",
+   "  \ttry {",
+   "end \\",
+   "const arr = [",
+   " call(",
+   "arg",
+   "      while (x)",
+   "\t\tasync function g() {",
+   "    private:",
+   "  \tx(); // trail",
+   "      1,"
+  ],
+  "expected": [
+   "else x();",
+   "#define X 1",
+   "total = a +",
+   "b +",
+   "try {",
+   "  end \\",
+   "    const arr = [",
+   "    call(",
+   "        arg",
+   "        while (x)",
+   "        async function g() {",
+   "        private:",
+   "        x(); // trail",
+   "        1,"
+  ]
+ },
+ {
+  "id": "random-11-131",
+  "lines": [
+   " });",
+   "     ",
+   "      }",
+   "const arr = [",
+   "];",
+   "      */",
+   " two;",
+   "    x(); // trail"
+  ],
+  "expected": [
+   "});",
+   "",
+   "}",
+   "const arr = [",
+   "];",
+   "*/",
+   "two;",
+   "x(); // trail"
+  ]
+ },
+ {
+  "id": "random-11-132",
+  "lines": [
+   "b,",
+   "      try {",
+   "#if Y"
+  ],
+  "expected": [
+   "b,",
+   "  try {",
+   "#if Y"
+  ]
+ },
+ {
+  "id": "random-11-133",
+  "lines": [
+   "  x = cond ?",
+   "[1, 2],",
+   "  }",
+   " /* block",
+   "      (",
+   "      do {",
+   "      a && b"
+  ],
+  "expected": [
+   "x = cond ?",
+   "[1, 2],",
+   "  }",
+   "/* block",
+   "   (",
+   "   do {",
+   "   a && b"
+  ]
+ },
+ {
+  "id": "random-11-134",
+  "lines": [
+   "more",
+   "      function f(a, b) {",
+   "} while (0);",
+   "",
+   " private:",
+   "call(",
+   "    try {",
+   "    g(x => {",
+   "\tf(function() {",
+   "      const o = {",
+   " if (a)",
+   "  \tkey: value,",
+   "  \tz;",
+   "  #define X 1"
+  ],
+  "expected": [
+   "more",
+   "function f(a, b) {",
+   "} while (0);",
+   "",
+   "private:",
+   "call(",
+   "    try {",
+   "    g(x => {",
+   "        f(function() {",
+   "            const o = {",
+   "            if (a)",
+   "            key: value,",
+   "            z;",
+   "#define X 1"
+  ]
+ },
+ {
+  "id": "random-11-135",
+  "lines": [
+   "",
+   "    g(x => {",
+   "x(); // trail",
+   "do",
+   "  \treturn {",
+   "      } else {",
+   "\t\tasync function g() {",
+   "    int a,",
+   "int a,"
+  ],
+  "expected": [
+   "",
+   "g(x => {",
+   "    x(); // trail",
+   "    do",
+   "    return {",
+   "    } else {",
+   "    async function g() {",
+   "    int a,",
+   "    int a,"
+  ]
+ },
+ {
+  "id": "random-11-136",
+  "lines": [
+   "\t\tx++;",
+   "\tcase 1:",
+   "end \\",
+   ")",
+   "      (",
+   "\tbar();",
+   "\t\ttry {",
+   "    switch (x) {"
+  ],
+  "expected": [
+   "x++;",
+   "case 1:",
+   "end \\",
+   "      )",
+   "      (",
+   "       bar();",
+   "       try {",
+   "       switch (x) {"
+  ]
+ },
+ {
+  "id": "random-11-137",
+  "lines": [
+   "    while (x)",
+   "\tif (a) b(); else c();",
+   "    #endif",
+   "c;",
+   "    2",
+   "  \tX,"
+  ],
+  "expected": [
+   "while (x)",
+   "  if (a) b(); else c();",
+   "#endif",
+   "  c;",
+   "  2",
+   "  X,"
+  ]
+ },
+ {
+  "id": "random-11-138",
+  "lines": [
+   "    arg",
+   "    for (;;)",
+   "b,",
+   "      X,",
+   "    while (x);",
+   "} else {"
+  ],
+  "expected": [
+   "arg",
+   "for (;;)",
+   "b,",
+   "  X,",
+   "  while (x);",
+   "} else {"
+  ]
+ },
+ {
+  "id": "random-11-139",
+  "lines": [
+   "  \tone :",
+   "    X,",
+   "    return {",
+   "\t} else {",
+   "\t\tclass A {",
+   "\tfoo(a,",
+   "      x = cond ?",
+   "  .then(r => r)",
+   "  \ttry {",
+   "    const arr = [",
+   "    for (;;)"
+  ],
+  "expected": [
+   "one :",
+   "X,",
+   "  return {",
+   "  } else {",
+   "    class A {",
+   "      foo(a,",
+   "          x = cond ?",
+   "          .then(r => r)",
+   "          try {",
+   "          const arr = [",
+   "          for (;;)"
+  ]
+ },
+ {
+  "id": "random-11-140",
+  "lines": [
+   "  \tprivate:",
+   "  } finally {",
+   "      2",
+   "return x;",
+   "    } while (0);",
+   "];",
+   "\t2",
+   "\t\t{ a: 1 },"
+  ],
+  "expected": [
+   "private:",
+   "} finally {",
+   "  2",
+   "    return x;",
+   "} while (0);",
+   "];",
+   "2",
+   "{ a: 1 },"
+  ]
+ },
+ {
+  "id": "random-11-141",
+  "lines": [
+   "// comment {",
+   "]",
+   "\t} while (x);",
+   "    1,",
+   "      int a,",
+   "\tb: 2",
+   " for (i = 0; i < n; i++) {"
+  ],
+  "expected": [
+   "// comment {",
+   "]",
+   "} while (x);",
+   "1,",
+   "  int a,",
+   "  b: 2",
+   "  for (i = 0; i < n; i++) {"
+  ]
+ },
+ {
+  "id": "random-11-142",
+  "lines": [
+   "",
+   "\tb,",
+   "      end \\"
+  ],
+  "expected": [
+   "",
+   "b,",
+   "  end \\"
+  ]
+ },
+ {
+  "id": "random-11-143",
+  "lines": [
+   "\t\tawait p;",
+   "\t\tswitch (x) {",
+   "    let v = [",
+   "key: value,",
+   "    A::A() :",
+   "\tc;"
+  ],
+  "expected": [
+   "await p;",
+   "switch (x) {",
+   "  let v = [",
+   "    key: value,",
+   "    A::A() :",
+   "      c;"
+  ]
+ },
+ {
+  "id": "random-11-144",
+  "lines": [
+   "\twhile (x);",
+   "two;",
+   ");",
+   "  \twhile (x);",
+   "|| c)",
+   "      b +",
+   "c = '{';",
+   "A::A() :",
+   "case 2: y();",
+   " default:",
+   "  /* one */",
+   "    } else if (b) {",
+   "      #if Y"
+  ],
+  "expected": [
+   "while (x);",
+   "two;",
+   ");",
+   "while (x);",
+   "|| c)",
+   "b +",
+   "c = '{';",
+   "A::A() :",
+   "  case 2: y();",
+   "    default:",
+   "    /* one */",
+   "    } else if (b) {",
+   "#if Y"
+  ]
+ },
+ {
+  "id": "random-11-145",
+  "lines": [
+   "  total = a +",
+   "\t\t} while (0);",
+   "      #endif",
+   "const arr = [",
+   "  \telse x();",
+   "  const o = {",
+   "\t\t#endif",
+   "\t\ta: 1,",
+   "\t\ta: 1,",
+   "} else {",
+   ");",
+   "\t\ta && b",
+   " async function g() {"
+  ],
+  "expected": [
+   "total = a +",
+   "} while (0);",
+   "#endif",
+   "const arr = [",
+   "  else x();",
+   "  const o = {",
+   "#endif",
+   "a: 1,",
+   "   a: 1,",
+   "  } else {",
+   "    );",
+   "    a && b",
+   "      async function g() {"
+  ]
+ },
+ {
+  "id": "random-11-146",
+  "lines": [
+   " x(0)",
+   "c);",
+   "      function f(a, b) {",
+   "",
+   "      arg",
+   "do",
+   " (",
+   "",
+   "else x();"
+  ],
+  "expected": [
+   "x(0)",
+   "  c);",
+   "  function f(a, b) {",
+   "",
+   "    arg",
+   "      do",
+   "        (",
+   "",
+   "         else x();"
+  ]
+ },
+ {
+  "id": "random-11-147",
+  "lines": [
+   "  \tf(function() {",
+   "if (a)",
+   "      try {",
+   "  \t   ",
+   "    ",
+   "  foo(a,",
+   "  \tcall(",
+   "let v = [",
+   "} else if (b) {"
+  ],
+  "expected": [
+   "f(function() {",
+   "    if (a)",
+   "    try {",
+   "",
+   "",
+   "    foo(a,",
+   "        call(",
+   "          let v = [",
+   "          } else if (b) {"
+  ]
+ },
+ {
+  "id": "random-11-148",
+  "lines": [
+   "};",
+   "  end \\",
+   "  key: value,",
+   "      b,",
+   "} else if (b) {",
+   "    const arr = [",
+   "};",
+   "  \tg(x => {",
+   "  \tdo {",
+   " * star"
+  ],
+  "expected": [
+   "};",
+   "end \\",
+   "      key: value,",
+   "    b,",
+   "    } else if (b) {",
+   "      const arr = [",
+   "    };",
+   "g(x => {",
+   "    do {",
+   "    * star"
+  ]
+ },
+ {
+  "id": "random-11-149",
+  "lines": [
+   "\ttotal = a +",
+   "\tlet v = [",
+   "  \tawait p;",
+   "\t.then(r => r)",
+   "\t1,",
+   ");"
+  ],
+  "expected": [
+   "total = a +",
+   "let v = [",
+   "  await p;",
+   ".then(r => r)",
+   "  1,",
+   "  );"
+  ]
+ },
+ {
+  "id": "random-11-150",
+  "lines": [
+   "\tfor (i = 0; i < n; i++) {",
+   "      } else {",
+   "\t\t]",
+   "\tkey: value,",
+   "    #if Y"
+  ],
+  "expected": [
+   "for (i = 0; i < n; i++) {",
+   "} else {",
+   "  ]",
+   "    key: value,",
+   "#if Y"
+  ]
+ },
+ {
+  "id": "random-11-151",
+  "lines": [
+   "async function g() {",
+   "      };",
+   "s = \"{ (\";",
+   "  \tswitch (x) {",
+   " X,",
+   "\tx(0)",
+   "  z;",
+   "\treturn x;",
+   "    c = '{';",
+   "    b,",
+   "\t\tstruct S s = {"
+  ],
+  "expected": [
+   "async function g() {",
+   "};",
+   "s = \"{ (\";",
+   "switch (x) {",
+   "  X,",
+   "    x(0)",
+   "      z;",
+   "  return x;",
+   "  c = '{';",
+   "  b,",
+   "    struct S s = {"
+  ]
+ },
+ {
+  "id": "random-11-152",
+  "lines": [
+   "* star",
+   "// comment {",
+   "    } else if (b) {",
+   "  \tlet v = ["
+  ],
+  "expected": [
+   "* star",
+   "// comment {",
+   "} else if (b) {",
+   "  let v = ["
+  ]
+ },
+ {
+  "id": "random-11-153",
+  "lines": [
+   "    b +",
+   "} finally {",
+   "x++;",
+   "  \tx(); // trail",
+   "g(x => {",
+   "#endif",
+   "\tenum E {",
+   "  \ta: 1,",
+   "const o = {"
+  ],
+  "expected": [
+   "b +",
+   "} finally {",
+   "  x++;",
+   "  x(); // trail",
+   "  g(x => {",
+   "#endif",
+   "      enum E {",
+   "a: 1,",
+   "const o = {"
+  ]
+ },
+ {
+  "id": "random-11-154",
+  "lines": [
+   "\t)",
+   " b,",
+   "    c = '{';",
+   " for (;;)",
+   "",
+   " one :",
+   " public:",
+   "else",
+   "  \t};",
+   "\t\tfor (i = 0; i < n; i++) {",
+   "  \tf(function() {"
+  ],
+  "expected": [
+   ")",
+   "b,",
+   "  c = '{';",
+   "for (;;)",
+   "",
+   "one :",
+   "public:",
+   "else",
+   "};",
+   "for (i = 0; i < n; i++) {",
+   "  f(function() {"
+  ]
+ },
+ {
+  "id": "random-11-155",
+  "lines": [
+   "  \t{",
+   "      g(x => {",
+   "b +",
+   "\t\tcase 1:",
+   " #endif",
+   "async function g() {",
+   "    ]",
+   " const arr = ["
+  ],
+  "expected": [
+   "{",
+   "  g(x => {",
+   "      b +",
+   "      case 1:",
+   "#endif",
+   "      async function g() {",
+   "      ]",
+   "      const arr = ["
+  ]
+ },
+ {
+  "id": "random-11-156",
+  "lines": [
+   "\tY",
+   "      const arr = [",
+   "Y",
+   "\t\ttwo;"
+  ],
+  "expected": [
+   "Y",
+   "const arr = [",
+   "  Y",
+   "  two;"
+  ]
+ },
+ {
+  "id": "random-11-157",
+  "lines": [
+   "\tenum E {",
+   "      c);",
+   "      await p;",
+   " s = 'a{b';",
+   " x = 1;",
+   "    }",
+   " x = cond ?",
+   "return x;",
+   " return x;"
+  ],
+  "expected": [
+   "enum E {",
+   "  c);",
+   "  await p;",
+   "  s = 'a{b';",
+   "    x = 1;",
+   "  }",
+   "  x = cond ?",
+   "    return x;",
+   "  return x;"
+  ]
+ },
+ {
+  "id": "random-11-158",
+  "lines": [
+   "\t.catch(e);",
+   "    z;",
+   "\t\telse x();",
+   ");",
+   " 2",
+   "",
+   "break;",
+   "a && b",
+   "    if (a) {",
+   "    foo(a,",
+   "  \t#define X 1",
+   "  \tY",
+   "  total = a +"
+  ],
+  "expected": [
+   ".catch(e);",
+   "z;",
+   "else x();",
+   ");",
+   "2",
+   "",
+   "break;",
+   "a && b",
+   "if (a) {",
+   "  foo(a,",
+   "#define X 1",
+   "      Y",
+   "      total = a +"
+  ]
+ },
+ {
+  "id": "random-11-159",
+  "lines": [
+   "foo(a,",
+   "    /* block",
+   "    )",
+   "\tz;",
+   "  \tdo",
+   " * star",
+   "  \telse x();",
+   "// comment {",
+   "    a: 1,",
+   "\t\t/* one */",
+   "else x();"
+  ],
+  "expected": [
+   "foo(a,",
+   "    /* block",
+   "       )",
+   "       z;",
+   "       do",
+   "     * star",
+   "     else x();",
+   "  // comment {",
+   "  a: 1,",
+   "  /* one */",
+   "  else x();"
+  ]
+ },
+ {
+  "id": "random-11-160",
+  "lines": [
+   "    {",
+   "g(x => {",
+   "      default:",
+   "      async function g() {",
+   "2",
+   "  do {",
+   "    end \\",
+   "\t#if Y"
+  ],
+  "expected": [
+   "{",
+   "  g(x => {",
+   "      default:",
+   "      async function g() {",
+   "      2",
+   "      do {",
+   "      end \\",
+   "#if Y"
+  ]
+ },
+ {
+  "id": "random-11-161",
+  "lines": [
+   "c = '{';",
+   "\t\tfor (i = 0; i < n; i++) {",
+   " } while (0);",
+   "  \tfor (i = 0; i < n; i++) {",
+   "\t\t#define X 1"
+  ],
+  "expected": [
+   "c = '{';",
+   "for (i = 0; i < n; i++) {",
+   "} while (0);",
+   "for (i = 0; i < n; i++) {",
+   "#define X 1"
+  ]
+ },
+ {
+  "id": "random-11-162",
+  "lines": [
+   "    };",
+   "enum E {",
+   "",
+   "    /* block",
+   "      end \\",
+   "\t\t|| c)",
+   "\t\tkey: value,",
+   "",
+   "\t\targ"
+  ],
+  "expected": [
+   "};",
+   "enum E {",
+   "",
+   "  /* block",
+   "     end \\",
+   "     || c)",
+   "key: value,",
+   "",
+   "arg"
+  ]
+ },
+ {
+  "id": "random-11-163",
+  "lines": [
+   "} else {",
+   "case 1:",
+   "      b +",
+   "{ a: 1 },",
+   "       ",
+   "    x(); // trail",
+   "\tif (a) {",
+   "    });",
+   "\t\tone :",
+   "\t\twhile (x);",
+   "\t} while (0);",
+   " void m()"
+  ],
+  "expected": [
+   "} else {",
+   "  case 1:",
+   "    b +",
+   "    { a: 1 },",
+   "",
+   "      x(); // trail",
+   "    if (a) {",
+   "    });",
+   "one :",
+   "    while (x);",
+   "} while (0);",
+   "void m()"
+  ]
+ },
+ {
+  "id": "random-11-164",
+  "lines": [
+   "{ a: 1 },",
+   "\t\tb,",
+   "  c;"
+  ],
+  "expected": [
+   "{ a: 1 },",
+   "  b,",
+   "  c;"
+  ]
+ },
+ {
+  "id": "random-11-165",
+  "lines": [
+   "struct S s = {",
+   "* star",
+   "  \t}",
+   "    } catch (e) {",
+   "\t\tint a,",
+   " const o = {",
+   "\tone :",
+   "    }",
+   "      x++;",
+   " do",
+   "\t\t* star"
+  ],
+  "expected": [
+   "struct S s = {",
+   "  * star",
+   "}",
+   "} catch (e) {",
+   "  int a,",
+   "      const o = {",
+   "one :",
+   "      }",
+   "  x++;",
+   "  do",
+   "    * star"
+  ]
+ },
+ {
+  "id": "random-11-166",
+  "lines": [
+   "      .then(r => r)",
+   "\tone :",
+   "(",
+   "   ",
+   "\t\t{ a: 1 },",
+   "  \tclass A {",
+   "else",
+   "};",
+   "      /* one */",
+   "  private:",
+   "  c);"
+  ],
+  "expected": [
+   ".then(r => r)",
+   "  one :",
+   "  (",
+   "",
+   "   { a: 1 },",
+   "   class A {",
+   "   else",
+   "   };",
+   "   /* one */",
+   "   private:",
+   "   c);"
+  ]
+ },
+ {
+  "id": "random-11-167",
+  "lines": [
+   "  b,",
+   "switch (x) {",
+   "",
+   "    } while (x);",
+   " ]",
+   "a: 1,",
+   "      // note",
+   " bar();",
+   "      );",
+   "} catch (e) {",
+   " c);",
+   "  b +"
+  ],
+  "expected": [
+   "b,",
+   "  switch (x) {",
+   "",
+   "  } while (x);",
+   "]",
+   "a: 1,",
+   "  // note",
+   "  bar();",
+   "  );",
+   "  } catch (e) {",
+   "    c);",
+   "    b +"
+  ]
+ },
+ {
+  "id": "random-11-168",
+  "lines": [
+   "  \tlabel:",
+   "(",
+   "2",
+   "",
+   "  private:",
+   "\tx++;",
+   "{",
+   "return x;",
+   "  \tcase 1:"
+  ],
+  "expected": [
+   "label:",
+   "(",
+   " 2",
+   "",
+   " private:",
+   " x++;",
+   " {",
+   " return x;",
+   " case 1:"
+  ]
+ },
+ {
+  "id": "random-11-169",
+  "lines": [
+   "} finally {",
+   "      case 1:",
+   "  ]",
+   "while (x)"
+  ],
+  "expected": [
+   "} finally {",
+   "  case 1:",
+   "    ]",
+   "      while (x)"
+  ]
+ },
+ {
+  "id": "random-11-170",
+  "lines": [
+   "const arr = [",
+   "  \tfor (;;)",
+   "} else if (b) {",
+   " switch (x) {",
+   "  \t// note"
+  ],
+  "expected": [
+   "const arr = [",
+   "  for (;;)",
+   "  } else if (b) {",
+   "    switch (x) {",
+   "      // note"
+  ]
+ },
+ {
+  "id": "random-11-171",
+  "lines": [
+   "",
+   "    const arr = [",
+   "try {",
+   "  \t{ a: 1 },",
+   "return {"
+  ],
+  "expected": [
+   "",
+   "const arr = [",
+   "  try {",
+   "    { a: 1 },",
+   "      return {"
+  ]
+ },
+ {
+  "id": "random-11-172",
+  "lines": [
+   "let v = [",
+   "c);",
+   " void m()",
+   "   ",
+   "  \tone :"
+  ],
+  "expected": [
+   "let v = [",
+   "  c);",
+   "void m()",
+   "",
+   "  one :"
+  ]
+ },
+ {
+  "id": "random-11-173",
+  "lines": [
+   "return {",
+   "else",
+   "      foo(a,",
+   "X,",
+   "bar();",
+   "  \tlabel:",
+   "\t\tdefault:",
+   ")",
+   "    a: 1,",
+   "\t\t.catch(e);"
+  ],
+  "expected": [
+   "return {",
+   "  else",
+   "    foo(a,",
+   "        X,",
+   "        bar();",
+   "label:",
+   "default:",
+   ")",
+   "      a: 1,",
+   "      .catch(e);"
+  ]
+ },
+ {
+  "id": "random-11-174",
+  "lines": [
+   "      2",
+   "\t} finally {",
+   "      else x();",
+   " call(",
+   " public:",
+   "public:",
+   "z;",
+   "  */"
+  ],
+  "expected": [
+   "2",
+   "} finally {",
+   "  else x();",
+   "  call(",
+   "      public:",
+   "      public:",
+   "      z;",
+   "      */"
+  ]
+ },
+ {
+  "id": "random-11-175",
+  "lines": [
+   " */",
+   "      ];",
+   " case 1:",
+   "\tb: 2",
+   "",
+   "a: 1,",
+   "});"
+  ],
+  "expected": [
+   "*/",
+   "];",
+   "case 1:",
+   "b: 2",
+   "",
+   "a: 1,",
+   "  });"
+  ]
+ },
+ {
+  "id": "random-11-176",
+  "lines": [
+   "\t#define X 1",
+   "  \t*/",
+   "  for (i = 0; i < n; i++) {",
+   "         ",
+   "A::A() :",
+   "  { a: 1 },",
+   "      )",
+   " key: value,",
+   "} while (0);",
+   "      .then(r => r)"
+  ],
+  "expected": [
+   "#define X 1",
+   "*/",
+   "for (i = 0; i < n; i++) {",
+   "",
+   "  A::A() :",
+   "  { a: 1 },",
+   "    )",
+   "      key: value,",
+   "} while (0);",
+   ".then(r => r)"
+  ]
+ },
+ {
+  "id": "random-11-177",
+  "lines": [
+   "  \tif (a) {",
+   "\t\tg(x => {",
+   "#define X 1",
+   "\tvoid m()",
+   "    const arr = [",
+   "  \t2",
+   "* star",
+   "  \tg(x => {",
+   "\t\tpublic:",
+   "      a: 1,",
+   "\tlabel:",
+   "      /* one */",
+   "\t#if Y",
+   " } while (x);"
+  ],
+  "expected": [
+   "if (a) {",
+   "  g(x => {",
+   "#define X 1",
+   "      void m()",
+   "      const arr = [",
+   "      2",
+   "      * star",
+   "      g(x => {",
+   "          public:",
+   "a: 1,",
+   "label:",
+   "/* one */",
+   "#if Y",
+   "} while (x);"
+  ]
+ },
+ {
+  "id": "random-11-178",
+  "lines": [
+   "{ a: 1 },",
+   "end \\",
+   "\telse",
+   "  \twhile (x)",
+   "",
+   "      break;",
+   "total = a +",
+   " total = a +",
+   "x++;",
+   "  key: value,",
+   "\twhile (x)",
+   "\t\tprivate:"
+  ],
+  "expected": [
+   "{ a: 1 },",
+   "  end \\",
+   "  else",
+   "while (x)",
+   "",
+   "  break;",
+   "  total = a +",
+   "  total = a +",
+   "  x++;",
+   "key: value,",
+   "  while (x)",
+   "  private:"
+  ]
+ },
+ {
+  "id": "random-11-179",
+  "lines": [
+   "more",
+   "\telse",
+   " } else {",
+   "  \t{"
+  ],
+  "expected": [
+   "more",
+   "else",
+   "} else {",
+   "  {"
+  ]
+ },
+ {
+  "id": "random-11-180",
+  "lines": [
+   "\t\tfor (i = 0; i < n; i++) {",
+   " if (a) b(); else c();",
+   "A::A() :",
+   "    a: 1,",
+   "  } else if (b) {",
+   "  for (i = 0; i < n; i++) {",
+   "\t   ",
+   "|| c)",
+   "};",
+   "\tprivate:",
+   "    } else {",
+   "default:",
+   "label:",
+   "    b,"
+  ],
+  "expected": [
+   "for (i = 0; i < n; i++) {",
+   "  if (a) b(); else c();",
+   "  A::A() :",
+   "    a: 1,",
+   "} else if (b) {",
+   "  for (i = 0; i < n; i++) {",
+   "",
+   "    || c)",
+   "  };",
+   "  private:",
+   "} else {",
+   "  default:",
+   "label:",
+   "    b,"
+  ]
+ },
+ {
+  "id": "random-11-181",
+  "lines": [
+   "    end \\",
+   "  c;",
+   "};",
+   "s = \"{ (\";",
+   "b +",
+   "      [1, 2],",
+   "\t\treturn {",
+   " });",
+   "  \t// note",
+   "  \tawait p;"
+  ],
+  "expected": [
+   "end \\",
+   "      c;",
+   "};",
+   "s = \"{ (\";",
+   "b +",
+   "[1, 2],",
+   "  return {",
+   "  });",
+   "// note",
+   "await p;"
+  ]
+ },
+ {
+  "id": "random-11-182",
+  "lines": [
+   "{ a: 1 },",
+   "}",
+   "  \t);",
+   " [1, 2],",
+   "\tasync function g() {",
+   "",
+   "      } else if (b) {",
+   " while (x)"
+  ],
+  "expected": [
+   "{ a: 1 },",
+   "  }",
+   ");",
+   "[1, 2],",
+   "  async function g() {",
+   "",
+   "  } else if (b) {",
+   "    while (x)"
+  ]
+ },
+ {
+  "id": "random-11-183",
+  "lines": [
+   "// note",
+   "  \tcase 2: y();",
+   "|| c)",
+   " end \\",
+   " #if Y"
+  ],
+  "expected": [
+   "// note",
+   "case 2: y();",
+   "|| c)",
+   "end \\",
+   "#if Y"
+  ]
+ },
+ {
+  "id": "random-11-184",
+  "lines": [
+   " {",
+   "  for (;;)",
+   "  a && b",
+   "",
+   " default:",
+   "  case 2: y();",
+   "  \t/* block",
+   "\tif (a)",
+   "  function f(a, b) {",
+   "b,",
+   "void m()"
+  ],
+  "expected": [
+   "{",
+   "  for (;;)",
+   "    a && b",
+   "",
+   "  default:",
+   "  case 2: y();",
+   "          /* block",
+   "             if (a)",
+   "             function f(a, b) {",
+   "             b,",
+   "             void m()"
+  ]
+ },
+ {
+  "id": "random-11-185",
+  "lines": [
+   "[1, 2],",
+   "  \tdo",
+   " try {",
+   "label:",
+   "\t\tb,",
+   "do {",
+   "\telse x();",
+   "  if (a) b(); else c();",
+   "s = \"{ (\";",
+   "switch (x) {",
+   " do {",
+   "} finally {"
+  ],
+  "expected": [
+   "[1, 2],",
+   "  do",
+   "  try {",
+   "label:",
+   "    b,",
+   "    do {",
+   "      else x();",
+   "      if (a) b(); else c();",
+   "      s = \"{ (\";",
+   "      switch (x) {",
+   "        do {",
+   "        } finally {"
+  ]
+ },
+ {
+  "id": "random-11-186",
+  "lines": [
+   "try {",
+   "  \t#endif",
+   "  \tg(x => {",
+   "a: 1,",
+   "  \ts = \"{ (\";",
+   "\tfoo(a,",
+   "a && b",
+   "  for (i = 0; i < n; i++) {",
+   "  while (x);",
+   "  \treturn {",
+   "      1,"
+  ],
+  "expected": [
+   "try {",
+   "#endif",
+   "  g(x => {",
+   "a: 1,",
+   "s = \"{ (\";",
+   "foo(a,",
+   "    a && b",
+   "    for (i = 0; i < n; i++) {",
+   "    while (x);",
+   "    return {",
+   "    1,"
+  ]
+ },
+ {
+  "id": "random-11-187",
+  "lines": [
+   "label:",
+   "    b: 2",
+   "\t\ta: 1,",
+   "z;",
+   "    do",
+   "{ a: 1 },",
+   "      x = 1;",
+   "    for (;;)",
+   "\tf(function() {",
+   "  \tenum E {",
+   "  for (i = 0; i < n; i++) {",
+   "  \t} else if (b) {",
+   "      } while (x);",
+   "    bar();"
+  ],
+  "expected": [
+   "label:",
+   "b: 2",
+   "a: 1,",
+   "  z;",
+   "do",
+   "{ a: 1 },",
+   "  x = 1;",
+   "for (;;)",
+   "f(function() {",
+   "    enum E {",
+   "    for (i = 0; i < n; i++) {",
+   "    } else if (b) {",
+   "    } while (x);",
+   "    bar();"
+  ]
+ },
+ {
+  "id": "random-11-188",
+  "lines": [
+   "    a && b",
+   "  \tcase 2: y();",
+   "#define X 1",
+   "one :",
+   "};",
+   "\t#if Y",
+   "    return {",
+   "private:",
+   "return x;",
+   "    const o = {",
+   "switch (x) {",
+   " end \\",
+   "  * star",
+   ""
+  ],
+  "expected": [
+   "a && b",
+   "case 2: y();",
+   "#define X 1",
+   "one :",
+   "};",
+   "#if Y",
+   "return {",
+   "  private:",
+   "    return x;",
+   "    const o = {",
+   "      switch (x) {",
+   "        end \\",
+   "          * star",
+   ""
+  ]
+ },
+ {
+  "id": "random-11-189",
+  "lines": [
+   "\t} else {",
+   "      } while (0);",
+   "   ",
+   "      foo(a,",
+   "  const o = {",
+   "  s = \"{ (\";",
+   "    call(",
+   "      bar();"
+  ],
+  "expected": [
+   "} else {",
+   "} while (0);",
+   "",
+   "foo(a,",
+   "    const o = {",
+   "    s = \"{ (\";",
+   "    call(",
+   "        bar();"
+  ]
+ },
+ {
+  "id": "random-11-190",
+  "lines": [
+   "      } while (0);",
+   "  * star",
+   "\t#define X 1",
+   "    // comment {",
+   "    do",
+   " #define X 1",
+   ""
+  ],
+  "expected": [
+   "} while (0);",
+   "* star",
+   "#define X 1",
+   "// comment {",
+   "do",
+   "#define X 1",
+   ""
+  ]
+ },
+ {
+  "id": "random-11-191",
+  "lines": [
+   "  \tcall(",
+   "      a: 1,",
+   "  \tf(function() {"
+  ],
+  "expected": [
+   "call(",
+   "    a: 1,",
+   "    f(function() {"
+  ]
+ },
+ {
+  "id": "random-11-192",
+  "lines": [
+   "for (;;)",
+   " // comment {",
+   " b: 2",
+   " {",
+   "    key: value,"
+  ],
+  "expected": [
+   "for (;;)",
+   "// comment {",
+   "b: 2",
+   "{",
+   "key: value,"
+  ]
+ },
+ {
+  "id": "random-11-193",
+  "lines": [
+   " total = a +",
+   "    c);",
+   "",
+   "\ttwo;"
+  ],
+  "expected": [
+   "total = a +",
+   "c);",
+   "",
+   "two;"
+  ]
+ },
+ {
+  "id": "random-11-194",
+  "lines": [
+   "  arg",
+   "private:",
+   "    return {",
+   "});",
+   "      b,",
+   "\t\twhile (x);",
+   "end \\",
+   "  \t// note",
+   "\t\tb +",
+   " // note",
+   "\t\tpublic:",
+   "  \tx(0)",
+   "else"
+  ],
+  "expected": [
+   "arg",
+   "private:",
+   "return {",
+   "});",
+   "b,",
+   "  while (x);",
+   "end \\",
+   "      // note",
+   "    b +",
+   "    // note",
+   "    public:",
+   "x(0)",
+   "  else"
+  ]
+ },
+ {
+  "id": "random-11-195",
+  "lines": [
+   "  async function g() {",
+   " */",
+   "return {",
+   "s = \"{ (\";",
+   "];"
+  ],
+  "expected": [
+   "async function g() {",
+   "  */",
+   "    return {",
+   "      s = \"{ (\";",
+   "      ];"
+  ]
+ },
+ {
+  "id": "random-11-196",
+  "lines": [
+   "",
+   "  \tc;",
+   "\t/* one */",
+   "// comment {",
+   "\t\tfoo(a,",
+   " } catch (e) {",
+   "    s = \"{ (\";",
+   "struct S s = {",
+   "\tpublic:",
+   ".catch(e);",
+   "enum E {",
+   "2"
+  ],
+  "expected": [
+   "",
+   "c;",
+   "/* one */",
+   "// comment {",
+   "foo(a,",
+   "    } catch (e) {",
+   "    s = \"{ (\";",
+   "    struct S s = {",
+   "    public:",
+   "    .catch(e);",
+   "    enum E {",
+   "    2"
+  ]
+ },
+ {
+  "id": "random-11-197",
+  "lines": [
+   "    } else {",
+   "      // comment {",
+   "    ];",
+   "\tcase 1:"
+  ],
+  "expected": [
+   "} else {",
+   "  // comment {",
+   "  ];",
+   "  case 1:"
+  ]
+ },
+ {
+  "id": "random-11-198",
+  "lines": [
+   "x(); // trail",
+   "];",
+   "g(x => {",
+   "    await p;",
+   "  x(); // trail"
+  ],
+  "expected": [
+   "x(); // trail",
+   "];",
+   "g(x => {",
+   "    await p;",
+   "    x(); // trail"
+  ]
+ },
+ {
+  "id": "random-11-199",
+  "lines": [
+   " public:",
+   " try {",
+   "\tx(0)",
+   "\ttotal = a +",
+   "\tx++;",
+   "  default:"
+  ],
+  "expected": [
+   "public:",
+   "try {",
+   "  x(0)",
+   "    total = a +",
+   "    x++;",
+   "  default:"
+  ]
+ },
+ {
+  "id": "random-11-200",
+  "lines": [
+   "if (a) b(); else c();",
+   "\t\t{",
+   "a && b",
+   "  if (a) b(); else c();",
+   "#if Y",
+   "    end \\",
+   "*/",
+   "  \tconst o = {",
+   " (",
+   "  \ttotal = a +"
+  ],
+  "expected": [
+   "if (a) b(); else c();",
+   "{",
+   "  a && b",
+   "    if (a) b(); else c();",
+   "#if Y",
+   "  end \\",
+   "    */",
+   "    const o = {",
+   "      (",
+   "       total = a +"
+  ]
+ },
+ {
+  "id": "random-11-201",
+  "lines": [
+   "  x++;",
+   " while (x);",
+   "  \tswitch (x) {",
+   ".catch(e);",
+   "});",
+   "int a,",
+   "class A {",
+   ");",
+   "(",
+   "\t\t2",
+   "      { a: 1 },",
+   "",
+   "\t\t} while (0);",
+   "public:"
+  ],
+  "expected": [
+   "x++;",
+   "while (x);",
+   "switch (x) {",
+   "  .catch(e);",
+   "});",
+   "int a,",
+   "    class A {",
+   "      );",
+   "      (",
+   "       2",
+   "       { a: 1 },",
+   "",
+   "       } while (0);",
+   "       public:"
+  ]
+ },
+ {
+  "id": "random-11-202",
+  "lines": [
+   "b,",
+   "  \t[1, 2],",
+   "      const o = {",
+   "\t\tif (a) b(); else c();",
+   "key: value,",
+   "  \t1,",
+   "\tf(function() {",
+   "\ttry {",
+   " x++;",
+   " a && b",
+   "break;",
+   "\t\tb,",
+   "      end \\"
+  ],
+  "expected": [
+   "b,",
+   "  [1, 2],",
+   "  const o = {",
+   "    if (a) b(); else c();",
+   "key: value,",
+   "       1,",
+   "       f(function() {",
+   "           try {",
+   "           x++;",
+   "           a && b",
+   "           break;",
+   "           b,",
+   "           end \\"
+  ]
+ },
+ {
+  "id": "random-11-203",
+  "lines": [
+   "  class A {",
+   "      g(x => {",
+   "* star",
+   "  \tawait p;",
+   "\t\telse",
+   " z;",
+   " c = '{';",
+   "    case 2: y();",
+   "f(function() {",
+   "  } else if (b) {"
+  ],
+  "expected": [
+   "class A {",
+   "  g(x => {",
+   "      * star",
+   "      await p;",
+   "      else",
+   "      z;",
+   "      c = '{';",
+   "      case 2: y();",
+   "      f(function() {",
+   "          } else if (b) {"
+  ]
+ },
+ {
+  "id": "random-11-204",
+  "lines": [
+   "\ts = \"{ (\";",
+   "    for (i = 0; i < n; i++) {",
+   "\t#endif",
+   " public:",
+   "  } else if (b) {"
+  ],
+  "expected": [
+   "s = \"{ (\";",
+   "for (i = 0; i < n; i++) {",
+   "#endif",
+   "  public:",
+   "} else if (b) {"
+  ]
+ },
+ {
+  "id": "random-11-205",
+  "lines": [
+   "c;",
+   "\t\t} catch (e) {",
+   "      public:"
+  ],
+  "expected": [
+   "c;",
+   "} catch (e) {",
+   "  public:"
+  ]
+ },
+ {
+  "id": "random-11-206",
+  "lines": [
+   "",
+   "    .then(r => r)",
+   " ]",
+   "  \ta: 1,"
+  ],
+  "expected": [
+   "",
+   ".then(r => r)",
+   "  ]",
+   "  a: 1,"
+  ]
+ },
+ {
+  "id": "random-11-207",
+  "lines": [
+   "do",
+   "[1, 2],",
+   "// note",
+   "await p;"
+  ],
+  "expected": [
+   "do",
+   "[1, 2],",
+   "  // note",
+   "  await p;"
+  ]
+ },
+ {
+  "id": "random-11-208",
+  "lines": [
+   "  * star",
+   "Y",
+   " two;",
+   "\t\tfor (;;)",
+   " x = cond ?",
+   "case 1:",
+   "\t\tclass A {",
+   "a && b",
+   "    arg",
+   "    case 2: y();",
+   ")",
+   "  \t} else {",
+   "    int a,"
+  ],
+  "expected": [
+   "* star",
+   "Y",
+   "two;",
+   "for (;;)",
+   "x = cond ?",
+   "case 1:",
+   "class A {",
+   "  a && b",
+   "    arg",
+   "  case 2: y();",
+   "          )",
+   "} else {",
+   "  int a,"
+  ]
+ },
+ {
+  "id": "random-11-209",
+  "lines": [
+   "X,",
+   "key: value,",
+   "#if Y",
+   "\tcase 2: y();",
+   "    x = 1;",
+   "a && b",
+   " b +",
+   "  break;",
+   "  two;",
+   "  case 1:"
+  ],
+  "expected": [
+   "X,",
+   "  key: value,",
+   "#if Y",
+   "  case 2: y();",
+   "  x = 1;",
+   "  a && b",
+   "  b +",
+   "  break;",
+   "  two;",
+   "  case 1:"
+  ]
+ },
+ {
+  "id": "random-11-210",
+  "lines": [
+   "  case 1:",
+   "\t\tenum E {",
+   "  \tawait p;",
+   "break;",
+   "#define X 1",
+   "    if (a)",
+   "    return x;"
+  ],
+  "expected": [
+   "case 1:",
+   "enum E {",
+   "  await p;",
+   "  break;",
+   "#define X 1",
+   "  if (a)",
+   "    return x;"
+  ]
+ },
+ {
+  "id": "random-11-211",
+  "lines": [
+   "for (;;)",
+   "await p;",
+   "      x(0)",
+   "\t\tx = 1;",
+   "\t\t{",
+   "         ",
+   "} catch (e) {",
+   "1,",
+   "while (x);"
+  ],
+  "expected": [
+   "for (;;)",
+   "await p;",
+   "x(0)",
+   "  x = 1;",
+   "{",
+   "",
+   "} catch (e) {",
+   "  1,",
+   "    while (x);"
+  ]
+ },
+ {
+  "id": "random-11-212",
+  "lines": [
+   "x++;",
+   "2",
+   "\t\tc = '{';",
+   "",
+   "    A::A() :",
+   " class A {",
+   "break;",
+   "  a: 1,",
+   "\t\ta && b",
+   "  \ttry {",
+   "\t[1, 2],",
+   "    const arr = ["
+  ],
+  "expected": [
+   "x++;",
+   "2",
+   "c = '{';",
+   "",
+   "A::A() :",
+   "  class A {",
+   "    break;",
+   "a: 1,",
+   "     a && b",
+   "       try {",
+   "         [1, 2],",
+   "         const arr = ["
+  ]
+ },
+ {
+  "id": "random-11-213",
+  "lines": [
+   "  ]",
+   "switch (x) {",
+   "  } while (x);",
+   "  \tpublic:",
+   "      switch (x) {",
+   "\t\tcall(",
+   "\t} while (0);",
+   "x(0)",
+   "    foo(a,",
+   "  try {"
+  ],
+  "expected": [
+   "]",
+   "switch (x) {",
+   "} while (x);",
+   "public:",
+   "switch (x) {",
+   "  call(",
+   "      } while (0);",
+   "      x(0)",
+   "      foo(a,",
+   "        try {"
+  ]
+ },
+ {
+  "id": "random-11-214",
+  "lines": [
+   "      /* one */",
+   "  \t#define X 1",
+   "",
+   "  \tenum E {",
+   "\t\ttotal = a +",
+   "      x = 1;",
+   "  end \\",
+   "  \tcall(",
+   "\t\tY",
+   "}",
+   "      case 2: y();"
+  ],
+  "expected": [
+   "/* one */",
+   "#define X 1",
+   "",
+   "enum E {",
+   "  total = a +",
+   "    x = 1;",
+   "  end \\",
+   "    call(",
+   "        Y",
+   "        }",
+   "        case 2: y();"
+  ]
+ },
+ {
+  "id": "random-11-215",
+  "lines": [
+   "function f(a, b) {",
+   "    }",
+   "    await p;",
+   "// note",
+   "  \tf(function() {",
+   "      } while (x);"
+  ],
+  "expected": [
+   "function f(a, b) {",
+   "}",
+   "await p;",
+   "// note",
+   "f(function() {",
+   "    } while (x);"
+  ]
+ },
+ {
+  "id": "random-11-216",
+  "lines": [
+   "\t\tc;",
+   "      || c)",
+   "      ];",
+   "  c = '{';",
+   "\t\tdo",
+   "  default:",
+   "{ a: 1 },",
+   "} while (0);",
+   "      switch (x) {",
+   "  \tawait p;"
+  ],
+  "expected": [
+   "c;",
+   "|| c)",
+   "];",
+   "c = '{';",
+   "do",
+   "default:",
+   "{ a: 1 },",
+   "  } while (0);",
+   "switch (x) {",
+   "  await p;"
+  ]
+ },
+ {
+  "id": "random-11-217",
+  "lines": [
+   "public:",
+   ");",
+   "      .then(r => r)",
+   "  \tasync function g() {",
+   "  one :",
+   "  \tkey: value,",
+   "  \tdo {",
+   "  x(0)",
+   "for (i = 0; i < n; i++) {",
+   "z;",
+   "a && b"
+  ],
+  "expected": [
+   "public:",
+   ");",
+   ".then(r => r)",
+   "  async function g() {",
+   "one :",
+   "key: value,",
+   "       do {",
+   "         x(0)",
+   "           for (i = 0; i < n; i++) {",
+   "             z;",
+   "             a && b"
+  ]
+ },
+ {
+  "id": "random-11-218",
+  "lines": [
+   "\t\tz;",
+   " Y",
+   "const arr = [",
+   "\t\tend \\",
+   "}",
+   " function f(a, b) {",
+   "  c;",
+   "      x++;",
+   "}",
+   "s = 'a{b';",
+   "\t\tbar();"
+  ],
+  "expected": [
+   "z;",
+   "Y",
+   "const arr = [",
+   "  end \\",
+   "    }",
+   "function f(a, b) {",
+   "  c;",
+   "  x++;",
+   "}",
+   "s = 'a{b';",
+   "  bar();"
+  ]
+ },
+ {
+  "id": "random-11-219",
+  "lines": [
+   "  \ts = \"{ (\";",
+   "      /* one */",
+   "    if (a) b(); else c();",
+   "  \tcase 1:",
+   " total = a +",
+   "\t\t)",
+   "  \tif (a)",
+   " if (a)",
+   "\tvoid m()",
+   "      b: 2",
+   "  };"
+  ],
+  "expected": [
+   "s = \"{ (\";",
+   "/* one */",
+   "if (a) b(); else c();",
+   "case 1:",
+   "total = a +",
+   "  )",
+   "  if (a)",
+   "  if (a)",
+   "void m()",
+   "  b: 2",
+   "  };"
+  ]
+ },
+ {
+  "id": "random-11-220",
+  "lines": [
+   "for (;;)",
+   "  \t#endif",
+   "\t\telse",
+   "b: 2",
+   "for (;;)",
+   " g(x => {",
+   "b,",
+   "  \treturn x;",
+   " more",
+   "  \t{",
+   "\t\tcase 2: y();",
+   "      } while (0);",
+   " try {"
+  ],
+  "expected": [
+   "for (;;)",
+   "#endif",
+   "else",
+   "b: 2",
+   "for (;;)",
+   "g(x => {",
+   "    b,",
+   "    return x;",
+   "    more",
+   "    {",
+   "    case 2: y();",
+   "    } while (0);",
+   "    try {"
+  ]
+ },
+ {
+  "id": "random-11-221",
+  "lines": [
+   "1,",
+   "      } while (0);",
+   "",
+   "    s = \"{ (\";"
+  ],
+  "expected": [
+   "1,",
+   "  } while (0);",
+   "",
+   "s = \"{ (\";"
+  ]
+ },
+ {
+  "id": "random-11-222",
+  "lines": [
+   " } else if (b) {",
+   "\t\tc);",
+   "    while (x)",
+   "  \tf(function() {",
+   "\tx(); // trail",
+   "  [1, 2],",
+   "// comment {",
+   "\t} else {",
+   "\targ",
+   "    A::A() :",
+   "\telse x();",
+   "  \tif (a) b(); else c();",
+   "s = 'a{b';"
+  ],
+  "expected": [
+   "} else if (b) {",
+   "  c);",
+   "  while (x)",
+   "    f(function() {",
+   "        x(); // trail",
+   "        [1, 2],",
+   "        // comment {",
+   "        } else {",
+   "        arg",
+   "        A::A() :",
+   "        else x();",
+   "        if (a) b(); else c();",
+   "        s = 'a{b';"
+  ]
+ },
+ {
+  "id": "random-11-223",
+  "lines": [
+   "}",
+   "  {",
+   "do {",
+   "{ a: 1 },"
+  ],
+  "expected": [
+   "}",
+   "{",
+   "  do {",
+   "    { a: 1 },"
+  ]
+ },
+ {
+  "id": "random-11-224",
+  "lines": [
+   "    b +",
+   "break;",
+   "\tf(function() {",
+   "};",
+   "       "
+  ],
+  "expected": [
+   "b +",
+   "break;",
+   "f(function() {",
+   "    };",
+   ""
+  ]
+ },
+ {
+  "id": "random-11-225",
+  "lines": [
+   "A::A() :",
+   "    } else if (b) {",
+   " enum E {",
+   ")"
+  ],
+  "expected": [
+   "A::A() :",
+   "  } else if (b) {",
+   "    enum E {",
+   "      )"
+  ]
+ },
+ {
+  "id": "random-11-226",
+  "lines": [
+   "x(); // trail",
+   "\t\tif (a)",
+   "two;",
+   "  if (a)",
+   "  \t.catch(e);",
+   "\t\tx(0)",
+   "  \t{",
+   "\tconst arr = [",
+   "/* one */",
+   "  \tX,",
+   " x(); // trail"
+  ],
+  "expected": [
+   "x(); // trail",
+   "if (a)",
+   "  two;",
+   "if (a)",
+   "  .catch(e);",
+   "x(0)",
+   "{",
+   "  const arr = [",
+   "    /* one */",
+   "    X,",
+   "    x(); // trail"
+  ]
+ },
+ {
+  "id": "random-11-227",
+  "lines": [
+   "\t\tf(function() {",
+   "      try {",
+   "  try {",
+   "|| c)",
+   "",
+   "  \tX,",
+   "\t\t/* block",
+   "default:",
+   "call(",
+   "async function g() {"
+  ],
+  "expected": [
+   "f(function() {",
+   "    try {",
+   "    try {",
+   "    || c)",
+   "",
+   "      X,",
+   "      /* block",
+   "         default:",
+   "         call(",
+   "         async function g() {"
+  ]
+ },
+ {
+  "id": "random-11-228",
+  "lines": [
+   "  #if Y",
+   "x(); // trail",
+   "s = 'a{b';",
+   "  key: value,",
+   "  \tc = '{';",
+   " case 1:",
+   "    case 1:",
+   "  ];",
+   "try {",
+   " ];"
+  ],
+  "expected": [
+   "#if Y",
+   "x(); // trail",
+   "s = 'a{b';",
+   "key: value,",
+   "       c = '{';",
+   "  case 1:",
+   "  case 1:",
+   "     ];",
+   "     try {",
+   "       ];"
+  ]
+ },
+ {
+  "id": "random-11-229",
+  "lines": [
+   ".catch(e);",
+   "label:",
+   "\t\tx(); // trail",
+   "\t});",
+   "\t\tb,",
+   "*/",
+   "    Y"
+  ],
+  "expected": [
+   ".catch(e);",
+   "label:",
+   "x(); // trail",
+   "});",
+   "b,",
+   "  */",
+   "  Y"
+  ]
+ },
+ {
+  "id": "random-11-230",
+  "lines": [
+   "f(function() {",
+   "for (i = 0; i < n; i++) {",
+   "else",
+   "  b,",
+   "\t\tcase 1:",
+   "return x;",
+   "    ]",
+   "  });",
+   "#if Y",
+   " key: value,",
+   "switch (x) {",
+   "    } finally {",
+   "|| c)"
+  ],
+  "expected": [
+   "f(function() {",
+   "    for (i = 0; i < n; i++) {",
+   "    else",
+   "    b,",
+   "    case 1:",
+   "    return x;",
+   "    ]",
+   "    });",
+   "#if Y",
+   "key: value,",
+   "       switch (x) {",
+   "       } finally {",
+   "         || c)"
+  ]
+ },
+ {
+  "id": "random-11-231",
+  "lines": [
+   "   ",
+   "  \ttwo;",
+   "\tb +",
+   "X,",
+   "  a: 1,",
+   "  });"
+  ],
+  "expected": [
+   "",
+   "two;",
+   "b +",
+   "X,",
+   "  a: 1,",
+   "  });"
+  ]
+ },
+ {
+  "id": "random-11-232",
+  "lines": [
+   "  const o = {",
+   " 2",
+   "\t\t/* one */",
+   "call(",
+   "    ",
+   "|| c)",
+   " A::A() :",
+   "\t}",
+   "  else",
+   "enum E {",
+   "\t(",
+   "[1, 2],"
+  ],
+  "expected": [
+   "const o = {",
+   "  2",
+   "    /* one */",
+   "    call(",
+   "",
+   "        || c)",
+   "    A::A() :",
+   "}",
+   "else",
+   "enum E {",
+   "  (",
+   "   [1, 2],"
+  ]
+ },
+ {
+  "id": "random-11-233",
+  "lines": [
+   "  if (a) b(); else c();",
+   "\t} while (x);",
+   "      while (x)",
+   "} catch (e) {",
+   " c;",
+   "for (i = 0; i < n; i++) {",
+   "    a && b",
+   "  for (i = 0; i < n; i++) {",
+   "do",
+   "\t\tclass A {"
+  ],
+  "expected": [
+   "if (a) b(); else c();",
+   "} while (x);",
+   "while (x)",
+   "  } catch (e) {",
+   "    c;",
+   "    for (i = 0; i < n; i++) {",
+   "      a && b",
+   "        for (i = 0; i < n; i++) {",
+   "          do",
+   "            class A {"
+  ]
+ },
+ {
+  "id": "random-11-234",
+  "lines": [
+   " while (x);",
+   "  do",
+   "  \tawait p;",
+   " } while (0);",
+   "  \t#define X 1",
+   "s = 'a{b';",
+   "async function g() {",
+   "  \t} else if (b) {",
+   " || c)",
+   "    b: 2"
+  ],
+  "expected": [
+   "while (x);",
+   "do",
+   "await p;",
+   "} while (0);",
+   "#define X 1",
+   "s = 'a{b';",
+   "  async function g() {",
+   "  } else if (b) {",
+   "    || c)",
+   "      b: 2"
+  ]
+ },
+ {
+  "id": "random-11-235",
+  "lines": [
+   "while (x)",
+   "\t1,",
+   "\telse x();",
+   "\t\t} finally {",
+   "for (i = 0; i < n; i++) {",
+   "one :",
+   "x = 1;",
+   " } else if (b) {",
+   "\t\t} else {",
+   "  \tc;"
+  ],
+  "expected": [
+   "while (x)",
+   "  1,",
+   "  else x();",
+   "} finally {",
+   "  for (i = 0; i < n; i++) {",
+   "one :",
+   "    x = 1;",
+   "  } else if (b) {",
+   "  } else {",
+   "    c;"
+  ]
+ },
+ {
+  "id": "random-11-236",
+  "lines": [
+   "      });",
+   "\t};",
+   "b,"
+  ],
+  "expected": [
+   "});",
+   "};",
+   "b,"
+  ]
+ },
+ {
+  "id": "random-11-237",
+  "lines": [
+   "x = 1;",
+   "{",
+   "      1,",
+   "} while (x);",
+   "2"
+  ],
+  "expected": [
+   "x = 1;",
+   "{",
+   "  1,",
+   "} while (x);",
+   "2"
+  ]
+ },
+ {
+  "id": "random-11-238",
+  "lines": [
+   "do {",
+   "  private:",
+   "const o = {",
+   "  A::A() :",
+   "  });",
+   "      b +",
+   "      #define X 1",
+   "} while (x);",
+   "\t\t(",
+   ".catch(e);"
+  ],
+  "expected": [
+   "do {",
+   "  private:",
+   "    const o = {",
+   "      A::A() :",
+   "    });",
+   "    b +",
+   "#define X 1",
+   "} while (x);",
+   "(",
+   " .catch(e);"
+  ]
+ },
+ {
+  "id": "random-11-239",
+  "lines": [
+   "key: value,",
+   ".then(r => r)",
+   "  { a: 1 },",
+   "      async function g() {",
+   "\tenum E {",
+   "arg",
+   "\tcall(",
+   "\tbar();",
+   "      { a: 1 },",
+   "\tx = cond ?",
+   "      key: value,"
+  ],
+  "expected": [
+   "key: value,",
+   "  .then(r => r)",
+   "{ a: 1 },",
+   "  async function g() {",
+   "    enum E {",
+   "      arg",
+   "        call(",
+   "            bar();",
+   "            { a: 1 },",
+   "            x = cond ?",
+   "            key: value,"
+  ]
+ },
+ {
+  "id": "random-11-240",
+  "lines": [
+   "\t} catch (e) {",
+   "\tconst arr = [",
+   "function f(a, b) {",
+   " do",
+   " return {",
+   "  } while (0);",
+   "\t\tbreak;",
+   " arg",
+   "    } catch (e) {",
+   "\tend \\",
+   "  \t* star",
+   "\t\tfor (i = 0; i < n; i++) {"
+  ],
+  "expected": [
+   "} catch (e) {",
+   "  const arr = [",
+   "    function f(a, b) {",
+   "      do",
+   "        return {",
+   "        } while (0);",
+   "      break;",
+   "      arg",
+   "    } catch (e) {",
+   "      end \\",
+   "        * star",
+   "        for (i = 0; i < n; i++) {"
+  ]
+ },
+ {
+  "id": "random-11-241",
+  "lines": [
+   " one :",
+   "\t#define X 1",
+   "",
+   "      f(function() {",
+   "      await p;",
+   "  \tx = cond ?",
+   "case 1:",
+   "bar();",
+   "\t\tclass A {",
+   "try {",
+   " };",
+   "      call(",
+   "  \t} catch (e) {"
+  ],
+  "expected": [
+   "one :",
+   "#define X 1",
+   "",
+   "f(function() {",
+   "    await p;",
+   "    x = cond ?",
+   "    case 1:",
+   "    bar();",
+   "    class A {",
+   "    try {",
+   "    };",
+   "    call(",
+   "        } catch (e) {"
+  ]
+ },
+ {
+  "id": "random-11-242",
+  "lines": [
+   "\t\ttotal = a +",
+   "  \tkey: value,",
+   "  \tg(x => {",
+   "f(function() {",
+   "case 2: y();",
+   "\tx(); // trail",
+   "x(); // trail",
+   "\t\t1,",
+   "} else if (b) {"
+  ],
+  "expected": [
+   "total = a +",
+   "key: value,",
+   "  g(x => {",
+   "      f(function() {",
+   "          case 2: y();",
+   "          x(); // trail",
+   "          x(); // trail",
+   "          1,",
+   "          } else if (b) {"
+  ]
+ },
+ {
+  "id": "random-11-243",
+  "lines": [
+   "if (a) b(); else c();",
+   "  enum E {",
+   "\t.then(r => r)",
+   "const o = {",
+   "      Y",
+   "  \t1,",
+   "  for (i = 0; i < n; i++) {",
+   "\tx(); // trail",
+   "enum E {",
+   "\t\t};"
+  ],
+  "expected": [
+   "if (a) b(); else c();",
+   "enum E {",
+   "  .then(r => r)",
+   "    const o = {",
+   "      Y",
+   "        1,",
+   "      for (i = 0; i < n; i++) {",
+   "        x(); // trail",
+   "        enum E {",
+   "        };"
+  ]
+ },
+ {
+  "id": "random-11-244",
+  "lines": [
+   " b: 2",
+   "\t\telse",
+   "  x = 1;",
+   " const arr = [",
+   "} else if (b) {",
+   "g(x => {",
+   "\t\tif (a) b(); else c();",
+   "\t} finally {",
+   "    enum E {",
+   " x++;",
+   "  \t});"
+  ],
+  "expected": [
+   "b: 2",
+   "else",
+   "x = 1;",
+   "const arr = [",
+   "  } else if (b) {",
+   "    g(x => {",
+   "        if (a) b(); else c();",
+   "        } finally {",
+   "        enum E {",
+   "        x++;",
+   "        });"
+  ]
+ },
+ {
+  "id": "random-11-245",
+  "lines": [
+   "return {",
+   "    total = a +",
+   "x++;",
+   "};",
+   "one :",
+   "  \tswitch (x) {",
+   "const o = {",
+   "    };"
+  ],
+  "expected": [
+   "return {",
+   "  total = a +",
+   "    x++;",
+   "};",
+   "one :",
+   "switch (x) {",
+   "  const o = {",
+   "  };"
+  ]
+ },
+ {
+  "id": "random-11-246",
+  "lines": [
+   "\t\t];",
+   "let v = [",
+   "      one :",
+   "  \t} finally {",
+   "]",
+   "Y",
+   "x = 1;",
+   "\t*/"
+  ],
+  "expected": [
+   "];",
+   "let v = [",
+   "  one :",
+   "  } finally {",
+   "]",
+   "  Y",
+   "  x = 1;",
+   "*/"
+  ]
+ },
+ {
+  "id": "random-11-247",
+  "lines": [
+   "\t\ta && b",
+   "    2",
+   "\t\tcall("
+  ],
+  "expected": [
+   "a && b",
+   "2",
+   "call("
+  ]
+ },
+ {
+  "id": "random-11-248",
+  "lines": [
+   "} while (x);",
+   "*/",
+   "\tY",
+   "};",
+   "a: 1,",
+   "#define X 1",
+   "\t};",
+   " };"
+  ],
+  "expected": [
+   "} while (x);",
+   "*/",
+   "Y",
+   "};",
+   "a: 1,",
+   "#define X 1",
+   "  };",
+   "};"
+  ]
+ },
+ {
+  "id": "random-11-249",
+  "lines": [
+   "\t} while (x);",
+   "  b,",
+   "  \tfor (i = 0; i < n; i++) {",
+   " (",
+   "} else {",
+   "",
+   "x(0)",
+   "      switch (x) {",
+   "\t\t} while (x);",
+   "      ]",
+   "private:",
+   "\tg(x => {",
+   "g(x => {"
+  ],
+  "expected": [
+   "} while (x);",
+   "b,",
+   "  for (i = 0; i < n; i++) {",
+   "    (",
+   "     } else {",
+   "",
+   "     x(0)",
+   "     switch (x) {",
+   "     } while (x);",
+   "     ]",
+   "     private:",
+   "     g(x => {",
+   "         g(x => {"
+  ]
+ },
+ {
+  "id": "random-11-250",
+  "lines": [
+   "one :",
+   "      (",
+   "    ]",
+   "      bar();"
+  ],
+  "expected": [
+   "one :",
+   "(",
+   " ]",
+   " bar();"
+  ]
+ },
+ {
+  "id": "random-11-251",
+  "lines": [
+   "    .then(r => r)",
+   "  \tconst arr = [",
+   "    {",
+   "\t\tconst arr = [",
+   " class A {",
+   "int a,",
+   "",
+   "*/",
+   "    function f(a, b) {",
+   "  \t};",
+   "x = cond ?",
+   " do {",
+   " }"
+  ],
+  "expected": [
+   ".then(r => r)",
+   "  const arr = [",
+   "{",
+   "  const arr = [",
+   "    class A {",
+   "      int a,",
+   "",
+   "          */",
+   "            function f(a, b) {",
+   "            };",
+   "      x = cond ?",
+   "        do {",
+   "        }"
+  ]
+ },
+ {
+  "id": "random-11-252",
+  "lines": [
+   "    x(0)",
+   "if (a) b(); else c();",
+   "\tA::A() :",
+   "];"
+  ],
+  "expected": [
+   "x(0)",
+   "  if (a) b(); else c();",
+   "  A::A() :",
+   "    ];"
+  ]
+ },
+ {
+  "id": "random-11-253",
+  "lines": [
+   "\t\tdefault:",
+   "    } finally {",
+   "\t\tc = '{';",
+   "while (x)",
+   "      s = 'a{b';",
+   "  \t});",
+   "      X,"
+  ],
+  "expected": [
+   "default:",
+   "} finally {",
+   "  c = '{';",
+   "  while (x)",
+   "    s = 'a{b';",
+   "    });",
+   "  X,"
+  ]
+ },
+ {
+  "id": "random-11-254",
+  "lines": [
+   "    case 1:",
+   "\tg(x => {",
+   " // comment {",
+   " A::A() :"
+  ],
+  "expected": [
+   "case 1:",
+   "g(x => {",
+   "    // comment {",
+   "    A::A() :"
+  ]
+ },
+ {
+  "id": "random-11-255",
+  "lines": [
+   "public:",
+   "  \tx(0)",
+   "    private:",
+   "\t\tz;",
+   "    class A {",
+   "end \\",
+   "\t\tc);",
+   " case 2: y();"
+  ],
+  "expected": [
+   "public:",
+   "x(0)",
+   "  private:",
+   "  z;",
+   "  class A {",
+   "    end \\",
+   "      c);",
+   "    case 2: y();"
+  ]
+ },
+ {
+  "id": "random-11-256",
+  "lines": [
+   "    */",
+   "await p;",
+   "  } catch (e) {"
+  ],
+  "expected": [
+   "*/",
+   "await p;",
+   "} catch (e) {"
+  ]
+ },
+ {
+  "id": "random-11-257",
+  "lines": [
+   "\t1,",
+   "\tstruct S s = {",
+   "  \telse x();",
+   "\tfor (;;)",
+   "for (;;)",
+   ")",
+   "      private:",
+   "\t\twhile (x)",
+   " x = cond ?",
+   "    public:"
+  ],
+  "expected": [
+   "1,",
+   "  struct S s = {",
+   "    else x();",
+   "    for (;;)",
+   "      for (;;)",
+   "        )",
+   "    private:",
+   "          while (x)",
+   "            x = cond ?",
+   "    public:"
+  ]
+ },
+ {
+  "id": "random-11-258",
+  "lines": [
+   "    #define X 1",
+   "\t\tconst arr = [",
+   "  \t{",
+   "   "
+  ],
+  "expected": [
+   "#define X 1",
+   "const arr = [",
+   "{",
+   ""
+  ]
+ },
+ {
+  "id": "random-11-259",
+  "lines": [
+   "a && b",
+   "enum E {",
+   "\t\tfunction f(a, b) {",
+   "    x = cond ?",
+   "\t\tc);"
+  ],
+  "expected": [
+   "a && b",
+   "enum E {",
+   "  function f(a, b) {",
+   "    x = cond ?",
+   "      c);"
+  ]
+ },
+ {
+  "id": "random-11-260",
+  "lines": [
+   "\tb +",
+   "s = \"{ (\";",
+   "\t\tf(function() {",
+   "  } catch (e) {",
+   "    #if Y"
+  ],
+  "expected": [
+   "b +",
+   "s = \"{ (\";",
+   "f(function() {",
+   "    } catch (e) {",
+   "#if Y"
+  ]
+ },
+ {
+  "id": "random-11-261",
+  "lines": [
+   " foo(a,",
+   "    case 1:",
+   "return x;",
+   "\tlabel:",
+   ""
+  ],
+  "expected": [
+   "foo(a,",
+   "    case 1:",
+   "    return x;",
+   "label:",
+   ""
+  ]
+ },
+ {
+  "id": "random-11-262",
+  "lines": [
+   "await p;",
+   "\tclass A {",
+   "  \t#endif",
+   "c;",
+   "  \ttotal = a +",
+   "      }",
+   "    function f(a, b) {"
+  ],
+  "expected": [
+   "await p;",
+   "class A {",
+   "#endif",
+   "  c;",
+   "  total = a +",
+   "}",
+   "function f(a, b) {"
+  ]
+ },
+ {
+  "id": "random-11-263",
+  "lines": [
+   "      Y",
+   "\twhile (x);",
+   "\t\tb +",
+   "  \tbar();",
+   "    1,",
+   "struct S s = {",
+   "async function g() {",
+   "      int a,",
+   "x = 1;",
+   "    enum E {",
+   "    2",
+   "      void m()",
+   "  return x;",
+   " if (a) b(); else c();"
+  ],
+  "expected": [
+   "Y",
+   "while (x);",
+   "b +",
+   "bar();",
+   "1,",
+   "  struct S s = {",
+   "    async function g() {",
+   "      int a,",
+   "      x = 1;",
+   "      enum E {",
+   "        2",
+   "          void m()",
+   "          return x;",
+   "        if (a) b(); else c();"
+  ]
+ },
+ {
+  "id": "random-11-264",
+  "lines": [
+   "  \tX,",
+   "{ a: 1 },",
+   "x(0)",
+   " case 1:",
+   "\t\tY",
+   "call(",
+   "    while (x);",
+   " } else if (b) {",
+   "    struct S s = {",
+   "  b: 2",
+   "\t\t/* block",
+   "arg",
+   "  if (a) b(); else c();",
+   "c);"
+  ],
+  "expected": [
+   "X,",
+   "{ a: 1 },",
+   "  x(0)",
+   "  case 1:",
+   "  Y",
+   "  call(",
+   "      while (x);",
+   "      } else if (b) {",
+   "      struct S s = {",
+   "b: 2",
+   "/* block",
+   "   arg",
+   "   if (a) b(); else c();",
+   "   c);"
+  ]
+ },
+ {
+  "id": "random-11-265",
+  "lines": [
+   "more",
+   "x = cond ?",
+   "      if (a) {",
+   "  /* one */",
+   "end \\",
+   "  arg"
+  ],
+  "expected": [
+   "more",
+   "x = cond ?",
+   "if (a) {",
+   "  /* one */",
+   "  end \\",
+   "    arg"
+  ]
+ },
+ {
+  "id": "random-11-266",
+  "lines": [
+   "bar();",
+   " #if Y",
+   "\t\tif (a) {",
+   "};",
+   "    ",
+   "arg",
+   " (",
+   "    public:",
+   "      return {",
+   "    x(0)"
+  ],
+  "expected": [
+   "bar();",
+   "#if Y",
+   "if (a) {",
+   "};",
+   "",
+   "arg",
+   "(",
+   " public:",
+   " return {",
+   " x(0)"
+  ]
+ },
+ {
+  "id": "random-11-267",
+  "lines": [
+   " #if Y",
+   "\tif (a)",
+   "\t\tstruct S s = {",
+   "  b: 2",
+   " 2",
+   "\tcall(",
+   "\t\t* star",
+   "  /* one */",
+   "  c;",
+   ".then(r => r)",
+   "      #endif",
+   "if (a)",
+   "let v = ["
+  ],
+  "expected": [
+   "#if Y",
+   "if (a)",
+   "  struct S s = {",
+   "b: 2",
+   "     2",
+   "     call(",
+   "         * star",
+   "         /* one */",
+   "         c;",
+   "         .then(r => r)",
+   "#endif",
+   "         if (a)",
+   "         let v = ["
+  ]
+ },
+ {
+  "id": "random-11-268",
+  "lines": [
+   "} else {",
+   "  s = 'a{b';",
+   "    g(x => {",
+   "x(); // trail",
+   "\t("
+  ],
+  "expected": [
+   "} else {",
+   "  s = 'a{b';",
+   "    g(x => {",
+   "        x(); // trail",
+   "        ("
+  ]
+ },
+ {
+  "id": "random-11-269",
+  "lines": [
+   "      } else {",
+   "  do",
+   "int a,",
+   "\t\tbreak;",
+   " struct S s = {",
+   "      bar();"
+  ],
+  "expected": [
+   "} else {",
+   "  do",
+   "    int a,",
+   "        break;",
+   "  struct S s = {",
+   "    bar();"
+  ]
+ },
+ {
+  "id": "random-11-270",
+  "lines": [
+   "      b,",
+   "    c = '{';",
+   "public:",
+   "if (a) b(); else c();",
+   "  \t};",
+   "  s = 'a{b';",
+   "\t\tprivate:",
+   "      if (a) {"
+  ],
+  "expected": [
+   "b,",
+   "  c = '{';",
+   "public:",
+   "if (a) b(); else c();",
+   "};",
+   "s = 'a{b';",
+   "  private:",
+   "    if (a) {"
+  ]
+ },
+ {
+  "id": "random-11-271",
+  "lines": [
+   "\t\t{",
+   " default:",
+   "\t\tz;",
+   "c;",
+   "} else {"
+  ],
+  "expected": [
+   "{",
+   "  default:",
+   "    z;",
+   "    c;",
+   "} else {"
+  ]
+ },
+ {
+  "id": "random-11-272",
+  "lines": [
+   " while (x);",
+   " s = \"{ (\";",
+   "// comment {",
+   "\t} while (0);",
+   "return {"
+  ],
+  "expected": [
+   "while (x);",
+   "s = \"{ (\";",
+   "// comment {",
+   "} while (0);",
+   "return {"
+  ]
+ },
+ {
+  "id": "random-11-273",
+  "lines": [
+   "      await p;",
+   "x = 1;",
+   "return {",
+   "      int a,",
+   "bar();",
+   "\t} while (0);",
+   "  \t   ",
+   "  x++;",
+   "\t\t} catch (e) {",
+   "foo(a,"
+  ],
+  "expected": [
+   "await p;",
+   "x = 1;",
+   "return {",
+   "  int a,",
+   "      bar();",
+   "} while (0);",
+   "",
+   "x++;",
+   "} catch (e) {",
+   "  foo(a,"
+  ]
+ },
+ {
+  "id": "random-11-274",
+  "lines": [
+   "for (;;)",
+   " do {",
+   "} else {",
+   "",
+   "}",
+   "  \tc);",
+   " };",
+   "  const o = {"
+  ],
+  "expected": [
+   "for (;;)",
+   "do {",
+   "} else {",
+   "",
+   "}",
+   "c);",
+   "};",
+   "const o = {"
+  ]
+ },
+ {
+  "id": "random-11-275",
+  "lines": [
+   " } finally {",
+   "    } else {",
+   "  // note",
+   "while (x);",
+   "(",
+   "  } else if (b) {",
+   "    else",
+   "do",
+   "",
+   "\t\twhile (x)",
+   "  \t});"
+  ],
+  "expected": [
+   "} finally {",
+   "} else {",
+   "  // note",
+   "  while (x);",
+   "  (",
+   "   } else if (b) {",
+   "   else",
+   "   do",
+   "",
+   "   while (x)",
+   "   });"
+  ]
+ },
+ {
+  "id": "random-11-276",
+  "lines": [
+   "\ta && b",
+   "  b +",
+   "      end \\",
+   "(",
+   "\t\t#endif"
+  ],
+  "expected": [
+   "a && b",
+   "b +",
+   "end \\",
+   "      (",
+   "#endif"
+  ]
+ },
+ {
+  "id": "random-11-277",
+  "lines": [
+   "\tfoo(a,",
+   " } while (x);",
+   "}",
+   "  };",
+   "\t\tc);",
+   "      return {",
+   "arg"
+  ],
+  "expected": [
+   "foo(a,",
+   "    } while (x);",
+   "    }",
+   "    };",
+   "    c);",
+   "return {",
+   "  arg"
+  ]
+ },
+ {
+  "id": "random-11-278",
+  "lines": [
+   "  case 1:",
+   "case 1:",
+   "x = cond ?",
+   "  #define X 1",
+   "\t\tY",
+   "];",
+   "    b,",
+   "    key: value,",
+   "  .then(r => r)",
+   "\t\tX,",
+   "\tcase 1:",
+   "      key: value,",
+   "    label:",
+   "  \t*/"
+  ],
+  "expected": [
+   "case 1:",
+   "case 1:",
+   "x = cond ?",
+   "#define X 1",
+   "Y",
+   "];",
+   "b,",
+   "  key: value,",
+   "  .then(r => r)",
+   "  X,",
+   "  case 1:",
+   "key: value,",
+   "  label:",
+   "  */"
+  ]
+ },
+ {
+  "id": "random-11-279",
+  "lines": [
+   "  let v = [",
+   "      const arr = [",
+   "  key: value,",
+   "\t\ta && b",
+   " A::A() :",
+   " // note",
+   "    z;",
+   "  // comment {",
+   "});",
+   "\t\tif (a) {"
+  ],
+  "expected": [
+   "let v = [",
+   "  const arr = [",
+   "    key: value,",
+   "    a && b",
+   "    A::A() :",
+   "      // note",
+   "      z;",
+   "      // comment {",
+   "      });",
+   "if (a) {"
+  ]
+ },
+ {
+  "id": "random-11-280",
+  "lines": [
+   "\tcase 1:",
+   "  \tcase 1:",
+   "      f(function() {",
+   "/* one */",
+   "public:",
+   "      } finally {",
+   "    c);",
+   "  \t} catch (e) {",
+   "Y",
+   "  for (;;)",
+   "\tx(); // trail",
+   "]"
+  ],
+  "expected": [
+   "case 1:",
+   "case 1:",
+   "f(function() {",
+   "    /* one */",
+   "    public:",
+   "    } finally {",
+   "    c);",
+   "    } catch (e) {",
+   "      Y",
+   "        for (;;)",
+   "          x(); // trail",
+   "      ]"
+  ]
+ },
+ {
+  "id": "random-11-281",
+  "lines": [
+   "    const o = {",
+   "  foo(a,",
+   "total = a +",
+   " b: 2",
+   "};",
+   " .catch(e);",
+   "\t\t/* one */",
+   "  ];",
+   "const arr = [",
+   "      a && b",
+   "\tif (a) b(); else c();",
+   "\t}",
+   " const arr = ["
+  ],
+  "expected": [
+   "const o = {",
+   "  foo(a,",
+   "      total = a +",
+   "      b: 2",
+   "      };",
+   "      .catch(e);",
+   "      /* one */",
+   "      ];",
+   "      const arr = [",
+   "      a && b",
+   "      if (a) b(); else c();",
+   "      }",
+   "      const arr = ["
+  ]
+ },
+ {
+  "id": "random-11-282",
+  "lines": [
+   " s = 'a{b';",
+   "  x(0)",
+   "\tx(0)",
+   "  .catch(e);",
+   "const arr = [",
+   "  } else if (b) {",
+   "    one :",
+   "\t\tc = '{';",
+   ");"
+  ],
+  "expected": [
+   "s = 'a{b';",
+   "  x(0)",
+   "    x(0)",
+   "    .catch(e);",
+   "  const arr = [",
+   "} else if (b) {",
+   "one :",
+   "  c = '{';",
+   "  );"
+  ]
+ },
+ {
+  "id": "random-11-283",
+  "lines": [
+   "\t} while (x);",
+   "      a: 1,",
+   "    {",
+   "\tmore",
+   "    ];"
+  ],
+  "expected": [
+   "} while (x);",
+   "a: 1,",
+   "{",
+   "  more",
+   "    ];"
+  ]
+ },
+ {
+  "id": "random-11-284",
+  "lines": [
+   "  total = a +",
+   "\t\t#define X 1",
+   "  \tf(function() {",
+   "} while (0);",
+   " break;",
+   "    );",
+   "else",
+   "\t];",
+   "\tc;",
+   "  Y",
+   "  });",
+   "[1, 2],",
+   "  1,",
+   "  two;"
+  ],
+  "expected": [
+   "total = a +",
+   "#define X 1",
+   "f(function() {",
+   "    } while (0);",
+   "    break;",
+   " );",
+   "else",
+   "];",
+   "c;",
+   "Y",
+   "});",
+   "[1, 2],",
+   "  1,",
+   "  two;"
+  ]
+ },
+ {
+  "id": "random-11-285",
+  "lines": [
+   "  \tkey: value,",
+   " else",
+   "  \t} finally {",
+   "    const arr = [",
+   "const arr = [",
+   "});",
+   "  */"
+  ],
+  "expected": [
+   "key: value,",
+   "  else",
+   "  } finally {",
+   "    const arr = [",
+   "      const arr = [",
+   "  });",
+   "*/"
+  ]
+ },
+ {
+  "id": "random-11-286",
+  "lines": [
+   "default:",
+   "\tx++;",
+   "  \tint a,",
+   ");",
+   "for (;;)",
+   "end \\",
+   "enum E {",
+   "    } while (0);",
+   "else",
+   "      if (a) {",
+   "\tif (a)",
+   "total = a +"
+  ],
+  "expected": [
+   "default:",
+   "x++;",
+   "int a,",
+   "    );",
+   "for (;;)",
+   "end \\",
+   "      enum E {",
+   "      } while (0);",
+   "else",
+   "if (a) {",
+   "  if (a)",
+   "    total = a +"
+  ]
+ },
+ {
+  "id": "random-11-287",
+  "lines": [
+   "  \telse",
+   "} finally {",
+   " enum E {",
+   "  b +",
+   "  \tenum E {",
+   " void m()",
+   "  for (i = 0; i < n; i++) {"
+  ],
+  "expected": [
+   "else",
+   "} finally {",
+   "  enum E {",
+   "    b +",
+   "      enum E {",
+   "        void m()",
+   "          for (i = 0; i < n; i++) {"
+  ]
+ },
+ {
+  "id": "random-11-288",
+  "lines": [
+   "  \tkey: value,",
+   "    #endif",
+   "    one :",
+   "a && b",
+   "case 2: y();",
+   "\treturn {",
+   "    g(x => {",
+   "{",
+   " ];",
+   "  try {"
+  ],
+  "expected": [
+   "key: value,",
+   "#endif",
+   "  one :",
+   "  a && b",
+   "  case 2: y();",
+   "  return {",
+   "    g(x => {",
+   "        {",
+   "        ];",
+   "        try {"
+  ]
+ },
+ {
+  "id": "random-11-289",
+  "lines": [
+   "case 1:",
+   "      do {",
+   "  b +",
+   "    two;",
+   "do {",
+   "\t\tenum E {",
+   "async function g() {",
+   "      if (a) b(); else c();"
+  ],
+  "expected": [
+   "case 1:",
+   "do {",
+   "  b +",
+   "    two;",
+   "  do {",
+   "    enum E {",
+   "      async function g() {",
+   "        if (a) b(); else c();"
+  ]
+ },
+ {
+  "id": "random-11-290",
+  "lines": [
+   "\tconst arr = [",
+   "  \t} while (x);",
+   "\t\telse",
+   "    try {",
+   "    let v = [",
+   "  void m()",
+   "\t\ts = \"{ (\";",
+   "\tenum E {",
+   "  \t} catch (e) {",
+   ""
+  ],
+  "expected": [
+   "const arr = [",
+   "  } while (x);",
+   "else",
+   "try {",
+   "  let v = [",
+   "    void m()",
+   "      s = \"{ (\";",
+   "  enum E {",
+   "  } catch (e) {",
+   ""
+  ]
+ },
+ {
+  "id": "random-11-291",
+  "lines": [
+   "\tlet v = [",
+   "class A {",
+   "\t\ttwo;",
+   "    else",
+   "\t\targ",
+   "      a && b",
+   "  \tlet v = [",
+   "      A::A() :",
+   "default:",
+   "  \tx = 1;"
+  ],
+  "expected": [
+   "let v = [",
+   "  class A {",
+   "    two;",
+   "    else",
+   "      arg",
+   "        a && b",
+   "        let v = [",
+   "        A::A() :",
+   "    default:",
+   "          x = 1;"
+  ]
+ },
+ {
+  "id": "random-11-292",
+  "lines": [
+   "  \tswitch (x) {",
+   "\tx = cond ?",
+   "private:",
+   "g(x => {",
+   "arg",
+   "",
+   "  \tpublic:",
+   "\t\tpublic:",
+   ");",
+   "\t} while (x);",
+   "  \t)",
+   "Y",
+   " #if Y",
+   "foo(a,"
+  ],
+  "expected": [
+   "switch (x) {",
+   "  x = cond ?",
+   "  private:",
+   "    g(x => {",
+   "        arg",
+   "",
+   "        public:",
+   "        public:",
+   "     );",
+   "    } while (x);",
+   "  )",
+   "    Y",
+   "#if Y",
+   "    foo(a,"
+  ]
+ },
+ {
+  "id": "random-11-293",
+  "lines": [
+   "  \t1,",
+   "\targ",
+   "  x(0)",
+   "    public:",
+   "s = 'a{b';",
+   "      A::A() :",
+   "c);",
+   "    x(); // trail",
+   "    default:",
+   "",
+   "void m()",
+   "  await p;"
+  ],
+  "expected": [
+   "1,",
+   "  arg",
+   "x(0)",
+   "  public:",
+   "  s = 'a{b';",
+   "    A::A() :",
+   "      c);",
+   "    x(); // trail",
+   "    default:",
+   "",
+   "    void m()",
+   "      await p;"
+  ]
+ },
+ {
+  "id": "random-11-294",
+  "lines": [
+   "  .then(r => r)",
+   " bar();",
+   "      do {",
+   "\t1,",
+   "  } else if (b) {"
+  ],
+  "expected": [
+   ".then(r => r)",
+   "  bar();",
+   "  do {",
+   "    1,",
+   "  } else if (b) {"
+  ]
+ },
+ {
+  "id": "random-11-295",
+  "lines": [
+   "s = \"{ (\";",
+   "call(",
+   "  \tX,",
+   "const o = {",
+   "  if (a) b(); else c();",
+   "  b,",
+   "      */"
+  ],
+  "expected": [
+   "s = \"{ (\";",
+   "call(",
+   "    X,",
+   "    const o = {",
+   "    if (a) b(); else c();",
+   "    b,",
+   "    */"
+  ]
+ },
+ {
+  "id": "random-11-296",
+  "lines": [
+   "label:",
+   "       ",
+   "a && b",
+   "    a && b"
+  ],
+  "expected": [
+   "label:",
+   "",
+   "a && b",
+   "a && b"
+  ]
+ },
+ {
+  "id": "random-11-297",
+  "lines": [
+   "b: 2",
+   "]",
+   "  \tasync function g() {",
+   "    2",
+   "one :",
+   "while (x)",
+   "  \t]",
+   "      x = 1;",
+   "try {"
+  ],
+  "expected": [
+   "b: 2",
+   "]",
+   "async function g() {",
+   "  2",
+   "    one :",
+   "    while (x)",
+   "      ]",
+   "        x = 1;",
+   "  try {"
+  ]
+ },
+ {
+  "id": "random-11-298",
+  "lines": [
+   "x++;",
+   "      two;",
+   "  1,",
+   "  \tf(function() {",
+   "  });",
+   "\t(",
+   "      let v = [",
+   "#endif",
+   "\t{",
+   "foo(a,",
+   "      x(); // trail",
+   "    one :",
+   "\t\ttry {"
+  ],
+  "expected": [
+   "x++;",
+   "two;",
+   "1,",
+   "  f(function() {",
+   "      });",
+   "(",
+   " let v = [",
+   "#endif",
+   " {",
+   " foo(a,",
+   "     x(); // trail",
+   "one :",
+   "try {"
+  ]
+ },
+ {
+  "id": "random-11-299",
+  "lines": [
+   "\t\tz;",
+   "\t{ a: 1 },",
+   "  \t} catch (e) {",
+   "      else x();",
+   "\t\tenum E {",
+   "for (i = 0; i < n; i++) {",
+   "\t\t   ",
+   "  \tdefault:",
+   "\ttotal = a +",
+   "\t\tX,",
+   "  \tx(0)",
+   "\t\tg(x => {"
+  ],
+  "expected": [
+   "z;",
+   "{ a: 1 },",
+   "  } catch (e) {",
+   "    else x();",
+   "    enum E {",
+   "      for (i = 0; i < n; i++) {",
+   "",
+   "        default:",
+   "          total = a +",
+   "            X,",
+   "            x(0)",
+   "              g(x => {"
+  ]
+ }
+]

@@ -2,8 +2,7 @@ import { CursorPosition, VimEditorState } from './types';
 import { clampCursor } from './cursor';
 import { isKeywordChar } from './wordMotion';
 import { pushUndoSnapshot } from './operators';
-import { formatLinesRange, changeCaseVisual, caseTypeForOperator } from './lineOperators';
-import { moveToFirstNonBlank } from './motions';
+import { formatLinesRange, cindentOptionsFor, equalOperatorCursor, changeCaseVisual, caseTypeForOperator } from './lineOperators';
 import { getTagTextObjectRange } from './tagTextObject';
 export { getTagTextObjectRange };
 import {
@@ -507,12 +506,11 @@ export function executeTextObjectOperator(
     // 자동 들여쓰기 정렬 (=)
     if (operator === '=') {
       const stateWithSnapshot = pushUndoSnapshot(curState);
-      const nextLines = formatLinesRange(curState.lines, startLine, endLine);
-      const newCursor = moveToFirstNonBlank(nextLines, { line: startLine, col: 0 });
+      const nextLines = formatLinesRange(curState.lines, startLine, endLine, cindentOptionsFor(curState));
       return {
         ...stateWithSnapshot,
         lines: nextLines,
-        cursor: newCursor,
+        cursor: equalOperatorCursor(curState, nextLines, startLine),
         pendingKeys: undefined,
       };
     }

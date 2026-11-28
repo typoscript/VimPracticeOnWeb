@@ -5386,5 +5386,342 @@
       "regType": "line",
       "mode": "n"
     }
+  },
+  {
+    "id": "equal-cindent-whole",
+    "text": "function f(a) {\nif (a) {\nx = 1 +\n2;\n} else {\ny();\n}\nfoo(a,\nb);\n}",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "gg=G",
+    "expected": {
+      "lines": [
+        "function f(a) {",
+        "  if (a) {",
+        "    x = 1 +",
+        "      2;",
+        "  } else {",
+        "    y();",
+        "  }",
+        "  foo(a,",
+        "      b);",
+        "}"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "equal-cindent-object-label",
+    "text": "const o = {\na: 1,\nb: 2,\n};",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "=G",
+    "expected": {
+      "lines": [
+        "const o = {",
+        "a: 1,",
+        "   b: 2,",
+        "};"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "equal-line-up",
+    "text": "alpha beta gamma\nfoo.bar(baz, \"qux\")\n{ key: 'value', n: 7 }\n",
+    "cursor": {
+      "row": 1,
+      "col": 16
+    },
+    "keys": "=-",
+    "expected": {
+      "lines": [
+        "alpha beta gamma",
+        "foo.bar(baz, \"qux\")",
+        "{ key: 'value', n: 7 }",
+        ""
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 15
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "equal-word-back",
+    "text": "alpha beta gamma\nfoo.bar(baz, \"qux\")\n{ key: 'value', n: 7 }\n",
+    "cursor": {
+      "row": 1,
+      "col": 15
+    },
+    "keys": "=b",
+    "expected": {
+      "lines": [
+        "alpha beta gamma",
+        "foo.bar(baz, \"qux\")",
+        "{ key: 'value', n: 7 }",
+        ""
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 15
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "equal-aw",
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "cursor": {
+      "row": 2,
+      "col": 8
+    },
+    "keys": "=aw",
+    "expected": {
+      "lines": [
+        "  indented line one",
+        "    deeper (nested) item",
+        "    back to one",
+        "last_word_here end"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 8
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "equal-find-fails",
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "cursor": {
+      "row": 1,
+      "col": 2
+    },
+    "keys": "=fz",
+    "expected": {
+      "lines": [
+        "  indented line one",
+        "    deeper (nested) item",
+        "  back to one",
+        "last_word_here end"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "equal-count-lines",
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "cursor": {
+      "row": 1,
+      "col": 23
+    },
+    "keys": "4==k",
+    "expected": {
+      "lines": [
+        "  indented line one",
+        "  deeper (nested) item",
+        "  back to one",
+        "  last_word_here end"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 18
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "equal-inner-brace",
+    "text": "function greet(name) {\n    return \"Hello, \" + name;\n}",
+    "cursor": {
+      "row": 1,
+      "col": 4
+    },
+    "keys": "l=i{",
+    "expected": {
+      "lines": [
+        "function greet(name) {",
+        "  return \"Hello, \" + name;",
+        "}"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 5
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "equal-dollar-col",
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "=$",
+    "expected": {
+      "lines": [
+        "  indented line one",
+        "  deeper (nested) item",
+        "  back to one",
+        "last_word_here end"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 21
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "equal-curswant-col",
+    "text": "function f(a) {\nif (a) {\nx = 1 +\n2;",
+    "cursor": {
+      "row": 2,
+      "col": 0
+    },
+    "keys": "$=k",
+    "expected": {
+      "lines": [
+        "function f(a) {",
+        "  if (a) {",
+        "    x = 1 +",
+        "2;"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 9
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "equal-visual-dot",
+    "text": "The quick brown fox. It jumps over\nthe lazy dog! Then it rests.\n\nAnother paragraph here.",
+    "cursor": {
+      "row": 1,
+      "col": 3
+    },
+    "keys": "Vh)=.",
+    "expected": {
+      "lines": [
+        "The quick brown fox. It jumps over",
+        "the lazy dog! Then it rests.",
+        "",
+        "Another paragraph here."
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 14
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "equal-block",
+    "text": "The quick brown fox. It jumps over\nthe lazy dog! Then it rests.",
+    "cursor": {
+      "row": 0,
+      "col": 9
+    },
+    "keys": "<C-v>%=",
+    "expected": {
+      "lines": [
+        "The quick brown fox. It jumps over",
+        "the lazy dog! Then it rests."
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 9
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "equal-noop-undo",
+    "text": "if (x) {\n  y();\n}\nz();\n  w();",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "==jjj==u",
+    "expected": {
+      "lines": [
+        "if (x) {",
+        "  y();",
+        "}",
+        "z();",
+        "  w();"
+      ],
+      "cursor": {
+        "row": 4,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "semicolon-without-find-fails",
+    "text": "abc def",
+    "cursor": {
+      "row": 0,
+      "col": 2
+    },
+    "keys": "d;",
+    "expected": {
+      "lines": [
+        "abc def"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
   }
 ]

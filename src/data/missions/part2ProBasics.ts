@@ -155,33 +155,29 @@ export const MISSIONS_PART2: Mission[] = [
       'g', 'g',
       '=', 'G',
     ],
+    // gg=G 는 Vim C 들여쓰기(cindent)로 정렬합니다. C 들여쓰기는 JSX 를 모르므로 'return (' 아래 여러 줄 JSX 는
+    // 6칸·');' 6칸처럼 어색하게 들여써집니다 (실제 Neovim 결과). 그래서 JSX 를 한 줄 return 으로 둡니다.
     initialLines: [
       'function App() {',
       'const title = "Vim";',
-      'return (',
-      '<button>Old</button>',
-      ');',
+      '    return <button>Old</button>;',
       '}',
     ],
     targetLines: [
       'function App() {',
       '  const title = "Vim";',
-      '  return (',
-      '    <button>Click Me</button>',
-      '  );',
+      '  return <button>Click Me</button>;',
       '}',
     ],
-    initialCursor: { line: 3, col: 8 },
+    initialCursor: { line: 2, col: 20 },
     checkComplete: (state) => {
       return (
         state.mode === 'NORMAL' &&
-        state.lines.length === 6 &&
+        state.lines.length === 4 &&
         state.lines[0] === 'function App() {' &&
         state.lines[1] === '  const title = "Vim";' &&
-        state.lines[2] === '  return (' &&
-        state.lines[3] === '    <button>Click Me</button>' &&
-        state.lines[4] === '  );' &&
-        state.lines[5] === '}'
+        state.lines[2] === '  return <button>Click Me</button>;' &&
+        state.lines[3] === '}'
       );
     },
   },

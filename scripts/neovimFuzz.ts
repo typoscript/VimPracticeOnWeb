@@ -46,8 +46,8 @@ const MOTIONS = ['h', 'j', 'k', 'l', 'w', 'b', 'e', 'W', 'B', 'E', 'ge', '0', '^
 // H/L/M·스크롤은 창 높이에 따라 달라 비교하지 않습니다 (headless nvim 창은 2줄).
 const FIND_CHARS = ['a', 'e', 'o', 't', '(', ')', '"', ',', '.', ' ', '{', '}', 'x'];
 const TEXT_OBJECTS = ['iw', 'aw', 'iW', 'aW', 'i"', 'a"', "i'", "a'", 'i(', 'a(', 'ib', 'i{', 'a{', 'iB', 'i[', 'a[', 'i<', 'a<', 'it', 'at', 'ip', 'ap', 'is', 'as'];
-// '=' 는 비교하지 않습니다: 엔진의 = 는 중괄호 깊이로 다시 들여쓰는 의도된 기능이고, nvim -u NONE 은 윗줄 들여쓰기만 복사합니다.
-const OPERATORS = ['d', 'c', 'y', '>', '<', 'gU', 'gu', 'g~'];
+// '=' 는 nvim -u NONE 처럼 C 들여쓰기(cindent, src/vim-engine/cindent.ts)로 다시 들여씁니다.
+const OPERATORS = ['d', 'c', 'y', '>', '<', '=', 'gU', 'gu', 'g~'];
 
 // 확장 명령 (Ex·입력 모드 편집 키·검색·이름 있는 레지스터·마크·매크로)
 const EX_COMMANDS = [
@@ -118,7 +118,7 @@ function randomCommandRaw(rng: Rng): string {
     return maybeCount(rng, 0.15) + op + target + insert;
   }
   if (r < 0.6) {
-    const op = rng.pick(['dd', 'yy', 'cc', '>>', '<<', 'gUU', 'guu', 'g~~']);
+    const op = rng.pick(['dd', 'yy', 'cc', '>>', '<<', '==', 'gUU', 'guu', 'g~~']);
     const insert = op === 'cc' ? rng.pick(INSERT_TEXT) + '<Esc>' : '';
     return maybeCount(rng, 0.2) + op + insert;
   }
@@ -133,7 +133,7 @@ function randomCommandRaw(rng: Rng): string {
   if (r < 0.92) {
     const vmode = rng.pick(['v', 'V', '<C-v>']);
     const moves = Array.from({ length: 1 + Math.floor(rng.next() * 2) }, () => randomMotion(rng)).join('');
-    const action = rng.pick(['d', 'y', 'c', '>', '<', '~', 'U', 'u', 'J', 'r#']);
+    const action = rng.pick(['d', 'y', 'c', '>', '<', '=', '~', 'U', 'u', 'J', 'r#']);
     const insert = action === 'c' ? rng.pick(INSERT_TEXT) + '<Esc>' : '';
     return vmode + moves + action + insert;
   }

@@ -1,7 +1,7 @@
 import { CursorPosition, VimEditorState } from './types';
 import { clampCursor } from './cursor';
 import { pushUndoSnapshot } from './operators';
-import { formatLinesRange, changeCaseVisual, caseTypeForOperator } from './lineOperators';
+import { formatLinesRange, cindentOptionsFor, equalOperatorCursor, changeCaseVisual, caseTypeForOperator } from './lineOperators';
 import { moveToFirstNonBlank } from './motions';
 
 export interface TextObjectRange {
@@ -155,11 +155,11 @@ export function executeLinewiseObjectOperator(
 
   if (operator === '=') {
     const stateWithSnapshot = pushUndoSnapshot(state);
-    const nextLines = formatLinesRange(state.lines, startLine, endLine);
+    const nextLines = formatLinesRange(state.lines, startLine, endLine, cindentOptionsFor(state));
     return {
       ...stateWithSnapshot,
       lines: nextLines,
-      cursor: moveToFirstNonBlank(nextLines, { line: startLine, col: 0 }),
+      cursor: equalOperatorCursor(state, nextLines, startLine),
       pendingKeys: undefined,
     };
   }

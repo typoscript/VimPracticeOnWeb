@@ -182,9 +182,8 @@ export function handleNormalDCYCombineShortcut(
     (parsed.operator === 'd' || parsed.operator === 'c' || parsed.operator === 'y') &&
     (key === ';' || key === ',')
   ) {
-    if (!state.lastCharSearch) {
-      return { ...state, pendingKeys: undefined };
-    }
+    // 이전 f/t/F/T 가 없으면 Vim 처럼 실패합니다.
+    if (!state.lastCharSearch) return ringBell(state);
     const op = parsed.operator;
     const motion = key === ';' ? state.lastCharSearch.type : getOppositeMotion(state.lastCharSearch.type);
     if (!moveFind(state.lines, state.cursor, motion, state.lastCharSearch.char, parsed.totalCount)) {

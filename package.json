@@ -17,7 +17,8 @@
     "sync:docs": "node scripts/syncAgentDocs.mjs",
     "prepare": "git config core.hooksPath .githooks || true",
     "fuzz:neovim": "tsx scripts/neovimFuzz.ts",
-    "fixtures:neovim-fuzz": "tsx scripts/neovimFuzzFixtures.ts"
+    "fixtures:neovim-fuzz": "tsx scripts/neovimFuzzFixtures.ts",
+    "fixtures:neovim-cindent": "tsx scripts/neovimCindentFixtures.ts"
   },
   "dependencies": {
     "react": "^19.0.0",
