@@ -362,6 +362,12 @@ const CASES: Case[] = [
   { id: 'visual-line-col-1', text: 'ABCD\nx', cursor: { row: 0, col: 0 }, keys: 'i<Esc>llVu' },
   { id: 'visual-line-col-2', text: 'abcd\nefgh', cursor: { row: 0, col: 0 }, keys: 'i<Esc>jllVky' },
   { id: 'visual-line-col-3', text: 'abcd\nefgh', cursor: { row: 0, col: 0 }, keys: 'i<Esc>llVjy' },
+  { id: 'put-unset-register-1', text: 'a\nb\nc\nd x', cursor: { row: 0, col: 0 }, keys: '3j:0pu<CR>' },
+  { id: 'put-unset-register-2', text: 'abc\ndef\nghi', cursor: { row: 0, col: 0 }, keys: 'jl:0pu<CR>' },
+  { id: 'put-unset-register-3', text: 'a\nb\nc', cursor: { row: 0, col: 0 }, keys: 'jj:pu<CR>' },
+  { id: 'put-unset-register-4', text: 'alpha beta\ngamma delta\nx', cursor: { row: 0, col: 0 }, keys: 'vjlc(<Esc>:pu<CR>' },
+  { id: 'put-unset-register-5', text: 'a\nb', cursor: { row: 0, col: 0 }, keys: 'yy:0pu<CR>' },
+  { id: 'put-unset-register-6', text: 'alpha beta gamma\nfoo.bar(baz, \"qux\")\n{ key: \'value\', n: 7 }\n', cursor: { row: 0, col: 0 }, keys: 'vWc(<Esc>:pu<CR>' },
 ];
 
 const LUA = `
@@ -373,7 +379,7 @@ for _, c in ipairs(cases) do
   vim.bo.undolevels = -1
   vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.split(c.text, "\\n", { plain = true }))
   vim.bo.undolevels = 1000
-  for _, r in ipairs({ '"', '0', '1', '-' }) do vim.fn.setreg(r, '') end
+  -- 레지스터는 비우지 않습니다: 케이스마다 새 nvim 이라 '한 번도 안 쓴' 상태이고, setreg('') 는 '빈 값으로 설정됨'이 되어 엔진과 달라집니다.
   vim.api.nvim_win_set_cursor(0, { c.cursor.row + 1, c.cursor.col })
   vim.api.nvim_feedkeys(vim.api.nvim_replace_termcodes(c.keys, true, false, true), "ntx", false)
   local cur = vim.api.nvim_win_get_cursor(0)

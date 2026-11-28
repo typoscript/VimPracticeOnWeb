@@ -242,8 +242,12 @@ export function executeExPut(
   // Vim: 한 번도 쓰지 않은 레지스터는 E353, 빈 문자열로 설정된 레지스터는 빈 줄 하나를 넣습니다.
   const clip = getRegisterContent(state, reg);
   if (!clip || clip.content === undefined || clip.content === null) {
+    // Vim do_one_cmd: 명령이 실패해도 커서는 먼저 주소의 줄로 갑니다 (:0pu → 첫 줄, 열은 curswant).
+    const line = Math.max(0, Math.min(insertAfterLine, state.lines.length - 1));
+    const col = Math.max(0, Math.min(state.curswant ?? state.cursor.col, (state.lines[line] ?? '').length - 1));
     return {
       ...state,
+      cursor: { line, col },
       mode: 'NORMAL',
       visualAnchor: undefined,
       commandBuffer: undefined,

@@ -7162,5 +7162,147 @@
       "regType": "line",
       "mode": "n"
     }
+  },
+  {
+    "id": "put-unset-register-1",
+    "text": "a\nb\nc\nd x",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "3j:0pu<CR>",
+    "expected": {
+      "lines": [
+        "a",
+        "b",
+        "c",
+        "d x"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "put-unset-register-2",
+    "text": "abc\ndef\nghi",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "jl:0pu<CR>",
+    "expected": {
+      "lines": [
+        "abc",
+        "def",
+        "ghi"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "put-unset-register-3",
+    "text": "a\nb\nc",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "jj:pu<CR>",
+    "expected": {
+      "lines": [
+        "a",
+        "b",
+        "c"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "put-unset-register-4",
+    "text": "alpha beta\ngamma delta\nx",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "vjlc(<Esc>:pu<CR>",
+    "expected": {
+      "lines": [
+        "(mma delta",
+        "alpha beta",
+        "ga",
+        "x"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      },
+      "reg": "alpha beta\nga",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "put-unset-register-5",
+    "text": "a\nb",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "yy:0pu<CR>",
+    "expected": {
+      "lines": [
+        "a",
+        "a",
+        "b"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "a\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "put-unset-register-6",
+    "text": "alpha beta gamma\nfoo.bar(baz, \"qux\")\n{ key: 'value', n: 7 }\n",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "vWc(<Esc>:pu<CR>",
+    "expected": {
+      "lines": [
+        "(eta gamma",
+        "alpha b",
+        "foo.bar(baz, \"qux\")",
+        "{ key: 'value', n: 7 }",
+        ""
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "alpha b",
+      "regType": "char",
+      "mode": "n"
+    }
   }
 ]
