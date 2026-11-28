@@ -212,7 +212,7 @@ export function renderLineContent(opts: RenderLineOptions): React.ReactNode {
     } else if (insertMode === 'A') {
       blockSecondaryCol = insertCol;
     } else if (insertMode === 'I') {
-      if (insertCol === 0 || text.length > insertCol) {
+      if (insertCol === 0 || text.length >= insertCol) {
         blockSecondaryCol = insertCol;
       }
     } else {

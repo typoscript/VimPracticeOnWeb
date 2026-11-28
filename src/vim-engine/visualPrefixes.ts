@@ -300,7 +300,8 @@ export function handleVisualTextObject(state: VimEditorState, key: string): VimE
     return { ...state, pendingKeys: undefined };
   }
 
-  if (key === 'i' || key === 'a') {
+  // f/t/F/T·g·[ 처럼 다른 접두 키가 대기 중이면 그 키의 인자입니다 (vfa 의 a 는 찾을 글자).
+  if ((key === 'i' || key === 'a') && (!state.pendingKeys || /^[1-9][0-9]*$/.test(state.pendingKeys))) {
     return {
       ...state,
       pendingKeys: (state.pendingKeys ?? '') + key,

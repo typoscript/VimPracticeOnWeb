@@ -441,7 +441,7 @@ export function handleInsertEscape(state: VimEditorState, isReplayingDot: boolea
           nextLines[lineIdx] = lineText.slice(0, insertCol) + insertedText + lineText.slice(insertCol);
         }
       } else if (insertMode === 'I') {
-        if (insertCol === 0 || lineText.length > insertCol) {
+        if (insertCol === 0 || lineText.length >= insertCol) {
           nextLines[lineIdx] = lineText.slice(0, insertCol) + insertedText + lineText.slice(insertCol);
         } else if (insertedText.length > 0 && !skippedSet?.has(lineIdx)) {
           lineText = lineText.padEnd(insertCol, ' ');
@@ -454,7 +454,8 @@ export function handleInsertEscape(state: VimEditorState, isReplayingDot: boolea
     }
 
     const finalFirstCol = col + (repeatCount > 1 ? unitText.length * (repeatCount - 1) : 0);
-    const nextCol = Math.max(0, finalFirstCol - 1);
+    // Vim op_insert: 블록 A 로 글자를 넣었으면 커서는 블록 왼쪽 위(oap->start.col)로 돌아갑니다.
+    const nextCol = insertMode === 'A' && unitText.length > 0 ? minCol : Math.max(0, finalFirstCol - 1);
     const lastPos = { line: firstLineIdx, col: insertCol, row: firstLineIdx };
     const changeRecord = recordChangePosition(state.changeList, { line: firstLineIdx, col: insertCol });
     const nextLastChange =

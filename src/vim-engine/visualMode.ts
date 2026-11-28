@@ -3,7 +3,7 @@ import { executeCommandLine } from './commandLine';
 import { moveToLineStart, moveToLineEnd, moveToFirstNonBlank } from './motions';
 import { syncRegisters, putFromRegister } from './registers';
 import { reselectLastVisual } from './advancedMotions';
-import { deleteVisualSelection, yankVisualSelection, yankVisualBlock, startVisualBlockInsert, swapVisualCursorAnchor, failedVisualJoinCursor } from './visual';
+import { deleteVisualSelection, yankVisualSelection, yankVisualBlock, startVisualBlockInsert, swapVisualCursorAnchor, failedVisualJoinCursor, getOrderedRange } from './visual';
 import { replaceVisualChars } from './visualUtilities';
 import { moveFind, moveFindRepeat } from './findChar';
 import { findMatches, findSearchTarget, getWordAtCursor } from './search';
@@ -416,8 +416,14 @@ export function handleVisualModeKey(
     }
     const delRes = deleteVisualSelection(state, true);
     const synced = syncRegisters(state, delRes, false);
+    // Vim op_change: 지운 범위가 줄 끝까지였으면 커서가 줄 끝 다음 칸(입력 위치)으로 갑니다 (vgec → 줄 끝에 덧붙임).
+    const changeStart = state.visualAnchor ? getOrderedRange(state.visualAnchor, state.cursor).start : synced.cursor;
+    const insertCol = changeStart.line === synced.cursor.line
+      ? Math.min(changeStart.col, (synced.lines[synced.cursor.line] ?? '').length)
+      : synced.cursor.col;
     return {
       ...synced,
+      cursor: { line: synced.cursor.line, col: insertCol },
       mode: 'INSERT',
       lastVisualSelection: snap,
     };
@@ -755,7 +761,7 @@ export function handleVisualModeKey(
     const targetText = state.lines[target] ?? '';
     const col = getOptions(state).startofline
       ? Math.max(0, targetText.search(/\S/))
-      : Math.min(state.curswant ?? state.cursor.col, Math.max(0, targetText.length - 1));
+      : Math.min(state.curswant ?? state.cursor.col, targetText.length);
     return { ...state, cursor: { line: target, col }, visualBlockEndOfLine: state.mode === 'VISUAL_BLOCK' ? state.visualBlockEndOfLine : undefined, pendingKeys: undefined };
   }
 
@@ -774,7 +780,8 @@ export function handleVisualModeKey(
     if (isFailedMotion(key, state.cursor, motionCursor)) {
       return ringBell(state);
     }
-    let nextCursor = motionCursor;
+    // Vim nv_dollar: 비주얼 모드의 $ 는 줄 끝 다음 칸(NUL)에 섭니다 (v$y 가 줄바꿈까지 복사).
+    let nextCursor = key === '$' ? { line: motionCursor.line, col: (state.lines[motionCursor.line] ?? '').length } : motionCursor;
     let nextBlockEol = state.visualBlockEndOfLine;
     if (state.mode === 'VISUAL_BLOCK') {
       if (key === '$') {
@@ -783,8 +790,7 @@ export function handleVisualModeKey(
         nextBlockEol &&
         (key === 'j' || key === 'k' || key === 'G' || key === '{' || key === '}' || key === 'ArrowDown' || key === 'ArrowUp')
       ) {
-        const lineLen = (state.lines[motionCursor.line] ?? '').length;
-        nextCursor = { line: motionCursor.line, col: Math.max(0, lineLen - 1) };
+        nextCursor = { line: motionCursor.line, col: (state.lines[motionCursor.line] ?? '').length };
       } else {
         nextBlockEol = undefined;
       }
@@ -801,4 +807,3 @@ export function handleVisualModeKey(
 
   return state;
 }
-

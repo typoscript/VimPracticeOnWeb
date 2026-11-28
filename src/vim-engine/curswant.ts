@@ -52,7 +52,8 @@ export function applyCurswant(prev: VimEditorState, next: VimEditorState, key: s
   const sameCursor = next.cursor.line === prev.cursor.line && next.cursor.col === prev.cursor.col;
   if (CURSWANT_MODES.has(prev.mode) && sameText && keepsCurswant(prev, key)) {
     const line = next.lines[next.cursor.line] ?? '';
-    const lastCol = Math.max(0, line.length - 1);
+    // 비주얼 모드는 줄 끝 다음 칸(NUL)까지 갈 수 있습니다 (Vim coladvance 의 one_more).
+    const lastCol = next.mode.startsWith('VISUAL') ? line.length : Math.max(0, line.length - 1);
     const col = Math.min(remembered, lastCol);
     const cursor = col === next.cursor.col ? next.cursor : clampCursor(next.lines, { line: next.cursor.line, col }, next.mode);
     return { ...next, cursor, curswant: remembered };
@@ -63,12 +64,21 @@ export function applyCurswant(prev: VimEditorState, next: VimEditorState, key: s
   const pending = prev.pendingKeys ?? '';
   const isDollar = key === '$' && /^([1-9][0-9]*)?$/.test(pending) && CURSWANT_MODES.has(prev.mode);
   // Vim nv_dollar: 줄이 모자라 [count]$ 가 실패해도 curswant 는 먼저 줄 끝으로 정해집니다 (3$ 뒤 G 가 줄 끝으로).
-  if (isDollar && next.bell && sameText && sameCursor) return { ...next, curswant: CURSWANT_EOL };
-  // 매크로 녹화 시작·끝(q{reg}, q)과 마크(m{a})는 Vim 에서 curswant 를 건드리지 않습니다.
+  // nv_g_cmd 의 g_ 도 같습니다: [count]g_ 가 줄이 모자라 실패하면 curswant 는 줄 끝입니다.
+  const isGUnderscore = key === '_' && /^([1-9][0-9]*)?g$/.test(pending) && CURSWANT_MODES.has(prev.mode);
+  if ((isDollar || isGUnderscore) && next.bell && sameText && sameCursor) return { ...next, curswant: CURSWANT_EOL };
+  // 매크로 녹화 시작·끝(q{reg}, q)과 마크(m{a}), 레지스터 지정("x)은 Vim 에서 curswant 를 건드리지 않습니다.
   const keepsForRecordOrMark =
-    prev.mode === 'NORMAL' && ((key === 'q' && !pending && !!prev.recordingMacro) || pending === 'q' || pending === 'm');
+    (prev.mode === 'NORMAL' && ((key === 'q' && !pending && !!prev.recordingMacro) || pending === 'q' || pending === 'm')) ||
+    (CURSWANT_MODES.has(prev.mode) && /^([1-9][0-9]*)?"$/.test(pending) && !!next.activeRegister);
   if ((next.bell || startsVisual || keepsForRecordOrMark) && sameText && sameCursor) {
     return next.curswant === remembered ? next : { ...next, curswant: remembered };
+  }
+  // Vim nv_pipe: [count]| 는 줄이 짧아 덜 가도 가려던 열(count-1)을 기억합니다 (2| 뒤 gg 가 1열로).
+  const pipeMatch = key === '|' && CURSWANT_MODES.has(prev.mode) ? /^([1-9][0-9]*)?$/.exec(pending) : null;
+  if (pipeMatch) {
+    const pipeWant = pipeMatch[1] ? parseInt(pipeMatch[1], 10) - 1 : 0;
+    return next.curswant === pipeWant ? next : { ...next, curswant: pipeWant };
   }
   const want = isDollar ? CURSWANT_EOL : next.cursor.col;
   return next.curswant === want ? next : { ...next, curswant: want };

@@ -470,7 +470,7 @@ export function executeSearchQuery(
 /**
  * n / N: 마지막 검색 패턴·방향·오프셋으로 반복합니다. (`?` 검색 뒤의 n 은 위쪽으로)
  */
-export function repeatSearch(state: VimEditorState, reverse: boolean): VimEditorState {
+export function repeatSearch(state: VimEditorState, reverse: boolean, count = 1): VimEditorState {
   if (!state.lastSearchQuery) {
     return { ...state, pendingKeys: undefined };
   }
@@ -485,7 +485,12 @@ export function repeatSearch(state: VimEditorState, reverse: boolean): VimEditor
     };
   }
   const forward = (state.lastSearchDirection !== 'backward') !== reverse;
-  const found = findSearchTarget(state.lines, matches, state.cursor, state.lastSearchOffset, forward)!;
+  let found = findSearchTarget(state.lines, matches, state.cursor, state.lastSearchOffset, forward)!;
+  // [count]n: Vim searchit 처럼 앞 매치 시작에서 count 번 더 찾고, 오프셋은 마지막 매치에만 붙입니다.
+  for (let i = 1; i < count && !(opts.wrapscan === false && found.wrapped); i++) {
+    const step = findSearchTarget(state.lines, matches, found.match, null, forward)!;
+    found = { match: step.match, target: applySearchOffset(state.lines, step.match, state.lastSearchOffset), wrapped: found.wrapped || step.wrapped };
+  }
   if (opts.wrapscan === false && found.wrapped) {
     return {
       ...state,

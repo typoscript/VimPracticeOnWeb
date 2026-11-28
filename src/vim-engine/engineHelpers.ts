@@ -139,7 +139,11 @@ export function moveByExtraMotion(state: VimEditorState, key: string, count: num
   if (!res) return ringBell(state);
   const mode = state.mode === 'NORMAL' ? 'NORMAL' : state.mode;
   // ]] 가 버퍼 끝에 닿으면 연산자와 함께일 때만 마지막 줄 끝(포함)이고, 커서 이동은 0열입니다 (Vim findpar).
-  const target = key === ']]' && res.kind === 'inclusive' ? { line: res.target.line, col: 0 } : res.target;
+  // 비주얼 모드의 ) 는 버퍼 끝에 닿으면 줄 끝 다음 칸(NUL)에 섭니다 (adjust_cursor 는 비주얼에서 커서를 당기지 않음).
+  const visualNul = key === ')' && res.kind === 'inclusive' && state.mode.startsWith('VISUAL');
+  const target = key === ']]' && res.kind === 'inclusive'
+    ? { line: res.target.line, col: 0 }
+    : visualNul ? { line: res.target.line, col: res.target.col + 1 } : res.target;
   return {
     ...state,
     cursor: clampCursor(state.lines, target, mode),
@@ -172,6 +176,12 @@ export function findShiftRange(
   if ((keys[0] === 'i' || keys[0] === 'a') && keys.length === 2 && 'wWs'.includes(keys[1])) {
     const range = findOperatorRangeByYank(state, keys, count, runHandleKey);
     if (range) return { startLine: range.start.line, endLine: range.end.line, startCol: range.start.col };
+    // 빈 범위로 성공한 객체(버퍼 끝 빈 줄의 is/as: y 가 빈 문자열을 복사)는 커서 줄만 대상입니다 (빈 줄이라 바뀌지 않음).
+    let probe: VimEditorState = { ...base, clipboard: undefined, bell: false };
+    for (const k of [...countKeys, 'y', ...keys]) if (!probe.bell) probe = runHandleKey(probe, k);
+    if (!probe.bell && probe.mode === 'NORMAL' && !probe.pendingKeys && probe.clipboard?.content === '') {
+      return { startLine: probe.cursor.line, endLine: probe.cursor.line, startCol: probe.cursor.col };
+    }
   }
   if (keys[0] === 'i' || keys[0] === 'a') {
     const selected = [...['v'], ...countKeys, ...keys].reduce((s, k) => runHandleKey(s, k), base);

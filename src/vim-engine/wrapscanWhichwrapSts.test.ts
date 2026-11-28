@@ -118,9 +118,13 @@ describe('whichwrap (:set ww=...)', () => {
     state = handleKey(state, 'ArrowLeft');
     expect(state.cursor).toEqual({ line: 0, col: 1 });
 
-    // Visual mode also respects whichwrap
+    // Visual mode also respects whichwrap. Neovim: 비주얼의 l 은 먼저 줄 끝 다음 칸(NUL)에 서고, 한 번 더 누르면 다음 줄로 넘어갑니다.
     state = runKeys(state, ['v', 'l']);
+    expect(state.cursor).toEqual({ line: 0, col: 2 });
+    state = handleKey(state, 'l');
     expect(state.cursor).toEqual({ line: 1, col: 0 });
+    state = handleKey(state, 'h');
+    expect(state.cursor).toEqual({ line: 0, col: 2 });
   });
 
   it('wraps ArrowLeft/ArrowRight in Insert/Replace when [,] are in whichwrap', () => {

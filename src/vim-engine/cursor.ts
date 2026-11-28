@@ -50,6 +50,13 @@ export function getMaxCol(
     mode === 'INSERT' ||
     mode === 'REPLACE' ||
     mode === 'TERMINAL' ||
+    // Vim 비주얼 모드('selection' 기본값)는 줄 끝 다음 칸(NUL)에 커서를 둘 수 있습니다 (v$ · vl · 짧은 줄로 내려온 j).
+    mode === 'VISUAL' ||
+    mode === 'VISUAL_LINE' ||
+    mode === 'VISUAL_BLOCK' ||
+    mode === 'SELECT' ||
+    mode === 'SELECT_LINE' ||
+    mode === 'SELECT_BLOCK' ||
     hasVirtualEdit(virtualedit, 'onemore')
   ) {
     return len;

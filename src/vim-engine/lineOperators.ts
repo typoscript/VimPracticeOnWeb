@@ -464,11 +464,12 @@ export function indentVisual(
     const minCol = Math.min(state.visualAnchor.col, state.cursor.col);
     for (let i = minLine; i <= maxLine; i++) {
       const line = newLines[i];
-      if (line.length <= minCol) continue;
+      // Vim shift_block: 블록 왼쪽 열에 못 미치는 줄만 건너뜁니다 (줄 끝이 딱 그 열이면 끝에 공백이 붙음).
+      if (line.length < minCol) continue;
       const prefix = line.slice(0, minCol);
       const rest = line.slice(minCol);
       if (direction === 'in') {
-        if (rest.length > 0) newLines[i] = prefix + indentStr + rest;
+        if (rest.length > 0 || minCol > 0) newLines[i] = prefix + indentStr + rest;
       } else {
         if (rest.startsWith(indentStr)) {
           newLines[i] = prefix + rest.slice(indentStr.length);
@@ -500,10 +501,11 @@ export function indentVisual(
     newLines[i] = shiftLineIndent(newLines[i], direction, sw, ts, et, sr, 1);
   }
 
-  // Vim op_shift: beginline(BL_SOL | BL_FIX) — 'nostartofline' 이면 비주얼을 끝낸 커서 열(curswant)을 유지
+  // Vim op_shift: beginline(BL_SOL | BL_FIX) — 'nostartofline' 이면 coladvance(w_curswant): 기억한 열로 갑니다
+  // (vkl> 처럼 짧은 줄에서 l 이 실패해도 k 전의 열, v$> 는 줄 끝).
   const newCursor = opts.startofline
     ? moveToFirstNonBlank(newLines, { line: minLine, col: 0 })
-    : clampCursor(newLines, { line: minLine, col: state.cursor.col }, 'NORMAL');
+    : clampCursor(newLines, { line: minLine, col: state.curswant ?? state.cursor.col }, 'NORMAL');
 
   return {
     ...stateWithUndo,

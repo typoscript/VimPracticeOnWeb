@@ -548,7 +548,7 @@ export function handleNormalEditingAndMotionFallback(
     };
   }
 
-  if (key === 'n' || key === 'N') return repeatSearch(state, key === 'N');
+  if (key === 'n' || key === 'N') return repeatSearch(state, key === 'N', parsed.totalCount);
   if (key === '*' || key === '#') return executeWordSearch(state, key === '*' ? 'forward' : 'backward', true);
   if (key === 'u') return undo(state);
   if (key === 'U') return undoCurrentLine(state);

@@ -89,6 +89,17 @@ export function isPositionSelected(
 }
 
 /**
+ * Vim block_prep: 블록 왼쪽 열에 닿지 않는 짧은 줄은 레지스터에 블록 너비만큼 공백으로 들어갑니다
+ * (`$` 블록이면 가장 긴 줄 끝까지의 너비, 줄 길이가 왼쪽 열과 같으면 빈 문자열).
+ */
+function shortLineBlockFill(lines: string[], minLine: number, maxLine: number, minCol: number, maxCol: number, isEol: boolean): string {
+  const width = isEol
+    ? Math.max(0, ...lines.slice(minLine, maxLine + 1).map((l) => l.length)) - minCol + 1
+    : maxCol - minCol + 1;
+  return ' '.repeat(Math.max(0, width));
+}
+
+/**
  * VISUAL_BLOCK 모드에서 선택된 직사각형 열 구간을 모든 해당 행에서 삭제합니다.
  */
 export function deleteVisualBlock(state: VimEditorState): VimEditorState {
@@ -109,10 +120,11 @@ export function deleteVisualBlock(state: VimEditorState): VimEditorState {
   const deletedParts: string[] = [];
   const nextLines = [...state.lines];
 
+  const fill = shortLineBlockFill(state.lines, minLine, maxLine, minCol, maxCol, isEol);
   for (let l = minLine; l <= maxLine; l++) {
     const lineText = nextLines[l] ?? '';
     if (lineText.length <= minCol) {
-      deletedParts.push('');
+      deletedParts.push(lineText.length < minCol ? fill : '');
     } else if (isEol) {
       deletedParts.push(lineText.slice(minCol));
       nextLines[l] = lineText.slice(0, minCol);
@@ -131,7 +143,7 @@ export function deleteVisualBlock(state: VimEditorState): VimEditorState {
   );
 
   const blockWidth = isEol
-    ? Math.max(0, ...deletedParts.map((p) => p.length))
+    ? Math.max(0, ...state.lines.slice(minLine, maxLine + 1).map((l) => l.length - minCol))
     : maxCol - minCol + 1;
 
   return {
@@ -168,10 +180,11 @@ export function yankVisualBlock(state: VimEditorState): VimEditorState {
   const isEol = Boolean(state.visualBlockEndOfLine);
 
   const parts: string[] = [];
+  const fill = shortLineBlockFill(state.lines, minLine, maxLine, minCol, maxCol, isEol);
   for (let l = minLine; l <= maxLine; l++) {
     const lineText = state.lines[l] ?? '';
     if (lineText.length <= minCol) {
-      parts.push('');
+      parts.push(lineText.length < minCol ? fill : '');
     } else if (isEol) {
       parts.push(lineText.slice(minCol));
     } else {
@@ -180,7 +193,7 @@ export function yankVisualBlock(state: VimEditorState): VimEditorState {
   }
 
   const blockWidth = isEol
-    ? Math.max(0, ...parts.map((p) => p.length))
+    ? Math.max(0, ...state.lines.slice(minLine, maxLine + 1).map((l) => l.length - minCol))
     : maxCol - minCol + 1;
 
   return {
@@ -245,7 +258,7 @@ export function startVisualBlockInsert(
     } else {
       targetCol = Math.min(minCol, (nextLines[minLine] ?? '').length);
       for (const l of linesList) {
-        if (minCol > 0 && (state.lines[l] ?? '').length <= minCol) {
+        if (minCol > 0 && (state.lines[l] ?? '').length < minCol) {
           skippedLines.push(l);
         }
       }
@@ -264,7 +277,8 @@ export function startVisualBlockInsert(
     targetCol = Math.min(minCol, (nextLines[minLine] ?? '').length);
     for (let l = minLine; l <= maxLine; l++) {
       const lineText = nextLines[l] ?? '';
-      if (minCol > 0 && lineText.length <= minCol) {
+      // Vim block_prep(is_del): 블록 왼쪽 열에 못 미치는 줄만 건너뜁니다. 줄 끝이 딱 왼쪽 열이면 그 끝에 입력이 들어갑니다.
+      if (minCol > 0 && lineText.length < minCol) {
         skippedLines.push(l);
         continue;
       }
@@ -463,17 +477,11 @@ export function deleteVisualSelection(state: VimEditorState, visualKey = false):
 }
 
 /**
- * 문자 단위 비주얼의 끝이 줄 끝 다음 칸(Vim 의 NUL)에 있어 줄바꿈까지 고른 것인지 (마지막 줄 제외).
- * 빈 줄이거나, 끝이 커서이고 $ / 짧은 줄로 내려온 j·k 로 기억한 열(curswant)이 줄 길이 이상일 때입니다.
+ * 문자 단위 비주얼의 끝이 줄 끝 다음 칸(Vim 의 NUL: 빈 줄, v$, 짧은 줄로 내려온 j …)에 있어 줄바꿈까지 고른 것인지 (마지막 줄 제외).
  */
 export function visualEndIncludesNewline(state: VimEditorState, end: CursorPosition): boolean {
   if (end.line >= state.lines.length - 1) return false;
-  const len = (state.lines[end.line] ?? '').length;
-  if (len === 0) return true;
-  const anchor = state.visualAnchor;
-  const cursorIsEnd = state.cursor.line === end.line && state.cursor.col === end.col;
-  const moved = !anchor || anchor.line !== state.cursor.line || anchor.col !== state.cursor.col;
-  return cursorIsEnd && moved && (state.curswant ?? -1) >= len;
+  return end.col >= (state.lines[end.line] ?? '').length;
 }
 
 /**

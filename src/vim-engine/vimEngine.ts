@@ -10,6 +10,7 @@ import {
   recordRepeatRegister,
   recordVisualUndoCursor,
   recordVisualRepeat,
+  redoLinewiseVisualCaseCursor,
 } from './repeatAndUndoRules';
 
 export { CURSWANT_EOL };
@@ -541,8 +542,14 @@ export function rawHandleKey(
 /** 키 하나를 처리한 결과에 파일별 상태 동기화, curswant, `.` 반복·실행 취소 규칙을 차례로 적용합니다. */
 function applyKeyRules(input: VimEditorState, raw: VimEditorState, key: string, isReplayingDot: boolean): VimEditorState {
   let next = syncPerFileState(input, raw);
+  // 비주얼 모드에서만 설 수 있는 줄 끝 다음 칸(NUL)은 비주얼을 끝내면 마지막 글자로 돌아옵니다 (Vim adjust_cursor).
+  if (next.mode === 'NORMAL' && VISUAL_LIKE_MODES.has(input.mode)) {
+    const clamped = clampCursor(next.lines, next.cursor, 'NORMAL');
+    if (clamped.col !== next.cursor.col || clamped.line !== next.cursor.line) next = { ...next, cursor: clamped };
+  }
   next = applyCurswant(input, next, key);
   next = recordVisualRepeat(input, next, key, isReplayingDot);
+  next = redoLinewiseVisualCaseCursor(input, next, key, isReplayingDot);
   next = recordRepeatRegister(input, next, isReplayingDot);
   next = recordInsertStartCursor(input, next, key);
   next = recordVisualUndoCursor(input, next);

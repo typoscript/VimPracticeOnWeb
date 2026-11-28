@@ -239,7 +239,8 @@ export function replaceVisualChars(
     for (let l = start.line; l <= end.line; l++) {
       const lineText = nextLines[l] ?? '';
       if (lineText.length === 0) continue;
-      const fromCol = l === start.line ? Math.min(start.col, lineText.length - 1) : 0;
+      // 시작이 줄 끝 다음 칸(NUL)이면 그 줄에서 바꿀 글자가 없습니다 (vggr# 이 짧은 첫 줄을 건드리지 않음).
+      const fromCol = l === start.line ? start.col : 0;
       const toCol = l === end.line ? Math.min(end.col, lineText.length - 1) : lineText.length - 1;
       const count = toCol - fromCol + 1;
       if (count > 0) {

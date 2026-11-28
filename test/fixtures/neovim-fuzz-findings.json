@@ -11503,5 +11503,791 @@
       "regType": "line",
       "mode": "n"
     }
+  },
+  {
+    "id": "visual-find-char-a",
+    "text": "  return \"Hello, \" + name;",
+    "cursor": {
+      "row": 0,
+      "col": 24
+    },
+    "keys": "vfar#",
+    "expected": {
+      "lines": [
+        "  return \"Hello, \" + nam#;"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 24
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-line-find-char-a",
+    "text": "funcend;tion greet(name) {\n  return \"Hello, \" + name;\n}",
+    "cursor": {
+      "row": 0,
+      "col": 7
+    },
+    "keys": "Vfad",
+    "expected": {
+      "lines": [
+        "  return \"Hello, \" + name;",
+        "}"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 20
+      },
+      "reg": "funcend;tion greet(name) {\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-change-to-line-end-appends",
+    "text": "ab cd\nef gh\nij",
+    "cursor": {
+      "row": 1,
+      "col": 4
+    },
+    "keys": "vgecQ<Esc>",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "eQ",
+        "ij"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 1
+      },
+      "reg": "f gh",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-change-para-to-buffer-end",
+    "text": "ab cd\nef gh\nij",
+    "cursor": {
+      "row": 1,
+      "col": 3
+    },
+    "keys": "v}cZ<Esc>",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "ef Z"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 3
+      },
+      "reg": "gh\nij",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "count-n-backward",
+    "text": "xe e e e e",
+    "cursor": {
+      "row": 0,
+      "col": 9
+    },
+    "keys": "?e<CR>2n",
+    "expected": {
+      "lines": [
+        "xe e e e e"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "count-N-reverse",
+    "text": "xe e e e e",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "/e<CR>3N",
+    "expected": {
+      "lines": [
+        "xe e e e e"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 7
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "pipe-count-curswant",
+    "text": "alpha beta gamma\nfoo.bar(baz, \"qux\")\n{ key: 'value', n: 7 }\n",
+    "cursor": {
+      "row": 3,
+      "col": 0
+    },
+    "keys": "2|gg",
+    "expected": {
+      "lines": [
+        "alpha beta gamma",
+        "foo.bar(baz, \"qux\")",
+        "{ key: 'value', n: 7 }",
+        ""
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "register-prefix-keeps-curswant",
+    "text": "the lazy dog! then it rests.\n\nAnother paragraph here.",
+    "cursor": {
+      "row": 0,
+      "col": 27
+    },
+    "keys": "A!<Esc>j\"_dd",
+    "expected": {
+      "lines": [
+        "the lazy dog! then it rests.!",
+        "Another paragraph here."
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 22
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "redo-linewise-visual-case-cursor",
+    "text": "abc def ghi\nxyz uvw rst\nmno pqr\nhello there\nend line",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "Vj~jjw.",
+    "expected": {
+      "lines": [
+        "ABC DEF GHI",
+        "XYZ UVW RST",
+        "MNO PQR",
+        "HELLO THERE",
+        "end line"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 4
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "redo-linewise-visual-rot13-cursor",
+    "text": "abc def ghi\nxyz uvw rst\nmno pqr\nhello there\nend line",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "Vjg?jjw.",
+    "expected": {
+      "lines": [
+        "nop qrs tuv",
+        "klm hij efg",
+        "zab cde",
+        "uryyb gurer",
+        "end line"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 4
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "block-yank-pads-short-lines",
+    "text": "abcdef\nab\n\nabcdefgh",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "<C-v>3jly",
+    "expected": {
+      "lines": [
+        "abcdef",
+        "ab",
+        "",
+        "abcdefgh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "de\n  \n  \nde",
+      "regType": "block",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "block-dollar-delete-pads-short-lines",
+    "text": "abcdef\nab\n\nabcdefgh",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "<C-v>3j$d",
+    "expected": {
+      "lines": [
+        "abc",
+        "ab",
+        "",
+        "abc"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "def\n      \n      \ndefgh",
+      "regType": "block",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "block-append-cursor-to-block-start",
+    "text": "abcdef\nabcdef\nabcdefgh",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "<C-v>2jlAZ<Esc>",
+    "expected": {
+      "lines": [
+        "abcdeZf",
+        "abcdeZf",
+        "abcdeZfgh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "block-dollar-append-cursor",
+    "text": "abcdef\nab\n\nabcdefgh",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "<C-v>3j$AZ<Esc>",
+    "expected": {
+      "lines": [
+        "abcdefZ",
+        "abZ",
+        "Z",
+        "abcdefghZ"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "block-insert-line-ending-at-col",
+    "text": "abcdef\nabc\nab\nabcdef",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "<C-v>3jlIZ<Esc>",
+    "expected": {
+      "lines": [
+        "abcZdef",
+        "abcZ",
+        "ab",
+        "abcZdef"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "block-change-line-ending-at-col",
+    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "<C-v>)ca b<Esc>",
+    "expected": {
+      "lines": [
+        "ca bsum(a, b) + 42;",
+        "ia b) {",
+        " a botal);",
+        "}a b",
+        "ra b"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "onst total = \nf (total > 10\n log(\"big\", t\n\neturn total;",
+      "regType": "block",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "block-shift-line-ending-at-col",
+    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;",
+    "cursor": {
+      "row": 2,
+      "col": 19
+    },
+    "keys": "<C-v>G>",
+    "expected": {
+      "lines": [
+        "const total = sum(a, b) + 42;",
+        "if (total > 10) {",
+        "  log(\"big\",   total);",
+        "}",
+        "return total;  "
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 13
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "i"
+    }
+  },
+  {
+    "id": "shift-is-empty-last-line",
+    "text": "ab\ncd\n",
+    "cursor": {
+      "row": 2,
+      "col": 0
+    },
+    "keys": ">is",
+    "expected": {
+      "lines": [
+        "ab",
+        "cd",
+        ""
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-dollar-start-excludes-last-char",
+    "text": "ab cd\nef gh\nij",
+    "cursor": {
+      "row": 1,
+      "col": 1
+    },
+    "keys": "vk$y",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "ef gh",
+        "ij"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      },
+      "reg": "\nef",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-dollar-start-case",
+    "text": "ab cd\nef gh\nij",
+    "cursor": {
+      "row": 1,
+      "col": 1
+    },
+    "keys": "vk$~",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "EF gh",
+        "ij"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-dollar-then-h",
+    "text": "ab cd\nef gh\nij",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "v$hy",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "ef gh",
+        "ij"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      },
+      "reg": "b cd",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-l-to-line-end",
+    "text": "ab cd\nef gh\nij",
+    "cursor": {
+      "row": 0,
+      "col": 4
+    },
+    "keys": "vly",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "ef gh",
+        "ij"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      },
+      "reg": "d\n",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-dollar-swap-dollar",
+    "text": "ab cd\nef gh\nij",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "v$o$y",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "ef gh",
+        "ij"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      },
+      "reg": "\n",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-j-short-line-nul",
+    "text": "abcdef\nab\nxyz",
+    "cursor": {
+      "row": 0,
+      "col": 5
+    },
+    "keys": "vjd",
+    "expected": {
+      "lines": [
+        "abcdexyz"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 5
+      },
+      "reg": "f\nab\n",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "block-j-short-line-nul",
+    "text": "abcdef\nab\nxyz",
+    "cursor": {
+      "row": 0,
+      "col": 5
+    },
+    "keys": "<C-v>jjy",
+    "expected": {
+      "lines": [
+        "abcdef",
+        "ab",
+        "xyz"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "def\n   \n",
+      "regType": "block",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-e-at-buffer-end",
+    "text": "  log(\"big\", total); } return total;x",
+    "cursor": {
+      "row": 0,
+      "col": 36
+    },
+    "keys": "veby",
+    "expected": {
+      "lines": [
+        "  log(\"big\", total); } return total;x"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 36
+      },
+      "reg": "x",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-gg-short-line-nul",
+    "text": "alpha beta gamma\nfoo.bar(baz, \"qux\")\n{ key: 'value', n: 7 }\n",
+    "cursor": {
+      "row": 2,
+      "col": 17
+    },
+    "keys": "vggr#",
+    "expected": {
+      "lines": [
+        "alpha beta gamma",
+        "###################",
+        "################## 7 }",
+        ""
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 15
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-block-sentence-nul",
+    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;",
+    "cursor": {
+      "row": 4,
+      "col": 1
+    },
+    "keys": "<C-v>k)U",
+    "expected": {
+      "lines": [
+        "const total = sum(a, b) + 42;",
+        "if (total > 10) {",
+        "  log(\"big\", total);",
+        "}",
+        "REturn total;"
+      ],
+      "cursor": {
+        "row": 4,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-shift-curswant-failed-l",
+    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;",
+    "cursor": {
+      "row": 4,
+      "col": 7
+    },
+    "keys": "vkl>",
+    "expected": {
+      "lines": [
+        "const total = sum(a, b) + 42;",
+        "if (total > 10) {",
+        "  log(\"big\", total);",
+        "  }",
+        "  return total;"
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-shift-curswant-after-h",
+    "text": "end;",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "veh>",
+    "expected": {
+      "lines": [
+        "  end;"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-shift-dollar",
+    "text": "ab cd\nef gh\nij",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "v$>",
+    "expected": {
+      "lines": [
+        "  ab cd",
+        "ef gh",
+        "ij"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 6
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-shift-sentence-buffer-end",
+    "text": "<div>!\nplain 0x1f 007 -3 words",
+    "cursor": {
+      "row": 1,
+      "col": 22
+    },
+    "keys": "v)>",
+    "expected": {
+      "lines": [
+        "<div>!",
+        "  plain 0x1f 007 -3 words"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 23
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "linewise-shift-sentence-buffer-end",
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "cursor": {
+      "row": 3,
+      "col": 0
+    },
+    "keys": "V^)>",
+    "expected": {
+      "lines": [
+        "  indented line one",
+        "    deeper (nested) item",
+        "  back to one",
+        "  last_word_here end"
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 18
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "g-underscore-fail-curswant",
+    "text": "The quick brown fox. It jumps over\nthe lazy dog! Then it rests.\n\nAnother paragraph here.",
+    "cursor": {
+      "row": 3,
+      "col": 0
+    },
+    "keys": "4g_gg",
+    "expected": {
+      "lines": [
+        "The quick brown fox. It jumps over",
+        "the lazy dog! Then it rests.",
+        "",
+        "Another paragraph here."
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 33
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
   }
 ]

@@ -49,6 +49,20 @@ export function recordVisualRepeat(prev: VimEditorState, next: VimEditorState, k
 }
 
 /**
+ * 줄 단위 비주얼 대소문자 연산(V~ Vu VU Vg?)을 `.` 로 반복하면 Vim(do_pending_operator 의 redo_VIsual_busy)은
+ * 연산 시작을 `.` 를 누른 커서 그대로(열 포함) 두므로 커서가 그 열에 남습니다 (처음 연산은 앵커가 위쪽이면 0열).
+ */
+export function redoLinewiseVisualCaseCursor(prev: VimEditorState, next: VimEditorState, key: string, isReplayingDot: boolean): VimEditorState {
+  if (!isReplayingDot || prev.mode !== 'VISUAL_LINE' || !prev.visualAnchor || next.mode !== 'NORMAL' || next.pendingKeys) return next;
+  const pending = prev.pendingKeys ?? '';
+  const isCaseOp = (!pending && (key === '~' || key === 'u' || key === 'U')) || (pending === 'g' && (key === '~' || key === 'u' || key === 'U' || key === '?'));
+  if (!isCaseOp || next.lines === prev.lines || prev.visualAnchor.line > prev.cursor.line) return next;
+  const line = prev.visualAnchor.line;
+  const col = Math.max(0, Math.min(prev.visualAnchor.col, (next.lines[line] ?? '').length - 1));
+  return next.cursor.line === line && next.cursor.col === col ? next : { ...next, cursor: { line, col } };
+}
+
+/**
  * Vim 은 레지스터를 지정한 변경(`"add`, `"acw…`)을 `.` 로 반복할 때 같은 레지스터를 씁니다.
  * 각 명령이 기록한 반복 키에 레지스터 접두사가 없으면 여기서 붙입니다 (비주얼 반복 제외).
  */
