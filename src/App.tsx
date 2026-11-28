@@ -21,6 +21,7 @@ import {
 import { useEditorWorkspaceHandlers } from './hooks/useEditorWorkspaceHandlers';
 import { useHardcoreAndKeymaps } from './hooks/useHardcoreAndKeymaps';
 import { useTabCloseGuard } from './hooks/useTabCloseGuard';
+import { useSandboxAutosave } from './hooks/useSandboxAutosave';
 import { useVimKeyboardInput } from './hooks/useVimKeyboardInput';
 import { useGhostReplay } from './hooks/useGhostReplay';
 import { useActionTimeline } from './hooks/useActionTimeline';
@@ -207,9 +208,9 @@ export function App() {
     currentTab === 'dojo';
 
   // 연습 중(키를 눌렀고 아직 끝내지 않음)에는 Ctrl+W 등으로 탭이 닫히기 전에 확인합니다.
-  useTabCloseGuard(
-    keystrokeCount > 0 && !isCompleted && (currentTab === 'course' || currentTab === 'sandbox' || currentTab === 'custom')
-  );
+  // 자유 연습장은 자동 저장되므로 확인 창 없이 닫혀도 다시 열면 이어서 할 수 있습니다.
+  useTabCloseGuard(keystrokeCount > 0 && !isCompleted && (currentTab === 'course' || currentTab === 'custom'));
+  useSandboxAutosave(editorState, currentTab === 'sandbox', keystrokeCount > 0, missionHandlers.localSandboxFiles);
 
   const { setIsKeyReferenceOpen } = viewSettings;
   const openKeyReference = useCallback(() => setIsKeyReferenceOpen(true), [setIsKeyReferenceOpen]);

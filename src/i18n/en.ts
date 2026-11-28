@@ -1622,4 +1622,5 @@ export const EN: Record<string, string> = {
   "아무 키나 눌러 보세요 (예: w, d, g, Ctrl-w). 아래 목록에서 클릭해도 됩니다.": "Press any key (for example w, d, g, Ctrl-w), or click one in the list below.",
   "⌨️ 키마다 하는 일 보기": "⌨️ See what each key does",
   "⚠️ 브라우저에서 Ctrl+W 는 탭을 닫습니다. 이 레슨의 Ctrl-w 는 Alt+W 로 누르세요.": "⚠️ Ctrl+W closes the browser tab. Press Alt+W for this lesson's Ctrl-w.",
+  "💾 자유 연습장을 이어서 엽니다 ({time} 저장). 처음 예제로 돌아가려면 \"🔄 코드 초기화\"를 누르세요.": "💾 Continuing your sandbox (saved {time}). Press \"🔄 Reset code\" to go back to the starting example.",
 };

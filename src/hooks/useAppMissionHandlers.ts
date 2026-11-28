@@ -24,6 +24,8 @@ import {
 } from '../utils/missionInitialState';
 import { AppTab } from '../components/AppHeader/AppHeader';
 import { t } from '../i18n';
+// 자동 저장 모듈은 작고(~2 kB) 탭 전환 순간 바로 써야 해서 정적으로 불러옵니다.
+import { clearSandboxAutosave, loadSandboxAutosave, restoreSandboxAutosave } from '../utils/sandboxAutosave';
 
 interface UseAppMissionHandlersParams {
   currentMission: Mission;
@@ -128,11 +130,39 @@ export function useAppMissionHandlers({
 
   const [localSandboxFiles, setLocalSandboxFiles] = useState<string[]>([]);
 
+  /** "🔄 코드 초기화": 자동 저장본도 지우고 기본 예제로 돌아갑니다. */
   const handleResetSandbox = useCallback(() => {
     handleStopGhostReplay();
     setLocalSandboxFiles([]);
+    clearSandboxAutosave();
     resetSessionWithState(
       buildSandboxInitialState({ activePresets, leaderKey, customKeymaps, userInitConfig })
+    );
+  }, [handleStopGhostReplay, resetSessionWithState, activePresets, leaderKey, customKeymaps, userInitConfig]);
+
+  /** 자유 연습장 탭에 들어올 때: 자동 저장본이 있으면 이어서 열고, 없으면 기본 예제로 시작합니다. */
+  const handleOpenSandbox = useCallback(() => {
+    handleStopGhostReplay();
+    const base = buildSandboxInitialState({ activePresets, leaderKey, customKeymaps, userInitConfig });
+    const saved = loadSandboxAutosave();
+    if (!saved) {
+      setLocalSandboxFiles([]);
+      resetSessionWithState(base);
+      return;
+    }
+    let restored: VimEditorState;
+    try {
+      restored = restoreSandboxAutosave(base, saved);
+    } catch {
+      setLocalSandboxFiles([]);
+      resetSessionWithState(base);
+      return;
+    }
+    setLocalSandboxFiles(saved.localFiles ?? []);
+    const time = new Date(saved.savedAt).toLocaleString();
+    resetSessionWithState(
+      restored,
+      t('💾 자유 연습장을 이어서 엽니다 ({time} 저장). 처음 예제로 돌아가려면 "🔄 코드 초기화"를 누르세요.', { time })
     );
   }, [handleStopGhostReplay, resetSessionWithState, activePresets, leaderKey, customKeymaps, userInitConfig]);
 
@@ -293,7 +323,7 @@ export function useAppMissionHandlers({
       antiPatternDetectorRef.current.reset();
 
       if (tab === 'sandbox') {
-        handleResetSandbox();
+        handleOpenSandbox();
       } else if (tab === 'speedrun') {
         resetSpeedrunReady();
       } else if (tab === 'arcade' || tab === 'dungeon' || tab === 'dojo') {
@@ -310,7 +340,7 @@ export function useAppMissionHandlers({
     },
     [
       currentMissionIndex,
-      handleResetSandbox,
+      handleOpenSandbox,
       resetSpeedrunReady,
       customMission,
       handleStopGhostReplay,

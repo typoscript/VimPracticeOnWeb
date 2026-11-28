@@ -29,6 +29,7 @@ export const STORAGE_KEYS = {
   THEME: 'vim_selected_theme',
   SOUND_MUTED: 'vim_sound_muted',
   LOCALE: 'vim_locale_v1',
+  SANDBOX_AUTOSAVE: 'vim_sandbox_autosave_v1',
 } as const;
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
