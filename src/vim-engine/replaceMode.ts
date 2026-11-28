@@ -134,7 +134,8 @@ function handleReplaceModeKeyInner(state: VimEditorState, key: string, isReplayi
       const typed = state.replaceTypedKeys ?? [];
       let s: VimEditorState = { ...state, insertRepeatCount: undefined };
       for (let i = 1; i < repeat; i++) for (const k of typed) s = { ...handleReplaceModeKey(s, k, true), currentChangeKeys: state.currentChangeKeys };
-      return handleReplaceModeKey(s, 'Escape', isReplayingDot);
+      // 되풀이한 글자의 변경 목록 위치는 changelist.ts 의 repeatedInsertCol 이 정합니다
+      return handleReplaceModeKey({ ...s, changeListHint: state.changeListHint }, 'Escape', isReplayingDot);
     }
     const curLine = state.lines[state.cursor.line] ?? '';
     const maxCol = getMaxCol(curLine, 'NORMAL');
@@ -160,8 +161,14 @@ function handleReplaceModeKeyInner(state: VimEditorState, key: string, isReplayi
   if (key === 'Backspace') {
     const stack = state.replaceStack ?? [];
     if (stack.length === 0) {
-      // 교체 모드 진입 지점 이전으로는 백스페이스 이동 불가
-      return state;
+      // 덮어쓴 글자가 없으면 커서만 옮깁니다 (Vim ins_bs + replace_do_bs: 'backspace' 의 start·eol 이 기본값,
+      // 줄 처음에서는 dec_cursor 로 윗줄 끝 다음 칸)
+      const nextChangeKeys = state.currentChangeKeys ? [...state.currentChangeKeys, 'Backspace'] : undefined;
+      const changeKeys = isReplayingDot ? state.currentChangeKeys : nextChangeKeys;
+      if (state.cursor.col > 0) return { ...state, cursor: { line: state.cursor.line, col: state.cursor.col - 1 }, currentChangeKeys: changeKeys };
+      if (state.cursor.line === 0) return state;
+      const up = state.cursor.line - 1;
+      return { ...state, cursor: { line: up, col: (state.lines[up] ?? '').length }, currentChangeKeys: changeKeys };
     }
     const last = stack[stack.length - 1];
     const newStack = stack.slice(0, -1);
@@ -189,6 +196,8 @@ function handleReplaceModeKeyInner(state: VimEditorState, key: string, isReplayi
       cursor: { line: lineIdx, col: last.col },
       replaceStack: newStack,
       currentChangeKeys: isReplayingDot ? state.currentChangeKeys : nextChangeKeys,
+      // 같은 글자를 되살려 줄이 그대로여도 Vim 은 그 자리를 변경 목록에 남깁니다
+      ...(newLine === curLine ? { changeListHint: { kind: 'at' as const, line: lineIdx, col: last.col, force: true } } : {}),
     };
   }
 
@@ -291,6 +300,8 @@ function handleReplaceModeKeyInner(state: VimEditorState, key: string, isReplayi
       cursor: { line: lineIdx, col: col + 1 },
       replaceStack: newStack,
       currentChangeKeys: isReplayingDot ? state.currentChangeKeys : nextChangeKeys,
+      // 같은 글자로 덮어써 줄이 그대로여도 Vim(replace_push + ins_char)은 그 자리를 변경 목록에 남깁니다
+      ...(newLine === curLine ? { changeListHint: { kind: 'at' as const, line: lineIdx, col, force: true } } : {}),
     };
   }
 

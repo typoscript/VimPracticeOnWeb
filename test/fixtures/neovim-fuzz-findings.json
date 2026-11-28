@@ -18283,5 +18283,610 @@
       "mode": "n",
       "changelist": "0:6 1:6 2:0|3"
     }
+  },
+  {
+    "id": "cl-macro-redo-entries",
+    "text": "a1 one\nb2 two\nc3 three\nd4 four\ne5 five\nf6 six\ng7 seven",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "qqA!<Esc>jA?<Esc>jq@qu<C-r>",
+    "expected": {
+      "lines": [
+        "a1 one!",
+        "b2 two?",
+        "c3 three!",
+        "d4 four?",
+        "e5 five",
+        "f6 six",
+        "g7 seven"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 8
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:6 1:6 3:0|3"
+    }
+  },
+  {
+    "id": "cl-macro-inner-undo",
+    "text": "a1 one\nb2 two\nc3 three\nd4 four\ne5 five\nf6 six\ng7 seven",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "xqqxuxjxjq@qu<C-r>",
+    "expected": {
+      "lines": [
+        " one",
+        "2 two",
+        "3 three",
+        "4 four",
+        "e5 five",
+        "f6 six",
+        "g7 seven"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      },
+      "reg": "d",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:0 1:0 2:0 3:0|4"
+    }
+  },
+  {
+    "id": "cl-macro-dd-o-redo",
+    "text": "a1 one\nb2 two\nc3 three\nd4 four\ne5 five\nf6 six\ng7 seven",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "qwddjo<Esc>kq@wu<C-r>u",
+    "expected": {
+      "lines": [
+        "b2 two",
+        "c3 three",
+        "",
+        "d4 four",
+        "e5 five",
+        "f6 six",
+        "g7 seven"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "c3 three\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "0:0 2:0 1:0|3"
+    }
+  },
+  {
+    "id": "cl-shift-word-buffer-end",
+    "text": "alpha beta gamma\nfoo.bar(baz, \"qux\")\n{ key: 'value', n: 7 }\n",
+    "cursor": {
+      "row": 3,
+      "col": 0
+    },
+    "keys": "3>Wk$3>W",
+    "expected": {
+      "lines": [
+        "alpha beta gamma",
+        "foo.bar(baz, \"qux\")",
+        "  { key: 'value', n: 7 }",
+        ""
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 23
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "3:0 2:0|2"
+    }
+  },
+  {
+    "id": "cl-replace-same-char",
+    "text": "<p>a <i>b</i> c</p>\n<a href=\"#\">link</a> <br/>\nx < y > z",
+    "cursor": {
+      "row": 1,
+      "col": 1
+    },
+    "keys": "Rab<BS><BS><Esc>",
+    "expected": {
+      "lines": [
+        "<p>a <i>b</i> c</p>",
+        "<a href=\"#\">link</a> <br/>",
+        "x < y > z"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:1|1"
+    }
+  },
+  {
+    "id": "replace-bs-before-start",
+    "text": "abcdefg\nhij",
+    "cursor": {
+      "row": 0,
+      "col": 4
+    },
+    "keys": "R<BS><BS>xy<Esc>jR<BS>w<Esc>",
+    "expected": {
+      "lines": [
+        "abxyefg",
+        "hwj"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 1
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:3 1:1|2"
+    }
+  },
+  {
+    "id": "replace-bs-prev-line",
+    "text": "abcdefg\nhij",
+    "cursor": {
+      "row": 1,
+      "col": 2
+    },
+    "keys": "R<BS><BS>xy<BS><BS><BS><Esc>",
+    "expected": {
+      "lines": [
+        "abcdefg",
+        "hij"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 6
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:0|1"
+    }
+  },
+  {
+    "id": "cl-replace-count-bs",
+    "text": "abcdexg\nhij",
+    "cursor": {
+      "row": 0,
+      "col": 5
+    },
+    "keys": "3Rab<BS><BS><BS><Esc>",
+    "expected": {
+      "lines": [
+        "abcdexg",
+        "hij"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:3|1"
+    }
+  },
+  {
+    "id": "cl-replace-count-dot",
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "cursor": {
+      "row": 3,
+      "col": 9
+    },
+    "keys": "4X4Rab<BS><BS><Esc>g_.",
+    "options": "sr",
+    "expected": {
+      "lines": [
+        "  indented line one",
+        "    deeper (nested) item",
+        "  back to one",
+        "last__here end"
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 12
+      },
+      "reg": "word",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "3:13|1"
+    }
+  },
+  {
+    "id": "cl-visual-r-empty-last",
+    "text": "ab\n\ncd\n",
+    "cursor": {
+      "row": 3,
+      "col": 0
+    },
+    "keys": "vr#kvr#",
+    "expected": {
+      "lines": [
+        "ab",
+        "",
+        "#d",
+        ""
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "2:0|1"
+    }
+  },
+  {
+    "id": "cl-block-put",
+    "text": "abcdef\nghijkl\nmnopqr\nstu",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "<C-v>jlyGpggllPj$pu3p",
+    "expected": {
+      "lines": [
+        "abcdbcef",
+        "ghijhiklbcbcbc",
+        "mnopqr  hihihi",
+        "stbcu",
+        "  hi"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 8
+      },
+      "reg": "bc\nhi",
+      "regType": "block",
+      "mode": "n",
+      "changelist": "3:0 0:0 2:0 1:0|4"
+    }
+  },
+  {
+    "id": "cl-block-shift-prewhite",
+    "text": "\tif (a) {\n\t\tb(1, 2);\n\t}\nend",
+    "cursor": {
+      "row": 3,
+      "col": 2
+    },
+    "keys": ":1,2>><CR>send;<Esc>^<C-v>j$2>",
+    "expected": {
+      "lines": [
+        "      if (a) {",
+        "            end;(1, 2);",
+        "\t}    ",
+        "end"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 3
+      },
+      "reg": "b",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:0 1:0 1:0|3"
+    }
+  },
+  {
+    "id": "cl-block-shift-cols",
+    "text": "<ul>\n  <li>one <b>two</b></li>\n  <li class=\"x\">three</li>\n</ul>",
+    "cursor": {
+      "row": 1,
+      "col": 1
+    },
+    "keys": "<C-v>eCq r<Esc><C-v>j><C-v>j<",
+    "expected": {
+      "lines": [
+        "<ul>",
+        " q r",
+        "  <li class=\"x\">three</li>",
+        "</ul>"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 3
+      },
+      "reg": " <li>one <b>two</b></li>",
+      "regType": "block",
+      "mode": "n",
+      "changelist": "1:2 1:3 1:0|3"
+    }
+  },
+  {
+    "id": "cl-block-change-short-first",
+    "text": "x\n\nAnotheR PARAGRAPh here.",
+    "cursor": {
+      "row": 2,
+      "col": 6
+    },
+    "keys": "g~l<C-v>k0c(<Esc>u",
+    "expected": {
+      "lines": [
+        "x",
+        "",
+        "Another PARAGRAPh here."
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "\nAnother",
+      "regType": "block",
+      "mode": "n",
+      "changelist": "2:6 1:0|2"
+    }
+  },
+  {
+    "id": "cl-undo-saved-start",
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "cursor": {
+      "row": 2,
+      "col": 3
+    },
+    "keys": ":norm! wD<CR>gU2awu",
+    "expected": {
+      "lines": [
+        "  indented line one",
+        "    deeper (nested) item",
+        "  back ",
+        "last_word_here end"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 6
+      },
+      "reg": "to one",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "2:0|1"
+    }
+  },
+  {
+    "id": "cl-norm-yyp-undo",
+    "text": "The quick brown fox. It jumps over\nthe lazy dog! Then it rests.\n\nAnother paragraph here.",
+    "cursor": {
+      "row": 1,
+      "col": 5
+    },
+    "keys": ":norm yyp<CR>uh:norm yyP<CR>u",
+    "expected": {
+      "lines": [
+        "The quick brown fox. It jumps over",
+        "the lazy dog! Then it rests.",
+        "",
+        "Another paragraph here."
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 4
+      },
+      "reg": "the lazy dog! Then it rests.\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "2:0 2:0|2"
+    }
+  },
+  {
+    "id": "cl-redo-put-dup",
+    "text": "\tif (a) {\n\t\tb(1, 2);\n\t}\nend",
+    "cursor": {
+      "row": 2,
+      "col": 1
+    },
+    "keys": "yypu<C-r>uyyPu<C-r>",
+    "expected": {
+      "lines": [
+        "\tif (a) {",
+        "\t\tb(1, 2);",
+        "\t}",
+        "\t}",
+        "end"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 1
+      },
+      "reg": "\t}\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "4:0 2:0|2"
+    }
+  },
+  {
+    "id": "cl-sort-undo-whole",
+    "text": "<ul>\n  <li>one <b>two</b></li>\n  <li class=\"x\">three</li>\n</ul>",
+    "cursor": {
+      "row": 2,
+      "col": 13
+    },
+    "keys": "Aab cd<C-w><Esc>2W:sort<CR>u<C-r>",
+    "options": "ai",
+    "expected": {
+      "lines": [
+        "  <li class=\"x\">three</li>ab ",
+        "  <li>one <b>two</b></li>",
+        "</ul>",
+        "<ul>"
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 3
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "2:29 0:0|2"
+    }
+  },
+  {
+    "id": "cl-tail-delete-dup",
+    "text": "<div class=\"a\"><span>text</span></div>\nplain 0x1f 007 -3 words",
+    "cursor": {
+      "row": 1,
+      "col": 7
+    },
+    "keys": "yyp\"_dd4J",
+    "expected": {
+      "lines": [
+        "<div class=\"a\"><span>text</span></div>",
+        "plain 0x1f 007 -3 words"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "plain 0x1f 007 -3 words\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "2:0 1:23|2"
+    }
+  },
+  {
+    "id": "cl-typed-run-zero",
+    "text": "> 10) {\nzz",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "y$jo<C-r>0<Esc>Ox> 10) {<Esc>",
+    "expected": {
+      "lines": [
+        "> 10) {",
+        "zz",
+        "x> 10) {",
+        "> 10) {"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 7
+      },
+      "reg": "> 10) {",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "3:4 2:5|2"
+    }
+  },
+  {
+    "id": "cl-ctrl-r-tab",
+    "text": "\tif (a) {\n\t\tb(1, 2);\n\t}\nend",
+    "cursor": {
+      "row": 1,
+      "col": 8
+    },
+    "keys": ":2,3norm x<CR>r_$Ix<C-r>\"y<Esc>",
+    "options": "ai sw=4",
+    "expected": {
+      "lines": [
+        "\tif (a) {",
+        "\tb(1, 2);",
+        "x y_",
+        "end"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 2
+      },
+      "reg": "\t",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "2:2|1"
+    }
+  },
+  {
+    "id": "cl-ctrl-r-linewise-ai",
+    "text": "  ab\n  cd\nzz",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "yjjA<C-r>\"<Esc>uA<C-r>\"y<Esc>",
+    "options": "ai",
+    "expected": {
+      "lines": [
+        "  ab",
+        "  cd  ab",
+        "    cd",
+        "    y",
+        "zz"
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 4
+      },
+      "reg": "  ab\n  cd\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "1:8 3:4|2"
+    }
+  },
+  {
+    "id": "cl-cc-empty-line",
+    "text": "a\n\n   \nb",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "S<Esc>jcc<Esc>kddujS<Esc>k2cc<Esc>u",
+    "options": "ai",
+    "expected": {
+      "lines": [
+        "a",
+        "",
+        "",
+        "b"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      },
+      "reg": "\n\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "3:0 3:0 1:0 3:0 2:0|5"
+    }
+  },
+  {
+    "id": "cl-dw-one-of-two-empty",
+    "text": "alpha beta gamma\nfoo.bar(baz, \"qux\")\n{ key: 'value', n: 7 }\n",
+    "cursor": {
+      "row": 1,
+      "col": 18
+    },
+    "keys": "<C-v>2j4J<C-v>}{dyawqadwjq",
+    "options": "ic scs",
+    "expected": {
+      "lines": [
+        ""
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "1:0 0:0|2"
+    }
   }
 ]

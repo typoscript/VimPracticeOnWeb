@@ -199,6 +199,7 @@ export function startVisualBlockInsert(
   const nextLines = [...state.lines];
   let targetCol = op.startCol;
   let linePlans: (BlockInsertPlan | null)[] | undefined;
+  let deleteCursorCol = 0;
   const ve = getOptions(state).virtualedit;
   const isVirtualBlock = hasVirtualEdit(ve, 'block') || hasVirtualEdit(ve, 'all');
 
@@ -242,6 +243,7 @@ export function startVisualBlockInsert(
       nextLines[l] = res.text;
       if (l === minLine) cursorCol = res.cursorCol;
     }
+    deleteCursorCol = cursorCol;
     const firstLine = nextLines[minLine] ?? '';
     targetCol = Math.min(cursorCol, Math.max(0, firstLine.length - 1));
     if (op.startCol > targetCol && firstLine.length > 0) targetCol++;
@@ -301,6 +303,8 @@ export function startVisualBlockInsert(
       skippedLines: skippedLines.length > 0 ? skippedLines : undefined,
     },
     pendingKeys: undefined,
+    // 블록 c/C 의 op_delete: changed_lines(블록 첫 줄, 지운 뒤 커서 열) — 지울 글자가 없는 짧은 줄이어도
+    ...(insertMode === 'c' ? { changeListHint: { kind: 'at' as const, line: minLine, col: Math.max(0, Math.min(deleteCursorCol, (nextLines[minLine] ?? '').length - 1)), force: true } } : {}),
   };
 }
 

@@ -280,6 +280,14 @@ export function blockShiftLine(line: string, op: BlockOperand, left: boolean, am
   return line.slice(0, copyEnd) + ' '.repeat(Math.max(0, fill)) + line.slice(nonWhite);
 }
 
+/** shift_block 이 changed_bytes 로 남기는 열 (오른쪽은 블록 앞 공백의 시작, 왼쪽은 블록 시작). 건너뛰는 줄이면 null. */
+export function blockShiftChangeCol(line: string, op: BlockOperand, left: boolean): number | null {
+  if (line.length === 0) return null;
+  const bd = blockPrep(line, op, left ? 'lshift' : 'rshift', true);
+  if (bd.isShort) return null;
+  return left ? bd.textcol : bd.textcol - (bd.preWhitespC - (bd.startspaces !== 0 ? 1 : 0));
+}
+
 /**
  * 블록 I/A 에서 첫 줄에 입력한 글자를 다른 줄에 넣는 방법 (Vim block_insert).
  * 결과 줄 = 앞부분(offset 까지) + 공백 pre + 입력 + 공백 post + 나머지(offset + skip 부터).

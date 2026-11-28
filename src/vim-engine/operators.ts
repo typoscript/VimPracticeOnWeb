@@ -236,6 +236,8 @@ export function changeLine(state: VimEditorState, count = 1): VimEditorState {
       content: deletedLines,
     },
     pendingKeys: undefined,
+    // truncate_line: 빈 줄(또는 들여쓰기만 남는 줄)이라 그대로여도 changed_bytes(줄, 입력 열)
+    ...(deleteCount === 1 && nextLines[line] === state.lines[line] ? { changeListHint: { kind: 'at' as const, line, col: indent.length, force: true } } : {}),
   };
 }
 

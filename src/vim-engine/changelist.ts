@@ -253,8 +253,9 @@ export function recordChangeList(prev: VimEditorState, next: VimEditorState, key
   if ((prev.lines === next.lines && !forced) || !sameBuffer || isSpecialBuffer(prev) || isSpecialBuffer(next)) return out;
   if ((next.changeListTick ?? 0) !== (prev.changeListTick ?? 0)) return out;
   const undoing = hint?.kind === 'undo' || hint?.kind === 'redo';
-  const hunks = changedHunks(prev, next, undoing);
-  if (hunks.length === 0 && !forced && !undoing) return out;
+  // 실행 취소는 줄만 되살린 덩어리의 모호한 자리를 u_save 한 첫 줄 쪽으로 맞춥니다 (같은 줄을 복사해 넣은 yyp 의 u)
+  const hunks = changedHunks(prev, next, undoing, hint?.kind === 'undo' ? hint.thenLine : hint?.kind === 'redo' ? hint.line : undefined, (hint?.kind === 'undo' || hint?.kind === 'redo') && Boolean(hint.whole));
+  if (hunks.length === 0 && !forced && !undoing && repeatedInsertCol(prev, next, key) === null) return out;
 
   const tw = getOptions(next).textwidth ?? 0;
   const w: Work = {
@@ -268,9 +269,16 @@ export function recordChangeList(prev: VimEditorState, next: VimEditorState, key
     if ((next.undoStack?.length ?? 0) === (prev.undoStack?.length ?? 0) && (next.redoStack?.length ?? 0) === (prev.redoStack?.length ?? 0)) return out;
     // 내용이 그대로인 실행 취소 단위(빈 >> 등)도 Vim 은 그 줄을 기록합니다
     noteChange(w, hint.kind === 'undo' && hint.thenLine !== undefined ? hint.thenLine : next.cursor.line, 0);
+  } else if ((hint?.kind === 'undo' || hint?.kind === 'redo') && hint.lines && hint.lines.length > 1) {
+    // 합친 매크로 기록: 줄 이동만 반영하고, 안쪽 변경마다 u_save 한 첫 줄을 실행 취소는 새것부터·다시 실행은 옛것부터 기록
+    for (const h of hunks) undoHunk(w, h, hint.kind === 'undo' ? h.oldStart : h.newStart, false);
+    for (const line of hint.kind === 'undo' ? [...hint.lines].reverse() : hint.lines) noteChange(w, line, 0);
   } else if (hint?.kind === 'undo') {
     // u_undoredo(): 새 항목부터(아래에서 위로) 줄을 되돌리고 각 덩어리 시작 0열을 기록
-    for (let k = hunks.length - 1; k >= 0; k--) undoHunk(w, hunks[k], hunks[k].oldStart);
+    // 바뀐 덩어리 하나가 u_save 한 범위의 첫 줄(thenLine) 아래에서 시작하면(gU2aw·블록 c 가 바뀌지 않은 시작 줄부터 저장)
+    // 같은 u_entry 이므로 Vim 은 그 첫 줄만 기록합니다
+    const inSavedRange = hunks.length === 1 && hint.thenLine !== undefined && hint.thenLine < hunks[0].oldStart;
+    for (let k = hunks.length - 1; k >= 0; k--) undoHunk(w, hunks[k], hunks[k].oldStart, !inSavedRange);
     if (hint.thenLine !== undefined) noteChange(w, hint.thenLine, 0);
   } else if (hint?.kind === 'redo') {
     for (const h of hunks) undoHunk(w, h, h.newStart);
@@ -287,16 +295,20 @@ export function recordChangeList(prev: VimEditorState, next: VimEditorState, key
     applyMove(w, prev.lines.length, hint.line1, hint.line2, hint.dest);
     // 실행 취소는 옮겨 넣은 줄(u_save(dest, dest + 1))을 마지막에 지웁니다
     w.undoLine = hint.undoLine;
-  } else if (!hint && hunks.length === 1 && hunks[0].oldCount === 1 && hunks[0].newCount === 1 && repeatedInsertCol(prev, next, key) !== null) {
-    // [count]i…<Esc> / [count]R…<Esc>: Esc 가 남은 횟수만큼 다시 넣고, 마지막으로 넣은 자리가 남습니다
-    noteChange(w, hunks[0].newStart, repeatedInsertCol(prev, next, key) as number);
+  } else if (!hint && (hunks.length === 0 || (hunks.length === 1 && hunks[0].oldCount === 1 && hunks[0].newCount === 1)) && repeatedInsertCol(prev, next, key) !== null) {
+    // [count]i…<Esc> / [count]R…<Esc>: Esc 가 남은 횟수만큼 다시 넣고, 마지막으로 넣은 자리가 남습니다 (R 은 줄이 그대로여도)
+    noteChange(w, hunks[0]?.newStart ?? prev.cursor.line, repeatedInsertCol(prev, next, key) as number);
   } else if (prev.mode === 'INSERT' && next.mode === 'INSERT' && next.lines.length > prev.lines.length && next.cursor.line > prev.cursor.line) {
     // 입력 모드에서 줄을 나눔 (Enter, 줄 바꿈이 든 Ctrl-r): 마지막으로 나눈 줄 끝, 그 뒤에 넣은 글자가 있으면 다음 줄 0열
     const s = prev.cursor.line;
     applyHunk(w, ctx, { oldStart: s, oldCount: 1, newStart: s, newCount: 1 + next.lines.length - prev.lines.length }, s, false);
     const L = next.cursor.line;
+    // Ctrl-r 로 넣은 여러 줄은 첫 줄을 나눈 자리(open_line)도 기록합니다
+    if (prev.insertRegisterPending && L - 1 > s) noteChange(w, s, (next.lines[s] ?? '').length);
     noteChange(w, L - 1, (next.lines[L - 1] ?? '').length);
     if (next.cursor.col > 0) noteChange(w, L, 0);
+    // 마지막 줄의 글자는 자동 들여쓰기 뒤에서 한 묶음으로 들어갑니다
+    if (prev.insertRegisterPending && typedRun?.line === L && typedRun.col > 0 && typedRun.col < next.cursor.col) noteChange(w, L, typedRun.col);
   } else if (insertJoinsLine(prev, next, key, hunks)) {
     // 입력 모드 BS·Ctrl-w·Ctrl-u 가 줄 처음에서 윗줄과 이음 (do_join(2, insert_space = false))
     const line = prev.cursor.line - 1;
@@ -305,7 +317,7 @@ export function recordChangeList(prev: VimEditorState, next: VimEditorState, key
     // 입력 모드 Ctrl-t / Ctrl-d (change_indent): 들여쓰기를 바꾼 줄의 0열
     applyHunk(w, ctx, hunks[0], hunks[0].newStart, false);
     noteChange(w, hunks[0].newStart, 0);
-  } else if (typedRun && typedRun === prev.insertTypedRun && hunks.length === 1 && hunks[0].oldCount === 1 && hunks[0].newCount === 1) {
+  } else if (typedRun && (typedRun === prev.insertTypedRun || (prev.mode === 'INSERT' && prev.insertRegisterPending)) && hunks.length === 1 && hunks[0].oldCount === 1 && hunks[0].newCount === 1) {
     // 이어 친 글자: Vim 은 묶음 전체를 첫 글자 자리에 한 번에 넣습니다
     noteChange(w, typedRun.line, typedRun.col);
   } else if (!hint && hunks.length === 1 && hunks[0].newCount === 0 && isLinewiseChange(prev, next)) {
@@ -350,15 +362,17 @@ export function recordChangeList(prev: VimEditorState, next: VimEditorState, key
   };
   // 실행 취소 때 마지막 기록 줄: 따로 정하지 않았으면 한 덩어리 변경의 시작 줄 (Vim u_undoredo 의 top + 1)
   const undoLine = w.undoLine ?? (hint?.kind === 'at' ? hint.line : !undoing && !hint && hunks.length === 1 ? hunks[0].newStart : undefined);
-  return undoLine === undefined ? recorded : withUndoLine(prev, recorded, undoLine);
+  return undoLine === undefined ? recorded : withUndoLine(prev, recorded, undoLine, w.last?.row);
 }
 
 /** 이번 키가 새로 만든 실행 취소 기록에 '실행 취소 때 마지막으로 기록할 줄'을 적어 둡니다 (undoHistory.ts 의 undo 가 읽음). */
-function withUndoLine(prev: VimEditorState, next: VimEditorState, line: number): VimEditorState {
+function withUndoLine(prev: VimEditorState, next: VimEditorState, line: number, redoLine?: number): VimEditorState {
   const stack = next.undoStack ?? [];
   const top = stack[stack.length - 1];
-  if (!top || top === prev.undoStack?.[prev.undoStack.length - 1]) return next;
-  return { ...next, undoStack: [...stack.slice(0, -1), { ...top, changeListUndoLine: line }] };
+  // 입력·바꾸기 모드는 들어갈 때 기록을 만들고 첫 글자에서 u_save 하므로, 아직 줄이 없으면 그 키의 줄을 적습니다
+  const typing = (prev.mode === 'INSERT' || prev.mode === 'REPLACE') && top?.changeListUndoLine === undefined;
+  if (!top || (top === prev.undoStack?.[prev.undoStack.length - 1] && !typing)) return next;
+  return { ...next, undoStack: [...stack.slice(0, -1), { ...top, changeListUndoLine: line, ...(redoLine !== undefined ? { changeListRedoLine: redoLine } : {}) }] };
 }
 
 /**
@@ -397,14 +411,25 @@ function repeatedInsertCol(prev: VimEditorState, next: VimEditorState, key: stri
   if (key !== 'Escape' || count < 2 || prev.insertRepeatNewline || prev.blockInsertSession) return null;
   if (prev.mode === 'REPLACE') {
     // 마지막 되풀이에서 글자는 그 자리, BS 는 되살린 자리에 기록됩니다
-    const keys = prev.currentChangeKeys ?? [];
+    // 되풀이할 키는 replaceTypedKeys (`.` 재생 중에는 currentChangeKeys 가 비어 있음)
+    const keys = prev.replaceTypedKeys ? ['R', ...prev.replaceTypedKeys] : prev.currentChangeKeys ?? [];
     const r = keys.indexOf('R');
     let col = prev.cursor.col;
     let last: number | null = null;
+    // 덮어쓴 글자가 없으면(replace_pop 이 비어 있음) BS 는 커서만 옮기고 기록하지 않습니다
+    let depth = prev.replaceStack?.length ?? 0;
     for (let pass = 1; pass < count; pass++) {
       for (const k of r >= 0 ? keys.slice(r + 1) : []) {
-        if (k.length === 1) last = col++;
-        else if (k === 'Backspace' || k === 'BS') last = col = Math.max(0, col - 1);
+        if (k.length === 1) {
+          last = col++;
+          depth++;
+        } else if (k === 'Backspace' || k === 'BS') {
+          col = Math.max(0, col - 1);
+          if (depth > 0) {
+            last = col;
+            depth--;
+          }
+        }
       }
     }
     return last ?? next.cursor.col;
@@ -416,7 +441,7 @@ function repeatedInsertCol(prev: VimEditorState, next: VimEditorState, key: stri
 }
 
 /** 바뀐 덩어리. 버퍼를 모두 지워 빈 줄 하나가 남으면 Vim 처럼 모든 줄 삭제로 봅니다 (ML_EMPTY). */
-function changedHunks(prev: VimEditorState, next: VimEditorState, splitHunks: boolean): Hunk[] {
+function changedHunks(prev: VimEditorState, next: VimEditorState, splitHunks: boolean, slideTo?: number, whole = false): Hunk[] {
   const wasEmpty = prev.lines.length === 1 && prev.lines[0] === '';
   // 빈 줄 하나뿐인 버퍼의 dd 도 줄을 지운 것 (del_lines → ML_EMPTY)
   if (wasEmpty && !splitHunks && next.lines.length === 1 && next.lines[0] === '' && next.registers?.['"'] !== prev.registers?.['"'] && next.registers?.['"']?.type === 'line' && next.mode === 'NORMAL') {
@@ -424,11 +449,16 @@ function changedHunks(prev: VimEditorState, next: VimEditorState, splitHunks: bo
   }
   // 한 줄뿐인 버퍼는 줄 단위 삭제(dd, "_dd, :d, 줄 단위 레지스터)일 때만 줄을 지운 것으로 봅니다 (x·dw 는 글자 삭제)
   const linewiseDelete = /d$/.test(prev.pendingKeys ?? '') || (next.registers?.['"'] !== prev.registers?.['"'] && next.registers?.['"']?.type === 'line');
-  const cleared = next.lines.length === 1 && next.lines[0] === '' && (prev.lines.length > 1 || linewiseDelete);
+  // 줄 단위 레지스터가 버퍼보다 적은 줄을 담았으면 남은 빈 줄은 지우지 않은 줄입니다 (빈 줄 두 개 중 하나의 dd·dw)
+  const reg = next.registers?.['"'];
+  const partial = reg !== prev.registers?.['"'] && reg?.type === 'line' && typeof reg.content === 'string' && reg.content.split('\n').length < prev.lines.length;
+  const cleared = next.lines.length === 1 && next.lines[0] === '' && (prev.lines.length > 1 || linewiseDelete) && !partial;
   if (cleared && next.mode !== 'INSERT' && !splitHunks) return [{ oldStart: 0, oldCount: prev.lines.length, newStart: 0, newCount: 0 }];
   // 실행 취소만 떨어진 여러 덩어리로 나눕니다. 명령 하나의 변경은 이어진 한 덩어리로 봅니다 (빈 줄 등이 우연히 맞춰지지 않게).
-  const hunks = splitHunks ? diffLineHunks(prev.lines, next.lines) : trimmedHunk(prev.lines, next.lines);
-  return hunks.map((h) => slidePureHunk(h, prev.lines, next.lines, next.cursor.line));
+  const hunks = splitHunks && !whole ? diffLineHunks(prev.lines, next.lines) : trimmedHunk(prev.lines, next.lines);
+  // 버퍼 끝 줄을 지우면 커서가 윗줄로 올라가므로, 지운 자리는 지우기 전 커서 줄 쪽입니다 (같은 줄이 이어진 yyp 뒤 "_dd)
+  const tailDelete = !splitHunks && prev.cursor.line >= next.lines.length;
+  return hunks.map((h) => slidePureHunk(h, prev.lines, next.lines, slideTo ?? (tailDelete && h.newCount === 0 ? prev.cursor.line : next.cursor.line)));
 }
 
 function trimmedHunk(a: readonly string[], b: readonly string[]): Hunk[] {
@@ -490,11 +520,11 @@ function applyMove(w: Work, lineCount: number, line1: number, line2: number, des
   noteChange(w, line1 < dest ? line1 - 1 : dest, 0);
 }
 
-function undoHunk(w: Work, h: Hunk, at: number): void {
+function undoHunk(w: Work, h: Hunk, at: number, record = true): void {
   if (h.oldCount !== h.newCount) {
     adjustLines(w, at, at + h.oldCount - 1, null, h.newCount - h.oldCount);
   }
-  noteChange(w, at, 0);
+  if (record) noteChange(w, at, 0);
 }
 
 /**
@@ -506,12 +536,27 @@ function trackTypedRun(prev: VimEditorState, next: VimEditorState, key?: string)
   if (prev.mode === 'INSERT' && next.mode === 'INSERT' && prev.insertRegisterPending) {
     // Ctrl-r 은 레지스터 내용을 입력으로 밀어 넣으므로 뒤이어 친 글자와 한 묶음이 됩니다
     if (next.lines === prev.lines) return undefined;
-    return next.cursor.line > prev.cursor.line ? { line: next.cursor.line, col: 0 } : { line: prev.cursor.line, col: prev.cursor.col };
+    const line = next.cursor.line;
+    const reg = prev.registers?.[key ?? ''];
+    // 줄 단위 레지스터는 줄 바꿈으로 끝납니다
+    const last = typeof reg?.content === 'string' && reg.type !== 'line' ? reg.content.split('\n').pop() ?? '' : '';
+    // 여러 줄이면 마지막 줄 글자는 (자동 들여쓰기 뒤) 커서 앞에 그대로 들어간 부분입니다
+    let start = line > prev.cursor.line ? Math.max(0, next.cursor.col - last.length) : prev.cursor.col;
+    // Tab 같은 제어 글자(ISSPECIAL)는 따로 넣으므로 그 뒤의 글자가 새 묶음이고, 제어 글자로 끝나면 다음에 친 글자가 새 묶음입니다
+    const ctrl = Math.max(-1, ...[...last].map((ch, i) => (/[\x00-\x09\x0b-\x1f\x7f]/.test(ch) ? i : -1)));
+    if (ctrl >= 0 && ctrl === last.length - 1) return { line, col: start, closed: true };
+    if (ctrl >= 0) start = Math.max(start, next.cursor.col - (last.length - ctrl - 1));
+    // 넣은 글자 가운데 마지막 0 / ^ 뒤에서 새 묶음이 시작됩니다
+    const text = (next.lines[line] ?? '').slice(start, next.cursor.col);
+    const brk = Math.max(text.slice(0, -1).lastIndexOf('0'), text.slice(0, -1).lastIndexOf('^'));
+    return { line, col: start + brk + 1 };
   }
   const typing = prev.mode === 'INSERT' && next.mode === 'INSERT' && key !== undefined && key.length === 1 && !prev.insertRegisterPending;
   if (!typing || next.lines === prev.lines) return undefined;
   const run = prev.insertTypedRun;
-  if (run && run.line === next.cursor.line) return run;
+  // Vim edit(): 0 과 ^ 는 뒤에 Ctrl-d 가 올 수 있어 묶음을 끝냅니다 (다음 글자가 새 묶음)
+  const afterBreak = /[0^]/.test((prev.lines[prev.cursor.line] ?? '')[prev.cursor.col - 1] ?? '');
+  if (run && !run.closed && run.line === next.cursor.line && !(afterBreak && prev.cursor.col - 1 >= run.col)) return run;
   return { line: prev.cursor.line, col: prev.cursor.col };
 }
 

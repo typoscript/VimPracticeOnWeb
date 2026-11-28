@@ -547,6 +547,8 @@ export function putFromRegister(
       },
       activeRegister: undefined,
       pendingKeys: undefined,
+      // do_put 블록: changed_lines(시작 줄, 0). 실행 취소는 처음의 빈 u_save 때문에 커서 다음 줄
+      changeListHint: { kind: 'at', line, col: 0, undoLine: line + 1 },
     };
   }
 

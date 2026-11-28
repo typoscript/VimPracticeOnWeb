@@ -20,7 +20,8 @@ import {
 } from './motions';
 import { isPositionSelected, linewiseVisualCol } from './visual';
 import { skipJoinComment } from './joinComments';
-import { blockOperandOf, blockShiftLine, blockTextRange } from './visualBlockColumns';
+import { blockOperandOf, blockShiftChangeCol, blockShiftLine, blockTextRange } from './visualBlockColumns';
+import type { BlockOperand } from './visualBlockColumns';
 import { cindentLines, type CIndentOptions } from './cindent';
 import { indentexprLines, jsIndentKindForFilename, jsIndentKindForFiletype, type JsIndentKind } from './filetypeIndent';
 export { modifyNumberAtCursor, modifyNumberVisual } from './numberOperators';
@@ -440,9 +441,12 @@ export function indentLines(
   };
 }
 
-function blockShiftEvents(lines: string[], minLine: number, maxLine: number, minCol: number): { line: number; col: number }[] {
+function blockShiftEvents(lines: string[], minLine: number, maxLine: number, op: BlockOperand, left: boolean): { line: number; col: number }[] {
   const out: { line: number; col: number }[] = [];
-  for (let l = minLine; l <= maxLine; l++) if ((lines[l] ?? '').length > 0 && (lines[l] ?? '').length >= minCol) out.push({ line: l, col: minCol });
+  for (let l = minLine; l <= maxLine; l++) {
+    const col = blockShiftChangeCol(lines[l] ?? '', op, left);
+    if (col !== null) out.push({ line: l, col });
+  }
   return out;
 }
 
@@ -488,7 +492,7 @@ export function indentVisual(
       visualBlockEndOfLine: undefined,
       pendingKeys: undefined,
       // Vim shift_block: 줄마다 changed_bytes(줄, 블록 열) 뒤 op_shift 의 changed_lines(시작 줄, 0)
-      changeListHint: { kind: 'at', line: minLine, col: 0, force: true, before: blockShiftEvents(state.lines, minLine, maxLine, minCol) },
+      changeListHint: { kind: 'at', line: minLine, col: 0, force: true, before: blockShiftEvents(state.lines, minLine, maxLine, op, direction === 'out') },
     };
   }
 

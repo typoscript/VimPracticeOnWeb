@@ -37,6 +37,8 @@ const TH = '<div class="a"><span>text</span></div>\nplain 0x1f 007 -3 words';
 
 const TC = 'aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj';
 const TT = '\tab\tcd\n\tef gh\nij';
+const TP = '<p>a <i>b</i> c</p>\n<a href="#">link</a> <br/>\nx < y > z';
+const TU = '<ul>\n  <li>one <b>two</b></li>\n  <li class="x">three</li>\n</ul>';
 
 const CASES: Case[] = [
   // >> / << / >{motion}: nostartofline 이면 열을 유지
@@ -879,6 +881,40 @@ const CASES: Case[] = [
   { id: 'macro-records-dot-once', text: TM, cursor: { row: 0, col: 0 }, keys: 'qqxj.jq@q' },
   { id: 'macro-records-dot-count', text: TM, cursor: { row: 0, col: 0 }, keys: 'qqdwj2.jq@q' },
   { id: 'macro-undo-redo-lines', text: TM, cursor: { row: 0, col: 0 }, keys: 'qqA!<Esc>jA?<Esc>jq@qu<C-r>u' },
+  // 변경 목록 남은 차이 (changelist.ts): 합친 매크로 기록의 u / Ctrl-r 은 안쪽 변경마다 기록, 매크로 안의 u 뒤 변경은 새 항목
+  { id: 'cl-macro-redo-entries', text: TM, cursor: { row: 0, col: 0 }, keys: 'qqA!<Esc>jA?<Esc>jq@qu<C-r>' },
+  { id: 'cl-macro-inner-undo', text: TM, cursor: { row: 0, col: 0 }, keys: 'xqqxuxjxjq@qu<C-r>' },
+  { id: 'cl-macro-dd-o-redo', text: TM, cursor: { row: 0, col: 0 }, keys: 'qwddjo<Esc>kq@wu<C-r>u' },
+  // nv_wordcmd: 연산자와 함께면 버퍼 끝의 단어 이동 실패에도 op_shift 를 실행 (마지막 빈 줄의 3>W)
+  { id: 'cl-shift-word-buffer-end', text: T2, cursor: { row: 3, col: 0 }, keys: '3>Wk$3>W' },
+  // 같은 글자로 덮어쓴 R·되살린 BS 도 기록, 덮어쓴 글자가 없을 때 BS 는 커서만 왼쪽으로
+  { id: 'cl-replace-same-char', text: TP, cursor: { row: 1, col: 1 }, keys: 'Rab<BS><BS><Esc>' },
+  { id: 'replace-bs-before-start', text: 'abcdefg\nhij', cursor: { row: 0, col: 4 }, keys: 'R<BS><BS>xy<Esc>jR<BS>w<Esc>' },
+  { id: 'replace-bs-prev-line', text: 'abcdefg\nhij', cursor: { row: 1, col: 2 }, keys: 'R<BS><BS>xy<BS><BS><BS><Esc>' },
+  { id: 'cl-replace-count-bs', text: 'abcdexg\nhij', cursor: { row: 0, col: 5 }, keys: '3Rab<BS><BS><BS><Esc>' },
+  { id: 'cl-replace-count-dot', text: T3, cursor: { row: 3, col: 9 }, keys: '4X4Rab<BS><BS><Esc>g_.', options: 'sr' },
+  // 마지막 빈 줄의 한 칸 비주얼 r 은 빈 범위 (op_replace 가 아무것도 하지 않음)
+  { id: 'cl-visual-r-empty-last', text: 'ab\n\ncd\n', cursor: { row: 3, col: 0 }, keys: 'vr#kvr#' },
+  // 블록 p 는 시작 줄 0열, 실행 취소는 커서 다음 줄
+  { id: 'cl-block-put', text: 'abcdef\nghijkl\nmnopqr\nstu', cursor: { row: 0, col: 1 }, keys: '<C-v>jlyGpggllPj$pu3p' },
+  // shift_block 의 changed_bytes: 블록 앞 공백의 시작 열, 짧은 줄은 건너뜀
+  { id: 'cl-block-shift-prewhite', text: TB, cursor: { row: 3, col: 2 }, keys: ':1,2>><CR>send;<Esc>^<C-v>j$2>' },
+  { id: 'cl-block-shift-cols', text: TU, cursor: { row: 1, col: 1 }, keys: '<C-v>eCq r<Esc><C-v>j><C-v>j<' },
+  // 블록 c 의 op_delete 는 블록 첫 줄에 기록 (첫 줄이 짧아도)
+  { id: 'cl-block-change-short-first', text: 'x\n\nAnotheR PARAGRAPh here.', cursor: { row: 2, col: 6 }, keys: 'g~l<C-v>k0c(<Esc>u' },
+  // 실행 취소: 바뀐 덩어리가 u_save 범위 첫 줄 아래면 같은 u_entry (첫 줄만 기록)
+  { id: 'cl-undo-saved-start', text: T3, cursor: { row: 2, col: 3 }, keys: ':norm! wD<CR>gU2awu' },
+  { id: 'cl-norm-yyp-undo', text: TQ, cursor: { row: 1, col: 5 }, keys: ':norm yyp<CR>uh:norm yyP<CR>u' },
+  { id: 'cl-redo-put-dup', text: TB, cursor: { row: 2, col: 1 }, keys: 'yypu<C-r>uyyPu<C-r>' },
+  { id: 'cl-sort-undo-whole', text: TU, cursor: { row: 2, col: 13 }, keys: 'Aab cd<C-w><Esc>2W:sort<CR>u<C-r>', options: 'ai' },
+  { id: 'cl-tail-delete-dup', text: TH, cursor: { row: 1, col: 7 }, keys: 'yyp"_dd4J' },
+  // insertchar 묶음: 0 / ^ 뒤와 Tab 같은 제어 글자 뒤는 새 묶음, 여러 줄 Ctrl-r 의 끝 글자는 자동 들여쓰기 뒤
+  { id: 'cl-typed-run-zero', text: '> 10) {\nzz', cursor: { row: 0, col: 0 }, keys: 'y$jo<C-r>0<Esc>Ox> 10) {<Esc>' },
+  { id: 'cl-ctrl-r-tab', text: TB, cursor: { row: 1, col: 8 }, keys: ':2,3norm x<CR>r_$Ix<C-r>"y<Esc>', options: 'ai sw=4' },
+  { id: 'cl-ctrl-r-linewise-ai', text: '  ab\n  cd\nzz', cursor: { row: 0, col: 0 }, keys: 'yjjA<C-r>"<Esc>uA<C-r>"y<Esc>', options: 'ai' },
+  // 빈 줄의 S / cc 도 truncate_line 이 기록, 빈 줄 두 개 중 하나의 dw 는 버퍼 비우기가 아님
+  { id: 'cl-cc-empty-line', text: 'a\n\n   \nb', cursor: { row: 1, col: 0 }, keys: 'S<Esc>jcc<Esc>kddujS<Esc>k2cc<Esc>u', options: 'ai' },
+  { id: 'cl-dw-one-of-two-empty', text: T2, cursor: { row: 1, col: 18 }, keys: '<C-v>2j4J<C-v>}{dyawqadwjq', options: 'ic scs' },
 ];
 
 const LUA = `

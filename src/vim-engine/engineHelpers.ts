@@ -159,6 +159,8 @@ export function findShiftRange(
   if (keys.length === 1 && 'wWeE'.includes(keys[0])) {
     const range = findOperatorRangeByYank(state, keys, count, runHandleKey);
     if (range) return { startLine: range.start.line, endLine: range.end.line, startCol: range.start.col };
+    // nv_wordcmd: 연산자와 함께면 버퍼 끝에서 단어 이동이 실패해도 연산을 계속합니다 (마지막 빈 줄의 3>W 도 op_shift)
+    if (state.cursor.line === state.lines.length - 1) return { startLine: state.cursor.line, endLine: state.cursor.line, startCol: state.cursor.col };
   }
   if ((keys[0] === 'i' || keys[0] === 'a') && keys.length === 2 && 'wWs'.includes(keys[1])) {
     const range = findOperatorRangeByYank(state, keys, count, runHandleKey);

@@ -614,6 +614,10 @@ function trackAutoIndentPending(prev: VimEditorState, next: VimEditorState, key:
     const on = (opensLine || changesLine) && (opts.autoindent || (opts.smartindent && opensLine && key !== 'S'));
     return on ? { ...next, autoIndentPending: true } : next;
   }
+  // 줄 바꿈으로 끝나는 레지스터를 Ctrl-r 로 넣으면 마지막 Enter 의 open_line 이 did_ai 를 켭니다 (들여쓰기만 남은 새 줄)
+  if (prev.mode === 'INSERT' && prev.insertRegisterPending && opts.autoindent && next.cursor.line > prev.cursor.line && next.cursor.col > 0 && !(next.lines[next.cursor.line] ?? '').slice(0, next.cursor.col).trim()) {
+    return { ...next, autoIndentPending: true };
+  }
   // Ctrl-r 와 빈 레지스터 이름은 글자를 넣지 않으므로 did_ai 를 끄지 않습니다 (cc<C-r>a<Esc> 가 들여쓰기를 지움).
   const registerNoop = (next.insertRegisterPending && !prev.insertRegisterPending) || (prev.insertRegisterPending && next.lines === prev.lines);
   if (prev.mode === 'INSERT' && next.autoIndentPending && !KEEPS_AUTO_INDENT.has(key) && !registerNoop) {

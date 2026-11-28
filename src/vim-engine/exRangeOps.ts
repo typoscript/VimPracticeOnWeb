@@ -122,14 +122,14 @@ export function executeGlobalCommand(
 
     // Vim 처럼 위에서부터 실행하고, 지워지거나 바뀐 줄의 표시는 버립니다 (`:g/x/norm dd` 의 레지스터는 마지막으로 지운 줄).
     let pending = [...matchedIndices];
-    let firstUndoCursor: CursorPosition | undefined;
+    let firstUndoCursor: FirstUndoCursor | undefined;
     while (pending.length > 0) {
       const idx = pending.shift() as number;
       const before = curState.lines;
       ({ state: curState, firstUndoCursor } = runNormalKeysOnLine(curState, idx, normKeys, keyRunner, bang, firstUndoCursor));
       pending = remapMarkedLines(before, curState.lines, pending);
     }
-    if (firstUndoCursor) curState = setLastUndoCursor(curState, state, firstUndoCursor);
+    if (firstUndoCursor) curState = setLastUndoCursor(curState, state, firstUndoCursor, undefined, firstUndoCursor.changeListUndoLine);
     // 안쪽 키가 아무것도 바꾸지 않았으면(u_save 없음) Vim 처럼 실행 취소 항목을 남기지 않습니다.
     else curState = withUndoFieldsOf(curState, state);
 
@@ -398,11 +398,11 @@ export function executeRangeNorm(
   let curState = pushUndoSnapshot(state);
   const count = range.endLine - range.startLine + 1;
 
-  let firstUndoCursor: CursorPosition | undefined;
+  let firstUndoCursor: FirstUndoCursor | undefined;
   for (let l = range.startLine; l <= range.endLine; l++) {
     ({ state: curState, firstUndoCursor } = runNormalKeysOnLine(curState, l, normKeys, keyRunner, bang, firstUndoCursor, l > range.startLine, keepCursor));
   }
-  if (firstUndoCursor) curState = setLastUndoCursor(curState, state, firstUndoCursor);
+  if (firstUndoCursor) curState = setLastUndoCursor(curState, state, firstUndoCursor, undefined, firstUndoCursor.changeListUndoLine);
   // 안쪽 키가 아무것도 바꾸지 않았으면(u_save 없음) Vim 처럼 실행 취소 항목을 남기지 않습니다.
   else curState = withUndoFieldsOf(curState, state);
 
@@ -415,6 +415,9 @@ export function executeRangeNorm(
     commandMessage: msg('{count}개 줄에 normal 명령을 실행했습니다.', { count }),
   };
 }
+
+/** :norm 안쪽 키가 처음 남긴 실행 취소 기록의 커서와 변경 목록용 실행 취소 줄 */
+type FirstUndoCursor = CursorPosition & { changeListUndoLine?: number };
 
 /**
  * 특정 줄 번호에 Normal 모드 키 시퀀스를 실행합니다.
@@ -440,10 +443,10 @@ function runNormalKeysOnLine(
   keysStr: string,
   keyRunner: KeyRunner | undefined,
   bang: boolean,
-  firstUndoCursor: CursorPosition | undefined,
+  firstUndoCursor: FirstUndoCursor | undefined,
   resetCurswant = false,
   keepCursor = false
-): { state: VimEditorState; firstUndoCursor: CursorPosition | undefined } {
+): { state: VimEditorState; firstUndoCursor: FirstUndoCursor | undefined } {
   if (lineIdx < 0 || lineIdx >= state.lines.length) {
     return { state, firstUndoCursor };
   }
@@ -484,8 +487,9 @@ function runNormalKeysOnLine(
   if (!found) {
     const base = state.undoStack ?? [];
     const stack = curState.undoStack ?? [];
-    if (stack.length > base.length) found = stack[base.length].cursor;
-    else if (stack.length > 0 && stack[stack.length - 1] !== base[base.length - 1]) found = stack[stack.length - 1].cursor;
+    // 첫 기록의 '실행 취소 때 마지막으로 기록할 줄'(변경 목록)도 함께 넘깁니다 (Vim 은 가장 먼저 u_save 한 항목을 마지막에 되돌림)
+    const first = stack.length > base.length ? stack[base.length] : stack.length > 0 && stack[stack.length - 1] !== base[base.length - 1] ? stack[stack.length - 1] : undefined;
+    if (first) found = { ...first.cursor, changeListUndoLine: first.changeListUndoLine };
   }
 
   // :norm 전체가 한 번의 실행 취소 단위가 되도록, 안쪽 키가 만든 실행 취소 기록은 버리고 시작 시점의 기록을 둡니다.

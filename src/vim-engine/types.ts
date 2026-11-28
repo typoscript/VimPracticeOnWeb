@@ -132,6 +132,13 @@ export interface StateSnapshot {
   header?: { cursor: CursorPosition; savedRange?: { start: number; end: number }; undoLine?: number };
   /** 실행 취소 때 변경 목록에 마지막으로 남길 줄 (changelist.ts 가 변경 때 적음) */
   changeListUndoLine?: number;
+  /**
+   * 여러 변경을 한 기록으로 합친 항목(@q 매크로, normalMacroAndDot.ts 의 joinMacroUndo)의 안쪽 변경별 실행 취소 줄 (저장 순서).
+   * Vim 은 이들을 따로 u_entry 로 두어 실행 취소는 새것부터, 다시 실행은 옛것부터 각 줄을 변경 목록에 남깁니다.
+   */
+  changeListUndoLines?: number[];
+  /** 다시 실행 때 줄만 더한 덩어리의 모호한 자리를 맞출 줄 (원래 변경이 변경 목록에 마지막으로 남긴 줄) */
+  changeListRedoLine?: number;
 }
 
 export interface MarkPosition {
@@ -603,8 +610,10 @@ export type ChangeListHint =
   /** do_move (:m): line1..line2 를 dest 줄 뒤로 (모두 1 기준, Vim 인자 그대로) */
   | { kind: 'move'; line1: number; line2: number; dest: number; undoLine?: number }
   | { kind: 'each' }
-  | { kind: 'undo'; thenLine?: number }
-  | { kind: 'redo' };
+  /** whole: 범위 전체를 한 u_entry 로 저장한 변경(savedRange, :sort 등) — 되돌린 줄을 한 덩어리로 봅니다 */
+  | { kind: 'undo'; thenLine?: number; lines?: number[]; whole?: boolean }
+  /** line: 원래 변경이 남긴 줄 (줄만 더한 덩어리의 모호한 자리를 맞출 때만 씀) */
+  | { kind: 'redo'; lines?: number[]; line?: number; whole?: boolean };
 
 
 export interface ViewportState {
@@ -954,12 +963,15 @@ export interface VimEditorState {
   changeListNewChange?: boolean;
   /** 여러 명령을 한 실행 취소 단위로 묶는 중(:g, :norm): pushUndoSnapshot 이 changeListNewChange 를 다시 켜지 않음 */
   changeListUndoJoin?: boolean;
+  /** u / Ctrl-r 직후 (Vim u_sync 됨): 묶는 중이어도 다음 pushUndoSnapshot 이 changeListNewChange 를 켭니다 (매크로 안의 u) */
+  changeListSynced?: boolean;
   /** 변경 목록 위치 힌트 (일시적, changelist.ts) */
   changeListHint?: ChangeListHint;
   /** 변경 목록을 기록할 때마다 1씩 늘어남 (안쪽 키 재생이 이미 기록했는지 확인용) */
   changeListTick?: number;
   /** 입력 모드에서 이어서 친 글자 묶음의 시작 위치 (Vim insertchar 는 미리 입력된 글자를 한 번에 넣음) */
-  insertTypedRun?: { line: number; col: number };
+  /** closed: 묶음이 끝나 다음 글자는 새 묶음 (Ctrl-r 로 넣은 내용에 Tab 같은 특수 글자가 있었음) */
+  insertTypedRun?: { line: number; col: number; closed?: boolean };
   /** Vim oparg 의 start_vcol / end_vcol: 비주얼 연산이 남기는 값 (문자·줄 단위 비주얼 A 가 읽음, visualInsert.ts) */
   visualOpVcol?: { start: number; end: number };
   /** 마지막 검색 시 사용된 커서 오프셋 (/pattern/e, /pattern/+1 등) */

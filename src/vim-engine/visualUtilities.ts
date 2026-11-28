@@ -198,6 +198,19 @@ export function replaceVisualChars(
   }
 
   const ch = replacementChar === 'Space' ? ' ' : replacementChar;
+  const { visualAnchor: a0, cursor: c0 } = state;
+  if (state.mode === 'VISUAL' && a0.line === c0.line && a0.col === c0.col && c0.line === state.lines.length - 1 && (state.lines[c0.line] ?? '') === '') {
+    // 마지막 빈 줄의 한 칸 선택: 줄 바꿈을 넣을 수 없어 빈 범위(oap->empty)가 되고 op_replace 는 아무것도 하지 않습니다
+    return {
+      ...state,
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      visualBlockEndOfLine: undefined,
+      pendingKeys: undefined,
+      activeRegister: undefined,
+      lastVisualSelection: { mode: 'VISUAL', anchor: { ...a0 }, cursor: { ...c0 } },
+    };
+  }
   const blockOp = state.mode === 'VISUAL_BLOCK' ? blockOperandOf(state) : null;
   // Vim op_replace 는 커서를 연산 시작(블록은 왼쪽 위)에 둔 채 u_save 합니다.
   const stateWithSnapshot = blockOp ? pushUndoSnapshotAt(state, { line: blockOp.startLine, col: blockOp.startCol }) : pushUndoSnapshot(state);

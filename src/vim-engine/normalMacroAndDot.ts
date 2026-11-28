@@ -50,7 +50,13 @@ function joinMacroUndo(before: VimEditorState, after: VimEditorState): VimEditor
     pendingUndoJoin: before.pendingUndoJoin,
     lastActionWasUndo: before.lastActionWasUndo,
   };
-  const joined = pushUndoSnapshot({ ...after, ...undoFields, lines: before.lines, cursor: stack[base.length].cursor });
+  const pushed = pushUndoSnapshot({ ...after, ...undoFields, lines: before.lines, cursor: stack[base.length].cursor });
+  // 안쪽 변경별 실행 취소 줄을 남겨 u / Ctrl-r 이 Vim 처럼 항목마다 변경 목록에 기록하게 합니다 (changelist.ts)
+  const inner = stack.slice(base.length).flatMap((snap) => snap.changeListUndoLines ?? (snap.changeListUndoLine !== undefined ? [snap.changeListUndoLine] : []));
+  const joinedStack = pushed.undoStack ?? [];
+  const joined = stack.slice(base.length).every((snap) => snap.changeListUndoLines || snap.changeListUndoLine !== undefined)
+    ? { ...pushed, undoStack: [...joinedStack.slice(0, -1), { ...joinedStack[joinedStack.length - 1], changeListUndoLine: inner[0], changeListUndoLines: inner }] }
+    : pushed;
   const {
     undoStack, redoStack, undoTreeNodes, currentUndoSeq, maxUndoSeq,
     undoTimeHistory, undoTimeIndex, undoJoinMerged, pendingUndoJoin, lastActionWasUndo,

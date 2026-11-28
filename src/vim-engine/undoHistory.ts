@@ -38,7 +38,8 @@ export function pushUndoSnapshot(state: VimEditorState): VimEditorState {
     undoStack: nextUndo,
     redoStack: [],
     // Vim u_savecommon: 새 실행 취소 단위가 시작되면 다음 변경이 변경 목록에 새 항목을 만들 수 있습니다 (changelist.ts)
-    changeListNewChange: treeState.changeListUndoJoin ? treeState.changeListNewChange : true,
+    changeListNewChange: treeState.changeListUndoJoin && !treeState.changeListSynced ? treeState.changeListNewChange : true,
+    changeListSynced: undefined,
     pendingUndoJoin: undefined,
     lastActionWasUndo: undefined,
   };
@@ -64,12 +65,19 @@ export function setLastUndoCursor(
   state: VimEditorState,
   before: VimEditorState,
   cursor: CursorPosition,
-  savedRange?: { start: number; end: number }
+  savedRange?: { start: number; end: number },
+  /** 변경 목록: 실행 취소 때 마지막으로 기록할 줄 (안쪽 첫 변경의 것) */
+  changeListUndoLine?: number
 ): VimEditorState {
   const stack = state.undoStack ?? [];
   const top = stack[stack.length - 1];
   if (!top || top === before.undoStack?.[before.undoStack.length - 1]) return state;
-  const entry: StateSnapshot = { ...top, cursor: { line: cursor.line, col: cursor.col }, ...(savedRange ? { savedRange } : {}) };
+  const entry: StateSnapshot = {
+    ...top,
+    cursor: { line: cursor.line, col: cursor.col },
+    ...(savedRange ? { savedRange } : {}),
+    ...(changeListUndoLine !== undefined ? { changeListUndoLine } : {}),
+  };
   return { ...state, undoStack: [...stack.slice(0, -1), entry] };
 }
 
@@ -230,6 +238,7 @@ export function undo(state: VimEditorState): VimEditorState {
     lines: [...state.lines],
     cursor: { ...state.cursor },
     header: { cursor: { ...lastSnapshot.cursor }, savedRange: lastSnapshot.savedRange, undoLine: lastSnapshot.undoLine },
+    ...changeListUndoFields(lastSnapshot),
   };
 
   const nextRedo = [...(state.redoStack ?? []), currentSnapshot];
@@ -260,7 +269,8 @@ export function undo(state: VimEditorState): VimEditorState {
     pendingKeys: undefined,
     pendingUndoJoin: undefined,
     lastActionWasUndo: true,
-    changeListHint: { kind: 'undo', thenLine: lastSnapshot.changeListUndoLine },
+    changeListSynced: true,
+    changeListHint: { kind: 'undo', thenLine: lastSnapshot.changeListUndoLine, lines: lastSnapshot.changeListUndoLines, ...(lastSnapshot.savedRange ? { whole: true } : {}) },
     commandMessage: describeUndoRedo(
       state.lines,
       lastSnapshot.lines,
@@ -268,6 +278,15 @@ export function undo(state: VimEditorState): VimEditorState {
       undoneSeq,
       state.undoTreeNodes?.[undoneSeq]?.timestamp
     ),
+  };
+}
+
+/** 실행 취소·다시 실행으로 옮기는 기록에 변경 목록용 실행 취소 줄을 그대로 넘깁니다 */
+function changeListUndoFields(s: StateSnapshot): Pick<StateSnapshot, 'changeListUndoLine' | 'changeListUndoLines' | 'changeListRedoLine'> {
+  return {
+    ...(s.changeListUndoLine !== undefined ? { changeListUndoLine: s.changeListUndoLine } : {}),
+    ...(s.changeListRedoLine !== undefined ? { changeListRedoLine: s.changeListRedoLine } : {}),
+    ...(s.changeListUndoLines ? { changeListUndoLines: s.changeListUndoLines } : {}),
   };
 }
 
@@ -284,9 +303,12 @@ export function redo(state: VimEditorState): VimEditorState {
 
   // Vim u_undoredo(redo): 원래 변경의 헤더(uh_cursor·저장 범위)로 커서를 정하고, 다시 u 할 때도 그 헤더를 씁니다.
   const header = nextSnapshot.header && nextSnapshot.header.undoLine === undefined ? nextSnapshot.header : undefined;
-  const currentSnapshot: StateSnapshot = header
-    ? { lines: [...state.lines], cursor: { ...header.cursor }, ...(header.savedRange ? { savedRange: header.savedRange } : {}) }
-    : { lines: [...state.lines], cursor: { ...state.cursor } };
+  const currentSnapshot: StateSnapshot = {
+    ...(header
+      ? { lines: [...state.lines], cursor: { ...header.cursor }, ...(header.savedRange ? { savedRange: header.savedRange } : {}) }
+      : { lines: [...state.lines], cursor: { ...state.cursor } }),
+    ...changeListUndoFields(nextSnapshot),
+  };
   const redoCursor = header
     ? undoCursorPosition(state, { lines: nextSnapshot.lines, cursor: header.cursor, ...(header.savedRange ? { savedRange: header.savedRange } : {}) })
     : nextSnapshot.cursor;
@@ -318,7 +340,8 @@ export function redo(state: VimEditorState): VimEditorState {
     currentUndoSeq: currentSeq,
     undoTimeIndex: timeIdx,
     pendingKeys: undefined,
-    changeListHint: { kind: 'redo' },
+    changeListSynced: true,
+    changeListHint: { kind: 'redo', lines: nextSnapshot.changeListUndoLines, line: nextSnapshot.changeListRedoLine, ...(nextSnapshot.header?.savedRange ? { whole: true } : {}) },
     commandMessage: describeUndoRedo(
       state.lines,
       nextSnapshot.lines,

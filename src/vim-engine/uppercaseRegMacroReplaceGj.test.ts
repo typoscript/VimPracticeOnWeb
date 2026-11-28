@@ -185,10 +185,10 @@ describe('Replace Mode (R - REPLACE)', () => {
     expect(state.lines[0]).toBe('abcdef');
     expect(state.cursor.col).toBe(2);
 
-    // 시작 지점에서는 추가 Backspace 시 변경 없음
+    // 시작 지점에서는 추가 Backspace 가 글자를 바꾸지 않고 커서만 왼쪽으로 옮깁니다 (Vim 'backspace' 기본값 start)
     state = handleKey(state, 'Backspace');
     expect(state.lines[0]).toBe('abcdef');
-    expect(state.cursor.col).toBe(2);
+    expect(state.cursor.col).toBe(1);
   });
 
   it('줄 끝을 초과하여 덮어쓰는 경우 글자가 추가되고, Backspace 시 삭제된다', () => {
