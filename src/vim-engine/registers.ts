@@ -550,7 +550,7 @@ export function putFromRegister(
           { line: line + parts.length - 1, col: parts[parts.length - 1].length },
           'NORMAL'
         )
-      : { line, col: insertCol };
+      : clampCursor(nextLines, { line, col: insertCol }, 'NORMAL');
 
     return {
       ...stateWithSnapshot,

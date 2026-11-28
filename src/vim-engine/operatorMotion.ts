@@ -62,7 +62,8 @@ export function executeOperatorMotion(
     if (res.kind === 'linewise') return applyLinewise(state, op, start.line, end.line);
     if (res.kind === 'inclusive') return applyCharwise(state, op, start, { line: end.line, col: end.col + 1 });
     if (start.line === end.line && start.col === end.col) return { ...state, pendingKeys: undefined };
-    return applyCharwise(state, op, start, end);
+    // 배타적 모션(( ) [( 등)도 :help exclusive-linewise 규칙을 따릅니다 (d( / d) / c( 가 빈 줄에서 끝날 때 줄 단위).
+    return applyExclusive(state, op, start, end);
   }
 
   switch (motionKey) {

@@ -782,6 +782,10 @@ export function handleNormalEditingAndMotionFallback(
     opts.whichwrap
   );
 
+  // Vim cursor_down: [count]$ 는 마지막 줄에서 더 내려갈 수 없으면 실패합니다 (그 밖에는 마지막 줄에서 멈춤).
+  if (motionCursor && key === '$' && parsed.totalCount > 1 && state.cursor.line >= state.lines.length - 1) {
+    return ringBell(state);
+  }
   if (motionCursor) {
     const isDollar = key === '$';
     const isVertical = key === 'j' || key === 'k' || key === 'ArrowDown' || key === 'ArrowUp';

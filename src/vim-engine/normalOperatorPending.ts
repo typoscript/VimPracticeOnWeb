@@ -1,4 +1,5 @@
 import { VimEditorState } from './types';
+import { getOptions } from './setOptionsCore';
 import { syncRegisters } from './registers';
 import { moveFind, executeFindOperator } from './findChar';
 import {
@@ -252,9 +253,14 @@ export function handleNormalFilterShiftEqualPending(
       state.cursor.col
     );
     const keys = [...(state.pendingKeys ?? '').split(''), key];
+    // $ 와 g_ 는 Vim 에서 curswant 를 '줄 끝'(MAXCOL)으로 두므로, 'nostartofline' 이면 들여쓰기 뒤 커서가 줄 끝으로 갑니다.
+    const toLineEnd = (key === '$' || (prefix === 'g' && key === '_')) && !getOptions(state).startofline && !res.bell;
+    const shifted = toLineEnd
+      ? { ...res, cursor: { line: res.cursor.line, col: Math.max(0, (res.lines[res.cursor.line] ?? '').length - 1) } }
+      : res;
     return {
       handled: true,
-      state: { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : keys },
+      state: { ...shifted, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : keys },
     };
   }
 

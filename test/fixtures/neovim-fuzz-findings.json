@@ -5030,5 +5030,361 @@
       "regType": "line",
       "mode": "n"
     }
+  },
+  {
+    "id": "misc-2-1",
+    "text": "abc def",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "4$",
+    "expected": {
+      "lines": [
+        "abc def"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-2-2",
+    "text": "abc\nxyz pq",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "j4$",
+    "expected": {
+      "lines": [
+        "abc",
+        "xyz pq"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-2-3",
+    "text": "abc\nxyz pq\nk",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "2$",
+    "expected": {
+      "lines": [
+        "abc",
+        "xyz pq",
+        "k"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 5
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-2-4",
+    "text": "abc\nxyz",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "d4$",
+    "expected": {
+      "lines": [
+        ""
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "abc\nxyz\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-2-5",
+    "text": "abc\nxyz",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "jd4$",
+    "expected": {
+      "lines": [
+        "abc",
+        "xyz"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-2-6",
+    "text": "ABC\nDEFG",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "jlgugg",
+    "expected": {
+      "lines": [
+        "abc",
+        "defg"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-2-7",
+    "text": "ABCD\nEFGH",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "llguj",
+    "expected": {
+      "lines": [
+        "abcd",
+        "efgh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-2-8",
+    "text": "abcd\nefgh",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "llgUk",
+    "expected": {
+      "lines": [
+        "abcd",
+        "efgh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-2-9",
+    "text": "  abc def\nx",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "ll>g_",
+    "expected": {
+      "lines": [
+        "    abc def",
+        "x"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 10
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-2-10",
+    "text": "  abc def\nx",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "ll<g_",
+    "expected": {
+      "lines": [
+        "abc def",
+        "x"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 6
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-2-11",
+    "text": "  abc\nx",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "ll>$",
+    "expected": {
+      "lines": [
+        "    abc",
+        "x"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 6
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-2-12",
+    "text": "    abcd\n    efgh",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "llVj<",
+    "expected": {
+      "lines": [
+        "  abcd",
+        "  efgh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-2-13",
+    "text": "A. B.\nx y.\n\nAnother.",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "jjjd(",
+    "expected": {
+      "lines": [
+        "A. B.",
+        "x y.",
+        "Another."
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      },
+      "reg": "\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-2-14",
+    "text": "a\nb\n\nc",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "jjvd",
+    "expected": {
+      "lines": [
+        "a",
+        "b",
+        "c"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      },
+      "reg": "\n",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-2-15",
+    "text": "a.\nb\n\nc",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "jjd)",
+    "expected": {
+      "lines": [
+        "a.",
+        "b",
+        "c"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      },
+      "reg": "\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "misc-2-16",
+    "text": "A. B.\nx y.\n\nAnother.",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "jjc(X<Esc>",
+    "expected": {
+      "lines": [
+        "A. B.",
+        "X",
+        "",
+        "Another."
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "x y.\n",
+      "regType": "line",
+      "mode": "n"
+    }
   }
 ]

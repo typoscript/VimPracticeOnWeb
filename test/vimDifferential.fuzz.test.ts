@@ -8,6 +8,17 @@ import type { VimEditorState } from '../src/vim-engine';
  * 으로 확인한 결과와 비교합니다. (시드가 고정되어 있어 케이스 번호와 키 시퀀스는 항상 같습니다)
  */
 const NEOVIM_VERIFIED_CASES: Record<number, { keys: string; lines: string[]; cursor: { line: number; col: number } }> = {
+  // 한 줄 버퍼에서 [count]$ 는 Vim 에서 실패합니다 (CodeMirror 는 줄 끝으로 이동). nvim --headless 결과.
+  7: {
+    keys: 'r y . r x f , 4 $ b',
+    lines: ['xlpha beta gamma delta epsilon zeta eta theta'],
+    cursor: { line: 0, col: 0 },
+  },
+  13: {
+    keys: 'c a w X Escape . 3 $ r x k l',
+    lines: ['xgamma delta epsilon zeta eta theta'],
+    cursor: { line: 0, col: 1 },
+  },
   // 빈 줄에서 cw 는 Vim 에서 cc 처럼 그 줄만 바꿉니다 (CodeMirror 는 다음 줄과 합침). nvim --headless 결과.
   73: {
     keys: 'c $ X Escape x y y p . $ d a " c w v a l Escape',

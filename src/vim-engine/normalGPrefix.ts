@@ -175,7 +175,11 @@ export function handleNormalCommentFormatOrCaseG(
     const count = caseOpG[1] ? parseInt(caseOpG[1], 10) : 1;
     if (key === op[1] || key === 'g') {
       const motionKey = key === 'g' ? 'gg' : key;
-      const res = executeCaseMotion({ ...state, pendingKeys: undefined }, op, motionKey, count);
+      let res = executeCaseMotion({ ...state, pendingKeys: undefined }, op, motionKey, count);
+      // gugg 는 줄 단위: 'nostartofline' 이면 첫 줄로 가되 원래 열을 유지합니다 (Vim op_tilde).
+      if (motionKey === 'gg' && !res.bell && !getOptions(state).startofline) {
+        res = { ...res, cursor: clampCursor(res.lines, { line: res.cursor.line, col: state.curswant ?? state.cursor.col }, 'NORMAL') };
+      }
       const opKeys = [...(count > 1 ? [String(count)] : []), op, 'g', key];
       return { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys, pendingKeys: undefined };
     }
@@ -222,10 +226,13 @@ export function handleNormalCommentFormatOrCaseG(
       caseTypeForOperator(op as 'gu' | 'gU' | 'g~' | 'g?')
     );
     const opKeys = [...(state.pendingKeys ?? '').split(''), key];
+    // 줄 단위 모션(gugg, guj …)은 'nostartofline' 에서 범위 첫 줄로 가되 원래 열을 유지합니다 (Vim op_tilde).
+    const keepCol = range.linewise && !getOptions(state).startofline;
+    const caseCursor = keepCol ? { line: range.start.line, col: state.curswant ?? state.cursor.col } : range.cursor;
     return {
       ...applied,
       mode: 'NORMAL',
-      cursor: clampCursor(applied.lines, range.cursor, 'NORMAL'),
+      cursor: clampCursor(applied.lines, caseCursor, 'NORMAL'),
       pendingKeys: undefined,
       lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys,
     };

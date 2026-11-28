@@ -1,6 +1,6 @@
 import { VimEditorState } from './types';
 import { executeOperatorMotion } from './operatorMotion';
-import { clampCursor } from './cursor';
+import { clampCursor, getFirstNonBlankCol } from './cursor';
 import {
   moveToNextWord,
   moveToNextWORD,
@@ -312,6 +312,15 @@ export function handleNormalDCYOperators(
       if (!span) return { handled: true, state: ringBell({ ...state, pendingKeys: undefined }) };
       const { line, col } = state.cursor;
       const cur = state.lines[line] ?? '';
+      // Vim op_delete: 여러 줄에 걸친 d$ 가 첫 비공백(또는 그 앞)에서 시작하면 줄 단위 삭제가 됩니다.
+      if (span.lastLine > line && col <= getFirstNonBlankCol(cur)) {
+        const res = deleteFoldOrLine(state, span.lastLine - line + 1);
+        const dKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'd', '$'] : ['d', '$'];
+        return {
+          handled: true,
+          state: { ...syncRegisters(state, res, false), lastChangeKeys: isReplayingDot ? state.lastChangeKeys : dKeys },
+        };
+      }
       const nextLines = [...state.lines.slice(0, line), cur.slice(0, col), ...state.lines.slice(span.lastLine + 1)];
       const stateWithDel: VimEditorState = {
         ...pushUndoSnapshot(state),

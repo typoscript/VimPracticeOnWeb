@@ -266,6 +266,22 @@ const CASES: Case[] = [
   { id: 'dot-split-keys-3', text: 'abc\n(\nDef\nghi', cursor: { row: 0, col: 0 }, keys: 'i<Esc>j4gUUk.' },
   { id: 'dot-split-keys-4', text: 'ABC DEF\nGHI', cursor: { row: 0, col: 0 }, keys: 'i<Esc>guiwj.' },
   { id: 'dot-split-keys-5', text: '1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25', cursor: { row: 0, col: 0 }, keys: 'i<Esc>12ddu.' },
+  { id: 'misc-2-1', text: 'abc def', cursor: { row: 0, col: 0 }, keys: '4$' },
+  { id: 'misc-2-2', text: 'abc\nxyz pq', cursor: { row: 0, col: 0 }, keys: 'j4$' },
+  { id: 'misc-2-3', text: 'abc\nxyz pq\nk', cursor: { row: 0, col: 0 }, keys: '2$' },
+  { id: 'misc-2-4', text: 'abc\nxyz', cursor: { row: 0, col: 0 }, keys: 'd4$' },
+  { id: 'misc-2-5', text: 'abc\nxyz', cursor: { row: 0, col: 0 }, keys: 'jd4$' },
+  { id: 'misc-2-6', text: 'ABC\nDEFG', cursor: { row: 0, col: 0 }, keys: 'jlgugg' },
+  { id: 'misc-2-7', text: 'ABCD\nEFGH', cursor: { row: 0, col: 0 }, keys: 'llguj' },
+  { id: 'misc-2-8', text: 'abcd\nefgh', cursor: { row: 0, col: 0 }, keys: 'llgUk' },
+  { id: 'misc-2-9', text: '  abc def\nx', cursor: { row: 0, col: 0 }, keys: 'll>g_' },
+  { id: 'misc-2-10', text: '  abc def\nx', cursor: { row: 0, col: 0 }, keys: 'll<g_' },
+  { id: 'misc-2-11', text: '  abc\nx', cursor: { row: 0, col: 0 }, keys: 'll>$' },
+  { id: 'misc-2-12', text: '    abcd\n    efgh', cursor: { row: 0, col: 0 }, keys: 'llVj<' },
+  { id: 'misc-2-13', text: 'A. B.\nx y.\n\nAnother.', cursor: { row: 0, col: 0 }, keys: 'jjjd(' },
+  { id: 'misc-2-14', text: 'a\nb\n\nc', cursor: { row: 0, col: 0 }, keys: 'jjvd' },
+  { id: 'misc-2-15', text: 'a.\nb\n\nc', cursor: { row: 0, col: 0 }, keys: 'jjd)' },
+  { id: 'misc-2-16', text: 'A. B.\nx y.\n\nAnother.', cursor: { row: 0, col: 0 }, keys: 'jjc(X<Esc>' },
 ];
 
 const LUA = `

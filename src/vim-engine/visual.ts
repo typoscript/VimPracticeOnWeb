@@ -373,6 +373,20 @@ export function deleteVisualSelection(state: VimEditorState): VimEditorState {
   // 문자 단위 VISUAL 모드
   const { start, end } = getOrderedRange(anchor, cursor);
 
+  // Vim: 빈 줄(마지막 줄 제외)을 문자 단위로 고르면 줄바꿈까지 고른 것입니다 — vd 는 그 줄을 지우고 레지스터는 "\n".
+  if (start.line === end.line && (state.lines[start.line] ?? '') === '' && start.line < state.lines.length - 1) {
+    const nextLines = [...state.lines.slice(0, start.line), ...state.lines.slice(start.line + 1)];
+    return {
+      ...stateWithSnapshot,
+      lines: nextLines,
+      cursor: clampCursor(nextLines, { line: start.line, col: 0 }, 'NORMAL'),
+      mode: 'NORMAL',
+      visualAnchor: undefined,
+      clipboard: { type: 'text', content: '\n' },
+      pendingKeys: undefined,
+    };
+  }
+
   if (start.line === end.line) {
     const currentLine = state.lines[start.line] ?? '';
     const deletedContent = currentLine.slice(start.col, end.col + 1);
