@@ -1,8 +1,10 @@
 import { CursorPosition, VimEditorState } from './types';
 import { clampCursor } from './cursor';
 import { pushUndoSnapshot } from './operators';
+import { pushUndoSnapshotAt } from './undoHistory';
 import { msg } from './messages';
 import { getOrderedRange } from './visual';
+import { blockOperandOf, blockReplaceLine } from './visualBlockColumns';
 
 export function utf8ByteLength(str: string): number {
   let bytes = 0;
@@ -196,7 +198,9 @@ export function replaceVisualChars(
   }
 
   const ch = replacementChar === 'Space' ? ' ' : replacementChar;
-  const stateWithSnapshot = pushUndoSnapshot(state);
+  const blockOp = state.mode === 'VISUAL_BLOCK' ? blockOperandOf(state) : null;
+  // Vim op_replace 는 커서를 연산 시작(블록은 왼쪽 위)에 둔 채 u_save 합니다.
+  const stateWithSnapshot = blockOp ? pushUndoSnapshotAt(state, { line: blockOp.startLine, col: blockOp.startCol }) : pushUndoSnapshot(state);
   const anchor = state.visualAnchor;
   const cursor = state.cursor;
   const snap = {
@@ -208,22 +212,13 @@ export function replaceVisualChars(
   let targetPos: CursorPosition;
 
   if (state.mode === 'VISUAL_BLOCK') {
-    const minLine = Math.min(anchor.line, cursor.line);
-    const maxLine = Math.max(anchor.line, cursor.line);
-    const minCol = Math.min(anchor.col, cursor.col);
-    const maxCol = Math.max(anchor.col, cursor.col);
-    const isEol = Boolean(state.visualBlockEndOfLine);
-
-    for (let l = minLine; l <= maxLine; l++) {
-      const lineText = nextLines[l] ?? '';
-      if (lineText.length <= minCol) continue;
-      const endCol = isEol ? lineText.length - 1 : Math.min(maxCol, lineText.length - 1);
-      const count = endCol - minCol + 1;
-      if (count > 0) {
-        nextLines[l] = lineText.slice(0, minCol) + ch.repeat(count) + lineText.slice(endCol + 1);
-      }
+    // Vim op_replace 블록: 화면 열 기준, 블록 끝이 가르는 탭은 블록 밖 부분만 공백으로 남깁니다.
+    const op = blockOp!;
+    for (let l = op.startLine; l <= op.endLine; l++) {
+      const replaced = blockReplaceLine(nextLines[l] ?? '', op, ch);
+      if (replaced !== null) nextLines[l] = replaced;
     }
-    targetPos = { line: minLine, col: minCol };
+    targetPos = { line: op.startLine, col: op.startCol };
   } else if (state.mode === 'VISUAL_LINE') {
     const minLine = Math.min(anchor.line, cursor.line);
     const maxLine = Math.max(anchor.line, cursor.line);

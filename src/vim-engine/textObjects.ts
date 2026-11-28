@@ -4,7 +4,7 @@ import { isKeywordChar } from './wordMotion';
 import { pushUndoSnapshot } from './operators';
 import { pushUndoSnapshotAt } from './undoHistory';
 import { formatLinesRange, cindentOptionsFor, equalOperatorCursor, changeCaseVisual, caseTypeForOperator } from './lineOperators';
-import { getTagTextObjectRange } from './tagTextObject';
+import { getTagTextObjectRange, vimTagBlock } from './tagTextObject';
 import { getCountedWordObjectRange } from './wordObjectCount';
 import { currentSentence } from './sentenceVim';
 import { toOperatorRange } from './vimPosition';
@@ -447,7 +447,22 @@ export function executeTextObjectOperator(
   const isMiniAi = /^[ia][nl].$/.test(objectType);
   // 괄호·태그 객체의 [count] 는 count 번째로 감싼 쌍을 고릅니다 (d2i( 는 바깥 괄호 안쪽). 쌍이 모자라면 실패.
   const isNestedPair = /^[ia][()[\]{}<>bBt]$/.test(objectType);
-  const nestedRange = isNestedPair && count > 1 ? getNestedPairRange(curState.lines, curState.cursor, objectType, count) : undefined;
+  // 태그 객체는 Vim current_tagblock 이식으로 [count]·비주얼 확장까지 한 번에 구합니다.
+  const isTag = objectType === 'it' || objectType === 'at';
+  let nestedRange: TextObjectRange | null | undefined;
+  if (isTag) {
+    const blk = vimTagBlock(curState.lines, curState.cursor, objectType === 'at', Math.max(1, count), operator === 'v' ? curState.visualAnchor ?? curState.cursor : undefined);
+    if (!blk) return { ...curState, bell: true, pendingKeys: undefined };
+    if (operator === 'v') {
+      return { ...curState, mode: 'VISUAL', visualAnchor: blk.start, cursor: blk.empty ? blk.start : blk.end, pendingKeys: undefined };
+    }
+    const { start, end } = blk;
+    nestedRange = blk.empty
+      ? { startLine: start.line, startCol: start.col, endLine: start.line, endCol: start.col - 1, isEmpty: true }
+      : { startLine: start.line, startCol: start.col, endLine: end.line, endCol: blk.inclusive ? end.col : end.col - 1 };
+  } else {
+    nestedRange = isNestedPair && count > 1 ? getNestedPairRange(curState.lines, curState.cursor, objectType, count) : undefined;
+  }
   if (nestedRange === null) return { ...curState, bell: true, pendingKeys: undefined };
   // 연산자와 함께 쓴 [count]iw/aw/iW/aW 는 Vim current_word 로 한 번에 범위를 구합니다 (여러 줄에 걸침).
   const isWordObject = operator !== 'v' && /^[ia][wW]$/.test(objectType);
@@ -592,7 +607,8 @@ export function executeTextObjectOperator(
         for (let l = startLine + 1; l < endLine; l++) {
           parts.push(curState.lines[l] ?? '');
         }
-        if (endCol >= 0) {
+        // 끝이 -1 열이면 앞 줄의 줄바꿈까지입니다 (닫는 태그가 줄 처음인 it).
+        if (endCol >= 0 || isTag) {
           parts.push((curState.lines[endLine] ?? '').slice(0, endCol + 1));
         }
         content = parts.join('\n');
@@ -605,7 +621,7 @@ export function executeTextObjectOperator(
         ...curState,
         // Vim: 복사 후 커서는 복사한 범위의 시작으로 갑니다 (yiw 는 단어 첫 글자).
         // 빈 i" (`""`) 는 Vim 처럼 빈 범위의 시작(닫는 따옴표)으로 갑니다.
-        cursor: range.isEmpty && !isQuote && !emptyBracket ? curState.cursor : { line: startLine, col: startCol },
+        cursor: range.isEmpty && !isQuote && !emptyBracket && !isTag ? curState.cursor : clampCursor(curState.lines, { line: startLine, col: startCol }, 'NORMAL'),
         clipboard: {
           type: 'text',
           content,

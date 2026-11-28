@@ -1,4 +1,5 @@
 import { CursorPosition } from './types';
+import { columnForVirtual } from './virtualColumn';
 import { isKeywordChar } from './wordMotion';
 import { findFunctionJumpTarget } from './textObjects';
 import { findSentence } from './sentenceVim';
@@ -186,7 +187,9 @@ export function evaluateExtraMotion(
   lines: string[],
   cursor: CursorPosition,
   key: string,
-  count = 1
+  count = 1,
+  /** 'tabstop' (`|` 는 화면 열) */
+  tabstop = 8
 ): MotionResult | null {
   const n = Math.max(1, count);
   const last = lines.length - 1;
@@ -209,8 +212,9 @@ export function evaluateExtraMotion(
       return { target: { line, col: firstNonBlankCol(lines[line] ?? '') }, kind: 'linewise' };
     }
     case '|': {
-      const len = (lines[cursor.line] ?? '').length;
-      return { target: { line: cursor.line, col: Math.max(0, Math.min(n - 1, len - 1)) }, kind: 'exclusive' };
+      // Vim nv_pipe: coladvance(count - 1) — 화면 열 기준이라 탭이 있으면 그 탭 위로
+      const text = lines[cursor.line] ?? '';
+      return { target: { line: cursor.line, col: Math.max(0, Math.min(columnForVirtual(text, n - 1, tabstop), text.length - 1)) }, kind: 'exclusive' };
     }
     case 'g_': {
       // Vim cursor_down: 마지막 줄에서 더 내려갈 수 없으면 실패, 그 밖에는 마지막 줄에서 멈춤.

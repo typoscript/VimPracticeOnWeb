@@ -2,6 +2,7 @@ import { VimEditorState, CursorPosition, FoldRange } from './types';
 import { getMaxCol, clampCursor } from './cursor';
 import { parseWhichwrapFlags } from './setOptionsCore';
 import { evaluateExtraMotion } from './extraMotions';
+import { tabstopOf } from './virtualColumn';
 import { executeOperatorMotion } from './operatorMotion';
 import { syncRegisters, putFromRegister } from './registers';
 import { gotoFileUnderCursor } from './gotoFileEngine';
@@ -135,7 +136,7 @@ export const LINEWISE_SHIFT_MOTIONS = new Set(['j', 'k', 'G', 'gg', '+', '-', 'E
 
 /** 보조 모션( ) ge g_ + - | [( 등)으로 커서를 옮깁니다. 이동할 수 없으면 bell. */
 export function moveByExtraMotion(state: VimEditorState, key: string, count: number): VimEditorState {
-  const res = evaluateExtraMotion(state.lines, state.cursor, key, count);
+  const res = evaluateExtraMotion(state.lines, state.cursor, key, count, tabstopOf(state));
   if (!res) return ringBell(state);
   const mode = state.mode === 'NORMAL' ? 'NORMAL' : state.mode;
   // ]] 가 버퍼 끝에 닿으면 연산자와 함께일 때만 마지막 줄 끝(포함)이고, 커서 이동은 0열입니다 (Vim findpar).
@@ -149,6 +150,7 @@ export function moveByExtraMotion(state: VimEditorState, key: string, count: num
     ...state,
     cursor: clampCursor(state.lines, target, mode),
     stickyDollar: false,
+    visualBlockEndOfLine: undefined,
     pendingKeys: undefined,
     ...(res.failed ? { bell: true } : {}),
   };

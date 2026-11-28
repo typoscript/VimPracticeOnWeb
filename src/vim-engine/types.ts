@@ -125,6 +125,11 @@ export interface StateSnapshot {
    * 항목마다 커서를 정하므로, 그 결과 줄을 여기 적어 둡니다. 열은 저장한 커서가 그 줄이면 그 열, 아니면 beginline 입니다.
    */
   undoLine?: number;
+  /**
+   * 다시 실행(redo) 스택 항목: 원래 변경의 실행 취소 헤더(Vim `uh_cursor` 와 저장 범위). redo 커서도 u_undoredo 가 같은
+   * 헤더로 정하고, redo 뒤 다시 u 할 때도 같은 헤더를 씁니다.
+   */
+  header?: { cursor: CursorPosition; savedRange?: { start: number; end: number }; undoLine?: number };
 }
 
 export interface MarkPosition {
@@ -523,6 +528,9 @@ export interface BlockInsertSession {
   maxCol?: number;         // 블록 오른쪽 경계 열 번호 (. 반복 및 블록 크기 복원용)
   count?: number;          // [count]I / [count]A / [count]c 반복 횟수 (기본 1)
   skippedLines?: number[]; // 블록 범위(minCol)에 도달하지 않아 제외된 짧은 줄 목록
+  startCol?: number;       // 블록 왼쪽 위 글자의 바이트 열 (oap->start.col, I/A 뒤 커서)
+  /** 줄마다 입력을 넣는 방법 (lines 와 같은 순서, null 이면 건너뜀; 화면 열 기준 Vim block_insert/op_change) */
+  linePlans?: ({ offset: number; pre: number; post: number; skip: number } | null)[];
 }
 
 export type CompletionItemKind =

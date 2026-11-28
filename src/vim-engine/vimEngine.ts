@@ -608,7 +608,9 @@ function trackAutoIndentPending(prev: VimEditorState, next: VimEditorState, key:
     const on = (opensLine || changesLine) && (opts.autoindent || (opts.smartindent && opensLine && key !== 'S'));
     return on ? { ...next, autoIndentPending: true } : next;
   }
-  if (prev.mode === 'INSERT' && next.autoIndentPending && !KEEPS_AUTO_INDENT.has(key)) {
+  // Ctrl-r 와 빈 레지스터 이름은 글자를 넣지 않으므로 did_ai 를 끄지 않습니다 (cc<C-r>a<Esc> 가 들여쓰기를 지움).
+  const registerNoop = (next.insertRegisterPending && !prev.insertRegisterPending) || (prev.insertRegisterPending && next.lines === prev.lines);
+  if (prev.mode === 'INSERT' && next.autoIndentPending && !KEEPS_AUTO_INDENT.has(key) && !registerNoop) {
     return { ...next, autoIndentPending: undefined };
   }
   if (next.mode !== 'INSERT' && next.autoIndentPending) return { ...next, autoIndentPending: undefined };

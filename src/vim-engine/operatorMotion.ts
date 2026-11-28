@@ -1,6 +1,6 @@
 import { CursorPosition, VimEditorState } from './types';
-import { curswantColumnOn } from './virtualColumn';
-import { clampCursor } from './cursor';
+import { curswantColumnOn, tabstopOf } from './virtualColumn';
+import { clampCursor, getFirstNonBlankCol } from './cursor';
 import { getOptions, parseWhichwrapFlags } from './setOptionsCore';
 import { findParagraphTarget } from './advancedMotions';
 import { pushUndoSnapshot } from './operators';
@@ -45,7 +45,7 @@ export function executeOperatorMotion(
   const lastLine = lines.length - 1;
 
   if (EXTRA_MOTION_KEYS.has(motionKey)) {
-    const res = evaluateExtraMotion(lines, cursor, motionKey, n);
+    const res = evaluateExtraMotion(lines, cursor, motionKey, n, tabstopOf(state));
     if (!res) return null;
     // 커서만 옮기고 실패한 모션(d9ge): 연산은 취소되고 커서는 옮긴 자리에 남습니다 (Vim clearopbeep).
     if (res.failed) return { ...state, cursor: { ...res.target }, pendingKeys: undefined, bell: true };
@@ -84,13 +84,15 @@ export function executeOperatorMotion(
     case 'gk':
     case 'ArrowUp':
       if (cursor.line <= 0) return null;
-      return applyLinewise(state, op, Math.max(0, cursor.line - n), cursor.line);
+      return applyLinewise(state, op, Math.max(0, cursor.line - n), cursor.line, false, curswantColumnOn(state, lines, Math.max(0, cursor.line - n)));
 
     case 'G':
     case 'gg': {
       const fallback = motionKey === 'G' ? lastLine : 0;
       const target = count !== undefined ? Math.max(0, Math.min(lastLine, count - 1)) : fallback;
-      return applyLinewise(state, op, Math.min(cursor.line, target), Math.max(cursor.line, target));
+      const upLine = Math.min(cursor.line, target);
+      const upCol = getOptions(state).startofline ? getFirstNonBlankCol(lines[upLine] ?? '') : curswantColumnOn(state, lines, upLine);
+      return applyLinewise(state, op, upLine, Math.max(cursor.line, target), false, upCol);
     }
 
     case 'h':
@@ -237,7 +239,7 @@ export function applyOperatorToMotionRange(
  */
 function applyExclusive(state: VimEditorState, op: Operator, start: CursorPosition, end: CursorPosition): VimEditorState {
   if (end.col === 0 && end.line > start.line) {
-    if (inIndent(state.lines[start.line] ?? '', start.col)) return applyLinewise(state, op, start.line, end.line - 1, true);
+    if (inIndent(state.lines[start.line] ?? '', start.col)) return applyLinewise(state, op, start.line, end.line - 1, true, start.col);
   }
   return applyCharwise(state, op, start, end);
 }
@@ -247,14 +249,22 @@ function applyExclusive(state: VimEditorState, op: Operator, start: CursorPositi
  * endAdjusted: 배타적 끝을 이전 줄로 옮겨 줄 단위가 된 범위 (Vim oap->end_adjusted). 이때 d 뒤 커서는 첫 비공백입니다
  * (op_delete 의 beginline 뒤 'nostartofline' 열 복원이 end_adjusted 에서는 일어나지 않음).
  */
-function applyLinewise(state: VimEditorState, op: Operator, startLine: number, endLine: number, endAdjusted = false): VimEditorState {
+function applyLinewise(
+  state: VimEditorState,
+  op: Operator,
+  startLine: number,
+  endLine: number,
+  endAdjusted = false,
+  /** 위로 가는 모션(k, gg)의 목적지 열: 복사 뒤 커서는 연산 시작(oap->start)인 그 자리입니다 */
+  upCol?: number
+): VimEditorState {
   const content = state.lines.slice(startLine, endLine + 1).join('\n');
   const clipboard = { type: 'line' as const, content };
 
   if (op === 'y') {
     return {
       ...state,
-      cursor: clampCursor(state.lines, { line: startLine, col: state.cursor.col }, 'NORMAL'),
+      cursor: clampCursor(state.lines, { line: startLine, col: upCol !== undefined && startLine < state.cursor.line ? upCol : state.cursor.col }, 'NORMAL'),
       clipboard,
       lastBracketMarks: {
         start: { row: startLine, col: 0 },

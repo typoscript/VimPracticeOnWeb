@@ -14623,5 +14623,1077 @@
       "regType": "char",
       "mode": "n"
     }
+  },
+  {
+    "id": "vblock-tab-yank",
+    "text": "\tif (a) {\n\t\tb(1, 2);\n\t}\nend",
+    "cursor": {
+      "row": 0,
+      "col": 4
+    },
+    "keys": "<C-v>Gy",
+    "expected": {
+      "lines": [
+        "\tif (a) {",
+        "\t\tb(1, 2);",
+        "\t}",
+        "end"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "f (\n b(\n\n",
+      "regType": "block",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "vblock-tab-delete",
+    "text": "\tif (a) {\n\t\tb(1, 2);\n\t}\nend",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "<C-v>2jd",
+    "expected": {
+      "lines": [
+        "\ti(a) {",
+        "\t (1, 2);",
+        "\t}",
+        "end"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "f \n b\n",
+      "regType": "block",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "vblock-tab-delete-split",
+    "text": "\tif (a) {\n\t\tb(1, 2);\n\t}\nend",
+    "cursor": {
+      "row": 2,
+      "col": 1
+    },
+    "keys": "<C-v>2jd",
+    "options": "noet ts=4 sw=4",
+    "expected": {
+      "lines": [
+        "\tif (a) {",
+        "\t\tb(1, 2);",
+        "   ",
+        "end"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 2
+      },
+      "reg": " }\n",
+      "regType": "block",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "vblock-tab-change",
+    "text": "\tif (a) {\n\t\tb(1, 2);\n\t}\nend",
+    "cursor": {
+      "row": 1,
+      "col": 2
+    },
+    "keys": "<C-v>GcX<Esc>",
+    "expected": {
+      "lines": [
+        "\tif (a) {",
+        "\t X(1, 2);",
+        "\t}X",
+        "endX"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 2
+      },
+      "reg": " b\n\n",
+      "regType": "block",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "vblock-tab-replace",
+    "text": "\tif (a) {\n\t\tb(1, 2);\n\t}\nend",
+    "cursor": {
+      "row": 0,
+      "col": 6
+    },
+    "keys": "<C-v>2jr#",
+    "expected": {
+      "lines": [
+        "\ti##### {",
+        "\t ##### 2);",
+        "\t}",
+        "end"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "vblock-tab-replace-g_",
+    "text": "\tif (a) {\n\t\tb(1, 2);\n\t}\nend",
+    "cursor": {
+      "row": 2,
+      "col": 0
+    },
+    "keys": "<C-v>g_r#",
+    "options": "sw=4 ts=4",
+    "expected": {
+      "lines": [
+        "\tif (a) {",
+        "\t\tb(1, 2);",
+        "#####",
+        "end"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "vblock-tab-insert",
+    "text": "\tif (a) XX\n\t\tb(1, 2);\n\t}\nend",
+    "cursor": {
+      "row": 0,
+      "col": 9
+    },
+    "keys": "<C-v>GIq r<Esc>",
+    "expected": {
+      "lines": [
+        "\tiq rf (a) XX",
+        "\t q r b(1, 2);",
+        "\t}q r",
+        "endq r"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "vblock-tab-append",
+    "text": "\tX\n\t\tb(1, 2);\n\t}\nend",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "<C-v>jjA<b><Esc>",
+    "expected": {
+      "lines": [
+        "\tX<b>",
+        "\t <b> b(1, 2);",
+        "\t}<b>",
+        "end"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "vblock-tab-append-split",
+    "text": "\tif (a) {\n\t\tb(1, 2);\n\t}\nend",
+    "cursor": {
+      "row": 0,
+      "col": 6
+    },
+    "keys": "<C-v>jjAX<Esc>",
+    "expected": {
+      "lines": [
+        "\tif (a)X {",
+        "\t\tb(1,X 2);",
+        "\t}     X",
+        "end"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "vblock-tab-shift-right",
+    "text": "\tif (a) {\n\t\tb(1, 2);\n\t}\nend",
+    "cursor": {
+      "row": 2,
+      "col": 1
+    },
+    "keys": "<C-v>G>",
+    "expected": {
+      "lines": [
+        "\tif (a) {",
+        "\t\tb(1, 2);",
+        "    }",
+        "en  d"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 1
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "vblock-tab-shift-dollar",
+    "text": "\tif (a) {\n\t\tb(1, 2);\n\t}\nend",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "<C-v>j$4>",
+    "options": "sts=2",
+    "expected": {
+      "lines": [
+        "\tif (a) {",
+        "            b(1, 2);",
+        "          }",
+        "end"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "vblock-tab-shift-noet",
+    "text": "<ul>\n<ul>\n  <li>one</li>\n  <li class=\"x\">three</li>\n</ul>",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "<C-v>G>",
+    "options": "noet",
+    "expected": {
+      "lines": [
+        "<ul>",
+        "\t<ul>",
+        "\t\t<li>one</li>",
+        "\t\t<li class=\"x\">three</li>",
+        "\t</ul>"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "vblock-tab-shift-left",
+    "text": "\tif (a) {\n\t\tb(1, 2);\n\t}\nend",
+    "cursor": {
+      "row": 1,
+      "col": 5
+    },
+    "keys": "<C-v>j<",
+    "options": "sts=2",
+    "expected": {
+      "lines": [
+        "\tif (a) {",
+        "\t b(1, 2);",
+        "\t}",
+        "end"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 1
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "vblock-tab-case",
+    "text": "\tif (a) {\n\t\tB(1, 2);\nBBB\nend",
+    "cursor": {
+      "row": 2,
+      "col": 2
+    },
+    "keys": "<C-v>{+u",
+    "options": "sr",
+    "expected": {
+      "lines": [
+        "\tif (a) {",
+        "\t\tb(1, 2);",
+        "BBb",
+        "end"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 1
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "vblock-o-clears-dollar",
+    "text": "function greet(name) {\n  return \"Hello, \" + name;\n}\n\nconst x = [1, 2, 3];",
+    "cursor": {
+      "row": 1,
+      "col": 5
+    },
+    "keys": "<C-v>j$oy",
+    "expected": {
+      "lines": [
+        "function greet(name) {",
+        "  return \"Hello, \" + name;",
+        "}",
+        "",
+        "const x = [1, 2, 3];"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 1
+      },
+      "reg": " retu\n",
+      "regType": "block",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "vblock-paren-clears-dollar",
+    "text": "<div class=\"a\"><span>text</span></div>\nplain 0x1f 007 -3 words",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "<C-v>$)d",
+    "expected": {
+      "lines": [
+        "div class=\"a\"><span>text</span></div>",
+        "lain 0x1f 007 -3 words"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "<\np",
+      "regType": "block",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "vblock-replace-undo-cursor",
+    "text": "<div class=\"a\"><span>text</span></div>\nplain 0x1f 007 -3 words",
+    "cursor": {
+      "row": 0,
+      "col": 7
+    },
+    "keys": "<C-v>+er#u",
+    "expected": {
+      "lines": [
+        "<div class=\"a\"><span>text</span></div>",
+        "plain 0x1f 007 -3 words"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "vblock-join-undo-cursor",
+    "text": "function greet(name) {\n  retunr \"Hello, \" + name; }\n\nconst x = [1, 2, 3];",
+    "cursor": {
+      "row": 1,
+      "col": 7
+    },
+    "keys": "<C-v>l2Ju",
+    "expected": {
+      "lines": [
+        "function greet(name) {",
+        "  retunr \"Hello, \" + name; }",
+        "",
+        "const x = [1, 2, 3];"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 7
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "tag-count-unmatched",
+    "text": "<div class=\"a\"><spa>text</span></div>\nplain",
+    "cursor": {
+      "row": 0,
+      "col": 19
+    },
+    "keys": "d2at",
+    "expected": {
+      "lines": [
+        "",
+        "plain"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "<div class=\"a\"><spa>text</span></div>",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "tag-count-gU",
+    "text": "<ul>\n  <li>one <b>two</b></li>\n  <li class=\"x\">three</li>\n</ul>",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "gU2at",
+    "expected": {
+      "lines": [
+        "<UL>",
+        "  <LI>ONE <B>TWO</B></LI>",
+        "  <LI CLASS=\"X\">THREE</LI>",
+        "</UL>"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "tag-indent-skip",
+    "text": "<ul>\n  <li>one <b>two</b></li>\n  <li class=\"x\">three</li>\n</ul>",
+    "cursor": {
+      "row": 2,
+      "col": 1
+    },
+    "keys": "catab<Esc>",
+    "expected": {
+      "lines": [
+        "<ul>",
+        "  <li>one <b>two</b></li>",
+        "  ab",
+        "</ul>"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 3
+      },
+      "reg": "<li class=\"x\">three</li>",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "tag-no-forward",
+    "text": "x <a>b</a>",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "yat",
+    "expected": {
+      "lines": [
+        "x <a>b</a>"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "tag-inner-newline",
+    "text": "<ul>\n  <li>one <b>two</b></li>X\n  <li class=\"x\">three</li>\n</ul>",
+    "cursor": {
+      "row": 1,
+      "col": 25
+    },
+    "keys": "yit",
+    "expected": {
+      "lines": [
+        "<ul>",
+        "  <li>one <b>two</b></li>X",
+        "  <li class=\"x\">three</li>",
+        "</ul>"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "\n  <li>one <b>two</b></li>X\n  <li class=\"x\">three</li>\n",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "tag-visual-end-tag",
+    "text": "<ul>\n  <li>one <b>two</b></q rli>\n  <li classx\">three</lq ri\n</ul>",
+    "cursor": {
+      "row": 1,
+      "col": 22
+    },
+    "keys": "vatcX<Esc>",
+    "expected": {
+      "lines": [
+        "X"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "<ul>\n  <li>one <b>two</b></q rli>\n  <li classx\">three</lq ri\n</ul>",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "star-nows-word-start",
+    "text": "<p>a</p>\n<a href=\"#\">link</a> <br",
+    "cursor": {
+      "row": 1,
+      "col": 23
+    },
+    "keys": "*",
+    "options": "nows",
+    "expected": {
+      "lines": [
+        "<p>a</p>",
+        "<a href=\"#\">link</a> <br"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 22
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "I-blank-line",
+    "text": "ab\n        \nk",
+    "cursor": {
+      "row": 1,
+      "col": 3
+    },
+    "keys": "I(<Esc>",
+    "expected": {
+      "lines": [
+        "ab",
+        "        (",
+        "k"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 8
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "g~~-blank-line-col",
+    "text": "ab\n    \ncd",
+    "cursor": {
+      "row": 1,
+      "col": 3
+    },
+    "keys": "g~~",
+    "expected": {
+      "lines": [
+        "ab",
+        "    ",
+        "cd"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 3
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "ctrl-r-empty-keeps-ai",
+    "text": "a\n  bc\nx",
+    "cursor": {
+      "row": 1,
+      "col": 2
+    },
+    "keys": "cc<C-r>a<Esc>",
+    "options": "ai",
+    "expected": {
+      "lines": [
+        "a",
+        "",
+        "x"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "  bc\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "ctrl-r-expandtab",
+    "text": "a\n\tb\tc\nx",
+    "cursor": {
+      "row": 1,
+      "col": 2
+    },
+    "keys": "\"ayyo<C-r>a<Esc>",
+    "options": "sts=4 ts=8",
+    "expected": {
+      "lines": [
+        "a",
+        "\tb\tc",
+        "    b   c",
+        "",
+        "x"
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 0
+      },
+      "reg": "\tb\tc\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "ai-indent-rebuilt-et",
+    "text": "\tif (a) {\n\t\tb(1, 2);\n\t}\nend",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "Onew<Esc>",
+    "options": "ai",
+    "expected": {
+      "lines": [
+        "  new",
+        "\tif (a) {",
+        "\t\tb(1, 2);",
+        "\t}",
+        "end"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "ctrl-u-stops-at-indent",
+    "text": "  indented\n  back to one",
+    "cursor": {
+      "row": 1,
+      "col": 3
+    },
+    "keys": "i<C-u><Esc>",
+    "options": "ai",
+    "expected": {
+      "lines": [
+        "  indented",
+        "  ack to one"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 1
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "pipe-virtual-column",
+    "text": "\tif (a) {\n\t\tb(1, 2); } end",
+    "cursor": {
+      "row": 1,
+      "col": 12
+    },
+    "keys": "4|",
+    "expected": {
+      "lines": [
+        "\tif (a) {",
+        "\t\tb(1, 2); } end"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 1
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "pipe-op-tab",
+    "text": "\tif (a) {\n\t\tb(1, 2);\n\t}\nend",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "3g~|",
+    "expected": {
+      "lines": [
+        "\tif (a) {",
+        "\t\tb(1, 2);",
+        "\t}",
+        "end"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "failed-E-sets-curswant",
+    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;",
+    "cursor": {
+      "row": 2,
+      "col": 18
+    },
+    "keys": "<C-v>GE=",
+    "expected": {
+      "lines": [
+        "const total = sum(a, b) + 42;",
+        "if (total > 10) {",
+        "  log(\"big\", total);",
+        "}",
+        "return total;"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 13
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "textobj-curswant-vcol",
+    "text": "\tif (a) {\n\t\tb(1, 2);\n\t}\nend",
+    "cursor": {
+      "row": 2,
+      "col": 0
+    },
+    "keys": "cat<b<Esc>",
+    "options": "sr",
+    "expected": {
+      "lines": [
+        "\tif (a) {",
+        "  b(1, 2);",
+        "\t}",
+        "end"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 1
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-tab-curswant-start",
+    "text": "\tif (a) {\n\t\tb(1, 2);\n\t}\nend",
+    "cursor": {
+      "row": 2,
+      "col": 0
+    },
+    "keys": "vWh>",
+    "expected": {
+      "lines": [
+        "\tif (a) {",
+        "\t\tb(1, 2);",
+        "    }",
+        "end"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "yy-goes-to-curswant",
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": ":><CR>\"ayy",
+    "expected": {
+      "lines": [
+        "  indented line one",
+        "      deeper (nested) item",
+        "  back to one",
+        "last_word_here end"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "      deeper (nested) item\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "yk-curswant-col",
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": ":><CR>yk",
+    "expected": {
+      "lines": [
+        "  indented line one",
+        "      deeper (nested) item",
+        "  back to one",
+        "last_word_here end"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "  indented line one\n      deeper (nested) item\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "ygg-vcol",
+    "text": "\tif (a) {\n\t\tb(1, 2);\n\t}\nend",
+    "cursor": {
+      "row": 3,
+      "col": 2
+    },
+    "keys": "ygg",
+    "options": "ic scs",
+    "expected": {
+      "lines": [
+        "\tif (a) {",
+        "\t\tb(1, 2);",
+        "\t}",
+        "end"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      },
+      "reg": "\tif (a) {\n\t\tb(1, 2);\n\t}\nend\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "redo-cursor-o",
+    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;",
+    "cursor": {
+      "row": 2,
+      "col": 4
+    },
+    "keys": "oend;<Esc>u<C-r>",
+    "expected": {
+      "lines": [
+        "const total = sum(a, b) + 42;",
+        "if (total > 10) {",
+        "  log(\"big\", total);",
+        "end;",
+        "}",
+        "return total;"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 4
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "join-dash-leader",
+    "text": "- { key: 1 }\n- \nx",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "J",
+    "expected": {
+      "lines": [
+        "- { key: 1 }",
+        "x"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 11
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "gJ-dash-leader",
+    "text": "- { key: 1 }\n-   b\nx",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "gJ",
+    "expected": {
+      "lines": [
+        "- { key: 1 }   b",
+        "x"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 12
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "join-trailing-comment",
+    "text": "x // a\n// b",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "J",
+    "expected": {
+      "lines": [
+        "x // a b"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 6
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "gUg_-empty-line",
+    "text": "\n    deeper (nested) item\nx",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "gUg_j",
+    "expected": {
+      "lines": [
+        "",
+        "    deeper (nested) item",
+        "x"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "gU-paren-linewise-cursor",
+    "text": "function greet(name) {\n  return \"Hello, \" + name;\n}\n\nconst x = [1, 2, 3];",
+    "cursor": {
+      "row": 3,
+      "col": 0
+    },
+    "keys": "4|gU(",
+    "expected": {
+      "lines": [
+        "FUNCTION GREET(NAME) {",
+        "  RETURN \"HELLO, \" + NAME;",
+        "}",
+        "",
+        "const x = [1, 2, 3];"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
   }
 ]

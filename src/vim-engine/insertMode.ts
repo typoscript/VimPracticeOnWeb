@@ -1,6 +1,6 @@
 import { VimEditorState } from './types';
 import { clampCursor } from './cursor';
-import { pushUndoSnapshot } from './operators';
+import { pushUndoSnapshot, rebuildIndent } from './operators';
 import { isKeymapPrefix } from './keymapEngine';
 import { isAbbrevTriggerKey } from './abbrevEngine';
 import { getOptions } from './setEngine';
@@ -135,7 +135,10 @@ function handleInsertEditingKey(
       return { ...state, currentChangeKeys: nextChangeKeys };
     }
     if (col === 0 && line > 0) return mergeWithPreviousLine(state, nextChangeKeys);
-    const deleteFrom = insertStartCol !== null && insertStartCol < col ? insertStartCol : 0;
+    // Vim ins_bs(BACKSPACE_LINE): 'autoindent' 이면 들여쓰기 뒤(첫 비공백)에서 멈춥니다.
+    const indentEnd = currentLine.match(/^[ \t]*/)![0].length;
+    const aiMin = getOptions(state).autoindent && indentEnd < col ? indentEnd : 0;
+    const deleteFrom = Math.max(aiMin, insertStartCol !== null && insertStartCol < col ? insertStartCol : 0);
     const nextLines = [...state.lines];
     nextLines[line] = currentLine.slice(0, deleteFrom) + currentLine.slice(col);
     return {
@@ -229,7 +232,7 @@ function handleInsertEditingKey(
       indent = comment.contPrefix;
       nextLineBody = afterCursor.replace(/^[ \t]+/, '');
     } else if (opts.autoindent || opts.smartindent) {
-      const baseIndent = rawBefore.match(/^[ \t]*/)?.[0] ?? '';
+      const baseIndent = rebuildIndent(rawBefore.match(/^[ \t]*/)?.[0] ?? '', opts);
       if (opts.smartindent && beforeCursor.trimEnd().endsWith('{')) {
         const sw = opts.shiftwidth || 2;
         const unit = opts.expandtab !== false ? ' '.repeat(sw) : '\t';

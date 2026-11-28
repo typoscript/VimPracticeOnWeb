@@ -527,7 +527,8 @@ export function handleVisualModeKey(
     const joinCount = Math.max(1, maxLine - minLine);
     const tempState: VimEditorState = {
       ...state,
-      cursor: { line: minLine, col: 0 },
+      // 실행 취소 커서(uh_cursor)는 연산 시작 (줄 단위 0열, 블록 왼쪽 위, 문자 단위 앞쪽 끝)
+      cursor: failedVisualJoinCursor(state),
       mode: 'NORMAL',
       visualAnchor: undefined,
       visualBlockEndOfLine: undefined,

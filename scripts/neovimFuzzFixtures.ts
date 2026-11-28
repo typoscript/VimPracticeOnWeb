@@ -31,6 +31,7 @@ const TS = 'a b a\nxa ya za\nq a\nlong a line here';
 const TJ = 'alpha beta\n  gamma delta\nepsilon\nzeta eta';
 const TF = 'function greet(name) {\n  return "Hello, " + name;\n}\n\nconst x = [1, 2, 3];';
 const TQ = 'The quick brown fox. It jumps over\nthe lazy dog! Then it rests.\n\nAnother paragraph here.';
+const TB = '\tif (a) {\n\t\tb(1, 2);\n\t}\nend';
 const TH = '<div class="a"><span>text</span></div>\nplain 0x1f 007 -3 words';
 
 const CASES: Case[] = [
@@ -749,6 +750,54 @@ const CASES: Case[] = [
   { id: 'count-ge-stops-at-start', text: '<div class="a"><span>text\nab cd', cursor: { row: 0, col: 9 }, keys: '4gex' },
   { id: 'count-ge-operator-cancelled', text: '<div class="a"><span>text\nab cd', cursor: { row: 0, col: 9 }, keys: 'd9ge' },
   { id: 'count-ge-hits-start-mid-word', text: '  word\nab cd', cursor: { row: 1, col: 3 }, keys: 'd9ge' },
+  // --- 블록 비주얼: 화면 열 기준 (Vim get_op_vcol·block_prep, 블록 끝이 가르는 탭은 공백으로) ---
+  { id: 'vblock-tab-yank', text: TB, cursor: { row: 0, col: 4 }, keys: '<C-v>Gy' },
+  { id: 'vblock-tab-delete', text: TB, cursor: { row: 0, col: 3 }, keys: '<C-v>2jd' },
+  { id: 'vblock-tab-delete-split', text: TB, cursor: { row: 2, col: 1 }, keys: '<C-v>2jd', options: 'noet ts=4 sw=4' },
+  { id: 'vblock-tab-change', text: TB, cursor: { row: 1, col: 2 }, keys: '<C-v>GcX<Esc>' },
+  { id: 'vblock-tab-replace', text: TB, cursor: { row: 0, col: 6 }, keys: '<C-v>2jr#' },
+  { id: 'vblock-tab-replace-g_', text: TB, cursor: { row: 2, col: 0 }, keys: '<C-v>g_r#', options: 'sw=4 ts=4' },
+  { id: 'vblock-tab-insert', text: '\tif (a) XX\n\t\tb(1, 2);\n\t}\nend', cursor: { row: 0, col: 9 }, keys: '<C-v>GIq r<Esc>' },
+  { id: 'vblock-tab-append', text: '\tX\n\t\tb(1, 2);\n\t}\nend', cursor: { row: 0, col: 1 }, keys: '<C-v>jjA<b><Esc>' },
+  { id: 'vblock-tab-append-split', text: TB, cursor: { row: 0, col: 6 }, keys: '<C-v>jjAX<Esc>' },
+  { id: 'vblock-tab-shift-right', text: TB, cursor: { row: 2, col: 1 }, keys: '<C-v>G>' },
+  { id: 'vblock-tab-shift-dollar', text: TB, cursor: { row: 1, col: 0 }, keys: '<C-v>j$4>', options: 'sts=2' },
+  { id: 'vblock-tab-shift-noet', text: '<ul>\n<ul>\n  <li>one</li>\n  <li class="x">three</li>\n</ul>', cursor: { row: 1, col: 0 }, keys: '<C-v>G>', options: 'noet' },
+  { id: 'vblock-tab-shift-left', text: TB, cursor: { row: 1, col: 5 }, keys: '<C-v>j<', options: 'sts=2' },
+  { id: 'vblock-tab-case', text: '\tif (a) {\n\t\tB(1, 2);\nBBB\nend', cursor: { row: 2, col: 2 }, keys: '<C-v>{+u', options: 'sr' },
+  { id: 'vblock-o-clears-dollar', text: TF, cursor: { row: 1, col: 5 }, keys: '<C-v>j$oy' },
+  { id: 'vblock-paren-clears-dollar', text: TH, cursor: { row: 0, col: 0 }, keys: '<C-v>$)d' },
+  { id: 'vblock-replace-undo-cursor', text: TH, cursor: { row: 0, col: 7 }, keys: '<C-v>+er#u' },
+  { id: 'vblock-join-undo-cursor', text: 'function greet(name) {\n  retunr "Hello, " + name; }\n\nconst x = [1, 2, 3];', cursor: { row: 1, col: 7 }, keys: '<C-v>l2Ju' },
+  // --- 태그 객체: Vim current_tagblock 이식 ([count], 앞쪽 태그 없음, 들여쓰기 건너뜀) ---
+  { id: 'tag-count-unmatched', text: '<div class="a"><spa>text</span></div>\nplain', cursor: { row: 0, col: 19 }, keys: 'd2at' },
+  { id: 'tag-count-gU', text: '<ul>\n  <li>one <b>two</b></li>\n  <li class="x">three</li>\n</ul>', cursor: { row: 1, col: 0 }, keys: 'gU2at' },
+  { id: 'tag-indent-skip', text: '<ul>\n  <li>one <b>two</b></li>\n  <li class="x">three</li>\n</ul>', cursor: { row: 2, col: 1 }, keys: 'catab<Esc>' },
+  { id: 'tag-no-forward', text: 'x <a>b</a>', cursor: { row: 0, col: 0 }, keys: 'yat' },
+  { id: 'tag-inner-newline', text: '<ul>\n  <li>one <b>two</b></li>X\n  <li class="x">three</li>\n</ul>', cursor: { row: 1, col: 25 }, keys: 'yit' },
+  { id: 'tag-visual-end-tag', text: '<ul>\n  <li>one <b>two</b></q rli>\n  <li classx">three</lq ri\n</ul>', cursor: { row: 1, col: 22 }, keys: 'vatcX<Esc>' },
+  // --- 그 밖 ---
+  { id: 'star-nows-word-start', text: '<p>a</p>\n<a href="#">link</a> <br', cursor: { row: 1, col: 23 }, keys: '*', options: 'nows' },
+  { id: 'I-blank-line', text: 'ab\n        \nk', cursor: { row: 1, col: 3 }, keys: 'I(<Esc>' },
+  { id: 'g~~-blank-line-col', text: 'ab\n    \ncd', cursor: { row: 1, col: 3 }, keys: 'g~~' },
+  { id: 'ctrl-r-empty-keeps-ai', text: 'a\n  bc\nx', cursor: { row: 1, col: 2 }, keys: 'cc<C-r>a<Esc>', options: 'ai' },
+  { id: 'ctrl-r-expandtab', text: 'a\n\tb\tc\nx', cursor: { row: 1, col: 2 }, keys: '"ayyo<C-r>a<Esc>', options: 'sts=4 ts=8' },
+  { id: 'ai-indent-rebuilt-et', text: TB, cursor: { row: 0, col: 0 }, keys: 'Onew<Esc>', options: 'ai' },
+  { id: 'ctrl-u-stops-at-indent', text: '  indented\n  back to one', cursor: { row: 1, col: 3 }, keys: 'i<C-u><Esc>', options: 'ai' },
+  { id: 'pipe-virtual-column', text: '\tif (a) {\n\t\tb(1, 2); } end', cursor: { row: 1, col: 12 }, keys: '4|' },
+  { id: 'pipe-op-tab', text: TB, cursor: { row: 0, col: 0 }, keys: '3g~|' },
+  { id: 'failed-E-sets-curswant', text: T1, cursor: { row: 2, col: 18 }, keys: '<C-v>GE=' },
+  { id: 'textobj-curswant-vcol', text: TB, cursor: { row: 2, col: 0 }, keys: 'cat<b<Esc>', options: 'sr' },
+  { id: 'visual-tab-curswant-start', text: TB, cursor: { row: 2, col: 0 }, keys: 'vWh>' },
+  { id: 'yy-goes-to-curswant', text: T3, cursor: { row: 1, col: 0 }, keys: ':><CR>"ayy' },
+  { id: 'yk-curswant-col', text: T3, cursor: { row: 1, col: 0 }, keys: ':><CR>yk' },
+  { id: 'ygg-vcol', text: TB, cursor: { row: 3, col: 2 }, keys: 'ygg', options: 'ic scs' },
+  { id: 'redo-cursor-o', text: T1, cursor: { row: 2, col: 4 }, keys: 'oend;<Esc>u<C-r>' },
+  { id: 'join-dash-leader', text: "- { key: 1 }\n- \nx", cursor: { row: 0, col: 0 }, keys: 'J' },
+  { id: 'gJ-dash-leader', text: '- { key: 1 }\n-   b\nx', cursor: { row: 0, col: 0 }, keys: 'gJ' },
+  { id: 'join-trailing-comment', text: 'x // a\n// b', cursor: { row: 0, col: 0 }, keys: 'J' },
+  { id: 'gUg_-empty-line', text: '\n    deeper (nested) item\nx', cursor: { row: 0, col: 0 }, keys: 'gUg_j' },
+  { id: 'gU-paren-linewise-cursor', text: TF, cursor: { row: 3, col: 0 }, keys: '4|gU(' },
 ];
 
 const LUA = `

@@ -4,7 +4,7 @@ import { clampCursor, getFirstNonBlankCol } from './cursor';
 import { pushUndoSnapshot } from './operators';
 import { pushUndoSnapshotAt, visualOperatorStart } from './undoHistory';
 import { getOptions } from './setEngine';
-import { parseWhichwrapFlags, hasFormatOption, extractCommentPrefix } from './setOptionsCore';
+import { parseWhichwrapFlags, hasFormatOption } from './setOptionsCore';
 import {
   moveToFirstNonBlank,
   moveToNextWord,
@@ -19,6 +19,8 @@ import {
   moveToLastLine,
 } from './motions';
 import { isPositionSelected, linewiseVisualCol } from './visual';
+import { skipJoinComment } from './joinComments';
+import { blockOperandOf, blockShiftLine, blockTextRange } from './visualBlockColumns';
 import { cindentLines, type CIndentOptions } from './cindent';
 import { indentexprLines, jsIndentKindForFilename, jsIndentKindForFiletype, type JsIndentKind } from './filetypeIndent';
 export { modifyNumberAtCursor, modifyNumberVisual } from './numberOperators';
@@ -53,24 +55,18 @@ export function joinLines(state: VimEditorState, count = 1, insertSpace = true):
 
   let currentJoined = state.lines[currentLineIdx];
   let firstJoinCol = currentJoined.length;
-  const stripCommentLeader = insertSpace && hasFormatOption(getOptions(state), 'j');
-  const baseComment = stripCommentLeader ? extractCommentPrefix(currentJoined) : null;
+  // Vim do_join: 'formatoptions' 에 j 가 있으면 앞 줄이 주석일 때 붙는 줄의 주석 리더를 지웁니다 (J 는 리더 뒤 공백까지, gJ 는 리더만).
+  const removeComments = hasFormatOption(getOptions(state), 'j');
+  let prevWasComment = removeComments && skipJoinComment(currentJoined, false, insertSpace).isComment;
 
   for (let i = currentLineIdx + 1; i <= maxJoinLine; i++) {
-    const rawNext = state.lines[i] ?? '';
-    let nextLineTrimmed = rawNext.trimStart();
-    if (stripCommentLeader && baseComment) {
-      const nextComment = extractCommentPrefix(rawNext);
-      const compatibleLeader =
-        nextComment &&
-        (nextComment.leader === baseComment.leader ||
-          (baseComment.leader === '/*' && nextComment.leader === '*'));
-      if (compatibleLeader) {
-        nextLineTrimmed = rawNext.slice(
-          nextComment.indent.length + nextComment.leader.length + nextComment.ws.length
-        );
-      }
+    let rawNext = state.lines[i] ?? '';
+    if (removeComments) {
+      const skipped = skipJoinComment(rawNext, prevWasComment, insertSpace);
+      prevWasComment = skipped.isComment;
+      rawNext = skipped.rest;
     }
+    const nextLineTrimmed = rawNext.trimStart();
     if (!insertSpace) {
       // gJ 는 공백을 넣거나 지우지 않습니다 (붙는 줄의 들여쓰기도 그대로 남음).
       firstJoinCol = currentJoined.length;
@@ -81,8 +77,8 @@ export function joinLines(state: VimEditorState, count = 1, insertSpace = true):
         firstJoinCol = 0;
       } else if (nextLineTrimmed.length === 0) {
         firstJoinCol = currentJoined.length;
-      } else if (currentJoined.endsWith(' ')) {
-        // Vim do_join: 공백으로 끝난 줄에는 공백을 넣지 않고, 커서는 붙인 줄의 첫 글자입니다 (col = sumsize - currsize).
+      } else if (currentJoined.endsWith(' ') || currentJoined.endsWith('\t') || nextLineTrimmed.startsWith(')')) {
+        // Vim do_join: 공백·탭으로 끝난 줄이나 ')' 로 시작하는 줄에는 공백을 넣지 않고, 커서는 붙인 줄의 첫 글자입니다.
         firstJoinCol = currentJoined.length;
         currentJoined += nextLineTrimmed;
       } else {
@@ -195,6 +191,8 @@ export function changeCaseVisual(
 
   const minLine = Math.min(anchor.line, cursor.line);
   const maxLine = Math.max(anchor.line, cursor.line);
+  // 블록은 화면 열 기준 (Vim op_tilde 의 block_prep)
+  const blockOp = mode === 'VISUAL_BLOCK' || mode === 'SELECT_BLOCK' ? blockOperandOf(state) : null;
 
   // Vim: 연산 전 커서를 영역 시작으로 옮긴 뒤 실행 취소 지점을 저장합니다 (u 가 이 위치로 돌아옴).
   // 줄 단위(V)는 시작 줄의 0열, 블록(Ctrl-v)은 왼쪽 위 모서리, 문자 단위는 앞쪽 끝입니다.
@@ -203,7 +201,7 @@ export function changeCaseVisual(
     (mode === 'VISUAL_LINE' || mode === 'SELECT_LINE'
       ? { line: minLine, col: linewiseVisualCol(state, minLine) }
       : mode === 'VISUAL_BLOCK' || mode === 'SELECT_BLOCK'
-        ? { line: minLine, col: Math.min(anchor.col, cursor.col) }
+        ? { line: minLine, col: blockOp ? blockOp.startCol : Math.min(anchor.col, cursor.col) }
         : anchor.line < cursor.line || (anchor.line === cursor.line && anchor.col <= cursor.col)
           ? anchor
           : cursor);
@@ -214,9 +212,10 @@ export function changeCaseVisual(
   for (let l = minLine; l <= maxLine; l++) {
     const lineStr = newLines[l];
     const chars = lineStr.split('');
+    const blockRange = blockOp ? blockTextRange(lineStr, blockOp) : null;
 
     for (let c = 0; c < chars.length; c++) {
-      if (isPositionSelected(l, c, anchor, cursor, mode)) {
+      if (blockRange ? c >= blockRange.start && c < blockRange.end : isPositionSelected(l, c, anchor, cursor, mode)) {
         const ch = chars[c];
         if (type === 'toggle') {
           chars[c] = ch === ch.toUpperCase() ? ch.toLowerCase() : ch.toUpperCase();
@@ -271,7 +270,9 @@ export function executeCaseMotion(
     // Vim nv_lineop: 모션 끝은 (끝 줄, 첫 비공백)이고 연산 후 커서는 원래 위치와 그중 앞쪽입니다.
     // 그래서 guu 는 첫 비공백(커서가 그 뒤에 있으면), 4guu 는 원래 열에 남습니다.
     const lineStart = state.cursor.line;
-    const fnb = getFirstNonBlankCol(state.lines[lineStart] ?? '');
+    // beginline(BL_WHITE | BL_FIX): 공백뿐인 줄은 마지막 공백에 멈춥니다.
+    const startText = state.lines[lineStart] ?? '';
+    const fnb = /\S/.test(startText) ? getFirstNonBlankCol(startText) : Math.max(0, startText.length - 1);
     const cursorAfter =
       endLine > lineStart ? { line: lineStart, col: state.cursor.col } : { line: lineStart, col: Math.min(state.cursor.col, fnb) };
     return changeCaseVisual(visualState, caseType, cursorAfter);
@@ -449,40 +450,21 @@ export function indentVisual(
   const ts = opts.tabstop || sw;
   const et = opts.expandtab !== false;
   const sr = Boolean(opts.shiftround);
-  const indentStr = et ? ' '.repeat(sw) : '\t';
 
   const newLines = [...state.lines];
   if (state.mode === 'VISUAL_BLOCK') {
-    const minCol = Math.min(state.visualAnchor.col, state.cursor.col);
-    for (let i = minLine; i <= maxLine; i++) for (let t = 0; t < Math.max(1, times); t++) {
-      const line = newLines[i];
-      // Vim shift_block: 블록 왼쪽 열에 못 미치는 줄만 건너뜁니다 (줄 끝이 딱 그 열이면 끝에 공백이 붙음).
-      if (line.length < minCol) continue;
-      const prefix = line.slice(0, minCol);
-      const rest = line.slice(minCol);
-      if (direction === 'in') {
-        if (rest.length > 0 || minCol > 0) newLines[i] = prefix + indentStr + rest;
-      } else {
-        if (rest.startsWith(indentStr)) {
-          newLines[i] = prefix + rest.slice(indentStr.length);
-        } else if (rest.startsWith('\t')) {
-          newLines[i] = prefix + rest.slice(1);
-        } else if (rest.startsWith(' ')) {
-          let spaces = 0;
-          while (spaces < sw && rest[spaces] === ' ') spaces++;
-          newLines[i] = prefix + rest.slice(spaces);
-        }
-      }
+    // Vim shift_block: 화면 열 기준. 블록 왼쪽의 공백(나뉜 탭 포함)까지 다시 채우고, 'noexpandtab' 이면 탭으로 채웁니다.
+    const op = blockOperandOf(state)!;
+    const amount = Math.max(1, times);
+    for (let i = minLine; i <= maxLine; i++) {
+      newLines[i] = blockShiftLine(newLines[i] ?? '', op, direction === 'out', amount, sw, et);
     }
-    const blockCursor = {
-      line: minLine,
-      col: Math.min(minCol, Math.max(0, (newLines[minLine] ?? '').length - 1)),
-    };
+    const minCol = op.startCol;
     // Vim op_shift 는 커서를 블록 왼쪽 위(oap->start)에 둔 채 u_save 하므로 실행 취소도 그 자리로 돌아옵니다.
     return {
       ...pushUndoSnapshotAt(state, { line: minLine, col: minCol }),
       lines: newLines,
-      cursor: blockCursor,
+      cursor: clampCursor(newLines, { line: minLine, col: minCol }, 'NORMAL'),
       mode: 'NORMAL',
       visualAnchor: undefined,
       visualBlockEndOfLine: undefined,

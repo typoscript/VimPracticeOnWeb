@@ -285,7 +285,7 @@ describe('textObjects module (iw, i", i(, i))', () => {
       expect(next.mode).toBe('INSERT');
     });
 
-    it('Self-closing 태그 at: <input /> 태그 전체를 선택/삭제한다', () => {
+    it('Self-closing 태그 at: Vim current_tagblock 은 <input /> 를 건너뛰고 감싼 <form> 을 지운다 (nvim 대조)', () => {
       const state: VimEditorState = {
         lines: ['<form><input type="text" /></form>'],
         cursor: { line: 0, col: 12 }, // input 태그 내부
@@ -293,8 +293,8 @@ describe('textObjects module (iw, i", i(, i))', () => {
       };
 
       const next = executeTextObjectOperator(state, 'd', 'at');
-      expect(next.lines[0]).toBe('<form></form>');
-      expect(next.clipboard?.content).toBe('<input type="text" />');
+      expect(next.lines[0]).toBe('');
+      expect(next.clipboard?.content).toBe('<form><input type="text" /></form>');
     });
 
     it('vat: 태그 전체를 VISUAL 모드로 영역 선택한다', () => {

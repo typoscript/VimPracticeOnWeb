@@ -37,7 +37,14 @@ export function tabstopOf(state: VimEditorState): number {
 
 /** 지금 커서의 화면 열 */
 export function cursorVirtualColumn(state: VimEditorState): number {
-  return virtualColumnOf(state.lines[state.cursor.line] ?? '', state.cursor.col, tabstopOf(state));
+  const line = state.lines[state.cursor.line] ?? '';
+  const { col } = state.cursor;
+  const anchor = state.visualAnchor;
+  // Vim getvcol: 비주얼에서 커서가 앵커보다 앞(같음 포함)이면 탭 위 커서는 탭의 첫 화면 열입니다.
+  if (line[col] === '\t' && anchor && /^(VISUAL|SELECT)/.test(state.mode) && (state.cursor.line < anchor.line || (state.cursor.line === anchor.line && col <= anchor.col))) {
+    return col === 0 ? 0 : virtualColumnOf(line, col - 1, tabstopOf(state)) + 1;
+  }
+  return virtualColumnOf(line, col, tabstopOf(state));
 }
 
 /**

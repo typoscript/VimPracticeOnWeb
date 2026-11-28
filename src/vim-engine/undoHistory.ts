@@ -248,6 +248,7 @@ export function undo(state: VimEditorState): VimEditorState {
   const currentSnapshot: StateSnapshot = {
     lines: [...state.lines],
     cursor: { ...state.cursor },
+    header: { cursor: { ...lastSnapshot.cursor }, savedRange: lastSnapshot.savedRange, undoLine: lastSnapshot.undoLine },
   };
 
   const nextRedo = [...(state.redoStack ?? []), currentSnapshot];
@@ -299,10 +300,14 @@ export function redo(state: VimEditorState): VimEditorState {
   const nextSnapshot = state.redoStack[state.redoStack.length - 1];
   const nextRedo = state.redoStack.slice(0, -1);
 
-  const currentSnapshot: StateSnapshot = {
-    lines: [...state.lines],
-    cursor: { ...state.cursor },
-  };
+  // Vim u_undoredo(redo): 원래 변경의 헤더(uh_cursor·저장 범위)로 커서를 정하고, 다시 u 할 때도 그 헤더를 씁니다.
+  const header = nextSnapshot.header && nextSnapshot.header.undoLine === undefined ? nextSnapshot.header : undefined;
+  const currentSnapshot: StateSnapshot = header
+    ? { lines: [...state.lines], cursor: { ...header.cursor }, ...(header.savedRange ? { savedRange: header.savedRange } : {}) }
+    : { lines: [...state.lines], cursor: { ...state.cursor } };
+  const redoCursor = header
+    ? undoCursorPosition(state, { lines: nextSnapshot.lines, cursor: header.cursor, ...(header.savedRange ? { savedRange: header.savedRange } : {}) })
+    : nextSnapshot.cursor;
 
   const nextUndo = [...(state.undoStack ?? []), currentSnapshot];
 
@@ -325,7 +330,7 @@ export function redo(state: VimEditorState): VimEditorState {
   return {
     ...state,
     lines: nextSnapshot.lines,
-    cursor: clampCursor(nextSnapshot.lines, nextSnapshot.cursor, 'NORMAL'),
+    cursor: clampCursor(nextSnapshot.lines, redoCursor, 'NORMAL'),
     undoStack: nextUndo,
     redoStack: nextRedo,
     currentUndoSeq: currentSeq,

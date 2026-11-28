@@ -109,7 +109,7 @@ describe('Track A: :set formatoptions (fo)', () => {
     expect(bad.commandMessage).toContain('E474');
   });
 
-  it('j flag removes duplicate comment leader on J (but not gJ)', () => {
+  it('j flag removes duplicate comment leader on J and gJ (gJ keeps the space after the leader, nvim do_join)', () => {
     let s = createVimState(['// hello', '// world']);
     s = handleKey(s, 'J');
     expect(s.lines).toEqual(['// hello world']);
@@ -121,7 +121,7 @@ describe('Track A: :set formatoptions (fo)', () => {
 
     let sGJ = createVimState(['// hello', '// world']);
     sGJ = sendKeys(sGJ, 'gJ');
-    expect(sGJ.lines).toEqual(['// hello// world']);
+    expect(sGJ.lines).toEqual(['// hello world']);
   });
 
   it('o flag auto-inserts comment leader on o and O', () => {

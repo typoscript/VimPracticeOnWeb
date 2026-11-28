@@ -91,12 +91,17 @@ export function applyCurswant(prev: VimEditorState, next: VimEditorState, key: s
     /[ia][nl]?$/.test(pending) &&
     ((prev.mode.startsWith('VISUAL') && /^([1-9][0-9]*)?[ia][nl]?$/.test(pending)) ||
       (prev.mode === 'NORMAL' && OPERATOR_PENDING.test(pending.replace(/[ia][nl]?$/, ''))));
-  if (textObject) return next.curswant === next.cursor.col ? next : { ...next, curswant: next.cursor.col };
+  if (textObject) {
+    const objWant = cursorVirtualColumn(next);
+    return next.curswant === objWant ? next : { ...next, curswant: objWant };
+  }
   // 매크로 녹화 시작·끝(q{reg}, q)과 마크(m{a}), 레지스터 지정("x)은 Vim 에서 curswant 를 건드리지 않습니다.
   const keepsForRecordOrMark =
     (prev.mode === 'NORMAL' && ((key === 'q' && !pending && !!prev.recordingMacro) || pending === 'q' || pending === 'm')) ||
     (CURSWANT_MODES.has(prev.mode) && /^([1-9][0-9]*)?"$/.test(pending) && !!next.activeRegister);
-  if ((next.bell || startsVisual || keepsForRecordOrMark) && sameText && sameCursor) {
+  // Vim nv_wordcmd / nv_bck_word: w W e E b B 는 실패해도 먼저 w_set_curswant 를 켭니다 (버퍼 끝 E 뒤 비주얼 = 가 그 열로).
+  const wordMotion = /^[wWeEbB]$/.test(key) && /^([1-9][0-9]*)?$/.test(pending) && CURSWANT_MODES.has(prev.mode);
+  if (((next.bell && !wordMotion) || startsVisual || keepsForRecordOrMark) && sameText && sameCursor) {
     return next.curswant === remembered ? next : { ...next, curswant: remembered };
   }
   // Vim nv_pipe: [count]| 는 줄이 짧아 덜 가도 가려던 열(count-1)을 기억합니다 (2| 뒤 gg 가 1열로).

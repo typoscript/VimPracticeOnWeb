@@ -190,6 +190,10 @@ export function handleNormalCommentFormatOrCaseG(
     }
     // gUg_ / gUge / gUgE / gUgj … : g 로 시작하는 다른 모션은 같은 모션의 y 로 범위를 구합니다.
     const range = findOperatorRangeByYank(state, ['g', key], count, runHandleKey);
+    // 빈 줄의 gUg_ 처럼 빈 범위면 바꾸지 않고 성공합니다 (cpo 에 E 가 없으면 bell 없음).
+    if (!range && isEmptyRegionMotion(state, ['g', key], count, runHandleKey)) {
+      return { ...emptyRegionCaseChange(state, op as 'gu' | 'gU' | 'g~' | 'g?'), lastChangeKeys: isReplayingDot ? state.lastChangeKeys : [...(state.pendingKeys ?? '').split(''), key] };
+    }
     if (!range) return ringBell({ ...state, pendingKeys: undefined });
     const applied = changeCaseVisual(
       { ...state, pendingKeys: undefined, mode: range.linewise ? 'VISUAL_LINE' : 'VISUAL', visualAnchor: range.start, cursor: range.end },
@@ -237,7 +241,8 @@ export function handleNormalCommentFormatOrCaseG(
     const opKeys = [...(state.pendingKeys ?? '').split(''), key];
     // 줄 단위 모션(gugg, guj …)은 'nostartofline' 에서 범위 첫 줄로 가되 원래 열을 유지합니다 (Vim op_tilde).
     // 단, - 는 모션 목적지(첫 비공백)가 연산 시작이라 그 자리로 갑니다 (g~- , Neovim 대조).
-    const keepCol = range.linewise && !getOptions(state).startofline && key !== '-';
+    // `(` 처럼 :help exclusive-linewise 로 줄 단위가 된 모션은 연산 시작(모션 목적지)으로 갑니다 (gU( 가 0열로).
+    const keepCol = range.linewise && !getOptions(state).startofline && !['-', '(', ')', '{', '}'].includes(key);
     const caseCursor = keepCol ? { line: range.start.line, col: curswantColumnOn(state, applied.lines, range.start.line) } : range.cursor;
     const finalCursor = clampCursor(applied.lines, caseCursor, 'NORMAL');
     // op_tilde 는 커서를 연산 시작에 둔 채 u_save 하므로, 줄 단위 모션(g~k, gUj, g~G)의 실행 취소도 그 열로 돌아옵니다.

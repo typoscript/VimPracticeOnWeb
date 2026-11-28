@@ -5,6 +5,8 @@ import { recordChangePosition } from './advancedMotions';
 import { lookupDigraph } from './digraphs';
 import { insertTextAtCursor } from './engineHelpers';
 import { getOptions } from './setOptionsCore';
+import { tabstopOf } from './virtualColumn';
+import { lineDisplayWidth } from './visualBlockColumns';
 
 export function resolveLastInsertedText(state: VimEditorState, candidate?: string): string | undefined {
   const txt = candidate !== undefined ? candidate : state.currentInsertText;
@@ -228,6 +230,30 @@ function applyAutoindentToRegisterText(text: string, currentLine: string, col: n
 }
 
 /**
+ * i_CTRL-R 는 글자를 입력한 것처럼 넣으므로 'expandtab' 이면 탭이 다음 'softtabstop'/'tabstop' 까지의 공백이 됩니다 (Vim ins_tab).
+ */
+function expandTypedTabs(state: VimEditorState, text: string, before: string): string {
+  const opts = getOptions(state);
+  if (opts.expandtab === false || !text.includes('\t')) return text;
+  const ts = tabstopOf(state);
+  const sts = opts.softtabstop ?? 0;
+  const stop = Math.max(1, sts > 0 ? sts : sts < 0 ? opts.shiftwidth || ts : ts);
+  let vcol = lineDisplayWidth(before, ts);
+  let out = '';
+  for (const ch of text) {
+    if (ch === '\t') {
+      const n = stop - (vcol % stop);
+      out += ' '.repeat(n);
+      vcol += n;
+    } else {
+      out += ch;
+      vcol = ch === '\n' ? 0 : vcol + 1;
+    }
+  }
+  return out;
+}
+
+/**
  * Ctrl+r / Ctrl+r Ctrl+o / Ctrl+r Ctrl+r / Ctrl+r Ctrl+p 레지스터 삽입 및 대기 상태
  */
 export function handleInsertRegister(
@@ -304,6 +330,7 @@ export function handleInsertRegister(
         } else if (regMode === 'normal' && getOptions(state).autoindent && rawText.includes('\n')) {
           textToInsert = applyAutoindentToRegisterText(rawText, currentLine, state.cursor.col);
         }
+        if (regMode !== 'indent') textToInsert = expandTypedTabs(state, textToInsert, currentLine.slice(0, state.cursor.col));
       }
 
       let nextState: VimEditorState = {
@@ -437,11 +464,17 @@ export function handleInsertEscape(state: VimEditorState, isReplayingDot: boolea
         firstLineText.slice(0, col) + extraFirst + firstLineText.slice(col);
     }
 
+    const { linePlans, startCol } = state.blockInsertSession;
     for (let i = 1; i < targetLines.length; i++) {
       const lineIdx = targetLines[i];
       if (skippedSet?.has(lineIdx)) continue;
       let lineText = nextLines[lineIdx] ?? '';
-      if (endOfLine) {
+      if (linePlans) {
+        const plan = linePlans[i];
+        if (plan && insertedText.length > 0) {
+          nextLines[lineIdx] = lineText.slice(0, plan.offset) + ' '.repeat(plan.pre) + insertedText + ' '.repeat(plan.post) + lineText.slice(plan.offset + plan.skip);
+        }
+      } else if (endOfLine) {
         nextLines[lineIdx] = lineText + insertedText;
       } else if (insertMode === 'A') {
         if (insertedText.length > 0) {
@@ -466,7 +499,7 @@ export function handleInsertEscape(state: VimEditorState, isReplayingDot: boolea
     const finalFirstCol = col + (repeatCount > 1 ? unitText.length * (repeatCount - 1) : 0);
     // Vim op_insert: 블록 I / A 로 글자를 넣었으면 커서는 블록 왼쪽 위(oap->start.col)로 돌아갑니다.
     const nextCol =
-      insertMode === 'A' && unitText.length > 0 ? minCol : insertMode === 'I' && unitText.length > 0 ? insertCol : Math.max(0, finalFirstCol - 1);
+      insertMode === 'A' && unitText.length > 0 ? (startCol ?? minCol) : insertMode === 'I' && unitText.length > 0 ? (startCol ?? insertCol) : Math.max(0, finalFirstCol - 1);
     const lastPos = { line: firstLineIdx, col: insertCol, row: firstLineIdx };
     const changeRecord = recordChangePosition(state.changeList, { line: firstLineIdx, col: insertCol });
     const nextLastChange =

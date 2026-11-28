@@ -61,8 +61,12 @@ export function yankLine(state: VimEditorState, count = 1): VimEditorState {
   const yankCount = Math.min(Math.max(1, count), state.lines.length - line);
   const yankedLines = state.lines.slice(line, line + yankCount).join('\n');
   const endRow = Math.min(state.lines.length - 1, line + yankCount - 1);
+  // Vim nv_lineop: cursor_down(count - 1) 이 기억한 열로 가고, 연산 시작은 원래 위치와 그중 앞쪽입니다 (:> 뒤 yy 가 0열로).
+  const text = state.lines[line] ?? '';
+  const wantCol = Math.min(curswantColumnOn(state, state.lines, line), Math.max(0, text.length - 1));
   return {
     ...state,
+    cursor: count <= 1 && wantCol < state.cursor.col ? { line, col: wantCol } : state.cursor,
     clipboard: {
       type: 'line',
       content: yankedLines,
@@ -305,7 +309,8 @@ export function replaceChar(state: VimEditorState, char: string, count = 1): Vim
 export function insertAtFirstNonBlank(state: VimEditorState): VimEditorState {
   const stateWithSnapshot = pushUndoSnapshot(state);
   const currentLine = state.lines[state.cursor.line] ?? '';
-  const firstNonBlank = getFirstNonBlankCol(currentLine);
+  // Vim nv_edit 'I': beginline(BL_WHITE) — 공백뿐인 줄이면 줄 끝에서 입력합니다.
+  const firstNonBlank = /\S/.test(currentLine) ? getFirstNonBlankCol(currentLine) : currentLine.length;
 
   return {
     ...stateWithSnapshot,
@@ -332,6 +337,19 @@ export function appendAtLineEnd(state: VimEditorState): VimEditorState {
 }
 
 /**
+ * Vim open_line 의 set_indent(): 복사한 들여쓰기를 같은 화면 폭으로 다시 만듭니다
+ * ('expandtab' 이면 공백만, 아니면 탭 + 남는 공백; 'copyindent' 는 없음).
+ */
+export function rebuildIndent(indent: string, opts: ReturnType<typeof getOptions>): string {
+  if (!indent.includes('\t') && opts.expandtab !== false) return indent;
+  const ts = opts.tabstop || 8;
+  let width = 0;
+  for (const ch of indent) width += ch === '\t' ? ts - (width % ts) : 1;
+  if (opts.expandtab !== false) return ' '.repeat(width);
+  return '\t'.repeat(Math.floor(width / ts)) + ' '.repeat(width % ts);
+}
+
+/**
  * autoindent / smartindent 옵션에 따라 새 줄의 자동 들여쓰기 문자열을 계산합니다.
  */
 export function computeAutoIndent(
@@ -340,7 +358,7 @@ export function computeAutoIndent(
   triggerSmartOpen = true
 ): string {
   if (!opts.autoindent && !opts.smartindent) return '';
-  const baseIndent = prevLine.match(/^[ \t]*/)?.[0] ?? '';
+  const baseIndent = rebuildIndent(prevLine.match(/^[ \t]*/)?.[0] ?? '', opts);
   if (opts.smartindent && triggerSmartOpen && prevLine.trimEnd().endsWith('{')) {
     const sw = opts.shiftwidth || 2;
     const unit = opts.expandtab !== false ? ' '.repeat(sw) : '\t';

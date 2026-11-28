@@ -2,8 +2,9 @@ import { CursorPosition, VimEditorState, VimMode } from './types';
 import { curswantColumnOn } from './virtualColumn';
 import { clampCursor, getFirstNonBlankCol, hasVirtualEdit } from './cursor';
 import { getOptions } from './setEngine';
-import { pushUndoSnapshot } from './operators';
 import { pushUndoSnapshotAt, visualOperatorStart } from './undoHistory';
+import { blockDeleteLine, blockInsertPlan, blockOperandOf, blockPrep, blockYankLine, blockYankWidth, colForVcol } from './visualBlockColumns';
+import type { BlockInsertPlan } from './visualBlockColumns';
 
 export interface VisualRange {
   start: CursorPosition;
@@ -90,127 +91,73 @@ export function isPositionSelected(
 }
 
 /**
- * Vim block_prep: 블록 왼쪽 열에 닿지 않는 짧은 줄은 레지스터에 블록 너비만큼 공백으로 들어갑니다
- * (`$` 블록이면 가장 긴 줄 끝까지의 너비, 줄 길이가 왼쪽 열과 같으면 빈 문자열).
- */
-function shortLineBlockFill(lines: string[], minLine: number, maxLine: number, minCol: number, maxCol: number, isEol: boolean): string {
-  const width = isEol
-    ? Math.max(0, ...lines.slice(minLine, maxLine + 1).map((l) => l.length)) - minCol + 1
-    : maxCol - minCol + 1;
-  return ' '.repeat(Math.max(0, width));
-}
-
-/**
- * VISUAL_BLOCK 모드에서 선택된 직사각형 열 구간을 모든 해당 행에서 삭제합니다.
+ * VISUAL_BLOCK 모드에서 선택된 직사각형(화면 열 기준)을 모든 해당 행에서 삭제합니다 (Vim op_delete 블록).
+ * 블록 끝이 탭 가운데를 지나면 탭 중 블록 밖 부분은 공백으로 남습니다.
  */
 export function deleteVisualBlock(state: VimEditorState): VimEditorState {
-  if (!state.visualAnchor) {
+  const op = blockOperandOf(state);
+  if (!op) {
     return { ...state, mode: 'NORMAL', pendingKeys: undefined, visualBlockEndOfLine: undefined };
   }
 
-  const stateWithSnapshot = pushUndoSnapshot(state);
-  const anchor = state.visualAnchor;
-  const cursor = state.cursor;
-
-  const minLine = Math.min(anchor.line, cursor.line);
-  const maxLine = Math.max(anchor.line, cursor.line);
-  const minCol = Math.min(anchor.col, cursor.col);
-  const maxCol = Math.max(anchor.col, cursor.col);
-  const isEol = Boolean(state.visualBlockEndOfLine);
-
+  // Vim do_pending_operator: 커서를 블록 왼쪽 위(oap->start)에 둔 뒤 u_save 하므로 실행 취소도 그 자리로 돌아옵니다.
+  const stateWithSnapshot = pushUndoSnapshotAt(state, { line: op.startLine, col: op.startCol });
   const deletedParts: string[] = [];
   const nextLines = [...state.lines];
-
-  const fill = shortLineBlockFill(state.lines, minLine, maxLine, minCol, maxCol, isEol);
-  for (let l = minLine; l <= maxLine; l++) {
-    const lineText = nextLines[l] ?? '';
-    if (lineText.length <= minCol) {
-      deletedParts.push(lineText.length < minCol ? fill : '');
-    } else if (isEol) {
-      deletedParts.push(lineText.slice(minCol));
-      nextLines[l] = lineText.slice(0, minCol);
-    } else {
-      const endDel = Math.min(maxCol, lineText.length - 1);
-      deletedParts.push(lineText.slice(minCol, endDel + 1));
-      nextLines[l] = lineText.slice(0, minCol) + lineText.slice(endDel + 1);
-    }
+  let cursorCol = op.startCol;
+  for (let l = op.startLine; l <= op.endLine; l++) {
+    const lineText = state.lines[l] ?? '';
+    deletedParts.push(blockYankLine(lineText, op));
+    const res = blockDeleteLine(lineText, op);
+    if (!res) continue;
+    nextLines[l] = res.text;
+    if (l === op.startLine) cursorCol = res.cursorCol;
   }
-
-  const targetLine = Math.min(minLine, nextLines.length - 1);
-  const nextCursor = clampCursor(
-    nextLines,
-    { line: targetLine, col: minCol },
-    'NORMAL'
-  );
-
-  const blockWidth = isEol
-    ? Math.max(0, ...state.lines.slice(minLine, maxLine + 1).map((l) => l.length - minCol))
-    : maxCol - minCol + 1;
 
   return {
     ...stateWithSnapshot,
     lines: nextLines,
-    cursor: nextCursor,
+    cursor: clampCursor(nextLines, { line: op.startLine, col: cursorCol }, 'NORMAL'),
     mode: 'NORMAL',
     visualAnchor: undefined,
     visualBlockEndOfLine: undefined,
     clipboard: {
       type: 'block',
       content: deletedParts.join('\n'),
-      blockWidth,
+      blockWidth: blockYankWidth(op),
     },
     pendingKeys: undefined,
   };
 }
 
 /**
- * VISUAL_BLOCK 모드에서 선택된 직사각형 영역을 복사합니다.
+ * VISUAL_BLOCK 모드에서 선택된 직사각형 영역을 복사합니다 (나눠진 탭은 공백으로).
  */
 export function yankVisualBlock(state: VimEditorState): VimEditorState {
-  if (!state.visualAnchor) {
+  const op = blockOperandOf(state);
+  if (!op) {
     return { ...state, mode: 'NORMAL', pendingKeys: undefined, visualBlockEndOfLine: undefined };
   }
 
-  const anchor = state.visualAnchor;
-  const cursor = state.cursor;
-
-  const minLine = Math.min(anchor.line, cursor.line);
-  const maxLine = Math.max(anchor.line, cursor.line);
-  const minCol = Math.min(anchor.col, cursor.col);
-  const maxCol = Math.max(anchor.col, cursor.col);
-  const isEol = Boolean(state.visualBlockEndOfLine);
-
   const parts: string[] = [];
-  const fill = shortLineBlockFill(state.lines, minLine, maxLine, minCol, maxCol, isEol);
-  for (let l = minLine; l <= maxLine; l++) {
-    const lineText = state.lines[l] ?? '';
-    if (lineText.length <= minCol) {
-      parts.push(lineText.length < minCol ? fill : '');
-    } else if (isEol) {
-      parts.push(lineText.slice(minCol));
-    } else {
-      parts.push(lineText.slice(minCol, maxCol + 1));
-    }
-  }
-
-  const blockWidth = isEol
-    ? Math.max(0, ...state.lines.slice(minLine, maxLine + 1).map((l) => l.length - minCol))
-    : maxCol - minCol + 1;
+  for (let l = op.startLine; l <= op.endLine; l++) parts.push(blockYankLine(state.lines[l] ?? '', op));
+  const endText = state.lines[op.endLine] ?? '';
+  const endCol = op.isMax ? Math.max(0, endText.length - 1) : colForVcol(endText, op.endVcol, op.ts);
 
   return {
     ...state,
     mode: 'NORMAL',
     visualAnchor: undefined,
     visualBlockEndOfLine: undefined,
-    cursor: clampCursor(state.lines, { line: minLine, col: minCol }, 'NORMAL'),
+    cursor: clampCursor(state.lines, { line: op.startLine, col: op.startCol }, 'NORMAL'),
     clipboard: {
       type: 'block',
       content: parts.join('\n'),
-      blockWidth,
+      blockWidth: blockYankWidth(op),
     },
     lastBracketMarks: {
-      start: { row: minLine, col: minCol },
-      end: { row: maxLine, col: Math.max(minCol, isEol ? Math.max(0, (state.lines[maxLine] ?? '').length - 1) : maxCol) },
+      start: { row: op.startLine, col: op.startCol },
+      end: { row: op.endLine, col: Math.max(op.startCol, endCol) },
     },
     pendingKeys: undefined,
   };
@@ -218,24 +165,26 @@ export function yankVisualBlock(state: VimEditorState): VimEditorState {
 
 /**
  * VISUAL_BLOCK 모드에서 I (첫 열 삽입), A (끝 열 추가), c (블록 변경) 모드로 진입합니다.
+ * 첫 줄에 입력한 글자는 Esc 때 다른 줄에도 들어갑니다 (Vim op_insert·block_insert·op_change, 줄마다 linePlans).
  */
 export function startVisualBlockInsert(
   state: VimEditorState,
   insertMode: 'I' | 'A' | 'c',
   count = 1
 ): VimEditorState {
-  if (!state.visualAnchor) {
+  const op = blockOperandOf(state);
+  if (!state.visualAnchor || !op) {
     return { ...state, mode: 'NORMAL', pendingKeys: undefined, visualBlockEndOfLine: undefined };
   }
 
   const anchor = state.visualAnchor;
   const cursor = state.cursor;
-
-  const minLine = Math.min(anchor.line, cursor.line);
-  const maxLine = Math.max(anchor.line, cursor.line);
+  const minLine = op.startLine;
+  const maxLine = op.endLine;
+  // 바이트 열 경계 ('virtualedit' 경로와 . 반복 키 복원용)
   const minCol = Math.min(anchor.col, cursor.col);
   const maxCol = Math.max(anchor.col, cursor.col);
-  const isEol = Boolean(state.visualBlockEndOfLine) && insertMode !== 'I';
+  const isEol = op.isMax && insertMode !== 'I';
   const repeatCount = Math.max(1, count);
 
   const linesList: number[] = [];
@@ -245,7 +194,8 @@ export function startVisualBlockInsert(
   }
 
   const nextLines = [...state.lines];
-  let targetCol = minCol;
+  let targetCol = op.startCol;
+  let linePlans: (BlockInsertPlan | null)[] | undefined;
   const ve = getOptions(state).virtualedit;
   const isVirtualBlock = hasVirtualEdit(ve, 'block') || hasVirtualEdit(ve, 'all');
 
@@ -257,41 +207,54 @@ export function startVisualBlockInsert(
         nextLines[minLine] = firstLine.padEnd(targetCol, ' ');
       }
     } else {
-      targetCol = Math.min(minCol, (nextLines[minLine] ?? '').length);
-      for (const l of linesList) {
-        if (minCol > 0 && (state.lines[l] ?? '').length < minCol) {
-          skippedLines.push(l);
-        }
-      }
+      linePlans = linesList.map((l, i) => (i === 0 ? null : blockInsertPlan(state.lines[l] ?? '', op, false)));
+      linesList.forEach((l, i) => {
+        if (i > 0 && !linePlans![i]) skippedLines.push(l);
+      });
     }
   } else if (insertMode === 'A') {
-    if (isEol) {
-      targetCol = (nextLines[minLine] ?? '').length;
-    } else {
+    if (isVirtualBlock && !isEol) {
       targetCol = maxCol + 1;
       const firstLine = nextLines[minLine] ?? '';
       if (firstLine.length < targetCol) {
         nextLines[minLine] = firstLine.padEnd(targetCol, ' ');
       }
+    } else {
+      // Vim op_insert(OP_APPEND): 첫 줄은 블록 오른쪽 글자 다음으로, 짧으면 블록 끝까지 공백을 채웁니다.
+      const firstLine = state.lines[minLine] ?? '';
+      const bd = blockPrep(firstLine, op, 'append', true);
+      targetCol = Math.max(op.startCol, Math.min(firstLine.length, bd.textcol + bd.textlen));
+      if (bd.isShort && !op.isMax) {
+        nextLines[minLine] = firstLine.slice(0, targetCol) + ' '.repeat(bd.endspaces) + firstLine.slice(targetCol);
+        targetCol += bd.endspaces;
+      }
+      linePlans = linesList.map((l, i) => (i === 0 ? null : blockInsertPlan(state.lines[l] ?? '', op, true)));
     }
   } else if (insertMode === 'c') {
-    targetCol = Math.min(minCol, (nextLines[minLine] ?? '').length);
+    // Vim op_change: 먼저 블록을 지우고(op_delete), 커서가 블록 시작보다 왼쪽이면 한 칸 오른쪽에서 입력합니다.
+    let cursorCol = op.startCol;
     for (let l = minLine; l <= maxLine; l++) {
-      const lineText = nextLines[l] ?? '';
-      // Vim block_prep(is_del): 블록 왼쪽 열에 못 미치는 줄만 건너뜁니다. 줄 끝이 딱 왼쪽 열이면 그 끝에 입력이 들어갑니다.
-      if (minCol > 0 && lineText.length < minCol) {
-        skippedLines.push(l);
-        continue;
-      }
-      if (lineText.length > minCol) {
-        nextLines[l] = isEol
-          ? lineText.slice(0, minCol)
-          : lineText.slice(0, minCol) + lineText.slice(Math.min(maxCol, lineText.length - 1) + 1);
-      }
+      const res = blockDeleteLine(state.lines[l] ?? '', op, 'change');
+      if (!res) continue;
+      nextLines[l] = res.text;
+      if (l === minLine) cursorCol = res.cursorCol;
     }
+    const firstLine = nextLines[minLine] ?? '';
+    targetCol = Math.min(cursorCol, Math.max(0, firstLine.length - 1));
+    if (op.startCol > targetCol && firstLine.length > 0) targetCol++;
+    linePlans = linesList.map((l, i) => {
+      if (i === 0) return null;
+      const lineText = nextLines[l] ?? '';
+      const bd = blockPrep(lineText, op, 'change', true);
+      return bd.isShort ? null : { offset: bd.textcol, pre: 0, post: 0, skip: 0 };
+    });
+    linesList.forEach((l, i) => {
+      if (i > 0 && !linePlans![i]) skippedLines.push(l);
+    });
   }
 
-  const stateWithSnapshot = pushUndoSnapshot(state);
+  // 실행 취소 커서 (uh_cursor): I / c 는 블록 왼쪽 위, A 는 첫 줄의 입력 위치
+  const stateWithSnapshot = pushUndoSnapshotAt(state, { line: minLine, col: insertMode === 'A' ? targetCol : op.startCol });
 
   const lineSpan = maxLine - minLine;
   const colSpan = maxCol - minCol;
@@ -329,6 +292,8 @@ export function startVisualBlockInsert(
       endOfLine: isEol || undefined,
       minCol,
       maxCol,
+      startCol: linePlans ? op.startCol : undefined,
+      linePlans,
       count: repeatCount > 1 ? repeatCount : undefined,
       skippedLines: skippedLines.length > 0 ? skippedLines : undefined,
     },
@@ -337,7 +302,6 @@ export function startVisualBlockInsert(
 }
 
 /**
- * VISUAL 모드에서 선택 영역을 삭제하고 NORMAL 모드로 복귀합니다.
  */
 export function deleteVisualSelection(state: VimEditorState, visualKey = false): VimEditorState {
   if (!state.visualAnchor) {
@@ -611,10 +575,12 @@ export function swapVisualCursorAnchor(
 
   const nextCursor = clampCursor(state.lines, state.visualAnchor, state.mode);
   const nextAnchor = clampCursor(state.lines, state.cursor, state.mode);
+  // Vim v_o: w_set_curswant 를 켜므로 `$` 로 늘린 블록도 보통 블록이 됩니다.
   return {
     ...state,
     cursor: nextCursor,
     visualAnchor: nextAnchor,
+    visualBlockEndOfLine: undefined,
     pendingKeys: undefined,
   };
 }
@@ -623,6 +589,6 @@ export function swapVisualCursorAnchor(
 export function failedVisualJoinCursor(state: VimEditorState): CursorPosition {
   const anchor = state.visualAnchor ?? state.cursor;
   const { start } = getOrderedRange(anchor, state.cursor);
-  const col = state.mode === 'VISUAL_LINE' ? 0 : state.mode === 'VISUAL_BLOCK' ? Math.min(anchor.col, state.cursor.col) : start.col;
+  const col = state.mode === 'VISUAL_LINE' ? 0 : state.mode === 'VISUAL_BLOCK' ? blockOperandOf(state)!.startCol : start.col;
   return clampCursor(state.lines, { line: start.line, col }, 'NORMAL');
 }

@@ -686,8 +686,10 @@ export function executeWordSearch(
 
   const found = findSearchTarget(state.lines, matches, searchFrom, null, direction === 'forward', false)!;
   if (opts.wrapscan === false && found.wrapped) {
+    // Vim nv_ident: 찾기 전에 커서를 단어 처음으로 옮기므로, 'nowrapscan' 으로 실패해도 그 자리에 남습니다.
     return {
       ...state,
+      cursor: searchFrom,
       lastSearchQuery: query,
       lastSearchOffset: null,
       lastSearchDirection: direction,
