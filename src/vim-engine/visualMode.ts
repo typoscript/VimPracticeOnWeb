@@ -4,13 +4,13 @@ import { executeCommandLine } from './commandLine';
 import { moveToLineStart, moveToLineEnd, moveToFirstNonBlank } from './motions';
 import { syncRegisters, putFromRegister } from './registers';
 import { reselectLastVisual } from './advancedMotions';
-import { deleteVisualSelection, yankVisualSelection, yankVisualBlock, startVisualBlockInsert, swapVisualCursorAnchor, failedVisualJoinCursor, getOrderedRange } from './visual';
+import { deleteVisualSelection, yankVisualSelection, swapVisualCursorAnchor, failedVisualJoinCursor } from './visual';
 import { replaceVisualChars } from './visualUtilities';
+import { toggleVisualMode, handleVisualChangeKey } from './visualModeChange';
 import { moveFind, moveFindRepeat } from './findChar';
 import { findMatches, findSearchTarget, getWordAtCursor } from './search';
 import { starSearchPattern } from './vimRegex';
 import { getOptions } from './setOptionsCore';
-import { pushUndoSnapshot } from './undoHistory';
 import { msg } from './messages';
 import { MAX_REMAP_DEPTH, isKeymapPrefix, parseKeySequence, resolveKeymapWithMeta, runKeymapTokens } from './keymapEngine';
 import { executeVisualSurround, startSurroundTagPrompt } from './surroundEngine';
@@ -281,154 +281,18 @@ export function handleVisualModeKey(
     };
   }
 
-  // 'v': VISUAL 모드 토글 또는 전환
-  if (key === 'v') {
-    if (state.mode === 'VISUAL') {
-      return {
-        ...state,
-        mode: 'NORMAL',
-        visualAnchor: undefined,
-        visualBlockEndOfLine: undefined,
-        pendingKeys: undefined,
-        lastVisualSelection: state.visualAnchor
-          ? {
-              mode: state.mode,
-              anchor: { ...state.visualAnchor },
-              cursor: { ...state.cursor },
-            }
-          : state.lastVisualSelection,
-      };
-    }
-    return {
-      ...state,
-      mode: 'VISUAL',
-      visualBlockEndOfLine: undefined,
-      pendingKeys: undefined,
-    };
-  }
-
-  // 'V': VISUAL_LINE 모드 토글 또는 전환
-  if (key === 'V') {
-    if (state.mode === 'VISUAL_LINE') {
-      return {
-        ...state,
-        mode: 'NORMAL',
-        visualAnchor: undefined,
-        visualBlockEndOfLine: undefined,
-        pendingKeys: undefined,
-        lastVisualSelection: state.visualAnchor
-          ? {
-              mode: state.mode,
-              anchor: { ...state.visualAnchor },
-              cursor: { ...state.cursor },
-            }
-          : state.lastVisualSelection,
-      };
-    }
-    return {
-      ...state,
-      mode: 'VISUAL_LINE',
-      visualBlockEndOfLine: undefined,
-      pendingKeys: undefined,
-    };
-  }
-
-  // 'Ctrl+v' / 'Ctrl-v': VISUAL_BLOCK 모드 토글 또는 전환
-  if (key === 'Ctrl+v' || key === 'Ctrl-v' || key === 'ctrl-v') {
-    if (state.mode === 'VISUAL_BLOCK') {
-      return {
-        ...state,
-        mode: 'NORMAL',
-        visualAnchor: undefined,
-        visualBlockEndOfLine: undefined,
-        pendingKeys: undefined,
-        lastVisualSelection: state.visualAnchor
-          ? {
-              mode: state.mode,
-              anchor: { ...state.visualAnchor },
-              cursor: { ...state.cursor },
-            }
-          : state.lastVisualSelection,
-      };
-    }
-    return {
-      ...state,
-      mode: 'VISUAL_BLOCK',
-      visualBlockEndOfLine: undefined,
-      pendingKeys: undefined,
-    };
-  }
+  // v / V / Ctrl-v: 같은 종류면 선택 종료, 다르면 그 비주얼 종류로 전환
+  const toggled = toggleVisualMode(state, key);
+  if (toggled) return toggled;
 
   // o / O: Visual 및 Visual Block 선택 영역의 커서와 앵커 반전
   if ((key === 'o' || key === 'O') && !state.pendingKeys) {
     return swapVisualCursorAnchor(state, key);
   }
 
-  // VISUAL_BLOCK 전용 모드 삽입 연산자 (I, A, c, C, s) 및 VISUAL/VISUAL_LINE c/s/C/S/R (텍스트 객체 'i'/'a' 대기 중이 아닐 때만)
-  const isTextObjPending = Boolean(state.pendingKeys && /^([1-9][0-9]*)?[ia]$/.test(state.pendingKeys));
-  if (state.mode === 'VISUAL_BLOCK' && !isTextObjPending) {
-    if (key === 'I') {
-      return startVisualBlockInsert(state, 'I', parsed.totalCount);
-    }
-    if (key === 'A') {
-      return startVisualBlockInsert(state, 'A', parsed.totalCount);
-    }
-    // 블록 c / s / C 는 Vim 처럼 지운 블록을 레지스터에 넣습니다 (블록 단위).
-    if (key === 'c' || key === 's' || key === 'C') {
-      const source = key === 'C' ? { ...state, visualBlockEndOfLine: true } : state;
-      const deleted = yankVisualBlock(source).clipboard;
-      const res = startVisualBlockInsert(source, 'c', parsed.totalCount);
-      return syncRegisters(state, { ...res, clipboard: deleted }, false);
-    }
-  } else if (!isTextObjPending && (key === 'c' || key === 's' || key === 'C' || key === 'S' || key === 'R')) {
-    const snap = state.visualAnchor
-      ? {
-          mode: state.mode as 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK',
-          anchor: { ...state.visualAnchor },
-          cursor: { ...state.cursor },
-        }
-      : state.lastVisualSelection;
-    const isLinewiseChange = state.mode === 'VISUAL_LINE' || key === 'C' || key === 'S' || key === 'R';
-    if (isLinewiseChange && state.visualAnchor) {
-      const minLine = Math.min(state.visualAnchor.line, state.cursor.line);
-      const maxLine = Math.max(state.visualAnchor.line, state.cursor.line);
-      const deletedContent = state.lines.slice(minLine, maxLine + 1).join('\n');
-      const nextLines = [
-        ...state.lines.slice(0, minLine),
-        '',
-        ...state.lines.slice(maxLine + 1),
-      ];
-      // 실행 취소 기록 (커서는 recordVisualUndoCursor 가 Vim 의 op_delete 시작 위치로 맞춤)
-      const withUndo = pushUndoSnapshot(state);
-      const withDel: VimEditorState = {
-        ...withUndo,
-        lines: nextLines,
-        cursor: { line: minLine, col: 0 },
-        mode: 'INSERT',
-        visualAnchor: undefined,
-        clipboard: { type: 'line', content: deletedContent },
-        pendingKeys: undefined,
-      };
-      return {
-        ...syncRegisters(state, withDel, false),
-        mode: 'INSERT',
-        lastVisualSelection: snap,
-      };
-    }
-    const delRes = deleteVisualSelection(state, true);
-    const synced = syncRegisters(state, delRes, false);
-    // Vim op_change: 지운 범위가 줄 끝까지였으면 커서가 줄 끝 다음 칸(입력 위치)으로 갑니다 (vgec → 줄 끝에 덧붙임).
-    const changeStart = state.visualAnchor ? getOrderedRange(state.visualAnchor, state.cursor).start : synced.cursor;
-    const insertCol = changeStart.line === synced.cursor.line
-      ? Math.min(changeStart.col, (synced.lines[synced.cursor.line] ?? '').length)
-      : synced.cursor.col;
-    return {
-      ...synced,
-      cursor: { line: synced.cursor.line, col: insertCol },
-      mode: 'INSERT',
-      lastVisualSelection: snap,
-    };
-  }
+  // 입력 모드로 들어가는 변경 (블록 I A c s C, 문자·줄 단위 c s C S R)
+  const changed = handleVisualChangeKey(state, key, parsed.totalCount);
+  if (changed) return changed;
 
   if (key === 'r' && !state.pendingKeys) {
     return { ...state, pendingKeys: 'r' };
