@@ -8,7 +8,6 @@
  * 차이는 --out JSON 에 저장합니다. 고친 차이는 scripts/generateGoldenTests.ts 의 골든 케이스로 옮겨
  * CI(nvim 없음)에서도 회귀를 막으세요.
  */
-import { execFileSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -171,6 +170,7 @@ function generateCases(count: number, seed: number): FuzzCase[] {
 // 엔진 실행
 // ---------------------------------------------------------------------------
 import { toEngineKeys } from './neovimFuzzKeys';
+import { runNeovimIsolated } from './neovimRunner';
 
 interface Snapshot {
   lines: string[];
@@ -268,23 +268,10 @@ local f = io.open(_G.arg[2], "w"); f:write(vim.json.encode(results)); f:close()
 os.exit(0)
 `;
 
-function runNeovim(cases: FuzzCase[]): Map<string, Snapshot> {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nvimfuzz-'));
-  const inFile = path.join(dir, 'in.json');
-  const outFile = path.join(dir, 'out.json');
-  const lua = path.join(dir, 'run.lua');
-  fs.writeFileSync(inFile, JSON.stringify(cases));
-  fs.writeFileSync(lua, LUA);
-  try {
-    execFileSync(process.env.NVIM_PATH ?? 'nvim', ['--headless', '-u', 'NONE', '-i', 'NONE', '-l', lua, inFile, outFile], {
-      stdio: ['ignore', 'inherit', 'inherit'],
-      maxBuffer: 1 << 28,
-    });
-    const out: Array<Snapshot & { id: string }> = JSON.parse(fs.readFileSync(outFile, 'utf8'));
-    return new Map(out.map((r) => [r.id, r]));
-  } finally {
-    fs.rmSync(dir, { recursive: true, force: true });
-  }
+async function runNeovim(cases: FuzzCase[]): Promise<Map<string, Snapshot>> {
+  // 케이스마다 새 nvim 프로세스 (이전 케이스의 레지스터·반복 상태가 새지 않게, scripts/neovimRunner.ts)
+  const out = await runNeovimIsolated<FuzzCase, Snapshot & { id: string }>(LUA, cases);
+  return new Map(out.map((r) => [r.id, r]));
 }
 
 // ---------------------------------------------------------------------------
@@ -299,7 +286,7 @@ function diffKinds(a: Snapshot, b: Snapshot): string[] {
   return kinds;
 }
 
-function main(): void {
+async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const opt = (name: string, def: string) => {
     const i = args.indexOf(`--${name}`);
@@ -310,7 +297,7 @@ function main(): void {
   const outPath = opt('out', path.join(os.tmpdir(), `neovim-fuzz-${seed}.json`));
 
   const cases = generateCases(count, seed);
-  const nvim = runNeovim(cases);
+  const nvim = await runNeovim(cases);
   const mismatches = [];
   for (const c of cases) {
     const expected = nvim.get(c.id);
@@ -340,4 +327,4 @@ function main(): void {
   console.log(`[neovim-fuzz] details: ${outPath}`);
 }
 
-main();
+void main();

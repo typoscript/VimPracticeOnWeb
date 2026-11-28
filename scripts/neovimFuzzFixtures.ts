@@ -6,9 +6,8 @@
  * 아래 CASES 를 `nvim --headless -u NONE` (엔진 기본 옵션: ts=2 sw=2 et noai nosol) 에서 실행해
  * test/fixtures/neovim-fuzz-findings.json 으로 저장합니다. test/neovimFuzzFindings.test.ts 가 nvim 없이 이 값과 비교합니다.
  */
-import { execFileSync } from 'child_process';
+import { runNeovimIsolated } from './neovimRunner';
 import fs from 'fs';
-import os from 'os';
 import path from 'path';
 
 interface Case {
@@ -298,15 +297,34 @@ local f = io.open(_G.arg[2], "w"); f:write(vim.json.encode(out)); f:close()
 os.exit(0)
 `;
 
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nvimfix-'));
-const inFile = path.join(dir, 'in.json');
-const outFile = path.join(dir, 'out.json');
-const lua = path.join(dir, 'run.lua');
-fs.writeFileSync(inFile, JSON.stringify(CASES));
-fs.writeFileSync(lua, LUA);
-execFileSync(process.env.NVIM_PATH ?? 'nvim', ['--headless', '-u', 'NONE', '-i', 'NONE', '-l', lua, inFile, outFile], { stdio: 'inherit' });
-const results = JSON.parse(fs.readFileSync(outFile, 'utf8'));
-fs.rmSync(dir, { recursive: true, force: true });
-const target = path.resolve('test/fixtures/neovim-fuzz-findings.json');
-fs.writeFileSync(target, JSON.stringify(results, null, 2) + '\n');
-console.log(`[neovim-fuzz-fixtures] ${results.length} cases -> ${target}`);
+interface FixtureResult {
+  id: string;
+  text: string;
+  cursor: { row: number; col: number };
+  keys: string;
+  expected: { lines: string[]; cursor: { row: number; col: number }; reg: string; regType: string; mode: string };
+}
+
+async function main(): Promise<void> {
+  // 케이스마다 새 nvim 프로세스로 실행합니다 (이전 케이스의 레지스터·반복 상태가 새지 않게).
+  const raw = await runNeovimIsolated<unknown, FixtureResult>(LUA, CASES);
+  // Lua 의 JSON 키 순서는 프로세스마다 달라서, 파일이 매번 같게 나오도록 키 순서를 고정합니다.
+  const results = raw.map((r) => ({
+    id: r.id,
+    text: r.text,
+    cursor: { row: r.cursor.row, col: r.cursor.col },
+    keys: r.keys,
+    expected: {
+      lines: r.expected.lines,
+      cursor: { row: r.expected.cursor.row, col: r.expected.cursor.col },
+      reg: r.expected.reg,
+      regType: r.expected.regType,
+      mode: r.expected.mode,
+    },
+  }));
+  const target = path.resolve('test/fixtures/neovim-fuzz-findings.json');
+  fs.writeFileSync(target, JSON.stringify(results, null, 2) + '\n');
+  console.log(`[neovim-fuzz-fixtures] ${results.length} cases -> ${target}`);
+}
+
+void main();
