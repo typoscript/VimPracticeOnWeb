@@ -28,11 +28,13 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'undoTreeEngine.ts',
       'digraphs.ts',
       'registerText.ts',
+      'registerDisplay.ts',
       'invariants.ts',
       'bracketMatch.ts',
       'wordMotion.ts',
       'vfs.ts',
       'setOptionsCore.ts',
+      'windowTreeLayout.ts',
       'windowTree.ts',
       'bufferLocalState.ts',
       // 변경 목록(g; g, :changes)·'. 마크 (Vim changed_common, 코어 파일만 import)
@@ -48,6 +50,8 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'filetypeIndent.ts',
       // Replace·Virtual Replace 모드(R gR gr) 편집 로직 (코어 파일만 import)
       'replaceMode.ts',
+      // 닫힌 폴드 위 j/k·dd/yy, 폴드 요약, 줄 변경에 맞춘 폴드 이동 (operators 만 import)
+      'foldLines.ts',
     ],
   },
   {
@@ -63,6 +67,7 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'vimscriptLexer.ts',
       'vimscriptEval.ts',
       'vimscriptFunctions.ts',
+      'vimscriptStatements.ts',
       'vimscriptEngine.ts',
       'expressionParser.ts',
     ],
@@ -95,6 +100,11 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'helpEngine.ts',
       // 키 처리 뒤 curswant(기억한 열) 규칙 (setEngine 만 더 import)
       'curswant.ts',
+      // 주석 토글(gcc gc)·commentstring (setEngine·ftplugin·syntax 만 import)
+      'commentEngine.ts',
+      // 폴드 감지(foldexpr 는 Vim script)와 열기·닫기 명령 (편집 계층에서 내림)
+      'foldingDetection.ts',
+      'foldCommands.ts',
     ],
   },
   {
@@ -132,9 +142,7 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'operatorMotion.ts',
       'operatorWordMotion.ts',
       'markOperator.ts',
-      'commentEngine.ts',
       'formatEngine.ts',
-      'foldingDetection.ts',
       'folding.ts',
       'engineHelpers.ts',
       'surroundEngine.ts',
