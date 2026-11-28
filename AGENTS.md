@@ -22,7 +22,7 @@
   `npm test -- src/vim-engine/vimEngine.test.ts --run`
 - **전체 테스트 스위트 실행**:
   `npm test -- --run`
-  *(현재 232개 테스트 파일, 3,954개 테스트 100% 통과 필수. 지연 로딩 화면을 기다리는 `findBy*`/`waitFor` 상한은 `src/test/setup.ts` 에서 5초, 테스트 하나의 상한은 `vite.config.ts` 에서 15초로 두어 CI 나 동시 실행으로 컴퓨터가 바쁠 때도 흔들리지 않게 했습니다)*
+  *(현재 232개 테스트 파일, 3,955개 테스트 100% 통과 필수. 지연 로딩 화면을 기다리는 `findBy*`/`waitFor` 상한은 `src/test/setup.ts` 에서 5초, 테스트 하나의 상한은 `vite.config.ts` 에서 15초로 두어 CI 나 동시 실행으로 컴퓨터가 바쁠 때도 흔들리지 않게 했습니다)*
 - **실제 브라우저(E2E) 테스트 (Playwright)**:
   `npm run test:e2e`
   *(`e2e/*.e2e.ts`, `playwright.config.ts`. 프로덕션 빌드를 `vite preview` 로 띄워 Chromium 에서 레슨 완료·Ex 명령·Ctrl+v 차단·한글 IME 키 매핑·언어 전환·지연 로딩 탭·키 사전(`Ctrl+/`)·Alt+W(`Ctrl-w`) 창 이동·자유 연습장 자동 저장을 검사합니다. 처음 한 번 `npx playwright install chromium` 이 필요하며, Linux 에서 공유 라이브러리가 없다고 나오면 `sudo npx playwright install-deps chromium` 을 실행하세요. 파일 이름을 `.e2e.ts` 로 두어 vitest 가 줍지 않게 합니다.)*
@@ -127,6 +127,8 @@
 - **상태바 (`StatusBar.tsx`)**: 모드 배지(`-- FLASH --`, `-- MULTI (N) --`, `-- TERMINAL --`, `-- VREPLACE --`, Select), `[SPELL]`, `[OIL]`, `[⚓ #N]`, `[⚔️ N]`, `[🐞 DAP LN]`, 검색 카운트, 와일드메뉴 후보(클릭 선택), 명령줄 커서 `.prompt-cursor`.
 - **패널·팝업**: 퀵픽스/로케이션 창 `QuickfixPanel/`, 레지스터 인스펙터 `RegisterInspector/`, 매크로 디버거 `MacroDebugger/`, 마크·점프 시각화 `MarksJumpVisualizer/`, Which-Key `WhichKey/`(`whichKeyCatalog.ts`, `vim_which_key_v1`), 퍼지 파인더 `FuzzyFinder/`, Harpoon `HarpoonMenu/`, Trouble `TroublePanel/`, Undotree `UndotreePanel/`, Yanky `YankyMenu/`, Spectre `SpectrePanel/`, Git `GitPanel/`(`:Git :LazyGit`), DAP `DapPanel/`, Neo-tree `NeotreeSidebar/`, 치트시트 `CheatsheetModal/`(`:Cheatsheet`, `[▶ 실행]`), `:ZenMode`.
 - **Vim 키 사전 (`src/components/KeyReference/`)**: `Ctrl+/`(macOS `Cmd+/`) 또는 헤더 아래 `⌨️ 키마다 하는 일 보기` 버튼으로 엽니다. 누른 키(한글 IME 키는 영문으로 변환)의 뜻을 노멀·비주얼·입력 모드 탭으로 보여 주고(현재 모드 탭이 먼저), 뒤에 키가 이어지는 키는 `whichKeyCatalog.ts` 를 재사용합니다. 설명은 `keyReferenceCatalog.ts` 에 `ko`/`en` 으로 직접 적습니다. 관련 레슨은 모범 답안을 엔진으로 실행해 그 모드에서 그 키를 누르는 레슨만 고릅니다(명령줄 글자 제외, 제목에 키가 있는 레슨 먼저, `keyReferenceLessons.ts`). `Esc`/`Ctrl+/` 로 닫습니다. 레슨 연결 순서: 제목에 그 키(또는 `dd`·`dw` 처럼 그 키로 시작하는 짧은 명령)가 적힌 레슨을 레슨 번호 순으로 먼저, 노멀 탭에서는 모범 답안에 키가 없어도 제목에 적혀 있으면 연결합니다.
+- **휴대폰 폭 헤더 (`AppHeader.tsx`, `App.css`)**: 640px 이하에서는 레슨 목록·치트시트·언어 버튼만 두고 나머지(`nav-collapsible`)는 `⋯ 더보기`(`toggle-more-actions-btn`)로 접어 에디터가 첫 화면에 보이게 합니다. 새 헤더 버튼은 휴대폰에서 꼭 필요하지 않으면 `nav-collapsible` 을 붙이세요.
+- **안티 패턴 코칭 (`antiPatternDetector.ts`)**: 이동 키를 5번 연타하면 코칭 토스트가 뜨지만, 레슨 1(h j k l 연습)에서는 나무라지 않고 다음 레슨의 `w` 를 예고하며 약점 통계에도 넣지 않습니다(`useAppKeyAndCompletionEffects`).
 - **Ctrl+W 대체**: 브라우저가 Ctrl+W 로 탭을 닫으므로 모든 모드에서 Alt+W 가 `Ctrl-w` 로 들어가고(`useVimKeyboardInput`), `Ctrl-w` 를 쓰는 레슨에는 안내가 나옵니다. 레슨·커스텀 미션 연습 중(키 입력이 있고 미완료)에는 `useTabCloseGuard` 가 탭 닫기 확인 창을 띄웁니다(자유 연습장은 자동 저장이라 제외).
 - **자유 연습장 (`src/data/sandbox.ts`)**: 여러 가상 파일(`src/api.ts`, `src/worker.ts`, `src/mergeDemo.ts`, `init.lua`)·`gitBaseLines`·Harpoon 핀과 함께 시작하고, 상단 퀵런처 칩으로 모던 기능을 바로 실행합니다(칩 키는 `getReturnToNormalKeys` 를 앞에 붙임, 3절 4항). 로컬 파일·폴더 불러오기(드래그&드롭, `webkitdirectory`, 파일당 512 KB, 바이너리 제외)와 파일·`.zip` 내보내기(`sandboxLocalFiles.ts`, `zipBuilder.ts`). 자동 저장(`sandboxAutosave.ts`, `useSandboxAutosave.ts`): 입력이 멈추고 0.8초 뒤와 페이지를 떠날 때 열린 버퍼·저장 전 편집·가상 파일·커서·파일 칩을 `vim_sandbox_autosave_v1` 에 저장하고 다시 들어오면 이어서 엽니다(`useAppMissionHandlers` 의 `handleOpenSandbox`). `🔄 코드 초기화` 는 저장본도 지우고, 200만 자가 넘으면 저장하지 않습니다.
 - **설정·저장 (`ConfigExporterModal/`)**: GUI 키매핑(`keymapStorage.ts`, `vim_custom_keymaps_v1`, 엔진 `userKeymaps` 와 동기화, `:keymap`), `.vimrc`·`init.lua`·`settings.json`·`.ideavimrc` 내보내기(`configGenerator.ts`), `init.lua`/`.vimrc` 플레이그라운드(`userInitConfig.ts`, `vim_user_init_config_v1`, 프리셋 4종), 진행도 전체 JSON 백업·복원(`backupStorage.ts` 의 `BACKUP_KEYS`, `merge`/`replace`). ⚠ 새 `localStorage` 키를 만들면 `BACKUP_KEYS` 에 넣을지 정하세요.
@@ -141,5 +143,4 @@
   - `)`/`as` 문장 이동·객체 일부, 빈 마지막 줄의 비주얼 `as`, `3g~-`, 비주얼 `T{`, `4C`, `"Ayiw`·매크로 레지스터를 `"ap` 로 붙였을 때의 특수 키 표기(엔진은 `<Esc>`, Vim 은 실제 ESC 글자).
   - `$` 뒤 `:s`/`&` 반복 시 커서가 줄 끝에 남는 Vim 특이 동작, `:2,2j` 커서, 제자리 `:m`(실행 취소 항목을 만들지 않음), `=h`·`=iw` 가 빈 실행 취소 항목을 만드는 Vim 동작.
 - **기준 Neovim 버전**: 실행 취소 커서 규칙은 Neovim v0.11 의 `u_undoredo` 를, cindent·JS/TS 들여쓰기는 로컬 nvim(v0.12.0-dev, 2025-07)을 따릅니다. 최신 Neovim 은 실행 취소가 항상 저장된 커서로 돌아가도록 바뀌었으므로(#5989), 로컬 nvim 을 올리면 관련 고정 케이스를 다시 만들고 규칙을 맞추세요. cindent 의 `return {` 초기화 인식(9.1.1626)·주석 안 괄호 무시(9.2.0447)도 그때 반영합니다.
-- **첫 방문 점검에서 남긴 관찰 (2026-11-28)**: 휴대폰 폭(390px)에서 가로 넘침은 없지만 상단 버튼이 7줄을 차지해 에디터가 첫 화면 아래로 밀립니다(작은 화면에서는 보조 버튼을 메뉴로 접는 방안). 레슨 1 은 제목이 `h, j, k, l` 인데 `l` 을 연타하면 "w, b 를 쓰세요" 코칭이 바로 떠서 처음 배우는 사람에게 엇갈려 보일 수 있습니다(모범 답안도 `w` 를 써서 틀린 안내는 아님).
 - **JS/TS 들여쓰기 한계**: TS 구문 강조의 위치별 차이(객체·인터페이스 안의 `x = /re/` 정규식, `[` 뒤 `/*`)와 TSX 태그 파싱은 없습니다(Neovim 대조 657건 중 2건 제외 목록).

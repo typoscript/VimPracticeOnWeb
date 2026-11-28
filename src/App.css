@@ -96,6 +96,11 @@
   flex-wrap: wrap;
 }
 
+/* '더보기' 토글은 휴대폰 폭에서만 보입니다 */
+.nav-more-btn {
+  display: none;
+}
+
 .toolbar-btn {
   background-color: #181825;
   border: 1px solid #313244;
@@ -592,6 +597,15 @@
 
   .nav-actions {
     justify-content: center;
+  }
+
+  /* 휴대폰 폭: 보조 버튼은 '더보기'를 눌렀을 때만 보입니다 */
+  .nav-more-btn {
+    display: inline-flex;
+  }
+
+  .nav-actions:not(.more-open) .nav-collapsible {
+    display: none;
   }
 
   .nav-action-group {

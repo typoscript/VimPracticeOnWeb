@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ThemeSwitcher } from '../ThemeSwitcher/ThemeSwitcher';
 import { ViewPanelsDropdown } from '../ViewPanelsDropdown/ViewPanelsDropdown';
 import { VimTheme } from '../../utils/theme';
@@ -91,6 +92,8 @@ export function AppHeader({
   onToggleMute,
   locale,
 }: AppHeaderProps) {
+  // 휴대폰 폭에서는 보조 버튼을 '더보기'로 접어 에디터가 첫 화면에 보이게 합니다 (데스크톱은 항상 펼침, App.css).
+  const [moreOpen, setMoreOpen] = useState(false);
   return (
     <>
       <header className="app-header">
@@ -171,12 +174,12 @@ export function AppHeader({
           )}
         </div>
 
-        <div className="nav-actions">
+        <div className={`nav-actions${moreOpen ? ' more-open' : ''}`}>
           {/* 주요 훈련 및 모달 도구 그룹 */}
           <div className="nav-action-group nav-tools-group">
             {/* 🔥 하드코어 수련 모드 토글 스위치 */}
             <button
-              className={`toolbar-btn hardcore-mode-btn ${hardcoreMode ? 'active' : ''}`}
+              className={`toolbar-btn nav-collapsible hardcore-mode-btn ${hardcoreMode ? 'active' : ''}`}
               onClick={onToggleHardcoreMode}
               data-testid="toggle-hardcore-mode-btn"
               title={t('🔥 하드코어 수련 모드: 방향키 및 마우스 완전 차단, 1.5초 3회 초과 연타 무시')}
@@ -186,7 +189,7 @@ export function AppHeader({
 
             {/* 데일리 챌린지 모달 */}
             <button
-              className="toolbar-btn daily-challenge-btn"
+              className="toolbar-btn nav-collapsible daily-challenge-btn"
               onClick={onOpenDailyModal}
               data-testid="open-daily-modal-btn"
               title={t('오늘의 데일리 Vim Golf 챌린지')}
@@ -196,7 +199,7 @@ export function AppHeader({
 
             {/* 숙련도 분석 대시보드 모달 */}
             <button
-              className="toolbar-btn analytics-btn"
+              className="toolbar-btn nav-collapsible analytics-btn"
               onClick={onOpenAnalyticsModal}
               data-testid="open-analytics-modal-btn"
               title={t('Vim 숙련도 5각 레이더 및 명령어 사용 통계 대시보드')}
@@ -206,7 +209,7 @@ export function AppHeader({
 
             {/* 커스텀 Vim Golf 미션 생성 모달 */}
             <button
-              className="toolbar-btn custom-mission-btn"
+              className="toolbar-btn nav-collapsible custom-mission-btn"
               onClick={onOpenCustomModal}
               data-testid="open-custom-modal-btn"
               title={t('URL 공유 가능한 커스텀 Vim Golf 미션 생성기')}
@@ -216,7 +219,7 @@ export function AppHeader({
 
             {/* 커스텀 키매핑 및 설정 파일 내보내기 모달 */}
             <button
-              className="toolbar-btn config-export-btn"
+              className="toolbar-btn nav-collapsible config-export-btn"
               onClick={onOpenConfigModal}
               data-testid="open-config-modal-btn"
               title={t('키매핑 프리셋 설정 및 .vimrc/init.lua/VS Code/IdeaVim 설정 내보내기')}
@@ -248,7 +251,7 @@ export function AppHeader({
           </div>
 
           {/* 에디터 보조 패널 & 인스펙터 드롭다운 그룹 */}
-          <div className="nav-action-group nav-view-group">
+          <div className="nav-action-group nav-view-group nav-collapsible">
             <ViewPanelsDropdown
               showDiffView={showDiffView}
               onToggleDiffView={onToggleDiffView}
@@ -274,15 +277,27 @@ export function AppHeader({
 
           {/* 환경 설정 (테마, 타건음, 언어) 그룹 */}
           <div className="nav-action-group nav-settings-group">
+            {/* 휴대폰 폭에서만 보이는 '더보기' 토글 */}
+            <button
+              type="button"
+              className="toolbar-btn nav-more-btn"
+              onClick={() => setMoreOpen((open) => !open)}
+              aria-expanded={moreOpen}
+              data-testid="toggle-more-actions-btn"
+            >
+              {moreOpen ? t('▲ 접기') : t('⋯ 더보기')}
+            </button>
             {/* 에디터 컬러 테마 스위처 */}
-            <ThemeSwitcher
-              currentTheme={currentTheme}
-              onThemeChange={onThemeChange}
-            />
+            <span className="nav-collapsible">
+              <ThemeSwitcher
+                currentTheme={currentTheme}
+                onThemeChange={onThemeChange}
+              />
+            </span>
 
             {/* 기계식 키보드 음향 효과음 토글 */}
             <button
-              className={`toolbar-btn sound-toggle-btn ${isMuted ? 'muted' : ''}`}
+              className={`toolbar-btn nav-collapsible sound-toggle-btn ${isMuted ? 'muted' : ''}`}
               onClick={onToggleMute}
               data-testid="toggle-sound-btn"
               title={t('기계식 키보드 타건 효과음 토글')}

@@ -1,6 +1,9 @@
 import { VimMode } from '../vim-engine';
 import { t } from '../i18n';
 
+/** 이동 키 연타 코칭 문구 (현재 화면 언어로 번역됨) */
+export const MOTION_MASH_ADVICE = () => t('이동 키를 연타하는 대신 w, b 또는 숫자+이동(예: 5j)을 사용해 보세요!');
+
 export const REPEATED_MOTION_KEYS = [
   'h', 'j', 'k', 'l',
   'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown',
@@ -51,7 +54,7 @@ export class AntiPatternDetector {
       if (REPEATED_MOTION_KEYS.includes(key)) {
         this.motionCount += 1;
         if (this.motionCount >= 5) {
-          coachingMsg = t('이동 키를 연타하는 대신 w, b 또는 숫자+이동(예: 5j)을 사용해 보세요!');
+          coachingMsg = MOTION_MASH_ADVICE();
         }
       } else {
         this.motionCount = 0;

@@ -106,4 +106,16 @@ describe('AppHeader', () => {
     expect(props.onOpenConfigModal).toHaveBeenCalledTimes(1);
     expect(props.onToggleMute).toHaveBeenCalledTimes(1);
   });
+  it('더보기 버튼으로 보조 버튼 묶음을 펼치고 접는다 (휴대폰 폭에서만 CSS 로 숨김)', () => {
+    render(<AppHeader {...createProps()} />);
+    const more = screen.getByTestId('toggle-more-actions-btn');
+    const actions = more.closest('.nav-actions')!;
+    expect(more).toHaveAttribute('aria-expanded', 'false');
+    expect(actions).not.toHaveClass('more-open');
+    expect(screen.getByTestId('open-daily-modal-btn')).toHaveClass('nav-collapsible');
+    expect(screen.getByTestId('toggle-locale-btn')).not.toHaveClass('nav-collapsible');
+    fireEvent.click(more);
+    expect(more).toHaveAttribute('aria-expanded', 'true');
+    expect(actions).toHaveClass('more-open');
+  });
 });

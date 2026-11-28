@@ -6,7 +6,7 @@ import { safeHandleKey } from '../utils/safeHandleKey';
 import { Mission } from '../types/mission';
 import { saveLessonRecord, LessonProgress } from '../utils/storage';
 import { saveCapstoneCompletion } from '../data/capstoneProjects';
-import { AntiPatternDetector } from '../utils/antiPatternDetector';
+import { AntiPatternDetector, MOTION_MASH_ADVICE } from '../utils/antiPatternDetector';
 import { HardcoreGuard } from '../utils/hardcoreGuard';
 import { recordKeyInputStats, recordAntiPatternDetection } from '../utils/analyticsStorage';
 import { ActionTimelineStep } from '../utils/actionTimeline';
@@ -185,8 +185,15 @@ export function useAppKeyAndCompletionEffects({
         baseState.pendingKeys
       );
       if (coachingAdvice) {
-        setCoachingMessage(coachingAdvice);
-        recordAntiPatternDetection(coachingAdvice);
+        // 레슨 1 은 h j k l 자체를 연습하는 레슨이라, 이동 키 연타를 나무라지 않고 다음 레슨을 예고합니다 (약점 통계에도 넣지 않음).
+        const isBasicMovementLesson =
+          currentTab === 'course' && currentMission.id === 1 && coachingAdvice === MOTION_MASH_ADVICE();
+        if (isBasicMovementLesson) {
+          setCoachingMessage(t('좋아요! 이 레슨은 h j k l 연습이에요. 다음 레슨에서 w 로 단어 단위로 더 빨리 움직이는 법을 배워요.'));
+        } else {
+          setCoachingMessage(coachingAdvice);
+          recordAntiPatternDetection(coachingAdvice);
+        }
       }
 
       const nextState = safeHandleKey(baseState, key);
@@ -200,6 +207,7 @@ export function useAppKeyAndCompletionEffects({
     },
     [
       currentTab,
+      currentMission.id,
       speedrunStatus,
       playKeySound,
       hardcoreMode,

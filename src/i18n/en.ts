@@ -1623,4 +1623,7 @@ export const EN: Record<string, string> = {
   "⌨️ 키마다 하는 일 보기": "⌨️ See what each key does",
   "⚠️ 브라우저에서 Ctrl+W 는 탭을 닫습니다. 이 레슨의 Ctrl-w 는 Alt+W 로 누르세요.": "⚠️ Ctrl+W closes the browser tab. Press Alt+W for this lesson's Ctrl-w.",
   "💾 자유 연습장을 이어서 엽니다 ({time} 저장). 처음 예제로 돌아가려면 \"🔄 코드 초기화\"를 누르세요.": "💾 Continuing your sandbox (saved {time}). Press \"🔄 Reset code\" to go back to the starting example.",
+  "좋아요! 이 레슨은 h j k l 연습이에요. 다음 레슨에서 w 로 단어 단위로 더 빨리 움직이는 법을 배워요.": "Nice! This lesson is for practicing h j k l. In the next lesson you'll learn w to move faster, word by word.",
+  "⋯ 더보기": "⋯ More",
+  "▲ 접기": "▲ Less",
 };
