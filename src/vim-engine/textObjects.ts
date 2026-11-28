@@ -31,8 +31,6 @@ import {
   executeLinewiseObjectOperator,
   getParagraphObjectRange,
   executeParagraphObjectOperator,
-  getSentenceObjectRange,
-  getSentenceStarts,
 } from './textObjectsExtended';
 
 export type { TextObjectRange, IndentObjectType, IndentObjectRange, ParagraphObjectType };
@@ -42,8 +40,6 @@ export {
   executeLinewiseObjectOperator,
   getParagraphObjectRange,
   executeParagraphObjectOperator,
-  getSentenceObjectRange,
-  getSentenceStarts,
 };
 
 export type TextObjectModifier = 'i' | 'a';
@@ -497,7 +493,7 @@ export function executeTextObjectOperator(
 
   for (let step = 0; step < steps; step++) {
     const range = sentenceRange ?? (wordRange as TextObjectRange | undefined) ?? nestedRange ?? (isSentence
-      ? getSentenceObjectRange(curState.lines, curState.cursor, objectType as 'is' | 'as', count)
+      ? null
       : isStructuralBlock
         ? getTreesitterObjectRange(curState.lines, curState.cursor, objectType as TreesitterObjectType, count)
         : getTextObjectRange(curState.lines, curState.cursor, objectType, count));

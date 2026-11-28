@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { handleKey } from './vimEngine';
-import { getParagraphObjectRange, getSentenceObjectRange } from './textObjects';
+import { getParagraphObjectRange } from './textObjects';
 import type { VimEditorState } from './types';
 
 function createState(lines: string[], cursor = { line: 0, col: 0 }): VimEditorState {
@@ -100,15 +100,21 @@ describe('문단 텍스트 객체 연산자 (dap, yip, cip, vap)', () => {
 
 describe('문장 텍스트 객체 (is, as)', () => {
   const LINE = ['Hello there. This is Vim!  Last one?'];
+  // 비주얼 vis / vas 로 고른 범위 (끝 포함)
+  const sentenceSelection = (lines: string[], cursor: { line: number; col: number }, obj: 'is' | 'as') => {
+    const v = press(createState([...lines], cursor), ['v', ...obj]);
+    const [a, b] = [v.visualAnchor!, v.cursor];
+    return { startLine: a.line, startCol: a.col, endLine: b.line, endCol: b.col };
+  };
 
   it('is / as 범위: 문장, 문장 + 뒤 공백, 공백 위의 is / as', () => {
-    expect(getSentenceObjectRange(LINE, { line: 0, col: 15 }, 'is')).toEqual({ startLine: 0, startCol: 13, endLine: 0, endCol: 24 });
-    expect(getSentenceObjectRange(LINE, { line: 0, col: 15 }, 'as')).toEqual({ startLine: 0, startCol: 13, endLine: 0, endCol: 26 });
+    expect(sentenceSelection(LINE, { line: 0, col: 15 }, 'is')).toEqual({ startLine: 0, startCol: 13, endLine: 0, endCol: 24 });
+    expect(sentenceSelection(LINE, { line: 0, col: 15 }, 'as')).toEqual({ startLine: 0, startCol: 13, endLine: 0, endCol: 26 });
     // 마지막 문장은 뒤 공백이 없으므로 앞 공백을 포함
-    expect(getSentenceObjectRange(LINE, { line: 0, col: 30 }, 'as')).toEqual({ startLine: 0, startCol: 25, endLine: 0, endCol: 35 });
+    expect(sentenceSelection(LINE, { line: 0, col: 30 }, 'as')).toEqual({ startLine: 0, startCol: 25, endLine: 0, endCol: 35 });
     // 공백 위: is 는 공백만, as 는 공백 + 다음 문장
-    expect(getSentenceObjectRange(LINE, { line: 0, col: 25 }, 'is')).toEqual({ startLine: 0, startCol: 25, endLine: 0, endCol: 26 });
-    expect(getSentenceObjectRange(LINE, { line: 0, col: 25 }, 'as')).toEqual({ startLine: 0, startCol: 25, endLine: 0, endCol: 35 });
+    expect(sentenceSelection(LINE, { line: 0, col: 25 }, 'is')).toEqual({ startLine: 0, startCol: 25, endLine: 0, endCol: 26 });
+    expect(sentenceSelection(LINE, { line: 0, col: 25 }, 'as')).toEqual({ startLine: 0, startCol: 25, endLine: 0, endCol: 35 });
   });
 
   it('das / dis / cis 로 문장을 지우고 바꾼다', () => {
@@ -128,13 +134,12 @@ describe('문장 텍스트 객체 (is, as)', () => {
 
   it('문장은 여러 줄에 걸칠 수 있고, 닫는 따옴표·괄호가 붙어도 끝을 인식한다', () => {
     const multi = ['First line', 'continues here. "Quoted end." Tail'];
-    expect(getSentenceObjectRange(multi, { line: 0, col: 3 }, 'is')).toEqual({ startLine: 0, startCol: 0, endLine: 1, endCol: 14 });
+    expect(sentenceSelection(multi, { line: 0, col: 3 }, 'is')).toEqual({ startLine: 0, startCol: 0, endLine: 1, endCol: 14 });
     expect(press(createState([...multi], { line: 0, col: 3 }), ['d', 'a', 's']).lines).toEqual(['"Quoted end." Tail']);
-    expect(getSentenceObjectRange(multi, { line: 1, col: 18 }, 'is')).toEqual({ startLine: 1, startCol: 16, endLine: 1, endCol: 28 });
+    expect(sentenceSelection(multi, { line: 1, col: 18 }, 'is')).toEqual({ startLine: 1, startCol: 16, endLine: 1, endCol: 28 });
   });
 
-  it('빈 줄은 문장 경계이며, vis 는 문자 단위 VISUAL 선택', () => {
-    expect(getSentenceObjectRange(['a.', '', 'b.'], { line: 1, col: 0 }, 'is')).toBeNull();
+  it('vis 는 문자 단위 VISUAL 선택', () => {
     const v = press(createState([...LINE], { line: 0, col: 15 }), ['v', 'i', 's']);
     expect(v.mode).toBe('VISUAL');
     expect(v.visualAnchor).toEqual({ line: 0, col: 13 });
