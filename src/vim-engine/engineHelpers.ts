@@ -163,7 +163,12 @@ export function findShiftRange(
   const earlier = (a: { line: number; col: number }, b: { line: number; col: number }) =>
     a.line < b.line || (a.line === b.line && a.col <= b.col) ? a : b;
   const countKeys = count > 1 ? String(count).split('') : [];
-  // 단어·문장 객체는 연산자용 범위(Vim current_word / current_sent, [count] 가 여러 줄에 걸침)를 씁니다.
+  // 단어·문장 객체와 w/W/e/E 는 연산자용 범위(Vim current_word / current_sent / nv_wordcmd: [count] 가 여러 줄에 걸치고,
+  // 줄의 마지막 단어에서 w 는 다음 줄로 넘어가지 않음)를 씁니다.
+  if (keys.length === 1 && 'wWeE'.includes(keys[0])) {
+    const range = findOperatorRangeByYank(state, keys, count, runHandleKey);
+    if (range) return { startLine: range.start.line, endLine: range.end.line, startCol: range.start.col };
+  }
   if ((keys[0] === 'i' || keys[0] === 'a') && keys.length === 2 && 'wWs'.includes(keys[1])) {
     const range = findOperatorRangeByYank(state, keys, count, runHandleKey);
     if (range) return { startLine: range.start.line, endLine: range.end.line, startCol: range.start.col };
@@ -179,6 +184,10 @@ export function findShiftRange(
   }
   // Vim nv_left: 줄 처음의 h 는 삐 소리만 내고 연산자는 빈 범위(커서 줄)로 계속됩니다 (>h 가 그 줄을 들여씀).
   if ((keys[0] === 'h' || keys[0] === 'ArrowLeft') && keys.length === 1 && state.cursor.col === 0) {
+    return { startLine: state.cursor.line, endLine: state.cursor.line, startCol: 0 };
+  }
+  // nv_right: 연산자와 함께 쓴 l 은 줄 끝(빈 줄 포함)에서도 실패하지 않고 커서 줄에 머뭅니다 (>l, 4>l).
+  if ((keys[0] === 'l' || keys[0] === 'ArrowRight') && keys.length === 1) {
     return { startLine: state.cursor.line, endLine: state.cursor.line, startCol: 0 };
   }
   let moved = base;
@@ -214,7 +223,8 @@ export function isEmptyRegionMotion(state: VimEditorState, motionKeys: string[],
     probe = runHandleKey(probe, k);
     if (probe.bell) return false;
   }
-  return probe.mode === 'NORMAL' && !probe.pendingKeys && probe.lines === state.lines && !probe.clipboard;
+  // 빈 범위의 y 는 빈 문자열을 복사합니다 (op_yank).
+  return probe.mode === 'NORMAL' && !probe.pendingKeys && probe.lines === state.lines && (!probe.clipboard || probe.clipboard.content === '');
 }
 
 /**
@@ -732,10 +742,13 @@ export function executePutVariant(
 ): VimEditorState {
   const res = putFromRegister(state, state.activeRegister, isBefore, count, options);
   // Vim do_put 은 레지스터가 비었는지 보기 전에 u_save 하므로, 실패해도 빈 실행 취소 항목이 남습니다 (`u` 가 그 커서로 돌아감).
-  if (isEmptyPut(state, res)) return emptyRegisterBell(pushUndoSnapshot(state));
   const regPrefix = state.activeRegister ? ['"', state.activeRegister] : [];
   const countAndBase = count > 1 ? [String(count), ...baseKeys] : baseKeys;
   const keys = [...regPrefix, ...countAndBase];
+  // nv_put 은 prep_redo 를 먼저 하므로 빈 레지스터로 실패한 붙여넣기도 `.` 대상입니다 (keepRepeatOnFailure 가 남김).
+  if (isEmptyPut(state, res)) {
+    return { ...emptyRegisterBell(pushUndoSnapshot(state)), lastChangeKeys: isReplayingDot ? state.lastChangeKeys : keys };
+  }
   return {
     ...res,
     lastChangeKeys: isReplayingDot ? state.lastChangeKeys : keys,
@@ -758,7 +771,8 @@ export function applyOperatorMotion(
   if (!res) {
     return ringBell(state);
   }
-  const synced = syncRegisters(state, res, op === 'y');
+  // ( ) 와 함께 쓴 삭제는 한 줄 안이어도 "1 에 들어갑니다 (Vim nv_brace 의 use_reg_one).
+  const synced = syncRegisters(state, res, op === 'y', motionKey === '(' || motionKey === ')');
   const motionKeys = motionKey === 'Enter' ? ['Enter'] : [...motionKey];
   const opKeys = hasCount ? [String(parsed.totalCount), op, ...motionKeys] : [op, ...motionKeys];
   if (op === 'c') {

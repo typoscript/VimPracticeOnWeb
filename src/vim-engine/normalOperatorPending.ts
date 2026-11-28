@@ -19,7 +19,8 @@ import {
 } from './surroundEngine';
 import { applyAbolishCoerce } from './abolishEngine';
 import { findGitConflictAtLine, chooseGitConflict } from './gitConflictEngine';
-import { setMark, jumpToMark, executeMarkOperator, isValidMarkJumpChar } from './marks';
+import { setMark, jumpToMark, isValidMarkJumpChar } from './marks';
+import { executeMarkMotionOperator } from './markOperator';
 import { indentLines, formatIndentLines, formatIndentRange } from './lineOperators';
 import {
   ringBell,
@@ -130,8 +131,8 @@ export function handleNormalMarkPending(
     const op = markOpMatch[2] as 'd' | 'c' | 'y' | 'v';
     const quote = markOpMatch[3] as "'" | '`';
     if (isValidMarkJumpChar(key)) {
-      const res = executeMarkOperator(state, op, key, quote === "'");
-      const synced = syncRegisters(state, res, op === 'y');
+      const res = executeMarkMotionOperator(state, op, key, quote === "'");
+      const synced = syncRegisters(state, res, op === 'y', true);
       if (op === 'c') {
         return {
           ...synced,

@@ -1,23 +1,15 @@
 import { VimEditorState } from './types';
-import { executeOperatorMotion } from './operatorMotion';
+import { executeOperatorMotion, applyOperatorToMotionRange } from './operatorMotion';
+import { operatorWordMotionEnd } from './operatorWordMotion';
+import { executeSearchRepeatOperator } from './searchMode';
 import { clampCursor, getFirstNonBlankCol } from './cursor';
 import {
-  moveToNextWord,
-  moveToNextWORD,
-  moveToWordEnd,
-  moveToWORDEnd,
-} from './motions';
-import {
-  deleteWord,
-  changeWord,
   changeLine,
   changeToEndOfLine,
   pushUndoSnapshot,
-  getCharType,
 } from './operators';
 import { syncRegisters } from './registers';
 import { diffObtain, diffPut } from './diffEngine';
-import { deleteVisualSelection, yankVisualSelection } from './visual';
 import { findMatchingBracket } from './bracketMatch';
 import { computePercentJumpTarget } from './extraMotions';
 import { executeLinewiseObjectOperator } from './textObjects';
@@ -30,39 +22,10 @@ import {
 } from './engineHelpers';
 import { PrefixStepResult } from './normalGPrefix';
 
-function computeWordTarget(
-  lines: string[],
-  cursor: VimEditorState['cursor'],
-  key: 'w' | 'W' | 'e' | 'E',
-  count: number
-) {
-  let target = cursor;
-  for (let i = 0; i < count; i++) {
-    if (key === 'w') target = moveToNextWord(lines, target);
-    else if (key === 'W') target = moveToNextWORD(lines, target);
-    else if (key === 'e') target = moveToWordEnd(lines, target);
-    else target = moveToWORDEnd(lines, target);
-  }
-  return target;
-}
-
-/**
- * d/y + e·E·W 의 포함 끝 위치. W 는 배타적 모션이라 한 칸 앞에서 끝나고, 다음 줄로 넘어가면
- * Vim 처럼 지나온 마지막 WORD 가 있던 줄 끝에서 멈춥니다 (dW 가 다음 줄 첫 글자를 지우지 않음).
- */
-function wordOperatorEnd(
-  state: VimEditorState,
-  key: string,
-  target: VimEditorState['cursor']
-): VimEditorState['cursor'] {
-  if (key !== 'W') return target;
-  if (target.line === state.cursor.line && target.col > state.cursor.col) return { line: target.line, col: target.col - 1 };
-  if (target.line > state.cursor.line) {
-    const endLine = target.line - 1;
-    const endCol = Math.max(0, (state.lines[endLine] ?? '').length - 1);
-    if (endLine > state.cursor.line || endCol >= state.cursor.col) return { line: endLine, col: endCol };
-  }
-  return target;
+/** d / c / y + [count]w·W·e·E (Vim nv_wordcmd: 여러 줄에 걸치고, 빈 줄의 dw 는 exclusive-linewise 로 dd 처럼) */
+function applyWordMotionOperator(state: VimEditorState, op: 'd' | 'c' | 'y', key: 'w' | 'W' | 'e' | 'E', count: number): VimEditorState {
+  const { end, inclusive } = operatorWordMotionEnd(state.lines, state.cursor, key, count, op);
+  return applyOperatorToMotionRange(state, op, state.cursor, end, inclusive);
 }
 
 function buildPendingSubOperator(state: VimEditorState, key: string): VimEditorState | null {
@@ -150,7 +113,7 @@ export function handleNormalDCYCombineShortcut(
         endLine: Math.max(state.cursor.line, pctTarget.line),
       };
       const res = executeLinewiseObjectOperator(state, op, range);
-      const synced = syncRegisters(state, res, op === 'y');
+      const synced = syncRegisters(state, res, op === 'y', true);
       const opKeys = [op, String(parsed.totalCount), '%'];
       if (op === 'c') {
         return { ...synced, currentChangeKeys: isReplayingDot ? state.currentChangeKeys : opKeys };
@@ -173,28 +136,21 @@ export function handleNormalDCYCombineShortcut(
         pendingKeys: undefined,
       };
     }
-    const stateWithAnchor: VimEditorState = {
-      ...state,
-      mode: 'VISUAL',
-      visualAnchor: state.cursor,
-      cursor: matchPos,
-    };
+    // % 는 포함 모션입니다 (여러 줄 d% 가 들여쓰기 안에서 시작해 줄 끝에서 끝나면 op_delete 규칙으로 줄 단위).
+    const res = applyOperatorToMotionRange(state, op, state.cursor, matchPos, true);
     if (op === 'd') {
-      const res = deleteVisualSelection(stateWithAnchor);
       return {
-        ...syncRegisters(state, res, false),
+        ...syncRegisters(state, res, false, true),
         lastChangeKeys: isReplayingDot ? state.lastChangeKeys : [op, '%'],
       };
     }
     if (op === 'c') {
-      const res = deleteVisualSelection(stateWithAnchor);
       return {
-        ...syncRegisters(state, res, false),
-        mode: 'INSERT',
+        ...syncRegisters(state, res, false, true),
         currentChangeKeys: isReplayingDot ? state.currentChangeKeys : [op, '%'],
       };
     }
-    return syncRegisters(state, yankVisualSelection(stateWithAnchor), true);
+    return syncRegisters(state, res, true);
   }
 
   if (
@@ -237,29 +193,6 @@ export function handleNormalDCYOperators(
   parsed: ParsedPending,
   isReplayingDot: boolean
 ): PrefixStepResult | null {
-  // Vim exclusive-linewise 규칙: 빈 줄(마지막 줄 제외)에서 dw / cw / dW / cW 는 그 줄을 줄 단위로 다룹니다
-  // (dw = dd, cw = cc, yw = yy). 단, `.` 반복 키는 원래 키(d w)로 남깁니다.
-  if (
-    (parsed.operator === 'd' || parsed.operator === 'c' || parsed.operator === 'y') &&
-    (key === 'w' || key === 'W') &&
-    parsed.totalCount === 1 &&
-    (state.lines[state.cursor.line] ?? '') === '' &&
-    state.cursor.line < state.lines.length - 1
-  ) {
-    const op = parsed.operator;
-    const res = handleNormalDCYOperators(state, op, parsed, true);
-    if (res?.handled && op === 'y') return res;
-    if (res?.handled) {
-      const keys = [op, key];
-      return {
-        handled: true,
-        state:
-          op === 'd'
-            ? { ...res.state, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : keys }
-            : { ...res.state, currentChangeKeys: isReplayingDot ? state.currentChangeKeys : keys },
-      };
-    }
-  }
   if (parsed.operator === 'd') {
     if (key === 'o') return { handled: true, state: { ...diffObtain(state), pendingKeys: undefined } };
     if (key === 'p') return { handled: true, state: { ...diffPut(state), pendingKeys: undefined } };
@@ -276,25 +209,8 @@ export function handleNormalDCYOperators(
       };
     }
     if (key === 'w' || key === 'e' || key === 'W' || key === 'E') {
-      const target = computeWordTarget(state.lines, state.cursor, key, parsed.totalCount);
       const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'd', key] : ['d', key];
-      if (key === 'e' || key === 'E' || key === 'W') {
-        const stateWithAnchor: VimEditorState = {
-          ...state,
-          mode: 'VISUAL',
-          visualAnchor: state.cursor,
-          cursor: wordOperatorEnd(state, key, target),
-        };
-        const delRes = deleteVisualSelection(stateWithAnchor);
-        return {
-          handled: true,
-          state: {
-            ...syncRegisters(state, delRes, false),
-            lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
-          },
-        };
-      }
-      const res = deleteWord(state, parsed.totalCount);
+      const res = applyWordMotionOperator(state, 'd', key, parsed.totalCount);
       return {
         handled: true,
         state: {
@@ -364,7 +280,7 @@ export function handleNormalDCYOperators(
       return {
         handled: true,
         state: {
-          ...syncRegisters(state, res, false),
+          ...syncRegisters(state, res, false, true),
           lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys,
         },
       };
@@ -373,6 +289,11 @@ export function handleNormalDCYOperators(
     if (sub) return { handled: true, state: sub };
     if (key === '/' || key === '?') {
       return { handled: true, state: startSearchOperator(state, 'd', key, parsed.totalCount) };
+    }
+    if (key === 'n' || key === 'N') {
+      const res = executeSearchRepeatOperator(state, 'd', key === 'N');
+      if (res.bell) return { handled: true, state: res };
+      return { handled: true, state: { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['d', key] } };
     }
     return { handled: false, state: { ...state, pendingKeys: undefined } };
   }
@@ -392,35 +313,11 @@ export function handleNormalDCYOperators(
     }
     if (key === 'w' || key === 'W' || key === 'e' || key === 'E') {
       const cKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'c', key] : ['c', key];
-      if (key === 'w') {
-        const res = changeWord(state, parsed.totalCount);
-        return {
-          handled: true,
-          state: {
-            ...syncRegisters(state, res, false),
-            currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
-          },
-        };
-      }
-      const target = computeWordTarget(
-        state.lines,
-        state.cursor,
-        key === 'W' ? 'E' : key,
-        parsed.totalCount
-      );
-      const stateWithAnchor: VimEditorState = {
-        ...state,
-        mode: 'VISUAL',
-        visualAnchor: state.cursor,
-        cursor: target,
-      };
-      const delRes = deleteVisualSelection(stateWithAnchor);
+      const res = applyWordMotionOperator(state, 'c', key, parsed.totalCount);
       return {
         handled: true,
         state: {
-          ...syncRegisters(state, delRes, false),
-          mode: 'INSERT',
-          cursor: { line: state.cursor.line, col: state.cursor.col },
+          ...syncRegisters(state, res, false),
           currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
         },
       };
@@ -454,7 +351,7 @@ export function handleNormalDCYOperators(
       return {
         handled: true,
         state: {
-          ...syncRegisters(state, res, false),
+          ...syncRegisters(state, res, false, false, (state.lines[state.cursor.line] ?? '') === ''),
           currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
         },
       };
@@ -465,7 +362,7 @@ export function handleNormalDCYOperators(
       return {
         handled: true,
         state: {
-          ...syncRegisters(state, res, false),
+          ...syncRegisters(state, res, false, true),
           currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
         },
       };
@@ -474,6 +371,11 @@ export function handleNormalDCYOperators(
     if (sub) return { handled: true, state: sub };
     if (key === '/' || key === '?') {
       return { handled: true, state: startSearchOperator(state, 'c', key, parsed.totalCount) };
+    }
+    if (key === 'n' || key === 'N') {
+      const res = executeSearchRepeatOperator(state, 'c', key === 'N');
+      if (res.bell) return { handled: true, state: res };
+      return { handled: true, state: { ...res, currentChangeKeys: isReplayingDot ? state.currentChangeKeys : ['c', key] } };
     }
     return { handled: false, state: { ...state, pendingKeys: undefined } };
   }
@@ -484,52 +386,12 @@ export function handleNormalDCYOperators(
       return { handled: true, state: syncRegisters(state, yankFoldOrLine(state, parsed.totalCount), true) };
     }
     if (key === 'w' || key === 'e' || key === 'W' || key === 'E') {
-      const target = computeWordTarget(state.lines, state.cursor, key, parsed.totalCount);
-      if (key === 'e' || key === 'E' || key === 'W') {
-        const stateWithAnchor: VimEditorState = {
-          ...state,
-          mode: 'VISUAL',
-          visualAnchor: state.cursor,
-          cursor: wordOperatorEnd(state, key, target),
-        };
-        return { handled: true, state: syncRegisters(state, yankVisualSelection(stateWithAnchor), true) };
-      }
-      const { line, col } = state.cursor;
-      const curLine = state.lines[line] ?? '';
-      if (curLine.length === 0 && line < state.lines.length - 1) {
-        return {
-          handled: true,
-          state: syncRegisters(
-            state,
-            { ...state, clipboard: { type: 'text', content: '\n' }, pendingKeys: undefined },
-            true
-          ),
-        };
-      }
-      let endCol = col;
-      for (let step = 0; step < parsed.totalCount; step++) {
-        if (endCol >= curLine.length) break;
-        const startType = getCharType(curLine[endCol]);
-        if (startType === 'space') {
-          while (endCol < curLine.length && getCharType(curLine[endCol]) === 'space') endCol++;
-        } else {
-          while (endCol < curLine.length && getCharType(curLine[endCol]) === startType) endCol++;
-          while (endCol < curLine.length && getCharType(curLine[endCol]) === 'space') endCol++;
-        }
-      }
-      return {
-        handled: true,
-        state: syncRegisters(
-          state,
-          { ...state, clipboard: { type: 'text', content: curLine.slice(col, endCol) }, pendingKeys: undefined },
-          true
-        ),
-      };
+      return { handled: true, state: syncRegisters(state, applyWordMotionOperator(state, 'y', key, parsed.totalCount), true) };
     }
     if (key === '0') {
       const { line, col } = state.cursor;
+      // 0열의 y0 은 빈 범위라 빈 문자열을 복사합니다 (Vim op_yank: "" 와 "0 이 비워짐).
       const yanked = (state.lines[line] ?? '').slice(0, col);
-      if (yanked.length === 0) return { handled: true, state: { ...state, pendingKeys: undefined } };
       return {
         handled: true,
         state: syncRegisters(
@@ -568,6 +430,7 @@ export function handleNormalDCYOperators(
     if (key === '/' || key === '?') {
       return { handled: true, state: startSearchOperator(state, 'y', key, parsed.totalCount) };
     }
+    if (key === 'n' || key === 'N') return { handled: true, state: executeSearchRepeatOperator(state, 'y', key === 'N') };
     return { handled: false, state: { ...state, pendingKeys: undefined } };
   }
 

@@ -400,13 +400,15 @@ export function handleNormalViewportAndNavOps(
   // Ctrl-a / Ctrl-x: 커서 위치 숫자 증감
   if ((key === 'Ctrl-a' || key === 'Ctrl+a' || key === 'ctrl-a') && !parsed.operator) {
     const res = modifyNumberAtCursor(state, parsed.totalCount);
-    if (res.lines.join('\n') === state.lines.join('\n')) return ringBell(state);
+    // op_addsub 는 숫자를 찾기 전에 u_save_cursor 하므로 실패해도 빈 실행 취소 항목이 남습니다 (u 가 그 커서로 돌아옴).
+    if (res.lines.join('\n') === state.lines.join('\n')) return ringBell(pushUndoSnapshot(state));
     const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'Ctrl-a'] : ['Ctrl-a'];
     return { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys };
   }
   if ((key === 'Ctrl-x' || key === 'Ctrl+x' || key === 'ctrl-x') && !parsed.operator) {
     const res = modifyNumberAtCursor(state, -parsed.totalCount);
-    if (res.lines.join('\n') === state.lines.join('\n')) return ringBell(state);
+    // op_addsub 는 숫자를 찾기 전에 u_save_cursor 하므로 실패해도 빈 실행 취소 항목이 남습니다 (u 가 그 커서로 돌아옴).
+    if (res.lines.join('\n') === state.lines.join('\n')) return ringBell(pushUndoSnapshot(state));
     const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'Ctrl-x'] : ['Ctrl-x'];
     return { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : lKeys };
   }
@@ -540,6 +542,8 @@ export function handleNormalEditingAndMotionFallback(
   }
 
   if (key === 'Y' && !parsed.operator) {
+    // Y 는 yy 와 같아서(nvim -u NONE) 마지막 줄에서 {count}Y 는 실패합니다 (nv_lineop 의 cursor_down 실패).
+    if (parsed.totalCount > 1 && state.cursor.line >= state.lines.length - 1) return ringBell({ ...state, pendingKeys: undefined });
     return syncRegisters(state, yankFoldOrLine(state, parsed.totalCount), true);
   }
   // Vim: 마지막 줄에서 {count}D / C / S 는 실패합니다 (아래로 count-1 줄을 갈 수 없음).
@@ -598,9 +602,10 @@ export function handleNormalEditingAndMotionFallback(
     const { line, col } = state.cursor;
     const curLine = state.lines[line] ?? '';
     const cKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 's'] : ['s'];
+    // 빈 줄의 s(= cl)는 빈 범위지만 op_delete 가 u_save_cursor 하므로, 입력한 글자도 u 한 번에 사라집니다.
     if (curLine.length === 0) {
       return {
-        ...state,
+        ...pushUndoSnapshot(state),
         mode: 'INSERT',
         pendingKeys: undefined,
         currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
@@ -632,7 +637,7 @@ export function handleNormalEditingAndMotionFallback(
   if (key === 'C' && !parsed.operator) {
     const cKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'C'] : ['C'];
     return {
-      ...syncRegisters(state, changeToEndOfLine(state, parsed.totalCount), false),
+      ...syncRegisters(state, changeToEndOfLine(state, parsed.totalCount), false, false, (state.lines[state.cursor.line] ?? '') === ''),
       currentChangeKeys: isReplayingDot ? state.currentChangeKeys : cKeys,
     };
   }

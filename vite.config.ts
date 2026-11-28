@@ -118,6 +118,8 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'textObjects.ts',
       'extraMotions.ts',
       'operatorMotion.ts',
+      'operatorWordMotion.ts',
+      'markOperator.ts',
       'commentEngine.ts',
       'formatEngine.ts',
       'foldingDetection.ts',

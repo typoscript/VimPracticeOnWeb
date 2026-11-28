@@ -20,7 +20,8 @@ import { jumpGitHunk } from './gitSignsEngine';
 import { jumpGitConflict } from './gitConflictEngine';
 import { jumpToNextSpellError, jumpToPrevSpellError } from './spellEngine';
 import { jumpToFoldEdge } from './folding';
-import { findAdjacentLowercaseMark, recordJump, executeMarkOperator } from './marks';
+import { findAdjacentLowercaseMark, recordJump } from './marks';
+import { executeMarkMotionOperator } from './markOperator';
 import { isKeywordChar } from './wordMotion';
 import { clampCursor } from './cursor';
 import { syncRegisters } from './registers';
@@ -280,8 +281,8 @@ export function handleNormalBracketPrefix(
       if (!found) {
         return { handled: true, state: ringBell(state) };
       }
-      const res = executeMarkOperator(state, op, found.markChar, key === "'");
-      const synced = syncRegisters(state, res, op === 'y');
+      const res = executeMarkMotionOperator(state, op, found.markChar, key === "'");
+      const synced = syncRegisters(state, res, op === 'y', true);
       const opKeys = total > 1 ? [String(total), op, bracket, key] : [op, bracket, key];
       if (op === 'c') {
         return {

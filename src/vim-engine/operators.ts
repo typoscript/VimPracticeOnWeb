@@ -24,9 +24,10 @@ export function deleteLine(state: VimEditorState, count = 1): VimEditorState {
   }
 
   const targetLine = Math.min(line, nextLines.length - 1);
+  // Vim do_pending_operator: 'nostartofline' 이면 줄 단위 삭제 뒤 기억한 열(curswant)로 갑니다 (빈 줄을 지나온 3G 뒤 dd 도 원래 열로).
   const clampedCursor = clampCursor(
     nextLines,
-    { line: targetLine, col: state.cursor.col },
+    { line: targetLine, col: getOptions(state).startofline ? state.cursor.col : state.curswant ?? state.cursor.col },
     'NORMAL'
   );
 
@@ -74,115 +75,15 @@ export function getCharType(ch: string | undefined): CharType {
 }
 
 /**
- * 'dw' / '[count]dw' / 'd[count]w': 현재 커서 위치부터 count개의 단어를 삭제하고 클립보드에 복사합니다.
- */
-export function deleteWord(state: VimEditorState, count = 1): VimEditorState {
-  const { line, col } = state.cursor;
-  const currentLine = state.lines[line] ?? '';
-
-  if (currentLine.length === 0) {
-    return { ...state, pendingKeys: undefined };
-  }
-
-  const stateWithSnapshot = pushUndoSnapshot(state);
-
-  let endCol = col;
-  for (let step = 0; step < count; step++) {
-    if (endCol >= currentLine.length) break;
-    const startType = getCharType(currentLine[endCol]);
-
-    if (startType === 'space') {
-      while (endCol < currentLine.length && getCharType(currentLine[endCol]) === 'space') {
-        endCol++;
-      }
-    } else {
-      while (endCol < currentLine.length && getCharType(currentLine[endCol]) === startType) {
-        endCol++;
-      }
-      while (endCol < currentLine.length && getCharType(currentLine[endCol]) === 'space') {
-        endCol++;
-      }
-    }
-  }
-
-  const deletedText = currentLine.slice(col, endCol);
-  const newLine = currentLine.slice(0, col) + currentLine.slice(endCol);
-  const nextLines = [...state.lines];
-  nextLines[line] = newLine;
-
-  const clampedCursor = clampCursor(nextLines, state.cursor, 'NORMAL');
-
-  return {
-    ...stateWithSnapshot,
-    lines: nextLines,
-    cursor: clampedCursor,
-    clipboard: {
-      type: 'text',
-      content: deletedText,
-    },
-    pendingKeys: undefined,
-  };
-}
-
-/**
- * 'de' / '[count]de': 현재 커서 위치부터 단어의 끝(공백 제외)까지 삭제합니다.
- */
-export function deleteToEndOfWord(state: VimEditorState, count = 1): VimEditorState {
-  const { line, col } = state.cursor;
-  const currentLine = state.lines[line] ?? '';
-
-  if (currentLine.length === 0) {
-    return { ...state, pendingKeys: undefined };
-  }
-
-  const stateWithSnapshot = pushUndoSnapshot(state);
-
-  let endCol = col;
-  for (let step = 0; step < count; step++) {
-    if (endCol >= currentLine.length) break;
-    const startType = getCharType(currentLine[endCol]);
-
-    if (startType === 'space') {
-      while (endCol < currentLine.length && getCharType(currentLine[endCol]) === 'space') {
-        endCol++;
-      }
-    }
-    if (endCol < currentLine.length) {
-      const wordType = getCharType(currentLine[endCol]);
-      while (endCol < currentLine.length && getCharType(currentLine[endCol]) === wordType) {
-        endCol++;
-      }
-    }
-  }
-
-  const deletedText = currentLine.slice(col, endCol);
-  const newLine = currentLine.slice(0, col) + currentLine.slice(endCol);
-  const nextLines = [...state.lines];
-  nextLines[line] = newLine;
-
-  const clampedCursor = clampCursor(nextLines, state.cursor, 'NORMAL');
-
-  return {
-    ...stateWithSnapshot,
-    lines: nextLines,
-    cursor: clampedCursor,
-    clipboard: {
-      type: 'text',
-      content: deletedText,
-    },
-    pendingKeys: undefined,
-  };
-}
-
-/**
  * 'x' / '[count]x': 현재 커서 위치부터 count개의 글자를 삭제합니다.
  */
 export function deleteChar(state: VimEditorState, count = 1): VimEditorState {
   const { line, col } = state.cursor;
   const currentLine = state.lines[line] ?? '';
 
+  // Vim: x 는 dl 이라 빈 줄에서는 빈 범위 — 지울 것은 없지만 빈 실행 취소 항목을 남깁니다 (op_delete 의 u_save_cursor).
   if (currentLine.length === 0) {
-    return { ...state, pendingKeys: undefined };
+    return { ...pushUndoSnapshot(state), pendingKeys: undefined };
   }
 
   const stateWithSnapshot = pushUndoSnapshot(state);
@@ -214,8 +115,9 @@ export function deleteCharBefore(state: VimEditorState, count = 1): VimEditorSta
   const { line, col } = state.cursor;
   const currentLine = state.lines[line] ?? '';
 
+  // Vim: X 는 dh 라 줄 처음에서는 빈 범위 — 빈 실행 취소 항목만 남깁니다.
   if (col === 0 || currentLine.length === 0) {
-    return { ...state, pendingKeys: undefined };
+    return { ...pushUndoSnapshot(state), pendingKeys: undefined };
   }
 
   const stateWithSnapshot = pushUndoSnapshot(state);
@@ -287,76 +189,6 @@ export function undoCurrentLine(state: VimEditorState): VimEditorState {
       toggledText: nextToggled,
       toggledCol: nextToggledCol,
     },
-  };
-}
-
-/**
- * 'cw' / 'c[count]w': 커서 위치부터 단어 끝까지 삭제 후 클립보드에 저장하고 INSERT 모드로 진입합니다.
- */
-export function changeWord(state: VimEditorState, count = 1): VimEditorState {
-  const { line, col } = state.cursor;
-  const currentLine = state.lines[line] ?? '';
-
-  if (currentLine.length === 0) {
-    const stateWithSnapshot = pushUndoSnapshot(state);
-    if (state.lines.length > line + 1) {
-      const nextLines = [
-        ...state.lines.slice(0, line),
-        ...state.lines.slice(line + 1),
-      ];
-      return {
-        ...stateWithSnapshot,
-        lines: nextLines,
-        cursor: { line, col: 0 },
-        mode: 'INSERT',
-        pendingKeys: undefined,
-      };
-    }
-    return {
-      ...stateWithSnapshot,
-      mode: 'INSERT',
-      pendingKeys: undefined,
-    };
-  }
-
-  const stateWithSnapshot = pushUndoSnapshot(state);
-
-  let endCol = col;
-  for (let step = 0; step < count; step++) {
-    if (endCol >= currentLine.length) break;
-    const startType = getCharType(currentLine[endCol]);
-
-    if (startType === 'space') {
-      while (endCol < currentLine.length && getCharType(currentLine[endCol]) === 'space') {
-        endCol++;
-      }
-    } else {
-      while (endCol < currentLine.length && getCharType(currentLine[endCol]) === startType) {
-        endCol++;
-      }
-      if (step < count - 1) {
-        while (endCol < currentLine.length && getCharType(currentLine[endCol]) === 'space') {
-          endCol++;
-        }
-      }
-    }
-  }
-
-  const deletedText = currentLine.slice(col, endCol);
-  const newLine = currentLine.slice(0, col) + currentLine.slice(endCol);
-  const nextLines = [...state.lines];
-  nextLines[line] = newLine;
-
-  return {
-    ...stateWithSnapshot,
-    lines: nextLines,
-    cursor: { line, col },
-    mode: 'INSERT',
-    clipboard: {
-      type: 'text',
-      content: deletedText,
-    },
-    pendingKeys: undefined,
   };
 }
 

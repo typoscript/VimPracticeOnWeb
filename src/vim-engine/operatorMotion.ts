@@ -1,5 +1,5 @@
 import { CursorPosition, VimEditorState } from './types';
-import { clampCursor, getFirstNonBlankCol } from './cursor';
+import { clampCursor } from './cursor';
 import { getOptions } from './setOptionsCore';
 import { findParagraphTarget } from './advancedMotions';
 import { pushUndoSnapshot } from './operators';
@@ -93,8 +93,9 @@ export function executeOperatorMotion(
 
     case 'h':
     case 'ArrowLeft':
-      // Vim nv_left: 줄 처음에서는 삐 소리만 내고 연산자는 빈 범위로 계속됩니다 (ch 는 입력 모드로).
-      if (cursor.col <= 0) return op === 'c' ? emptyRegion(state, op) : null;
+      // Vim nv_left: 줄 처음에서는 삐 소리(beep_flush: 매크로 중단)를 내고 연산자는 빈 범위로 계속됩니다
+      // (ch 는 입력 모드, dh 는 빈 실행 취소 항목, yh 는 "" 복사).
+      if (cursor.col <= 0) return op === 'c' ? emptyRegion(state, op) : { ...emptyRegion(state, op), bell: true };
       return applyCharwise(state, op, { line: cursor.line, col: Math.max(0, cursor.col - n) }, cursor);
 
     case 'l':
@@ -130,7 +131,8 @@ export function executeOperatorMotion(
         target = motionKey === 'b' ? moveToPrevWord(lines, target) : moveToPrevWORD(lines, target);
       }
       if (target.line === cursor.line && target.col === cursor.col) return null;
-      return applyCharwise(state, op, target, cursor);
+      // b / B 는 배타적이라 끝(원래 커서)이 0열이면 :help exclusive-linewise 를 따릅니다 (빈 줄 아래 0열의 dB 는 빈 줄을 줄 단위로).
+      return applyExclusive(state, op, target, cursor);
     }
   }
 
@@ -139,11 +141,38 @@ export function executeOperatorMotion(
 
 /**
  * 움직이지 않고 성공한 모션의 빈 범위 (Vim: 'cpoptions' 에 E 가 없으면 빈 범위도 오류가 아님).
- * d / y 는 아무것도 하지 않고, c 는 그 자리에서 입력 모드로 들어갑니다 (c0 / c^ / ch 처럼).
+ * d 는 아무것도 지우지 않지만 빈 실행 취소 항목을 남기고(op_delete 의 `if (oap->empty) return u_save_cursor()`),
+ * y 는 빈 문자열을 복사하며(op_yank), c 는 그 자리에서 입력 모드로 들어갑니다 (c0 / c^ / ch 처럼).
  */
-function emptyRegion(state: VimEditorState, op: Operator): VimEditorState {
+export function emptyRegion(state: VimEditorState, op: Operator): VimEditorState {
   if (op === 'c') return { ...pushUndoSnapshot(state), mode: 'INSERT', pendingKeys: undefined };
-  return { ...state, pendingKeys: undefined };
+  if (op === 'y') return { ...state, clipboard: { type: 'text', content: '' }, pendingKeys: undefined };
+  return { ...pushUndoSnapshot(state), pendingKeys: undefined };
+}
+
+/** Vim inindent(0): 위치 앞이 모두 공백·탭인지 (들여쓰기 안 또는 첫 비공백 위) */
+function inIndent(lineText: string, col: number): boolean {
+  return /^[ \t]*$/.test(lineText.slice(0, col));
+}
+
+/**
+ * 모션이 정한 범위(from → to, inclusive 여부)에 d / c / y 를 적용합니다 (Vim do_pending_operator → op_delete / op_change / op_yank).
+ * 방향은 상관없고, 배타적 빈 범위는 emptyRegion, 배타적 끝이 다음 줄 0열이면 :help exclusive-linewise,
+ * 여러 줄 문자 단위 d 는 op_delete 의 줄 단위 규칙을 따릅니다.
+ */
+export function applyOperatorToMotionRange(
+  state: VimEditorState,
+  op: Operator,
+  from: CursorPosition,
+  to: CursorPosition,
+  inclusive: boolean
+): VimEditorState {
+  const backward = to.line < from.line || (to.line === from.line && to.col < from.col);
+  const start = backward ? to : from;
+  const end = backward ? from : to;
+  if (inclusive) return applyCharwise(state, op, start, { line: end.line, col: end.col + 1 });
+  if (start.line === end.line && start.col === end.col) return emptyRegion(state, op);
+  return applyExclusive(state, op, start, end);
 }
 
 /**
@@ -153,14 +182,17 @@ function emptyRegion(state: VimEditorState, op: Operator): VimEditorState {
  */
 function applyExclusive(state: VimEditorState, op: Operator, start: CursorPosition, end: CursorPosition): VimEditorState {
   if (end.col === 0 && end.line > start.line) {
-    const firstNonBlank = getFirstNonBlankCol(state.lines[start.line] ?? '');
-    if (start.col <= firstNonBlank) return applyLinewise(state, op, start.line, end.line - 1);
+    if (inIndent(state.lines[start.line] ?? '', start.col)) return applyLinewise(state, op, start.line, end.line - 1, true);
   }
   return applyCharwise(state, op, start, end);
 }
 
-/** startLine ~ endLine 줄 전체에 연산자를 적용합니다. */
-function applyLinewise(state: VimEditorState, op: Operator, startLine: number, endLine: number): VimEditorState {
+/**
+ * startLine ~ endLine 줄 전체에 연산자를 적용합니다.
+ * endAdjusted: 배타적 끝을 이전 줄로 옮겨 줄 단위가 된 범위 (Vim oap->end_adjusted). 이때 d 뒤 커서는 첫 비공백입니다
+ * (op_delete 의 beginline 뒤 'nostartofline' 열 복원이 end_adjusted 에서는 일어나지 않음).
+ */
+function applyLinewise(state: VimEditorState, op: Operator, startLine: number, endLine: number, endAdjusted = false): VimEditorState {
   const content = state.lines.slice(startLine, endLine + 1).join('\n');
   const clipboard = { type: 'line' as const, content };
 
@@ -197,9 +229,9 @@ function applyLinewise(state: VimEditorState, op: Operator, startLine: number, e
   const nextLines = before.length + after.length === 0 ? [''] : [...before, ...after];
   const targetLine = Math.min(startLine, nextLines.length - 1);
   // 'nostartofline'(기본값)이면 Vim 처럼 원래 열을 유지합니다 (dG, dk, dgg).
-  const cursor = getOptions(state).startofline
+  const cursor = getOptions(state).startofline || endAdjusted
     ? moveToFirstNonBlank(nextLines, { line: targetLine, col: 0 })
-    : clampCursor(nextLines, { line: targetLine, col: state.cursor.col }, 'NORMAL');
+    : clampCursor(nextLines, { line: targetLine, col: state.curswant ?? state.cursor.col }, 'NORMAL');
   return {
     ...stateWithSnapshot,
     lines: nextLines,
@@ -226,12 +258,13 @@ function applyCharwise(
   const startText = lines[start.line] ?? '';
   const endText = lines[realEnd.line] ?? '';
 
-  // Vim op_delete: 여러 줄에 걸친 문자 단위 삭제가 들여쓰기 안에서 시작하고 끝 뒤에 공백만 남으면 줄 단위가 됩니다.
+  // Vim op_delete: 여러 줄에 걸친 문자 단위 삭제가 들여쓰기 안에서 시작하고 끝 뒤에 공백만 남으면 줄 단위가 됩니다
+  // (빈 줄에서 de / d2w / d% 가 다음 줄 끝까지 지우면 두 줄이 모두 사라짐).
   if (
     op === 'd' &&
     realEnd.line > start.line &&
-    start.col <= getFirstNonBlankCol(startText) &&
-    endText.slice(realEnd.col).trim() === ''
+    inIndent(startText, start.col) &&
+    /^[ \t]*$/.test(endText.slice(realEnd.col))
   ) {
     return applyLinewise(state, op, start.line, realEnd.line);
   }

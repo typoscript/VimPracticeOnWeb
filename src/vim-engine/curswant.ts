@@ -21,6 +21,8 @@ function keepsCurswant(prev: VimEditorState, key: string): boolean {
   const nosol = !getOptions(prev).startofline;
   if (countOnly && ALWAYS_VERTICAL_KEYS.has(key)) return true;
   if (countOnly && nosol && NOSOL_VERTICAL_KEYS.has(key)) return true;
+  // {count}% 는 줄로 가는 세로 이동입니다 (nv_percent → beginline(BL_SOL|BL_FIX), 'nostartofline' 이면 기억한 열).
+  if (nosol && key === '%' && /^[1-9][0-9]*$/.test(pending)) return true;
   if (/^([1-9][0-9]*)?g$/.test(pending)) return key === 'j' || key === 'k' || (key === 'g' && nosol);
   if (/^([1-9][0-9]*)?z$/.test(pending)) return key === 'z' || key === 't' || key === 'b';
   return false;

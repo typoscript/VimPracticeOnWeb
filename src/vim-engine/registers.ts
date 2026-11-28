@@ -16,11 +16,15 @@ export {
 
 /**
  * 연산(d, y, c, x 등) 완료 후 activeRegister에 따라 registers와 clipboard를 동기화합니다.
+ * useRegOne: `% ( ) \` / ? n N { }` 모션과 함께 쓴 삭제는 한 줄 안이어도 "1 에 넣습니다 (Vim oap->use_reg_one, "- 에도 넣음).
  */
 export function syncRegisters(
   prevState: VimEditorState,
   nextState: VimEditorState,
-  isYank: boolean
+  isYank: boolean,
+  useRegOne = false,
+  /** 빈 줄의 C / c$ 처럼 op_change 가 빈 문자열을 지운 것으로 기록하는 경우 (Vim 은 빈 줄 d$ 와 달리 "" 와 "- 를 비움) */
+  writeEmptyDelete = false
 ): VimEditorState {
   const reg = prevState.activeRegister;
 
@@ -36,7 +40,7 @@ export function syncRegisters(
 
   const clip = nextState.clipboard;
   // Vim op_delete: 빈 범위(`d0` 를 0열에서, 마지막 빈 줄의 `vd`·`vc`)는 지울 것이 없어 레지스터를 건드리지 않습니다 (복사 `y0` 는 "" 를 씀).
-  if (clip && !isYank && clip.type !== 'line' && clip.content === '') {
+  if (clip && !isYank && !writeEmptyDelete && clip.type !== 'line' && clip.content === '') {
     return {
       ...nextState,
       clipboard: prevState.clipboard,
@@ -134,7 +138,7 @@ export function syncRegisters(
     // 삭제/변경(d, c, x, s, D, C 등) 연산:
     // 1) 줄 단위(line)이거나 개행(\n)을 포함하는 다중 줄 삭제는 "1 ~ "9 번호 레지스터를 시프트하여 "1 에 기록
     const isMultiOrLineDelete = regType === 'line' || clip.content.includes('\n');
-    if (isMultiOrLineDelete) {
+    if (isMultiOrLineDelete || useRegOne) {
       for (let i = 9; i >= 2; i--) {
         const prevEntry = newRegisters[String(i - 1)];
         if (prevEntry) {
@@ -146,7 +150,8 @@ export function syncRegisters(
         content: clip.content,
         ...blockWidthProp,
       };
-    } else if ((!reg || reg === '"') && clip.content.length > 0) {
+    }
+    if (!isMultiOrLineDelete && (!reg || reg === '"') && (clip.content.length > 0 || writeEmptyDelete)) {
       // 2) 명명된 레지스터 지정이 없는 1줄 미만 소규모 삭제는 "- (small delete register)에 기록
       newRegisters['-'] = {
         type: 'char',

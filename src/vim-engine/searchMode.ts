@@ -1,6 +1,7 @@
 import { VimEditorState, CursorPosition } from './types';
 import { clampCursor } from './cursor';
 import { pushUndoSnapshot } from './operators';
+import { applyOperatorToMotionRange } from './operatorMotion';
 import { syncRegisters } from './registers';
 import {
   applySearchOffset,
@@ -83,95 +84,9 @@ export function executeSearchOperator(
     };
   }
 
-  // Character-wise operator
-  let start = from;
-  let end = to;
-  if (from.line > to.line || (from.line === to.line && from.col > to.col)) {
-    start = to;
-    end = from;
-  }
-
-  if (start.line === end.line) {
-    const lineText = state.lines[start.line] ?? '';
-    const endOffset = isEndInclusive ? 1 : 0;
-    const sCol = Math.max(0, Math.min(lineText.length, start.col));
-    const eCol = Math.max(sCol, Math.min(lineText.length, end.col + endOffset));
-    const textFragment = lineText.slice(sCol, eCol);
-
-    if (op === 'y') {
-      return {
-        ...state,
-        clipboard: { type: 'text', content: textFragment },
-      };
-    }
-
-    const stateWithSnapshot = pushUndoSnapshot(state);
-    const newLine = lineText.slice(0, sCol) + lineText.slice(eCol);
-    const nextLines = [...state.lines];
-    nextLines[start.line] = newLine;
-
-    if (op === 'c') {
-      return {
-        ...stateWithSnapshot,
-        lines: nextLines,
-        mode: 'INSERT',
-        cursor: { line: start.line, col: sCol },
-        clipboard: { type: 'text', content: textFragment },
-      };
-    }
-
-    return {
-      ...stateWithSnapshot,
-      lines: nextLines,
-      cursor: clampCursor(nextLines, { line: start.line, col: Math.min(sCol, Math.max(0, newLine.length - 1)) }, 'NORMAL'),
-      clipboard: { type: 'text', content: textFragment },
-    };
-  }
-
-  // Multi-line character-wise
-  const firstLineText = state.lines[start.line] ?? '';
-  const lastLineText = state.lines[end.line] ?? '';
-  const endOffset = isEndInclusive ? 1 : 0;
-  const sCol = Math.max(0, Math.min(firstLineText.length, start.col));
-  const eCol = Math.max(0, Math.min(lastLineText.length, end.col + endOffset));
-
-  const textFragments = [
-    firstLineText.slice(sCol),
-    ...state.lines.slice(start.line + 1, end.line),
-    lastLineText.slice(0, eCol),
-  ].join('\n');
-
-  if (op === 'y') {
-    return {
-      ...state,
-      clipboard: { type: 'text', content: textFragments },
-    };
-  }
-
-  const stateWithSnapshot = pushUndoSnapshot(state);
-  const mergedLine = firstLineText.slice(0, sCol) + lastLineText.slice(eCol);
-  const nextLines = [
-    ...state.lines.slice(0, start.line),
-    mergedLine,
-    ...state.lines.slice(end.line + 1),
-  ];
-
-  if (op === 'c') {
-    return {
-      ...stateWithSnapshot,
-      lines: nextLines,
-      mode: 'INSERT',
-      cursor: { line: start.line, col: sCol },
-      clipboard: { type: 'text', content: textFragments },
-    };
-  }
-
-  return {
-    ...stateWithSnapshot,
-    lines: nextLines,
-    cursor: clampCursor(nextLines, { line: start.line, col: Math.min(sCol, Math.max(0, mergedLine.length - 1)) }, 'NORMAL'),
-    clipboard: { type: 'text', content: textFragments },
-  };
+  // 문자 단위: `e` 오프셋은 inclusive, 그 밖은 exclusive (:help exclusive-linewise·op_delete 줄 단위 규칙 포함)
+  if (op !== 'd' && op !== 'c' && op !== 'y') return state;
+  return applyOperatorToMotionRange(state, op, from, to, isEndInclusive);
 }
 
 /**
@@ -500,7 +415,7 @@ export function executeSearchQuery(
       isLinewise,
       offset?.type === 'end'
     );
-    const synced = syncRegisters(state, res, op === 'y');
+    const synced = syncRegisters(state, res, op === 'y', true);
     const opKeys = [op, delimChar, ...rawQuery.split(''), 'Enter'];
 
     if (op === 'c') {
@@ -591,6 +506,29 @@ export function repeatSearch(state: VimEditorState, reverse: boolean): VimEditor
       : msg('다음 검색 결과 ({v}/{matchesCount}): {lastSearchQuery}', { v: matchIdx + 1, matchesCount: matches.length, lastSearchQuery: state.lastSearchQuery }),
     pendingKeys: undefined,
   };
+}
+
+/**
+ * d / c / y + n·N: 마지막 검색을 반복한 위치까지 연산합니다 (문자 단위 exclusive, `e` 오프셋은 inclusive, 줄 오프셋은 줄 단위).
+ * 패턴이 없거나 찾지 못하면 실패(bell)입니다.
+ */
+export function executeSearchRepeatOperator(state: VimEditorState, op: 'd' | 'c' | 'y', reverse: boolean): VimEditorState {
+  if (!state.lastSearchQuery) return { ...state, pendingKeys: undefined, bell: true, commandMessage: msg('E35: 이전 정규식이 없습니다') };
+  const opts = getOptions(state);
+  const matches = findMatches(state.lines, state.lastSearchQuery, opts);
+  const forward = (state.lastSearchDirection !== 'backward') !== reverse;
+  const found = matches.length > 0 ? findSearchTarget(state.lines, matches, state.cursor, state.lastSearchOffset, forward) : null;
+  if (!found || (opts.wrapscan === false && found.wrapped)) {
+    return {
+      ...state,
+      pendingKeys: undefined,
+      bell: true,
+      commandMessage: msg('E486: 패턴을 찾을 수 없습니다: {lastSearchQuery}', { lastSearchQuery: state.lastSearchQuery }),
+    };
+  }
+  const offset = state.lastSearchOffset;
+  const res = executeSearchOperator(state, op, state.cursor, found.target, offset?.type === 'line', offset?.type === 'end');
+  return { ...syncRegisters(state, res, op === 'y', true), pendingKeys: undefined };
 }
 
 /**

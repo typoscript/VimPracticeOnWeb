@@ -89,7 +89,7 @@ describe('Marks (m{a-z}, \'{a-z}, `{a-z}) & Jump List (Ctrl-o, Ctrl-i)', () => {
     expect(state.clipboard?.type).toBe('line');
   });
 
-  it('d`a: 현재 커서부터 마크 a 좌표까지 문자 단위(character-wise)로 삭제한다', () => {
+  it('d`a: 현재 커서부터 마크 a 좌표까지 배타적 문자 단위(exclusive)로 삭제한다 (Neovim: 끝 글자는 남음)', () => {
     let state: VimEditorState = {
       lines: ['hello world foo bar'],
       cursor: { line: 0, col: 6 }, // 'w'
@@ -104,12 +104,12 @@ describe('Marks (m{a-z}, \'{a-z}, `{a-z}) & Jump List (Ctrl-o, Ctrl-i)', () => {
     state = handleKey(state, 'e');
     expect(state.cursor.col).toBe(10);
 
-    // d`a 실행: col 6부터 10까지 "world" 삭제
+    // d`a 실행: `a 는 배타적 모션이라 col 6부터 9까지 "worl" 삭제 (커서 쪽 끝 'd' 는 남음, nvim 과 같음)
     state = handleKey(state, 'd');
     state = handleKey(state, '`');
     state = handleKey(state, 'a');
 
-    expect(state.lines).toEqual(['hello  foo bar']);
+    expect(state.lines).toEqual(['hello d foo bar']);
   });
 
   it('c\'a 및 y\'a 연산자 결합이 정상 동작한다', () => {
@@ -530,13 +530,13 @@ describe('Line and Character Operators (J, ~, >>, <<, ==, Ctrl-a, Ctrl-x)', () =
       state = handleKey(state, ']');
       expect(state.cursor).toEqual({ line: 0, col: 13 });
 
-      // 커서를 `[`(11)로 옮기고 d`] 로 방금 붙여넣은 'bar' 삭제
+      // 커서를 `[`(11)로 옮기고 d`] 로 삭제: `] 는 배타적이라 'ba' 만 지워집니다 (nvim 과 같음)
       state = handleKey(state, '`');
       state = handleKey(state, '[');
       state = handleKey(state, 'd');
       state = handleKey(state, '`');
       state = handleKey(state, ']');
-      expect(state.lines[0]).toBe('hello world');
+      expect(state.lines[0]).toBe('hello worldr');
     });
 
     it("'< / '> / `< / `> 는 마지막 Visual 선택의 시작/끝으로 이동하고 Visual/연산자/미설정 E20·:marks 를 지원한다", () => {

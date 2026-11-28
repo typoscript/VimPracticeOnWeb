@@ -188,6 +188,8 @@ function runEngine(c: FuzzCase): Snapshot {
   try {
     for (const cmd of c.commands) {
       for (const k of toEngineKeys(cmd)) s = handleKey(s, k);
+      // 생성기가 [count] 뒤에 0 모션을 붙이면 '20' 처럼 count 만 남는데, Neovim 은 feedkeys('x') 가 끝날 때 남은 count 를 버립니다.
+      if (s.mode === 'NORMAL' && s.pendingKeys && /^[1-9][0-9]*$/.test(s.pendingKeys)) s = { ...s, pendingKeys: undefined };
       // Neovim 쪽과 같게, 명령이 끝났는데 NORMAL 이 아니면 Esc 를 누릅니다.
       if (s.mode !== 'NORMAL') s = handleKey(s, 'Escape');
       steps.push({ lines: s.lines, cursor: { row: s.cursor.line, col: s.cursor.col }, reg: regText(s) });

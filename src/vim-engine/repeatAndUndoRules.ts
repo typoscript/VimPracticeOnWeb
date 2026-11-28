@@ -73,18 +73,32 @@ export function recordRepeatRegister(prev: VimEditorState, next: VimEditorState,
  * 이번 키로 새 실행 취소 스냅샷이 생기고 입력 모드에 들어갔다면 스냅샷 커서를 입력 시작 위치로 바꿉니다.
  * (o/O 처럼 줄이 늘어나는 경우는 원래 줄을 기억하므로 그대로 둡니다.)
  */
-/** 이번 변경이 커서 왼쪽을 지웠는지: 지운 구간이 정확히 [새 커서, 원래 커서) 이고, 커서 자리부터 지워 줄 끝으로 당겨진 것(`d$`, 끝 글자 `x`)으로는 설명되지 않거나 키가 왼쪽 삭제(X, dh, db, dF …)일 때. */
-function isLeftwardDelete(prev: VimEditorState, next: VimEditorState, key: string): boolean {
+/**
+ * 이번 변경이 커서 왼쪽에서 시작하는 삭제인지 보고 그 시작 열을 돌려줍니다 (Vim 은 연산 전에 커서를 범위 시작 oap->start 로 옮긴 뒤 u_save).
+ * X·db·dF 처럼 커서 바로 앞까지 지운 경우와 diW·daw 처럼 커서를 감싼 범위를 지운 경우 모두입니다.
+ * 커서 자리부터 지워 줄 끝으로 당겨진 것(`d$`, 끝 글자 `x`)과 구분이 안 되면 키(X, dh, db, dF …)로 정합니다.
+ */
+function leftwardDeleteStart(prev: VimEditorState, next: VimEditorState, key: string): number | null {
   const before = prev.lines[prev.cursor.line] ?? '';
   const after = next.lines[next.cursor.line] ?? '';
+  const d = before.length - after.length;
+  if (d <= 0) return null;
   const n = next.cursor.col;
   const p = prev.cursor.col;
-  if (after !== before.slice(0, n) + before.slice(p)) return false;
-  const clampedRightDelete = n === after.length - 1 && after.length <= p && before.startsWith(after);
-  if (!clampedRightDelete) return true;
-  const pending = prev.pendingKeys ?? '';
-  if (!pending) return key === 'X';
-  return /[FT]$/.test(pending) || (/d$/.test(pending) && 'hbB0^'.includes(key));
+  // 지운 글자가 무명 레지스터에 들어갔으면 그것으로 범위를 가립니다 (das 처럼 앞뒤 어느 쪽으로도 설명되는 경우).
+  const deleted = next.registers !== prev.registers ? next.registers?.['"']?.content : undefined;
+  const explains = (start: number) =>
+    after === before.slice(0, start) + before.slice(start + d) && (typeof deleted !== 'string' || deleted === before.slice(start, start + d));
+  const clamped = n === after.length - 1;
+  const starts = [n, ...(clamped ? [n + 1] : [])].filter((start) => start < p && start + d >= p && explains(start));
+  if (starts.length === 0) return null;
+  // 커서 자리부터 지워 줄 끝으로 당겨진 것(시작 = 원래 커서)으로도 설명되면 키로 구분합니다.
+  if (clamped && n + 1 === p && explains(p)) {
+    const pending = prev.pendingKeys ?? '';
+    if (!pending) return key === 'X' ? starts[0] : null;
+    return /[FT]$/.test(pending) || (/d$/.test(pending) && 'hbB0^'.includes(key)) ? starts[0] : null;
+  }
+  return starts[starts.length - 1];
 }
 
 export function recordInsertStartCursor(prev: VimEditorState, next: VimEditorState, key = ''): VimEditorState {
@@ -99,18 +113,33 @@ export function recordInsertStartCursor(prev: VimEditorState, next: VimEditorSta
     next.cursor.line === prev.cursor.line &&
     next.cursor.col < prev.cursor.col &&
     next.lines.every((l, i) => i === next.cursor.line || l === prev.lines[i]) &&
-    next.registers?.['"']?.type !== 'line' &&
-    // 커서 자리부터 지워 줄 끝으로 당겨진 경우(`d$`, 끝 글자 `x`, 마지막 단어 `dw`)는 원래 커서를 기억합니다.
-    isLeftwardDelete(prev, next, key)
+    next.registers?.['"']?.type !== 'line'
   ) {
-    const top = next.undoStack[next.undoStack.length - 1];
-    return { ...next, undoStack: [...next.undoStack.slice(0, -1), { ...top, cursor: { ...next.cursor } }] };
+    // 커서 자리부터 지워 줄 끝으로 당겨진 경우(`d$`, 끝 글자 `x`, 마지막 단어 `dw`)는 원래 커서를 기억합니다.
+    const start = leftwardDeleteStart(prev, next, key);
+    if (start !== null) {
+      const top = next.undoStack[next.undoStack.length - 1];
+      return { ...next, undoStack: [...next.undoStack.slice(0, -1), { ...top, cursor: { line: next.cursor.line, col: start } }] };
+    }
   }
   if (prev.mode !== 'NORMAL' || next.mode !== 'INSERT') return next;
   const stack = next.undoStack;
   if (!stack || stack.length === 0 || stack === prev.undoStack) return next;
-  if (next.lines.length !== prev.lines.length) return next;
   const top = stack[stack.length - 1];
+  // 여러 줄을 줄 단위로 바꾸는 2cc·2S·cj·cgg·cip 는 op_delete 가 둘째 줄부터 지우며 u_save 하므로,
+  // 연산 시작 위치(oap->start)를 한 줄 내린 곳을 기억합니다 (열은 시작 열: 커서 줄이면 커서 열, 위로 간 모션이면 기억한 열, 텍스트 객체는 0열).
+  if (next.lines.length < prev.lines.length && next.registers !== prev.registers && next.registers?.['"']?.type === 'line') {
+    const start = next.cursor.line;
+    const lineLen = (l: number) => (prev.lines[l] ?? '').length;
+    const startCol = /[ia]$/.test(prev.pendingKeys ?? '')
+      ? 0
+      : start === prev.cursor.line
+        ? prev.cursor.col
+        : Math.min(prev.curswant ?? prev.cursor.col, Math.max(0, lineLen(start) - 1));
+    const col = Math.max(0, Math.min(startCol, lineLen(start + 1) - 1));
+    return { ...next, undoStack: [...stack.slice(0, -1), { ...top, cursor: { line: start + 1, col } }] };
+  }
+  if (next.lines.length !== prev.lines.length) return next;
   return { ...next, undoStack: [...stack.slice(0, -1), { ...top, cursor: { ...next.cursor } }] };
 }
 
@@ -134,7 +163,7 @@ export function recordVisualUndoCursor(prev: VimEditorState, next: VimEditorStat
 
 /**
  * Vim 은 실패한 변경(`gUi[` 처럼 대상이 없는 텍스트 객체, `ca{` 등)을 `.` 반복 대상으로 남기지 않습니다.
- * 단 `[count]Ctrl-a` / `Ctrl-x` 는 숫자가 없어 실패해도 반복 대상으로 기록합니다 (nv_addsub 의 prep_redo).
+ * 단 `[count]Ctrl-a` / `Ctrl-x` 는 숫자가 없어 실패해도 반복 대상으로 기록합니다 (nv_addsub 의 prep_redo). 실행 취소 항목을 남긴 실패(`dh`, 빈 레지스터 `p`)도 같습니다.
  */
 export function keepRepeatOnFailure(prev: VimEditorState, next: VimEditorState, key: string, isReplayingDot: boolean): VimEditorState {
   if (isReplayingDot || !next.bell || prev.mode !== 'NORMAL') return next;
@@ -142,6 +171,9 @@ export function keepRepeatOnFailure(prev: VimEditorState, next: VimEditorState, 
   if ((key === 'Ctrl-a' || key === 'Ctrl-x') && /^([1-9][0-9]*)?$/.test(pending)) {
     return { ...next, lastChangeKeys: [...pending.split('').filter(Boolean), key] };
   }
+  // 삐 소리를 냈어도 실행 취소 항목을 남긴 명령은 Vim 에서 실행된 것이라 `.` 대상입니다
+  // (줄 처음의 dh 는 beep_flush 뒤 빈 범위로 실행, 빈 레지스터 p 는 prep_redo 뒤 E353).
+  if (next.undoStack !== prev.undoStack && (next.undoStack?.length ?? 0) > (prev.undoStack?.length ?? 0)) return next;
   if (next.lastChangeKeys !== prev.lastChangeKeys) return { ...next, lastChangeKeys: prev.lastChangeKeys };
   return next;
 }

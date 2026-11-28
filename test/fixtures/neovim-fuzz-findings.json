@@ -9585,5 +9585,1303 @@
       "regType": "char",
       "mode": "n"
     }
+  },
+  {
+    "id": "de-empty-line-linewise",
+    "text": "ab\n\ncd\ngh",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "de",
+    "expected": {
+      "lines": [
+        "ab",
+        "gh"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "\ncd\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "de-empty-line-linewise-undo",
+    "text": "ab\n\ncd\ngh",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "deu",
+    "expected": {
+      "lines": [
+        "ab",
+        "",
+        "cd",
+        "gh"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "\ncd\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "dE-trailing-blank-linewise",
+    "text": "ab\n\ncd  \ngh",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "dE",
+    "expected": {
+      "lines": [
+        "ab",
+        "gh"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "\ncd  \n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "d2e-indent-linewise",
+    "text": "  ab\ncd\ngh",
+    "cursor": {
+      "row": 0,
+      "col": 2
+    },
+    "keys": "d2e",
+    "expected": {
+      "lines": [
+        "gh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      },
+      "reg": "  ab\ncd\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "d-search-e-linewise",
+    "text": "  ab\ncd\ngh",
+    "cursor": {
+      "row": 0,
+      "col": 2
+    },
+    "keys": "d/d/e<CR>",
+    "expected": {
+      "lines": [
+        "gh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      },
+      "reg": "  ab\ncd\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "d-percent-linewise",
+    "text": "x\n{\nab\n}\nz",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "d%",
+    "expected": {
+      "lines": [
+        "x",
+        "z"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "{\nab\n}\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "d-search-end-adjusted-cursor",
+    "text": "  ab\n    ef\nx",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "d/^ <CR>",
+    "expected": {
+      "lines": [
+        "    ef",
+        "x"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      },
+      "reg": "  ab\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "c-search-end-adjusted",
+    "text": "  ab\n  cd\n    ef\nx",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "c/^  <CR>X<Esc>",
+    "expected": {
+      "lines": [
+        "X",
+        "  cd",
+        "    ef",
+        "x"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "  ab\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "d3b-linewise",
+    "text": "  a b\nconst x",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "d3b",
+    "expected": {
+      "lines": [
+        "const x"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "  a b\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "dB-empty-line-linewise",
+    "text": "a\n\nconst x",
+    "cursor": {
+      "row": 2,
+      "col": 0
+    },
+    "keys": "dB",
+    "expected": {
+      "lines": [
+        "a",
+        "const x"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "gUB-empty-line",
+    "text": "a\n\nconst x",
+    "cursor": {
+      "row": 2,
+      "col": 0
+    },
+    "keys": "gUB",
+    "expected": {
+      "lines": [
+        "a",
+        "",
+        "const x"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "d3w-across-lines",
+    "text": "ab cd\nef gh\nij",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "d3w",
+    "expected": {
+      "lines": [
+        "gh",
+        "ij"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "ab cd\nef ",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "d2w-stops-at-empty-line",
+    "text": "ab cd\n\nef gh\nij",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "d2w",
+    "expected": {
+      "lines": [
+        "ab ",
+        "ef gh",
+        "ij"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "cd\n",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "d2w-empty-lines-linewise",
+    "text": "ab cd\n\n\nef gh\nij",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "d2w",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "ef gh",
+        "ij"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "\n\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "c3w-across-lines",
+    "text": "ab cd\nef gh\nij",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "c3wX<Esc>",
+    "expected": {
+      "lines": [
+        "X gh",
+        "ij"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "ab cd\nef",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "y2W-from-empty-line",
+    "text": "ab cd\n\nef gh\nij",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "y2W",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "",
+        "ef gh",
+        "ij"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "\nef ",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "dw-empty-line-first-nonblank",
+    "text": "ab\n\n  cd ef\n",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "dw",
+    "expected": {
+      "lines": [
+        "ab",
+        "  cd ef",
+        ""
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 2
+      },
+      "reg": "\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "d5w-to-buffer-end",
+    "text": "ab cd\nef",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "d5w",
+    "expected": {
+      "lines": [
+        "ab "
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "cd\nef",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "shift-w-last-word",
+    "text": "a b\n  b c\nd",
+    "cursor": {
+      "row": 0,
+      "col": 2
+    },
+    "keys": "<w",
+    "expected": {
+      "lines": [
+        "a b",
+        "  b c",
+        "d"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "d-backtick-exclusive",
+    "text": "hello world foo bar",
+    "cursor": {
+      "row": 0,
+      "col": 6
+    },
+    "keys": "maed`a",
+    "expected": {
+      "lines": [
+        "hello d foo bar"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 6
+      },
+      "reg": "worl",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "d-backtick-multiline",
+    "text": "ab cd\nxy",
+    "cursor": {
+      "row": 0,
+      "col": 4
+    },
+    "keys": "jmakd`a",
+    "expected": {
+      "lines": [
+        "ab cy"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      },
+      "reg": "d\nx",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "dn-repeat-search",
+    "text": "ab cd\nxy",
+    "cursor": {
+      "row": 0,
+      "col": 4
+    },
+    "keys": "/d<CR>0dn",
+    "expected": {
+      "lines": [
+        "d",
+        "xy"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "ab c",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "dN-undo",
+    "text": "ab cd\nxy",
+    "cursor": {
+      "row": 0,
+      "col": 4
+    },
+    "keys": "/c<CR>$dNu",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "xy"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "c",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "dn-dot",
+    "text": "ab cd\nxy cd",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "/c<CR>0dn.",
+    "expected": {
+      "lines": [
+        "cd"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "cd\nxy ",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "y0-col0-yanks-empty",
+    "text": "ab\n\ncd",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "yiwy0",
+    "expected": {
+      "lines": [
+        "ab",
+        "",
+        "cd"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "yh-col0-yanks-empty",
+    "text": "ab cd\nx",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "yiwyh",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "x"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "dl-empty-line-undo-entry",
+    "text": "ab cd\n\ncd ef\ngh",
+    "cursor": {
+      "row": 0,
+      "col": 4
+    },
+    "keys": "xjdlu",
+    "expected": {
+      "lines": [
+        "ab c",
+        "",
+        "cd ef",
+        "gh"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "d",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "x-empty-line-undo-entry",
+    "text": "ab cd\n\ncd ef\ngh",
+    "cursor": {
+      "row": 0,
+      "col": 4
+    },
+    "keys": "xjxu",
+    "expected": {
+      "lines": [
+        "ab c",
+        "",
+        "cd ef",
+        "gh"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "d",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "X-col0-undo-entry",
+    "text": "ab cd\n\ncd ef\ngh",
+    "cursor": {
+      "row": 0,
+      "col": 4
+    },
+    "keys": "x0Xu",
+    "expected": {
+      "lines": [
+        "ab c",
+        "",
+        "cd ef",
+        "gh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "d",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "dh-col0-dot",
+    "text": "ab cd\n\ncd ef\ngh",
+    "cursor": {
+      "row": 0,
+      "col": 4
+    },
+    "keys": "x0dh.",
+    "expected": {
+      "lines": [
+        "ab c",
+        "",
+        "cd ef",
+        "gh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "d",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "gUl-empty-line-undo-entry",
+    "text": "ab cd\n\ncd ef\ngh",
+    "cursor": {
+      "row": 0,
+      "col": 4
+    },
+    "keys": "xjgUlu",
+    "expected": {
+      "lines": [
+        "ab c",
+        "",
+        "cd ef",
+        "gh"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "d",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "shift-l-empty-line-undo-entry",
+    "text": "ab cd\n\ncd ef\ngh",
+    "cursor": {
+      "row": 0,
+      "col": 4
+    },
+    "keys": "xj>lu",
+    "expected": {
+      "lines": [
+        "ab c",
+        "",
+        "cd ef",
+        "gh"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "d",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "shift-count-l-line-end",
+    "text": "}\nxyz",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "4>l",
+    "expected": {
+      "lines": [
+        "  }",
+        "xyz"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "gUTo-adjacent-no-change",
+    "text": "Another paragraph",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "gUTo",
+    "expected": {
+      "lines": [
+        "Another paragraph"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "gU-caret-on-first-nonblank",
+    "text": "x\n  Another paragraph",
+    "cursor": {
+      "row": 1,
+      "col": 2
+    },
+    "keys": "gU^",
+    "expected": {
+      "lines": [
+        "x",
+        "  Another paragraph"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "s-empty-line-undo",
+    "text": "abc\n\nxyz",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "sa b<Esc>u",
+    "expected": {
+      "lines": [
+        "abc",
+        "",
+        "xyz"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "ctrl-a-no-number-undo-entry",
+    "text": "The quick brown fox. It jumps over\nthe lazy dog!",
+    "cursor": {
+      "row": 0,
+      "col": 29
+    },
+    "keys": "x<C-a>0u",
+    "expected": {
+      "lines": [
+        "The quick brown fox. It jumpsover",
+        "the lazy dog!"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 29
+      },
+      "reg": " ",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "put-empty-register-dot",
+    "text": "abc\ndef",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "xj\"aP.",
+    "expected": {
+      "lines": [
+        "ac",
+        "def"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 1
+      },
+      "reg": "b",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "C-empty-line-clears-register",
+    "text": "abc def\n\nxyz",
+    "cursor": {
+      "row": 0,
+      "col": 4
+    },
+    "keys": "xjCX<Esc>",
+    "expected": {
+      "lines": [
+        "abc ef",
+        "X",
+        "xyz"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "Y-count-last-line-fails",
+    "text": "abc def\nxyz",
+    "cursor": {
+      "row": 1,
+      "col": 1
+    },
+    "keys": "2Y",
+    "expected": {
+      "lines": [
+        "abc def",
+        "xyz"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 1
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "g-norm-no-change-no-undo",
+    "text": "abc\nxyz\nhello\nend",
+    "cursor": {
+      "row": 2,
+      "col": 3
+    },
+    "keys": ":g/e/norm 0<CR>u",
+    "expected": {
+      "lines": [
+        "abc",
+        "xyz",
+        "hello",
+        "end"
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "g-norm-failed-keeps-prev-undo",
+    "text": "abc\nxyz\nhello\nend",
+    "cursor": {
+      "row": 2,
+      "col": 3
+    },
+    "keys": "x:g/e/norm fq<CR>u",
+    "expected": {
+      "lines": [
+        "abc",
+        "xyz",
+        "hello",
+        "end"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 3
+      },
+      "reg": "l",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "range-norm-no-change-no-undo",
+    "text": "abc\nxyz\nhello\nend",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "x:%norm $<CR>u",
+    "expected": {
+      "lines": [
+        "abc",
+        "xyz",
+        "hello",
+        "end"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      },
+      "reg": "b",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "range-norm-dd-curswant",
+    "text": "xa\nhello b\nworld a\nabcdef\nzzzzzz",
+    "cursor": {
+      "row": 3,
+      "col": 4
+    },
+    "keys": ":1,2norm dd<CR>",
+    "expected": {
+      "lines": [
+        "hello b",
+        "abcdef",
+        "zzzzzz"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "world a\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "g-norm-dd-curswant",
+    "text": "xa\nhello b\nworld a\nabcdef",
+    "cursor": {
+      "row": 3,
+      "col": 4
+    },
+    "keys": ":g/a/norm dd<CR>",
+    "expected": {
+      "lines": [
+        "hello b"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      },
+      "reg": "abcdef\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "dd-uses-curswant",
+    "text": "The quick\nthe lazy\n\nAnother paragraph here.",
+    "cursor": {
+      "row": 3,
+      "col": 2
+    },
+    "keys": "3Gdd",
+    "expected": {
+      "lines": [
+        "The quick",
+        "the lazy",
+        "Another paragraph here."
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 2
+      },
+      "reg": "\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "count-percent-keeps-curswant",
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "cursor": {
+      "row": 1,
+      "col": 19
+    },
+    "keys": "3%dd",
+    "expected": {
+      "lines": [
+        "    deeper (nested) item",
+        "  back to one",
+        "last_word_here end"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 19
+      },
+      "reg": "  indented line one\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "case-k-undo-cursor",
+    "text": "alpha beta gamma\nfoo.bar(baz, \"qux\")\n{ key }\n",
+    "cursor": {
+      "row": 1,
+      "col": 18
+    },
+    "keys": "g~ku",
+    "expected": {
+      "lines": [
+        "alpha beta gamma",
+        "foo.bar(baz, \"qux\")",
+        "{ key }",
+        ""
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 15
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "case-G-undo-cursor",
+    "text": "alpha beta gamma\nfoo.bar(baz, \"qux\")\n{ key }\n",
+    "cursor": {
+      "row": 1,
+      "col": 12
+    },
+    "keys": "g~Gu",
+    "expected": {
+      "lines": [
+        "alpha beta gamma",
+        "foo.bar(baz, \"qux\")",
+        "{ key }",
+        ""
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 12
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "case-gg-undo-cursor",
+    "text": "alpha beta gamma\nfoo.bar(baz, \"qux\")\n{ key }\n",
+    "cursor": {
+      "row": 1,
+      "col": 12
+    },
+    "keys": "g~ggu",
+    "expected": {
+      "lines": [
+        "alpha beta gamma",
+        "foo.bar(baz, \"qux\")",
+        "{ key }",
+        ""
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 12
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "diW-undo-cursor",
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "cursor": {
+      "row": 3,
+      "col": 6
+    },
+    "keys": ":2<CR>g~a\"diWu",
+    "expected": {
+      "lines": [
+        "  indented line one",
+        "    deeper (nested) item",
+        "  back to one",
+        "last_word_here end"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 4
+      },
+      "reg": "deeper",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "das-undo-cursor",
+    "text": "abc def. ghi jk.",
+    "cursor": {
+      "row": 0,
+      "col": 10
+    },
+    "keys": "dasu",
+    "expected": {
+      "lines": [
+        "abc def. ghi jk."
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 8
+      },
+      "reg": " ghi jk.",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "daw-line-end-undo-cursor",
+    "text": "abc def ghi",
+    "cursor": {
+      "row": 0,
+      "col": 9
+    },
+    "keys": "dawu",
+    "expected": {
+      "lines": [
+        "abc def ghi"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 7
+      },
+      "reg": " ghi",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "S-count-undo-cursor",
+    "text": "The quick\nthe lazy dog\n\nAnother\nend x",
+    "cursor": {
+      "row": 3,
+      "col": 3
+    },
+    "keys": "2SX<Esc>u",
+    "expected": {
+      "lines": [
+        "The quick",
+        "the lazy dog",
+        "",
+        "Another",
+        "end x"
+      ],
+      "cursor": {
+        "row": 4,
+        "col": 3
+      },
+      "reg": "Another\nend x\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "cj-undo-cursor",
+    "text": "The quick\nthe lazy dog\n\nAnother\nend x",
+    "cursor": {
+      "row": 1,
+      "col": 5
+    },
+    "keys": "cjnew<Esc>u",
+    "expected": {
+      "lines": [
+        "The quick",
+        "the lazy dog",
+        "",
+        "Another",
+        "end x"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      },
+      "reg": "the lazy dog\n\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "cgg-undo-cursor",
+    "text": "The quick\nthe lazy dog\n\nAnother\nend x",
+    "cursor": {
+      "row": 3,
+      "col": 5
+    },
+    "keys": "cggX<Esc>u",
+    "expected": {
+      "lines": [
+        "The quick",
+        "the lazy dog",
+        "",
+        "Another",
+        "end x"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 5
+      },
+      "reg": "The quick\nthe lazy dog\n\nAnother\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "cip-undo-cursor",
+    "text": "The quick\nthe lazy dog\n\nAnother\nend x",
+    "cursor": {
+      "row": 1,
+      "col": 3
+    },
+    "keys": "cipX<Esc>u",
+    "expected": {
+      "lines": [
+        "The quick",
+        "the lazy dog",
+        "",
+        "Another",
+        "end x"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "The quick\nthe lazy dog\n",
+      "regType": "line",
+      "mode": "n"
+    }
   }
 ]

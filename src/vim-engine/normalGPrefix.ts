@@ -3,6 +3,7 @@ import { clampCursor, getFirstNonBlankCol, getMaxCol } from './cursor';
 import { getOptions } from './setOptionsCore';
 import { moveToFirstLine } from './motions';
 import { pushUndoSnapshot } from './operators';
+import { setLastUndoCursor } from './undoHistory';
 import { syncRegisters } from './registers';
 import { nextTab, prevTab } from './tabEngine';
 import { travelUndoTime } from './undoTreeEngine';
@@ -180,6 +181,8 @@ export function handleNormalCommentFormatOrCaseG(
       // gugg 는 줄 단위: 'nostartofline' 이면 첫 줄로 가되 원래 열을 유지합니다 (Vim op_tilde).
       if (motionKey === 'gg' && !res.bell && !getOptions(state).startofline) {
         res = { ...res, cursor: clampCursor(res.lines, { line: res.cursor.line, col: state.curswant ?? state.cursor.col }, 'NORMAL') };
+        // op_tilde 는 커서를 연산 시작(oap->start)에 둔 채 u_save 하므로 실행 취소도 그 열로 돌아옵니다.
+        res = setLastUndoCursor(res, state, res.cursor);
       }
       const opKeys = [...(count > 1 ? [String(count)] : []), op, 'g', key];
       return { ...res, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys, pendingKeys: undefined };
@@ -234,10 +237,13 @@ export function handleNormalCommentFormatOrCaseG(
     // 단, - 는 모션 목적지(첫 비공백)가 연산 시작이라 그 자리로 갑니다 (g~- , Neovim 대조).
     const keepCol = range.linewise && !getOptions(state).startofline && key !== '-';
     const caseCursor = keepCol ? { line: range.start.line, col: state.curswant ?? state.cursor.col } : range.cursor;
+    const finalCursor = clampCursor(applied.lines, caseCursor, 'NORMAL');
+    // op_tilde 는 커서를 연산 시작에 둔 채 u_save 하므로, 줄 단위 모션(g~k, gUj, g~G)의 실행 취소도 그 열로 돌아옵니다.
+    const withUndoCursor = keepCol ? setLastUndoCursor(applied, state, finalCursor) : applied;
     return {
-      ...applied,
+      ...withUndoCursor,
       mode: 'NORMAL',
-      cursor: clampCursor(applied.lines, caseCursor, 'NORMAL'),
+      cursor: finalCursor,
       pendingKeys: undefined,
       lastChangeKeys: isReplayingDot ? state.lastChangeKeys : opKeys,
     };
@@ -583,7 +589,9 @@ export function handleNormalGOperator(
 function emptyRegionCaseChange(state: VimEditorState, op: 'gu' | 'gU' | 'g~' | 'g?'): VimEditorState {
   const { line, col } = state.cursor;
   const len = (state.lines[line] ?? '').length;
-  if (len === 0) return { ...state, pendingKeys: undefined };
+  // 빈 줄이거나 0열이 아니면(dec() 가 같은 줄 앞 칸으로 가 범위가 비어) 바꿀 글자는 없지만 op_tilde 의 u_save 로 빈 실행 취소 항목이 남습니다
+  // (gUTo 가 바로 옆 글자로 움직이지 않을 때, 첫 비공백에서 gU^).
+  if (len === 0 || col > 0) return { ...pushUndoSnapshot(state), pendingKeys: undefined };
   const endCol = line === 0 ? col : len - 1;
   const applied = changeCaseVisual(
     { ...state, pendingKeys: undefined, mode: 'VISUAL', visualAnchor: { line, col }, cursor: { line, col: endCol } },
