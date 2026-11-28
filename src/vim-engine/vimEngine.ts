@@ -8,6 +8,7 @@ import {
   normalizeRepeatKeys,
   recordInsertStartCursor,
   recordRepeatRegister,
+  recordVisualUndoCursor,
   recordVisualRepeat,
 } from './repeatAndUndoRules';
 
@@ -539,6 +540,7 @@ function applyKeyRules(input: VimEditorState, raw: VimEditorState, key: string, 
   next = recordVisualRepeat(input, next, key, isReplayingDot);
   next = recordRepeatRegister(input, next, isReplayingDot);
   next = recordInsertStartCursor(input, next);
+  next = recordVisualUndoCursor(input, next);
   next = keepRepeatOnFailure(input, next, key, isReplayingDot);
   return normalizeRepeatKeys(input, next);
 }

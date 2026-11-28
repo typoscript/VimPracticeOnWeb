@@ -53,6 +53,7 @@ import {
   executeAlignRange,
 } from './exBufferOps';
 import { executeJoinRange, executeShiftRange, executePrintRange } from './exRangeOps';
+import { beginlineSolCol, keepCurswantIfNosol } from './undoHistory';
 import { finishEx, tryExecuteWorkspaceExCommand } from './exWorkspaceCommands';
 import type { ExCommandRunner } from './exWorkspaceCommands';
 import { tryExecuteToolExCommand } from './exListAndToolCommands';
@@ -300,12 +301,16 @@ function tryExecuteRangeExCommand(
 
   // 명령어 없이 범위 또는 주소만 주어진 경우: 라인 이동 (예: ':10', ':$', ':+3', ':-2', ':\'a')
   if (hasRange && cmdTrimmed.length === 0 && range) {
+    // Vim do_one_cmd: 주소만 있으면 그 줄로 가서 beginline(BL_SOL | BL_FIX) — 'nostartofline' 이면 curswant 열, curswant 유지
     const targetLine = Math.max(0, Math.min(range.endLine, state.lines.length - 1));
-    const nextCursor = clampCursor(state.lines, { line: targetLine, col: state.cursor.col }, 'NORMAL');
-    return finishEx(state, {
-      cursor: nextCursor,
-      commandMessage: msg('{v}번째 줄로 이동했습니다.', { v: targetLine + 1 }),
-    });
+    const col = beginlineSolCol(state, state.lines[targetLine] ?? '');
+    const nextCursor = clampCursor(state.lines, { line: targetLine, col }, 'NORMAL');
+    return keepCurswantIfNosol(
+      finishEx(state, {
+        cursor: nextCursor,
+        commandMessage: msg('{v}번째 줄로 이동했습니다.', { v: targetLine + 1 }),
+      })
+    );
   }
 
   const currentLineRange = { startLine: state.cursor.line, endLine: state.cursor.line };

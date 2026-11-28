@@ -1,4 +1,5 @@
 import { VimEditorState } from './types';
+import { visualOperatorStart } from './undoHistory';
 
 /**
  * handleKey 가 키 하나를 처리한 뒤 적용하는 `.` 반복·실행 취소 규칙 (Neovim 대조).
@@ -95,6 +96,24 @@ export function recordInsertStartCursor(prev: VimEditorState, next: VimEditorSta
   if (next.lines.length !== prev.lines.length) return next;
   const top = stack[stack.length - 1];
   return { ...next, undoStack: [...stack.slice(0, -1), { ...top, cursor: { ...next.cursor } }] };
+}
+
+/**
+ * 비주얼 모드 연산의 실행 취소 위치 (Vim do_pending_operator → 각 연산의 첫 u_save).
+ * 연산 전에 커서를 연산 범위 시작(oap->start)으로 옮기므로, 앵커가 커서보다 앞이면 앵커(줄 단위 비주얼은 그 줄의 0열),
+ * 아니면 커서 자리를 기억합니다. 줄 단위로 여러 줄을 바꾸는 `c`(op_delete) 는 둘째 줄부터 지우며 기록을 시작하므로 한 줄 아래입니다.
+ */
+export function recordVisualUndoCursor(prev: VimEditorState, next: VimEditorState): VimEditorState {
+  if ((prev.mode !== 'VISUAL' && prev.mode !== 'VISUAL_LINE') || !prev.visualAnchor) return next;
+  const stack = next.undoStack;
+  if (!stack || stack.length === 0 || stack === prev.undoStack) return next;
+  const top = stack[stack.length - 1];
+  if (top === prev.undoStack?.[prev.undoStack.length - 1]) return next;
+  const anchor = prev.visualAnchor;
+  const linewise = prev.mode === 'VISUAL_LINE';
+  let start = visualOperatorStart(linewise, anchor, prev.cursor);
+  if (linewise && next.mode === 'INSERT' && anchor.line !== prev.cursor.line) start = { line: start.line + 1, col: start.col };
+  return { ...next, undoStack: [...stack.slice(0, -1), { ...top, cursor: start }] };
 }
 
 /**

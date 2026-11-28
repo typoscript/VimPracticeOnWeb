@@ -2,6 +2,7 @@ import { CursorPosition, VimEditorState, VimMode } from './types';
 import { clampCursor, hasVirtualEdit } from './cursor';
 import { getOptions } from './setEngine';
 import { pushUndoSnapshot } from './operators';
+import { pushUndoSnapshotAt, visualOperatorStart } from './undoHistory';
 
 export interface VisualRange {
   start: CursorPosition;
@@ -332,7 +333,11 @@ export function deleteVisualSelection(state: VimEditorState): VimEditorState {
     return deleteVisualBlock(state);
   }
 
-  const stateWithSnapshot = pushUndoSnapshot(state);
+  // Vim: 연산 범위 시작(oap->start)으로 커서를 옮긴 뒤 지우므로 실행 취소는 그 자리로 돌아갑니다 (d{motion} 도 이 함수를 씀).
+  const stateWithSnapshot = pushUndoSnapshotAt(
+    state,
+    visualOperatorStart(state.mode === 'VISUAL_LINE', state.visualAnchor, state.cursor)
+  );
   const anchor = state.visualAnchor;
   const cursor = state.cursor;
 

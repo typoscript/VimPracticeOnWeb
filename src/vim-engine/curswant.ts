@@ -34,6 +34,14 @@ function keepsCurswant(prev: VimEditorState, key: string): boolean {
  */
 export function applyCurswant(prev: VimEditorState, next: VimEditorState, key: string): VimEditorState {
   const remembered = prev.curswant ?? prev.cursor.col;
+  // Ex 명령이 Vim 처럼 curswant 를 건드리지 않고 커서를 옮긴 경우 (`:N`, `:>`, `:t`, `:m`, `:y` …, keepCurswantAt)
+  if (next.keepCurswantAt) {
+    const { keepCurswantAt: kept, ...rest } = next;
+    const honored =
+      !rest.pendingKeys && CURSWANT_MODES.has(rest.mode) && kept.line === rest.cursor.line && kept.col === rest.cursor.col;
+    if (honored) return { ...rest, curswant: remembered };
+    next = rest;
+  }
   // 아직 명령이 끝나지 않았거나(대기 키), 입력·명령줄 모드 중에는 기억한 열을 그대로 둡니다.
   if (next.pendingKeys || !CURSWANT_MODES.has(next.mode)) {
     return next.curswant === remembered ? next : { ...next, curswant: remembered };
@@ -47,7 +55,10 @@ export function applyCurswant(prev: VimEditorState, next: VimEditorState, key: s
     const cursor = col === next.cursor.col ? next.cursor : clampCursor(next.lines, { line: next.cursor.line, col }, next.mode);
     return { ...next, cursor, curswant: remembered };
   }
-  if (next.bell && sameText && sameCursor) {
+  // v / V / Ctrl-v 로 비주얼 모드를 시작해도 Vim(n_start_visual_mode)은 curswant 를 바꾸지 않습니다.
+  const startsVisual =
+    prev.mode === 'NORMAL' && !prev.pendingKeys && (key === 'v' || key === 'V' || key === 'Ctrl-v') && next.mode.startsWith('VISUAL');
+  if ((next.bell || startsVisual) && sameText && sameCursor) {
     return next.curswant === remembered ? next : { ...next, curswant: remembered };
   }
   const isDollar = key === '$' && /^([1-9][0-9]*)?$/.test(prev.pendingKeys ?? '') && CURSWANT_MODES.has(prev.mode);

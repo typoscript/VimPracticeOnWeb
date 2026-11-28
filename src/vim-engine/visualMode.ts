@@ -9,6 +9,7 @@ import { moveFind } from './findChar';
 import { findMatches, findSearchTarget, getWordAtCursor } from './search';
 import { starSearchPattern } from './vimRegex';
 import { getOptions } from './setOptionsCore';
+import { pushUndoSnapshot } from './undoHistory';
 import { msg } from './messages';
 import { MAX_REMAP_DEPTH, isKeymapPrefix, parseKeySequence, resolveKeymapWithMeta, runKeymapTokens } from './keymapEngine';
 import { executeVisualSurround, startSurroundTagPrompt } from './surroundEngine';
@@ -396,8 +397,10 @@ export function handleVisualModeKey(
         '',
         ...state.lines.slice(maxLine + 1),
       ];
+      // 실행 취소 기록 (커서는 recordVisualUndoCursor 가 Vim 의 op_delete 시작 위치로 맞춤)
+      const withUndo = pushUndoSnapshot(state);
       const withDel: VimEditorState = {
-        ...state,
+        ...withUndo,
         lines: nextLines,
         cursor: { line: minLine, col: 0 },
         mode: 'INSERT',

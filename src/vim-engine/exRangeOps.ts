@@ -1,12 +1,13 @@
-import { VimEditorState } from './types';
+import { CursorPosition, VimEditorState } from './types';
 import { clampCursor } from './cursor';
 import { pushUndoSnapshot } from './operators';
+import { beginlineSolCol, keepCurswantIfNosol, pushUndoSnapshotAt, setLastUndoCursor } from './undoHistory';
 import { compileVimRegex } from './vimRegex';
 import { msg } from './messages';
 import { getRegisterContent, syncRegisters } from './registers';
 import { getOptions } from './setEngine';
 import { moveToFirstNonBlank } from './motions';
-import { shiftLineIndent } from './lineOperators';
+import { joinLines, shiftLineIndent } from './lineOperators';
 import type { KeyRunner } from './exSubstitute';
 
 /**
@@ -64,13 +65,19 @@ export function executeGlobalCommand(
 
   // 1. :g/pattern/d (매칭 줄 일괄 삭제)
   if (action === 'd' || action === 'delete' || action === '') {
-    const stateWithUndo = pushUndoSnapshot(state);
+    // Vim global_exe → ex_operators: 첫 일치 줄의 curswant 열(beginline(BL_SOL))에서 실행 취소 기록이 시작됩니다.
+    const firstMatch = matchedIndices[0];
+    const stateWithUndo = pushUndoSnapshotAt(state, {
+      line: firstMatch,
+      col: beginlineSolCol(state, state.lines[firstMatch] ?? ''),
+    });
     const deleteSet = new Set(matchedIndices);
     const yanked = state.lines.filter((_, idx) => deleteSet.has(idx));
     const newLines = state.lines.filter((_, idx) => !deleteSet.has(idx));
     const finalLines = newLines.length === 0 ? [''] : newLines;
-    // Vim: 마지막 :d 뒤 커서 줄의 첫 비공백
-    const gLine = Math.min(matchedIndices[0], finalLines.length - 1);
+    // Vim: 마지막 :d 뒤 커서 줄(마지막 일치 줄이 앞선 삭제만큼 올라온 자리)의 첫 비공백
+    const lastMatch = matchedIndices[matchedIndices.length - 1];
+    const gLine = Math.min(lastMatch - (matchedIndices.length - 1), finalLines.length - 1);
     const nextCursor = clampCursor(
       finalLines,
       { line: gLine, col: Math.max(0, (finalLines[gLine] ?? '').search(/\S/)) },
@@ -106,9 +113,11 @@ export function executeGlobalCommand(
     const isLineDelete = normKeys.trim() === 'dd';
     const sortedIndices = isLineDelete ? [...matchedIndices].reverse() : matchedIndices;
 
+    let firstUndoCursor: CursorPosition | undefined;
     for (const idx of sortedIndices) {
-      curState = executeNormalKeysOnLine(curState, idx, normKeys, keyRunner, bang);
+      ({ state: curState, firstUndoCursor } = runNormalKeysOnLine(curState, idx, normKeys, keyRunner, bang, firstUndoCursor));
     }
+    if (firstUndoCursor) curState = setLastUndoCursor(curState, state, firstUndoCursor);
 
     return {
       ...curState,
@@ -157,16 +166,22 @@ export function executeRangeDelete(
   _commandStr: string,
   register?: string
 ): VimEditorState {
-  const stateWithUndo = pushUndoSnapshot(state);
+  // Vim ex_operators: 첫 줄의 curswant 열(beginline(BL_SOL))로 커서를 옮긴 뒤 지우므로 실행 취소는 그 자리로 돌아갑니다.
+  const stateWithUndo = pushUndoSnapshotAt(state, {
+    line: range.startLine,
+    col: beginlineSolCol(state, state.lines[range.startLine] ?? ''),
+  });
   const yanked = state.lines.slice(range.startLine, range.endLine + 1);
   const remaining = [
     ...state.lines.slice(0, range.startLine),
     ...state.lines.slice(range.endLine + 1),
   ];
   const newLines = remaining.length === 0 ? [''] : remaining;
+  // op_delete 줄 단위: beginline(BL_WHITE | BL_FIX) — 첫 비공백, curswant 도 그 열
+  const delLine = Math.min(range.startLine, newLines.length - 1);
   const nextCursor = clampCursor(
     newLines,
-    { line: Math.min(range.startLine, newLines.length - 1), col: 0 },
+    { line: delLine, col: Math.max(0, (newLines[delLine] ?? '').search(/\S/)) },
     'NORMAL'
   );
 
@@ -196,8 +211,10 @@ export function executeRangeYank(
   register?: string
 ): VimEditorState {
   const yanked = state.lines.slice(range.startLine, range.endLine + 1);
+  // Vim ex_operators: `:y` 는 커서를 옮기지 않으므로 curswant 도 그대로입니다.
   const res: VimEditorState = {
     ...state,
+    keepCurswantAt: { line: state.cursor.line, col: state.cursor.col },
     mode: 'NORMAL',
     visualAnchor: undefined,
     clipboard: {
@@ -268,9 +285,11 @@ export function executeRangeNorm(
   let curState = pushUndoSnapshot(state);
   const count = range.endLine - range.startLine + 1;
 
+  let firstUndoCursor: CursorPosition | undefined;
   for (let l = range.startLine; l <= range.endLine; l++) {
-    curState = executeNormalKeysOnLine(curState, l, normKeys, keyRunner, bang);
+    ({ state: curState, firstUndoCursor } = runNormalKeysOnLine(curState, l, normKeys, keyRunner, bang, firstUndoCursor));
   }
+  if (firstUndoCursor) curState = setLastUndoCursor(curState, state, firstUndoCursor);
 
   return {
     ...curState,
@@ -292,8 +311,24 @@ export function executeNormalKeysOnLine(
   keyRunner?: KeyRunner,
   bang = false
 ): VimEditorState {
+  return runNormalKeysOnLine(state, lineIdx, keysStr, keyRunner, bang, undefined).state;
+}
+
+/**
+ * executeNormalKeysOnLine 과 같고, 아직 기록이 없으면(`firstUndoCursor` 가 없으면) 안쪽 키가 처음 남긴
+ * 실행 취소 기록의 커서(변경을 시작한 위치)를 함께 돌려줍니다. Vim 은 `:norm` 전체를 한 번의 실행 취소로 묶고,
+ * 그 안의 첫 변경이 시작될 때의 커서를 uh_cursor 로 저장합니다.
+ */
+function runNormalKeysOnLine(
+  state: VimEditorState,
+  lineIdx: number,
+  keysStr: string,
+  keyRunner: KeyRunner | undefined,
+  bang: boolean,
+  firstUndoCursor: CursorPosition | undefined
+): { state: VimEditorState; firstUndoCursor: CursorPosition | undefined } {
   if (lineIdx < 0 || lineIdx >= state.lines.length) {
-    return state;
+    return { state, firstUndoCursor };
   }
 
   const prevDisabled = state.keymapsDisabled;
@@ -310,7 +345,7 @@ export function executeNormalKeysOnLine(
 
   const tokens = parseKeyTokens(keysStr);
   if (!keyRunner) {
-    return { ...curState, keymapsDisabled: prevDisabled, recordingMacro: prevRecording };
+    return { state: { ...curState, keymapsDisabled: prevDisabled, recordingMacro: prevRecording }, firstUndoCursor };
   }
 
   // Vim 처럼 :norm 안에서 한 변경은 `.` 로 반복할 수 있게 기록합니다 (반복 재생이 아닌 일반 입력으로 실행).
@@ -325,19 +360,31 @@ export function executeNormalKeysOnLine(
     curState = keyRunner(curState, 'Escape', false);
   }
 
+  // 안쪽 키가 처음 남긴 실행 취소 기록 = 첫 변경을 시작한 커서
+  let found = firstUndoCursor;
+  if (!found) {
+    const base = state.undoStack ?? [];
+    const stack = curState.undoStack ?? [];
+    if (stack.length > base.length) found = stack[base.length].cursor;
+    else if (stack.length > 0 && stack[stack.length - 1] !== base[base.length - 1]) found = stack[stack.length - 1].cursor;
+  }
+
   // :norm 전체가 한 번의 실행 취소 단위가 되도록, 안쪽 키가 만든 실행 취소 기록은 버리고 시작 시점의 기록을 둡니다.
   return {
-    ...curState,
-    keymapsDisabled: prevDisabled,
-    recordingMacro: prevRecording,
-    undoStack: state.undoStack,
-    redoStack: state.redoStack,
-    undoTreeNodes: state.undoTreeNodes,
-    currentUndoSeq: state.currentUndoSeq,
-    maxUndoSeq: state.maxUndoSeq,
-    undoTimeHistory: state.undoTimeHistory,
-    undoTimeIndex: state.undoTimeIndex,
-    undoJoinMerged: state.undoJoinMerged,
+    state: {
+      ...curState,
+      keymapsDisabled: prevDisabled,
+      recordingMacro: prevRecording,
+      undoStack: state.undoStack,
+      redoStack: state.redoStack,
+      undoTreeNodes: state.undoTreeNodes,
+      currentUndoSeq: state.currentUndoSeq,
+      maxUndoSeq: state.maxUndoSeq,
+      undoTimeHistory: state.undoTimeHistory,
+      undoTimeIndex: state.undoTimeIndex,
+      undoJoinMerged: state.undoJoinMerged,
+    },
+    firstUndoCursor: found,
   };
 }
 
@@ -477,29 +524,16 @@ export function executeJoinRange(
     };
   }
 
-  const stateWithUndo = pushUndoSnapshot(state);
-  let joined = state.lines[joinStart] ?? '';
-  if (bang) {
-    joined = state.lines.slice(joinStart, joinEnd + 1).join('');
-  } else {
-    for (let i = joinStart + 1; i <= joinEnd; i++) {
-      const nextTrimmed = (state.lines[i] ?? '').trimStart();
-      if (nextTrimmed.length === 0) continue;
-      if (joined.length === 0) {
-        joined = nextTrimmed;
-      } else if (joined.endsWith(' ') || joined.endsWith('\t')) {
-        joined += nextTrimmed;
-      } else {
-        joined += ' ' + nextTrimmed;
-      }
-    }
-  }
-
-  const nextLines = [
-    ...state.lines.slice(0, joinStart),
-    joined,
-    ...state.lines.slice(joinEnd + 1),
-  ];
+  // Vim ex_join → do_join: J 와 같은 규칙('formatoptions' j 의 주석 리더 제거, 빈 줄은 공백 없이)으로 잇습니다.
+  // 커서 줄만 첫 줄로 옮기고(열은 그대로) do_join 이 범위 전체를 u_save 하므로 실행 취소는 그 자리로 돌아갑니다.
+  const joinedState = joinLines({ ...state, cursor: { line: joinStart, col: 0 } }, joinEnd - joinStart, !bang);
+  const stateWithUndo = setLastUndoCursor(
+    joinedState,
+    state,
+    { line: joinStart, col: state.cursor.col },
+    { start: joinStart, end: joinEnd }
+  );
+  const nextLines = joinedState.lines;
   const nextCursor = moveToFirstNonBlank(nextLines, { line: joinStart, col: 0 });
 
   return {
@@ -544,7 +578,12 @@ export function executeShiftRange(
   const sr = Boolean(opts.shiftround);
   const times = Math.max(1, shiftCount);
 
-  const stateWithUndo = pushUndoSnapshot(state);
+  // Vim ex_operators: 첫 줄의 curswant 열(beginline(BL_SOL))에서 op_shift 가 실행 취소 기록을 남깁니다.
+  const stateWithUndo = pushUndoSnapshotAt(
+    state,
+    { line: startLine, col: beginlineSolCol(state, state.lines[startLine] ?? '') },
+    { start: startLine, end: endLine }
+  );
   const nextLines = [...state.lines];
 
   for (let i = startLine; i <= endLine; i++) {
@@ -554,7 +593,8 @@ export function executeShiftRange(
   const nextCursor = moveToFirstNonBlank(nextLines, { line: endLine, col: 0 });
   const linesCount = endLine - startLine + 1;
 
-  return {
+  // op_shift(":>"): 마지막 줄의 새 들여쓰기 끝(set_indent) — w_set_curswant 를 켜지 않으므로 curswant 유지
+  return keepCurswantIfNosol({
     ...stateWithUndo,
     lines: nextLines,
     cursor: nextCursor,
@@ -567,7 +607,7 @@ export function executeShiftRange(
       dir: direction === 'in' ? '>' : '<',
       times,
     }),
-  };
+  });
 }
 
 /**

@@ -115,6 +115,11 @@ export interface ClipboardRegister {
 export interface StateSnapshot {
   lines: string[];
   cursor: CursorPosition;
+  /**
+   * Vim 이 이 변경을 한 번의 u_save 로 기록한 줄 범위(변경 전 버퍼 기준, 0부터, 끝 포함). `:sort`·`:>`·`:j` 처럼
+   * 범위 전체를 한 항목으로 저장하는 명령에서, 실행 취소 커서가 '저장한 커서가 바뀐 범위 안인지'를 이 범위로 판정합니다.
+   */
+  savedRange?: { start: number; end: number };
 }
 
 export interface MarkPosition {
@@ -897,6 +902,11 @@ export interface VimEditorState {
    * `$` 뒤에는 CURSWANT_EOL(줄 끝). 다른 명령이 끝나면 현재 열로 다시 정해집니다.
    */
   curswant?: number;
+  /**
+   * Ex 명령이 커서를 이 위치에 두면서 curswant 를 바꾸지 않았다는 표시 (Vim 은 `beginline(BL_SOL)`·`set_indent` 처럼
+   * `w_set_curswant` 를 켜지 않는 커서 이동 뒤 기억한 열을 유지합니다). 키 하나를 처리한 뒤 applyCurswant 가 지웁니다.
+   */
+  keepCurswantAt?: CursorPosition;
   /** [count]/pattern 의 count (연산자 없이 검색을 시작할 때) */
   searchCount?: number;
   searchOperator?: {

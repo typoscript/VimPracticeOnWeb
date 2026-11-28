@@ -102,11 +102,12 @@ export function parsePending(pendingKeys?: string): ParsedPending {
   return { totalCount: 1 };
 }
 
-/** 일시적인 실패 신호(bell)를 제거한 상태를 반환합니다. */
+/** 일시적인 신호(실패 bell, Ex 명령의 curswant 유지 표시 keepCurswantAt)를 제거한 상태를 반환합니다. */
 export function withoutBell(state: VimEditorState): VimEditorState {
-  if (!state.bell) return state;
+  if (!state.bell && !state.keepCurswantAt) return state;
   const copy = { ...state };
   delete copy.bell;
+  delete copy.keepCurswantAt;
   return copy;
 }
 
@@ -150,8 +151,11 @@ export function findShiftRange(
   keys: string[],
   count: number,
   runHandleKey: RunHandleKeyFn
-): { startLine: number; endLine: number } | null {
+): { startLine: number; endLine: number; startCol: number } | null {
   const base: VimEditorState = { ...state, mode: 'NORMAL', pendingKeys: undefined, visualAnchor: undefined, undoStack: [] };
+  // startCol: 연산 범위 시작 위치(Vim oap->start)의 열. op_shift 는 커서를 여기 두고 실행 취소 위치(uh_cursor)를 저장합니다.
+  const earlier = (a: { line: number; col: number }, b: { line: number; col: number }) =>
+    a.line < b.line || (a.line === b.line && a.col <= b.col) ? a : b;
   const countKeys = count > 1 ? String(count).split('') : [];
   if (keys[0] === 'i' || keys[0] === 'a') {
     const selected = [...['v'], ...countKeys, ...keys].reduce((s, k) => runHandleKey(s, k), base);
@@ -159,6 +163,7 @@ export function findShiftRange(
     return {
       startLine: Math.min(selected.visualAnchor.line, selected.cursor.line),
       endLine: Math.max(selected.visualAnchor.line, selected.cursor.line),
+      startCol: earlier(selected.visualAnchor, selected.cursor).col,
     };
   }
   let moved = base;
@@ -173,7 +178,7 @@ export function findShiftRange(
   if (!LINEWISE_SHIFT_MOTIONS.has(motionKey) && moved.cursor.line > state.cursor.line && moved.cursor.col === 0) {
     endLine = Math.max(state.cursor.line, moved.cursor.line - 1);
   }
-  return { startLine: Math.min(state.cursor.line, moved.cursor.line), endLine };
+  return { startLine: Math.min(state.cursor.line, moved.cursor.line), endLine, startCol: earlier(state.cursor, moved.cursor).col };
 }
 
 /**

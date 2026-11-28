@@ -271,10 +271,11 @@ export function handleNormalFilterShiftEqualPending(
     const range = findShiftRange(state, prefix ? [...prefix.split(''), key] : [key], count, runHandleKey);
     if (!range) return { handled: true, state: ringBell(state) };
     const res = indentLines(
-      { ...state, cursor: { line: range.startLine, col: 0 }, pendingKeys: undefined },
+      { ...state, cursor: { line: range.startLine, col: range.startCol }, pendingKeys: undefined },
       range.endLine - range.startLine + 1,
       dir === '>' ? 'in' : 'out',
-      state.cursor.col
+      // Vim op_shift 의 beginline(BL_SOL) / do_pending_operator 의 old_col: 연산 전 기억한 열. `|` 는 curswant 를 count-1 로 정합니다.
+      !prefix && key === '|' ? count - 1 : (state.curswant ?? state.cursor.col)
     );
     const keys = [...(state.pendingKeys ?? '').split(''), key];
     // $ 와 g_ 는 Vim 에서 curswant 를 '줄 끝'(MAXCOL)으로 두므로, 'nostartofline' 이면 들여쓰기 뒤 커서가 줄 끝으로 갑니다.

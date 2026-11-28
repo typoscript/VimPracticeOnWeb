@@ -405,8 +405,8 @@ export function indentLines(
   state: VimEditorState,
   count = 1,
   direction: 'in' | 'out',
-  /** 연산 전 커서 열. 'nostartofline'(기본값)이면 Vim 처럼 이 열을 유지합니다. */
-  keepCol: number = state.cursor.col
+  /** 연산 전 기억한 열(curswant). 'nostartofline'(기본값)이면 Vim 처럼 이 열로 갑니다 (do_pending_operator 의 old_col). */
+  keepCol: number = state.curswant ?? state.cursor.col
 ): VimEditorState {
   const stateWithUndo = pushUndoSnapshot(state);
   const startLine = state.cursor.line;

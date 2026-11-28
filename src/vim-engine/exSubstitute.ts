@@ -1,6 +1,7 @@
 import { VimEditorState, ConfirmSubstituteMatch } from './types';
 import { clampCursor, getFirstNonBlankCol } from './cursor';
 import { pushUndoSnapshot } from './operators';
+import { pushUndoSnapshotAt } from './undoHistory';
 import { compileVimRegex } from './vimRegex';
 import { msg } from './messages';
 import {
@@ -186,6 +187,7 @@ export function executeSubstitution(
   const replacer = makeReplacer(replacement, state, options.runEx);
   let totalSubCount = 0;
   let lastModifiedLine = -1;
+  let firstModifiedLine = -1;
 
   let nextLines = [...state.lines];
   try {
@@ -209,7 +211,10 @@ export function executeSubstitution(
         const groups = (offsetIndex > 1 ? args.slice(1, offsetIndex) : []) as (string | undefined)[];
         return replacer(match, groups, l);
       });
-      if (lineMatched) lastModifiedLine = l;
+      if (lineMatched) {
+        lastModifiedLine = l;
+        if (firstModifiedLine < 0) firstModifiedLine = l;
+      }
     }
   } catch (err) {
     return substituteError(state, err instanceof Error ? err.message : String(err));
@@ -231,7 +236,8 @@ export function executeSubstitution(
   }
 
   nextLines = splitReplacedLines(nextLines);
-  const stateWithSnapshot = pushUndoSnapshot(state);
+  // Vim do_sub: 줄을 바꾸기 직전(u_savesub) 커서는 처음 치환한 줄의 0열이므로 실행 취소는 그 자리로 돌아갑니다.
+  const stateWithSnapshot = pushUndoSnapshotAt(state, { line: Math.max(0, firstModifiedLine), col: 0 });
   // Vim do_sub: 마지막으로 치환한 줄의 첫 비공백으로 갑니다.
   const lastSubLine = Math.max(0, Math.min(lastModifiedLine, nextLines.length - 1));
   const nextCursor = clampCursor(

@@ -1,7 +1,7 @@
 import { VimEditorState } from './types';
 import { clampCursor, getFirstNonBlankCol } from './cursor';
-import { getOptions } from './setOptionsCore';
 import { pushUndoSnapshot } from './operators';
+import { beginlineSolCol, keepCurswantIfNosol, pushUndoSnapshotAt } from './undoHistory';
 import { compileVimRegex } from './vimRegex';
 import { buildVfsMap, getVfsFile } from './vfs';
 import { executeReadShell } from './shellEngine';
@@ -191,7 +191,8 @@ export function executeSort(
     }
   }
 
-  const stateWithUndo = pushUndoSnapshot(state);
+  // Vim ex_sort: 커서를 옮기기 전에 범위 전체를 u_save 하므로 실행 취소는 원래 커서로 돌아갑니다.
+  const stateWithUndo = pushUndoSnapshotAt(state, state.cursor, { start: minLine, end: maxLine });
   const selectedLines = state.lines.slice(minLine, maxLine + 1);
 
   const indexed = selectedLines.map((line, idx) => {
@@ -480,12 +481,14 @@ export function executeMove(
   ];
 
   const finalCursorLine = insertIndex + linesToMove.length - 1;
-  // Vim ex_copy / ex_move: 마지막 줄로 가고 'nostartofline' 이면 열을 유지합니다.
-  const nextCursor = getOptions(state).startofline
-    ? clampCursor(newLines, { line: finalCursorLine, col: getFirstNonBlankCol(newLines[finalCursorLine] ?? '') }, 'NORMAL')
-    : clampCursor(newLines, { line: finalCursorLine, col: state.cursor.col }, 'NORMAL');
+  // Vim ex_copymove: 마지막 줄로 가서 beginline(BL_SOL | BL_FIX) — 'nostartofline' 이면 curswant 열, curswant 유지
+  const nextCursor = clampCursor(
+    newLines,
+    { line: finalCursorLine, col: beginlineSolCol(state, newLines[finalCursorLine] ?? '') },
+    'NORMAL'
+  );
 
-  return {
+  return keepCurswantIfNosol({
     ...stateWithUndo,
     lines: newLines,
     cursor: nextCursor,
@@ -494,7 +497,7 @@ export function executeMove(
     commandBuffer: undefined,
     commandType: undefined,
     commandMessage: msg('{linesToMoveCount}개 줄 이동 완료', { linesToMoveCount: linesToMove.length }),
-  };
+  });
 }
 
 /**
@@ -533,12 +536,14 @@ export function executeCopy(
   ];
 
   const finalCursorLine = insertIndex + linesToCopy.length - 1;
-  // Vim ex_copy / ex_move: 마지막 줄로 가고 'nostartofline' 이면 열을 유지합니다.
-  const nextCursor = getOptions(state).startofline
-    ? clampCursor(newLines, { line: finalCursorLine, col: getFirstNonBlankCol(newLines[finalCursorLine] ?? '') }, 'NORMAL')
-    : clampCursor(newLines, { line: finalCursorLine, col: state.cursor.col }, 'NORMAL');
+  // Vim ex_copymove: 마지막 줄로 가서 beginline(BL_SOL | BL_FIX) — 'nostartofline' 이면 curswant 열, curswant 유지
+  const nextCursor = clampCursor(
+    newLines,
+    { line: finalCursorLine, col: beginlineSolCol(state, newLines[finalCursorLine] ?? '') },
+    'NORMAL'
+  );
 
-  return {
+  return keepCurswantIfNosol({
     ...stateWithUndo,
     lines: newLines,
     cursor: nextCursor,
@@ -547,7 +552,7 @@ export function executeCopy(
     commandBuffer: undefined,
     commandType: undefined,
     commandMessage: msg('{linesToCopyCount}개 줄 복제 완료', { linesToCopyCount: linesToCopy.length }),
-  };
+  });
 }
 
 export {

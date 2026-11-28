@@ -1,6 +1,7 @@
 // 실행 취소 기록(pushUndoSnapshot)과 u / Ctrl-r 실행 취소·다시 실행. operators.ts 에서 분리.
-import { StateSnapshot, VimEditorState } from './types';
+import { CursorPosition, StateSnapshot, VimEditorState } from './types';
 import { clampCursor, getFirstNonBlankCol } from './cursor';
+import { getOptions } from './setOptionsCore';
 import { areLinesEqual, ensureUndoTreeInitialized, recordUndoTreeChange, jumpUndoSeq } from './undoTreeEngine';
 import { msg } from './messages';
 
@@ -59,6 +60,66 @@ export function pushUndoSnapshot(state: VimEditorState): VimEditorState {
     pendingUndoJoin: undefined,
     lastActionWasUndo: undefined,
   };
+}
+
+/**
+ * pushUndoSnapshot 과 같지만, 실행 취소 때 돌아갈 커서(Vim `uh_cursor`)를 `cursor` 로 기록합니다.
+ * `savedRange` 는 Vim 이 한 번의 u_save 로 저장한 줄 범위입니다 (StateSnapshot.savedRange).
+ * Vim 은 변경 묶음의 첫 u_save 때 커서를 저장하는데, Ex 명령은 그 전에 커서를 옮깁니다
+ * (`:d`·`:>` 는 첫 줄의 curswant 열, `:s` 는 처음 바꾼 줄의 0열, `:j` 는 첫 줄의 원래 열).
+ * `:undojoin` 으로 새 기록이 생기지 않으면 이전 기록을 건드리지 않습니다.
+ */
+export function pushUndoSnapshotAt(
+  state: VimEditorState,
+  cursor: CursorPosition,
+  savedRange?: { start: number; end: number }
+): VimEditorState {
+  return setLastUndoCursor(pushUndoSnapshot(state), state, cursor, savedRange);
+}
+
+/** 실행 취소 기록의 맨 위 항목(방금 넣은 변경)의 커서·u_save 범위를 바꿉니다. 기록이 `before` 보다 늘지 않았으면 그대로 둡니다. */
+export function setLastUndoCursor(
+  state: VimEditorState,
+  before: VimEditorState,
+  cursor: CursorPosition,
+  savedRange?: { start: number; end: number }
+): VimEditorState {
+  const stack = state.undoStack ?? [];
+  const top = stack[stack.length - 1];
+  if (!top || top === before.undoStack?.[before.undoStack.length - 1]) return state;
+  const entry: StateSnapshot = { ...top, cursor: { line: cursor.line, col: cursor.col }, ...(savedRange ? { savedRange } : {}) };
+  return { ...state, undoStack: [...stack.slice(0, -1), entry] };
+}
+
+/**
+ * Vim `beginline(BL_SOL | BL_FIX)`: 'startofline' 이면 첫 비공백, 아니면 기억한 열(curswant)로 갑니다
+ * (줄이 짧으면 줄 끝). Ex 주소 이동·`:d`/`:>` 의 시작 위치·`:t`/`:m` 뒤·실행 취소가 씁니다.
+ */
+export function beginlineSolCol(state: VimEditorState, lineText: string): number {
+  if (getOptions(state).startofline) return getFirstNonBlankCol(lineText);
+  const want = state.curswant ?? state.cursor.col;
+  return Math.max(0, Math.min(want, lineText.length - 1));
+}
+
+/** 커서를 옮긴 Ex 명령이 Vim 처럼 curswant 를 바꾸지 않게 표시합니다 ('startofline' 이면 표시하지 않음, beginline 이 curswant 를 다시 정함). */
+export function keepCurswantIfNosol(state: VimEditorState): VimEditorState {
+  if (getOptions(state).startofline) return state;
+  return { ...state, keepCurswantAt: { line: state.cursor.line, col: state.cursor.col } };
+}
+
+/** 커서를 옮긴 Ex 명령이 curswant 를 바꾸지 않게 표시합니다 (Vim 에서 `w_set_curswant` 를 켜지 않는 이동). */
+export function keepCurswant(state: VimEditorState): VimEditorState {
+  return { ...state, keepCurswantAt: { line: state.cursor.line, col: state.cursor.col } };
+}
+
+/**
+ * 비주얼 선택에 연산할 때 Vim do_pending_operator 가 커서를 두는 범위 시작(oap->start).
+ * oap->start 는 앵커(줄 단위 비주얼은 그 줄의 0열)이고, 그것이 커서보다 앞이면 그 자리, 아니면 커서 자리입니다. 연산의 첫 u_save 가 이 위치를 기억합니다.
+ */
+export function visualOperatorStart(linewise: boolean, anchor: CursorPosition, cursor: CursorPosition): CursorPosition {
+  const start = { line: anchor.line, col: linewise ? 0 : anchor.col };
+  const startFirst = start.line < cursor.line || (start.line === cursor.line && start.col < cursor.col);
+  return startFirst ? start : { line: cursor.line, col: cursor.col };
 }
 
 /** Vim u_add_time: 100초 미만은 "N seconds ago", 그 이상은 변경 시각(HH:MM:SS). */
@@ -136,9 +197,9 @@ function firstHunkRestoredSize(restored: string[], current: string[], top: numbe
 
 /**
  * Vim u_undoredo 의 커서 규칙.
- * - 변경을 시작할 때의 커서(스냅샷 커서)가 바뀐 범위(바로 윗줄 ~ 되살린 줄의 끝)에 있으면 그 위치로 돌아갑니다.
- * - 아니면 실제로 바뀐 첫 줄로 가고, 열은 스냅샷 커서가 그 줄이면 그 열, 아니면 첫 비공백입니다.
- *   (Vim 은 'nostartofline' 이면 curswant 열로 가지만, Ex 명령 뒤의 curswant 를 엔진이 따로 기억하지 않아 첫 비공백으로 둡니다.)
+ * - 변경을 시작할 때 저장한 커서(스냅샷 커서, Vim `uh_cursor`)가 바뀐 범위(바로 윗줄 ~ 되살린 줄의 끝)에 있으면 그 위치로 돌아갑니다.
+ * - 아니면 실제로 바뀐 첫 줄로 가고, 열은 저장한 커서가 그 줄이면 그 열, 아니면 `beginline(BL_SOL | BL_FIX)`
+ *   ('nostartofline' 이면 실행 취소 직전의 curswant 열, 아니면 첫 비공백)입니다. 되살린 줄이 버퍼 끝을 넘으면 0열입니다.
  */
 function undoCursorPosition(state: VimEditorState, snapshot: StateSnapshot): { line: number; col: number } {
   const restored = snapshot.lines;
@@ -147,11 +208,18 @@ function undoCursorPosition(state: VimEditorState, snapshot: StateSnapshot): { l
   let top = 0;
   while (top < Math.min(restored.length, current.length) && restored[top] === current[top]) top++;
   if (top === restored.length && top === current.length) return saved;
-  const newSize = firstHunkRestoredSize(restored, current, top);
-  if (saved.line >= top - 1 && saved.line <= top + newSize) return saved;
-  const line = Math.min(top, Math.max(0, restored.length - 1));
+  if (snapshot.savedRange) {
+    // 한 번의 u_save 항목: 저장한 커서가 그 범위(바로 윗줄 ~ 범위 다음 줄) 안이면 그 위치
+    const { start, end } = snapshot.savedRange;
+    if (saved.line >= start - 1 && saved.line <= end + 1) return saved;
+  } else {
+    const newSize = firstHunkRestoredSize(restored, current, top);
+    if (saved.line >= top - 1 && saved.line <= top + newSize) return saved;
+  }
+  if (top > restored.length - 1) return { line: Math.max(0, restored.length - 1), col: 0 };
+  const line = top;
   if (saved.line === line) return { line, col: saved.col };
-  return { line, col: getFirstNonBlankCol(restored[line] ?? '') };
+  return { line, col: beginlineSolCol(state, restored[line] ?? '') };
 }
 
 /**

@@ -3416,6 +3416,691 @@
     }
   },
   {
+    "id": "ex-goto-curswant",
+    "text": "xxxxxxxx\nab cd ef gh\nzz\nzzzzzz a",
+    "cursor": {
+      "row": 0,
+      "col": 6
+    },
+    "keys": ":3<CR>:2<CR>",
+    "expected": {
+      "lines": [
+        "xxxxxxxx",
+        "ab cd ef gh",
+        "zz",
+        "zzzzzz a"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 6
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "ex-yank-keeps-curswant",
+    "text": "xxxxxxxx\nab cd ef gh\nzz\nzzzzzz a",
+    "cursor": {
+      "row": 0,
+      "col": 6
+    },
+    "keys": "$:2,3y<CR>j",
+    "expected": {
+      "lines": [
+        "xxxxxxxx",
+        "ab cd ef gh",
+        "zz",
+        "zzzzzz a"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 10
+      },
+      "reg": "ab cd ef gh\nzz\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "ex-shift-keeps-curswant",
+    "text": "xxxxxxxx\nab cd ef gh\nzz\nzzzzzz a",
+    "cursor": {
+      "row": 0,
+      "col": 6
+    },
+    "keys": ":2,3><CR>j",
+    "expected": {
+      "lines": [
+        "xxxxxxxx",
+        "  ab cd ef gh",
+        "  zz",
+        "zzzzzz a"
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 6
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "ex-shift-undo",
+    "text": "xxxxxxxx\nab cd ef gh\nzz\nzzzzzz a",
+    "cursor": {
+      "row": 0,
+      "col": 6
+    },
+    "keys": ":2,3><CR>juj",
+    "expected": {
+      "lines": [
+        "xxxxxxxx",
+        "ab cd ef gh",
+        "zz",
+        "zzzzzz a"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 1
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "ex-shift-then-op-shift",
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "cursor": {
+      "row": 2,
+      "col": 3
+    },
+    "keys": ":1,2>><CR><j",
+    "expected": {
+      "lines": [
+        "      indented line one",
+        "      deeper (nested) item",
+        "back to one",
+        "last_word_here end"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 3
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "ex-delete-undo",
+    "text": "xxxxxxxx\n  ab cd ef gh\nzz\nzzzzzz a",
+    "cursor": {
+      "row": 0,
+      "col": 6
+    },
+    "keys": ":2,3d<CR>u",
+    "expected": {
+      "lines": [
+        "xxxxxxxx",
+        "  ab cd ef gh",
+        "zz",
+        "zzzzzz a"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 6
+      },
+      "reg": "  ab cd ef gh\nzz\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "ex-delete-first-nonblank",
+    "text": "a\nb\n  c\nd",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": ":2d<CR>",
+    "expected": {
+      "lines": [
+        "a",
+        "  c",
+        "d"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 2
+      },
+      "reg": "b\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "g-delete-undo-curswant",
+    "text": "xxxxxxxx\nab cd ef gh\nzz\nzzzzzz a",
+    "cursor": {
+      "row": 0,
+      "col": 6
+    },
+    "keys": ":g/a/d<CR>u",
+    "expected": {
+      "lines": [
+        "xxxxxxxx",
+        "ab cd ef gh",
+        "zz",
+        "zzzzzz a"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 6
+      },
+      "reg": "zzzzzz a\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "g-delete-last-match-cursor",
+    "text": "a\nb\na\nc\n  a\n  d",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": ":g/a/d<CR>",
+    "expected": {
+      "lines": [
+        "b",
+        "c",
+        "  d"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 2
+      },
+      "reg": "  a\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "g-delete-undo-first-match",
+    "text": "a\nb\na\nc\n  a\n  d",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": ":g/a/d<CR>u",
+    "expected": {
+      "lines": [
+        "a",
+        "b",
+        "a",
+        "c",
+        "  a",
+        "  d"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "  a\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "s-undo-first-line-col0",
+    "text": "xxxxxxxx\nab cd ef gh\nzz\nzzzzzz a",
+    "cursor": {
+      "row": 0,
+      "col": 6
+    },
+    "keys": ":%s/a/Q/<CR>uk",
+    "expected": {
+      "lines": [
+        "xxxxxxxx",
+        "ab cd ef gh",
+        "zz",
+        "zzzzzz a"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "s-undo-same-line-col0",
+    "text": "const total = sum(a, b) + 42;\nif (total > 10) {",
+    "cursor": {
+      "row": 0,
+      "col": 15
+    },
+    "keys": ":s/\\w\\+/W/g<CR>u",
+    "expected": {
+      "lines": [
+        "const total = sum(a, b) + 42;",
+        "if (total > 10) {"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "copy-keeps-curswant",
+    "text": "xxxxxxxx\nab cd ef gh\nzz\nzzzzzz a",
+    "cursor": {
+      "row": 0,
+      "col": 6
+    },
+    "keys": ":3t0<CR>j",
+    "expected": {
+      "lines": [
+        "zz",
+        "xxxxxxxx",
+        "ab cd ef gh",
+        "zz",
+        "zzzzzz a"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 6
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "move-undo-curswant",
+    "text": "xxxxxxxx\nab cd ef gh\nzz\nzzzzzz a",
+    "cursor": {
+      "row": 0,
+      "col": 6
+    },
+    "keys": ":3m$<CR>u",
+    "expected": {
+      "lines": [
+        "xxxxxxxx",
+        "ab cd ef gh",
+        "zz",
+        "zzzzzz a"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 1
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "join-undo-start-col",
+    "text": "xxxxxxxx\nab cd ef gh\nzz\nzzzzzz a",
+    "cursor": {
+      "row": 0,
+      "col": 6
+    },
+    "keys": ":2,3j<CR>ku",
+    "expected": {
+      "lines": [
+        "xxxxxxxx",
+        "ab cd ef gh",
+        "zz",
+        "zzzzzz a"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 6
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "join-comment-leader",
+    "text": "# a b\n# c\n# \n# d",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": ":2,3j<CR>",
+    "expected": {
+      "lines": [
+        "# a b",
+        "# c",
+        "# d"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "sort-undo-saved-cursor",
+    "text": "xxxxxxxx\n  ab cd ef gh\nzz\nzzzzzz a",
+    "cursor": {
+      "row": 3,
+      "col": 6
+    },
+    "keys": ":sort<CR>u",
+    "expected": {
+      "lines": [
+        "xxxxxxxx",
+        "  ab cd ef gh",
+        "zz",
+        "zzzzzz a"
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 6
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "norm-undo-first-change-1",
+    "text": "xxxxxxxx\n  ab cd ef gh\nzz\nzzzzzz a",
+    "cursor": {
+      "row": 0,
+      "col": 6
+    },
+    "keys": ":2,3norm A!<CR>u",
+    "expected": {
+      "lines": [
+        "xxxxxxxx",
+        "  ab cd ef gh",
+        "zz",
+        "zzzzzz a"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 12
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "norm-undo-first-change-2",
+    "text": "xxxxxxxx\n  ab cd ef gh\nzz\nzzzzzz a",
+    "cursor": {
+      "row": 3,
+      "col": 6
+    },
+    "keys": ":2,3norm I#<CR>u",
+    "expected": {
+      "lines": [
+        "xxxxxxxx",
+        "  ab cd ef gh",
+        "zz",
+        "zzzzzz a"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "shift-pipe-count-col",
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "cursor": {
+      "row": 0,
+      "col": 7
+    },
+    "keys": ":2<CR>2<|",
+    "expected": {
+      "lines": [
+        "  indented line one",
+        "  deeper (nested) item",
+        "  back to one",
+        "last_word_here end"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 1
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "shift-up-undo-start",
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "cursor": {
+      "row": 3,
+      "col": 4
+    },
+    "keys": "<ku",
+    "expected": {
+      "lines": [
+        "  indented line one",
+        "    deeper (nested) item",
+        "  back to one",
+        "last_word_here end"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 4
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-start-keeps-curswant",
+    "text": "function greet(name) {\n  return \"Hello, \" + name;\n}",
+    "cursor": {
+      "row": 1,
+      "col": 18
+    },
+    "keys": "Aend;<Esc>:1,2>><CR>vggF)d",
+    "expected": {
+      "lines": [
+        "    function greet(nameeturn \"Hello, \" + name;end;",
+        "}"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 23
+      },
+      "reg": ") {\n      r",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-line-change-undo-1",
+    "text": "abc\n  plain words\nxyz",
+    "cursor": {
+      "row": 1,
+      "col": 4
+    },
+    "keys": "Vca b<Esc>u",
+    "expected": {
+      "lines": [
+        "abc",
+        "  plain words",
+        "xyz"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "  plain words\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-line-change-undo-2",
+    "text": "abc\n  plain words\nxyz",
+    "cursor": {
+      "row": 0,
+      "col": 2
+    },
+    "keys": "Vjca b<Esc>u",
+    "expected": {
+      "lines": [
+        "abc",
+        "  plain words",
+        "xyz"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "abc\n  plain words\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-line-change-undo-3",
+    "text": "abc def\n  plain words\nxyz",
+    "cursor": {
+      "row": 2,
+      "col": 1
+    },
+    "keys": "VkcX<Esc>u",
+    "expected": {
+      "lines": [
+        "abc def",
+        "  plain words",
+        "xyz"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 1
+      },
+      "reg": "  plain words\nxyz\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-delete-undo-1",
+    "text": "abc def\n  plain words\nxyz",
+    "cursor": {
+      "row": 0,
+      "col": 5
+    },
+    "keys": "vjdu",
+    "expected": {
+      "lines": [
+        "abc def",
+        "  plain words",
+        "xyz"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 5
+      },
+      "reg": "ef\n  plai",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-delete-undo-2",
+    "text": "abc def\n  plain words\nxyz",
+    "cursor": {
+      "row": 0,
+      "col": 5
+    },
+    "keys": "Vjdu",
+    "expected": {
+      "lines": [
+        "abc def",
+        "  plain words",
+        "xyz"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "abc def\n  plain words\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-change-undo",
+    "text": "abc def\n  plain words\nxyz",
+    "cursor": {
+      "row": 1,
+      "col": 4
+    },
+    "keys": "vecX<Esc>u",
+    "expected": {
+      "lines": [
+        "abc def",
+        "  plain words",
+        "xyz"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 4
+      },
+      "reg": "ain",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "d-e-empty-line-undo",
+    "text": "abc\n\nconst x = 1;",
+    "cursor": {
+      "row": 1,
+      "col": 0
+    },
+    "keys": "deu",
+    "expected": {
+      "lines": [
+        "abc",
+        "",
+        "const x = 1;"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "\nconst",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
     "id": "ex-range-past-end-1",
     "text": "plain 0x1f 007 -3 words\nsecond",
     "cursor": {
