@@ -436,7 +436,7 @@ export function goToLastInsert(state: VimEditorState): VimEditorState {
  */
 export function reselectLastVisual(state: VimEditorState): VimEditorState {
   if (state.lastVisualSelection) {
-    const { mode, anchor, cursor } = state.lastVisualSelection;
+    const { mode, anchor, cursor, endOfLine } = state.lastVisualSelection;
     const clampedAnchor = clampCursor(state.lines, anchor, mode);
     const clampedCursor = clampCursor(state.lines, cursor, mode);
     return {
@@ -444,6 +444,8 @@ export function reselectLastVisual(state: VimEditorState): VimEditorState {
       mode,
       visualAnchor: clampedAnchor,
       cursor: clampedCursor,
+      // 블록을 `$` 로 줄 끝까지 늘렸던 선택은 gv 도 줄 끝까지입니다 (Vim vi_curswant == MAXCOL)
+      visualBlockEndOfLine: mode === 'VISUAL_BLOCK' && endOfLine ? true : undefined,
       pendingKeys: undefined,
     };
   }

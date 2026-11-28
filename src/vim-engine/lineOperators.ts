@@ -1,6 +1,6 @@
 import { CursorPosition, VimEditorState } from './types';
 import { columnForVirtual, curswantColumnOn, cursorVirtualColumn, tabstopOf } from './virtualColumn';
-import { clampCursor, getFirstNonBlankCol } from './cursor';
+import { clampCursor, getFirstNonBlankCol, placeCursorMaybePastEnd } from './cursor';
 import { pushUndoSnapshot } from './operators';
 import { pushUndoSnapshotAt, visualOperatorStart } from './undoHistory';
 import { getOptions } from './setEngine';
@@ -483,17 +483,17 @@ export function indentVisual(
     }
     const minCol = op.startCol;
     // Vim op_shift 는 커서를 블록 왼쪽 위(oap->start)에 둔 채 u_save 하므로 실행 취소도 그 자리로 돌아옵니다.
-    return {
+    // 커서는 block_col 로 가고 고치지 않으므로, `<` 가 뒤 공백을 지워 줄 끝이 되면 줄 끝 다음 칸(NUL)에 남습니다.
+    return placeCursorMaybePastEnd({
       ...pushUndoSnapshotAt(state, { line: minLine, col: minCol }),
       lines: newLines,
-      cursor: clampCursor(newLines, { line: minLine, col: minCol }, 'NORMAL'),
       mode: 'NORMAL',
       visualAnchor: undefined,
       visualBlockEndOfLine: undefined,
       pendingKeys: undefined,
       // Vim shift_block: 줄마다 changed_bytes(줄, 블록 열) 뒤 op_shift 의 changed_lines(시작 줄, 0)
       changeListHint: { kind: 'at', line: minLine, col: 0, force: true, before: blockShiftEvents(state.lines, minLine, maxLine, op, direction === 'out') },
-    };
+    }, { line: minLine, col: minCol });
   }
 
   for (let i = minLine; i <= maxLine; i++) {

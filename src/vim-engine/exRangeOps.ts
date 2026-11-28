@@ -1,5 +1,5 @@
 import { CursorPosition, VimEditorState } from './types';
-import { clampCursor } from './cursor';
+import { clampCursor, settleCursorPastEnd } from './cursor';
 import { pushUndoSnapshot } from './operators';
 import { beginlineSolCol, pushUndoSnapshotAt, setLastUndoCursor } from './undoHistory';
 import { compileVimRegex } from './vimRegex';
@@ -133,14 +133,14 @@ export function executeGlobalCommand(
     // 안쪽 키가 아무것도 바꾸지 않았으면(u_save 없음) Vim 처럼 실행 취소 항목을 남기지 않습니다.
     else curState = withUndoFieldsOf(curState, state);
 
-    return {
+    return settleCursorPastEnd({
       ...curState,
       mode: 'NORMAL',
       visualAnchor: undefined,
       commandBuffer: undefined,
       commandType: undefined,
       commandMessage: msg('{matchedIndicesCount}개 줄에 normal 명령을 실행했습니다.', { matchedIndicesCount: matchedIndices.length }),
-    };
+    });
   }
 
   // 3. 그 밖의 Ex 명령 (:g/pat/s//X/, :g/^/m0, :g/pat/t$, :g/pat/j …)
@@ -227,9 +227,10 @@ function executeGlobalExCommand(
     commandType: undefined,
     commandMessage: lastMessage, changeListUndoJoin: state.changeListUndoJoin,
   };
-  if (areSameLines(cur.lines, state.lines)) return { ...finished, changeListNewChange: state.changeListNewChange };
+  // Vim global_exe 는 끝에 check_cursor() 하므로 `:g/pat/>` 가 줄 끝 다음 칸에 둔 커서도 마지막 글자로 돌아옵니다.
+  if (areSameLines(cur.lines, state.lines)) return settleCursorPastEnd({ ...finished, changeListNewChange: state.changeListNewChange });
   const withUndo = pushUndoSnapshot({ ...withUndoFieldsOf(cur, state), lines: state.lines, cursor: firstUndoCursor ?? state.cursor });
-  return { ...withUndo, ...finished, ...undoFieldsOnly(withUndo) };
+  return settleCursorPastEnd({ ...withUndo, ...finished, ...undoFieldsOnly(withUndo) });
 }
 
 function undoFieldsOnly(s: VimEditorState): Partial<VimEditorState> {

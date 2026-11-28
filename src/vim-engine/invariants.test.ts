@@ -62,6 +62,14 @@ describe('Vim State Invariant Guard', () => {
       );
     });
 
+    it('allows the NORMAL cursor on the end-of-line cell only when cursorPastEnd is set (Vim :> / block <)', () => {
+      const prev = createMockState();
+      const flagged = createMockState({ cursor: { line: 0, col: 11 }, cursorPastEnd: true });
+      expect(() => assertValidVimState(prev, flagged, ':')).not.toThrow();
+      const beyond = createMockState({ cursor: { line: 0, col: 12 }, cursorPastEnd: true });
+      expect(() => assertValidVimState(prev, beyond, ':')).toThrow(/COL_OVERFLOW/);
+    });
+
     it('allows cursor col to equal line length in INSERT mode', () => {
       const prev = createMockState({ mode: 'INSERT' });
       const next = createMockState({ mode: 'INSERT', cursor: { line: 0, col: 11 } });

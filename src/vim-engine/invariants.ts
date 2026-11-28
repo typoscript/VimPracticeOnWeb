@@ -177,9 +177,11 @@ function assertBufferAndCursor(
     nextState?.options?.virtualedit ??
     nextState?.globalOptions?.virtualedit ??
     prevState?.options?.virtualedit;
+  // Vim 이 고치지 않고 두는 줄 끝 다음 칸(:> · 블록 <)은 cursorPastEnd 로 표시된 경우에만 허용합니다.
+  const pastEndAllowed = nextState?.cursorPastEnd === true && mode === 'NORMAL' && col === currentLine.length;
   const maxCol = getMaxAllowedCol(currentLine, mode, virtualedit);
 
-  if (col > maxCol) {
+  if (col > maxCol && !pastEndAllowed) {
     throw new VimInvariantViolationError(
       'COL_OVERFLOW',
       `${context}: cursor col ${col} exceeds max allowed ${maxCol} for mode '${mode}' on line ${row} (lineLen: ${currentLine.length}, content: '${currentLine}')`,

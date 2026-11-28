@@ -1,5 +1,5 @@
 import { ClipboardRegister, RegisterEntry, VimEditorState } from './types';
-import { clampCursor } from './cursor';
+import { clampCursor, getFirstNonBlankCol } from './cursor';
 import { pushUndoSnapshot } from './operators';
 import { getOptions } from './setEngine';
 import { registerEntryText, toPrintableRegisterText } from './registerText';
@@ -484,8 +484,8 @@ export function putFromRegister(
     }
 
     const firstLine = insertedLines[0] ?? '';
-    const firstNonWs = firstLine.search(/\S/);
-    const targetCol = firstNonWs !== -1 ? firstNonWs : 0;
+    // Vim do_put: beginline(BL_WHITE | BL_FIX) — 공백만 있는 줄은 마지막 공백
+    const targetCol = getFirstNonBlankCol(firstLine);
     return {
       ...stateWithSnapshot,
       lines: nextLines,

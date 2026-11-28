@@ -1,5 +1,5 @@
 import { VimEditorState, CursorPosition, FoldRange } from './types';
-import { getMaxCol, clampCursor } from './cursor';
+import { getMaxCol, clampCursor, settleCursorPastEnd } from './cursor';
 import { parseWhichwrapFlags } from './setOptionsCore';
 import { evaluateExtraMotion } from './extraMotions';
 import { tabstopOf } from './virtualColumn';
@@ -87,8 +87,12 @@ export function parsePending(pendingKeys?: string): ParsedPending {
   return { totalCount: 1 };
 }
 
-/** 일시적인 신호(실패 bell, Ex 명령의 curswant 유지 표시 keepCurswantAt)를 제거한 상태를 반환합니다. */
+/**
+ * 일시적인 신호(실패 bell, Ex 명령의 curswant 유지 표시 keepCurswantAt)를 제거한 상태를 반환합니다.
+ * 줄 끝 다음 칸에 둔 NORMAL 커서(cursorPastEnd)도 Vim 처럼 다음 키를 처리하기 전에 마지막 글자로 돌립니다.
+ */
 export function withoutBell(state: VimEditorState): VimEditorState {
+  if (state.cursorPastEnd) state = settleCursorPastEnd(state);
   if (!state.bell && !state.keepCurswantAt) return state;
   const copy = { ...state };
   delete copy.bell;
@@ -154,9 +158,10 @@ export function findShiftRange(
   const earlier = (a: { line: number; col: number }, b: { line: number; col: number }) =>
     a.line < b.line || (a.line === b.line && a.col <= b.col) ? a : b;
   const countKeys = count > 1 ? String(count).split('') : [];
-  // 단어·문장 객체와 w/W/e/E 는 연산자용 범위(Vim current_word / current_sent / nv_wordcmd: [count] 가 여러 줄에 걸치고,
+  // 단어·문장 객체와 w/W/e/E/) 는 연산자용 범위(Vim current_word / current_sent / nv_wordcmd: [count] 가 여러 줄에 걸치고,
   // 줄의 마지막 단어에서 w 는 다음 줄로 넘어가지 않음)를 씁니다.
-  if (keys.length === 1 && 'wWeE'.includes(keys[0])) {
+  // `)` 도 같습니다: 버퍼 끝에 닿으면 마지막 글자까지 포함합니다 (>) 가 마지막 줄도 들여씀).
+  if (keys.length === 1 && 'wWeE)'.includes(keys[0])) {
     const range = findOperatorRangeByYank(state, keys, count, runHandleKey);
     if (range) return { startLine: range.start.line, endLine: range.end.line, startCol: range.start.col };
     // nv_wordcmd: 연산자와 함께면 버퍼 끝에서 단어 이동이 실패해도 연산을 계속합니다 (마지막 빈 줄의 3>W 도 op_shift)
@@ -174,6 +179,15 @@ export function findShiftRange(
     // Vim current_word: [count] 가 버퍼 끝을 넘으면 실패하고 커서는 움직인 자리에 남습니다 (4<iW, nv_object).
     if (probe.bell && keys[1] !== 's') {
       return { startLine: state.cursor.line, endLine: state.cursor.line, startCol: state.cursor.col, failedAt: probe.cursor };
+    }
+  }
+  // 태그 객체(it): 연산자용 범위 끝은 다음 줄 0열의 `</tag>` 앞(배타)인데 Vim 은 이를 앞 줄로 당기지 않으므로 그 줄도 들여씁니다 (>it).
+  if ((keys[0] === 'i' || keys[0] === 'a') && keys.length === 2 && keys[1] === 't') {
+    let probe: VimEditorState = { ...base, clipboard: undefined, bell: false };
+    for (const k of [...countKeys, 'y', ...keys]) if (!probe.bell) probe = runHandleKey(probe, k);
+    const text = probe.clipboard?.content;
+    if (!probe.bell && probe.mode === 'NORMAL' && !probe.pendingKeys && typeof text === 'string' && text.length > 0 && probe.clipboard?.type !== 'line') {
+      return { startLine: probe.cursor.line, endLine: probe.cursor.line + text.split('\n').length - 1, startCol: probe.cursor.col };
     }
   }
   if (keys[0] === 'i' || keys[0] === 'a') {

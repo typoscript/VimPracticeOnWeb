@@ -107,7 +107,8 @@ describe('Select Mode (gh / gH / g<C-h> / Visual Ctrl-g)', () => {
     // Escape returns to NORMAL and saves lastVisualSelection
     state = handleKey(state, 'Escape');
     expect(state.mode).toBe('NORMAL');
-    expect(state.lastVisualSelection).toEqual({
+    // (curswant 는 gv 가 되살릴 b_visual.vi_curswant 입니다)
+    expect(state.lastVisualSelection).toMatchObject({
       mode: 'VISUAL',
       anchor: { line: 0, col: 0 },
       cursor: { line: 0, col: 4 },

@@ -145,12 +145,28 @@ describe('Vim Engine - NORMAL Mode Motions', () => {
       expect(next.cursor).toEqual({ line: 0, col: 0 });
     });
 
-    it('returns 0 for whitespace-only line and empty line', () => {
+    it('goes to the last blank on a whitespace-only line (Vim BL_FIX) and 0 on an empty line', () => {
       const state1 = createState(['     '], 0, 2);
-      expect(handleKey(state1, '^').cursor).toEqual({ line: 0, col: 0 });
+      expect(handleKey(state1, '^').cursor).toEqual({ line: 0, col: 4 });
 
       const state2 = createState([''], 0, 0);
       expect(handleKey(state2, '^').cursor).toEqual({ line: 0, col: 0 });
+    });
+  });
+
+  describe('cursor left past the end of the line (Vim :> on a blank line)', () => {
+    it(':> puts the cursor on the NUL cell, and the next key moves it back to the last character first', () => {
+      let state = createState(['a', '        ', 'b'], 1, 3);
+      for (const k of [':', '>', 'Enter']) state = handleKey(state, k);
+      expect(state.lines[1]).toBe('          ');
+      expect(state.cursor).toEqual({ line: 1, col: 10 });
+      expect(state.cursorPastEnd).toBe(true);
+      const x = handleKey(state, 'x');
+      expect(x.lines[1]).toBe('         ');
+      expect(x.cursor).toEqual({ line: 1, col: 8 });
+      expect(x.cursorPastEnd).toBeUndefined();
+      // 대기 키만 눌러도 먼저 마지막 글자로 돌아옵니다
+      expect(handleKey(state, '"').cursor).toEqual({ line: 1, col: 9 });
     });
   });
 

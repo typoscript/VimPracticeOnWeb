@@ -3,6 +3,7 @@ import { syncRegisters } from './registers';
 import { pushUndoSnapshot } from './undoHistory';
 import { deleteVisualSelection, yankVisualBlock, startVisualBlockInsert, getOrderedRange } from './visual';
 import { startCharOrLineVisualInsert } from './visualInsert';
+import { getOptions } from './setEngine';
 
 type VisualKind = 'VISUAL' | 'VISUAL_LINE' | 'VISUAL_BLOCK';
 
@@ -51,7 +52,8 @@ export function handleVisualChangeKey(state: VimEditorState, key: string, totalC
       const source = key === 'C' ? { ...state, visualBlockEndOfLine: true } : state;
       const deleted = yankVisualBlock(source).clipboard;
       const res = startVisualBlockInsert(source, 'c', totalCount);
-      return syncRegisters(state, { ...res, clipboard: deleted }, false);
+      // 빈 블록(빈 줄의 <C-v>$c)도 Vim op_change 처럼 "" 를 빈 값으로 씁니다 (op_delete 의 d 와 다름).
+      return syncRegisters(state, { ...res, clipboard: deleted }, false, false, true);
     }
     return null;
   }
@@ -67,13 +69,16 @@ export function handleVisualChangeKey(state: VimEditorState, key: string, totalC
     const minLine = Math.min(state.visualAnchor.line, state.cursor.line);
     const maxLine = Math.max(state.visualAnchor.line, state.cursor.line);
     const deletedContent = state.lines.slice(minLine, maxLine + 1).join('\n');
-    const nextLines = [...state.lines.slice(0, minLine), '', ...state.lines.slice(maxLine + 1)];
+    // Vim op_change(줄 단위): 'autoindent' 이면 첫 줄의 들여쓰기를 남기고 그 뒤에서 입력합니다 (아무것도 안 넣고 Esc 하면 지움, did_ai).
+    const indent = getOptions(state).autoindent ? ((state.lines[minLine] ?? '').match(/^[ \t]*/)?.[0] ?? '') : '';
+    const nextLines = [...state.lines.slice(0, minLine), indent, ...state.lines.slice(maxLine + 1)];
     // 실행 취소 기록 (커서는 recordVisualUndoCursor 가 Vim 의 op_delete 시작 위치로 맞춤)
     const withUndo = pushUndoSnapshot(state);
     const withDel: VimEditorState = {
       ...withUndo,
       lines: nextLines,
-      cursor: { line: minLine, col: 0 },
+      cursor: { line: minLine, col: indent.length },
+      ...(indent ? { autoIndentPending: true } : {}),
       mode: 'INSERT',
       visualAnchor: undefined,
       clipboard: { type: 'line', content: deletedContent },

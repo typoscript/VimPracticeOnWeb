@@ -37,7 +37,13 @@ function visualReselectKeys(prev: VimEditorState): string[] | null {
 }
 
 /** 비주얼 모드 연산이 끝나면 '.' 가 같은 양의 텍스트에 다시 적용되도록 반복 키를 기록합니다. */
+/** 문자 단위 비주얼의 X / D / Y 는 Vim v_visop 이 줄 단위('V')로 바꿔 실행하므로 반복·실행 취소 규칙도 줄 단위로 봅니다. */
+function asVisualOpState(prev: VimEditorState, key: string): VimEditorState {
+  return prev.mode === 'VISUAL' && !prev.pendingKeys && (key === 'X' || key === 'D' || key === 'Y') ? { ...prev, mode: 'VISUAL_LINE' } : prev;
+}
+
 export function recordVisualRepeat(prev: VimEditorState, next: VimEditorState, key: string, isReplayingDot: boolean): VimEditorState {
+  prev = asVisualOpState(prev, key);
   if (isReplayingDot || !VISUAL_REPEAT_MODES.has(prev.mode)) return next;
   if (VISUAL_REPEAT_MODES.has(next.mode) || next.pendingKeys) return next;
   // 문자·줄 단위 비주얼 I / A 는 자기 반복 키를 남깁니다 (visualInsert.ts)
@@ -174,7 +180,8 @@ export function recordInsertStartCursor(prev: VimEditorState, next: VimEditorSta
  * 연산 전에 커서를 연산 범위 시작(oap->start)으로 옮기므로, 앵커가 커서보다 앞이면 앵커(줄 단위 비주얼은 그 줄의 0열),
  * 아니면 커서 자리를 기억합니다. 줄 단위로 여러 줄을 바꾸는 `c`(op_delete) 는 둘째 줄부터 지우며 기록을 시작하므로 한 줄 아래입니다.
  */
-export function recordVisualUndoCursor(prev: VimEditorState, next: VimEditorState): VimEditorState {
+export function recordVisualUndoCursor(prev: VimEditorState, next: VimEditorState, key = ''): VimEditorState {
+  prev = asVisualOpState(prev, key);
   if ((prev.mode !== 'VISUAL' && prev.mode !== 'VISUAL_LINE') || !prev.visualAnchor) return next;
   if (isVisualInsertRedoKey(next.currentChangeKeys?.[0])) return next;
   const stack = next.undoStack;

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { renderLineContent, RenderLineOptions } from './EditorLineRenderer';
 
 function renderLine(opts: Partial<RenderLineOptions>) {
@@ -78,6 +78,35 @@ describe('EditorLineRenderer', () => {
     expect(container.querySelectorAll('.spell-error').length).toBeGreaterThan(0);
     expect(container.querySelectorAll('.lsp-diag-error').length).toBeGreaterThan(0);
     expect(container.querySelector('.syn-keyword')).toBeInTheDocument();
+  });
+
+  it('renders a NORMAL cursor left past the end of the line (Vim :> on a blank line) as an extra cell', () => {
+    const { container } = renderLine({
+      text: '    ',
+      lineIdx: 0,
+      cursor: { line: 0, col: 4 },
+      mode: 'NORMAL',
+      targetCol: null,
+      lineMatches: [],
+    });
+    const cursor = screen.getByTestId('vim-cursor');
+    expect(cursor.textContent).toBe('\u00A0');
+    const cells = Array.from(container.querySelectorAll('.vim-char, .vim-cursor'));
+    expect(cells.indexOf(cursor)).toBe(4);
+
+    // 'list' 의 eol 문자는 그 칸(커서) 위에 그리고 따로 한 번 더 그리지 않습니다
+    const listed = renderLine({
+      text: 'ab',
+      lineIdx: 0,
+      cursor: { line: 0, col: 2 },
+      mode: 'NORMAL',
+      targetCol: null,
+      lineMatches: [],
+      listMode: true,
+      listchars: { eol: '$' },
+    });
+    expect(within(listed.container).getByTestId('vim-cursor').textContent).toBe('$');
+    expect(within(listed.container).queryAllByTestId('listchar-eol')).toHaveLength(0);
   });
 
   it('renders listchars for tabs, trailing spaces, inner spaces, nbsp, and eol', () => {

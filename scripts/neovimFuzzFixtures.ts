@@ -915,6 +915,66 @@ const CASES: Case[] = [
   // 빈 줄의 S / cc 도 truncate_line 이 기록, 빈 줄 두 개 중 하나의 dw 는 버퍼 비우기가 아님
   { id: 'cl-cc-empty-line', text: 'a\n\n   \nb', cursor: { row: 1, col: 0 }, keys: 'S<Esc>jcc<Esc>kddujS<Esc>k2cc<Esc>u', options: 'ai' },
   { id: 'cl-dw-one-of-two-empty', text: T2, cursor: { row: 1, col: 18 }, keys: '<C-v>2j4J<C-v>}{dyawqadwjq', options: 'ic scs' },
+  // NORMAL 커서가 줄 끝 다음 칸(NUL)에 남는 Vim 동작 (cursorPastEnd): :> 는 공백만 남은 줄의 첫 비공백(=NUL), 블록 < 는 block_col.
+  // 다음 키를 처리하기 전에 마지막 글자로 돌아옵니다 (x · i · yy 가 그 자리에서 동작).
+  { id: 'eol-ex-shift-blank-line', text: 'a\n        \nb', cursor: { row: 1, col: 3 }, keys: ':><CR>' },
+  { id: 'eol-ex-shift-then-x', text: 'a\n        \nb', cursor: { row: 1, col: 3 }, keys: ':><CR>x' },
+  { id: 'eol-ex-shift-then-i', text: 'a\n        \nb', cursor: { row: 1, col: 3 }, keys: ':><CR>iX<Esc>' },
+  { id: 'eol-ex-shift-then-a', text: 'a\n        \nb', cursor: { row: 1, col: 3 }, keys: ':><CR>aX<Esc>' },
+  { id: 'eol-ex-shift-then-yy', text: 'a\n        \nb', cursor: { row: 1, col: 3 }, keys: ':><CR>yy' },
+  { id: 'eol-ex-shift-twice', text: 'a\n        \nb', cursor: { row: 1, col: 3 }, keys: ':><CR>:><CR>' },
+  { id: 'eol-ex-shift-sol', text: 'a\n        \nb', cursor: { row: 1, col: 3 }, keys: ':><CR>', options: 'sol' },
+  { id: 'eol-ex-lshift-range', text: 'a\n    \nb\n    ', cursor: { row: 1, col: 3 }, keys: ':2,4<<CR>' },
+  { id: 'eol-global-shift-clamps', text: 'a\n        \nb', cursor: { row: 1, col: 3 }, keys: ':g/^ /><CR>' },
+  { id: 'eol-block-lshift-dollar', text: 'ab      \ncd      x\nef  \ngh', cursor: { row: 0, col: 2 }, keys: '<C-v>j$4<' },
+  { id: 'eol-block-lshift-count', text: 'ab      \ncd      x\nef  \ngh', cursor: { row: 0, col: 4 }, keys: '<C-v>jj4<' },
+  { id: 'eol-block-lshift-then-x', text: 'ab      \ncd      x\nef  \ngh', cursor: { row: 0, col: 2 }, keys: '<C-v>jj4<x' },
+  { id: 'eol-block-lshift-dot', text: 'ab      \ncd      x\nef  \ngh', cursor: { row: 0, col: 4 }, keys: '<C-v>jj<.' },
+  { id: 'eol-block-lshift-undo', text: 'ab      \ncd      x\nef  \ngh', cursor: { row: 0, col: 4 }, keys: '<C-v>jj4<u' },
+  // 공백만 있는 줄의 첫 비공백은 beginline(BL_WHITE|BL_FIX): 마지막 공백
+  { id: 'caret-blank-line', text: 'abc\n    \nxyz', cursor: { row: 1, col: 1 }, keys: '^' },
+  { id: 'put-line-blank-line', text: 'abc\n    \nxyz', cursor: { row: 1, col: 1 }, keys: 'yyp' },
+  { id: 'norm-yyp-blank-line', text: '  \nab', cursor: { row: 0, col: 1 }, keys: ':norm yyp<CR>' },
+  { id: 'sol-dd-to-blank-line', text: 'abc\n    \nxyz\n   ', cursor: { row: 0, col: 1 }, keys: 'dd', options: 'sol' },
+  { id: 'sol-mark-blank-line', text: 'abc\n    \nxyz\n   ', cursor: { row: 1, col: 1 }, keys: "ma0k'a", options: 'sol' },
+  { id: 'sol-G-blank-line', text: 'abc\n    \nxyz\n   ', cursor: { row: 0, col: 1 }, keys: 'G', options: 'sol' },
+  // 대소문자 연산자의 커서는 oap->start (같은 모션의 y 자리): :> 로 curswant 와 열이 다를 때
+  { id: 'case-op-down-keeps-col', text: '    abc def ghi jkl\n      xyz uvw rst\nend', cursor: { row: 1, col: 12 }, keys: ':1,2><CR>guj' },
+  { id: 'case-op-G-keeps-col', text: '    abc def ghi jkl\n      xyz uvw rst\nend', cursor: { row: 1, col: 12 }, keys: ':1,2><CR>g~G' },
+  { id: 'case-op-up-curswant', text: '    abc def ghi jkl\n      xyz uvw rst\nend', cursor: { row: 1, col: 12 }, keys: ':1,2><CR>guk' },
+  // y{count}% / gU{count}% : 위로 가면 nv_percent 가 간 기억한 열
+  { id: 'y-count-percent-up', text: T1, cursor: { row: 2, col: 18 }, keys: '3y%' },
+  { id: 'case-count-percent-up', text: T1, cursor: { row: 2, col: 18 }, keys: '3g~%' },
+  { id: 'y-count-percent-down', text: T1, cursor: { row: 1, col: 12 }, keys: 'y100%' },
+  // >it: 태그 객체 끝이 다음 줄 0열이어도 그 줄까지 / >) 가 버퍼 끝에 닿으면 마지막 줄까지
+  { id: 'shift-inner-tag-close-line', text: '<ul>\n  <li>one</li>\n  <li>two</li>\n</ul>', cursor: { row: 0, col: 3 }, keys: '>it' },
+  { id: 'shift-sentence-buffer-end', text: 'ab\ncd ef\nghij\nk', cursor: { row: 2, col: 2 }, keys: '>)' },
+  // @q 뒤 curswant 는 매크로 안 명령이 정한 값
+  { id: 'macro-keeps-inner-curswant', text: TF, cursor: { row: 0, col: 21 }, keys: 'qaA!<Esc>jq2@a3dk' },
+  // gv 는 비주얼을 끝낼 때의 curswant(vi_curswant)와 선택(>, < 로 끝낸 것 포함)을 되살림
+  { id: 'gv-restores-curswant', text: TB, cursor: { row: 1, col: 9 }, keys: 'Vjcnew<Esc>gvd' },
+  { id: 'gv-restores-curswant-tab', text: TB, cursor: { row: 1, col: 9 }, keys: 'VTawcnew<Esc>gvd' },
+  { id: 'gv-after-block-shift', text: TP, cursor: { row: 0, col: 7 }, keys: '<C-v>jl<gvd' },
+  { id: 'gv-after-block-shift-noop', text: TP, cursor: { row: 0, col: 7 }, keys: '<C-v>e4<gvU' },
+  { id: 'gv-after-visual-shift', text: TC, cursor: { row: 0, col: 2 }, keys: 'vj>gvd' },
+  { id: 'gv-block-dollar-append', text: TP, cursor: { row: 1, col: 12 }, keys: '<C-v>j$A<b><Esc>gvy', options: 'sol' },
+  // 줄 단위 비주얼 c 는 'autoindent' 면 첫 줄 들여쓰기를 남김
+  { id: 'visual-line-change-ai', text: '<ul>\n  <li>one\n  <li>two\n</ul>', cursor: { row: 1, col: 3 }, keys: 'Vjc(<Esc>', options: 'ai' },
+  { id: 'visual-line-change-ai-esc', text: '<ul>\n  <li>one\n  <li>two\n</ul>', cursor: { row: 1, col: 3 }, keys: 'Vc<Esc>', options: 'ai' },
+  // 빈 블록의 c 는 "" 를 빈 값으로 (d 는 그대로)
+  { id: 'block-change-empty-reg', text: 'abc\n\n\nxyz', cursor: { row: 0, col: 0 }, keys: 'yyj<C-v>$c<b><Esc>' },
+  { id: 'block-delete-empty-reg', text: 'abc\n\n\nxyz', cursor: { row: 0, col: 0 }, keys: 'yyj<C-v>$d' },
+  // 비주얼 X D Y: 문자·줄 단위는 줄 단위, 블록 X·Y 는 d·y, 블록 D 는 줄 끝까지
+  { id: 'visual-D-linewise', text: 'abcdef\ndefgh\n\nxyz\nqwerty', cursor: { row: 0, col: 1 }, keys: 'vjD' },
+  { id: 'visual-D-undo', text: 'abcdef\ndefgh\n\nxyz\nqwerty', cursor: { row: 0, col: 1 }, keys: 'vjDu' },
+  { id: 'visual-X-dot', text: 'abcdef\ndefgh\n\nxyz\nqwerty', cursor: { row: 0, col: 1 }, keys: 'vjX.' },
+  { id: 'visual-Y-linewise', text: 'abcdef\ndefgh\n\nxyz\nqwerty', cursor: { row: 0, col: 1 }, keys: 'vjY' },
+  { id: 'block-D-to-eol-dot', text: 'abcdef\ndefgh\n\nxyz\nqwerty', cursor: { row: 0, col: 1 }, keys: '<C-v>jlD.' },
+  { id: 'block-X-like-d', text: 'abcdef\ndefgh\n\nxyz\nqwerty', cursor: { row: 0, col: 1 }, keys: '<C-v>jlX' },
+  { id: 'block-Y-like-y', text: 'abcdef\ndefgh\n\nxyz\nqwerty', cursor: { row: 0, col: 1 }, keys: '<C-v>jlY' },
+  // 연산자 뒤 f/t 도 ; , 가 쓸 글자를 기억
+  { id: 'op-find-sets-charsearch', text: 'the lazy dog! Then it rests. e', cursor: { row: 0, col: 2 }, keys: '=fe;' },
+  { id: 'case-op-till-sets-charsearch', text: 'the lazy dog! Then it rests. e', cursor: { row: 0, col: 2 }, keys: 'gUte;' },
 ];
 
 const LUA = `

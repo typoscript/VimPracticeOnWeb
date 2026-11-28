@@ -12,6 +12,8 @@ import { syncRegisters } from './registers';
 import { diffObtain, diffPut } from './diffEngine';
 import { findMatchingBracket } from './bracketMatch';
 import { computePercentJumpTarget } from './extraMotions';
+import { getOptions } from './setEngine';
+import { curswantColumnOn } from './virtualColumn';
 import { executeLinewiseObjectOperator } from './textObjects';
 import { moveFind, executeFindOperator } from './findChar';
 import { deleteFoldOrLine, yankFoldOrLine } from './folding';
@@ -113,7 +115,15 @@ export function handleNormalDCYCombineShortcut(
         endLine: Math.max(state.cursor.line, pctTarget.line),
       };
       const res = executeLinewiseObjectOperator(state, op, range);
-      const synced = syncRegisters(state, res, op === 'y', true);
+      let synced = syncRegisters(state, res, op === 'y', true);
+      // y{count}%: 커서는 연산 시작(oap->start). 위로 가면 nv_percent 가 간 자리(beginline(BL_SOL|BL_FIX): 'nostartofline' 이면 기억한 열)
+      if (op === 'y') {
+        const up = pctTarget.line < state.cursor.line;
+        const target = up
+          ? { line: pctTarget.line, col: getOptions(state).startofline ? getFirstNonBlankCol(state.lines[pctTarget.line]) : curswantColumnOn(state, state.lines, pctTarget.line) }
+          : state.cursor;
+        synced = { ...synced, cursor: clampCursor(state.lines, target, 'NORMAL') };
+      }
       const opKeys = [op, String(parsed.totalCount), '%'];
       if (op === 'c') {
         return { ...synced, currentChangeKeys: isReplayingDot ? state.currentChangeKeys : opKeys };

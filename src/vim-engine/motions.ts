@@ -102,6 +102,7 @@ export function moveToLineEnd(lines: string[], cursor: CursorPosition): CursorPo
 
 /**
  * '^': 현재 줄의 첫 번째 공백이 아닌 문자로 이동
+ * Vim beginline(BL_WHITE | BL_FIX): 공백만 있는 줄은 NUL 에 서지 않고 마지막 공백으로 갑니다 (`^`, 줄 단위 `p`, `'a`, `G`).
  */
 export function moveToFirstNonBlank(lines: string[], cursor: CursorPosition): CursorPosition {
   const clamped = clampCursor(lines, cursor);

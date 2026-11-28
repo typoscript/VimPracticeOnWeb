@@ -466,6 +466,13 @@ export function handleVisualModeKey(
       }
     : state.lastVisualSelection;
 
+  // v_X v_D v_Y: 문자·줄 단위는 줄 단위 삭제·복사(Vim 이 'V' 로 바꿈), 블록 X·Y 는 d·y, 블록 D 는 줄 끝까지 지웁니다 (Neovim 대조).
+  if ((key === 'X' || key === 'D' || key === 'Y') && !state.pendingKeys && state.visualAnchor && state.mode.startsWith('VISUAL')) {
+    const block = state.mode === 'VISUAL_BLOCK';
+    const converted: VimEditorState = block ? (key === 'D' ? { ...state, visualBlockEndOfLine: true } : state) : { ...state, mode: 'VISUAL_LINE' };
+    return handleVisualModeKey(converted, key === 'Y' ? 'y' : 'd', dispatchKey, macroDepth);
+  }
+
   // 선택 영역 삭제 (d / x)
   if (key === 'd' || key === 'x') {
     const res = deleteVisualSelection(state, true);

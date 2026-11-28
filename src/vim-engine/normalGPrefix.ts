@@ -243,7 +243,8 @@ export function handleNormalCommentFormatOrCaseG(
     // 단, - 는 모션 목적지(첫 비공백)가 연산 시작이라 그 자리로 갑니다 (g~- , Neovim 대조).
     // `(` 처럼 :help exclusive-linewise 로 줄 단위가 된 모션은 연산 시작(모션 목적지)으로 갑니다 (gU( 가 0열로).
     const keepCol = range.linewise && !getOptions(state).startofline && !['-', '(', ')', '{', '}'].includes(key);
-    const caseCursor = keepCol ? { line: range.start.line, col: curswantColumnOn(state, applied.lines, range.start.line) } : range.cursor;
+    // 커서는 Vim oap->start: 같은 모션의 y 가 두는 자리입니다 (guj 는 원래 열, guk·gugg 는 기억한 열; `:>` 로 curswant 와 열이 다를 때 차이).
+    const caseCursor = range.cursor;
     const finalCursor = clampCursor(applied.lines, caseCursor, 'NORMAL');
     // op_tilde 는 커서를 연산 시작에 둔 채 u_save 하므로, 줄 단위 모션(g~k, gUj, g~G)의 실행 취소도 그 열로 돌아옵니다.
     const withUndoCursor = keepCol ? setLastUndoCursor(applied, state, finalCursor) : applied;

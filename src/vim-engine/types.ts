@@ -576,6 +576,8 @@ export interface LastVisualSelection {
   anchor: CursorPosition;
   cursor: CursorPosition;
   endOfLine?: boolean;
+  /** 비주얼 모드를 끝낼 때의 curswant (Vim b_visual.vi_curswant). gv 가 되살립니다. */
+  curswant?: number;
 }
 
 export interface ChangeListItem {
@@ -808,6 +810,12 @@ export interface VimEditorState {
   } | null;
   /** 직전 키가 실패했음을 나타내는 일시적 신호 (Vim의 벨/에러). 매 키 입력 시작 시 제거되며, 매크로·`.`·`:normal`·키매핑 재생은 이 신호에서 중단됩니다. */
   bell?: boolean;
+  /**
+   * NORMAL 모드 커서가 줄 끝 다음 칸(col == 줄 길이)에 있어도 되는 일시적 표시. Vim 은 `:>`/`:<`(공백만 남은 줄의 첫 비공백 = NUL)와
+   * 블록 `<`(블록 왼쪽 열이 줄 끝)에서 커서를 고치지 않고 두었다가 다음 키를 처리하기 전에 마지막 글자로 돌립니다. 엔진도 매 키 입력
+   * 시작 시(`withoutBell`) 이 표시를 지우며 커서를 맞추고, `assertValidVimState` 는 이 표시가 있을 때만 그 칸을 허용합니다.
+   */
+  cursorPastEnd?: boolean;
   /** 직전 줄 내 문자 탐색 정보 (';' 및 ',' 반복용) */
   lastCharSearch?: { type: 'f' | 'F' | 't' | 'T'; char: string } | null;
   /** 현재 버퍼 로컬 상태(마크·변경 목록·gv·gi·폴드)가 속한 파일명 */

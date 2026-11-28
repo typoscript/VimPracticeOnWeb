@@ -1,4 +1,4 @@
-import { CursorPosition, VimMode } from './types';
+import type { CursorPosition, VimEditorState, VimMode } from './types';
 
 let activeCursorMode: VimMode = 'NORMAL';
 let activeVirtualEdit = '';
@@ -65,15 +65,16 @@ export function getMaxCol(
 }
 
 /**
- * 줄의 첫 번째 공백이 아닌 문자의 열 인덱스(^)를 반환합니다.
- * 공백만 있거나 빈 줄인 경우 0을 반환합니다.
+ * 줄의 첫 번째 공백이 아닌 문자의 열 인덱스(^)를 반환합니다. 빈 줄은 0 입니다.
+ * 공백만 있는 줄은 Vim beginline(BL_WHITE | BL_FIX) 처럼 NUL 에 서지 않고 마지막 공백(길이 - 1)입니다
+ * (`^`, 줄 단위 `p`, `'a`, sol 의 `dd`·`G`). 들여쓰기 폭이 필요하면 `search(/\S/)` 를 직접 쓰세요.
  */
 export function getFirstNonBlankCol(lineText: string | undefined): number {
   if (!lineText || lineText.length === 0) {
     return 0;
   }
   const match = lineText.search(/\S/);
-  return match !== -1 ? match : 0;
+  return match !== -1 ? match : lineText.length - 1;
 }
 
 /**
@@ -95,4 +96,31 @@ export function clampCursor(
   const col = Math.max(0, Math.min(cursor.col, maxCol));
 
   return { line, col };
+}
+
+/**
+ * Vim 이 NORMAL 모드에서 고치지 않고 두는 줄 끝 다음 칸(NUL) 커서를 놓습니다 (`:>` 가 공백만 남은 줄의 첫 비공백으로,
+ * 블록 `<` 가 줄 끝이 된 블록 왼쪽 열로 보낼 때). `col` 이 줄 길이와 같으면 `cursorPastEnd` 를 켜고, 더 크면 줄 길이로 줄입니다.
+ * 다음 키를 처리하기 전에 `settleCursorPastEnd` 가 마지막 글자로 돌립니다 (Vim 은 다음 명령 전에 check_cursor_col).
+ */
+export function placeCursorMaybePastEnd(state: VimEditorState, cursor: CursorPosition): VimEditorState {
+  const lineText = state.lines[cursor.line] ?? '';
+  if (lineText.length === 0 || cursor.col < lineText.length) {
+    const next = { ...state, cursor: clampCursor(state.lines, cursor, 'NORMAL') };
+    delete next.cursorPastEnd;
+    return next;
+  }
+  return { ...state, cursor: { line: cursor.line, col: lineText.length }, cursorPastEnd: true };
+}
+
+/** `cursorPastEnd` 표시를 지우고, NORMAL 모드 커서가 줄 끝 다음 칸에 있으면 마지막 글자로 옮깁니다. */
+export function settleCursorPastEnd(state: VimEditorState): VimEditorState {
+  if (!state.cursorPastEnd) return state;
+  const next = { ...state };
+  delete next.cursorPastEnd;
+  if (next.mode === 'NORMAL') {
+    const clamped = clampCursor(next.lines, next.cursor, 'NORMAL');
+    if (clamped.col !== next.cursor.col || clamped.line !== next.cursor.line) next.cursor = clamped;
+  }
+  return next;
 }

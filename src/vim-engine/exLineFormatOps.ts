@@ -1,5 +1,5 @@
 import { VimEditorState } from './types';
-import { clampCursor } from './cursor';
+import { clampCursor, placeCursorMaybePastEnd } from './cursor';
 import { pushUndoSnapshot } from './operators';
 import { beginlineSolCol, keepCurswant, keepCurswantIfNosol, pushUndoSnapshotAt, setLastUndoCursor } from './undoHistory';
 import { msg } from './messages';
@@ -203,14 +203,15 @@ export function executeShiftRange(
     nextLines[i] = shiftLineIndent(nextLines[i], direction, sw, ts, et, sr, times);
   }
 
-  const nextCursor = moveToFirstNonBlank(nextLines, { line: endLine, col: 0 });
+  // op_shift(":>"): 마지막 줄의 새 들여쓰기 끝(set_indent) — 공백만 남은 줄이면 줄 끝 다음 칸(NUL)에 두고 고치지 않습니다.
+  const lastText = nextLines[endLine] ?? '';
+  const indentEnd = lastText.search(/\S/);
   const linesCount = endLine - startLine + 1;
 
-  // op_shift(":>"): 마지막 줄의 새 들여쓰기 끝(set_indent) — w_set_curswant 를 켜지 않으므로 curswant 유지
-  return keepCurswantIfNosol({
+  // w_set_curswant 를 켜지 않으므로 curswant 유지
+  return keepCurswantIfNosol(placeCursorMaybePastEnd({
     ...stateWithUndo, changeListHint: { kind: 'at', line: startLine, col: 0, force: true },
     lines: nextLines,
-    cursor: nextCursor,
     mode: 'NORMAL',
     visualAnchor: undefined,
     commandBuffer: undefined,
@@ -220,7 +221,7 @@ export function executeShiftRange(
       dir: direction === 'in' ? '>' : '<',
       times,
     }),
-  });
+  }, { line: endLine, col: indentEnd === -1 ? lastText.length : indentEnd }));
 }
 
 /**

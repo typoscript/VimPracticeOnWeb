@@ -18888,5 +18888,1183 @@
       "mode": "n",
       "changelist": "1:0 0:0|2"
     }
+  },
+  {
+    "id": "eol-ex-shift-blank-line",
+    "text": "a\n        \nb",
+    "cursor": {
+      "row": 1,
+      "col": 3
+    },
+    "keys": ":><CR>",
+    "expected": {
+      "lines": [
+        "a",
+        "          ",
+        "b"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 10
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:0|1"
+    }
+  },
+  {
+    "id": "eol-ex-shift-then-x",
+    "text": "a\n        \nb",
+    "cursor": {
+      "row": 1,
+      "col": 3
+    },
+    "keys": ":><CR>x",
+    "expected": {
+      "lines": [
+        "a",
+        "         ",
+        "b"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 8
+      },
+      "reg": " ",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:9|1"
+    }
+  },
+  {
+    "id": "eol-ex-shift-then-i",
+    "text": "a\n        \nb",
+    "cursor": {
+      "row": 1,
+      "col": 3
+    },
+    "keys": ":><CR>iX<Esc>",
+    "expected": {
+      "lines": [
+        "a",
+        "         X ",
+        "b"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 9
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:9|1"
+    }
+  },
+  {
+    "id": "eol-ex-shift-then-a",
+    "text": "a\n        \nb",
+    "cursor": {
+      "row": 1,
+      "col": 3
+    },
+    "keys": ":><CR>aX<Esc>",
+    "expected": {
+      "lines": [
+        "a",
+        "          X",
+        "b"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 10
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:10|1"
+    }
+  },
+  {
+    "id": "eol-ex-shift-then-yy",
+    "text": "a\n        \nb",
+    "cursor": {
+      "row": 1,
+      "col": 3
+    },
+    "keys": ":><CR>yy",
+    "expected": {
+      "lines": [
+        "a",
+        "          ",
+        "b"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 3
+      },
+      "reg": "          \n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "1:0|1"
+    }
+  },
+  {
+    "id": "eol-ex-shift-twice",
+    "text": "a\n        \nb",
+    "cursor": {
+      "row": 1,
+      "col": 3
+    },
+    "keys": ":><CR>:><CR>",
+    "expected": {
+      "lines": [
+        "a",
+        "            ",
+        "b"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 12
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:0|1"
+    }
+  },
+  {
+    "id": "eol-ex-shift-sol",
+    "text": "a\n        \nb",
+    "cursor": {
+      "row": 1,
+      "col": 3
+    },
+    "keys": ":><CR>",
+    "options": "sol",
+    "expected": {
+      "lines": [
+        "a",
+        "          ",
+        "b"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 10
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:0|1"
+    }
+  },
+  {
+    "id": "eol-ex-lshift-range",
+    "text": "a\n    \nb\n    ",
+    "cursor": {
+      "row": 1,
+      "col": 3
+    },
+    "keys": ":2,4<<CR>",
+    "expected": {
+      "lines": [
+        "a",
+        "  ",
+        "b",
+        "  "
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:0|1"
+    }
+  },
+  {
+    "id": "eol-global-shift-clamps",
+    "text": "a\n        \nb",
+    "cursor": {
+      "row": 1,
+      "col": 3
+    },
+    "keys": ":g/^ /><CR>",
+    "expected": {
+      "lines": [
+        "a",
+        "          ",
+        "b"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 9
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "1:0|1"
+    }
+  },
+  {
+    "id": "eol-block-lshift-dollar",
+    "text": "ab      \ncd      x\nef  \ngh",
+    "cursor": {
+      "row": 0,
+      "col": 2
+    },
+    "keys": "<C-v>j$4<",
+    "expected": {
+      "lines": [
+        "ab",
+        "cdx",
+        "ef  ",
+        "gh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:0|1"
+    }
+  },
+  {
+    "id": "eol-block-lshift-count",
+    "text": "ab      \ncd      x\nef  \ngh",
+    "cursor": {
+      "row": 0,
+      "col": 4
+    },
+    "keys": "<C-v>jj4<",
+    "expected": {
+      "lines": [
+        "ab  ",
+        "cd  x",
+        "ef  ",
+        "gh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:0|1"
+    }
+  },
+  {
+    "id": "eol-block-lshift-then-x",
+    "text": "ab      \ncd      x\nef  \ngh",
+    "cursor": {
+      "row": 0,
+      "col": 2
+    },
+    "keys": "<C-v>jj4<x",
+    "expected": {
+      "lines": [
+        "a",
+        "cdx",
+        "ef",
+        "gh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "b",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:1|1"
+    }
+  },
+  {
+    "id": "eol-block-lshift-dot",
+    "text": "ab      \ncd      x\nef  \ngh",
+    "cursor": {
+      "row": 0,
+      "col": 4
+    },
+    "keys": "<C-v>jj<.",
+    "expected": {
+      "lines": [
+        "ab  ",
+        "cd  x",
+        "ef  ",
+        "gh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:4 0:0|2"
+    }
+  },
+  {
+    "id": "eol-block-lshift-undo",
+    "text": "ab      \ncd      x\nef  \ngh",
+    "cursor": {
+      "row": 0,
+      "col": 4
+    },
+    "keys": "<C-v>jj4<u",
+    "expected": {
+      "lines": [
+        "ab      ",
+        "cd      x",
+        "ef  ",
+        "gh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:0|1"
+    }
+  },
+  {
+    "id": "caret-blank-line",
+    "text": "abc\n    \nxyz",
+    "cursor": {
+      "row": 1,
+      "col": 1
+    },
+    "keys": "^",
+    "expected": {
+      "lines": [
+        "abc",
+        "    ",
+        "xyz"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 3
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "|0"
+    }
+  },
+  {
+    "id": "put-line-blank-line",
+    "text": "abc\n    \nxyz",
+    "cursor": {
+      "row": 1,
+      "col": 1
+    },
+    "keys": "yyp",
+    "expected": {
+      "lines": [
+        "abc",
+        "    ",
+        "    ",
+        "xyz"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 3
+      },
+      "reg": "    \n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "2:0|1"
+    }
+  },
+  {
+    "id": "norm-yyp-blank-line",
+    "text": "  \nab",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": ":norm yyp<CR>",
+    "expected": {
+      "lines": [
+        "  ",
+        "  ",
+        "ab"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 1
+      },
+      "reg": "  \n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "1:0|1"
+    }
+  },
+  {
+    "id": "sol-dd-to-blank-line",
+    "text": "abc\n    \nxyz\n   ",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "dd",
+    "options": "sol",
+    "expected": {
+      "lines": [
+        "    ",
+        "xyz",
+        "   "
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "abc\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "0:0|1"
+    }
+  },
+  {
+    "id": "sol-mark-blank-line",
+    "text": "abc\n    \nxyz\n   ",
+    "cursor": {
+      "row": 1,
+      "col": 1
+    },
+    "keys": "ma0k'a",
+    "options": "sol",
+    "expected": {
+      "lines": [
+        "abc",
+        "    ",
+        "xyz",
+        "   "
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 3
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "|0"
+    }
+  },
+  {
+    "id": "sol-G-blank-line",
+    "text": "abc\n    \nxyz\n   ",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "G",
+    "options": "sol",
+    "expected": {
+      "lines": [
+        "abc",
+        "    ",
+        "xyz",
+        "   "
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "|0"
+    }
+  },
+  {
+    "id": "case-op-down-keeps-col",
+    "text": "    abc def ghi jkl\n      xyz uvw rst\nend",
+    "cursor": {
+      "row": 1,
+      "col": 12
+    },
+    "keys": ":1,2><CR>guj",
+    "expected": {
+      "lines": [
+        "      abc def ghi jkl",
+        "        xyz uvw rst",
+        "end"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 8
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:0|1"
+    }
+  },
+  {
+    "id": "case-op-G-keeps-col",
+    "text": "    abc def ghi jkl\n      xyz uvw rst\nend",
+    "cursor": {
+      "row": 1,
+      "col": 12
+    },
+    "keys": ":1,2><CR>g~G",
+    "expected": {
+      "lines": [
+        "      abc def ghi jkl",
+        "        XYZ UVW RST",
+        "END"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 8
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:0 1:0|2"
+    }
+  },
+  {
+    "id": "case-op-up-curswant",
+    "text": "    abc def ghi jkl\n      xyz uvw rst\nend",
+    "cursor": {
+      "row": 1,
+      "col": 12
+    },
+    "keys": ":1,2><CR>guk",
+    "expected": {
+      "lines": [
+        "      abc def ghi jkl",
+        "        xyz uvw rst",
+        "end"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 12
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:0|1"
+    }
+  },
+  {
+    "id": "y-count-percent-up",
+    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;",
+    "cursor": {
+      "row": 2,
+      "col": 18
+    },
+    "keys": "3y%",
+    "expected": {
+      "lines": [
+        "const total = sum(a, b) + 42;",
+        "if (total > 10) {",
+        "  log(\"big\", total);",
+        "}",
+        "return total;"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 18
+      },
+      "reg": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "|0"
+    }
+  },
+  {
+    "id": "case-count-percent-up",
+    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;",
+    "cursor": {
+      "row": 2,
+      "col": 18
+    },
+    "keys": "3g~%",
+    "expected": {
+      "lines": [
+        "CONST TOTAL = SUM(A, B) + 42;",
+        "IF (TOTAL > 10) {",
+        "  LOG(\"BIG\", TOTAL);",
+        "}",
+        "return total;"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 18
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:0|1"
+    }
+  },
+  {
+    "id": "y-count-percent-down",
+    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;",
+    "cursor": {
+      "row": 1,
+      "col": 12
+    },
+    "keys": "y100%",
+    "expected": {
+      "lines": [
+        "const total = sum(a, b) + 42;",
+        "if (total > 10) {",
+        "  log(\"big\", total);",
+        "}",
+        "return total;"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 12
+      },
+      "reg": "if (total > 10) {\n  log(\"big\", total);\n}\nreturn total;\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "|0"
+    }
+  },
+  {
+    "id": "shift-inner-tag-close-line",
+    "text": "<ul>\n  <li>one</li>\n  <li>two</li>\n</ul>",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": ">it",
+    "expected": {
+      "lines": [
+        "  <ul>",
+        "    <li>one</li>",
+        "    <li>two</li>",
+        "  </ul>"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:0|1"
+    }
+  },
+  {
+    "id": "shift-sentence-buffer-end",
+    "text": "ab\ncd ef\nghij\nk",
+    "cursor": {
+      "row": 2,
+      "col": 2
+    },
+    "keys": ">)",
+    "expected": {
+      "lines": [
+        "ab",
+        "cd ef",
+        "  ghij",
+        "  k"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "2:0|1"
+    }
+  },
+  {
+    "id": "macro-keeps-inner-curswant",
+    "text": "function greet(name) {\n  return \"Hello, \" + name;\n}\n\nconst x = [1, 2, 3];",
+    "cursor": {
+      "row": 0,
+      "col": 21
+    },
+    "keys": "qaA!<Esc>jq2@a3dk",
+    "expected": {
+      "lines": [
+        "const x = [1, 2, 3];"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      },
+      "reg": "function greet(name) {!\n  return \"Hello, \" + name;!\n}!\n\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "0:22 0:0|2"
+    }
+  },
+  {
+    "id": "gv-restores-curswant",
+    "text": "\tif (a) {\n\t\tb(1, 2);\n\t}\nend",
+    "cursor": {
+      "row": 1,
+      "col": 9
+    },
+    "keys": "Vjcnew<Esc>gvd",
+    "expected": {
+      "lines": [
+        "\tif (a) {"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 8
+      },
+      "reg": "new\nend\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "1:0|1"
+    }
+  },
+  {
+    "id": "gv-restores-curswant-tab",
+    "text": "\tif (a) {\n\t\tb(1, 2);\n\t}\nend",
+    "cursor": {
+      "row": 1,
+      "col": 9
+    },
+    "keys": "VTawcnew<Esc>gvd",
+    "expected": {
+      "lines": [
+        "\tif (a) {"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      },
+      "reg": "new\nend\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "1:0|1"
+    }
+  },
+  {
+    "id": "gv-after-block-shift",
+    "text": "<p>a <i>b</i> c</p>\n<a href=\"#\">link</a> <br/>\nx < y > z",
+    "cursor": {
+      "row": 0,
+      "col": 7
+    },
+    "keys": "<C-v>jl<gvd",
+    "expected": {
+      "lines": [
+        "<p>a <i</i> c</p>",
+        "<a href#\">link</a> <br/>",
+        "x < y > z"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 7
+      },
+      "reg": ">b\n=\"",
+      "regType": "block",
+      "mode": "n",
+      "changelist": "0:7|1"
+    }
+  },
+  {
+    "id": "gv-after-block-shift-noop",
+    "text": "<p>a <i>b</i> c</p>\n<a href=\"#\">link</a> <br/>\nx < y > z",
+    "cursor": {
+      "row": 0,
+      "col": 7
+    },
+    "keys": "<C-v>e4<gvU",
+    "expected": {
+      "lines": [
+        "<p>a <i>B</i> c</p>",
+        "<a href=\"#\">link</a> <br/>",
+        "x < y > z"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 7
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:0|1"
+    }
+  },
+  {
+    "id": "gv-after-visual-shift",
+    "text": "aaaa bbbb cccc\ndddd eeee ffff\ngggg hhhh\niiii\njjjj",
+    "cursor": {
+      "row": 0,
+      "col": 2
+    },
+    "keys": "vj>gvd",
+    "expected": {
+      "lines": [
+        "  ddd eeee ffff",
+        "gggg hhhh",
+        "iiii",
+        "jjjj"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "aaaa bbbb cccc\n  d",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:2 1:0|2"
+    }
+  },
+  {
+    "id": "gv-block-dollar-append",
+    "text": "<p>a <i>b</i> c</p>\n<a href=\"#\">link</a> <br/>\nx < y > z",
+    "cursor": {
+      "row": 1,
+      "col": 12
+    },
+    "keys": "<C-v>j$A<b><Esc>gvy",
+    "options": "sol",
+    "expected": {
+      "lines": [
+        "<p>a <i>b</i> c</p>",
+        "<a href=\"#\">link</a> <br/><b>",
+        "x < y > z<b>"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 9
+      },
+      "reg": "#\">link</a> <br/><b>\n<b>",
+      "regType": "block",
+      "mode": "n",
+      "changelist": "2:0|1"
+    }
+  },
+  {
+    "id": "visual-line-change-ai",
+    "text": "<ul>\n  <li>one\n  <li>two\n</ul>",
+    "cursor": {
+      "row": 1,
+      "col": 3
+    },
+    "keys": "Vjc(<Esc>",
+    "options": "ai",
+    "expected": {
+      "lines": [
+        "<ul>",
+        "  (",
+        "</ul>"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 2
+      },
+      "reg": "  <li>one\n  <li>two\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "1:2|1"
+    }
+  },
+  {
+    "id": "visual-line-change-ai-esc",
+    "text": "<ul>\n  <li>one\n  <li>two\n</ul>",
+    "cursor": {
+      "row": 1,
+      "col": 3
+    },
+    "keys": "Vc<Esc>",
+    "options": "ai",
+    "expected": {
+      "lines": [
+        "<ul>",
+        "",
+        "  <li>two",
+        "</ul>"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "  <li>one\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "1:0|1"
+    }
+  },
+  {
+    "id": "block-change-empty-reg",
+    "text": "abc\n\n\nxyz",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "yyj<C-v>$c<b><Esc>",
+    "expected": {
+      "lines": [
+        "abc",
+        "<b>",
+        "",
+        "xyz"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "block",
+      "mode": "n",
+      "changelist": "1:0|1"
+    }
+  },
+  {
+    "id": "block-delete-empty-reg",
+    "text": "abc\n\n\nxyz",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "yyj<C-v>$d",
+    "expected": {
+      "lines": [
+        "abc",
+        "",
+        "",
+        "xyz"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "abc\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "|0"
+    }
+  },
+  {
+    "id": "visual-D-linewise",
+    "text": "abcdef\ndefgh\n\nxyz\nqwerty",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "vjD",
+    "expected": {
+      "lines": [
+        "",
+        "xyz",
+        "qwerty"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "abcdef\ndefgh\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "0:0|1"
+    }
+  },
+  {
+    "id": "visual-D-undo",
+    "text": "abcdef\ndefgh\n\nxyz\nqwerty",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "vjDu",
+    "expected": {
+      "lines": [
+        "abcdef",
+        "defgh",
+        "",
+        "xyz",
+        "qwerty"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "abcdef\ndefgh\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "0:0|1"
+    }
+  },
+  {
+    "id": "visual-X-dot",
+    "text": "abcdef\ndefgh\n\nxyz\nqwerty",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "vjX.",
+    "expected": {
+      "lines": [
+        "qwerty"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "\nxyz\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "0:0|1"
+    }
+  },
+  {
+    "id": "visual-Y-linewise",
+    "text": "abcdef\ndefgh\n\nxyz\nqwerty",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "vjY",
+    "expected": {
+      "lines": [
+        "abcdef",
+        "defgh",
+        "",
+        "xyz",
+        "qwerty"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "abcdef\ndefgh\n",
+      "regType": "line",
+      "mode": "n",
+      "changelist": "|0"
+    }
+  },
+  {
+    "id": "block-D-to-eol-dot",
+    "text": "abcdef\ndefgh\n\nxyz\nqwerty",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "<C-v>jlD.",
+    "expected": {
+      "lines": [
+        "",
+        "",
+        "",
+        "xyz",
+        "qwerty"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "a\nd",
+      "regType": "block",
+      "mode": "n",
+      "changelist": "0:0|1"
+    }
+  },
+  {
+    "id": "block-X-like-d",
+    "text": "abcdef\ndefgh\n\nxyz\nqwerty",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "<C-v>jlX",
+    "expected": {
+      "lines": [
+        "adef",
+        "dgh",
+        "",
+        "xyz",
+        "qwerty"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      },
+      "reg": "bc\nef",
+      "regType": "block",
+      "mode": "n",
+      "changelist": "0:1|1"
+    }
+  },
+  {
+    "id": "block-Y-like-y",
+    "text": "abcdef\ndefgh\n\nxyz\nqwerty",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "<C-v>jlY",
+    "expected": {
+      "lines": [
+        "abcdef",
+        "defgh",
+        "",
+        "xyz",
+        "qwerty"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      },
+      "reg": "bc\nef",
+      "regType": "block",
+      "mode": "n",
+      "changelist": "|0"
+    }
+  },
+  {
+    "id": "op-find-sets-charsearch",
+    "text": "the lazy dog! Then it rests. e",
+    "cursor": {
+      "row": 0,
+      "col": 2
+    },
+    "keys": "=fe;",
+    "expected": {
+      "lines": [
+        "the lazy dog! Then it rests. e"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 16
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "|0"
+    }
+  },
+  {
+    "id": "case-op-till-sets-charsearch",
+    "text": "the lazy dog! Then it rests. e",
+    "cursor": {
+      "row": 0,
+      "col": 2
+    },
+    "keys": "gUte;",
+    "expected": {
+      "lines": [
+        "thE LAZY DOG! THen it rests. e"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 15
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n",
+      "changelist": "0:2|1"
+    }
   }
 ]

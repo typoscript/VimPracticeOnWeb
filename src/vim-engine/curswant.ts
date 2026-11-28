@@ -8,6 +8,7 @@ import { columnForVirtual, cursorVirtualColumn, tabstopOf } from './virtualColum
 export const CURSWANT_EOL = Number.MAX_SAFE_INTEGER;
 
 const CURSWANT_MODES = new Set(['NORMAL', 'VISUAL', 'VISUAL_LINE', 'VISUAL_BLOCK']);
+const VISUAL_SELECT_MODES = new Set(['VISUAL', 'VISUAL_LINE', 'VISUAL_BLOCK', 'SELECT', 'SELECT_LINE', 'SELECT_BLOCK']);
 const ALWAYS_VERTICAL_KEYS = new Set(['j', 'k', 'ArrowDown', 'ArrowUp', 'Ctrl-e', 'Ctrl-y']);
 /** 'nostartofline' 일 때만 열을 유지하는 세로 이동 */
 const NOSOL_VERTICAL_KEYS = new Set(['G', 'H', 'L', 'M', 'Ctrl-d', 'Ctrl-u', 'Ctrl-f', 'Ctrl-b']);
@@ -41,6 +42,28 @@ function keepsCurswant(prev: VimEditorState, key: string): boolean {
  */
 export function applyCurswant(prev: VimEditorState, next: VimEditorState, key: string): VimEditorState {
   const remembered = prev.curswant ?? cursorVirtualColumn(prev);
+  // Vim end_visual_mode 는 비주얼을 끝내는 모든 길(>, <, J, : …)에서 선택('<, '>)과 그때의 curswant(b_visual.vi_curswant)를
+  // 남기고, gv(nv_gv_cmd)가 둘 다 되살립니다. 처리기가 따로 남기지 않았으면 끝내기 직전 선택을 저장합니다.
+  if (VISUAL_SELECT_MODES.has(prev.mode) && !VISUAL_SELECT_MODES.has(next.mode)) {
+    const saved =
+      next.lastVisualSelection && next.lastVisualSelection !== prev.lastVisualSelection
+        ? next.lastVisualSelection
+        : prev.visualAnchor
+          ? {
+              mode: prev.mode.endsWith('LINE') ? ('VISUAL_LINE' as const) : prev.mode.endsWith('BLOCK') ? ('VISUAL_BLOCK' as const) : ('VISUAL' as const),
+              anchor: { ...prev.visualAnchor },
+              cursor: { ...prev.cursor },
+              ...(prev.visualBlockEndOfLine ? { endOfLine: true } : {}),
+            }
+          : undefined;
+    // 블록을 `$` 로 늘린 채(curswant MAXCOL) 끝냈으면 gv 도 줄 끝까지 다시 고릅니다 (<C-v>j$A…<Esc>gv).
+    const eol = saved?.mode === 'VISUAL_BLOCK' && remembered === CURSWANT_EOL ? { endOfLine: true } : {};
+    if (saved) next = { ...next, lastVisualSelection: { ...saved, ...eol, curswant: remembered } };
+  }
+  if (prev.mode === 'NORMAL' && key === 'v' && /^([1-9][0-9]*)?g$/.test(prev.pendingKeys ?? '') && next.mode.startsWith('VISUAL')) {
+    const saved = next.lastVisualSelection?.curswant;
+    if (saved !== undefined) return next.curswant === saved ? next : { ...next, curswant: saved };
+  }
   // 입력 모드 Ctrl-o: Vim 은 커서를 줄 끝 다음 칸에 둔 채 명령을 받으므로 curswant 는 입력하던 열입니다 (A…<C-o>j).
   // 다시 시작한 입력에서 아직 아무것도 넣지 않았으면 이전 curswant(`<C-o>$` 의 줄 끝)를 그대로 씁니다.
   if (prev.mode === 'INSERT' && next.insertNormalSession && next.mode === 'NORMAL' && !prev.insertNormalSession) {
@@ -56,6 +79,10 @@ export function applyCurswant(prev: VimEditorState, next: VimEditorState, key: s
       !rest.pendingKeys && CURSWANT_MODES.has(rest.mode) && kept.line === rest.cursor.line && kept.col === rest.cursor.col;
     if (honored) return { ...rest, curswant: remembered };
     next = rest;
+  }
+  // @{reg} 매크로 재생: 안쪽 키들이 정한 curswant 를 그대로 둡니다 (A!<Esc>j 매크로 뒤 3dk 가 그 열로).
+  if (prev.mode === 'NORMAL' && /^([1-9][0-9]*)?@$/.test(prev.pendingKeys ?? '') && !next.pendingKeys && CURSWANT_MODES.has(next.mode) && next.curswant !== undefined) {
+    return next;
   }
   // 아직 명령이 끝나지 않았거나(대기 키), 입력·명령줄 모드 중에는 기억한 열을 그대로 둡니다.
   if (next.pendingKeys || !CURSWANT_MODES.has(next.mode)) {

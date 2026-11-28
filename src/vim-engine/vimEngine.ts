@@ -578,21 +578,31 @@ export function rawHandleKey(
   return applyScrollbindDelta(prevTopRow, prevActivePaneIndex, prevSplitPanes, nextState);
 }
 
+/** Vim searchc: 연산자 뒤 f/t/F/T 도 (실패해도) `;`·`,` 가 쓸 글자를 기억합니다 (=fe; gUte;). */
+function rememberOperatorCharSearch(input: VimEditorState, next: VimEditorState, key: string): VimEditorState {
+  const m = input.mode === 'NORMAL' && key.length === 1 ? /^("[^"]?)?[1-9]?[0-9]*(?:g[uU~?qw]|zf|gc|[=<>!])[1-9]?[0-9]*([fFtT])$/.exec(input.pendingKeys ?? '') : null;
+  if (!m) return next;
+  const type = m[2] as 'f' | 'F' | 't' | 'T';
+  return next.lastCharSearch?.type === type && next.lastCharSearch.char === key ? next : { ...next, lastCharSearch: { type, char: key } };
+}
+
 /** 키 하나를 처리한 결과에 파일별 상태 동기화, curswant, `.` 반복·실행 취소 규칙을 차례로 적용합니다. */
 function applyKeyRules(input: VimEditorState, raw: VimEditorState, key: string, isReplayingDot: boolean): VimEditorState {
   let next = syncPerFileState(input, raw);
   // 비주얼 모드에서만 설 수 있는 줄 끝 다음 칸(NUL)은 비주얼을 끝내면 마지막 글자로 돌아옵니다 (Vim adjust_cursor).
-  if (next.mode === 'NORMAL' && VISUAL_LIKE_MODES.has(input.mode)) {
+  // 블록 `<` 처럼 Vim 이 줄 끝 다음 칸에 그대로 두는 커서(cursorPastEnd)는 예외입니다.
+  if (next.mode === 'NORMAL' && VISUAL_LIKE_MODES.has(input.mode) && !next.cursorPastEnd) {
     const clamped = clampCursor(next.lines, next.cursor, 'NORMAL');
     if (clamped.col !== next.cursor.col || clamped.line !== next.cursor.line) next = { ...next, cursor: clamped };
   }
   next = applyCurswant(input, next, key);
+  next = rememberOperatorCharSearch(input, next, key);
   next = trackVisualOpVcol(input, next, key);
   next = recordVisualRepeat(input, next, key, isReplayingDot);
   next = redoLinewiseVisualCaseCursor(input, next, key, isReplayingDot);
   next = recordRepeatRegister(input, next, isReplayingDot);
   next = recordInsertStartCursor(input, next, key);
-  next = recordVisualUndoCursor(input, next);
+  next = recordVisualUndoCursor(input, next, key);
   next = keepRepeatOnFailure(input, next, key, isReplayingDot);
   next = applyEmptyBufferDelete(input, next, key);
   next = dropEmptyInsertUndo(input, next, key);
