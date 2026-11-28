@@ -46,7 +46,8 @@ import {
   scrollLineUp,
 } from './viewport';
 import { recordJump, jumpOlder, jumpNewer } from './marks';
-import { joinLines, toggleCaseChar, modifyNumberAtCursor } from './lineOperators';
+import { reselectVisualForRedo } from './visualRedo';
+import { joinLines, joinSingleLastLine, toggleCaseChar, modifyNumberAtCursor } from './lineOperators';
 import { yankFoldOrLine } from './folding';
 import { msg } from './messages';
 import { getOptions } from './setOptionsCore';
@@ -279,10 +280,14 @@ export function handleNormalMacroAndDot(
       replayKeys = withDotRepeatCount(replayKeys, Number(state.pendingKeys));
     }
     let curState: VimEditorState = { ...state, pendingKeys: undefined };
-    for (const rk of clampVisualRedoLines(replayKeys, state)) {
+    // 블록·여러 줄 문자 단위 비주얼 반복은 같은 크기의 영역을 직접 다시 고릅니다 (짧은 줄에서도 너비 유지).
+    const reselect = reselectVisualForRedo(curState, replayKeys);
+    if (reselect) curState = reselect.state;
+    for (const rk of reselect ? reselect.rest : clampVisualRedoLines(replayKeys, state)) {
       curState = runHandleKey(curState, rk, true);
       if (curState.bell) break;
     }
+    if (reselect) curState = reselect.restore(curState);
     return { ...curState, lastChangeKeys: replayKeys };
   }
 
@@ -477,7 +482,9 @@ export function handleNormalViewportAndNavOps(
 
   // J / ~: 줄 합치기 및 대소문자 토글
   if (key === 'J' && !parsed.operator) {
-    if (state.cursor.line >= state.lines.length - 1) return ringBell(state);
+    if (state.cursor.line >= state.lines.length - 1) {
+      return parsed.totalCount > 2 ? { ...joinSingleLastLine(state, false), lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['J'] } : ringBell(state);
+    }
     // [count]J 는 count 줄을 합칩니다 (최소 2줄) → 이음 횟수는 count - 1
     const res = joinLines(state, Math.max(1, parsed.totalCount - 1));
     const lKeys = parsed.totalCount > 1 ? [String(parsed.totalCount), 'J'] : ['J'];

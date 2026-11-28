@@ -27,7 +27,7 @@ import { openLspDocumentSymbols } from './lspRefactorEngine';
 import { openFlashJump } from './flashJumpEngine';
 import { startMultiCursor } from './multiCursorEngine';
 import { executeTreesj } from './treesjEngine';
-import { joinLines, executeCaseMotion, changeCaseVisual, caseTypeForOperator } from './lineOperators';
+import { joinLines, joinSingleLastLine, executeCaseMotion, changeCaseVisual, caseTypeForOperator } from './lineOperators';
 import { msg } from './messages';
 import { executeGn, executeWordSearch } from './searchMode';
 import {
@@ -164,7 +164,7 @@ export function handleNormalCommentFormatOrCaseG(
     }
     const count = (c1 ? parseInt(c1, 10) : 1) * (c2 ? parseInt(c2, 10) : 1);
     const range = findShiftRange(state, prefix ? [...prefix.split(''), key] : [key], count, runHandleKey);
-    if (!range) return ringBell(state);
+    if (!range || range.failedAt) return ringBell(range?.failedAt ? { ...state, cursor: range.failedAt } : state);
     const res = applyLines(range.startLine, range.endLine);
     if (res.bell) return res;
     const keys = [...(state.pendingKeys ?? '').split(''), key];
@@ -207,7 +207,8 @@ export function handleNormalCommentFormatOrCaseG(
   // gU{motion} 등 대소문자 연산자: f/t/F/T·마크·대괄호 접두와 연산자 뒤 카운트를 모은 뒤,
   // 같은 모션의 y 로 범위를 구해 적용합니다 (gUfx 가 실패하면 아무것도 바꾸지 않음).
   const caseMotion = state.pendingKeys?.match(/^([1-9][0-9]*)?(g[uU~?])([1-9][0-9]*)?([fFtT'`\[\]])?$/);
-  if (caseMotion && key !== 'i' && key !== 'a' && key !== 'g' && key !== caseMotion[2][1] && key !== 'Escape') {
+  // f/t/F/T·마크 접두 뒤의 i a g U … 는 찾을 글자입니다 (gUfa).
+  if (caseMotion && key !== 'Escape' && (caseMotion[4] || (key !== 'i' && key !== 'a' && key !== 'g' && key !== caseMotion[2][1]))) {
     const [, c1, op, c2, prefix] = caseMotion;
     if (!prefix && (/^[1-9]$/.test(key) || (key === '0' && c2))) {
       return { ...state, pendingKeys: state.pendingKeys + key };
@@ -494,7 +495,10 @@ export function handleNormalGOperator(
     return { handled: true, state: traverseChangeList(state, 'next', parsedTotalCount) };
   }
   if (key === 'J') {
-    if (state.cursor.line >= state.lines.length - 1) return { handled: true, state: ringBell(state) };
+    if (state.cursor.line >= state.lines.length - 1) {
+      if (parsedTotalCount <= 2) return { handled: true, state: ringBell(state) };
+      return { handled: true, state: { ...joinSingleLastLine(state, true), lastChangeKeys: isReplayingDot ? state.lastChangeKeys : ['g', 'J'] } };
+    }
     const res = joinLines(state, Math.max(1, parsedTotalCount - 1), false);
     const lKeys = parsedTotalCount > 1 ? [String(parsedTotalCount), 'g', 'J'] : ['g', 'J'];
     return {

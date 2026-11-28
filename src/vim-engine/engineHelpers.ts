@@ -140,7 +140,8 @@ export function moveByExtraMotion(state: VimEditorState, key: string, count: num
   const mode = state.mode === 'NORMAL' ? 'NORMAL' : state.mode;
   // ]] 가 버퍼 끝에 닿으면 연산자와 함께일 때만 마지막 줄 끝(포함)이고, 커서 이동은 0열입니다 (Vim findpar).
   // 비주얼 모드의 ) 는 버퍼 끝에 닿으면 줄 끝 다음 칸(NUL)에 섭니다 (adjust_cursor 는 비주얼에서 커서를 당기지 않음).
-  const visualNul = key === ')' && res.kind === 'inclusive' && state.mode.startsWith('VISUAL');
+  // 비주얼 g$ 는 화면 줄 끝 열로 coladvance 하므로 화면보다 짧은 줄에서는 NUL 에 섭니다 (nv_g_dollar_cmd).
+  const visualNul = (key === ')' || key === 'g$') && res.kind === 'inclusive' && state.mode.startsWith('VISUAL') && (state.lines[res.target.line] ?? '').length > 0;
   const target = key === ']]' && res.kind === 'inclusive'
     ? { line: res.target.line, col: 0 }
     : visualNul ? { line: res.target.line, col: res.target.col + 1 } : res.target;
@@ -161,7 +162,7 @@ export function findShiftRange(
   keys: string[],
   count: number,
   runHandleKey: RunHandleKeyFn
-): { startLine: number; endLine: number; startCol: number } | null {
+): { startLine: number; endLine: number; startCol: number; failedAt?: { line: number; col: number } } | null {
   const base: VimEditorState = { ...state, mode: 'NORMAL', pendingKeys: undefined, visualAnchor: undefined, undoStack: [] };
   // startCol: 연산 범위 시작 위치(Vim oap->start)의 열. op_shift 는 커서를 여기 두고 실행 취소 위치(uh_cursor)를 저장합니다.
   const earlier = (a: { line: number; col: number }, b: { line: number; col: number }) =>
@@ -181,6 +182,10 @@ export function findShiftRange(
     for (const k of [...countKeys, 'y', ...keys]) if (!probe.bell) probe = runHandleKey(probe, k);
     if (!probe.bell && probe.mode === 'NORMAL' && !probe.pendingKeys && probe.clipboard?.content === '') {
       return { startLine: probe.cursor.line, endLine: probe.cursor.line, startCol: probe.cursor.col };
+    }
+    // Vim current_word: [count] 가 버퍼 끝을 넘으면 실패하고 커서는 움직인 자리에 남습니다 (4<iW, nv_object).
+    if (probe.bell && keys[1] !== 's') {
+      return { startLine: state.cursor.line, endLine: state.cursor.line, startCol: state.cursor.col, failedAt: probe.cursor };
     }
   }
   if (keys[0] === 'i' || keys[0] === 'a') {

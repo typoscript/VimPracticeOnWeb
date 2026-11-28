@@ -1,4 +1,4 @@
-import { VimEditorState } from './types';
+import { StateSnapshot, VimEditorState } from './types';
 import { visualOperatorStart } from './undoHistory';
 
 /**
@@ -235,4 +235,65 @@ export function normalizeRepeatKeys(prev: VimEditorState, next: VimEditorState):
     if (keys !== next.currentChangeKeys) out = { ...out, currentChangeKeys: keys };
   }
   return out;
+}
+
+/**
+ * Vim 은 마지막 줄까지 지워 버퍼가 비면 ML_EMPTY 로 표시하고, 그 상태의 op_delete 는 아무 일도 하지 않습니다
+ * (`if (curbuf->b_ml.ml_flags & ML_EMPTY) return OK` — 레지스터를 덮어쓰지 않음, `das` 뒤 `S`·`dd`·`.`).
+ * 엔진은 버퍼를 비운 삭제의 결과 줄 배열을 `emptiedLines` 로 기억합니다 (줄이 바뀌면 배열이 달라져 저절로 풀림).
+ */
+const EMPTY_BUFFER_DELETE = /^("[^"]?)?([1-9][0-9]*)?[dc]/;
+export function applyEmptyBufferDelete(prev: VimEditorState, next: VimEditorState, key: string): VimEditorState {
+  const isEmpty = (lines: string[]) => lines.length === 1 && lines[0] === '';
+  if (prev.emptiedLines && prev.lines === prev.emptiedLines && next.registers !== prev.registers && isEmpty(next.lines)) {
+    const pending = prev.pendingKeys ?? '';
+    const deletes =
+      key === '.' ||
+      (prev.mode === 'NORMAL' && (EMPTY_BUFFER_DELETE.test(pending) || (/^("[^"]?)?([1-9][0-9]*)?$/.test(pending) && 'SC'.includes(key)))) ||
+      (prev.mode.startsWith('VISUAL') && !pending && 'dxXDcsSC'.includes(key));
+    if (deletes) return { ...next, registers: prev.registers, clipboard: prev.clipboard };
+  }
+  if (
+    isEmpty(next.lines) &&
+    next.lines !== prev.lines &&
+    !isEmpty(prev.lines) &&
+    next.mode !== 'INSERT' &&
+    next.registers !== prev.registers &&
+    next.registers?.['"']?.type === 'line'
+  ) {
+    return { ...next, emptiedLines: next.lines };
+  }
+  return next;
+}
+
+/**
+ * Vim 은 입력 모드에서 처음 글자를 넣을 때 실행 취소를 저장합니다 (ins_need_undo). 엔진은 i/a/I/A/gi/gI 로 들어갈 때
+ * 미리 스냅샷을 쌓으므로, 아무것도 바꾸지 않고 Esc 로 나오면 그 스냅샷을 걷어 냅니다 (`i<Esc>` 뒤 `u` 가 커서를 옮기지 않음).
+ */
+export function dropEmptyInsertUndo(prev: VimEditorState, next: VimEditorState, key: string): VimEditorState {
+  const pending = prev.pendingKeys ?? '';
+  if (prev.mode === 'NORMAL' && next.mode === 'INSERT' && !next.insertNormalSession) {
+    const pure = /^([1-9][0-9]*)?$/.test(pending) ? 'iaIA'.includes(key) : /^([1-9][0-9]*)?g$/.test(pending) && (key === 'i' || key === 'I');
+    const stack = next.undoStack ?? [];
+    const top = stack[stack.length - 1];
+    if (pure && top && stack !== prev.undoStack && next.lines === prev.lines) {
+      return { ...next, emptyInsertUndo: { snapshot: top, redoStack: prev.redoStack } };
+    }
+    return next;
+  }
+  if (!prev.emptyInsertUndo) return next;
+  if (next.mode === 'INSERT') {
+    // 한 번이라도 글자를 넣었으면(나중에 지웠어도) Vim 은 실행 취소를 저장했습니다 (a…<C-u><Esc>).
+    if (next.lines === prev.lines) return next;
+    const { emptyInsertUndo: _dropped, ...typed } = next;
+    return typed;
+  }
+  const { emptyInsertUndo, ...rest } = next;
+  const stack = rest.undoStack ?? [];
+  const top: StateSnapshot | undefined = stack[stack.length - 1];
+  const untouched =
+    key === 'Escape' && prev.mode === 'INSERT' && !rest.insertNormalSession && top === emptyInsertUndo?.snapshot &&
+    top.lines.length === rest.lines.length && top.lines.every((l, i) => l === rest.lines[i]);
+  if (!untouched) return emptyInsertUndo ? rest : next;
+  return { ...rest, undoStack: stack.slice(0, -1), redoStack: emptyInsertUndo.redoStack };
 }

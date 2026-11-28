@@ -369,9 +369,11 @@ export function deleteVisualSelection(state: VimEditorState, visualKey = false):
     }
 
     const targetLine = Math.min(minLine, nextLines.length - 1);
+    // Vim do_pending_operator: 'nostartofline' 이면 줄 단위 삭제 뒤 연산 전 curswant(old_col) 열로 갑니다 (3EVkd; curswant 는 다시 정해짐).
+    const keepWant = !getOptions(state).startofline && state.curswant !== undefined;
     const nextCursor = clampCursor(
       nextLines,
-      { line: targetLine, col: cursor.col },
+      { line: targetLine, col: keepWant ? (state.curswant as number) : cursor.col },
       'NORMAL'
     );
 

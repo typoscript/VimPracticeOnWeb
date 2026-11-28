@@ -518,8 +518,8 @@ export function handleVisualModeKey(
     return ringBell(state);
   }
 
-  // ';' 및 ',' 키: 줄 내 문자 탐색 반복
-  if (key === ';') {
+  const awaitingFindChar = /[fFtT]$/.test(state.pendingKeys ?? ''); // ';' ',': 줄 내 문자 탐색 반복 (f/t/F/T 뒤면 찾을 글자: vf,)
+  if (key === ';' && !awaitingFindChar) {
     if (state.lastCharSearch) {
       const nextPos = moveFindRepeat(
         state.lines,
@@ -539,7 +539,7 @@ export function handleVisualModeKey(
     return { ...state, pendingKeys: undefined };
   }
 
-  if (key === ',') {
+  if (key === ',' && !awaitingFindChar) {
     if (state.lastCharSearch) {
       const oppMotion = getOppositeMotion(state.lastCharSearch.type);
       const nextPos = moveFindRepeat(

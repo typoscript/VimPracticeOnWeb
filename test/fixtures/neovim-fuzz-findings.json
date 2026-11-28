@@ -12289,5 +12289,1174 @@
       "regType": "char",
       "mode": "n"
     }
+  },
+  {
+    "id": "case-op-find-a",
+    "text": "function greet(name) {\n  return \"Hello, \" + name;\n}\n\nconst x = [1, 2, 3];",
+    "cursor": {
+      "row": 1,
+      "col": 9
+    },
+    "keys": "gufa",
+    "expected": {
+      "lines": [
+        "function greet(name) {",
+        "  return \"hello, \" + name;",
+        "}",
+        "",
+        "const x = [1, 2, 3];"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 9
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "case-op-find-back-a",
+    "text": "<div class=\"a\"><span>text</span></div>\nplain 0x1f 007 -3 words",
+    "cursor": {
+      "row": 1,
+      "col": 16
+    },
+    "keys": "gUFa",
+    "expected": {
+      "lines": [
+        "<div class=\"a\"><span>text</span></div>",
+        "plAIN 0X1F 007 -3 words"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "case-op-till-a",
+    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "gUta",
+    "expected": {
+      "lines": [
+        "CONST TOTal = sum(a, b) + 42;",
+        "if (total > 10) {",
+        "  log(\"big\", total);",
+        "}",
+        "return total;"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "shift-failed-angle-object",
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "cursor": {
+      "row": 3,
+      "col": 5
+    },
+    "keys": "<i<2<{",
+    "expected": {
+      "lines": [
+        "  indented line one",
+        "    deeper (nested) item",
+        "  back to one",
+        "last_word_here end"
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 5
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "shift-failed-angle-object-then-shift",
+    "text": "function greet(name) {\n  return \"Hello, \" + name;\n}\n\nconst x = [1, 2, 3];",
+    "cursor": {
+      "row": 1,
+      "col": 12
+    },
+    "keys": "<a<>+",
+    "expected": {
+      "lines": [
+        "function greet(name) {",
+        "    return \"Hello, \" + name;",
+        "  }",
+        "",
+        "const x = [1, 2, 3];"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 12
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "failed-quote-object-curswant",
+    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;",
+    "cursor": {
+      "row": 2,
+      "col": 9
+    },
+    "keys": "A!<Esc>j>i\"4>l",
+    "expected": {
+      "lines": [
+        "const total = sum(a, b) + 42;",
+        "if (total > 10) {",
+        "  log(\"big\", total);!",
+        "  }",
+        "return total;"
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "failed-paren-object-curswant",
+    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;",
+    "cursor": {
+      "row": 2,
+      "col": 4
+    },
+    "keys": "A!<Esc>jjyi'gg",
+    "expected": {
+      "lines": [
+        "const total = sum(a, b) + 42;",
+        "if (total > 10) {",
+        "  log(\"big\", total);!",
+        "}",
+        "return total;"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 12
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "failed-angle-object-shift-up",
+    "text": "function greet(name) {\n  return \"Hello, \" + name;\n}\n\nconst x = [1, 2, 3];",
+    "cursor": {
+      "row": 1,
+      "col": 16
+    },
+    "keys": "dwj4gua<>-",
+    "expected": {
+      "lines": [
+        "function greet(name) {",
+        "    return \"Hello,\" + name;",
+        "  }",
+        "",
+        "const x = [1, 2, 3];"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": " ",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "count-D-fail-curswant",
+    "text": "alpha beta gamma\nfoo.bar(baz, \"qux\")\n{ key: 'value', n: 7 }\n",
+    "cursor": {
+      "row": 3,
+      "col": 0
+    },
+    "keys": "2D:2<CR>",
+    "expected": {
+      "lines": [
+        "alpha beta gamma",
+        "foo.bar(baz, \"qux\")",
+        "{ key: 'value', n: 7 }",
+        ""
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 18
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "count-dollar-op-fail-curswant",
+    "text": "abcdefgh\nab\nabcdefgh",
+    "cursor": {
+      "row": 2,
+      "col": 2
+    },
+    "keys": "d2$gg",
+    "expected": {
+      "lines": [
+        "abcdefgh",
+        "ab",
+        "abcdefgh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 7
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "shift-count-word-object-fail",
+    "text": "  ab cd\n    x y\n  ab cd",
+    "cursor": {
+      "row": 2,
+      "col": 4
+    },
+    "keys": "4<iW",
+    "expected": {
+      "lines": [
+        "  ab cd",
+        "    x y",
+        "  ab cd"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 6
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "case-op-count-gg",
+    "text": "<div class=\"a\"><span>text</span></div>\nplain 0x1f 007 -3 words",
+    "cursor": {
+      "row": 0,
+      "col": 11
+    },
+    "keys": "3gUgg",
+    "expected": {
+      "lines": [
+        "<DIV CLASS=\"A\"><SPAN>TEXT</SPAN></DIV>",
+        "PLAIN 0X1F 007 -3 WORDS"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 11
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "case-op-count-gg-up",
+    "text": "function greet(name) {\n  return \"Hello, \" + name;\n}\n\nconst x = [1, 2, 3];",
+    "cursor": {
+      "row": 4,
+      "col": 19
+    },
+    "keys": "3gUgg",
+    "expected": {
+      "lines": [
+        "function greet(name) {",
+        "  return \"Hello, \" + name;",
+        "}",
+        "",
+        "CONST X = [1, 2, 3];"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "paren-object-unclosed-open-fails",
+    "text": "if (totX\n  log(\"big\", total);\n}",
+    "cursor": {
+      "row": 0,
+      "col": 7
+    },
+    "keys": "g~a(",
+    "expected": {
+      "lines": [
+        "if (totX",
+        "  log(\"big\", total);",
+        "}"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 7
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "paren-object-unclosed-inner-fails",
+    "text": "x (a (b) c",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "da(",
+    "expected": {
+      "lines": [
+        "x (a (b) c"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "ctrl-o-redo-after-dollar",
+    "text": "abc def\nxyz uvw",
+    "cursor": {
+      "row": 0,
+      "col": 2
+    },
+    "keys": "iw<C-o>$!<Esc>j0.",
+    "expected": {
+      "lines": [
+        "abwc def!",
+        "!xyz uvw"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "ctrl-o-redo-after-zero",
+    "text": "abc def\nxyz uvw",
+    "cursor": {
+      "row": 0,
+      "col": 2
+    },
+    "keys": "Aw<C-o>0!<Esc>j$.",
+    "expected": {
+      "lines": [
+        "!abc defw",
+        "xyz uv!w"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 6
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "ctrl-o-redo-nothing-typed",
+    "text": "abc def\nxyz uvw",
+    "cursor": {
+      "row": 0,
+      "col": 2
+    },
+    "keys": "iw<C-o>$<Esc>j0.",
+    "expected": {
+      "lines": [
+        "abwc def",
+        "wxyz uvw"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "ctrl-o-undo-cursor",
+    "text": "abc def\nxyz uvw",
+    "cursor": {
+      "row": 0,
+      "col": 2
+    },
+    "keys": "iw<C-o>$!<Esc>u",
+    "expected": {
+      "lines": [
+        "abwc def",
+        "xyz uvw"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 7
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "ctrl-o-count-dropped",
+    "text": "abc def\nxyz uvw",
+    "cursor": {
+      "row": 0,
+      "col": 2
+    },
+    "keys": "3iw<C-o>0!<Esc>j$.",
+    "expected": {
+      "lines": [
+        "!abwc def",
+        "xyz uv!w"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 6
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "ctrl-o-eol-j",
+    "text": "abcdef\ndefgh",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "Ax<C-o>jy<Esc>",
+    "expected": {
+      "lines": [
+        "abcdefx",
+        "defghy"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 5
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "ctrl-o-eol-zz",
+    "text": "abc\ndefgh",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "Ax<C-o>zzy<Esc>",
+    "expected": {
+      "lines": [
+        "abcxy",
+        "defgh"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "ctrl-o-dollar-then-j",
+    "text": "abc\ndefgh",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "ix<C-o>$<C-o>jy<Esc>",
+    "expected": {
+      "lines": [
+        "xabc",
+        "defghy"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 5
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "count-J-last-line",
+    "text": "function greet(name) {\n  return \"Hello, \" + name;\n}\n\nconst x = [1, 2, 3];",
+    "cursor": {
+      "row": 4,
+      "col": 4
+    },
+    "keys": "3J",
+    "expected": {
+      "lines": [
+        "function greet(name) {",
+        "  return \"Hello, \" + name;",
+        "}",
+        "",
+        "const x = [1, 2, 3];"
+      ],
+      "cursor": {
+        "row": 4,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "count-J-last-line-undo",
+    "text": "ab cd\nef gh\nij kl",
+    "cursor": {
+      "row": 2,
+      "col": 3
+    },
+    "keys": "x3Ju",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "ef gh",
+        "ij l"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 3
+      },
+      "reg": "k",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "count-gJ-last-line-redo",
+    "text": "ab cd\nef gh\nij kl",
+    "cursor": {
+      "row": 2,
+      "col": 3
+    },
+    "keys": "3gJk$.",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "ef ghij kl"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 5
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "empty-buffer-change-keeps-register",
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "cursor": {
+      "row": 3,
+      "col": 11
+    },
+    "keys": "dasSX<Esc>",
+    "expected": {
+      "lines": [
+        "X"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "empty-buffer-cc-keeps-register",
+    "text": "<div class=\"a\"><span>text</span></div>\nplain 0x1f 007 -3 words",
+    "cursor": {
+      "row": 0,
+      "col": 10
+    },
+    "keys": "3ged}ccend;<Esc>",
+    "expected": {
+      "lines": [
+        "end;"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "<div class=\"a\"><span>text</span></div>\nplain 0x1f 007 -3 words\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "empty-buffer-dd-keeps-register",
+    "text": "abc",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "ddddp",
+    "expected": {
+      "lines": [
+        "",
+        "abc"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "abc\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "emptied-line-dd-yanks",
+    "text": "a\nb",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "jddxdd",
+    "expected": {
+      "lines": [
+        ""
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "put-e353-keeps-col",
+    "text": "function greet(name) {\n  return \"Hello, \" + name;\n}\n\nconst x = [1, 2, 3];",
+    "cursor": {
+      "row": 4,
+      "col": 9
+    },
+    "keys": ":1,2>><CR>:0pu<CR>",
+    "expected": {
+      "lines": [
+        "    function greet(name) {",
+        "      return \"Hello, \" + name;",
+        "}",
+        "",
+        "const x = [1, 2, 3];"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 6
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "put-blank-register-bl-fix",
+    "text": "function greet(name) {\n  return \"Hello, \" + name;\n}\n\nconst x = [1, 2, 3];",
+    "cursor": {
+      "row": 1,
+      "col": 1
+    },
+    "keys": "\"ayiw:pu!<CR>",
+    "expected": {
+      "lines": [
+        "function greet(name) {",
+        "  ",
+        "  return \"Hello, \" + name;",
+        "}",
+        "",
+        "const x = [1, 2, 3];"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 1
+      },
+      "reg": "  ",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "put-charwise-trailing-newline",
+    "text": "The quick brown fox. It jumps over\nthe lazy dog! Then it rests.\n\nAnother paragraph here.",
+    "cursor": {
+      "row": 3,
+      "col": 18
+    },
+    "keys": "Vld\"ayiw:pu a<CR>",
+    "expected": {
+      "lines": [
+        "The quick brown fox. It jumps over",
+        "the lazy dog! Then it rests.",
+        ".",
+        "",
+        ""
+      ],
+      "cursor": {
+        "row": 3,
+        "col": 0
+      },
+      "reg": ".\n",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-line-delete-old-col",
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "cursor": {
+      "row": 3,
+      "col": 2
+    },
+    "keys": "3EVkd",
+    "expected": {
+      "lines": [
+        "  indented line one",
+        "    deeper (nested) item"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 17
+      },
+      "reg": "  back to one\nlast_word_here end\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-line-delete-last-line-curswant",
+    "text": "function greet(name) {\n  return \"Hello, \" + name;\n}\n\nconst x = [1, 2, 3];",
+    "cursor": {
+      "row": 3,
+      "col": 0
+    },
+    "keys": "eVd:2<CR>",
+    "expected": {
+      "lines": [
+        "function greet(name) {",
+        "  return \"Hello, \" + name;",
+        "}",
+        ""
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "const x = [1, 2, 3];\n",
+      "regType": "line",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "tilde-empty-line-not-repeated",
+    "text": "function greet(name) {\n  return \"Hello, \" + name;\n}\n\nconst x = [1, 2, 3];",
+    "cursor": {
+      "row": 3,
+      "col": 0
+    },
+    "keys": "ix<Esc>u0~j.",
+    "expected": {
+      "lines": [
+        "function greet(name) {",
+        "  return \"Hello, \" + name;",
+        "}",
+        "",
+        "xconst x = [1, 2, 3];"
+      ],
+      "cursor": {
+        "row": 4,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "empty-insert-no-undo-entry",
+    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;",
+    "cursor": {
+      "row": 1,
+      "col": 14
+    },
+    "keys": "xi<Esc>u",
+    "expected": {
+      "lines": [
+        "const total = sum(a, b) + 42;",
+        "if (total > 10) {",
+        "  log(\"big\", total);",
+        "}",
+        "return total;"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 14
+      },
+      "reg": ")",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "typed-then-erased-insert-undo",
+    "text": "alpha beta gamma\nfoo.bar(baz, \"qux\")\n{ key: 'value', n: 7 }\n",
+    "cursor": {
+      "row": 2,
+      "col": 7
+    },
+    "keys": "aone two<C-u><Esc>u",
+    "expected": {
+      "lines": [
+        "alpha beta gamma",
+        "foo.bar(baz, \"qux\")",
+        "{ key: 'value', n: 7 }",
+        ""
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 8
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "block-shift-undo-cursor",
+    "text": "function greet(name) {\n  return \"Hello, \" + name;\n}\n\nconst x = [1, 2, 3];",
+    "cursor": {
+      "row": 1,
+      "col": 2
+    },
+    "keys": "<C-v>+>u",
+    "expected": {
+      "lines": [
+        "function greet(name) {",
+        "  return \"Hello, \" + name;",
+        "}",
+        "",
+        "const x = [1, 2, 3];"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "block-shift-undo-cursor-nul",
+    "text": "function greet(name) {\n  return \"Hello, \" + name;\n}\n\nconst x = [1, 2, 3];",
+    "cursor": {
+      "row": 1,
+      "col": 5
+    },
+    "keys": "<C-v>j>u",
+    "expected": {
+      "lines": [
+        "function greet(name) {",
+        "  return \"Hello, \" + name;",
+        "}",
+        "",
+        "const x = [1, 2, 3];"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 1
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "block-equal-redo-short-line",
+    "text": "function greet(name) {\n  return \"Hello, \" + name;\n}\n\nconst x = [1, 2, 3];",
+    "cursor": {
+      "row": 2,
+      "col": 0
+    },
+    "keys": "<C-v>kl=.",
+    "expected": {
+      "lines": [
+        "function greet(name) {",
+        "  return \"Hello, \" + name;",
+        "}",
+        "",
+        "const x = [1, 2, 3];"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 1
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "block-shift-redo-short-lines",
+    "text": "The quick brown fox. It jumps over\nthe lazy dog! Then it rests.\n\nAnother paragraph here.",
+    "cursor": {
+      "row": 3,
+      "col": 17
+    },
+    "keys": "<C-v>lgg>4f .",
+    "expected": {
+      "lines": [
+        "The quick brown f  ox. It jumps   over",
+        "the lazy dog! The  n it rests.",
+        "",
+        "Another paragraph   here."
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 31
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "i"
+    }
+  },
+  {
+    "id": "block-change-redo-keeps-width",
+    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;",
+    "cursor": {
+      "row": 2,
+      "col": 2
+    },
+    "keys": "<C-v>gg)c(<Esc>..",
+    "expected": {
+      "lines": [
+        "const total = sum(a, b) + 42;",
+        "if (total > 10) {",
+        "  (",
+        "}",
+        "re("
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 2
+      },
+      "reg": "(\n            \n(",
+      "regType": "block",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-g-dollar-nul",
+    "text": "abc def\nxyz",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "vg$d",
+    "expected": {
+      "lines": [
+        "axyz"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 1
+      },
+      "reg": "bc def\n",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-find-comma",
+    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;",
+    "cursor": {
+      "row": 2,
+      "col": 18
+    },
+    "keys": "vF,y",
+    "expected": {
+      "lines": [
+        "const total = sum(a, b) + 42;",
+        "if (total > 10) {",
+        "  log(\"big\", total);",
+        "}",
+        "return total;"
+      ],
+      "cursor": {
+        "row": 2,
+        "col": 11
+      },
+      "reg": ", total)",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-find-comma-replace",
+    "text": "const total = sum(a, b) + 42;\nif (total > 10) {\n  log(\"big\", total);\n}\nreturn total;",
+    "cursor": {
+      "row": 0,
+      "col": 4
+    },
+    "keys": "vf,r#",
+    "expected": {
+      "lines": [
+        "cons################ b) + 42;",
+        "if (total > 10) {",
+        "  log(\"big\", total);",
+        "}",
+        "return total;"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "paren-object-forward-unmatched-fails",
+    "text": "x = ( (t)",
+    "cursor": {
+      "row": 0,
+      "col": 2
+    },
+    "keys": "da(",
+    "expected": {
+      "lines": [
+        "x = ( (t)"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "paren-object-forward-next-line-unmatched",
+    "text": "x =(\nif (t) {",
+    "cursor": {
+      "row": 0,
+      "col": 2
+    },
+    "keys": "gUib",
+    "expected": {
+      "lines": [
+        "x =(",
+        "if (t) {"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "equal-h-at-col0",
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "=h",
+    "expected": {
+      "lines": [
+        "indented line one",
+        "    deeper (nested) item",
+        "  back to one",
+        "last_word_here end"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "join-trailing-space-cursor",
+    "text": "  indented line one\n    deeper (nested) item\n  back to one\nlast_word_here end",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "Aa <Esc>J",
+    "expected": {
+      "lines": [
+        "  indented line onea deeper (nested) item",
+        "  back to one",
+        "last_word_here end"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 21
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
   }
 ]

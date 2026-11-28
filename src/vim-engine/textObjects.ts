@@ -235,7 +235,14 @@ export function getTextObjectRange(
 
     let target = enclosing[0];
 
-    // 커서를 감싸는 쌍이 없으면, 커서 뒤에 나타나는 첫 번째 괄호 쌍 선택
+    // 커서를 감싸는 쌍이 없으면, 커서 뒤에 나타나는 첫 번째 괄호 쌍 선택.
+    // 단 커서 앞(또는 위)에 짝 없는 여는 괄호가 있으면 Vim current_block 은 그 괄호를 블록 시작으로 보고 실패합니다.
+    const unmatchedOpenBefore = stack.some((p) => posCompare(p, cursor) <= 0);
+    if (!target && unmatchedOpenBefore) return null;
+    // 앞으로 찾을 때도 커서 뒤 첫 여는 괄호가 짝이 없으면 실패합니다 (`x = ( (t)` 의 da().
+    const firstUnmatchedAfter = stack.find((p) => posCompare(p, cursor) > 0);
+    const firstPairAfter = pairs.filter((p) => posCompare(p.open, cursor) > 0).sort((a, b) => posCompare(a.open, b.open))[0];
+    if (!target && firstUnmatchedAfter && (!firstPairAfter || posCompare(firstUnmatchedAfter, firstPairAfter.open) < 0)) return null;
     if (!target) {
       const upcoming = pairs
         .filter((p) => posCompare(p.open, cursor) >= 0)

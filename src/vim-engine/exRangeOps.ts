@@ -344,9 +344,10 @@ export function executeExPut(
   // Vim: 한 번도 쓰지 않은 레지스터는 E353, 빈 문자열로 설정된 레지스터는 빈 줄 하나를 넣습니다.
   const clip = getRegisterContent(state, reg);
   if (!clip || clip.content === undefined || clip.content === null) {
-    // Vim do_one_cmd: 명령이 실패해도 커서는 먼저 주소의 줄로 갑니다 (:0pu → 첫 줄, 열은 curswant).
+    // Vim ex_put: 레지스터를 보기 전에 커서를 주소의 줄로 옮기고 열은 check_cursor_col 로만 맞춥니다
+    // (:0pu → 첫 줄, 열은 그대로; curswant 는 바뀌지 않음).
     const line = Math.max(0, Math.min(insertAfterLine, state.lines.length - 1));
-    const col = Math.max(0, Math.min(state.curswant ?? state.cursor.col, (state.lines[line] ?? '').length - 1));
+    const col = Math.max(0, Math.min(state.cursor.col, (state.lines[line] ?? '').length - 1));
     // do_put 은 레지스터 검사 전에 u_save 하므로 빈 실행 취소 항목이 남습니다.
     return {
       ...pushUndoSnapshot({ ...state, cursor: { line, col } }),
@@ -357,19 +358,23 @@ export function executeExPut(
       commandType: undefined,
       commandMessage: msg('E353: 레지스터 {reg} 가 비어 있습니다', { reg }),
       bell: true,
+      keepCurswantAt: { line, col },
     };
   }
   const rawContent = clip.content;
   const content = Array.isArray(rawContent) ? rawContent.join('\n') : rawContent;
-  const inserted = content.replace(/\n$/, '').split('\n');
+  // 줄 단위 레지스터는 끝 줄바꿈 없이 저장됩니다. 문자 단위 "x\n" 은 Vim 처럼 "x" 와 빈 줄 두 줄입니다.
+  const inserted = content.split('\n');
   const idx = insertAfterLine < 0 ? 0 : before ? insertAfterLine : insertAfterLine + 1;
   const newLines = [...state.lines.slice(0, idx), ...inserted, ...state.lines.slice(idx)];
   const lastLine = idx + inserted.length - 1;
-  const firstNonBlank = (newLines[lastLine] ?? '').search(/\S/);
+  // beginline(BL_WHITE | BL_FIX): 첫 비공백, 공백뿐인 줄이면 마지막 글자.
+  const lastText = newLines[lastLine] ?? '';
+  const firstNonBlank = lastText.search(/\S/);
   return {
     ...pushUndoSnapshot(state),
     lines: newLines,
-    cursor: clampCursor(newLines, { line: lastLine, col: Math.max(0, firstNonBlank) }, 'NORMAL'),
+    cursor: clampCursor(newLines, { line: lastLine, col: firstNonBlank >= 0 ? firstNonBlank : Math.max(0, lastText.length - 1) }, 'NORMAL'),
     mode: 'NORMAL',
     visualAnchor: undefined,
     commandBuffer: undefined,

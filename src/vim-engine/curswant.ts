@@ -10,6 +10,9 @@ const ALWAYS_VERTICAL_KEYS = new Set(['j', 'k', 'ArrowDown', 'ArrowUp', 'Ctrl-e'
 /** 'nostartofline' 일 때만 열을 유지하는 세로 이동 */
 const NOSOL_VERTICAL_KEYS = new Set(['G', 'H', 'L', 'M', 'Ctrl-d', 'Ctrl-u', 'Ctrl-f', 'Ctrl-b']);
 
+/** 연산자 대기 접두 ("a2d3, gU, >, = …): 이어서 모션·텍스트 객체를 기다리는 상태 */
+const OPERATOR_PENDING = /^("[^"]?)?([1-9][0-9]*)?(d|c|y|>|<|=|!|g[uU~?qw@]|zf|gc)([1-9][0-9]*)?$/;
+
 /** 이번 키가 curswant 를 유지하는 세로 이동(또는 커서를 옮기지 않는 화면 정렬)인지 */
 function keepsCurswant(prev: VimEditorState, key: string): boolean {
   const pending = prev.pendingKeys ?? '';
@@ -36,6 +39,14 @@ function keepsCurswant(prev: VimEditorState, key: string): boolean {
  */
 export function applyCurswant(prev: VimEditorState, next: VimEditorState, key: string): VimEditorState {
   const remembered = prev.curswant ?? prev.cursor.col;
+  // 입력 모드 Ctrl-o: Vim 은 커서를 줄 끝 다음 칸에 둔 채 명령을 받으므로 curswant 는 입력하던 열입니다 (A…<C-o>j).
+  // 다시 시작한 입력에서 아직 아무것도 넣지 않았으면 이전 curswant(`<C-o>$` 의 줄 끝)를 그대로 씁니다.
+  if (prev.mode === 'INSERT' && next.insertNormalSession && next.mode === 'NORMAL' && !prev.insertNormalSession) {
+    const want = prev.insertRestartPending ? remembered : prev.cursor.col;
+    return next.curswant === want ? next : { ...next, curswant: want };
+  }
+  // Ctrl-o 명령이 끝나 입력으로 돌아왔으면 finishInsertNormalSession 이 정한 curswant 를 유지합니다.
+  if (prev.insertNormalSession && next.mode === 'INSERT' && next.insertRestartPending) return next;
   // Ex 명령이 Vim 처럼 curswant 를 건드리지 않고 커서를 옮긴 경우 (`:N`, `:>`, `:t`, `:m`, `:y` …, keepCurswantAt)
   if (next.keepCurswantAt) {
     const { keepCurswantAt: kept, ...rest } = next;
@@ -66,7 +77,19 @@ export function applyCurswant(prev: VimEditorState, next: VimEditorState, key: s
   // Vim nv_dollar: 줄이 모자라 [count]$ 가 실패해도 curswant 는 먼저 줄 끝으로 정해집니다 (3$ 뒤 G 가 줄 끝으로).
   // nv_g_cmd 의 g_ 도 같습니다: [count]g_ 가 줄이 모자라 실패하면 curswant 는 줄 끝입니다.
   const isGUnderscore = key === '_' && /^([1-9][0-9]*)?g$/.test(pending) && CURSWANT_MODES.has(prev.mode);
-  if ((isDollar || isGUnderscore) && next.bell && sameText && sameCursor) return { ...next, curswant: CURSWANT_EOL };
+  // 연산자 뒤 $ / g_ 와 D / C 도 같습니다 (2D 가 마지막 줄에서 실패해도 curswant 는 줄 끝).
+  const opDollar =
+    CURSWANT_MODES.has(prev.mode) &&
+    ((key === '$' && OPERATOR_PENDING.test(pending)) ||
+      (key === '_' && pending.endsWith('g') && OPERATOR_PENDING.test(pending.slice(0, -1))) ||
+      ((key === 'D' || key === 'C') && /^("[^"]?)?([1-9][0-9]*)?$/.test(pending)));
+  if ((isDollar || isGUnderscore || opDollar) && next.bell && sameText && sameCursor) return { ...next, curswant: CURSWANT_EOL };
+  // Vim nv_object: 텍스트 객체는 성공·실패와 상관없이 curswant 를 현재 열로 다시 정합니다 (실패한 >i" 뒤 4>l).
+  const textObject =
+    /[ia][nl]?$/.test(pending) &&
+    ((prev.mode.startsWith('VISUAL') && /^([1-9][0-9]*)?[ia][nl]?$/.test(pending)) ||
+      (prev.mode === 'NORMAL' && OPERATOR_PENDING.test(pending.replace(/[ia][nl]?$/, ''))));
+  if (textObject) return next.curswant === next.cursor.col ? next : { ...next, curswant: next.cursor.col };
   // 매크로 녹화 시작·끝(q{reg}, q)과 마크(m{a}), 레지스터 지정("x)은 Vim 에서 curswant 를 건드리지 않습니다.
   const keepsForRecordOrMark =
     (prev.mode === 'NORMAL' && ((key === 'q' && !pending && !!prev.recordingMacro) || pending === 'q' || pending === 'm')) ||

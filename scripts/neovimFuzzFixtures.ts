@@ -27,6 +27,9 @@ const T7 = 'a b\nc d\ne f\ng h';
 const TG = 'abc\nxyz\nhello there\nend';
 const TS = 'a b a\nxa ya za\nq a\nlong a line here';
 const TJ = 'alpha beta\n  gamma delta\nepsilon\nzeta eta';
+const TF = 'function greet(name) {\n  return "Hello, " + name;\n}\n\nconst x = [1, 2, 3];';
+const TQ = 'The quick brown fox. It jumps over\nthe lazy dog! Then it rests.\n\nAnother paragraph here.';
+const TH = '<div class="a"><span>text</span></div>\nplain 0x1f 007 -3 words';
 
 const CASES: Case[] = [
   // >> / << / >{motion}: nostartofline 이면 열을 유지
@@ -617,6 +620,70 @@ const CASES: Case[] = [
   { id: 'visual-shift-sentence-buffer-end', text: "<div>!\nplain 0x1f 007 -3 words", cursor: { row: 1, col: 22 }, keys: "v)>" },
   { id: 'linewise-shift-sentence-buffer-end', text: T3, cursor: { row: 3, col: 0 }, keys: "V^)>" },
   { id: 'g-underscore-fail-curswant', text: "The quick brown fox. It jumps over\nthe lazy dog! Then it rests.\n\nAnother paragraph here.", cursor: { row: 3, col: 0 }, keys: "4g_gg" },
+  // f/t/F/T 뒤의 i a g U … 와 <i< · >f> 의 < > 는 찾을 글자·텍스트 객체입니다
+  { id: 'case-op-find-a', text: TF, cursor: { row: 1, col: 9 }, keys: 'gufa' },
+  { id: 'case-op-find-back-a', text: TH, cursor: { row: 1, col: 16 }, keys: 'gUFa' },
+  { id: 'case-op-till-a', text: T1, cursor: { row: 0, col: 0 }, keys: 'gUta' },
+  { id: 'shift-failed-angle-object', text: T3, cursor: { row: 3, col: 5 }, keys: '<i<2<{' },
+  { id: 'shift-failed-angle-object-then-shift', text: TF, cursor: { row: 1, col: 12 }, keys: '<a<>+' },
+  // 텍스트 객체는 실패해도 curswant 를 다시 정합니다 (nv_object), 연산자 뒤 $ / D 실패는 curswant 를 줄 끝으로
+  { id: 'failed-quote-object-curswant', text: T1, cursor: { row: 2, col: 9 }, keys: 'A!<Esc>j>i"4>l' },
+  { id: 'failed-paren-object-curswant', text: T1, cursor: { row: 2, col: 4 }, keys: "A!<Esc>jjyi'gg" },
+  { id: 'failed-angle-object-shift-up', text: TF, cursor: { row: 1, col: 16 }, keys: 'dwj4gua<>-' },
+  { id: 'count-D-fail-curswant', text: T2, cursor: { row: 3, col: 0 }, keys: '2D:2<CR>' },
+  { id: 'count-dollar-op-fail-curswant', text: 'abcdefgh\nab\nabcdefgh', cursor: { row: 2, col: 2 }, keys: 'd2$gg' },
+  // [count]iW 가 버퍼 끝을 넘으면 실패하고 커서는 움직인 자리에 남음 (current_word)
+  { id: 'shift-count-word-object-fail', text: '  ab cd\n    x y\n  ab cd', cursor: { row: 2, col: 4 }, keys: '4<iW' },
+  // [count]gg 와 대소문자 연산자
+  { id: 'case-op-count-gg', text: TH, cursor: { row: 0, col: 11 }, keys: '3gUgg' },
+  { id: 'case-op-count-gg-up', text: TF, cursor: { row: 4, col: 19 }, keys: '3gUgg' },
+  // 짝 없는 여는 괄호 안에서는 뒤쪽 괄호 쌍을 찾지 않고 실패 (current_block)
+  { id: 'paren-object-unclosed-open-fails', text: 'if (totX\n  log("big", total);\n}', cursor: { row: 0, col: 7 }, keys: 'g~a(' },
+  { id: 'paren-object-unclosed-inner-fails', text: 'x (a (b) c', cursor: { row: 0, col: 3 }, keys: 'da(' },
+  // Ctrl-o 뒤 다시 시작한 입력: 새 실행 취소 단계와 `i` 로 시작하는 반복, [count] 는 버림, 줄 끝 curswant
+  { id: 'ctrl-o-redo-after-dollar', text: 'abc def\nxyz uvw', cursor: { row: 0, col: 2 }, keys: 'iw<C-o>$!<Esc>j0.' },
+  { id: 'ctrl-o-redo-after-zero', text: 'abc def\nxyz uvw', cursor: { row: 0, col: 2 }, keys: 'Aw<C-o>0!<Esc>j$.' },
+  { id: 'ctrl-o-redo-nothing-typed', text: 'abc def\nxyz uvw', cursor: { row: 0, col: 2 }, keys: 'iw<C-o>$<Esc>j0.' },
+  { id: 'ctrl-o-undo-cursor', text: 'abc def\nxyz uvw', cursor: { row: 0, col: 2 }, keys: 'iw<C-o>$!<Esc>u' },
+  { id: 'ctrl-o-count-dropped', text: 'abc def\nxyz uvw', cursor: { row: 0, col: 2 }, keys: '3iw<C-o>0!<Esc>j$.' },
+  { id: 'ctrl-o-eol-j', text: 'abcdef\ndefgh', cursor: { row: 0, col: 0 }, keys: 'Ax<C-o>jy<Esc>' },
+  { id: 'ctrl-o-eol-zz', text: 'abc\ndefgh', cursor: { row: 0, col: 0 }, keys: 'Ax<C-o>zzy<Esc>' },
+  { id: 'ctrl-o-dollar-then-j', text: 'abc\ndefgh', cursor: { row: 0, col: 0 }, keys: 'ix<C-o>$<C-o>jy<Esc>' },
+  // [count]J 가 마지막 줄에서: count 를 1 로 줄여 실행 (0열, 실행 취소 항목, `.` 는 J)
+  { id: 'count-J-last-line', text: TF, cursor: { row: 4, col: 4 }, keys: '3J' },
+  { id: 'count-J-last-line-undo', text: 'ab cd\nef gh\nij kl', cursor: { row: 2, col: 3 }, keys: 'x3Ju' },
+  { id: 'count-gJ-last-line-redo', text: 'ab cd\nef gh\nij kl', cursor: { row: 2, col: 3 }, keys: '3gJk$.' },
+  // ML_EMPTY: 버퍼를 다 지운 뒤의 삭제·변경은 레지스터를 덮어쓰지 않음
+  { id: 'empty-buffer-change-keeps-register', text: T3, cursor: { row: 3, col: 11 }, keys: 'dasSX<Esc>' },
+  { id: 'empty-buffer-cc-keeps-register', text: TH, cursor: { row: 0, col: 10 }, keys: '3ged}ccend;<Esc>' },
+  { id: 'empty-buffer-dd-keeps-register', text: 'abc', cursor: { row: 0, col: 0 }, keys: 'ddddp' },
+  { id: 'emptied-line-dd-yanks', text: 'a\nb', cursor: { row: 0, col: 0 }, keys: 'jddxdd' },
+  // :put — E353 은 열을 그대로, 공백뿐인 줄은 마지막 글자로, 문자 단위 "x\n" 은 두 줄
+  { id: 'put-e353-keeps-col', text: TF, cursor: { row: 4, col: 9 }, keys: ':1,2>><CR>:0pu<CR>' },
+  { id: 'put-blank-register-bl-fix', text: TF, cursor: { row: 1, col: 1 }, keys: '"ayiw:pu!<CR>' },
+  { id: 'put-charwise-trailing-newline', text: TQ, cursor: { row: 3, col: 18 }, keys: 'Vld"ayiw:pu a<CR>' },
+  // 줄 단위 비주얼 삭제 뒤 열은 연산 전 curswant (do_pending_operator old_col)
+  { id: 'visual-line-delete-old-col', text: T3, cursor: { row: 3, col: 2 }, keys: '3EVkd' },
+  { id: 'visual-line-delete-last-line-curswant', text: TF, cursor: { row: 3, col: 0 }, keys: 'eVd:2<CR>' },
+  // 빈 줄의 ~ 는 실패 (`.` 대상이 아님), 아무것도 넣지 않은 i<Esc> 는 실행 취소 항목이 아님
+  { id: 'tilde-empty-line-not-repeated', text: TF, cursor: { row: 3, col: 0 }, keys: 'ix<Esc>u0~j.' },
+  { id: 'empty-insert-no-undo-entry', text: T1, cursor: { row: 1, col: 14 }, keys: 'xi<Esc>u' },
+  { id: 'typed-then-erased-insert-undo', text: T2, cursor: { row: 2, col: 7 }, keys: 'aone two<C-u><Esc>u' },
+  // 블록 > 의 실행 취소는 블록 왼쪽 위로, 블록 비주얼 `.` 는 같은 너비 (짧은 줄에서도)
+  { id: 'block-shift-undo-cursor', text: TF, cursor: { row: 1, col: 2 }, keys: '<C-v>+>u' },
+  { id: 'block-shift-undo-cursor-nul', text: TF, cursor: { row: 1, col: 5 }, keys: '<C-v>j>u' },
+  { id: 'block-equal-redo-short-line', text: TF, cursor: { row: 2, col: 0 }, keys: '<C-v>kl=.' },
+  { id: 'block-shift-redo-short-lines', text: TQ, cursor: { row: 3, col: 17 }, keys: '<C-v>lgg>4f .' },
+  { id: 'block-change-redo-keeps-width', text: T1, cursor: { row: 2, col: 2 }, keys: '<C-v>gg)c(<Esc>..' },
+  // 비주얼 g$ 는 화면보다 짧은 줄에서 줄 끝 다음 칸(NUL)에 섬 (줄바꿈까지 고름)
+  { id: 'visual-g-dollar-nul', text: 'abc def\nxyz', cursor: { row: 0, col: 1 }, keys: 'vg$d' },
+  // 비주얼 f/t/F/T 뒤의 , ; 는 찾을 글자, 커서 뒤 첫 여는 괄호가 짝이 없으면 실패, 0열의 =h, 공백으로 끝난 줄의 J 커서
+  { id: 'visual-find-comma', text: T1, cursor: { row: 2, col: 18 }, keys: 'vF,y' },
+  { id: 'visual-find-comma-replace', text: T1, cursor: { row: 0, col: 4 }, keys: 'vf,r#' },
+  { id: 'paren-object-forward-unmatched-fails', text: 'x = ( (t)', cursor: { row: 0, col: 2 }, keys: 'da(' },
+  { id: 'paren-object-forward-next-line-unmatched', text: 'x =(\nif (t) {', cursor: { row: 0, col: 2 }, keys: 'gUib' },
+  { id: 'equal-h-at-col0', text: T3, cursor: { row: 0, col: 0 }, keys: '=h' },
+  { id: 'join-trailing-space-cursor', text: T3, cursor: { row: 0, col: 3 }, keys: 'Aa <Esc>J' },
 ];
 
 const LUA = `

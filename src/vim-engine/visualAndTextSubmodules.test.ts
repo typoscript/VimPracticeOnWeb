@@ -82,7 +82,8 @@ describe('visualPrefixes submodule', () => {
     expect(gkAtTop?.bell).toBe(true);
 
     const gDollar = handleVisualGImmediate(inVisualG, '$', parsePending('g'));
-    expect(gDollar?.cursor.col).toBe(base.lines[0].length - 1);
+    // Neovim: 비주얼 g$ 는 화면보다 짧은 줄에서 줄 끝 다음 칸(NUL)에 섭니다 (nv_g_dollar_cmd → coladvance one_more).
+    expect(gDollar?.cursor.col).toBe(base.lines[0].length);
 
     const withTwoTabs = {
       ...sendKeys(createVimState(['first foo line']), ':tabnew<CR>'),

@@ -867,6 +867,12 @@ export interface VimEditorState {
   folds?: FoldRange[];
   /** Insert 모드 일회성 Normal 명령 실행 세션 (Ctrl+o) */
   insertNormalSession?: boolean;
+  /** Ctrl-o 명령 뒤 다시 시작한 입력에서 아직 글자를 넣지 않음 (Vim arrow_used) */
+  insertRestartPending?: boolean;
+  /** 마지막 줄까지 지워 빈 버퍼가 된 줄 배열 (Vim ML_EMPTY: 이 배열이 그대로면 삭제·변경이 레지스터를 쓰지 않음) */
+  emptiedLines?: string[];
+  /** i/a/I/A 로 들어갈 때 쌓은 실행 취소 스냅샷과 그 전 redo 목록 (아무것도 넣지 않고 나가면 되돌림) */
+  emptyInsertUndo?: { snapshot: StateSnapshot; redoStack?: StateSnapshot[] };
   /** Select 모드 일회성 Visual 명령 실행 세션 (Ctrl+o) */
   selectVisualOneShot?: boolean;
   /** Insert 모드 및 Command 모드 Ctrl+r 레지스터 입력 대기 상태 */

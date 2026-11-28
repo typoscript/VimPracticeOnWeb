@@ -27,6 +27,19 @@ export { modifyNumberAtCursor, modifyNumberVisual } from './numberOperators';
  * [count]J 지원 (예: 3J -> 현재 줄 포함 3개 줄 연결)
  * insertSpace = false (gJ): 공백을 삽입하지 않고 뒷줄의 들여쓰기를 제거하여 딱 붙임
  */
+/**
+ * Vim nv_join: 마지막 줄에서 [count]J (count 3 이상)는 실패하지 않고 count 를 남은 줄 수(1)로 줄여 do_join(1) 합니다.
+ * 바뀌는 글자는 없지만 u_save 로 실행 취소 항목이 생기고 커서는 0열로, `.` 는 count 1(= 두 줄 합치기)로 기록됩니다.
+ */
+export function joinSingleLastLine(state: VimEditorState, gJ: boolean): VimEditorState {
+  return {
+    ...pushUndoSnapshot(state),
+    cursor: { line: state.cursor.line, col: 0 },
+    pendingKeys: undefined,
+    lastChangeKeys: gJ ? ['g', 'J'] : ['J'],
+  };
+}
+
 export function joinLines(state: VimEditorState, count = 1, insertSpace = true): VimEditorState {
   if (state.lines.length <= 1 || state.cursor.line >= state.lines.length - 1) {
     return { ...state, pendingKeys: undefined };
@@ -68,7 +81,8 @@ export function joinLines(state: VimEditorState, count = 1, insertSpace = true):
       } else if (nextLineTrimmed.length === 0) {
         firstJoinCol = currentJoined.length;
       } else if (currentJoined.endsWith(' ')) {
-        firstJoinCol = currentJoined.length - 1;
+        // Vim do_join: 공백으로 끝난 줄에는 공백을 넣지 않고, 커서는 붙인 줄의 첫 글자입니다 (col = sumsize - currsize).
+        firstJoinCol = currentJoined.length;
         currentJoined += nextLineTrimmed;
       } else {
         firstJoinCol = currentJoined.length;
@@ -108,7 +122,8 @@ export function toggleCaseChar(state: VimEditorState, count = 1): VimEditorState
         pendingKeys: undefined,
       };
     }
-    return { ...state, pendingKeys: undefined };
+    // Vim n_swapchar: 빈 줄의 ~ 는 실패합니다 (bell, `.` 대상이 아님).
+    return { ...state, pendingKeys: undefined, bell: true };
   }
 
   const stateWithUndo = pushUndoSnapshot(state);
@@ -287,7 +302,8 @@ export function executeCaseMotion(
     target = moveToLastLine(state.lines, target);
     isLinewise = true;
   } else if (motionKey === 'gg') {
-    target = moveToFirstLine(state.lines, target);
+    // [count]gg 는 count 번째 줄입니다 (3gUgg, 줄이 모자라면 마지막 줄).
+    target = count > 1 ? { line: Math.min(state.lines.length - 1, count - 1), col: 0 } : moveToFirstLine(state.lines, target);
     isLinewise = true;
   } else if (motionKey === 'j') {
     target = { line: Math.min(state.lines.length - 1, state.cursor.line + count), col: state.cursor.col };
@@ -486,8 +502,9 @@ export function indentVisual(
       line: minLine,
       col: Math.min(minCol, Math.max(0, (newLines[minLine] ?? '').length - 1)),
     };
+    // Vim op_shift 는 커서를 블록 왼쪽 위(oap->start)에 둔 채 u_save 하므로 실행 취소도 그 자리로 돌아옵니다.
     return {
-      ...stateWithUndo,
+      ...pushUndoSnapshotAt(state, { line: minLine, col: minCol }),
       lines: newLines,
       cursor: blockCursor,
       mode: 'NORMAL',

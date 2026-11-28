@@ -182,6 +182,10 @@ function equalMotionRange(
   const range = findOperatorRangeByYank(state, motionKeys, count, runHandleKey);
   // y 는 커서를 연산 범위 시작(oap->start)에 두므로 그 위치가 `=` 의 실행 취소 커서입니다.
   if (range) return { startLine: range.start.line, endLine: range.end.line, opStart: range.cursor };
+  // Vim nv_left: 줄 처음의 h 는 삐 소리만 내고 연산자는 커서 줄의 빈 범위로 계속됩니다 (=h 가 그 줄을 다시 들여씀).
+  if ((motionKeys[0] === 'h' || motionKeys[0] === 'ArrowLeft') && motionKeys.length === 1 && state.cursor.col === 0) {
+    return { startLine: state.cursor.line, endLine: state.cursor.line, opStart: { ...state.cursor } };
+  }
   // 커서가 움직이지 않아도 성공하는 모션만 빈 범위(커서 줄)로 봅니다 (0, ^, |, t/T 바로 옆 글자, 마크).
   if (!'0^|tT`\''.includes(motionKeys[0])) return null;
   let probe: VimEditorState = { ...state, mode: 'NORMAL', pendingKeys: undefined, visualAnchor: undefined, bell: false };
@@ -233,7 +237,7 @@ export function handleNormalFilterShiftEqualPending(
     }
     const count = (c1 ? parseInt(c1, 10) : 1) * (c2 ? parseInt(c2, 10) : 1);
     const range = findShiftRange(state, prefix ? [prefix, key] : [key], count, runHandleKey);
-    if (!range) return { handled: true, state: ringBell(state) };
+    if (!range || range.failedAt) return { handled: true, state: ringBell(range?.failedAt ? { ...state, cursor: range.failedAt } : state) };
     const delta = range.endLine - range.startLine;
     const cmdBuffer =
       delta > 0
@@ -258,7 +262,8 @@ export function handleNormalFilterShiftEqualPending(
 
   // >{motion} / <{motion} / >{텍스트 객체} (mini.ai >in{ / <al( 포함)
   const shiftMatch = state.pendingKeys?.match(/^([1-9][0-9]*)?([<>])([1-9][0-9]*)?([ia][nl]|[iagfFtT'`\[\]])?$/);
-  if (shiftMatch && key !== shiftMatch[2]) {
+  // 접두(i a f t …) 뒤의 < > 는 텍스트 객체·찾을 글자입니다 (<i<, >f>).
+  if (shiftMatch && (key !== shiftMatch[2] || shiftMatch[4])) {
     const [, c1, dir, c2, prefix] = shiftMatch;
     if (!prefix && (/^[1-9]$/.test(key) || (key === '0' && c2))) {
       return { handled: true, state: { ...state, pendingKeys: state.pendingKeys + key } };
@@ -271,7 +276,7 @@ export function handleNormalFilterShiftEqualPending(
     }
     const count = (c1 ? parseInt(c1, 10) : 1) * (c2 ? parseInt(c2, 10) : 1);
     const range = findShiftRange(state, prefix ? [...prefix.split(''), key] : [key], count, runHandleKey);
-    if (!range) return { handled: true, state: ringBell(state) };
+    if (!range || range.failedAt) return { handled: true, state: ringBell(range?.failedAt ? { ...state, cursor: range.failedAt } : state) };
     const res = indentLines(
       { ...state, cursor: { line: range.startLine, col: range.startCol }, pendingKeys: undefined },
       range.endLine - range.startLine + 1,

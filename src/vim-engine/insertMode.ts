@@ -576,9 +576,14 @@ export function handleInsertModeKey(
   }
 
   // Ctrl+o: 일회성 Normal 명령 실행 (INSERT (normal))
+  // Vim ins_ctrl_o 는 지금까지의 입력을 끝냅니다(ins_esc, count 0): `.` 는 여기까지의 입력이고 [count] 반복은 버립니다.
   if (key === 'Ctrl-o' || key === 'Ctrl+o' || key === 'Alt-o' || key === 'Alt+o') {
     return {
       ...state,
+      lastChangeKeys: !isReplayingDot && state.currentChangeKeys && !state.insertRestartPending ? [...state.currentChangeKeys, 'Escape'] : state.lastChangeKeys,
+      currentChangeKeys: undefined,
+      insertRepeatCount: undefined,
+      insertRepeatNewline: undefined,
       mode: 'NORMAL',
       insertNormalSession: true,
       cursor: clampCursor(state.lines, state.cursor, 'NORMAL'),

@@ -5,6 +5,8 @@ import { applyCurswant, CURSWANT_EOL } from './curswant';
 import {
   doubledLineOpOverflow,
   keepRepeatOnFailure,
+  applyEmptyBufferDelete,
+  dropEmptyInsertUndo,
   normalizeRepeatKeys,
   recordInsertStartCursor,
   recordRepeatRegister,
@@ -47,6 +49,7 @@ import { handleTerminalModeKey } from './terminalEngine';
 import { handleSpellSuggestKey } from './spellEngine';
 import { handleSurroundTagPromptKey } from './surroundEngine';
 import { recordUndoTreeChange } from './undoTreeEngine';
+import { pushUndoSnapshot } from './undoHistory';
 import { computeSpecialMarksUpdate } from './marks';
 import { applyScrollbindDelta } from './splitWindow';
 import {
@@ -77,10 +80,7 @@ export { withInvariantCheck, assertValidVimState, deepFreeze } from './invariant
 /**
  * Ctrl-o 일회성 노멀/커맨드/검색 세션 종료 시 조건을 확인해 INSERT 모드로 복귀합니다.
  */
-function finishInsertNormalSession(
-  nextState: VimEditorState,
-  allowStickyDollar = false
-): VimEditorState {
+function finishInsertNormalSession(prev: VimEditorState, nextState: VimEditorState, key: string): VimEditorState {
   if (
     nextState.mode === 'NORMAL' &&
     !nextState.cmdlineWindow &&
@@ -94,17 +94,46 @@ function finishInsertNormalSession(
     !nextState.functionDraft
   ) {
     const currentLineText = nextState.lines[nextState.cursor.line] ?? '';
-    const targetCol = allowStickyDollar && nextState.stickyDollar
-      ? currentLineText.length
-      : Math.min(nextState.cursor.col, currentLineText.length);
+    // Vim edit() 재시작: 커서가 줄의 마지막 글자 위인데 curswant 가 더 오른쪽이면 줄 끝 다음 칸으로 갑니다
+    // (`<C-o>$`, 줄 끝에서 누른 `<C-o>j`·`<C-o>zz`: Ctrl-o 때 curswant 는 입력하던 열). 세로 이동의 열도 여기서 맞춥니다.
+    const moved = applyCurswant(prev, nextState, key);
+    let targetCol = Math.min(moved.cursor.col, currentLineText.length);
+    const want = moved.curswant ?? targetCol;
+    if (currentLineText.length > 0 && targetCol === currentLineText.length - 1 && want > targetCol) targetCol = currentLineText.length;
+    // Vim edit() 재시작은 arrow_used 상태입니다: 글자를 넣으면(stop_arrow) 새 실행 취소 단계와 `1i` 로 시작하는 반복을 엽니다.
     return {
       ...nextState,
       mode: 'INSERT',
-      cursor: { line: nextState.cursor.line, col: targetCol },
+      cursor: { line: moved.cursor.line, col: targetCol },
+      curswant: want,
       insertNormalSession: undefined,
+      insertRestartPending: true,
+      currentChangeKeys: ['i'],
+      currentInsertText: undefined,
+      insertStartCol: targetCol,
     };
   }
   return { ...nextState, insertNormalSession: undefined };
+}
+
+/**
+ * Ctrl-o 뒤 다시 시작한 입력 (Vim arrow_used): 처음 글자를 넣을 때(stop_arrow) 그 자리에서 새 실행 취소 단계를 열고,
+ * 아무것도 넣지 않고 나가면 `.` 는 Ctrl-o 앞까지의 입력(또는 Ctrl-o 명령)을 그대로 반복합니다.
+ */
+function finishInsertRestart(
+  state: VimEditorState,
+  nextState: VimEditorState,
+  key: string,
+  isReplayingDot: boolean,
+  macroDepth: number,
+  abbrevCtx: AbbrevReplayCtx
+): VimEditorState {
+  if (nextState.mode !== 'INSERT' || nextState.insertNormalSession) {
+    return { ...nextState, insertRestartPending: undefined, lastChangeKeys: isReplayingDot ? nextState.lastChangeKeys : state.lastChangeKeys };
+  }
+  if (nextState.lines === state.lines) return nextState;
+  const restarted = { ...pushUndoSnapshot(state), insertRestartPending: undefined };
+  return handleInsertModeKey(restarted, key, rawHandleKey, isReplayingDot, macroDepth, abbrevCtx);
 }
 
 /**
@@ -281,17 +310,18 @@ export function rawHandleKey(
   } else if (state.mode === 'SEARCH') {
     nextState = handleSearchModeKey(state, key, isReplayingDot);
     if (state.insertNormalSession && nextState.mode === 'NORMAL') {
-      nextState = finishInsertNormalSession(nextState);
+      nextState = finishInsertNormalSession(state, nextState, key);
     }
   } else if (state.mode === 'COMMAND') {
     nextState = handleCommandLineModeKey(state, key, handleKey, rawHandleKey, macroDepth);
     if (state.insertNormalSession && nextState.mode === 'NORMAL') {
-      nextState = finishInsertNormalSession(nextState);
+      nextState = finishInsertNormalSession(state, nextState, key);
     }
   } else if (state.mode === 'REPLACE') {
     nextState = handleReplaceModeKey(state, key, isReplayingDot, macroDepth);
   } else if (state.mode === 'INSERT') {
     nextState = handleInsertModeKey(state, key, rawHandleKey, isReplayingDot, macroDepth, abbrevCtx);
+    if (state.insertRestartPending) nextState = finishInsertRestart(state, nextState, key, isReplayingDot, macroDepth, abbrevCtx);
   } else if (state.mode === 'SELECT' || state.mode === 'SELECT_LINE' || state.mode === 'SELECT_BLOCK') {
     nextState = handleSelectModeKey(state, key, rawHandleKey, macroDepth);
   } else if (state.mode === 'VISUAL' || state.mode === 'VISUAL_LINE' || state.mode === 'VISUAL_BLOCK') {
@@ -339,7 +369,7 @@ export function rawHandleKey(
           };
         } else {
           // pendingKeys가 없으면 단일 normal 명령이 완결되었으므로 다시 INSERT 모드로 자동 복귀
-          nextState = finishInsertNormalSession(nextState, true);
+          nextState = finishInsertNormalSession(state, nextState, key);
         }
       } else {
         // pendingKeys가 남아 있는 경우(예: 'z', '2', 'd' 등) 세션 유지
@@ -554,6 +584,8 @@ function applyKeyRules(input: VimEditorState, raw: VimEditorState, key: string, 
   next = recordInsertStartCursor(input, next, key);
   next = recordVisualUndoCursor(input, next);
   next = keepRepeatOnFailure(input, next, key, isReplayingDot);
+  next = applyEmptyBufferDelete(input, next, key);
+  next = dropEmptyInsertUndo(input, next, key);
   return normalizeRepeatKeys(input, next);
 }
 
