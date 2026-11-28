@@ -219,6 +219,28 @@ export function handleNormalDCYOperators(
   parsed: ParsedPending,
   isReplayingDot: boolean
 ): PrefixStepResult | null {
+  // Vim exclusive-linewise 규칙: 빈 줄(마지막 줄 제외)에서 dw / cw / dW / cW 는 그 줄을 줄 단위로 다룹니다
+  // (dw = dd, cw = cc). 단, `.` 반복 키는 원래 키(d w)로 남깁니다.
+  if (
+    (parsed.operator === 'd' || parsed.operator === 'c') &&
+    (key === 'w' || key === 'W') &&
+    parsed.totalCount === 1 &&
+    (state.lines[state.cursor.line] ?? '') === '' &&
+    state.cursor.line < state.lines.length - 1
+  ) {
+    const op = parsed.operator;
+    const res = handleNormalDCYOperators(state, op, parsed, true);
+    if (res?.handled) {
+      const keys = [op, key];
+      return {
+        handled: true,
+        state:
+          op === 'd'
+            ? { ...res.state, lastChangeKeys: isReplayingDot ? state.lastChangeKeys : keys }
+            : { ...res.state, currentChangeKeys: isReplayingDot ? state.currentChangeKeys : keys },
+      };
+    }
+  }
   if (parsed.operator === 'd') {
     if (key === 'o') return { handled: true, state: { ...diffObtain(state), pendingKeys: undefined } };
     if (key === 'p') return { handled: true, state: { ...diffPut(state), pendingKeys: undefined } };

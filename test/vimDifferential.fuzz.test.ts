@@ -8,6 +8,12 @@ import type { VimEditorState } from '../src/vim-engine';
  * 으로 확인한 결과와 비교합니다. (시드가 고정되어 있어 케이스 번호와 키 시퀀스는 항상 같습니다)
  */
 const NEOVIM_VERIFIED_CASES: Record<number, { keys: string; lines: string[]; cursor: { line: number; col: number } }> = {
+  // 빈 줄에서 cw 는 Vim 에서 cc 처럼 그 줄만 바꿉니다 (CodeMirror 는 다음 줄과 합침). nvim --headless 결과.
+  73: {
+    keys: 'c $ X Escape x y y p . $ d a " c w v a l Escape',
+    lines: ['', '', 'val', '  getUser(id) {', '    return { id: id, name: "Alice" };', '  }', '}'],
+    cursor: { line: 2, col: 2 },
+  },
   // 3ggdi{yyP: 여러 줄 di{ 는 { 줄과 } 줄을 남깁니다 (CodeMirror 는 한 줄로 합침)
   82: {
     keys: '3 g g d i { y y P',

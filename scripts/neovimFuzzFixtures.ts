@@ -255,6 +255,18 @@ const CASES: Case[] = [
   { id: 'nested-pair-count-3', text: 'x {\n  b { c }\n}', cursor: { row: 0, col: 0 }, keys: 'jfcy2a{' },
   { id: 'nested-pair-count-4', text: '[1, [2, x]]', cursor: { row: 0, col: 0 }, keys: 'fx2yi[' },
   { id: 'nested-pair-count-5', text: '[1, [2, x]]', cursor: { row: 0, col: 0 }, keys: 'fx3yi[' },
+  { id: 'macro-unnamed-and-empty-word-1', text: 'x\nword\nz', cursor: { row: 0, col: 0 }, keys: 'j\"kyiwqkjq' },
+  { id: 'macro-unnamed-and-empty-word-2', text: 'abc def', cursor: { row: 0, col: 0 }, keys: '\"kyiwqkxq' },
+  { id: 'macro-unnamed-and-empty-word-3', text: 'a\n\nb', cursor: { row: 0, col: 0 }, keys: 'jdw' },
+  { id: 'macro-unnamed-and-empty-word-4', text: 'a\n\nb', cursor: { row: 0, col: 0 }, keys: 'jyw' },
+  { id: 'macro-unnamed-and-empty-word-5', text: 'a\n\nb', cursor: { row: 0, col: 0 }, keys: 'jcwX<Esc>' },
+  { id: 'macro-unnamed-and-empty-word-6', text: 'a\n  \nb', cursor: { row: 0, col: 0 }, keys: 'jdw' },
+  { id: 'macro-unnamed-and-empty-word-7', text: 'a\n\n', cursor: { row: 0, col: 0 }, keys: 'jjdw' },
+  { id: 'dot-split-keys-1', text: 'Another Para\nx', cursor: { row: 0, col: 0 }, keys: 'i<Esc>guu.' },
+  { id: 'dot-split-keys-2', text: 'abc\nRETURN X\nyy', cursor: { row: 0, col: 0 }, keys: 'i<Esc>2g~~j.' },
+  { id: 'dot-split-keys-3', text: 'abc\n(\nDef\nghi', cursor: { row: 0, col: 0 }, keys: 'i<Esc>j4gUUk.' },
+  { id: 'dot-split-keys-4', text: 'ABC DEF\nGHI', cursor: { row: 0, col: 0 }, keys: 'i<Esc>guiwj.' },
+  { id: 'dot-split-keys-5', text: '1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25', cursor: { row: 0, col: 0 }, keys: 'i<Esc>12ddu.' },
 ];
 
 const LUA = `

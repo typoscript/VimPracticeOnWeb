@@ -1,5 +1,6 @@
 import { getVimEngineConfig } from './config';
-import { VimEditorState } from './types';
+import { RegisterEntry, VimEditorState } from './types';
+import { formatMacroKeysToString } from './registers';
 import { setActiveCursorContext, clampCursor } from './cursor';
 import { setActiveIskeyword } from './wordMotion';
 import { setActiveMatchpairs } from './bracketMatch';
@@ -209,13 +210,15 @@ export function rawHandleKey(
       const reg = state.recordingMacro.register;
       const targetReg = /^[A-Z]$/.test(reg) ? reg.toLowerCase() : reg;
       const recordedKeys = [...state.recordingMacro.keys];
-      const newRegisters = {
-        ...(state.registers ?? {}),
-        [targetReg]: {
-          type: 'macro' as const,
-          content: recordedKeys,
-        },
-      };
+      const macroEntry = { type: 'macro' as const, content: recordedKeys };
+      const newRegisters: Record<string, RegisterEntry> = { ...(state.registers ?? {}), [targetReg]: macroEntry };
+      // Vim 의 무명 레지스터는 마지막으로 쓴 레지스터를 가리킵니다. "ayiw 뒤 qa…q 처럼 무명 레지스터가
+      // 녹화 대상 레지스터를 보여 주고 있었다면 새 매크로 내용을 보여 줍니다 (키 표기 텍스트, 문자 단위).
+      const unnamed = state.registers?.['"'];
+      const previous = state.registers?.[targetReg];
+      if (unnamed && previous && JSON.stringify(unnamed.content) === JSON.stringify(previous.content) && unnamed.type === previous.type) {
+        newRegisters['"'] = { type: 'char', content: formatMacroKeysToString(recordedKeys) };
+      }
       return {
         ...state,
         registers: newRegisters,
@@ -535,10 +538,10 @@ export function handleKey(
   let nextState: VimEditorState;
   if (getVimEngineConfig().devChecks) {
     deepFreeze(input);
-    nextState = keepRepeatOnFailure(input, recordInsertStartCursor(input, recordRepeatRegister(input, recordVisualRepeat(input, applyCurswant(input, syncPerFileState(input, rawHandleKey(input, key, isReplayingDot, macroDepth)), key), key, isReplayingDot), isReplayingDot)), key, isReplayingDot);
+    nextState = normalizeRepeatKeys(input, keepRepeatOnFailure(input, recordInsertStartCursor(input, recordRepeatRegister(input, recordVisualRepeat(input, applyCurswant(input, syncPerFileState(input, rawHandleKey(input, key, isReplayingDot, macroDepth)), key), key, isReplayingDot), isReplayingDot)), key, isReplayingDot));
     assertValidVimState(input, nextState, key);
   } else {
-    nextState = keepRepeatOnFailure(input, recordInsertStartCursor(input, recordRepeatRegister(input, recordVisualRepeat(input, applyCurswant(input, syncPerFileState(input, rawHandleKey(input, key, isReplayingDot, macroDepth)), key), key, isReplayingDot), isReplayingDot)), key, isReplayingDot);
+    nextState = normalizeRepeatKeys(input, keepRepeatOnFailure(input, recordInsertStartCursor(input, recordRepeatRegister(input, recordVisualRepeat(input, applyCurswant(input, syncPerFileState(input, rawHandleKey(input, key, isReplayingDot, macroDepth)), key), key, isReplayingDot), isReplayingDot)), key, isReplayingDot));
   }
   const withHl = releaseHlsearchSuppression(input, nextState, key);
   return processKeyAutocmds(input, withHl);
@@ -668,6 +671,28 @@ function doubledLineOpOverflow(state: VimEditorState, key: string): VimEditorSta
     ? { ...state.recordingMacro, keys: [...state.recordingMacro.keys, key] }
     : state.recordingMacro;
   return { ...state, pendingKeys: undefined, bell: true, recordingMacro };
+}
+
+/**
+ * `.` 반복 키는 실제로 누르는 키 단위여야 다시 재생됩니다. 일부 연산자가 `gu`·`g~` 처럼 두 키를 하나로,
+ * 또는 count `12` 를 하나로 기록하므로 여기서 한 글자씩 나눕니다 (나누지 않으면 `.` 가 `u` 실행 취소로 이어짐).
+ */
+const COMBINED_REPEAT_TOKEN = /^(g[uU~?qwc]|[0-9]{2,})$/;
+function splitRepeatKeys(keys: string[] | undefined): string[] | undefined {
+  if (!keys || !keys.some((k) => COMBINED_REPEAT_TOKEN.test(k))) return keys;
+  return keys.flatMap((k) => (COMBINED_REPEAT_TOKEN.test(k) ? k.split('') : [k]));
+}
+function normalizeRepeatKeys(prev: VimEditorState, next: VimEditorState): VimEditorState {
+  let out = next;
+  if (next.lastChangeKeys !== prev.lastChangeKeys) {
+    const keys = splitRepeatKeys(next.lastChangeKeys);
+    if (keys !== next.lastChangeKeys) out = { ...out, lastChangeKeys: keys };
+  }
+  if (next.currentChangeKeys !== prev.currentChangeKeys) {
+    const keys = splitRepeatKeys(next.currentChangeKeys);
+    if (keys !== next.currentChangeKeys) out = { ...out, currentChangeKeys: keys };
+  }
+  return out;
 }
 
 /** `$` 뒤의 curswant: 세로 이동이 항상 줄 끝으로 갑니다 (Vim MAXCOL). */

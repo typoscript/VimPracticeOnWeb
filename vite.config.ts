@@ -237,5 +237,7 @@ export default defineConfig(({ mode }) => ({
     exclude: [...configDefaults.exclude, '.claude/**'],
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts',
+    // 바쁜 CI 에서도 지연 로딩 화면을 기다릴 수 있게 (setup.ts 의 asyncUtilTimeout 5초보다 길게)
+    testTimeout: 15000,
   },
 }));
