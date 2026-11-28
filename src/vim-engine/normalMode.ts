@@ -18,11 +18,10 @@ import { msg } from './messages';
 import {
   parsePending,
   applyOperatorMotion,
-  handleCtrlWKey,
-  handleCtrlWGKey,
   DispatchKeyFn,
   RunHandleKeyFn,
 } from './engineHelpers';
+import { handleCtrlWKey, handleCtrlWGKey } from './ctrlWCommands';
 import { handleNormalZPrefix } from './normalZPrefix';
 import { handleNormalBracketPrefix } from './normalBracketPrefix';
 import {

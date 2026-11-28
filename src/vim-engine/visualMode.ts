@@ -20,7 +20,8 @@ import { joinLines, changeCaseVisual, indentVisual, modifyNumberVisual, formatIn
 import { findMatchingBracket } from './bracketMatch';
 import { computePercentJumpTarget } from './extraMotions';
 import { handleMiniMoveVisual } from './miniMoveEngine';
-import { parsePending, ringBell, VISUAL_EXTRA_KEYS, moveByExtraMotion, isFailedMotion, evaluateMotionWithCount, handleCtrlWKey, handleCtrlWGKey, getOppositeMotion, DispatchKeyFn } from './engineHelpers';
+import { parsePending, ringBell, VISUAL_EXTRA_KEYS, moveByExtraMotion, isFailedMotion, evaluateMotionWithCount, getOppositeMotion, DispatchKeyFn } from './engineHelpers';
+import { handleCtrlWKey, handleCtrlWGKey } from './ctrlWCommands';
 import { handleVisualZPrefix, handleVisualGImmediate, handleVisualGSubcommand, handleVisualDirectGCombo, handleVisualTextObject, handleVisualBracketPrefix } from './visualPrefixes';
 export { handleSelectModeKey } from './selectMode';
 

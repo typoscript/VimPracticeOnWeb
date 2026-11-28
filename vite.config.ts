@@ -46,6 +46,8 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'tsIndent.ts',
       'jsIndent.ts',
       'filetypeIndent.ts',
+      // Replace·Virtual Replace 모드(R gR gr) 편집 로직 (코어 파일만 import)
+      'replaceMode.ts',
     ],
   },
   {
@@ -91,6 +93,8 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'autocmdEngine.ts',
       'completion.ts',
       'helpEngine.ts',
+      // 키 처리 뒤 curswant(기억한 열) 규칙 (setEngine 만 더 import)
+      'curswant.ts',
     ],
   },
   {
@@ -134,6 +138,8 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'folding.ts',
       'engineHelpers.ts',
       'surroundEngine.ts',
+      // 비주얼 연산 `.` 반복의 영역 재선택 (모드 디스패처에서 내림)
+      'visualRedo.ts',
     ],
   },
   {
@@ -177,6 +183,7 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'exSubstituteConfirm.ts',
       'exSubstitutePreview.ts',
       'exRange.ts',
+      'exLineFormatOps.ts',
       'exRangeOps.ts',
       'shellBuiltins.ts',
       'shellStreamFilters.ts',
@@ -188,6 +195,12 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'exQuickfixCommands.ts',
       'exListAndToolCommands.ts',
       'commandLine.ts',
+      // 명령줄 편집·와일드메뉴와, Ex 실행기를 쓰는 노멀 모드 명령 묶음(Ctrl-w, 매크로·`.`, 뷰포트·점프)
+      'cmdlineEdit.ts',
+      'wildmenu.ts',
+      'ctrlWCommands.ts',
+      'normalMacroAndDot.ts',
+      'normalViewportNav.ts',
     ],
   },
 ];
