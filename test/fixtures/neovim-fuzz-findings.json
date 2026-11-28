@@ -10883,5 +10883,625 @@
       "regType": "line",
       "mode": "n"
     }
+  },
+  {
+    "id": "quote-da-trailing-space",
+    "text": "say \"hi\" now",
+    "cursor": {
+      "row": 0,
+      "col": 5
+    },
+    "keys": "da\"",
+    "expected": {
+      "lines": [
+        "say now"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      },
+      "reg": "\"hi\" ",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "quote-da-leading-space",
+    "text": "say \"hi\"",
+    "cursor": {
+      "row": 0,
+      "col": 5
+    },
+    "keys": "da\"",
+    "expected": {
+      "lines": [
+        "say"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": " \"hi\"",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "quote-ya-leading-space",
+    "text": "const msg = 'x';",
+    "cursor": {
+      "row": 0,
+      "col": 13
+    },
+    "keys": "ya'",
+    "expected": {
+      "lines": [
+        "const msg = 'x';"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 11
+      },
+      "reg": " 'x'",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "quote-ca-backtick",
+    "text": "a `b`  c",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "ca`X<Esc>",
+    "expected": {
+      "lines": [
+        "a Xc"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "`b`  ",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "quote-di-between-strings",
+    "text": "x \"a\" b \"c\"",
+    "cursor": {
+      "row": 0,
+      "col": 6
+    },
+    "keys": "di\"",
+    "expected": {
+      "lines": [
+        "x \"a\"\"c\""
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 5
+      },
+      "reg": " b ",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "quote-2di-includes-quotes",
+    "text": "x \"a\" b \"c\"",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "2di\"",
+    "expected": {
+      "lines": [
+        "x  b \"c\""
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "\"a\"",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "quote-2da",
+    "text": "x \"a\" b \"c\"",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "2da\"",
+    "expected": {
+      "lines": [
+        "x b \"c\""
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "\"a\" ",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "quote-escaped",
+    "text": "x \"a\\\"b\" c",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "di\"",
+    "expected": {
+      "lines": [
+        "x \"\" c"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "a\\\"b",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "quote-on-closing",
+    "text": "x \"ab\" \"cd\"",
+    "cursor": {
+      "row": 0,
+      "col": 5
+    },
+    "keys": "ya\"",
+    "expected": {
+      "lines": [
+        "x \"ab\" \"cd\""
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "\"ab\" ",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "quote-after-cursor",
+    "text": "x = \"ab\";",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "ci\"Z<Esc>",
+    "expected": {
+      "lines": [
+        "x = \"Z\";"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 5
+      },
+      "reg": "ab",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "quote-odd-quote-fails",
+    "text": "a \"b\" c \"d",
+    "cursor": {
+      "row": 0,
+      "col": 8
+    },
+    "keys": "yiwya\"",
+    "expected": {
+      "lines": [
+        "a \"b\" c \"d"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 8
+      },
+      "reg": "\"",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "quote-none-fails",
+    "text": "abc def",
+    "cursor": {
+      "row": 0,
+      "col": 1
+    },
+    "keys": "yiwdi\"",
+    "expected": {
+      "lines": [
+        "abc def"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "abc",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "quote-empty-yank",
+    "text": "a \"\" b",
+    "cursor": {
+      "row": 0,
+      "col": 2
+    },
+    "keys": "yiwyi\"",
+    "expected": {
+      "lines": [
+        "a \"\" b"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "quote-visual-va",
+    "text": "say \"hi\" now",
+    "cursor": {
+      "row": 0,
+      "col": 6
+    },
+    "keys": "va\"y",
+    "expected": {
+      "lines": [
+        "say \"hi\" now"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      },
+      "reg": "\"hi\" ",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "quote-visual-vi",
+    "text": "say \"hi\" now",
+    "cursor": {
+      "row": 0,
+      "col": 6
+    },
+    "keys": "vi\"y",
+    "expected": {
+      "lines": [
+        "say \"hi\" now"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 5
+      },
+      "reg": "hi",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "quote-visual-vi-twice",
+    "text": "say \"hi\" now",
+    "cursor": {
+      "row": 0,
+      "col": 6
+    },
+    "keys": "vi\"i\"y",
+    "expected": {
+      "lines": [
+        "say \"hi\" now"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      },
+      "reg": "\"hi\"",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "quote-visual-v2i",
+    "text": "say \"hi\" now",
+    "cursor": {
+      "row": 0,
+      "col": 6
+    },
+    "keys": "v2i\"y",
+    "expected": {
+      "lines": [
+        "say \"hi\" now"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 4
+      },
+      "reg": "\"hi\"",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "quote-visual-va-next",
+    "text": "a \"b\" c \"d\" e",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "va\"a\"y",
+    "expected": {
+      "lines": [
+        "a \"b\" c \"d\" e"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "\"b\" c \"d\" ",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "failed-op-2yib-keeps-append",
+    "text": "ab cd\n12 x\nend",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "qadwjq\"Ayiw2yib",
+    "expected": {
+      "lines": [
+        "cd",
+        "12 x",
+        "end"
+      ],
+      "cursor": {
+        "row": 1,
+        "col": 0
+      },
+      "reg": "dwj12",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "failed-op-yi-paren",
+    "text": "ab cd\nxy",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "\"ayiwyi(",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "xy"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "cd",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "failed-op-di-brace",
+    "text": "ab cd\nxy",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "\"ayiwdi{",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "xy"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "cd",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "failed-op-yit",
+    "text": "ab cd\nxy",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "\"ayiwyit",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "xy"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "cd",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "failed-op-ya-quote",
+    "text": "ab cd\nxy",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "\"ayiwya\"",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "xy"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "cd",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "failed-op-y-search",
+    "text": "ab cd\nxy",
+    "cursor": {
+      "row": 0,
+      "col": 3
+    },
+    "keys": "\"ayiwy/zzz<CR>",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "xy"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 3
+      },
+      "reg": "cd",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "failed-op-yf",
+    "text": "ab cd\nxy",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "\"ayiwyfz",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "xy"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "ab",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "failed-op-dt",
+    "text": "ab cd\nxy",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "\"ayiwdtz",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "xy"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "ab",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "failed-op-y-mark",
+    "text": "ab cd\nxy",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "\"ayiwy`q",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "xy"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "ab",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "failed-op-yap-dot-reg",
+    "text": "ab cd\nxy",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "\"ayiwyi[",
+    "expected": {
+      "lines": [
+        "ab cd",
+        "xy"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 0
+      },
+      "reg": "ab",
+      "regType": "char",
+      "mode": "n"
+    }
+  },
+  {
+    "id": "visual-linewise-change-dot-reg",
+    "text": "one\ntwo\nthree",
+    "cursor": {
+      "row": 0,
+      "col": 0
+    },
+    "keys": "VGca b<Esc>.",
+    "expected": {
+      "lines": [
+        "a b"
+      ],
+      "cursor": {
+        "row": 0,
+        "col": 2
+      },
+      "reg": "a b\n",
+      "regType": "line",
+      "mode": "n"
+    }
   }
 ]

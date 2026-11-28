@@ -109,6 +109,7 @@ export const ENGINE_CHUNK_LAYERS: ReadonlyArray<{ name: string; files: readonly 
       'lineOperators.ts',
       'vimPosition.ts',
       'sentenceVim.ts',
+      'quoteTextObject.ts',
       'wordObjectCount.ts',
       'textObjectsExtended.ts',
       'treesitterTextObjects.ts',

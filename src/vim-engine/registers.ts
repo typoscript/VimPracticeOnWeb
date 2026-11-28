@@ -39,6 +39,11 @@ export function syncRegisters(
   }
 
   const clip = nextState.clipboard;
+  // 새로 복사·삭제한 내용이 없는 연산(실패한 `2yib`·`yi(`·`y/pat` 등)은 레지스터를 건드리지 않습니다.
+  // 예전 clipboard 를 다시 쓰면 "Ayiw 뒤 "" 가 덮어써집니다. (bell 만으로는 판단하지 않음: 0열 `yh` 는 bell 이어도 "" 를 복사)
+  if (clip === prevState.clipboard) {
+    return { ...nextState, clipboard: prevState.clipboard, activeRegister: undefined };
+  }
   // Vim op_delete: 빈 범위(`d0` 를 0열에서, 마지막 빈 줄의 `vd`·`vc`)는 지울 것이 없어 레지스터를 건드리지 않습니다 (복사 `y0` 는 "" 를 씀).
   if (clip && !isYank && !writeEmptyDelete && clip.type !== 'line' && clip.content === '') {
     return {

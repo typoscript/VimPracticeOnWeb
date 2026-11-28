@@ -182,6 +182,22 @@ export function withDotRepeatCount(keys: readonly string[], count: number): stri
 }
 
 /**
+ * Vim redo_VIsual: 비주얼 반복이 다시 고를 줄 수가 버퍼 끝을 넘으면 마지막 줄까지로 줄입니다
+ * (`VGc…` 뒤 줄이 하나만 남았을 때 `.` 가 `V2j` 에서 실패하지 않음).
+ */
+function clampVisualRedoLines(keys: readonly string[], state: VimEditorState): readonly string[] {
+  if (!['v', 'V', 'Ctrl-v'].includes(keys[0] ?? '')) return keys;
+  let i = 1;
+  while (isDigitKey(keys[i])) i++;
+  if (i === 1 || keys[i] !== 'j') return keys;
+  const wanted = Number(keys.slice(1, i).join(''));
+  const available = Math.max(0, state.lines.length - 1 - state.cursor.line);
+  if (wanted <= available) return keys;
+  const countKeys = available > 0 ? [...String(available).split(''), 'j'] : [];
+  return [keys[0], ...countKeys, ...keys.slice(i + 1)];
+}
+
+/**
  * 매크로 녹화(q), 매크로 재생(@{reg}/@@/@:), Q 반복, 도트 반복(.), 단일 문자 교체(r)를 처리합니다.
  */
 export function handleNormalMacroAndDot(
@@ -263,7 +279,7 @@ export function handleNormalMacroAndDot(
       replayKeys = withDotRepeatCount(replayKeys, Number(state.pendingKeys));
     }
     let curState: VimEditorState = { ...state, pendingKeys: undefined };
-    for (const rk of replayKeys) {
+    for (const rk of clampVisualRedoLines(replayKeys, state)) {
       curState = runHandleKey(curState, rk, true);
       if (curState.bell) break;
     }

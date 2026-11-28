@@ -152,10 +152,13 @@ describe('Vim Differential Cross-Validation: 50 Edge Cases', () => {
       expect(res.passed, res.mismatch?.diffReport).toBe(true);
     });
 
-    it('[Case 23] da" including quotes', () => {
+    it('[Case 23] da" including quotes (Neovim 기준: CodeMirror 오라클은 앞 공백을 남김)', () => {
       const text = 'const msg = "hello world";';
-      const res = runDifferentialCheck(text, ['f', '"', 'l', 'd', 'a', '"']);
-      expect(res.passed, res.mismatch?.diffReport).toBe(true);
+      // nvim --headless -u NONE: f"lda" → "const msg =;" (닫는 따옴표 뒤 공백이 없어 앞 공백을 함께 지움), 커서 (0, 11)
+      const res = runAgainstNeovim(text, ['f', '"', 'l', 'd', 'a', '"']);
+      expect(res.lines).toEqual(['const msg =;']);
+      expect(res.cursor).toEqual({ line: 0, col: 11 });
+      expect(res.registers?.['"']?.content).toBe(' "hello world"');
     });
 
     it('[Case 24] ci" inside string literal and Escape', () => {

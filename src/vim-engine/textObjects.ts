@@ -8,6 +8,7 @@ import { getTagTextObjectRange } from './tagTextObject';
 import { getCountedWordObjectRange } from './wordObjectCount';
 import { currentSentence } from './sentenceVim';
 import { toOperatorRange } from './vimPosition';
+import { currentQuote } from './quoteTextObject';
 export { getTagTextObjectRange };
 import {
   TreesitterObjectType,
@@ -165,52 +166,11 @@ export function getTextObjectRange(
     objectType.endsWith('`') ? '`' : null;
 
   if (quoteChar) {
-    if (lineText.length === 0) return null;
-    const modifier = objectType[0] as 'i' | 'a';
-    const quoteIndices: number[] = [];
-    for (let i = 0; i < lineText.length; i++) {
-      if (lineText[i] === quoteChar) {
-        quoteIndices.push(i);
-      }
-    }
-
-    if (quoteIndices.length < 2) {
-      return null;
-    }
-
-    const pairs: { start: number; end: number }[] = [];
-    for (let i = 0; i < quoteIndices.length - 1; i += 2) {
-      pairs.push({ start: quoteIndices[i], end: quoteIndices[i + 1] });
-    }
-
-    let targetPair = pairs.find((p) => p.start <= col && col <= p.end);
-    if (!targetPair) {
-      targetPair = pairs.find((p) => p.start >= col);
-    }
-
-    if (!targetPair) {
-      return null;
-    }
-
-    if (modifier === 'i') {
-      if (targetPair.start + 1 === targetPair.end) {
-        return {
-          startCol: targetPair.start + 1,
-          endCol: targetPair.start,
-          isEmpty: true,
-        };
-      }
-      return {
-        startCol: targetPair.start + 1,
-        endCol: targetPair.end - 1,
-      };
-    } else {
-      // a: 따옴표 자체를 포함
-      return {
-        startCol: targetPair.start,
-        endCol: targetPair.end,
-      };
-    }
+    const res = currentQuote(lineText, cursor.col, count, objectType[0] === 'a', quoteChar);
+    if (!res || res.kind !== 'operator') return null;
+    return res.isEmpty
+      ? { startCol: res.startCol, endCol: res.startCol - 1, isEmpty: true }
+      : { startCol: res.startCol, endCol: res.endCol };
   }
 
   // 3. 괄호 및 블록: i(, a(, i), a), i[, a[, i], a], i{, a{, i}, a}, ib, ab, iB, aB
@@ -489,7 +449,25 @@ export function executeTextObjectOperator(
         return res.kind === 'operator' ? toOperatorRange(curState.lines, res.start, res.end, res.inclusive) : undefined;
       })()
     : undefined;
-  const steps = isSentence || isStructuralBlock || isMiniAi || isNestedPair || isWordObject ? 1 : count;
+  // 따옴표 객체는 Vim current_quote 로 한 번만 구합니다 ([count] 2 이상이면 i" 도 따옴표 포함).
+  const isQuote = /^[ia]["'`]$/.test(objectType);
+  if (isQuote && operator === 'v') {
+    const anchor = curState.visualAnchor ?? curState.cursor;
+    // Vim: 비주얼 선택이 여러 줄이면 따옴표 객체는 실패합니다.
+    if (anchor.line !== curState.cursor.line) return { ...curState, bell: true, pendingKeys: undefined };
+    const line = curState.lines[curState.cursor.line] ?? '';
+    const sel = currentQuote(line, curState.cursor.col, count, objectType[0] === 'a', objectType[1], anchor.col);
+    if (!sel || sel.kind !== 'visual') return { ...curState, bell: true, pendingKeys: undefined };
+    const fit = (c: number) => Math.max(0, Math.min(c, line.length - 1));
+    return {
+      ...curState,
+      mode: 'VISUAL',
+      visualAnchor: { line: anchor.line, col: fit(sel.anchorCol ?? anchor.col) },
+      cursor: { line: curState.cursor.line, col: fit(sel.cursorCol) },
+      pendingKeys: undefined,
+    };
+  }
+  const steps = isSentence || isStructuralBlock || isMiniAi || isNestedPair || isWordObject || isQuote ? 1 : count;
 
   for (let step = 0; step < steps; step++) {
     const range = sentenceRange ?? (wordRange as TextObjectRange | undefined) ?? nestedRange ?? (isSentence
@@ -599,7 +577,8 @@ export function executeTextObjectOperator(
       return {
         ...curState,
         // Vim: 복사 후 커서는 복사한 범위의 시작으로 갑니다 (yiw 는 단어 첫 글자).
-        cursor: range.isEmpty ? curState.cursor : { line: startLine, col: startCol },
+        // 빈 i" (`""`) 는 Vim 처럼 빈 범위의 시작(닫는 따옴표)으로 갑니다.
+        cursor: range.isEmpty && !isQuote ? curState.cursor : { line: startLine, col: startCol },
         clipboard: {
           type: 'text',
           content,

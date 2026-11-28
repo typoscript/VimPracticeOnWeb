@@ -1508,7 +1508,7 @@ describe('Vim Engine - Extended Text Objects Integration in handleKey', () => {
     state = handleKey(state, 'a');
     state = handleKey(state, '"');
 
-    expect(state.lines[0]).toBe('const str = ;');
+    expect(state.lines[0]).toBe('const str =;'); // Vim: a" 는 앞 공백 포함
   });
 
   it('2daw: 카운트와 조합하여 2개 단어 일괄 삭제', () => {

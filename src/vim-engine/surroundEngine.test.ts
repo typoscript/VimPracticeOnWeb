@@ -484,4 +484,25 @@ describe('surroundEngine: vim-surround (cs, ds, ys, yss, Visual S)', () => {
       expect(state.lines[0]).toBe('<p>x</p> <p>y</p>');
     });
   });
+
+  describe('따옴표는 a" 범위가 아니라 따옴표 글자만 다룬다 (vim-surround 의 di" 뒤 d2i")', () => {
+    const run = (line: string, col: number, seq: string[]) =>
+      seq.reduce<VimEditorState>((s, k) => handleKey(s, k), { lines: [line], cursor: { line: 0, col }, mode: 'NORMAL' });
+
+    it('ds" 는 따옴표 뒤·앞 공백을 지우지 않는다', () => {
+      expect(run('say "hi" now', 5, ['d', 's', '"']).lines).toEqual(['say hi now']);
+      expect(run('say "hi"', 5, ['d', 's', '"']).lines).toEqual(['say hi']);
+    });
+
+    it('ds" 는 따옴표 안쪽 공백을 남기고, 빈 따옴표에서는 아무것도 하지 않는다', () => {
+      expect(run('a " hi " b', 4, ['d', 's', '"']).lines).toEqual(['a  hi  b']);
+      expect(run('a "" b', 2, ['d', 's', '"']).lines).toEqual(['a "" b']);
+    });
+
+    it('cs 는 따옴표 글자만 바꾸고 커서 뒤 문자열도 찾는다', () => {
+      expect(run('say "hi" now', 5, ['c', 's', '"', "'"]).lines).toEqual(["say 'hi' now"]);
+      expect(run('x = "hi";', 5, ['c', 's', '"', '`']).lines).toEqual(['x = `hi`;']);
+      expect(run("x = 'hi'", 0, ['c', 's', "'", '"']).lines).toEqual(['x = "hi"']);
+    });
+  });
 });

@@ -456,7 +456,8 @@ export const MISSIONS_PART4: Mission[] = [
     initialLines: [
       'const token = "AUTH_BEARER_SECRET";',
       'console.log("DEBUG_LEAK");',
-      'const backup = ',
+      // ya" 는 Vim 처럼 따옴표 앞 공백까지 복사하므로 줄 끝 공백 없이 시작합니다.
+      'const backup =',
     ],
     targetLines: [
       'const token = "AUTH_BEARER_SECRET";',

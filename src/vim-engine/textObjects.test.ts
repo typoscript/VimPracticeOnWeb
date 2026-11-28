@@ -162,9 +162,10 @@ describe('textObjects module (iw, i", i(, i))', () => {
       };
 
       const next = executeTextObjectOperator(state, 'd', 'a"');
-      expect(next.lines[0]).toBe('const greeting = ;');
-      expect(next.clipboard?.content).toBe('"Hello World"');
-      expect(next.cursor.col).toBe(17);
+      // Vim current_quote: 닫는 따옴표 뒤 공백이 없으면 여는 따옴표 앞 공백을 함께 지웁니다.
+      expect(next.lines[0]).toBe('const greeting =;');
+      expect(next.clipboard?.content).toBe(' "Hello World"');
+      expect(next.cursor.col).toBe(16);
       expect(next.mode).toBe('NORMAL');
     });
 
@@ -175,8 +176,8 @@ describe('textObjects module (iw, i", i(, i))', () => {
         mode: 'NORMAL',
       };
       const sqResult = executeTextObjectOperator(singleQuoteState, 'd', "a'");
-      expect(sqResult.lines[0]).toBe('const msg = ;');
-      expect(sqResult.clipboard?.content).toBe("'single quote'");
+      expect(sqResult.lines[0]).toBe('const msg =;');
+      expect(sqResult.clipboard?.content).toBe(" 'single quote'");
 
       const backtickState: VimEditorState = {
         lines: ['const tpl = `template literal`;'],
@@ -184,8 +185,8 @@ describe('textObjects module (iw, i", i(, i))', () => {
         mode: 'NORMAL',
       };
       const btResult = executeTextObjectOperator(backtickState, 'd', 'a`');
-      expect(btResult.lines[0]).toBe('const tpl = ;');
-      expect(btResult.clipboard?.content).toBe('`template literal`');
+      expect(btResult.lines[0]).toBe('const tpl =;');
+      expect(btResult.clipboard?.content).toBe(' `template literal`');
     });
 
     it('멀티라인 ci{: { 줄과 } 줄은 남기고 안쪽 줄들을 한 줄로 바꾼 뒤 INSERT 모드로 진입한다 (Neovim 으로 확인)', () => {

@@ -64,6 +64,22 @@ function getTagSurroundPair(tag: string): SurroundPair {
   return { open: `<${trimmed}>`, close: `</${name}>`, padSpace: false };
 }
 
+const QUOTE_TARGETS = new Set(['"', "'", '`']);
+
+/**
+ * ds/cs 가 지울 구분자 쌍의 범위 (startCol·endCol 이 여는·닫는 구분자).
+ * 따옴표는 vim-surround 처럼 `di"` 뒤 `d2i"` 로 따옴표 글자만 고릅니다 (a" 의 앞뒤 공백은 넣지 않음).
+ * 안쪽이 비어 있으면 vim-surround 는 아무것도 하지 않습니다 (keeper == "").
+ */
+function findSurroundRange(state: VimEditorState, target: string) {
+  if (QUOTE_TARGETS.has(target)) {
+    const inner = getTextObjectRange(state.lines, state.cursor, `i${target}`);
+    if (!inner || inner.isEmpty) return null;
+    return getTextObjectRange(state.lines, state.cursor, `i${target}`, 2);
+  }
+  return getTextObjectRange(state.lines, state.cursor, `a${target}`);
+}
+
 /**
  * Maps a surround target character to its text-object query representation.
  */
@@ -144,7 +160,7 @@ export function executeDeleteSurround(state: VimEditorState, targetChar: string)
   }
 
   // 2. Quotes or Brackets deletion
-  const range = getTextObjectRange(state.lines, state.cursor, `a${targetObj}`);
+  const range = findSurroundRange(state, targetObj);
   if (!range) {
     return { ...state, pendingKeys: undefined };
   }
@@ -167,6 +183,7 @@ export function executeDeleteSurround(state: VimEditorState, targetChar: string)
   let cutStart = startCol + 1;
   let cutEnd = endCol;
   if (
+    !QUOTE_TARGETS.has(targetObj) &&
     currentLine[startCol + 1] === ' ' &&
     currentLine[endCol - 1] === ' ' &&
     startCol + 1 < endCol - 1
@@ -243,7 +260,7 @@ export function executeChangeSurround(
   }
 
   // 2. Bracket or quote change
-  const range = getTextObjectRange(state.lines, state.cursor, `a${oldTarget}`);
+  const range = findSurroundRange(state, oldTarget);
   if (!range) {
     return { ...state, pendingKeys: undefined };
   }
@@ -263,6 +280,7 @@ export function executeChangeSurround(
   // If old pair had inner padding spaces and new pair does not request padding, strip it
   if (
     !newPair.padSpace &&
+    !QUOTE_TARGETS.has(oldTarget) &&
     currentLine[startCol + 1] === ' ' &&
     currentLine[endCol - 1] === ' ' &&
     startCol + 1 < endCol - 1
